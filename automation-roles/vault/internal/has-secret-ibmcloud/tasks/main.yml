@@ -19,4 +19,18 @@
 
 
 - debug:
-    msg: "{{ response_getSecret }}"
+    msg: "{{ response_getSecret.json.resources | from_json }}"
+
+- set_fact:
+    response_getSecret_json: "{{ response_getSecret.json | from_json }}"
+
+- set_fact:
+    response_getSecret_json_result: "{{ response_getSecret_json.resources|json_query(query_secret) }}"
+  vars:
+    query_secret: "[?name=='{{ secret_name }}']"
+
+- set_fact:
+    has_secret: "not response_getSecret_json_result.length == 0"
+
+- debug:
+    msg: "Contains secret: {{ has_secret }}"
