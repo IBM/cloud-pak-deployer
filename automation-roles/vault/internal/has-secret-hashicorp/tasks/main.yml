@@ -1,0 +1,16 @@
+---
+- name: Create secret Validate mandatory variables are defined
+  assert:
+    that:
+      - secret_name_path is defined
+
+- name: Validate if valid login session is available
+  shell: "vault kv get {{ secret_name_path }}"
+  ignore_errors: yes
+  register: hashicorp_vault_get_secret_result
+
+- set_fact:
+    has_secret: "hashicorp_vault_get_secret_result.rc == '0'"
+
+- debug:
+    msg: "Secret {{ secret_name_path }} lookup resulted in {{ has_secret }}"

@@ -1,0 +1,27 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - vault_url is defined
+      - vault_api_key is defined
+      - secret_name is defined
+
+- name: Login to vault if vault_login_success is not set
+  include_role: 
+     name: vault-connect
+  when: "not vault_login_success is defined"
+
+- name: Validate secret exists in Vault Hashicorp
+  include_role: 
+    name: has-secret-hashicorp
+  vars:
+    secret_name_path: "/secret/{{ secret_name }}"
+  when: "vault_type == 'hashicorp-vault'"
+
+- name: Validate secret exists in Vault IBMCloud
+  include_role: 
+    name: has-secret-ibmcloud
+  vars:
+    ibmcloud_vault_address: "{{ vault_url }}"
+  when: "vault_type == 'ibmcloud-vault'"
+
