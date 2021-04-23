@@ -12,24 +12,21 @@
      name: vault-connect
   when: "not vault_login_success is defined"
 
-- name: Create secret Hashicorp vault
-  block:
-    - name: Login to Hashicorp vault
-      include_role: 
-        name: connect-vault-hashicorp
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_vault_login_token: "{{ vault_api_key }}"
-    
+- name: Create Secret Vault Hashicorp
+  include_role: 
+    name: create-secret-hashicorp
+  vars:
+    secret_name: "{{ secret_name }}"
+    secret_payload: "{{ secret_payload }}"
+    secret_description: "{{ secret_description }}"
   when: "vault_type == 'hashicorp-vault'"
 
-- name: Create secret IBMCloud vault
-  block:
-    - name: Login to IBMCloud vault
-      include_role: 
-        name: connect-vault-ibmcloud
-      vars:
-        ibmcloud_vault_address: "{{ vault_url }}"
-        ibmcloud_api_key: "{{ vault_api_key }}"
-    
-  when: "vault_type == 'ibmcloud-vault'" 
+- name: Create Secret Vault IBMCloud
+  include_role: 
+    name: create-secret-ibmcloud
+  vars:
+    secret_name: "{{ secret_name }}"
+    secret_payload: "{{ secret_payload }}"
+    secret_description: "{{ secret_description }}"
+  when: "vault_type == 'ibmcloud-vault'"
+

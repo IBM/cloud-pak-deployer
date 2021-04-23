@@ -1,0 +1,32 @@
+---
+
+- name: "IBMCloud vault - create secret: Validate mandatory variables are defined"
+  assert:
+    that:
+      - secret_name is defined
+      - secret_payload is defined
+      - secret_description is defined
+      - ibmcloud_vault_address is defined
+      - ibm_vault_token is defined
+
+- name: "IBMCloud vault - create secret: Create the new secret inside vault"
+  uri:
+    url: https://{{ ibmcloud_vault_address }}/api/v1/secrets/arbitrary
+    headers:
+      Authorization: "Bearer {{ ibm_vault_token.json.access_token }}"
+      Accept: "application/json"
+    method: POST
+    body_format: json
+    body:
+      metadata:
+        collection_type: "application/vnd.ibm.secrets-manager.secret+json"
+        collection_total: 1
+      resources:
+        - name: "{{ secret_name }}"
+          description: "{{ secret_description }}"
+          payload: "{{ secret_payload }}"
+    status_code: 200
+  register: response_createSecret
+
+- debug:
+    msg: "Secret {{ secret_name }} successfully created on IBMCloud vault"
