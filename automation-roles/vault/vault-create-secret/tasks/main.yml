@@ -3,6 +3,8 @@
 - name: Validate mandatory variables are defined
   assert:
     that:
+      - vault_url is defined
+      - vault_api_key is defined
       - secret_name is defined
       - secret_payload is defined
       - secret_description is defined
@@ -20,5 +22,7 @@
 - name: Create Secret Vault IBMCloud
   include_role: 
     name: create-secret-ibmcloud
+  vars:
+    ibmcloud_vault_address: "{{ vault_url }}"
   when: "vault_type == 'ibmcloud-vault'"
 
