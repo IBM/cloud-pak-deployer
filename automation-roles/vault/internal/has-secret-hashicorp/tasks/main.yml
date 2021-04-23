@@ -10,7 +10,12 @@
   register: hashicorp_vault_get_secret_result
 
 - set_fact:
-    has_secret: "hashicorp_vault_get_secret_result.rc == '0'"
+    has_secret: true
+  when: "hashicorp_vault_get_secret_result.rc == '0'"
+
+- set_fact:
+    has_secret: false
+  when: "not hashicorp_vault_get_secret_result.rc == '0'"
 
 - debug:
     msg: "Secret {{ secret_name_path }} lookup resulted in {{ has_secret }}"

@@ -17,7 +17,6 @@
     status_code: 200
   register: response_getSecret
 
-
 - debug:
     msg: "{{ response_getSecret }}"
 
@@ -26,15 +25,13 @@
   vars:
     query_secret: "[?name=='{{ secret_name }}']"
 
-- debug:
-    msg: "{{ response_getSecret_query_result }}"
-
-- debug:
-    msg: "{{ response_getSecret_query_result|length }}"
-
+- set_fact:
+    has_secret: false
+  when: "response_getSecret_query_result.length == '0'"
 
 - set_fact:
-    has_secret: "{{ response_getSecret_query_result|length }} == '1'"
+    has_secret: true
+  when: "response_getSecret_query_result.length == '1'"
 
 - debug:
     msg: "Contains secret: {{ has_secret }}"
