@@ -7,13 +7,16 @@
       - secret_payload is defined
       - secret_description is defined
       - ibmcloud_vault_address is defined
-      - ibm_vault_token is defined
+      - ibm_vault_iam_token is defined
+
+ - debug:
+     var: ibm_vault_iam_token
 
 - name: Create secret Create the new secret inside vault
   uri:
     url: https://{{ ibmcloud_vault_address }}/api/v1/secrets/arbitrary
     headers:
-      Authorization: "Bearer {{ ibm_vault_token.json.access_token }}"
+      Authorization: "Bearer {{ ibm_vault_iam_token.json.access_token }}"
       Accept: "application/json"
     method: POST
     body_format: json
