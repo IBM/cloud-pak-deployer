@@ -6,10 +6,14 @@
       - secret_name is defined
       - secret_payload is defined
       - secret_description is defined
-      - ibmcloud_vault_address is defined
-      - ibm_vault_iam_token is defined
 
-- name: Create secret Create the new secret inside vault
+
+- name: Validate if valid login session is available
+  shell: "vault secrets list"
+  ignore_errors: yes
+  register: hashicorp_vault_list_result
+
+- name: Create the new secret inside vault
   uri:
     url: "{{ ibmcloud_vault_address }}/api/v1/secrets/arbitrary"
     headers:
@@ -28,5 +32,5 @@
     status_code: 200
   register: response_createSecret
 
-- debug:
-    msg: "Secret {{ secret_name }} successfully created on IBMCloud vault"
+#- debug:
+#    msg: "Secret {{ secret_name }} successfully created on IBMCloud vault"

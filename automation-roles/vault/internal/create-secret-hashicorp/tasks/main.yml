@@ -1,0 +1,18 @@
+---
+
+- name: Create secret Validate mandatory variables are defined
+  assert:
+    that:
+      - secret_name_path is defined
+      - secret_payload is defined
+
+- name: Validate if valid login session is available
+  shell: "vault kv put {{ secret_name_path }} value=\"{{ secret_payload }}\""
+  ignore_errors: yes
+  register: hashicorp_vault_create_result
+
+- debug:
+    msg: "{{ hashicorp_vault_create_result }}"
+
+- debug:
+    msg: "Secret {{ secret_secret_name_pathname }} successfully created on Hashicorp vault"
