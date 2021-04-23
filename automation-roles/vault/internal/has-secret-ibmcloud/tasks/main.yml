@@ -7,7 +7,6 @@
       - ibmcloud_vault_address is defined
       - ibm_vault_iam_token is defined
 
-
 - name: Validate if the secret {{ secret_name }} is available
   uri:
     url: "{{ ibmcloud_vault_address }}/api/v1/secrets"
@@ -16,9 +15,6 @@
       Accept: "application/json"
     status_code: 200
   register: response_getSecret
-
-- debug:
-    msg: "{{ response_getSecret }}"
 
 - set_fact:
     response_getSecret_query_result: "{{ response_getSecret.json.resources | json_query(query_secret) }}"
