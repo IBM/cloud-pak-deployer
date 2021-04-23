@@ -4,7 +4,7 @@
   assert:
     that:
       - ibmcloud_vault_address is defined
-      - ibmcloud_vault_login_token is defined
+      - ibmcloud_api_key is defined
 
 - name: Receive IAM Token from IBM Cloud
   uri:
@@ -14,7 +14,7 @@
     body_format: form-urlencoded
     body:
       grant_type: "urn:ibm:params:oauth:grant-type:apikey"
-      apikey: "{{ ibmcloud_vault_login_token }}" 
+      apikey: "{{ ibmcloud_api_key }}" 
     status_code: 200
   register: ibm_vault_iam_token
 
@@ -32,4 +32,4 @@
   register: ibm_vault_token
 
 - debug:
-    msg: "Successfully logged into {{ ibm_vault_base_url }} with vault token {{ ibm_vault_token }}"
+    msg: "Successfully logged into {{ ibmcloud_vault_address }} with vault token {{ ibm_vault_token }}"
