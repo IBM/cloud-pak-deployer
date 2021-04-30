@@ -22,9 +22,9 @@
     msg: "{{ response_getSecretGroups }}"
 
 - set_fact:
-    response_getSecretGroups_query_result: "{{ response_getSecretGroups.data.groups | json_query(query_secret) }}"
+    response_getSecretGroups_query_result: "{{ response_getSecretGroups.json.data.groups | json_query(query_group) }}"
   vars:
-    query_secret: "[?name=='{{ secret_group }}']"
+    query_group: "[?name=='{{ secret_group }}']"
 
 - debug:
     msg: "{{ response_getSecretGroups_query_result }}"
@@ -32,9 +32,9 @@
 - block:
   - name: Create Secret Group {{ secret_group }} if it does not exist
     uri:
-      url: "{{ ibmcloud_vault_address }}/api/v1/auth/ibmcloud/manage/groups"
+      url: "{{ ibmcloud_vault_address }}/v1/auth/ibmcloud/manage/groups"
       headers:
-        Authorization: "Bearer {{ ibm_vault_iam_token.json.access_token }}"
+        X-Vault-Token: "{{ ibm_vault_token_content.auth.client_token }}"
         Accept: "application/json"
         Content-Type: "application/json"
       method: POST
@@ -50,7 +50,6 @@
 
   - set_fact:
       secret_group_id: "{{ response_createSecretGroup.data.id }}"
-
   when: "response_getSecretGroups_query_result|length == 0"
 
 - set_fact:
