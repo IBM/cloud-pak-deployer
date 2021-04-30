@@ -9,9 +9,13 @@
       - secret_description is defined
       - ibmcloud_vault_address is defined
 
-- name: Create the new secret inside vault
+- name: Get or Create the IBMVault Group ID
+  include_role: 
+     name: get-or-create-secret-group-ibmcloud
+
+- name: Create the new secret inside vault in group {{ secret_group }}
   uri:
-    url: "{{ ibmcloud_vault_address }}/api/v1/secrets/arbitrary"
+    url: "{{ ibmcloud_vault_address }}/api/v1/secrets/arbitrary/secrets/groups/{{ secret_group_id }}"
     headers:
       Authorization: "Bearer {{ ibm_vault_iam_token.json.access_token }}"
       Accept: "application/json"
