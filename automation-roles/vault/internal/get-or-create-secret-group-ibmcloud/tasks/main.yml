@@ -18,16 +18,10 @@
     status_code: 200
   register: response_getSecretGroups
 
-- debug:
-    msg: "{{ response_getSecretGroups }}"
-
 - set_fact:
     response_getSecretGroups_query_result: "{{ response_getSecretGroups.json.data.groups | json_query(query_group) }}"
   vars:
     query_group: "[?name=='{{ secret_group }}']"
-
-- debug:
-    msg: "{{ response_getSecretGroups_query_result }}"
 
 - block:
   - name: Create Secret Group {{ secret_group }} if it does not exist
@@ -45,19 +39,12 @@
       status_code: 200
     register: response_createSecretGroup
 
-  - debug:
-      msg: "{{ response_createSecretGroup }}"
-
   - set_fact:
       secret_group_id: "{{ response_createSecretGroup.json.data.id }}"
-      
+
   when: "response_getSecretGroups_query_result|length == 0"
 
 - set_fact:
     secret_group_id: "{{ response_getSecretGroups_query_result[0].id }}"
   when: "response_getSecretGroups_query_result|length > 0"
-
-- debug:
-    msg: "{{ secret_group_id }}"
-
 
