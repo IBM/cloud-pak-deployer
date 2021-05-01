@@ -1,0 +1,26 @@
+---
+- name: Create secret Validate mandatory variables are defined
+  assert:
+    that:
+      - secret_name_path is defined
+
+- name: Validate secret exists in Vault Hashicorp
+  include_role: 
+    name: has-secret-hashicorp
+
+- block:
+  - name: Get the secret value
+    shell: "vault kv get -field=value {{ secret_name_path }}"
+    register: hashicorp_vault_get_secret_result
+  
+  - set_fact:
+      secret_value: "hashicorp_vault_get_secret_result.stdout"
+  
+  when: "has_secret == true"
+
+- set_fact:
+    secret_value: ""
+  when: "has_secret == false"
+
+- debug:
+    msg: "Secret {{ secret_name_path }} value {{ secret_value }}"
