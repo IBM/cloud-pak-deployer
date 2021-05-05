@@ -1,0 +1,38 @@
+---
+
+- name: Create secret Validate mandatory variables are defined
+  assert:
+    that:
+      - secret_group is defined
+      - secret_name is defined
+      - ibmcloud_vault_address is defined
+      - ibm_vault_iam_token is defined
+
+- name: Validate secret exists in Vault IBMCloud
+  include_role: 
+    name: has-secret-ibmcloud
+
+- block:
+  - name: Get Secret {{ secret_name }} from group {{ secret_group }}
+    uri:
+      url: "{{ ibmcloud_vault_address }}/v1/ibmcloud/arbitrary/secrets/groups/{{ secret_group_id }}/{{ secret_name }}"
+      headers:
+        X-Vault-Token: "{{ ibm_vault_token_content.auth.client_token }}"
+        Accept: "application/json"
+      status_code: 200
+    register: response_getSecret
+
+  - debug:
+      msg: {{ response_getSecret }}
+
+  - set_fact:
+      secret_value: ""
+
+  when: "has_secret == true"
+
+- set_fact:
+    secret_value: ""
+  when: "has_secret == false"
+
+- debug:
+    msg: "Secret {{ secret_name }} from group {{ secret_group }} value {{ secret_value }}"
