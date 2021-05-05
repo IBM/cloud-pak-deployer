@@ -10,9 +10,9 @@
       - ibmcloud_vault_address is defined
       - ibm_vault_token_content is defined
 
-- name: Get or Create the IBMVault Group ID
+- name: Validate if the secret already exists
   include_role: 
-     name: get-or-create-secret-group-ibmcloud
+     name: has-secret-ibmcloud
 
 - name: Create new secret {{ secret_name }} in group {{ secret_group }}
   uri:
@@ -29,6 +29,11 @@
       payload: "{{ secret_payload }}"
     status_code: 200
   register: response_createSecret
+  when: "has_secret == false"
+
+- debug: Secret {{ secret_name }} already exists
+    msg: "Secret {{ secret_name }} in group {{ secret_group }} already exists"
+  when: "has_secret == true"
 
 #- debug:
 #    msg: "Secret {{ secret_name }} successfully created on IBMCloud vault"
