@@ -1,0 +1,44 @@
+data "ibm_resource_group" "resource_group" {
+    name = "ibm"
+}
+
+{# start - shared services definition #}
+{% for service in yaml_config.get('saas_services') if service.service == 'db2' and service.state == 'present' %}
+{# 
+resource "ibm_resource_instance" "saas-services_{{ service.get('saas_service_name') }}" {
+    name              = "{{ service.get('saas_service_name') }}"
+    resource_group_id = data.ibm_resource_group.resource_group.id
+    service           = "dashdb-for-transactions"
+    plan              = "standard"
+    location          = "eu-de"
+    timeouts {
+        create = "60m"
+        update = "60m"
+        delete = "5m"
+    }
+}
+#}
+{% endfor %}
+{# end - shared services definition #}
+
+{% for roks_cluster in yaml_config.get('roks_clusters') %}
+{% set roks_name_modified = roks_cluster.roks_name | replace("-", "") %}
+
+resource "ibm_container_cluster" "{{ roks_name_modified }}" {
+    name              = "{{ roks_cluster.roks_name }}"
+    resource_group_id = data.ibm_resource_group.resource_group.id
+    datacenter        = "{{ roks_cluster.classic_datacenter }}"
+    default_pool_size = "{{ roks_cluster.roks_number_workers }}"
+    machine_type      = "{{ roks_cluster.worker_flavour }}"
+    hardware          = "shared"
+    kube_version      = "{{ roks_cluster.kube_version }}"
+    public_vlan_id    = "{{ iaas_vlans.public.id }}"
+    private_vlan_id   = "{{ iaas_vlans.private.id }}"
+    public_service_endpoint  = "true"
+    private_service_endpoint = "true"
+    entitlement       = "cloud_pak"
+    tags              = ["env:auto","pipeline:ansible"]
+}
+
+{% endfor %}
+

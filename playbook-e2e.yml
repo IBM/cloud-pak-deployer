@@ -7,28 +7,20 @@
   connection: local
   become: True
 
-  tasks:
-  - name: Validate mandatory variables are defined
-    assert:
-      that:
-        - vault_api_key is defined
-        - vault_type is defined
-        - vault_authentication_type is defined
-        - vault_url is defined
-
   roles:
-    - role: vault-connect
-    - role: vault-create-secret
-      vars:
-        secret_name: "secret_item6"
-        secret_payload: "A very secret value6!!"
-        secret_description: "The description of the secret_item6"
-        secret_group: "my_secret_group"
-    - role: vault-has-secret
-      vars:
-        secret_name: "secret_item6"
-        secret_group: "my_secret_group"
-    - role: vault-get-secret
-      vars:
-        secret_name: "secret_item6"
-        secret_group: "my_secret_group"
+    - role: validate-variables
+    # - role: vault-connect
+    # - role: vault-create-secret
+    #   vars:
+    #     secret_name: "secret_item6"
+    #     secret_payload: "A very secret value6!!"
+    #     secret_description: "The description of the secret_item6"
+    #     secret_group: "my_secret_group"
+    # - role: vault-has-secret
+    #   vars:
+    #     secret_name: "secret_item6"
+    #     secret_group: "my_secret_group"
+    # - role: vault-get-secret
+    #   vars:
+    #     secret_name: "secret_item6"
+    #     secret_group: "my_secret_group"
