@@ -1,0 +1,25 @@
+data "ibm_resource_group" "resource_group" {
+    name = "ibm"
+}
+
+{% for roks_cluster in roks_config.get('roks') %}
+{% set roks_name_modified = roks_cluster.name | replace("-", "") %}
+
+resource "ibm_container_cluster" "{{ roks_name_modified }}" {
+    name              = "{{ roks_cluster.name }}"
+    resource_group_id = data.ibm_resource_group.resource_group.id
+    datacenter        = "{{ roks_cluster.classic_datacenter }}"
+    default_pool_size = "{{ roks_cluster.worker_count }}"
+    machine_type      = "{{ roks_cluster.worker_flavour }}"
+    hardware          = "shared"
+    kube_version      = "{{ roks_cluster.kube_version }}"
+    public_vlan_id    = "{{ iaas_vlans.public.id }}"
+    private_vlan_id   = "{{ iaas_vlans.private.id }}"
+    public_service_endpoint  = "true"
+    private_service_endpoint = "true"
+    entitlement       = "cloud_pak"
+    tags              = ["env:auto","pipeline:ansible"]
+}
+
+{% endfor %}
+
