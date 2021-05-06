@@ -66,17 +66,17 @@
       shell: "ibmcloud iam service-api-keys {{ ibm_cloud_icr_service_id[0].id }} | grep -i 'ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key' | wc -l"
       register: ibmcloud_iam_service_api_keys_result
 
-    - name: Delete the service_api_key ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key  if it exists
-      command: "ibmcloud iam service-api-key-delete ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key {{ ibm_cloud_icr_service_id[0].id }} -f"
+    - name: Delete the service_api_key ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key  if it exists
+      command: "ibmcloud iam service-api-key-delete ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key {{ ibm_cloud_icr_service_id[0].id }} -f"
       when: "ibmcloud_iam_service_api_keys_result.stdout == '1'"
 
-    - name: Create IAM service-api-key ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key for IBM Container Registry namespace {{ ibm_cloud_cr[0].saas_service_name }}
-      command: "ibmcloud iam service-api-key-create ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key ICR-{{ ibm_cloud_cr[0].saas_service_name }}-id --file {{ cp4d_automation_temp_dir.path }}/ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key.txt --description 'API key for service ID ICR-{{ ibm_cloud_cr[0].saas_service_name }}-id'"
+    - name: Create IAM service-api-key ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key for IBM Container Registry namespace {{ current_cp4d_cluster.container_registry_namespace }}
+      command: "ibmcloud iam service-api-key-create ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id --file {{ icr_temp_dir.path }}/ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key.txt --description 'API key for service ID ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id'"
       register: create_service_api_key_result
 
-    - name: Read the generated file {{ cp4d_automation_temp_dir.path }}/ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key.txt
+    - name: Read the generated file {{ icr_temp_dir.path }}/ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key.txt
       include_vars:
-        file: "{{ cp4d_automation_temp_dir.path }}/ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key.txt"
+        file: "{{ icr_temp_dir.path }}/ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key.txt"
         name: ibmcloud_cr_key
 
     - name: Store the ICR key into the vault
@@ -91,6 +91,6 @@
     - name: Delete the generated ICR API key file
       file:
         state: absent
-        path: "{{ cp4d_automation_temp_dir.path }}/ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key.txt"
+        path: "{{ icr_temp_dir.path }}/ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key.txt"
 
   when: "has_secret == false"
