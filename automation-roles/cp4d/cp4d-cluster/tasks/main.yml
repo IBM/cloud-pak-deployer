@@ -35,9 +35,9 @@
 #   loop_control:
 #     loop_var: cp4d_service
 
-# - name: Loop through each cp4d_service of the OpenShift Project {{ current_cp4d_cluster.project }} from ROKS cluster {{ current_cp4d_cluster.roks_name }}
-#   include_role:
-#     name: cp4d-service
-#   loop: "{{ range(0,9)|list }}"
-#   loop_control:
-#     loop_var: service_number
+- name: Loop through each cp4d_service of the OpenShift Project {{ current_cp4d_cluster.project }} from ROKS cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+  include_role:
+    name: cp4d-service
+  loop: "{{ current_cp4d_cluster.cartridges }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge
