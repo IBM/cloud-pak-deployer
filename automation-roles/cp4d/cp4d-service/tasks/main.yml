@@ -55,7 +55,7 @@
       delay: 10
       until: cpd_prepare_result.rc==0
 
-    - name: Install the Cloud Pak For Data service {{service_number}}. (This task can take a long time)
+    - name: Install the Cloud Pak For Data cartridge {{current_cp4d_cartridge.name}}. (This task can take a long time)
       shell: |
           runcpdinstall () { \
             {{ cp4d_cli_dir }}/cpd-cli install \
@@ -77,3 +77,7 @@
       until: cpd_install_result.rc==0
 
   when: cp4d_cartridge_status_result.stdout == 'absent'
+
+- name: Configure CP4D admin password and store in vault
+  include_tasks: configure-cpd-admin-password.yml
+  when: cp4d_configure_cpd_admin == 0
