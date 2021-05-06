@@ -2,21 +2,21 @@
 # tasks file for prepare_project
 
 - debug:
-    msg: "Handling Project: {{ current_cp4d_config.project }}"
+    msg: "Handling Project: {{ current_cp4d_cluster.project }}"
 
 - tempfile:
     state: directory
   register: cp4d_automation_temp_dir
 
 - name: Validate if OpenShift project exists
-  shell: "oc get projects | grep -i '^{{ current_cp4d_config.project }}' | wc -l"
+  shell: "oc get projects | grep -i '^{{ current_cp4d_cluster.project }}' | wc -l"
   register: cp4d_cluster_project_exists
 
 - name: Create OpenShift Project if it does not exist
-  command: "oc new-project {{ current_cp4d_config.project }}"
+  command: "oc new-project {{ current_cp4d_cluster.project }}"
   when: cp4d_cluster_project_exists.stdout == "0"
 
-- name: Set OpenShift project {{ current_cp4d_config.project }} active
+- name: Set OpenShift project {{ current_cp4d_cluster.project }} active
   command: "oc project {{ cp4d_config[0].project }}"
   when: not cp4d_cluster_project_exists.stdout == "0"
 
@@ -24,29 +24,29 @@
   include_role: 
      name: icr-api-key
 
-- name: Get key for ICR {{ current_cp4d_config.container_registry_namespace }} exists in the vault
+- name: Get key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "icr_api_key_{{ current_cp4d_config.container_registry_namespace }}"
-    secret_group: "icr-{{ current_cp4d_config.container_registry_namespace }}"     
+    secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+    secret_group: "icr-{{ current_cp4d_cluster.container_registry_namespace }}"     
 
 - name: Validate ICR secret is available
-  fail: msg="ICR key icr_api_key_{{ current_cp4d_config.container_registry_namespace }} value from group icr-{{ current_cp4d_config.container_registry_namespace }} is empty"
+  fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group icr-{{ current_cp4d_cluster.container_registry_namespace }} is empty"
   when: secret_value== ""
 
-- name: Validate if secret icr-{{ current_cp4d_config.project }} exists
-  shell: "oc get secrets --namespace {{ current_cp4d_config.project }} | grep -i '^icr-{{ current_cp4d_config.project }}' | wc -l"
+- name: Validate if secret icr-{{ current_cp4d_cluster.project }} exists
+  shell: "oc get secrets --namespace {{ current_cp4d_cluster.project }} | grep -i '^icr-{{ current_cp4d_cluster.project }}' | wc -l"
   register: icr_secret_exists
 
-- name: Create the secret icr-{{ current_cp4d_config.project }} if it does not exists
-  command: "oc --namespace {{ current_cp4d_config.project }}  create secret docker-registry icr-{{ current_cp4d_config.project }} --docker-server={{ ibm_cloud_cr_server }} --docker-username=iamapikey --docker-password={{ secret_value }}  --docker-email=a@b.c"
+- name: Create the secret icr-{{ current_cp4d_cluster.project }} if it does not exists
+  command: "oc --namespace {{ current_cp4d_cluster.project }}  create secret docker-registry icr-{{ current_cp4d_cluster.project }} --docker-server={{ ibm_cloud_cr_server }} --docker-username=iamapikey --docker-password={{ secret_value }}  --docker-email=a@b.c"
   when: icr_secret_exists.stdout == "0"
 
-- name: Validate if the secret icr-{{ current_cp4d_config.project }} is already patched to the default service account
-  shell: "oc --namespace {{ current_cp4d_config.project }} describe sa default | sed -e 's/^[ \t]*//' | grep -i '^icr-{{ current_cp4d_config.project }}' | wc -l"
+- name: Validate if the secret icr-{{ current_cp4d_cluster.project }} is already patched to the default service account
+  shell: "oc --namespace {{ current_cp4d_cluster.project }} describe sa default | sed -e 's/^[ \t]*//' | grep -i '^icr-{{ current_cp4d_cluster.project }}' | wc -l"
   register: default_sa_image_pull_secret_exists
 
-- name: Patch the OpenShift Project {{ current_cp4d_config.project }} default service account image pull secret with the created secret icr-{{ current_cp4d_config.project }}
-  command: "oc patch --namespace {{ current_cp4d_config.project }} serviceaccount/default --type='json' -p='[{\"op\":\"add\",\"path\":\"/imagePullSecrets/-\",\"value\":{\"name\":\"icr-{{ current_cp4d_config.project }}\"}}]'"
+- name: Patch the OpenShift Project {{ current_cp4d_cluster.project }} default service account image pull secret with the created secret icr-{{ current_cp4d_cluster.project }}
+  command: "oc patch --namespace {{ current_cp4d_cluster.project }} serviceaccount/default --type='json' -p='[{\"op\":\"add\",\"path\":\"/imagePullSecrets/-\",\"value\":{\"name\":\"icr-{{ current_cp4d_cluster.project }}\"}}]'"
   when: default_sa_image_pull_secret_exists.stdout == "0"
