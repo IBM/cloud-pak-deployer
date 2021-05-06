@@ -5,12 +5,12 @@
     state: directory
   register: icr_temp_dir
 
-- name: Validate if the key for ICR {{ current_cp4d_config.container_registry_namespace }} exists in the vault
+- name: Validate if the key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
   include_role: 
     name: vault-has-secret
   vars:
-    secret_name: "icr_api_key_{{ current_cp4d_config.container_registry_namespace }}"
-    secret_group: "icr-{{ current_cp4d_config.container_registry_namespace }}"
+    secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+    secret_group: "icr-{{ current_cp4d_cluster.container_registry_namespace }}"
 
 - name: Create and store the ICR API Key into the vault
   block:
@@ -22,16 +22,16 @@
     - set_fact:
         ibm_cloud_iam_service_ids: "{{ ibm_cloud_iam_service_ids_json.stdout | from_json }}"
 
-    - name: Attempt to get service-id ICR-{{ current_cp4d_config.container_registry_namespace }}-id
+    - name: Attempt to get service-id ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id
       set_fact:
         ibm_cloud_icr_service_id: "{{ ibm_cloud_iam_service_ids|json_query(query_ibm_cloud_icr) }}"
       vars:
-        query_ibm_cloud_icr: "[?name=='ICR-{{ current_cp4d_config.container_registry_namespace }}-id']"
+        query_ibm_cloud_icr: "[?name=='ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id']"
 
     - name: Create a new ibmcloud iam service-id and retrieve details
       block:
-        - name: Create ibmcloud iam service-id ICR-{{ current_cp4d_config.container_registry_namespace }}-id
-          command: "ibmcloud iam service-id-create ICR-{{ current_cp4d_config.container_registry_namespace }}-id --description 'Service ID for IBM Cloud Container Registry {{ current_cp4d_config.container_registry_namespace }}'"
+        - name: Create ibmcloud iam service-id ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id
+          command: "ibmcloud iam service-id-create ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id --description 'Service ID for IBM Cloud Container Registry {{ current_cp4d_cluster.container_registry_namespace }}'"
           register: create_service_id_result
 
         - name: Get all IBM Cloud service ids
@@ -41,29 +41,29 @@
         - set_fact:
             ibm_cloud_iam_service_ids: "{{ ibm_cloud_iam_service_ids_json.stdout | from_json }}"
 
-        - name: Get service-id ICR-{{ current_cp4d_config.container_registry_namespace }}-id
+        - name: Get service-id ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id
           set_fact:
             ibm_cloud_icr_service_id: "{{ ibm_cloud_iam_service_ids|json_query(query_ibm_cloud_icr) }}"
           vars:
-            query_ibm_cloud_icr: "[?name=='ICR-{{ current_cp4d_config.container_registry_namespace }}-id']"
+            query_ibm_cloud_icr: "[?name=='ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id']"
           failed_when: "ibm_cloud_icr_service_id|length == 0"
 
       when: "ibm_cloud_icr_service_id|length == 0"
 
-    - name: Get service-policy for service-id ICR-{{ current_cp4d_config.container_registry_namespace }}-id
+    - name: Get service-policy for service-id ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id
       command: "ibmcloud iam service-policies {{ ibm_cloud_icr_service_id[0].id }} --output json"
       register: ibm_cloud_iam_service_policies_json
 
     - set_fact:
         ibm_cloud_iam_service_policies: "{{ ibm_cloud_iam_service_policies_json.stdout | from_json }}"
 
-    - name: Create ibmcloud iam service-policy for service-id ICR-{{ current_cp4d_config.container_registry_namespace }}-id
-      command: "ibmcloud iam service-policy-create ICR-{{ current_cp4d_config.container_registry_namespace }}-id --roles Manager --service-name container-registry  --resource-type namespace --resource {{ current_cp4d_config.container_registry_namespace }} --region {{ ibm_cloud_cr_region }}"
+    - name: Create ibmcloud iam service-policy for service-id ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id
+      command: "ibmcloud iam service-policy-create ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id --roles Manager --service-name container-registry  --resource-type namespace --resource {{ current_cp4d_cluster.container_registry_namespace }} --region {{ ibm_cloud_cr_region }}"
       register: create_service_policy_result
       when: "ibm_cloud_iam_service_policies|length == 0"
 
-    - name: Get existing service api key ICR-{{ current_cp4d_config.container_registry_namespace }}-key for service-id ICR-{{ current_cp4d_config.container_registry_namespace }}-id
-      shell: "ibmcloud iam service-api-keys {{ ibm_cloud_icr_service_id[0].id }} | grep -i 'ICR-{{ current_cp4d_config.container_registry_namespace }}-key' | wc -l"
+    - name: Get existing service api key ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key for service-id ICR-{{ current_cp4d_cluster.container_registry_namespace }}-id
+      shell: "ibmcloud iam service-api-keys {{ ibm_cloud_icr_service_id[0].id }} | grep -i 'ICR-{{ current_cp4d_cluster.container_registry_namespace }}-key' | wc -l"
       register: ibmcloud_iam_service_api_keys_result
 
     - name: Delete the service_api_key ICR-{{ ibm_cloud_cr[0].saas_service_name }}-key  if it exists
@@ -83,10 +83,10 @@
       include_role:
         name: vault_create_secret
       vars:
-        secret_name: "icr_api_key_{{ current_cp4d_config.container_registry_namespace }}"
-        secret_description: "IBM Container Registry API key for namespace {{ current_cp4d_config.container_registry_namespace }}" # description is optional
+        secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+        secret_description: "IBM Container Registry API key for namespace {{ current_cp4d_cluster.container_registry_namespace }}" # description is optional
         secret_payload: "{{ ibmcloud_cr_key.apikey }}"
-        secret_group: "icr-{{ current_cp4d_config.container_registry_namespace }}"
+        secret_group: "icr-{{ current_cp4d_cluster.container_registry_namespace }}"
 
     - name: Delete the generated ICR API key file
       file:
