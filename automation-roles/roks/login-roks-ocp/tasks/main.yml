@@ -1,0 +1,24 @@
+---
+
+- name: Validate if the OpenShift cluster {{ roks_name }} exists
+  command: "ibmcloud oc cluster get -c {{ roks_name }} --output json"
+  register: ibmcloud_oc_cluster_result_json
+
+- set_fact:
+    ibmcloud_oc_cluster: "{{ ibmcloud_oc_cluster_result_json.stdout | from_json }}"
+
+- debug:
+    msg: "{{ ibmcloud_oc_cluster }}"
+
+- name: Set terminal context for OpenShift cluster {{ roks_name }}
+  command: "ibmcloud oc cluster config -c {{ roks_name }}  --admin"
+
+- name: Login to OpenShift ROKS cluster
+  command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ ibmcloud_oc_cluster.publicServiceEndpointURL }}"
+  register: oc_login_result
+  retries: 360
+  delay: 10
+  until: oc_login_result.rc==0
+
+- debug:
+    msg: "{{ oc_login_result }}"

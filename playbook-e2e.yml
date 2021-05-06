@@ -8,9 +8,19 @@
   become: True
 
   roles:
+    - role: vault-connect
     - role: validate-variables
     #- role: terraform-classic
     - role: cli-installs
+
+  tasks:
+  - name: Loop through each cp4d entry
+    include_role:
+      name: cp4d-cluster
+    loop: "{{ cp4d_config }}"
+    loop_control:
+      loop_var: current_cp4d_cluster
+
     # - role: vault-connect
     # - role: vault-create-secret
     #   vars:
