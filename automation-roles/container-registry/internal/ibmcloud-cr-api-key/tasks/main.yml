@@ -5,6 +5,11 @@
     state: directory
   register: icr_temp_dir
 
+- name: Validate if IBM Container Registry {{ current_cp4d_cluster.container_registry_namespace }} exists
+  shell: "ibmcloud cr namespace-list | grep -w '^{{ current_cp4d_cluster.container_registry_namespace }} ' | wc -l"
+  register: ibmcloud_cr_exists_result
+  failed_when: "not ibmcloud_cr_exists_result.stdout == '1'"
+
 - name: Validate if the key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
   include_role: 
     name: vault-has-secret

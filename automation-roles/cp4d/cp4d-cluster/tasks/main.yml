@@ -3,11 +3,6 @@
 - debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
-- name: Validate if IBM Container Registry {{ current_cp4d_cluster.container_registry_namespace }} exists
-  shell: "ibmcloud cr namespace-list | grep -w '^{{ current_cp4d_cluster.container_registry_namespace }} ' | wc -l"
-  register: ibmcloud_cr_exists_result
-  failed_when: "not ibmcloud_cr_exists_result.stdout == '1'"
-
 - name: Login to the OpenShift cluster
   include_role:
     name: login-roks-ocp
@@ -20,7 +15,7 @@
 
 - name: Prepare the NFS Storage to {{ nfs_file_storage_name }}
   include_role:
-    name: nfs-storage-ibmcloud
+    name: nfs-storage
 
 
 # - name: Check for cp4d service definitions, skip when empty

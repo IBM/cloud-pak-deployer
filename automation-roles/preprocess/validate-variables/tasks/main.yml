@@ -13,6 +13,7 @@
       - cp4d_cli_dir is defined
       - ibm_cp4d_entitlement_key is defined
       - ibm_cr_namespace is defined
+      - cloud_platform is defined
 
 - include_vars:
     file: "provision-configuration/roks.yaml"
@@ -21,6 +22,10 @@
 - include_vars:
     file: "provision-configuration/cp4d.yaml"
     name: cp4d_config
+
+- name: Validate cloud_platform is supported is supported
+  fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
+  when: "cloud_platform not in supported_cloud_platform_types"
 
 - debug:
     msg: "{{ roks_config.roks[0] }}"
