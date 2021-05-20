@@ -1,0 +1,24 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - current_roks_cluster is defined
+
+
+- include_vars:
+    file: "files/worker_flavour.yaml"
+    name: worker_flavour
+
+- name: Set worker_flavour configuration to json
+  set_fact:
+    worker_flavour_json: "{{ worker_flavour | to_json }}"
+
+- name: Get the worker flavour
+  set_fact:
+    worker_flavour_implementation: "{{ worker_flavour_json | json_query(workerquery) }} "
+  vars: 
+    workerquery: "[ ? size=='{{ current_rosk_cluster.worker_flavour }}'].implementation"
+
+- debug:
+    msg: "{{ worker_flavour_implementation }}"
+
