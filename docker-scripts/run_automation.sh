@@ -87,4 +87,6 @@ echo ""
 echo "Starting Automation script..."
 echo ""
 
+ls -al
+
 ansible-playbook -i ${INV_DIR} playbook-e2e.yml -e input_dir=${CONFIG_DIR} -e ansible_pipeline_apikey=${IBM_CLOUD_API_KEY} "$@"
