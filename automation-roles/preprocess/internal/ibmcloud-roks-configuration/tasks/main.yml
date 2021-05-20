@@ -18,9 +18,6 @@
   vars: 
     workerquery: "[? size=='{{ current_roks_cluster.worker_flavour }}'].implementation"
 
-#- set_fact:
-#    current_roks_cluster2: "{{ current_roks_cluster | combine({'worker_flavour':worker_flavour_implementation_query[0]}) }}"
-
 - set_fact:
     current_roks_cluster_worker_flavour: "{{ worker_flavour_implementation_query.0 }}"
 - set_fact:
@@ -29,10 +26,6 @@
 - name: Validate worker count minimum threshold is met
   fail: msg="Minimum worker count must be {{ worker_count.worker_count_min_threshold }}. Currently set at {{ current_roks_cluster_worker_count }}"
   when: "current_roks_cluster_worker_count|int < worker_count.worker_count_min_threshold"
-
-
-
-
 
 - debug:
     msg: "Worker Flavour: {{ current_roks_cluster_worker_flavour }}"
