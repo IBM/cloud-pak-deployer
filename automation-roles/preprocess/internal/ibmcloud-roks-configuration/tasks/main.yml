@@ -7,19 +7,19 @@
 
 - include_vars:
     file: "files/worker_flavour.yaml"
-    name: worker_flavour
+    name: worker_flavours
 
 - name: Set worker_flavour configuration to json
   set_fact:
-    worker_flavour_json: "{{ worker_flavour | to_json }}"
+    worker_flavours_json: "{{ worker_flavours | to_json }}"
 
 - debug:
-    msg: "{{ worker_flavour_json }}"
+    msg: "{{ worker_flavours_json }}"
 
 
 - name: Get the worker flavour
   set_fact:
-    worker_flavour_implementation: "{{ worker_flavour_json | json_query(workerquery) }} "
+    worker_flavour_implementation: "{{ worker_flavours_json.worker_flavour | json_query(workerquery) }} "
   vars: 
     workerquery: "[? size=='{{ current_roks_cluster.worker_flavour }}'].implementation"
 
