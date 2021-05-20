@@ -4,27 +4,25 @@
     that:
       - current_roks_cluster is defined
 
-
 - include_vars:
     file: "files/worker_flavour.yaml"
     name: worker_flavours
 
-- name: Set worker_flavour configuration to json
-  set_fact:
-    worker_flavours_json: "{{ worker_flavours.worker_flavour | to_json }}"
-
-- debug:
-    msg: "{{ worker_flavours.worker_flavour }}"
-
-- debug:
-    msg: "{{current_roks_cluster.worker_flavour }}"
-
 - name: Get the worker flavour
   set_fact:
-    worker_flavour_implementation: "{{ worker_flavours.worker_flavour | json_query(workerquery) }} "
+    worker_flavour_implementation_query: "{{ worker_flavours.worker_flavour | json_query(workerquery) }} "
   vars: 
     workerquery: "[? size=='{{ current_roks_cluster.worker_flavour }}'].implementation"
 
+- name: Set the worker flavour
+  
 - debug:
-    msg: "This is the selected implementation: {{ worker_flavour_implementation.0 }}"
+    msg: "This is the selected implementation: {{ worker_flavour_implementation_query.0 }}"
+
+
+- set_fact:
+    current_roks_cluster: "{{ current_roks_cluster | combine('worker_flavour': worker_flavour_implementation_query[0] }}"
+
+- debug:
+    msg: "{{ current_roks_cluster }}"
 
