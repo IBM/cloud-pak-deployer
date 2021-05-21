@@ -91,5 +91,5 @@ cd /automation_script
 
 ls -al ${INV_DIR}
 
-ansible-playbook -i ${INV_DIR} playbook-e2e.yml --extra-vars input_dir=${CONFIG_DIR} --extra-vars vault_url=${vault_url} --extra-vars iaas_classic_username=${iaas_classic_username} --extra-vars iaas_classic_api_key=${iaas_classic_api_key} --extra-vars ibmcloud_api_key=${ibmcloud_api_key} --extra-vars vault_api_key=${vault_api_key} --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
+ansible-playbook -i ${INV_DIR}/inventory-acme-uat-dev.inv playbook-e2e.yml --extra-vars input_dir=${CONFIG_DIR} --extra-vars vault_url=${vault_url} --extra-vars iaas_classic_username=${iaas_classic_username} --extra-vars iaas_classic_api_key=${iaas_classic_api_key} --extra-vars ibmcloud_api_key=${ibmcloud_api_key} --extra-vars vault_api_key=${vault_api_key} --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
 
