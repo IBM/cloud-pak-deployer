@@ -85,3 +85,17 @@
 - name: Configure CP4D LDAP connectivity
   include_tasks: configure-cpd-ldap-integration.yml
   when: cp4d_configure_cpd_ldap == 0
+
+- name: Provision Data Virtualization instance if service dv is requested
+  block:
+    - name: Run Data Virtualization instance playbook
+      include_role:
+        name: provision_dv_instance
+  when: current_cp4d_cartridge.name != None and current_cp4d_cartridge.name == 'dv'
+
+- name: Provision Cognos instance if service ca is requested
+  block:
+    - name: Run Cognos Analytics instance playbook
+      include_role:
+        name: provision_cognos_instance
+  when: current_cp4d_cartridge.name != None and current_cp4d_cartridge.name == 'ca'
