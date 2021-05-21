@@ -90,10 +90,10 @@ echo ""
 cd /automation_script
 
 ansible-playbook -i ${INV_DIR} playbook-e2e.yml \ 
-  -e input_dir=${CONFIG_DIR} \
-  -e vault_url=${vault_url} \
-  -e iaas_classic_username=${iaas_classic_username} \
-  -e iaas_classic_api_key=${iaas_classic_api_key} \
-  -e ibmcloud_api_key=${ibmcloud_api_key} \
-  -e ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
+--extra-vars input_dir=${CONFIG_DIR} \
+--extra-vars vault_url=${vault_url} \
+--extra-vars iaas_classic_username=${iaas_classic_username} \
+--extra-vars iaas_classic_api_key=${iaas_classic_api_key} \
+--extra-vars ibmcloud_api_key=${ibmcloud_api_key} \
+--extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
 
