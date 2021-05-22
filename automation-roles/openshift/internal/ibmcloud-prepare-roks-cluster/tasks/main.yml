@@ -1,0 +1,26 @@
+# tasks file for roks-cluster
+---
+
+- name: Make a temporary work folder available
+  tempfile:
+    state: directory
+  register: cp4d_automation_temp_dir
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: login_ocp
+
+- name: Check if the daemon set {{ oc_daemon_set_name }} is available
+  shell: "oc get daemonsets -n kube-system | grep -i '^{{ oc_daemon_set_name }}' | wc -l"
+  register: oc_daemon_set_exists
+
+- name: Configure daemon set {{ oc_daemon_set_name }}
+  block:
+    - name: Create {{ oc_daemon_set_name }} yaml
+      template:
+        src: daemon_set.yaml.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/daemon_set.yaml"
+
+    - name: Create daemon set {{ oc_daemon_set_name }}
+      shell: "oc create -f {{ cp4d_automation_temp_dir.path }}/daemon_set.yaml"
+  when: oc_daemon_set_exists.stdout == "0"
