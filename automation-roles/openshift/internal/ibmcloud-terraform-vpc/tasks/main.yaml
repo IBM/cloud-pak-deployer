@@ -1,5 +1,5 @@
 ---
-- name: Create temporary terraform directory if it does not exist
+- name: "Create Terraform directory {{status_dir}}/terraform"
   file:
     path: "{{status_dir}}/terraform"
     state: directory
@@ -9,26 +9,26 @@
   args:
     executable: python3
   register: generate_management_output
-- name: copy ibm-provider config to the terraform dir
+- name: "Copy ibm-provider config to Terraform directory {{status_dir}}/terraform"
   template:
     src: 'provider.tf.j2'
     dest: '{{status_dir}}/terraform/provider.tf'
-- name: copy variables to the terraform dir
+- name: "Copy variables to Terraform directory {{status_dir}}/terraform"
   template:
     src: 'variables.auto.tfvars.j2'
     dest: '{{status_dir}}/terraform/variables.auto.tfvars'
 
-- name: Run terraform init in terraform_temp
+- name: "Run terraform init in Terraform directory {{status_dir}}/terraform"
   shell: 
     chdir: '{{status_dir}}/terraform'
     cmd: 'terraform init'
 
-- name: Run terraform plan in terraform_temp 
+- name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check apply log"
   shell: 
     chdir: '{{status_dir}}/terraform'
     cmd: bash -c "terraform plan 2>&1 >> apply.log"
 
-- name: Run terraform apply in terraform_temp 
+- name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check apply.log"
   shell: 
     chdir: '{{status_dir}}/terraform'
     cmd: bash -c "terraform apply -auto-approve 2>&1 >> apply.log"
