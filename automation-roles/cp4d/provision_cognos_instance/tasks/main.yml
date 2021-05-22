@@ -6,7 +6,7 @@
         msg: "Variable cp4d_ca_provision_cognos_instance set to {{ cp4d_ca_provision_cognos_instance }}, ending play provision_cognos_instance"
 
 - debug:
-    var: current_cp4d_service
+    var: current_cp4d_cartridge
 
 - when: "cp4d_ca_provision_cognos_instance == true"
   block:
@@ -42,29 +42,29 @@
   - when: "cognos_lookup_result_json.total_count == 0"
     block:
     - debug:
-        msg: "Using DB2 SAAS service {{ current_cp4d_cartridge.ca_meta_db2 }} for Cognos Analytics Repository database"
+        msg: "Using DB2 SAAS service {{ current_cp4d_cartridge.metastore_ref }} for Cognos Analytics Repository database"
 
-    - name: Check availability of DB2 service instance {{ current_cp4d_cartridge.ca_meta_db2 }}
-      shell: "ibmcloud resource service-instance {{ current_cp4d_cartridge.ca_meta_db2 }}"
+    - name: Check availability of DB2 service instance {{ current_cp4d_cartridge.metastore_ref }}
+      shell: "ibmcloud resource service-instance {{ current_cp4d_cartridge.metastore_ref }}"
 
-    - name: Check availability of DB2 service key {{ current_cp4d_cartridge.ca_meta_db2 }}-Credentials for service instance {{ current_cp4d_cartridge.ca_meta_db2 }}
-      shell: "ibmcloud resource service-keys --instance-name {{ current_cp4d_cartridge.ca_meta_db2 }} | grep {{ current_cp4d_cartridge.ca_meta_db2 }}-Credentials | wc -l"
+    - name: Check availability of DB2 service key {{ current_cp4d_cartridge.metastore_ref }}-Credentials for service instance {{ current_cp4d_cartridge.metastore_ref }}
+      shell: "ibmcloud resource service-keys --instance-name {{ current_cp4d_cartridge.metastore_ref }} | grep {{ current_cp4d_cartridge.metastore_ref }}-Credentials | wc -l"
       register: db2_service_key_lookup_result
 
     - when: "not db2_service_key_lookup_result.stdout == '0'"
       block:
         - name: "Skip provision Cognos Analytics instance"
           debug:
-            msg: "The DB service instance {{ current_cp4d_cartridge.ca_meta_db2 }} already contains DB2 service key {{ current_cp4d_cartridge.ca_meta_db2 }}-Credentials. Ensure this database is not used by a different CA instance. Delete the DB2 service key and re-run."
+            msg: "The DB service instance {{ current_cp4d_cartridge.metastore_ref }} already contains DB2 service key {{ current_cp4d_cartridge.metastore_ref }}-Credentials. Ensure this database is not used by a different CA instance. Delete the DB2 service key and re-run."
 
     - when: "db2_service_key_lookup_result.stdout == '0'"
       block:
       - name: Create DB2 service key {{ cp4d_ca_db2_service_key_name }} if not available
-        shell: "ibmcloud resource service-key-create {{ current_cp4d_cartridge.ca_meta_db2 }}-Credentials --instance-name {{ current_cp4d_cartridge.ca_meta_db2 }}"
+        shell: "ibmcloud resource service-key-create {{ current_cp4d_cartridge.metastore_ref }}-Credentials --instance-name {{ current_cp4d_cartridge.metastore_ref }}"
         when: db2_service_key_lookup_result.stdout == "0"
 
       - name: Get DB2 service key {{ current_cp4d_service['cp4d_service']['service_name'] }}
-        shell: "ibmcloud resource service-key {{ current_cp4d_cartridge.ca_meta_db2 }}-Credentials --output json"
+        shell: "ibmcloud resource service-key {{ current_cp4d_cartridge.metastore_ref }}-Credentials --output json"
         register: db2_service_key_json
 
       #- debug:
