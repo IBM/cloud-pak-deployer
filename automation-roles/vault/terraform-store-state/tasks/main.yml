@@ -1,0 +1,44 @@
+---
+# tasks file for terraform-sotre-state
+- set_fact:
+    tf_state_secret_name: "{{ cp4d_project_openshift_cluster_name }}-terraform-tfstate"
+    tf_state_content: "{{ lookup('file', status_dir+'/terraform/terraform.tfstate') | b64encode}}"
+
+- name: Validate if existing terraform state files exist in the vault
+  include_role:
+    name: vault_get_secret
+  vars:
+    secret_name: "{{ tf_state_secret_name }}"
+    secret_group: "{{ cp4d_project_openshift_cluster_name }}" 
+
+- name: Write the tf_state to the vault, delete existing state
+  block:
+
+    # - name: Delete {{ tf_state_secret_name }} if it exists
+    #   include_role:
+    #     name: "vault_delete_secret"
+    #   vars:
+    #       secret_name: "{{ tf_state_secret_name }}"
+    #       secret_group: "{{ cp4d_project_openshift_cluster_name }}" 
+    #   when: "not secret_value== ''"
+
+    - name: Store the terraform tfstate file as {{ tf_state_secret_name }}
+      include_role:
+        name: vault-create-secret
+      vars:
+        secret_name: "{{ tf_state_secret_name }}"
+        secret_description: "Terraform tfstate file for ROKS Cluster {{ cp4d_project_openshift_cluster_name }}" # description is optional
+        secret_payload: "{{ tf_state_content }}"
+        secret_group: "{{ cp4d_project_openshift_cluster_name }}"
+
+    # - name: Delete the file {{ status_dir }}/terraform/terraform.tfstate
+    #   ansible.builtin.file:
+    #     path: "{{ status_dir }}/terraform/terraform.tfstate"
+    #     state: absent
+
+    # - name: Delete the file {{ status_dir }}/terraform/terraform.tfstate.backup
+    #   ansible.builtin.file:
+    #     path: "{{ status_dir }}/terraform/terraform.tfstate.backup"
+    #     state: absent
+
+  when:  "tf_state_content | length > 0"
