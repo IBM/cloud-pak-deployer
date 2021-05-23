@@ -119,6 +119,7 @@ fi
 echo ""
 echo "Starting Automation script..."
 echo ""
+ANSIBLE_CONFIG=${SCRIPT_DIR}/../ansible.cfg
 
 ansible-playbook -i ${INV_DIR} ${SCRIPT_DIR}/../playbook-e2e.yml --extra-vars input_dir=${CONF_DIR} --extra-vars iaas_classic_username=${iaas_classic_username} --extra-vars iaas_classic_api_key=${iaas_classic_api_key} --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
 
