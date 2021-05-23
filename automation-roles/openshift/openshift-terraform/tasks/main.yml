@@ -13,6 +13,14 @@
     - name: Provision OpenShift on IBM Cloud Classic Infrastructure
       include_role: 
         name: ibmcloud-terraform-classic
+      when: roks_config.roks[0].infrastructure.type == "classic"
+  when: "cloud_platform == 'ibm-cloud'"
+
+    
+- name: Provision OpenShift on IBM Cloud VPC Infrastructure
+   include_role: 
+      name: ibmcloud-terraform-vpc
+    when: roks_config.roks[0].infrastructure.type == "vpc"
   when: "cloud_platform == 'ibm-cloud'"
 
 - name: Store the Terraform tfstate file in the vault

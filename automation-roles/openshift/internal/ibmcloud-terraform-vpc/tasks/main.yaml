@@ -1,0 +1,34 @@
+---
+- name: "Create Terraform directory {{status_dir}}/terraform"
+  file:
+    path: "{{status_dir}}/terraform"
+    state: directory
+
+- name: Run pre-processing script
+  script: scripts/generate_management.py {{input_dir}} "{{status_dir}}/terraform/main.tf.json"
+  args:
+    executable: python3
+  register: generate_management_output
+- name: "Copy ibm-provider config to Terraform directory {{status_dir}}/terraform"
+  template:
+    src: 'provider.tf.j2'
+    dest: '{{status_dir}}/terraform/provider.tf'
+- name: "Copy variables to Terraform directory {{status_dir}}/terraform"
+  template:
+    src: 'variables.auto.tfvars.j2'
+    dest: '{{status_dir}}/terraform/variables.auto.tfvars'
+
+- name: "Run terraform init in Terraform directory {{status_dir}}/terraform"
+  shell: 
+    chdir: '{{status_dir}}/terraform'
+    cmd: 'terraform init'
+
+- name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check apply log"
+  shell: 
+    chdir: '{{status_dir}}/terraform'
+    cmd: bash -c "terraform plan 2>&1 >> apply.log"
+
+- name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check apply.log"
+  shell: 
+    chdir: '{{status_dir}}/terraform'
+    cmd: bash -c "terraform apply -auto-approve 2>&1 >> apply.log"

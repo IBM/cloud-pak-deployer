@@ -10,11 +10,18 @@
 - debug:
     msg: "{{ ibmcloud_oc_cluster }}"
 
+- set_fact:
+    roks_publicEndpoint: "{{ ibmcloud_oc_cluster.serviceEndpoints.publicServiceEndpointURL | 
+      default(ibmcloud_oc_cluster.publicServiceEndpointURL) }}"
+
+- debug:
+    msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
+
 - name: Set terminal context for OpenShift cluster {{ roks_name }}
   command: "ibmcloud oc cluster config -c {{ roks_name }}  --admin"
 
 - name: Login to OpenShift ROKS cluster
-  command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ ibmcloud_oc_cluster.publicServiceEndpointURL }}"
+  command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}"
   register: oc_login_result
   retries: 360
   delay: 10
