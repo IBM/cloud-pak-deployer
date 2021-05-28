@@ -9,11 +9,15 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+- debug:
+    msg: "{{roks_config}}"
+
 - name: NFS Storage for IBM Cloud
   block:
     - name: Configure NFS Storage for IBM Cloud
       include_role: 
         name: nfs-storage-ibmcloud
+      when: roks_config.roks[0].infrastructure.type == "classic"
     
   when: "cloud_platform == 'ibm-cloud'"
 
