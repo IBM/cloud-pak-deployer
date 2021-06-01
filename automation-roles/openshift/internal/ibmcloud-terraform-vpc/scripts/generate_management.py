@@ -64,9 +64,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
     json_result["resource"]["ibm_is_floating_ip"] = {}
     json_result["resource"]["ibm_is_volume"] = {}
     json_result["resource"]["ibm_is_public_gateway"] = {}
-    json_result["resource"]["ibm_container_vpc_cluster"] = {}
     json_result["resource"]["ibm_resource_instance"] = {}
-    json_result["resource"]["ibm_tg_gateway"] = {}
 
     for vpc in root_dict['vpcs']:
         #print(vpc)
@@ -180,6 +178,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                                     json_result["resource"]["ibm_is_instance"][ vsi['name'] ].pop('addons', None)
             if 'roks' in vpc:
                 if vpc['roks']:
+                    json_result["resource"]["ibm_container_vpc_cluster"] = {}
                     for roks in vpc['roks']:
                         ### each cluster requires a COS Instance to store its image registry somewhere
                         json_result["resource"]["ibm_resource_instance"][ roks['name'] ] = {}
