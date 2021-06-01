@@ -14,6 +14,11 @@
   include_role: 
      name: has-secret-ibmcloud
 
+- name: Delete secret {{ secret_name }} in group {{ secret_group }} if it already exists
+  include_role:
+    name: delete-secret-ibmcloud
+  when: "has_secret == true"
+
 - name: Create new secret {{ secret_name }} in group {{ secret_group }}
   uri:
     url: "{{ ibmcloud_vault_address }}/v1/ibmcloud/arbitrary/secrets/groups/{{ secret_group_id }}"
@@ -29,11 +34,7 @@
       payload: "{{ secret_payload }}"
     status_code: 200
   register: response_createSecret
-  when: "has_secret == false"
+  
 
-- debug: 
-    msg: "Secret {{ secret_name }} in group {{ secret_group }} already exists"
-  when: "has_secret == true"
-
-#- debug:
-#    msg: "Secret {{ secret_name }} successfully created on IBMCloud vault"
+- debug:
+    msg: "Secret {{ secret_name }} successfully created on IBMCloud vault"
