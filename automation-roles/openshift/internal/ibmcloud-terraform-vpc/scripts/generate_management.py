@@ -3,7 +3,7 @@ import os, math, sys
 import pprint
 
 if len(sys.argv) != 3:
-    log.error('Syntax: {} <input directory> <output file name>'.format(sys.argv[0]))
+    print('Syntax: {} <input directory> <output file name>'.format(sys.argv[0]))
     sys.exit(1)
 
 #config_path = '.'
@@ -64,7 +64,6 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
     json_result["resource"]["ibm_is_floating_ip"] = {}
     json_result["resource"]["ibm_is_volume"] = {}
     json_result["resource"]["ibm_is_public_gateway"] = {}
-    json_result["resource"]["ibm_container_vpc_cluster"] = {}
     json_result["resource"]["ibm_resource_instance"] = {}
 
     for vpc in root_dict['vpcs']:
@@ -179,6 +178,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                                     json_result["resource"]["ibm_is_instance"][ vsi['name'] ].pop('addons', None)
             if 'roks' in vpc:
                 if vpc['roks']:
+                    json_result["resource"]["ibm_container_vpc_cluster"] = {}
                     for roks in vpc['roks']:
                         ### each cluster requires a COS Instance to store its image registry somewhere
                         json_result["resource"]["ibm_resource_instance"][ roks['name'] ] = {}
@@ -202,34 +202,35 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                         # hardcoded cleanup
                         json_result["resource"]["ibm_container_vpc_cluster"][ roks['name'] ].pop('subnets', None)
 
-    json_result["resource"]["ibm_tg_gateway"] = {}
-    json_result["resource"]["ibm_tg_connection"] = {}
-    for tgw in root_dict['tgws']:
-        json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ] = {}
-        json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].update( tgw )
-        json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].update({
-            'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( tgw['name'] ),
-            'resource_group': '${data.ibm_resource_group.base.id}'
-        })
-        for connection in tgw['connections']:
-            print('tgw-connection: '+ connection)
-            json_result["resource"]["ibm_tg_connection"][ connection ] = {
-                'name': to_kebap_case( 'to-' + connection ),
-                'gateway': '${ibm_tg_gateway.' + tgw['name'] + '.id}',
-                'network_type': "vpc",
-                'network_id': '${ibm_is_vpc.'+ connection +'.resource_crn}'
-            }
-        # clean up tgw
-        json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].pop('connections', None)
+    if 'tgw' in root_dict:
+        json_result["resource"]["ibm_tg_gateway"] = {}
+        json_result["resource"]["ibm_tg_connection"] = {}
+        for tgw in root_dict['tgws']:
+            json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ] = {}
+            json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].update( tgw )
+            json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].update({
+                'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( tgw['name'] ),
+                'resource_group': '${data.ibm_resource_group.base.id}'
+            })
+            for connection in tgw['connections']:
+                print('tgw-connection: '+ connection)
+                json_result["resource"]["ibm_tg_connection"][ connection ] = {
+                    'name': to_kebap_case( 'to-' + connection ),
+                    'gateway': '${ibm_tg_gateway.' + tgw['name'] + '.id}',
+                    'network_type': "vpc",
+                    'network_id': '${ibm_is_vpc.'+ connection +'.resource_crn}'
+                }
+            # clean up tgw
+            json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].pop('connections', None)
 
     ### Services
-    for service in root_dict['services']:
-        json_result["resource"]["ibm_resource_instance"][ service['name'] ] = {}
-        json_result["resource"]["ibm_resource_instance"][ service['name'] ].update(templates['service'][ service['flavour'] ])
-        json_result["resource"]["ibm_resource_instance"][ service['name'] ].update({
-            'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( service['name'] )
-        })
-
+    if 'services' in root_dict:
+        for service in root_dict['services']:
+            json_result["resource"]["ibm_resource_instance"][ service['name'] ] = {}
+            json_result["resource"]["ibm_resource_instance"][ service['name'] ].update(templates['service'][ service['flavour'] ])
+            json_result["resource"]["ibm_resource_instance"][ service['name'] ].update({
+                'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( service['name'] )
+            })
 
 # print(json_result)
 
