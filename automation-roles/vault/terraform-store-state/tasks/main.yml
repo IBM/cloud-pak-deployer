@@ -11,16 +11,11 @@
     secret_name: "{{ tf_state_secret_name }}"
     secret_group: "{{ roks_name }}" 
 
+- set_fact:
+    keep_tfstate: "{{ 'true' if ( tfstate_persist is not defined or tfstate_persist == 'true') else 'false' }}"
+
 - name: Write the tf_state to the vault, delete existing state
   block:
-
-    # - name: Delete {{ tf_state_secret_name }} if it exists
-    #   include_role:
-    #     name: "vault_delete_secret"
-    #   vars:
-    #       secret_name: "{{ tf_state_secret_name }}"
-    #       secret_group: "{{ cp4d_project_openshift_cluster_name }}" 
-    #   when: "not secret_value== ''"
 
     - name: Store the terraform tfstate file as {{ tf_state_secret_name }}
       include_role:
@@ -35,10 +30,12 @@
       ansible.builtin.file:
         path: "{{ status_dir }}/terraform/terraform.tfstate"
         state: absent
+      when: "keep_tfstate == 'false'"
 
     - name: Delete the file {{ status_dir }}/terraform/terraform.tfstate.backup
       ansible.builtin.file:
         path: "{{ status_dir }}/terraform/terraform.tfstate.backup"
         state: absent
+      when: "keep_tfstate == 'false'"        
 
   when:  "tf_state_content | length > 0"
