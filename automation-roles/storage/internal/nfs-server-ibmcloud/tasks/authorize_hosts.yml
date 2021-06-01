@@ -1,0 +1,28 @@
+---
+# tasks file for nfs_storage
+
+- name: Get the NFS File Storages from IBM Cloud
+  shell: "ibmcloud sl file volume-list --output json"
+  register: ibmcloud_sl_list_result
+
+- set_fact:
+    ibmcloud_sl_list_json: "{{ ibmcloud_sl_list_result.stdout|from_json }}"
+
+- set_fact:
+    ibmcloud_sl_list: "{{ ibmcloud_sl_list_json|json_query(query_sl) }}"
+  vars:
+    query_sl: "[?username=='{{ nfs_file_storage_name }}']"
+  failed_when: "ibmcloud_sl_list|length == 0"
+
+- set_fact:
+    ibmcloud_sl_nfs_storage_id: "{{ ibmcloud_sl_list[0].id }}"
+    nfs_storage_server: "{{ ibmcloud_sl_list[0].serviceResource.backendIpAddress }}"
+    nfs_storage_server_path: "{{ ibmcloud_sl_list[0].fileNetworkMountAddress.split(':')[1] }}"
+
+- name: Get the node IPs of the ROKS cluster
+  shell: "oc get nodes | awk '{if(NR>1)print}' | grep -oP \"^\\S+\""
+  register: oc_nodes_result
+
+- name: For each OpenShift node authorize to the NFS file storage
+  include_tasks: authorize_host.yml
+  loop: "{{ oc_nodes_result.stdout_lines }}"

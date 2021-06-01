@@ -1,0 +1,25 @@
+---
+
+- name: Delete secret Validate mandatory variables are defined
+  assert:
+    that:
+      - secret_group is defined
+      - secret_name is defined
+      - ibmcloud_vault_address is defined
+      - ibm_vault_iam_token is defined
+
+- name: Delete Secret {{ secret_name }} from group {{ secret_group }}
+  uri:
+    url: "{{ ibmcloud_vault_address }}/v1/ibmcloud/arbitrary/secrets/groups/{{ secret_group_id }}/{{ secret_id }}"
+    headers:
+      X-Vault-Token: "{{ ibm_vault_token_content.auth.client_token }}"
+      Accept: "application/json"
+    status_code: 200
+    method: DELETE
+  register: response_deleteSecret
+
+- debug:
+    msg: "{{ response_deleteSecret }}"
+
+- debug:
+    msg: "Secret {{ secret_name }} from group {{ secret_group }} has been deelte"
