@@ -1,0 +1,17 @@
+---
+- name: Get NFS server config
+  set_fact:
+    servers_config: "{{ hostvars['localhost']['nfs_server'] }}"
+
+- name: Format the NFS volume
+  include_tasks:
+    prepare_xfs_volume.yaml
+  vars:
+    volume_selector: "{{ nfs_server['infrastructure']['volume_selector'] }}"
+    mount_path: "{{ nfs_server['infrastructure']['mount_path'] }}"
+
+- name: Install the NFS server
+  include_tasks:
+    install_nfs_vpc.yaml
+  vars:
+    storage_folder: "{{ nfs_server['infrastructure']['storage_folder'] }}"

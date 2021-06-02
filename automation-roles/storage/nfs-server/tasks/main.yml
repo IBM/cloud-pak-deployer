@@ -10,19 +10,30 @@
   when: "cloud_platform not in implemented_cloud_platform_types"
 
 - set_fact:
-    nfs_server_name: "{{ roks_config.roks[0].storage_classes[0].nfs_server_name }}"
+    storage_type: "{{ roks_config.roks[0].storage_classes[0].storage_type }}"
 
-- set_fact:
-    nfs_server: "{{ servers_config.nfs_servers | json_query(query) }}"
-  vars:
-    query: >-
-        [?name=='{{nfs_server_name}}']
+- block:
+  - set_fact:
+      nfs_server_name: "{{ roks_config.roks[0].storage_classes[0].nfs_server_name }}"
 
-# TODO - Is infrastructure type correct for the IBM Cloud File service?
-- name: Configure NFS server IBM Cloud SaaS
-  block:
-    - name: Configure NFS server for IBM Cloud SaaS
-      include_role: 
-        name: nfs-server-ibmcloud-saas
-  when: cloud_platform == 'ibm-cloud' and nfs_server.infrastructure.type=='saas'
+  - set_fact:
+      nfs_server: "{{ servers_config.nfs_servers | json_query(query) | first }}"
+    vars:
+      query: >-
+          [?name=='{{nfs_server_name}}']
 
+  # TODO - Is infrastructure type correct for the IBM Cloud File service?
+  - name: Configure NFS server IBM Cloud SaaS
+    block:
+      - name: Configure NFS server for IBM Cloud SaaS
+        include_role: 
+          name: nfs-server-ibmcloud-saas
+    when: cloud_platform == 'ibm-cloud' and nfs_server.infrastructure.type == 'saas'
+
+  - name: Configure NFS server IBM Cloud VPC
+    block:
+      - name: Configure NFS server for IBM Cloud VPC
+        include_role: 
+          name: nfs-server-ibmcloud-vpc-prepare
+    when: cloud_platform == 'ibm-cloud' and nfs_server.infrastructure.type == 'vpc'
+  when: storage_type == 'nfs'
