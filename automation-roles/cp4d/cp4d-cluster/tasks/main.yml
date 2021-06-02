@@ -9,6 +9,10 @@
   vars:
     roks_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
+- name: Prepare the NFS Storage for OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+  include_role:
+    name: nfs-storage
+
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }}
   include_role:
     name: openshift-prepare-cluster
@@ -18,10 +22,6 @@
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }}
   include_role:
     name: openshift-prepare-project
-
-- name: Prepare the NFS Storage to {{ nfs_file_storage_name }}
-  include_role:
-    name: nfs-storage
 
 # - name: Check for cp4d service definitions, skip when empty
 #   debug:
