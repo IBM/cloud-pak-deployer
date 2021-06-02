@@ -1,16 +1,29 @@
 ---
-- name: Run Automation
+- name: Run Infrastructure automation
   hosts: localhost
-#  environment:
-#    VAULT_ADDR: "{{ vault_url }}"
-#    VAULT_TOKEN: "{{ vault_api_key }}"
   connection: local
   become: True
+  gather_facts: False
 
   roles:
     - role: validate-variables
     - role: vault-connect
     - role: openshift-terraform
+    - role: nfs-server
+
+- hosts: vpc_nfs_servers
+  become: True
+  gather_facts: False
+
+  roles:
+    - role: nfs-server-ibmcloud-vpc-install
+
+- name: Run Cloud Pak automation
+  hosts: localhost
+  connection: local
+  become: True
+
+  roles:
     - role: cli-installs
     - role: login-ibmcloud
 

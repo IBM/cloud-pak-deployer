@@ -1,0 +1,33 @@
+---
+
+- name: Install the nfs-utils package
+  yum:
+    name: nfs-utils
+    state: present
+
+- name: Set permissions for NFS directory
+  file:
+    group: "root"
+    mode: 0777
+    owner: "root"
+    path: "{{ storage_folder }}"
+    state: directory
+
+- name: Copy /etc/exports
+  template:
+    src: nfs_server_exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+
+- name: Disable firewall
+  service:
+    name: firewalld
+    enabled: no
+    state: stopped
+
+- name: Start NFS service
+  service:
+    name: nfs-server
+    enabled: yes
+    state: restarted

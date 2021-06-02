@@ -1,0 +1,37 @@
+---
+
+- set_fact:
+    bastion_host: "{{ nfs_server['infrastructure']['bastion_host'] }}"
+    nfs_server_ip: "{{ nfs_server['infrastructure']['primary_ipv4_address'] }}"
+
+- name: Retrieve Terraform tfstate file from the vault
+  include_role: 
+    name: terraform-retrieve-state
+  vars:
+    roks_name: "{{ roks_config.roks[0].name }}"
+    status_dir: "/tmp"
+
+- include_vars:
+    file: "/tmp/terraform/terraform.tfstate"
+    name: tfstate
+
+- debug:
+    var: tfstate
+
+- set_fact:
+    bastion_fip: "{{ tfstate.resources | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?name=='{{bastion_host}}' && type=='ibm_is_floating_ip'].
+      {public_ip_address: instances[0].attributes.address, public_ip_name: instances[0].attributes.name}
+
+- debug:
+    msg: "{{ bastion_fip }}"
+
+- name: Create dynamic Ansible group vpc_nfs_servers
+  add_host:
+    name: "{{nfs_server_ip}}"
+    groups: vpc_nfs_servers
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p -q {{ bastion_fip.public_ip_address }}"'
+    nfs_server: "{{ nfs_server }}"
