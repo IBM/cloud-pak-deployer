@@ -69,7 +69,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
     for vpc in root_dict['vpcs']:
         #print(vpc)
         json_result["resource"]["ibm_is_vpc"][ vpc['name'] ] = {
-            'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( vpc['name'] ),
+            'name': to_kebap_case( vpc['name'] ),
             'address_prefix_management': 'manual',
             'resource_group': '${data.ibm_resource_group.base.id}'
         }
@@ -95,7 +95,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
         if vpc['address_prefixes']:
             for prefix in vpc['address_prefixes']:
                 json_result["resource"]["ibm_is_vpc_address_prefix"][ prefix['name'] ] = {
-                    'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( prefix['name'] ),
+                    'name': to_kebap_case( prefix['name'] ),
                     'zone': '${local.zone}',
                     'cidr': prefix['cidr'],
                     'vpc': "${ibm_is_vpc."+ vpc['name'] +".id}"
@@ -110,7 +110,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                         json_result["resource"]["ibm_is_subnet"][ subnet['name'] ].update( templates['subnet']['default'] )
                         json_result["resource"]["ibm_is_subnet"][ subnet['name'] ].update( subnet )
                         json_result["resource"]["ibm_is_subnet"][ subnet['name'] ].update( {
-                            'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( subnet['name'] ),
+                            'name': to_kebap_case( subnet['name'] ),
                             #'zone': '${local.zone}',
                             #'ipv4_cidr_block': subnet['ipv4_cidr_block'],
                             'vpc': "${ibm_is_vpc."+ vpc['name'] +".id}",
@@ -141,7 +141,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                                                 print('processing storage')
                                                 disk_name=vsi['name']+'_'+disk['name']
                                                 json_result["resource"]["ibm_is_volume"][ disk_name ] = {
-                                                    'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case(disk_name),
+                                                    'name': to_kebap_case(disk_name),
                                                     'resource_group': '${data.ibm_resource_group.base.id}',
                                                     'profile': disk['profile'],
                                                     'zone': '${local.zone}',
@@ -154,7 +154,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                                                 
                                     json_result["resource"]["ibm_is_instance"][ vsi['name'] ].update( vsi )
                                     json_result["resource"]["ibm_is_instance"][ vsi['name'] ].update({
-                                        'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( vsi['name'] ),
+                                        'name': to_kebap_case( vsi['name'] ),
                                         'resource_group': '${data.ibm_resource_group.base.id}',
                                         'zone': '${local.zone}',
                                         'primary_network_interface': {
@@ -167,7 +167,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                                     ### if the vsi is flagged as bastion, attach a public ip to it
                                     if 'bastion' in vsi:
                                         json_result["resource"]["ibm_is_floating_ip"][ vsi['name'] ] = {
-                                            'name': get_name_prefix(root_dict['locals']['name_prefix']) +to_kebap_case( vsi['name'] )+'-fip',
+                                            'name': to_kebap_case( vsi['name'] )+'-fip',
                                             'target': '${ibm_is_instance.' + vsi['name'] + '.primary_network_interface[0].id}'
                                         }
                                     ### todo: solve this
@@ -184,14 +184,14 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                         json_result["resource"]["ibm_resource_instance"][ roks['name'] ] = {}
                         json_result["resource"]["ibm_resource_instance"][ roks['name'] ].update(templates['service']['cos'])
                         json_result["resource"]["ibm_resource_instance"][ roks['name'] ].update({
-                            'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( roks['name'] + '-cos')
+                            'name': to_kebap_case( roks['name'] + '-cos')
                         })
                         ### now define the cluster itself
                         json_result["resource"]["ibm_container_vpc_cluster"][ roks['name'] ] = {}
                         json_result["resource"]["ibm_container_vpc_cluster"][ roks['name'] ].update(templates['roks']['default'])
                         json_result["resource"]["ibm_container_vpc_cluster"][ roks['name'] ].update(roks)
                         json_result["resource"]["ibm_container_vpc_cluster"][ roks['name'] ].update({
-                            'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( roks['name'] ),
+                            'name': to_kebap_case( roks['name'] ),
                             'vpc_id': "${ibm_is_vpc."+ vpc['name'] +".id}",
                             'cos_instance_crn': "${ibm_resource_instance."+ roks['name'] +".id}",
                             'zones': [{
@@ -209,7 +209,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
             json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ] = {}
             json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].update( tgw )
             json_result["resource"]["ibm_tg_gateway"][ tgw['name'] ].update({
-                'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( tgw['name'] ),
+                'name': to_kebap_case( tgw['name'] ),
                 'resource_group': '${data.ibm_resource_group.base.id}'
             })
             for connection in tgw['connections']:
@@ -229,7 +229,7 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
             json_result["resource"]["ibm_resource_instance"][ service['name'] ] = {}
             json_result["resource"]["ibm_resource_instance"][ service['name'] ].update(templates['service'][ service['flavour'] ])
             json_result["resource"]["ibm_resource_instance"][ service['name'] ].update({
-                'name': get_name_prefix(root_dict['locals']['name_prefix']) + to_kebap_case( service['name'] )
+                'name': to_kebap_case( service['name'] )
             })
 
 # print(json_result)
