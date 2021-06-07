@@ -28,6 +28,12 @@
 - debug:
     msg: "{{ bastion_fip }}"
 
+- name: Create dynamic Ansible group vpc_bastion_server
+  add_host:
+    name: "{{bastion_fip.public_ip_address}}"
+    groups: vpc_bastion_server
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+
 - name: Create dynamic Ansible group vpc_nfs_servers
   add_host:
     name: "{{nfs_server_ip}}"
