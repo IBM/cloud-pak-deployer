@@ -26,6 +26,13 @@
     enabled: no
     state: stopped
 
+- name: Disable NFS v3 to avoid rpcbind service
+  lineinfile:
+    path: /etc/nfs.conf
+    regexp: "^# vers3=y"
+    line: "vers3=no"
+    state: present
+
 - name: Start NFS service
   service:
     name: nfs-server
