@@ -4,19 +4,17 @@
   assert:
     that:
       - vault_type is defined
-      - vault_url is defined
-      - vault_api_key is defined
       - vault_authentication_type is defined
 
 - debug:
-    msg: "{{ vault_url }}"
+    msg: "{{ vault_type }}"
 
 - name: Validate vault_type is supported
   fail: msg="Vault type {{ vault_type }} only support values {{ supported_vault_types }} "
   when: "vault_type not in supported_vault_types"
 
 - name: Validate vault_authentication_type is supported
-  fail: msg="Vault Authentication type {{ vault_authentication_type }} only support values {{ supported_vault_authentication_types }} "
+  fail: msg="Vault Authentication type (vault_authentication_type) only support values {{ supported_vault_authentication_types }} "
   when: "vault_authentication_type not in supported_vault_authentication_types"
 
 - name: Login to Hashicorp vault
@@ -27,7 +25,6 @@
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_vault_login_token: "{{ vault_api_key }}"
-    
   when: "vault_type == 'hashicorp-vault'"
 
 - name: Login to IBMCloud vault
@@ -38,8 +35,14 @@
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibmcloud_api_key: "{{ vault_api_key }}"
-    
   when: "vault_type == 'ibmcloud-vault'"  
+
+- name: Login to file vault
+  block:
+    - name: No login to file fault needed
+      debug:
+        msg: File vault directory is {{ vault_directory }}
+  when: "vault_type == 'file-vault'"  
 
 - set_fact:
     vault_login_success: "true"
