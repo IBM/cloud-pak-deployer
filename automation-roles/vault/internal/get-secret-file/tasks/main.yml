@@ -1,0 +1,15 @@
+---
+- name: Get secret Validate mandatory variables are defined
+  assert:
+    that:
+      - secret_directory is defined
+      - secret_group is defined
+      - secret_name is defined
+
+- set_fact:
+    secret_value: "{{ lookup(item) }}"
+  with_items:
+    - "'ini', '{{ secret_name }} type=properties file={{ secret_directory }}/{{ secret_group }}'"
+
+- debug:
+    msg: "Secret {{ secret_group }}/{{ secret_name }} value {{ secret_value }}"
