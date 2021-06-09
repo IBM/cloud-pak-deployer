@@ -3,21 +3,21 @@
 - name: Create secret Validate mandatory variables are defined
   assert:
     that:
-      - secret_directory is defined
+      - vault_directory is defined
       - secret_group is defined
       - secret_name is defined
       - secret_payload is defined
 
-- name: Create directory {{ secret_directory }} if not existent
+- name: Create directory {{ vault_directory }} if not existent
   file:
-    path: "{{ secret_directory }}"
+    path: "{{ vault_directory }}"
     state: directory
 
-- name: Add or replace secret in file {{ secret_directory }}/{{ secret_group }}
+- name: Add or replace secret in file {{ vault_directory }}/{{ secret_group }}
   lineinfile:
-    path: "{{ secret_directory }}/{{ secret_group }}"
+    path: "{{ vault_directory }}/{{ secret_group }}"
     regexp: "^{{ secret_name }}"
-    line: "{{ secret_payload }}"
+    line: "{{ secret_name }}={{ secret_payload }}"
     state: present
     create: True
 
