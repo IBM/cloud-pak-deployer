@@ -1,0 +1,102 @@
+- name: Ensure that variables are present and required folders are in place
+  block:
+    - name: Check that all required variables are set
+      assert:
+        quiet: true
+        that:
+          - "{{item}}"
+        fail_msg: "'{{item}}' needs to be set for this role to work"
+      with_items:
+      - path_to_config_folder
+      - path_to_definitions_folder
+      - path_to_terraform_folder
+    - name: Create terraform work folder if it does not exist
+      file:
+        path: '{{ path_to_terraform_folder }}'
+        state: directory
+# - name: Check if a Statefile exists for the given environment
+#   stat:
+#     path: '{{playbook_dir}}/terraform_state/{{config_name}}/terraform.tfstate'
+#   register: statefile_details
+# - name: 
+#   template:
+- name: Pull in the path_to_definitions_folder and read the [definition_name].yaml
+  include_vars: "{{path_to_definitions_folder}}/{{definition_name}}.yaml"
+  register: generators_included_definition
+- debug: 
+    var: generators_included_definition.ansible_facts
+- name: show generator directories
+  set_fact: 
+    generators_index:
+  #vars:
+  #    jsonVar: "{{ lookup('file', '{{definition_name}}.yaml') | from_yaml }}"
+
+- name: List the folders in /generators, don't recurse
+  find:
+    file_type: directory
+    paths: "{{path_to_config_folder}}/generators"
+    recurse: no
+  register: generators_generator_folders
+
+- name: show generator directories
+  set_fact: 
+    generators_index:
+      available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
+
+# - name: loop over the entities defined in the repo_definition/[environment].yaml
+#   debug: 
+#     msg: "{{item.key}} ---> {{item.value}}"
+#   loop: "{{generators_included_definition.ansible_facts | dict2items}}"
+
+# - name: loop (subelements) over the entities defined in the repo_definition/[environment].yaml
+#   debug: 
+#     msg: "{{item[0]}} ---> {{item[1]}}"
+#   loop: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
+
+### TODO: check if the roles are available, before we even try to run them
+
+
+- name: Run generators
+  include_tasks: "{{path_to_config_folder}}/generators/{{ item[0].key }}/main.yaml"
+  vars:
+    generator:
+      name: "{{ item[0].key }}"
+      path: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
+      attributes: "{{ item[1] }}"
+    GENERATOR_NAME: "{{ item[0].key }}"
+    GENERATOR_DIR: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
+  loop: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
+
+
+### Unfortunately subelements('value') works with loop but refuses to work with with_items
+
+# - name: Run generators
+#   include_tasks: "{{path_to_config_folder}}/generators/{{ item[0].key }}/main.yaml"
+#   vars:
+#     generator:
+#       name: "{{ item[0].key }}"
+#       path: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
+#       attributes: "{{ item[1] }}"
+#     GENERATOR_NAME: "{{ item[0].key }}"
+#     GENERATOR_DIR: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
+#   with_items: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
+
+
+### Old way of running generators
+# - name: show path to generators
+#   debug:
+#     msg: "{{path_to_config_folder}}/generators"
+# - name: Recursively find main.yml files inside the generators-directory
+#   find:
+#     paths: "{{path_to_config_folder}}/generators"
+#     patterns: 'main.yaml,main.yml'
+#     recurse: yes
+#   register: search_result
+# - name: show files
+#   debug: 
+#     msg: "{{ search_result }}"
+# - name: Run generators
+#   # item.path looks like:
+#   # "path": "/Users/markuswiegleb/workspaces/ansible-dapper/platform-provision-automation-next/repo_config/generators/nfs_servers/main.yaml"
+#   include_tasks: "{{ item.path }}"
+#   with_items: "{{ search_result.files }}"
