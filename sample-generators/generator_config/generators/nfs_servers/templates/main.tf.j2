@@ -1,0 +1,26 @@
+{# start - nfs_server definition #}
+
+resource "ibm_is_volume" "{{ vpc_name_modified }}_bastionhost" {
+    resource_group = data.ibm_resource_group.resource_group.id
+    name = "{{ vpc.get('vpc_name') }}-volume-bastiondata-auto"
+    profile = "general-purpose"
+    zone = "{{ vpc.zone }}"
+    tags = ["env:auto","pipeline:ansible","vpc:{{ vpc.get('vpc_name') }}"]
+    capacity = 500
+}
+
+resource "ibm_is_instance" "{{ vpc_name_modified }}_bastion" {
+    resource_group = data.ibm_resource_group.resource_group.id
+    name= "{{ vpc.get('vpc_name') }}-vm-bastion-auto"
+    vpc  = ibm_is_vpc.{{ vpc_name_modified }}.id
+    zone = "{{ vpc.zone }}"
+    profile = "bx2-4x16"
+    image = "r010-75e67093-ceaf-4d5e-a087-569e2124a974"
+    volumes = [ ibm_is_volume.{{ vpc_name_modified }}_bastionhost.id ]
+    primary_network_interface {
+        name = "eth0"
+        subnet = ibm_is_subnet.{{ vpc_name_modified }}_primary.id
+    }
+    tags = ["env:auto","pipeline:ansible","vpc:{{ vpc.get('vpc_name') }}"]
+    keys = ["r010-09b9b1dd-183f-426a-9e18-0e9a7fe74f27","r010-a23d1986-3e6a-4b44-a8d1-a49a15b1ad1f","r010-bc4a2239-0eca-4e82-ac6b-b0576c37c535"]
+}

@@ -1,0 +1,39 @@
+---
+- name: Maintain Management Environment
+  hosts: localhost
+  connection: local
+  vars:
+    terraform_work_folder: "TEMP_TERRAFORM"
+    definition_name: sbx
+  tasks:
+  - name: Pass variables to role
+    include_role:
+      name: generators
+    vars:
+      path_to_config_folder: "{{playbook_dir}}/sample-generators/generator_config"
+      path_to_definitions_folder: "{{playbook_dir}}/sample-generators/environment_definitions"
+      path_to_terraform_folder: "{{playbook_dir}}/scrap/{{terraform_work_folder}}"
+  # roles:
+  # - role: preprocess_management
+  #   vars:
+  #     input_dir: 'provision-configuration/environment_{{target_env}}'
+  #     terraform_main_file: '{{playbook_dir}}/{{terraform_work_folder}}/main.tf.json'
+  # tasks:
+
+
+  # - name: Copy statefile to the terraform_work_folder directory
+  #   copy:
+  #     src: "{{playbook_dir}}/terraform_state/{{target_env}}/"
+  #     dest: "{{playbook_dir}}/{{terraform_work_folder}}"
+  #   when: statefile_details.stat.exists
+  
+  # - name: Run terraform init in terraform_temp
+  #   shell: 
+  #     chdir: '{{playbook_dir}}/{{terraform_work_folder}}'
+  #     #cmd: 'bash -c "terraform init" 2>&1 >> apply.log'
+  #     cmd: 'terraform init'
+  
+  # - name: Run terraform plan in terraform_temp 
+  #   shell: 
+  #     chdir: '{{playbook_dir}}/{{terraform_work_folder}}'
+  #     cmd: bash -c "terraform plan 2>&1 >> apply.log"
