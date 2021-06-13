@@ -13,6 +13,11 @@
   args:
     executable: python3
   register: generate_management_output
+
+- name: Add SSH keys to Terraform directory {{status_dir}}/terraform
+  include: ibmcloud-vpc-ssh.yaml
+  loop: "{{ vpc_config.ssh_keys }}"
+
 - name: "Copy ibm-provider config to Terraform directory {{status_dir}}/terraform"
   template:
     src: 'provider.tf.j2'

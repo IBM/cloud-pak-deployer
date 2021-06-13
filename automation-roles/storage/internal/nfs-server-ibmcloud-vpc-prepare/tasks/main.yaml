@@ -3,16 +3,23 @@
 - set_fact:
     bastion_host: "{{ nfs_server['infrastructure']['bastion_host'] }}"
     nfs_server_ip: "{{ nfs_server['infrastructure']['primary_ipv4_address'] }}"
+    nfs_server_ssh_key: "{{ nfs_server['infrastructure']['ssh_key'] }}"
+
+- name: Create temporary directory to hold Terraform state file
+  tmpfile:
+    state: directory
+    suffix: tf
+  register: tfstate_dir
 
 - name: Retrieve Terraform tfstate file from the vault
   include_role: 
     name: terraform-retrieve-state
   vars:
     roks_name: "{{ roks_config.roks[0].name }}"
-    status_dir: "/tmp"
+    status_dir: "{{ tfstate_dir.path }}"
 
 - include_vars:
-    file: "/tmp/terraform/terraform.tfstate"
+    file: "{{ tfstate_dir.path }}/terraform.tfstate"
     name: tfstate
 
 - debug:
@@ -28,16 +35,35 @@
 - debug:
     msg: "{{ bastion_fip }}"
 
+- name: Create temporary directory to hold SSH private key
+  tmpfile:
+    state: directory
+    suffix: ssh
+  register: ssh_key_dir
+
+- name: Retrieve SSH private key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ nfs_server_ssh_key }}-key"
+    secret_group: "{{ vpc_config.vpcs[0].name }}"
+
+- name: Store SSH private key in file
+  copy:
+    content: "{{ secret_value }}"
+    dest: "{{ ssh_key_dir.path }}/id_rsa"
+    mode: 0600
+
 - name: Create dynamic Ansible group vpc_bastion_server
   add_host:
     name: "{{bastion_fip.public_ip_address}}"
     groups: vpc_bastion_server
-    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
 
 - name: Create dynamic Ansible group vpc_nfs_servers
   add_host:
     name: "{{nfs_server_ip}}"
     groups: vpc_nfs_servers
-    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+    ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
     ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p -q {{ bastion_fip.public_ip_address }}"'
     nfs_server: "{{ nfs_server }}"

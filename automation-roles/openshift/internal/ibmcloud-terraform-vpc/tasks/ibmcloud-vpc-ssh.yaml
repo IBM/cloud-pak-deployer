@@ -1,0 +1,63 @@
+---
+- name: Retrieve SSH public key if already in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ item.name }}"
+    secret_group: "{{ vpc_config.vpcs[0].name }}" 
+
+- fail:
+    msg: "SSH key {{ item.name }} not found in vault and not managed"
+  when: 'not item.managed | default(False) | bool and secret_value == ""'
+
+- name: Create temporary directory to hold SSH keys
+  tmpfile:
+    state: directory
+    suffix: ssh
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+  register: ssh_tempdir
+
+- name: Create SSH key if not already in the vault and managed
+  community.crypto.openssh_keypair:
+    path: "{{ ssh_tempdir.path }}/{{ item.name }}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Store SSH private key {{ item.name }} in vault
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{ item.name }}-key"
+    secret_description: "Managed private SSH key for VPC {{ vpc_config.vpcs[0].name }}"
+    secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + item.name) }}"
+    secret_group: "{{ vpc_config.vpcs[0].name }}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Store SSH public key {{ item.name }} in vault
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{ item.name }}"
+    secret_description: "Managed public SSH key for VPC {{ vpc_config.vpcs[0].name }}"
+    secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + item.name + '.pub') }}"
+    secret_group: "{{ vpc_config.vpcs[0].name }}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Delete temporary SSH key directory
+  file:
+    path: "{{ ssh_tempdir.path }}"
+    state: absent
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ item.name }}"
+    secret_group: "{{ vpc_config.vpcs[0].name }}"
+
+- name: Generate Terraform SSH key construct
+  blockinfile:
+    dest: '{{status_dir}}/terraform/ssh-keys.tf'
+    block: "{{ lookup('template','ssh-key.tf.j2') }}"
+    marker: "// {mark} SSH Key for {{ item.name }}"
+    create: True
