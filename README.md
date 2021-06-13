@@ -1,9 +1,11 @@
 # Cloud Pak Deployer
 
+![Provisioner pipeline](/images/Provisioner-pipeline.png)
+
 ## Installing the Cloud Pak Deployer
 
 ### Install pre-requisites
-* Start with a Red Hat 8.x operating system. 
+* Start with a server that has the Red Hat 8.x operating system installed.
 
 > Please note that this must be a registered RHEL-8 system; CentOS or other will not work as the tool depends on the Red Hat Universal Base Image (UBI)
 ```
