@@ -1,0 +1,54 @@
+---
+
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - hashicorp_vault_address is defined
+      - hashicorp_vault_ca_certificate is defined
+      - hashicorp_vault_client_certificate is defined
+      - hashicorp_vault_client_key is defined
+
+
+- name: Validate if valid login session is available
+  shell: |
+    vault kv list \
+    -ca-cert={{ hashicorp_vault_ca_certificate }} \
+    -client-cert={{ hashicorp_vault_client_certificate }} \
+    -client-key={{ hashicorp_vault_client_key }} \
+    -address={{ hashicorp_vault_address }} \ 
+    secret/
+  ignore_errors: yes
+  register: hashicorp_vault_list_result
+
+- debug:
+    msg: "Login to {{ hashicorp_vault_address }} already available, skip login..."
+  when: "hashicorp_vault_list_result.rc == 0"
+
+- name: Login to Hashicorp Vault if vault list failed
+  block:
+
+    - name: Login to vault {{ hashicorp_vault_address }} using token
+      shell: |
+         vault login \
+          -ca-cert={{ hashicorp_vault_ca_certificate }} \
+          -client-cert={{ hashicorp_vault_client_certificate }} \
+          -client-key={{ hashicorp_vault_client_key }} \
+          -address={{ hashicorp_vault_address }} 
+      register: hashicorp_vault_login_result
+      failed_when: "not hashicorp_vault_login_result.rc == 0"
+
+    - name: Test connection to vault
+      shell: |
+        vault kv list \
+          -ca-cert={{ hashicorp_vault_ca_certificate }} \
+          -client-cert={{ hashicorp_vault_client_certificate }} \
+          -client-key={{ hashicorp_vault_client_key }} \
+          -address={{ hashicorp_vault_address }} \ 
+          secret/
+      register: hashicorp_vault_list_after_login_result
+      failed_when: "not hashicorp_vault_list_after_login_result.rc == 0"
+
+  when: "not hashicorp_vault_list_result.rc == 0"
+
+- debug:
+    msg: "Successfully logged into {{ hashicorp_vault_address }} with certificate"

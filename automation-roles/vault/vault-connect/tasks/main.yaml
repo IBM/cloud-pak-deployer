@@ -6,9 +6,6 @@
       - vault_type is defined
       - vault_authentication_type is defined
 
-- debug:
-    msg: "{{ vault_type }}"
-
 - name: Validate vault_type is supported
   fail: msg="Vault type {{ vault_type }} only support values {{ supported_vault_types }} "
   when: "vault_type not in supported_vault_types"
@@ -19,12 +16,23 @@
 
 - name: Login to Hashicorp vault
   block:
-    - name: Login to Hashicorp vault
-      include_role: 
-        name: connect-vault-hashicorp
+    - name: Login to Hashicorp vault (API Key)
+      include_tasks: connect-hashicorp-vault-api-key.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_vault_login_token: "{{ vault_api_key }}"
+      when: vault_authentication_type == 'api-key'
+
+    - name: Login to Hashicorp vault (Certificate)
+      include_tasks: connect-hashicorp-vault-certificate.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_ca_certificate: "{{ vault_api_key }}"
+        hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
+        hashicorp_vault_client_key: "{{ vault_client_key }}"
+      when: vault_authentication_type == 'certificate'
+
+        
   when: "vault_type == 'hashicorp-vault'"
 
 - name: Login to IBMCloud vault
