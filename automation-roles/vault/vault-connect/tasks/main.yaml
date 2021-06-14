@@ -27,19 +27,16 @@
       include_tasks: connect-hashicorp-vault-certificate.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_vault_ca_certificate: "{{ vault_api_key }}"
+        hashicorp_vault_ca_certificate: "{{ vault_ca_cert }}"
         hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
         hashicorp_vault_client_key: "{{ vault_client_key }}"
-      when: vault_authentication_type == 'certificate'
-
-        
+      when: vault_authentication_type == 'certificate'      
   when: "vault_type == 'hashicorp-vault'"
 
 - name: Login to IBMCloud vault
   block:
     - name: Login to IBMCloud vault
-      include_role: 
-        name: connect-vault-ibmcloud
+      include_tasks: connect-ibmcloud-vault-api-key.yml
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibmcloud_api_key: "{{ vault_api_key }}"
