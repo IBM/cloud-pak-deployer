@@ -7,8 +7,12 @@
       - hashicorp_vault_login_token is defined
 
 - name: Validate if valid login session is available
-  shell: "vault kv list secret/"
+  shell: |
+    vault kv list \
+      -address {{ hashicorp_vault_address }} \
+      /secret
   ignore_errors: yes
+  no_log: true
   register: hashicorp_vault_list_result
 
 - debug:
@@ -27,7 +31,11 @@
       failed_when: "not hashicorp_vault_login_result.rc == 0"
 
     - name: Test connection to vault
-      shell: "vault kv list secret/"
+      shell: |
+        vault kv list secret \
+          -address {{ hashicorp_vault_address }} \
+          /secret
+      no_log: true
       register: hashicorp_vault_list_after_login_result
       failed_when: "not hashicorp_vault_list_after_login_result.rc == 0"
 
