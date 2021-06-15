@@ -1,0 +1,47 @@
+- name: Get or Create Secret Group Validate mandatory variables are defined
+  assert:
+    that:
+      - ibmcloud_secret_group_name is defined
+      - ibmcloud_vault_address is defined
+      - ibm_vault_token_content is defined
+
+- name: Get all IBM Cloud Vault groups
+  uri:
+    url: "{{ ibmcloud_vault_address }}/v1/auth/ibmcloud/manage/groups"
+    headers:
+      X-Vault-Token: "{{ ibm_vault_token_content.auth.client_token }}"
+      Accept: "application/json"
+    method: GET
+    status_code: 200
+  register: response_getSecretGroups
+
+- set_fact:
+    response_getSecretGroups_query_result: "{{ response_getSecretGroups.json.data.groups | json_query(ibmcloud_secret_group_name) }}"
+  vars:
+    query_group: "[?name=='{{ secret_group }}']"
+
+- block:
+  - name: Create Secret Group {{ ibmcloud_secret_group_name }} if it does not exist
+    uri:
+      url: "{{ ibmcloud_vault_address }}/v1/auth/ibmcloud/manage/groups"
+      headers:
+        X-Vault-Token: "{{ ibm_vault_token_content.auth.client_token }}"
+        Accept: "application/json"
+        Content-Type: "application/json"
+      method: POST
+      body_format: json
+      body:
+        name: "{{ ibmcloud_secret_group_name }}"
+        description: "Group {{ ibmcloud_secret_group_name }}"
+      status_code: 200
+    register: response_createSecretGroup
+
+  - set_fact:
+      ibm_cloud_secret_group_id: "{{ response_createSecretGroup.json.data.id }}"
+
+  when: "response_getSecretGroups_query_result|length == 0"
+
+- set_fact:
+    ibm_cloud_secret_group_id: "{{ response_getSecretGroups_query_result[0].id }}"
+  when: "response_getSecretGroups_query_result|length > 0"
+

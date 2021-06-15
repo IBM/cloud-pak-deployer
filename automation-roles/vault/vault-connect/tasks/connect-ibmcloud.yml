@@ -5,6 +5,7 @@
     that:
       - ibmcloud_vault_address is defined
       - ibmcloud_api_key is defined
+      - ibmcloud_vault_group is defined
 
 - name: Receive IAM Token from IBM Cloud
   uri:
@@ -31,14 +32,12 @@
     status_code: 200
   register: ibm_vault_token
 
-- debug:
-    msg: "{{ ibm_vault_token.content  }}"
-
 - set_fact:
     ibm_vault_token_content: "{{ ibm_vault_token.content | from_json }} "
 
 - debug:
-    msg: "Successfully generate vault access token {{ ibm_vault_token_content.auth.client_token }}"
-
-- debug:
     msg: "Successfully logged into ibmvault {{ ibmcloud_vault_address }}"
+
+- name: Get the Cloud vault group id
+  include_role: 
+     name: vault-group

@@ -1,28 +1,64 @@
----
-
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - secret_group is defined
-      - secret_name is defined
-      - secret_payload is defined
-
-
 - name: Create Secret Vault Hashicorp
-  include_role: 
-    name: create-secret-hashicorp
-  vars:
-    secret_name_path: "/secret/{{ secret_group }}/{{ secret_name }}"
+  block:
+    - name: Validate mandatory variables are defined for Hashicorp Vault
+      assert:
+        that:
+          - secret_name is defined
+          - secret_path is defined  
+          - secret_field is defined
+          - secret_payload is defined
+
+    - name: Create Secret Hashicorp vault (API Key)
+      include_tasks: create-secret-hashicorp-api-key.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_login_token: "{{ vault_api_key }}"
+        hashicorp_secret_name_path: "{{ secret_path }}/{{ secret_name }}"
+        hashicorp_secret_field: "{{ secret_field }}"
+        hashicorp_secret_payload: "{{ secret_payload | b64encode }}"
+      when: vault_authentication_type == 'api-key'
+
+    - name: Get Secret Hashicorp vault (Certificate)
+      include_tasks: create-secret-hashicorp-certificate.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_ca_certificate: "{{ vault_ca_cert }}"
+        hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
+        hashicorp_vault_client_key: "{{ vault_client_key }}"
+        hashicorp_secret_name_path: "/secret/{{ secret_group }}/{{ secret_name }}"
+        hashicorp_secret_field: "{{ secret_field }}"
+        hashicorp_secret_payload: "{{ secret_payload | b64encode }}"
+      when: vault_authentication_type == 'certificate'      
   when: "vault_type == 'hashicorp-vault'"
 
-- name: Create Secret Vault IBMCloud
-  include_role: 
-    name: create-secret-ibmcloud
-  vars:
-    ibmcloud_vault_address: "{{ vault_url }}"
+- name: Create Secret Vault IBM Cloud
+  block:
+    - name: Validate mandatory variables are defined for Vault IBM Cloud
+      assert:
+        that:
+          - secret_name is defined
+          - secret_path is defined  
+          - secret_payload is defined
+          - secret_description is defined
+
+    - name: Create secret from Vault IBMCloud
+      include_tasks: create-secret-ibmcloud.yml
+      vars:
+        ibmcloud_vault_address: "{{ vault_url }}"
+        ibm_cloud_secret_name: "{{ secret_name }}"
+        ibm_vault_secret_payload: "{{ secret_payload | b64encode }}"
+        ibm_vault_secret_description: "{{ secret_description }}"
   when: "vault_type == 'ibmcloud-vault'"
 
 - name: Create Secret Vault file
-  include_role: 
-    name: create-secret-file
+  block:
+    - name: Validate mandatory variables are defined for Vault file
+      assert:
+        that:
+          - secret_name is defined
+          - secret_path is defined  
+          - secret_payload is defined
+
+    - name: Get secret in Vault file
+      include_tasks: create-secret-file.yml
   when: "vault_type == 'file-vault'"

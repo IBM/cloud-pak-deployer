@@ -1,11 +1,5 @@
 ---
 
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - vault_type is defined
-      - vault_authentication_type is defined
-
 - name: Validate vault_type is supported
   fail: msg="Vault type {{ vault_type }} only support values {{ supported_vault_types }} "
   when: "vault_type not in supported_vault_types"
@@ -16,6 +10,13 @@
 
 - name: Login to Hashicorp vault
   block:
+
+    - name: Validate mandatory variables are defined
+      assert:
+        that:
+          - vault_type is defined
+          - vault_authentication_type is defined
+
     - name: Login to Hashicorp vault (API Key)
       include_tasks: connect-hashicorp-vault-api-key.yml
       vars:
@@ -35,11 +36,20 @@
 
 - name: Login to IBMCloud vault
   block:
+
+    - name: Validate mandatory variables are defined
+      assert:
+        that:
+          - vault_type is defined
+          - vault_authentication_type is defined
+          - vault_secret_group is defined
+
     - name: Login to IBMCloud vault
       include_tasks: connect-ibmcloud-vault.yml
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibmcloud_api_key: "{{ vault_api_key }}"
+        ibmcloud_vault_group: "{{ vault_secret_group }}"
   when: "vault_type == 'ibmcloud-vault'"  
 
 - name: Login to file vault
