@@ -49,6 +49,22 @@
       register: hashicorp_vault_list_after_login_result
       failed_when: "not hashicorp_vault_list_after_login_result.rc == 0"
 
+
+   - name: Fetch ibm_roks_bind_user from the vault
+      shell: |
+        vault kv get \
+          -field=passwd \
+          -ca-cert={{ hashicorp_vault_ca_certificate }} \
+          -client-cert={{ hashicorp_vault_client_certificate }} \
+          -client-key={{ hashicorp_vault_client_key }} \
+          -address={{ hashicorp_vault_address }} \ 
+          secret/data/sbx/mgmt/common/users/ibm_roks_bind_user
+      register: hashicorp_vault_list_secret_fetch
+
+    - debug:
+        msg: "{{ hashicorp_vault_list_secret_fetch }} "
+      
+
   when: "not hashicorp_vault_list_result.rc == 0"
 
 - debug:
