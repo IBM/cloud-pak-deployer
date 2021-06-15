@@ -3,17 +3,19 @@
     - name: Validate mandatory variables are defined for Hashicorp Vault
       assert:
         that:
+          - vault_secret_path is defined
           - secret_name is defined
           - secret_path is defined  
           - secret_field is defined
           - secret_payload is defined
+          - secret_group is defined
 
     - name: Create Secret Hashicorp vault (API Key)
       include_tasks: create-secret-hashicorp-api-key.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_vault_login_token: "{{ vault_api_key }}"
-        hashicorp_secret_name_path: "{{ secret_path }}/{{ secret_name }}"
+        hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
         hashicorp_secret_field: "{{ secret_field }}"
         hashicorp_secret_payload: "{{ secret_payload | b64encode }}"
       when: vault_authentication_type == 'api-key'
@@ -25,7 +27,7 @@
         hashicorp_vault_ca_certificate: "{{ vault_ca_cert }}"
         hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
         hashicorp_vault_client_key: "{{ vault_client_key }}"
-        hashicorp_secret_name_path: "/secret/{{ secret_group }}/{{ secret_name }}"
+        hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
         hashicorp_secret_field: "{{ secret_field }}"
         hashicorp_secret_payload: "{{ secret_payload | b64encode }}"
       when: vault_authentication_type == 'certificate'      
