@@ -5,22 +5,15 @@
     nfs_server_ip: "{{ nfs_server['infrastructure']['primary_ipv4_address'] }}"
     nfs_server_ssh_key: "{{ nfs_server['infrastructure']['ssh_key'] }}"
 
-- name: Create temporary directory to hold Terraform state file
-  tempfile:
-    state: directory
-    suffix: tf
-  register: tfstate_dir
-
-- name: Retrieve Terraform tfstate file from the vault
+- name: Retrieve Terraform tfstate from the vault
   include_role: 
-    name: terraform-retrieve-state
+    name: vault-get-secret
   vars:
-    roks_name: "{{ roks_config.roks[0].name }}"
-    status_dir: "{{ tfstate_dir.path }}"
+    secret_name: "{{ roks_config.roks[0].name }}-terraform-tfstate"
+    secret_group: "{{ roks_config.roks[0].name }}"
 
-- include_vars:
-    file: "{{ tfstate_dir.path }}/terraform.tfstate"
-    name: tfstate
+- set_fact:
+    tfstate: "{{ secret_value }}"
 
 - debug:
     var: tfstate
@@ -38,21 +31,37 @@
 - name: Create temporary directory to hold SSH private key
   tempfile:
     state: directory
-    suffix: ssh
+    suffix: _ssh
   register: ssh_key_dir
 
-- name: Retrieve SSH private key from the vault
+- name: Retrieve SSH private key {{ nfs_server_ssh_key }}-key from the vault
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "{{ nfs_server_ssh_key }}-key"
     secret_group: "{{ vpc_config.vpcs[0].name }}"
 
-- name: Store SSH private key in file
+- name: Store SSH private key in file {{ ssh_key_dir.path }}/id_rsa
   copy:
-    content: "{{ secret_value }}"
+    content: "{{ secret_value }}\n"
     dest: "{{ ssh_key_dir.path }}/id_rsa"
     mode: 0600
+
+# TODO: Temporary!!!
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ nfs_server_ssh_key }}"
+    secret_group: "{{ vpc_config.vpcs[0].name }}"
+
+- name: Store SSH public key in file
+  copy:
+    content: "{{ secret_value }}"
+    dest: "{{ ssh_key_dir.path }}/id_rsa.pub"
+    mode: 0600
+# TODO: Temporary!!!
+
 
 - name: Create dynamic Ansible group vpc_bastion_server
   add_host:
@@ -65,5 +74,5 @@
     name: "{{nfs_server_ip}}"
     groups: vpc_nfs_servers
     ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
-    ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -W %h:%p -q {{ bastion_fip.public_ip_address }}"'
+    ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ ssh_key_dir.path }}/id_rsa -W %h:%p -q {{ bastion_fip.public_ip_address }}"'
     nfs_server: "{{ nfs_server }}"

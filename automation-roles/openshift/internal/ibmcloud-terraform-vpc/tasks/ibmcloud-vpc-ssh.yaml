@@ -13,13 +13,19 @@
 - name: Create temporary directory to hold SSH keys
   tempfile:
     state: directory
-    suffix: ssh
+    suffix: _ssh
   when: 'item.managed | default(False) | bool and secret_value == ""'
   register: ssh_tempdir
 
 - name: Create SSH key if not already in the vault and managed
   community.crypto.openssh_keypair:
     path: "{{ ssh_tempdir.path }}/{{ item.name }}"
+    type: rsa
+    comment: "provision-key for {{item.name}}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- debug:
+    msg: "{{ ssh_tempdir.path }}/{{ item.name }}"
   when: 'item.managed | default(False) | bool and secret_value == ""'
 
 - name: Store SSH private key {{ item.name }} in vault
