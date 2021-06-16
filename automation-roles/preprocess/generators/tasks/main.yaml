@@ -43,16 +43,6 @@
     generators_index:
       available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
 
-# - name: loop over the entities defined in the repo_definition/[environment].yaml
-#   debug: 
-#     msg: "{{item.key}} ---> {{item.value}}"
-#   loop: "{{generators_included_definition.ansible_facts | dict2items}}"
-
-# - name: loop (subelements) over the entities defined in the repo_definition/[environment].yaml
-#   debug: 
-#     msg: "{{item[0]}} ---> {{item[1]}}"
-#   loop: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
-
 ### TODO: check if the roles are available, before we even try to run them
 
 
@@ -66,6 +56,15 @@
     GENERATOR_NAME: "{{ item[0].key }}"
     GENERATOR_DIR: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
   loop: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
+- name: put the provider config to the terraform folder
+  template:
+    src: '../templates/provider.tf.j2'
+    dest: '{{ path_to_terraform_folder }}/provider.tf'
+# - name: put the provider-variables (the API Key!)
+#   template:
+#     src: '../templates/provider.auto.tfvars.j2'
+#     dest: '{{ path_to_terraform_folder }}/provider.auto.tfvars'
+
 
 
 ### Unfortunately subelements('value') works with loop but refuses to work with with_items
@@ -80,23 +79,3 @@
 #     GENERATOR_NAME: "{{ item[0].key }}"
 #     GENERATOR_DIR: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
 #   with_items: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
-
-
-### Old way of running generators
-# - name: show path to generators
-#   debug:
-#     msg: "{{path_to_config_folder}}/generators"
-# - name: Recursively find main.yml files inside the generators-directory
-#   find:
-#     paths: "{{path_to_config_folder}}/generators"
-#     patterns: 'main.yaml,main.yml'
-#     recurse: yes
-#   register: search_result
-# - name: show files
-#   debug: 
-#     msg: "{{ search_result }}"
-# - name: Run generators
-#   # item.path looks like:
-#   # "path": "/Users/markuswiegleb/workspaces/ansible-dapper/platform-provision-automation-next/repo_config/generators/nfs_servers/main.yaml"
-#   include_tasks: "{{ item.path }}"
-#   with_items: "{{ search_result.files }}"

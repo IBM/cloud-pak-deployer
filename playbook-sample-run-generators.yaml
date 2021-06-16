@@ -6,7 +6,51 @@
     terraform_work_folder: "TEMP_TERRAFORM"
     definition_name: sbx
   tasks:
-  - name: Pass variables to role
+  - name: handle terraform files and its folder
+    block:
+    # - name: check for .terraform directory
+    #   stat:
+    #     path: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform"
+    #   register: dot_terraform_dir
+    - name: ensure the environment-backup folder exists
+      file:
+        path: "{{playbook_dir}}/terraform_temp/{{definition_name}}"
+        state: directory
+    - name: save the .terraform directory
+      shell: 
+        cmd: "mv {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform {{playbook_dir}}/terraform_temp/{{definition_name}}"
+        removes: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform"
+    - name: save the .terraform.lock.hcl file
+      shell: 
+        cmd: "mv {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
+        removes: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl"
+    
+    - name: save the statefile
+      copy: 
+        src: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/terraform.tfstate"
+        dest: "{{playbook_dir}}/terraform_temp/{{definition_name}}/terraform.tfstate"
+    - name: purge terraform work folder
+      file:
+        path: "{{playbook_dir}}/scrap/{{terraform_work_folder}}"
+        state: absent
+    - name: create terraform work folder again
+      file:
+        path: "{{playbook_dir}}/scrap/{{terraform_work_folder}}"
+        state: directory
+    - name: copy statefile back
+      copy:
+        src: "{{playbook_dir}}/terraform_temp/{{definition_name}}/terraform.tfstate"
+        dest: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/terraform.tfstate"
+    - name: move the .terraform directory back
+      shell: 
+        cmd:  "mv {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform {{playbook_dir}}/scrap/{{terraform_work_folder}}"
+        removes: "{{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform"
+    - name: save the .terraform.lock.hcl file
+      shell: 
+        cmd:  "mv {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl"
+        removes: "{{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
+
+  - name: "Include 'generators'-role and pass variables to it"
     include_role:
       name: generators
     vars:

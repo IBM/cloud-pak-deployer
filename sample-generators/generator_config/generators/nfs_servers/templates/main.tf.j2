@@ -1,26 +1,50 @@
 {# start - nfs_server definition #}
 
-resource "ibm_is_volume" "{{ vpc_name_modified }}_bastionhost" {
-    resource_group = data.ibm_resource_group.resource_group.id
-    name = "{{ vpc.get('vpc_name') }}-volume-bastiondata-auto"
-    profile = "general-purpose"
-    zone = "{{ vpc.zone }}"
-    tags = ["env:auto","pipeline:ansible","vpc:{{ vpc.get('vpc_name') }}"]
-    capacity = 500
+
+data "ibm_is_image" "{{generator.attributes.name | replace("-", "_") }}" {
+    name = "{{generator.attributes.infrastructure.image}}"
 }
 
-resource "ibm_is_instance" "{{ vpc_name_modified }}_bastion" {
-    resource_group = data.ibm_resource_group.resource_group.id
-    name= "{{ vpc.get('vpc_name') }}-vm-bastion-auto"
-    vpc  = ibm_is_vpc.{{ vpc_name_modified }}.id
-    zone = "{{ vpc.zone }}"
-    profile = "bx2-4x16"
-    image = "r010-75e67093-ceaf-4d5e-a087-569e2124a974"
-    volumes = [ ibm_is_volume.{{ vpc_name_modified }}_bastionhost.id ]
-    primary_network_interface {
-        name = "eth0"
-        subnet = ibm_is_subnet.{{ vpc_name_modified }}_primary.id
-    }
-    tags = ["env:auto","pipeline:ansible","vpc:{{ vpc.get('vpc_name') }}"]
-    keys = ["r010-09b9b1dd-183f-426a-9e18-0e9a7fe74f27","r010-a23d1986-3e6a-4b44-a8d1-a49a15b1ad1f","r010-bc4a2239-0eca-4e82-ac6b-b0576c37c535"]
+{% for storage in generator.attributes.storage %}
+resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}" {
+    name           = "{{generator.attributes.name}}-disk-{{storage.name}}"
+    resource_group = data.ibm_resource_group.thisresourcegroup.id
+    profile        = "{{storage.profile}}"
+    zone           = "{{generator.attributes.infrastructure.zone }}"
+    capacity       = {{storage.size}}
 }
+{% endfor %}
+
+resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" {
+    name = "{{generator.attributes.name }}-vsi"
+    resource_group =  data.ibm_resource_group.thisresourcegroup.id
+    profile = "{{generator.attributes.infrastructure.profile}}"
+    keys = []
+    zone = "{{generator.attributes.infrastructure.zone }}"
+    vpc = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name }}.id
+    image = data.ibm_is_image.{{generator.attributes.name | replace("-", "_") }}.id
+    
+    boot_volume {
+        name = "{{generator.attributes.name }}-disk-boot"
+    }
+    primary_network_interface {
+        name = "{{generator.attributes.name }}-nic"
+        subnet = ibm_is_subnet.{{generator.attributes.infrastructure.subnet | replace("-", "_") }}.id
+        primary_ipv4_address = "{{generator.attributes.infrastructure.primary_ipv4_address}}"
+    }
+
+
+    volumes = [
+        {% for storage in generator.attributes.storage %}
+        ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}.id{{ "," if not loop.last else "" }}
+        {% endfor %}
+    ]
+}
+
+
+
+{# nice to have for debugging #}
+
+/* generator.attributes:
+{{generator.attributes | to_nice_json}}
+*/

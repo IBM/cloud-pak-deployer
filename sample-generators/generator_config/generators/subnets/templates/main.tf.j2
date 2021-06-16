@@ -1,5 +1,8 @@
-resource "ibm_is_subnet" "{{generator.attributes.name}}" {
+resource "ibm_is_subnet" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.name}}"
     vpc  = ibm_is_vpc.{{generator.attributes.vpc}}.id
-    zone = 
+    ipv4_cidr_block = "{{generator.attributes.ipv4_cidr_block}}"
+    zone = "{{generator.attributes.zone}}"
+
+    depends_on = [ibm_is_vpc_address_prefix.{{generator.attributes.address_prefix | replace("-", "_")}}]
 }
