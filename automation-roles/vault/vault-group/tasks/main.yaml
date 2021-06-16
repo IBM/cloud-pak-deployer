@@ -1,0 +1,16 @@
+---
+
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - vault_type is defined
+      - vault_authentication_type is defined
+      - secret_group is defined
+
+- name: Get or create Group IBMCloud
+  include_tasks: group-ibmcloud.yml
+  vars:
+    ibmcloud_vault_address: "{{ vault_url }}"
+    ibmcloud_api_key: "{{ vault_api_key }}"
+    ibmcloud_secret_group_name: "{{ secret_group }}"
+  when: "vault_type == 'ibmcloud-vault'" 

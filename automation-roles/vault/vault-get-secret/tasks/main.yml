@@ -1,30 +1,58 @@
 ---
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - secret_name is defined
-      - secret_group is defined
 
-- name: Login to vault if vault_login_success is not set
-  include_role: 
-     name: vault-connect
-  when: "not vault_login_success is defined"
+- name: Get Secret from Vault Hashicorp
+  block:
+    - name: Validate mandatory variables are defined for Hashicorp Vault
+      assert:
+        that:
+          - vault_secret_path is defined
+          - vault_secret_field is defined
+          - secret_name is defined
+          - secret_group is defined
 
-- name: Get secret in Vault Hashicorp
-  include_role: 
-    name: get-secret-hashicorp
-  vars:
-    secret_name_path: "/secret/{{ secret_group }}/{{ secret_name }}"
+    - name: Get Secret Hashicorp vault (API Key)
+      include_tasks: get-secret-hashicorp-api-key.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_login_token: "{{ vault_api_key }}"
+        hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
+        hashicorp_secret_field: "{{ vault_secret_field }}"
+      when: vault_authentication_type == 'api-key'
+
+    - name: Get Secret Hashicorp vault (Certificate)
+      include_tasks: get-secret-hashicorp-certificate.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_ca_certificate: "{{ vault_ca_cert }}"
+        hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
+        hashicorp_vault_client_key: "{{ vault_client_key }}"
+        hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
+        hashicorp_secret_field: "{{ vault_secret_field }}"
+      when: vault_authentication_type == 'certificate'      
   when: "vault_type == 'hashicorp-vault'"
 
-- name: Get secret in Vault IBMCloud
-  include_role: 
-    name: get-secret-ibmcloud
-  vars:
-    ibmcloud_vault_address: "{{ vault_url }}"
+- name: Get Secret from Vault IBM Cloud
+  block:
+    - name: Validate mandatory variables are defined for Vault IBM Cloud
+      assert:
+        that:
+          - secret_name is defined
+          - secret_group is defined
+
+    - name: Get secret from Vault IBMCloud
+      include_tasks: get-secret-ibmcloud.yml
+      vars:
+        ibmcloud_vault_address: "{{ vault_url }}"
+        ibm_cloud_secret_name: "{{ secret_name }}"
   when: "vault_type == 'ibmcloud-vault'"
 
-- name: Get secret in Vault file
-  include_role: 
-    name: get-secret-file
+- name: Get Secret from Vault file
+  block:
+    - name: Validate mandatory variables are defined for Vault file
+      assert:
+        that:
+          - secret_name is defined
+
+    - name: Get secret in Vault file
+      include_tasks: get-secret-file.yml
   when: "vault_type == 'file-vault'"
