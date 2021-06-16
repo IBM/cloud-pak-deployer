@@ -8,11 +8,27 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: Retrieve Terraform tf state file from the vault if available
+- name: Retrieve Terraform tfstate from the vault
   include_role: 
-    name: terraform-retrieve-state
+    name: vault-get-secret
   vars:
-    roks_name: "{{ roks_config.roks[0].name }}"
+    secret_name: "{{ roks_config.roks[0].name }}-terraform-tfstate"
+    secret_group: "{{ roks_config.roks[0].name }}"
+
+- name: When the terraform state exist, write to disk
+  block:
+
+    - name: Create temporary terraform directory if it does not exist
+      file:
+        path: "{{status_dir}}/terraform"
+        state: directory
+
+    - copy:
+        content: "{{ secret_value }}"
+        dest: "{{ status_dir }}/terraform/terraform.tfstate"
+      when: "secret_value|length > 0"
+
+  when: "not secret_value == ''"
 
 - name: OpenShift Terraform for IBM Cloud
   block:
@@ -21,7 +37,6 @@
         name: ibmcloud-terraform-classic
       when: roks_config.roks[0].infrastructure.type == "classic"
   when: "cloud_platform == 'ibm-cloud'"
-
     
 - name: Provision OpenShift on IBM Cloud VPC Infrastructure
   block:
@@ -31,8 +46,14 @@
       when: roks_config.roks[0].infrastructure.type == "vpc"
   when: "cloud_platform == 'ibm-cloud'"
 
-- name: Store the Terraform tfstate file in the vault
-  include_role: 
-    name: terraform-store-state
+- set_fact:
+    tf_state_content: "{{ lookup('file', status_dir+'/terraform/terraform.tfstate') }}"
+
+- name: Store the terraform tfstate file as {{ roks_config.roks[0].name }}-terraform-tfstate
+  include_role:
+    name: vault-create-secret
   vars:
-    roks_name: "{{ roks_config.roks[0].name }}"
+    secret_name: "{{ roks_config.roks[0].name }}-terraform-tfstate"
+    secret_group: "{{ roks_config.roks[0].name }}"
+    secret_payload: "{{ tf_state_content }}"
+  when: "tf_state_content | length > 0"
