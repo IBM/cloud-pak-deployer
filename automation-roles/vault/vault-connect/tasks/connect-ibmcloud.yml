@@ -1,0 +1,39 @@
+---
+
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - ibmcloud_vault_address is defined
+      - ibmcloud_api_key is defined
+
+- name: Receive IAM Token from IBM Cloud
+  uri:
+    url: https://iam.cloud.ibm.com/identity/token
+    return_content: yes
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: "urn:ibm:params:oauth:grant-type:apikey"
+      apikey: "{{ ibmcloud_api_key }}" 
+    status_code: 200
+  register: ibm_vault_iam_token
+
+- name: Use the IAM token to build a vault token
+  uri:
+    url: "{{ ibmcloud_vault_address }}/v1/auth/ibmcloud/login"
+    return_content: yes
+    headers:
+      Accept: "application/json"
+    method: POST
+    body_format: json
+    body: 
+      token: "{{ ibm_vault_iam_token.json.access_token }}"
+    status_code: 200
+  register: ibm_vault_token
+
+- set_fact:
+    ibm_vault_token_content: "{{ ibm_vault_token.content | from_json }} "
+
+- debug:
+    msg: "Successfully logged into IBMCloud vault {{ ibmcloud_vault_address }}"
+

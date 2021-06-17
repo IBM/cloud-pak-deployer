@@ -134,6 +134,13 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                                     #if vsi['flavour']:
                                     #    json_result["resource"]["ibm_is_instance"][ vsi['name'] ].update(templates['vsi'][ vsi['flavour'] ])
                                     print('instance: '+vsi['name'] + ' image: ' + json_result["resource"]["ibm_is_instance"][ vsi['name'] ]['image'])
+                                    if 'keys' in vsi:
+                                        print('keys: '+vsi['name'] + ' keys: ', vsi['keys'])
+                                        if not 'keys' in json_result["resource"]["ibm_is_instance"][ vsi['name'] ]:
+                                            json_result["resource"]["ibm_is_instance"][ vsi['name'] ]['keys'] = []
+                                        for key in vsi['keys']:
+                                            json_result["resource"]["ibm_is_instance"][ vsi['name'] ]['keys'].append('${ibm_is_ssh_key.'+key+'.id}')
+                                        del vsi['keys']
                                     if 'addons' in vsi:
                                         if 'storage' in vsi['addons']:
                                             json_result["resource"]["ibm_is_instance"][ vsi['name'] ]['volumes'] = []
@@ -232,7 +239,8 @@ with open(config_dir + '/' + 'vpc.yaml') as root_yaml_content:
                 'name': to_kebap_case( service['name'] )
             })
 
-# print(json_result)
+print('JSON result:')
+print(json_result)
 
 with open(terraform_main_file, 'w') as outfile:
     json.dump(json_result, outfile, indent=4)

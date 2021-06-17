@@ -1,61 +1,55 @@
-- name: Create Secret Vault Hashicorp
+---
+
+- name: Delete Secret from Vault Hashicorp
   block:
     - name: Validate mandatory variables are defined for Hashicorp Vault
       assert:
         that:
           - vault_secret_path is defined
           - secret_name is defined
-          - vault_secret_field is defined
-          - secret_payload is defined
           - secret_group is defined
 
-    - name: Create Secret Hashicorp vault (API Key)
-      include_tasks: create-secret-hashicorp-api-key.yml
+    - name: Delete Secret Hashicorp vault (API Key)
+      include_tasks: delete-secret-hashicorp-api-key.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_vault_login_token: "{{ vault_api_key }}"
         hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
-        hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_payload | b64encode }}"
       when: vault_authentication_type == 'api-key'
 
-    - name: Get Secret Hashicorp vault (Certificate)
-      include_tasks: create-secret-hashicorp-certificate.yml
+    - name: Delete Secret Hashicorp vault (Certificate)
+      include_tasks: delete-secret-hashicorp-certificate.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_vault_ca_certificate: "{{ vault_ca_cert }}"
         hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
         hashicorp_vault_client_key: "{{ vault_client_key }}"
         hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
-        hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_payload | b64encode }}"
       when: vault_authentication_type == 'certificate'      
   when: "vault_type == 'hashicorp-vault'"
 
-- name: Create Secret Vault IBM Cloud
+- name: Delete Secret from Vault IBM Cloud
   block:
     - name: Validate mandatory variables are defined for Vault IBM Cloud
       assert:
         that:
           - secret_name is defined
-          - secret_payload is defined
+          - secret_group is defined
 
-    - name: Create secret from Vault IBMCloud
-      include_tasks: create-secret-ibmcloud.yml
+    - name: Delete secret from Vault IBMCloud
+      include_tasks: delete-secret-ibmcloud.yml
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibm_cloud_secret_name: "{{ secret_name }}"
-        ibm_vault_secret_payload: "{{ secret_payload | b64encode }}"
   when: "vault_type == 'ibmcloud-vault'"
 
-- name: Create Secret Vault file
+- name: Delete Secret from Vault file
   block:
     - name: Validate mandatory variables are defined for Vault file
       assert:
         that:
           - secret_name is defined
-          - secret_payload is defined
 
     - name: Get secret in Vault file
-      include_tasks: create-secret-file.yml
+      include_tasks: delete-secret-file.yml
   when: "vault_type == 'file-vault'"
