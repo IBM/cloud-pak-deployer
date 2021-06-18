@@ -28,7 +28,7 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
 {% if generator.attributes.infrastructure.public_ip is defined and generator.attributes.infrastructure.public_ip is sameas true %}
 resource "ibm_is_floating_ip" "{{generator.attributes.name | replace("-", "_") }}" {
   name           = "{{generator.attributes.name}}"
-  target         = ibm_is_instance.{{generator.attributes.name | replace("-", "_")}}.id
+  target         = ibm_is_instance.{{generator.attributes.name | replace("-", "_")}}.primary_network_interface[0].id
   resource_group = data.ibm_resource_group.thisresourcegroup.id
 }
 {% endif %}
