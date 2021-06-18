@@ -17,21 +17,28 @@
     #   register: dot_terraform_dir
     - name: ensure the environment-backup folder exists
       file:
-        path: "{{playbook_dir}}/terraform_temp/{{definition_name}}"
+        path: "{{playbook_dir}}/scrap/terraform_temp/{{definition_name}}"
         state: directory
     - name: save the .terraform directory
       shell: 
-        cmd: "mv {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform {{playbook_dir}}/terraform_temp/{{definition_name}}"
+        cmd: "mv {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform {{playbook_dir}}/scrap/terraform_temp/{{definition_name}}"
         removes: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform"
     - name: save the .terraform.lock.hcl file
       shell: 
-        cmd: "mv {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
+        cmd: "mv {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl {{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
         removes: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl"
     
+
+    - name: get stats_temp_statefile
+      stat:
+        path: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/terraform.tfstate"
+      register: stats_temp_statefile
     - name: save the statefile
       copy: 
         src: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/terraform.tfstate"
-        dest: "{{playbook_dir}}/terraform_temp/{{definition_name}}/terraform.tfstate"
+        dest: "{{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/terraform.tfstate"
+      when: stats_temp_statefile.stat.exists
+
     - name: purge terraform work folder
       file:
         path: "{{playbook_dir}}/scrap/{{terraform_work_folder}}"
@@ -42,16 +49,16 @@
         state: directory
     - name: copy statefile back
       copy:
-        src: "{{playbook_dir}}/terraform_temp/{{definition_name}}/terraform.tfstate"
+        src: "{{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/terraform.tfstate"
         dest: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/terraform.tfstate"
     - name: move the .terraform directory back
       shell: 
-        cmd:  "mv {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform {{playbook_dir}}/scrap/{{terraform_work_folder}}"
-        removes: "{{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform"
+        cmd:  "mv {{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/.terraform {{playbook_dir}}/scrap/{{terraform_work_folder}}"
+        removes: "{{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/.terraform"
     - name: move the .terraform.lock.hcl file back
       shell: 
-        cmd:  "mv {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl"
-        removes: "{{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
+        cmd:  "mv {{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/.terraform.lock.hcl {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl"
+        removes: "{{playbook_dir}}/scrap/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
 
   - name: ensure the ssh-key folder exists
     file:
