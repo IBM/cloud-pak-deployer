@@ -61,9 +61,6 @@
     secret_name: "{{ item.name }}"
     secret_group: "{{ vpc_config.vpcs[0].name }}"
 
-- name: Generate Terraform SSH key construct
-  blockinfile:
-    dest: '{{status_dir}}/terraform/ssh-keys.tf'
-    block: "{{ lookup('template','ssh-key.tf.j2') }}"
-    marker: "// {mark} SSH Key for {{ item.name }}"
-    create: True
+- name: Set SSH public key fact to be used in generator
+  set_fact:
+    "{{ item.name | replace('-','_') }}": "{{ secret_value }}s"

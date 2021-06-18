@@ -24,21 +24,15 @@
 
 - set_fact:
     vault_api_key: "{{ ibmcloud_api_key }}"
+    
 - include_vars:
-    file: "{{ input_dir }}/roks.yaml"
-    name: roks_config
+    file: "{{ config_dir }}/config/{{ definition_name }}.yaml"
+    name: all_config
 
-- include_vars:
-    file: "{{ input_dir }}/servers.yaml"
-    name: servers_config
-
-- include_vars:
-    file: "{{ input_dir }}/cp4d.yaml"
-    name: cp4d_config    
+- debug:
+    msg: "{{ all_config }}"
 
 - name: Validate cloud_platform is supported
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
 
-- debug:
-    msg: "{{ roks_config.roks[0] }}"
