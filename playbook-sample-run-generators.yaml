@@ -5,7 +5,9 @@
   gather_facts: False
   vars:
     terraform_work_folder: "TEMP_TERRAFORM"
-    definition_name: sample
+    definition_name: client
+    sample_provision_ssh: some_very_long_string
+
   tasks:
   - name: handle terraform files and its folder
     block:
@@ -46,10 +48,21 @@
       shell: 
         cmd:  "mv {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform {{playbook_dir}}/scrap/{{terraform_work_folder}}"
         removes: "{{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform"
-    - name: save the .terraform.lock.hcl file
+    - name: move the .terraform.lock.hcl file back
       shell: 
         cmd:  "mv {{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl {{playbook_dir}}/scrap/{{terraform_work_folder}}/.terraform.lock.hcl"
         removes: "{{playbook_dir}}/terraform_temp/{{definition_name}}/.terraform.lock.hcl"
+
+  - name: ensure the ssh-key folder exists
+    file:
+      path: "{{playbook_dir}}/scrap/keys"
+      state: directory
+  - name: generate a deployment ssh key
+    community.crypto.openssh_keypair:
+      path: "{{playbook_dir}}/scrap/keys/id_provisionssh_rsa"
+  - name: 
+    set_fact:
+      sample_provision_ssh: "{{ lookup('file', './scrap/keys/id_provisionssh_rsa.pub') }}"
 
   - name: "Include 'generators'-role and pass variables to it"
     include_role:
@@ -58,10 +71,11 @@
       path_to_config_folder: "{{playbook_dir}}/sample-generators/generator_config"
       path_to_definitions_folder: "{{playbook_dir}}/sample-generators/environment_definitions"
       path_to_terraform_folder: "{{playbook_dir}}/scrap/{{terraform_work_folder}}"
-  # - name: "add the 'provider.auto.tfvars' to the terraform-workdir"
-  #   copy:
-  #     src: "{{playbook_dir}}/scrap/provider.auto.tfvars.j2"
-  #     dest: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/provider.auto.tfvars"
+  
+  - name: "add the 'provider.auto.tfvars' to the terraform-workdir"
+    copy:
+      src: "{{playbook_dir}}/scrap/provider.auto.tfvars.j2"
+      dest: "{{playbook_dir}}/scrap/{{terraform_work_folder}}/provider.auto.tfvars"
 
   
   # roles:
