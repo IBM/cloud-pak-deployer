@@ -1,16 +1,17 @@
 ---
 
 - set_fact:
-    bastion_host: "{{ nfs_server['infrastructure']['bastion_host'] }}"
-    nfs_server_ip: "{{ nfs_server['infrastructure']['primary_ipv4_address'] }}"
-    nfs_server_ssh_key: "{{ nfs_server['infrastructure']['ssh_key'] }}"
+    bastion_host: "{{ current_nfs_server['infrastructure']['bastion_host'] }}"
+    nfs_server_ip: "{{ current_nfs_server['infrastructure']['primary_ipv4_address'] }}"
+    nfs_server_ssh_key: "{{ current_nfs_server['infrastructure']['keys'][0] }}"
+    # TODO: Search through the available SSH keys and retrieve the one that has both a private and public key in the vault
 
 - name: Retrieve Terraform tfstate from the vault
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ all_config.roks[0].name }}-terraform-tfstate"
-    secret_group: "{{ all_config.roks[0].name }}"
+    secret_name: "{{ environment_name }}-terraform-tfstate"
+    secret_group: "{{ environment_name }}"
 
 - set_fact:
     tfstate: "{{ secret_value }}"
@@ -38,8 +39,8 @@
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ nfs_server_ssh_key }}-key"
-    secret_group: "{{ all_config.vpcs[0].name }}"
+    secret_name: "{{ nfs_server_ssh_key }}-ssh-key"
+    secret_group: "{{ environment_name }}"
 
 - name: Store SSH private key in file {{ ssh_key_dir.path }}/id_rsa
   copy:
@@ -52,8 +53,8 @@
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ nfs_server_ssh_key }}"
-    secret_group: "{{ all_config.vpcs[0].name }}"
+    secret_name: "{{ nfs_server_ssh_key }}-ssh-pub-key"
+    secret_group: "{{ environment_name }}"
 
 - name: Store SSH public key in file
   copy:
@@ -75,4 +76,4 @@
     groups: vpc_nfs_servers
     ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
     ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ ssh_key_dir.path }}/id_rsa -W %h:%p -q {{ bastion_fip.public_ip_address }}"'
-    nfs_server: "{{ nfs_server }}"
+    nfs_server: "{{ current_nfs_server }}"
