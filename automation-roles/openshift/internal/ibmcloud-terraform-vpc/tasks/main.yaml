@@ -1,17 +1,7 @@
 ---
-- name: "Create Terraform directory {{status_dir}}/terraform"
-  file:
-    path: "{{status_dir}}/terraform"
-    state: directory
-
 - name: Generate or retrieve the SSH keys
   include: ibmcloud-vpc-ssh.yaml
   loop: "{{ all_config.ssh_keys }}"
-
-- name: "Copy variables to Terraform directory {{status_dir}}/terraform"
-  template:
-    src: 'variables.auto.tfvars.j2'
-    dest: '{{status_dir}}/terraform/variables.auto.tfvars'
 
 - name: "Include 'generators'-role and pass variables to it"
   include_role:
@@ -20,6 +10,11 @@
     path_to_config_folder: "{{ config_dir }}/generator_config"
     path_to_definitions_folder: "{{ config_dir }}/config"
     path_to_terraform_folder: "{{status_dir}}/terraform"
+
+- name: "Copy variables to Terraform directory {{status_dir}}/terraform"
+  template:
+    src: 'variables.auto.tfvars.j2'
+    dest: '{{status_dir}}/terraform/variables.auto.tfvars'
 
 - name: "Run terraform init in Terraform directory {{status_dir}}/terraform"
   shell: 
@@ -35,5 +30,8 @@
   shell: 
     chdir: '{{status_dir}}/terraform'
     cmd: bash -c "terraform apply -auto-approve 2>&1 >> apply.log"
+  environment:
+    TF_LOG: "info"
+    TF_LOG_PATH: "{{ status_dir }}/terraform/tf_apply.log"
   register: terraform_apply
   ignore_errors: yes
