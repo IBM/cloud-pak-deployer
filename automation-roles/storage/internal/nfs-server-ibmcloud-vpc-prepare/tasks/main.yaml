@@ -9,8 +9,8 @@
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ roks_config.roks[0].name }}-terraform-tfstate"
-    secret_group: "{{ roks_config.roks[0].name }}"
+    secret_name: "{{ all_config.roks[0].name }}-terraform-tfstate"
+    secret_group: "{{ all_config.roks[0].name }}"
 
 - set_fact:
     tfstate: "{{ secret_value }}"
@@ -39,7 +39,7 @@
     name: vault-get-secret
   vars:
     secret_name: "{{ nfs_server_ssh_key }}-key"
-    secret_group: "{{ vpc_config.vpcs[0].name }}"
+    secret_group: "{{ all_config.vpcs[0].name }}"
 
 - name: Store SSH private key in file {{ ssh_key_dir.path }}/id_rsa
   copy:
@@ -53,7 +53,7 @@
     name: vault-get-secret
   vars:
     secret_name: "{{ nfs_server_ssh_key }}"
-    secret_group: "{{ vpc_config.vpcs[0].name }}"
+    secret_group: "{{ all_config.vpcs[0].name }}"
 
 - name: Store SSH public key in file
   copy:

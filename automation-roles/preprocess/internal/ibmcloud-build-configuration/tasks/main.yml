@@ -2,8 +2,7 @@
 - name: Validate mandatory variables are defined
   assert:
     that:
-      - roks_config is defined
-      - cp4d_config is defined
+      - all_config is defined
 
 
 - name: Validate cloud_platform is supported is supported
@@ -13,9 +12,9 @@
 - name: Loop through each cp4d entry
   include_role:
     name: ibmcloud-roks-configuration
-  loop: "{{ roks_config.roks }}"
+  loop: "{{ all_config.roks }}"
   loop_control:
     loop_var: current_roks_cluster
 
 - debug:
-    msg: "{{ roks_config }}"
+    msg: "{{ all_config }}"

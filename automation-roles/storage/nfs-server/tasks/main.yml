@@ -10,14 +10,14 @@
   when: "cloud_platform not in implemented_cloud_platform_types"
 
 - set_fact:
-    storage_type: "{{ roks_config.roks[0].storage_classes[0].storage_type }}"
+    storage_type: "{{ all_config.roks[0].storage_classes[0].storage_type }}"
 
 - block:
   - set_fact:
-      nfs_server_name: "{{ roks_config.roks[0].storage_classes[0].nfs_server_name }}"
+      nfs_server_name: "{{ all_config.roks[0].storage_classes[0].nfs_server_name }}"
 
   - set_fact:
-      nfs_server: "{{ servers_config.nfs_servers | json_query(query) | first }}"
+      nfs_server: "{{ all_config.nfs_servers | json_query(query) | first }}"
     vars:
       query: >-
           [?name=='{{nfs_server_name}}']

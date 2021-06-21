@@ -32,8 +32,8 @@ fi
 
 # Handle configuration on GitHub
 if [ -v GIT_CONFIG_REPO_URL ];then
-    CONFIG_DIR=/tmp/automation_config
-    mkdir -p ${CONFIG_DIR}
+    GIT_DIR=/tmp/automation_config
+    mkdir -p ${GIT_DIR}
 
     #Disable asking for credentials when login fails.
     export GIT_TERMINAL_PROMPT=0
@@ -56,11 +56,11 @@ if [ -v GIT_CONFIG_REPO_URL ];then
     rm -f /tmp/git_api_key.txt
 
     # Clear any existing content from the CONF_FOLDER_PATH
-    rm -rf ${CONFIG_DIR}/*
+    rm -rf ${GIT_DIR}/*
 
     # Clone the config repository
     export GIT_CONFIG_REPO_URL_WITH_TOKEN="https://iamapikey:${GIT_ACCESS_TOKEN}@${GIT_CONFIG_REPO_URL#https://}"
-    pushd ${CONFIG_DIR}
+    pushd ${GIT_DIR}
     git clone ${GIT_CONFIG_REPO_URL_WITH_TOKEN} .
     popd
 
@@ -71,8 +71,10 @@ if [ -v GIT_CONFIG_REPO_URL ];then
         exit 1
     fi
 
+    CONFIG_DIR=${GIT_DIR}/${CONTEXT_DIR}
+
     # Validate if the specified context directory exists
-    if [ ! -d "${CONFIG_DIR}/${CONTEXT_DIR}" ]; then
+    if [ ! -d "${CONFIG_DIR}" ]; then
         echo "Context directory ${CONTEXT_DIR} not found."
         echo "Exiting with exit code 1"
         echo ""
@@ -80,7 +82,7 @@ if [ -v GIT_CONFIG_REPO_URL ];then
     fi
 
     # Validate if the configuration directory exists
-    CONF_DIR="${CONFIG_DIR}/${CONTEXT_DIR}/config"
+    CONF_DIR="${CONFIG_DIR}/config"
     if [ ! -d "${CONF_DIR}" ]; then
         echo "config directory not found in context directory ${CONTEXT_DIR}."
         echo "Exiting with exit code 1"
@@ -89,7 +91,7 @@ if [ -v GIT_CONFIG_REPO_URL ];then
     fi
 
     # Validate if the inventory directory exists
-    INV_DIR="${CONFIG_DIR}/${CONTEXT_DIR}/inventory"
+    INV_DIR="${CONFIG_DIR}/inventory"
     if [ ! -d "${INV_DIR}" ]; then
         echo "inventroy directory not found in context directory ${CONTEXT_DIR}."
         echo "Exiting with exit code 1"
@@ -121,6 +123,6 @@ echo "Starting Automation script..."
 echo ""
 cd ${SCRIPT_DIR}/..
 
-ansible-playbook -i ${INV_DIR} playbook-e2e.yml --extra-vars input_dir=${CONF_DIR} --extra-vars iaas_classic_username=${iaas_classic_username} --extra-vars iaas_classic_api_key=${iaas_classic_api_key} --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
+ansible-playbook -i ${INV_DIR} playbook-e2e.yml --extra-vars config_dir=${CONFIG_DIR} --extra-vars iaas_classic_username=${iaas_classic_username} --extra-vars iaas_classic_api_key=${iaas_classic_api_key} --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} "$@"  
 
 

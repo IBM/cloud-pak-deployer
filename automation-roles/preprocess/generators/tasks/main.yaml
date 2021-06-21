@@ -10,6 +10,12 @@
       - path_to_config_folder
       - path_to_definitions_folder
       - path_to_terraform_folder
+      
+    - name: Delete terraform work folder if it already exists
+      file:
+        path: '{{ path_to_terraform_folder }}'
+        state: absent
+
     - name: Create terraform work folder if it does not exist
       file:
         path: '{{ path_to_terraform_folder }}'
@@ -20,7 +26,7 @@
 #   register: statefile_details
 # - name: 
 #   template:
-- name: Pull in the path_to_definitions_folder and read the [definition_name].yaml
+- name: Pull in the path_to_definitions_folder and read the {{ definition_name }}.yaml
   include_vars: "{{path_to_definitions_folder}}/{{definition_name}}.yaml"
   register: generators_included_definition
 - debug: 

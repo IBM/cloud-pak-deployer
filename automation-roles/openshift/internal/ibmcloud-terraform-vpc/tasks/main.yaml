@@ -1,27 +1,16 @@
 ---
-- name: "Create Terraform directory {{status_dir}}/terraform"
-  file:
-    path: "{{status_dir}}/terraform"
-    state: directory
-
-- include_vars:
-    file: "{{ input_dir }}/vpc.yaml"
-    name: vpc_config
-
-- name: Run pre-processing script
-  script: scripts/generate_management.py {{input_dir}} "{{status_dir}}/terraform/main.tf.json"
-  args:
-    executable: python3
-  register: generate_management_output
-
-- name: Add SSH keys to Terraform directory {{status_dir}}/terraform
+- name: Generate or retrieve the SSH keys
   include: ibmcloud-vpc-ssh.yaml
-  loop: "{{ vpc_config.ssh_keys }}"
+  loop: "{{ all_config.ssh_keys }}"
 
-- name: "Copy ibm-provider config to Terraform directory {{status_dir}}/terraform"
-  template:
-    src: 'provider.tf.j2'
-    dest: '{{status_dir}}/terraform/provider.tf'
+- name: "Include 'generators'-role and pass variables to it"
+  include_role:
+    name: generators
+  vars:
+    path_to_config_folder: "{{ config_dir }}/generator_config"
+    path_to_definitions_folder: "{{ config_dir }}/config"
+    path_to_terraform_folder: "{{status_dir}}/terraform"
+
 - name: "Copy variables to Terraform directory {{status_dir}}/terraform"
   template:
     src: 'variables.auto.tfvars.j2'
@@ -32,12 +21,17 @@
     chdir: '{{status_dir}}/terraform'
     cmd: 'terraform init'
 
-- name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check plan.log"
+- name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
   shell: 
     chdir: '{{status_dir}}/terraform'
     cmd: bash -c "terraform plan 2>&1 >> plan.log"
 
-- name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check apply.log"
+- name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/apply.log"
   shell: 
     chdir: '{{status_dir}}/terraform'
     cmd: bash -c "terraform apply -auto-approve 2>&1 >> apply.log"
+  environment:
+    TF_LOG: "info"
+    TF_LOG_PATH: "{{ status_dir }}/terraform/tf_apply.log"
+  register: terraform_apply
+  ignore_errors: yes

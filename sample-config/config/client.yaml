@@ -82,7 +82,6 @@ subnets:
   ipv4_cidr_block: 10.91.0.192/26
   zone: eu-de-3 # TODO: resolve this via the prefix
 
-
 vsis:
 - name: bastion
   infrastructure:
@@ -95,7 +94,6 @@ vsis:
     subnet: subnet-shared
     primary_ipv4_address: 10.91.0.196
     public_ip: True
-
 
 nfs_servers:
 - name: storage
@@ -114,36 +112,38 @@ nfs_servers:
     profile: 10iops-tier
     size: 1000
 
-# nfs_servers:
-# - name: storage
-#   infrastructure:
-#     # type: vpc
-#     subnet: access
-#     primary_ipv4_address: 10.90.0.196
-#     profile: "cx2-2x4"
-#     image: ibm-redhat-8-3-minimal-amd64-3
-#     # keys (are hardcoded right now)
-#     zone: eu-de-3 # TODO: resolve this via the subnet->prefix
-#     vpc_name: access # TODO: resolve this via the subnet->prefix
-#     # bastion_host: # needed to provision this machine
-#   storage:
-#   - name: nfs-data
-#     profile: 10iops-tier
-#     size: 1000
+nfs_servers:
+- name: storage
+  infrastructure:
+    # type: vpc
+    subnet: access
+    primary_ipv4_address: 10.90.0.196
+    profile: "cx2-2x4"
+    image: ibm-redhat-8-3-minimal-amd64-3
+    # keys (are hardcoded right now)
+    zone: eu-de-3 # TODO: resolve this via the subnet->prefix
+    vpc_name: access # TODO: resolve this via the subnet->prefix
+    # bastion_host: # needed to provision this machine
+  storage:
+  - name: nfs-data
+    profile: 10iops-tier
+    size: 1000
 
-
-
-# roks:
-# - name: sample
-#   kube_version: 4.6_openshift # Mandatory
-#   worker_flavour: bx2.16x64
-#   worker_count: 3
-#   resource_group_name: ibm
-#   max_worker_count: 10 # Optional, default is no maximum
-#   infrastructure:
-#     type: vpc # TODO no other otions yet
-#     vpc_name: client # Mandatory if type==vpc
-#     subnet: client-3
+roks:
+- name: sample
+  kube_version: 4.6_openshift # Mandatory
+  worker_flavour: bx2.16x64
+  worker_count: 3
+  resource_group_name: ibm
+  max_worker_count: 10 # Optional, default is no maximum
+  infrastructure:
+    type: vpc # TODO no other otions yet
+    vpc_name: client # Mandatory if type==vpc
+    subnet: client-3
+    zone: eu-de-3
+  storage_classes:
+  - storage_type: nfs
+    nfs_server_name: nfs
 
 cp4ds:
 - project: zen-sample            # Mandatory
