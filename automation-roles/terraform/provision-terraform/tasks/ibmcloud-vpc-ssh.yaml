@@ -1,0 +1,66 @@
+---
+- name: Retrieve SSH public key if already in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ item.name }}-ssh-key"
+    secret_group: "{{ environment_name }}" 
+
+- fail:
+    msg: "SSH key {{ item.name }} not found in vault and not managed"
+  when: 'not item.managed | default(False) | bool and secret_value == ""'
+
+- name: Create temporary directory to hold SSH keys
+  tempfile:
+    state: directory
+    suffix: _ssh
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+  register: ssh_tempdir
+
+- name: Create SSH key if not already in the vault and managed
+  community.crypto.openssh_keypair:
+    path: "{{ ssh_tempdir.path }}/{{ item.name }}"
+    type: rsa
+    comment: "provision-key for {{item.name}}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- debug:
+    msg: "{{ ssh_tempdir.path }}/{{ item.name }}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Store SSH private key {{ item.name }} in vault
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{ item.name }}-ssh-key"
+    secret_description: "Managed private SSH key for VPC {{ all_config.vpcs[0].name }}"
+    secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + item.name) }}"
+    secret_group: "{{ environment_name }}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Store SSH public key {{ item.name }} in vault
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{ item.name }}-ssh-pub-key"
+    secret_description: "Managed public SSH key for VPC {{ all_config.vpcs[0].name }}"
+    secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + item.name + '.pub') }}"
+    secret_group: "{{ environment_name }}"
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Delete temporary SSH key directory
+  file:
+    path: "{{ ssh_tempdir.path }}"
+    state: absent
+  when: 'item.managed | default(False) | bool and secret_value == ""'
+
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ item.name }}-ssh-pub-key"
+    secret_group: "{{ environment_name }}"
+
+- name: Set SSH public key fact to be used in generator
+  set_fact:
+    "{{ item.name | replace('-','_') }}_ssh_pub_key": "{{ secret_value }}"
