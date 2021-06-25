@@ -11,6 +11,22 @@ resource_groups:
 
 vpcs:
 - name: client
+  allow_inbound: ['ssh','ldaptcp']
+
+
+security_rules:
+- name: ssh
+  tcp: {port_min: 22, port_max: 22}
+- name: ldaptcp
+  tcp: {port_min: 636, port_max: 636} 
+
+
+
+transit_gateways:
+- name: client-gateway
+  location: eu-de
+  connections:
+  - vpc: client 
 
 ssh_keys:
 - name: sample-provision-ssh
