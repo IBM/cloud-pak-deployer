@@ -227,9 +227,38 @@ done
 # --------------------------------------------------------------------------------------------------------- #
 # Check invalid combinations of parameters                                                                  #
 # --------------------------------------------------------------------------------------------------------- #
-if [ ! -z ${CONFIG_DIR} ] && [ ! -z ${GIT_REPO_URL} ];then
-  echo "Error: Either specify --config-dir or --git-repo-url, not both."
-  exit 1
+if [ -z ${CONFIG_DIR} ] && [ -z ${GIT_REPO_URL} ];then
+  echo "Error: Either specify --config-dir or --git-repo-url."
+  command_usage 1
+fi
+
+# Validate if the configuration directory exists and has the correct subdirectories
+if [ ! -z ${CONFIG_DIR} ];then
+  if [ ! -z ${GIT_REPO_URL} ];then
+    echo "Error: Either specify --config-dir or --git-repo-url, not both."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}/config" ]; then
+    echo "config directory not found in directory ${CONFIG_DIR}."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}/inventory" ]; then
+    echo "inventory directory not found in directory ${CONFIG_DIR}."
+    exit 1
+  fi
+fi
+
+# Validate combination of parameters when --git-repo-url specified
+if [ ! -z ${GIT_REPO_URL} ];then
+  if [ -z ${GIT_REPO_DIR} ];then
+    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
+    exit 1
+  fi
+  if [ -z ${GIT_ACCESS_TOKEN} ];then
+    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
+    exit 1
+  fi
+
 fi
 
 # Set remaining parameters
