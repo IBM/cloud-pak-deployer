@@ -9,27 +9,27 @@ resource "ibm_is_vpc" "{{generator.attributes.name | replace("-", "_") }}" {
 }
 
 {% for rule in generator.attributes.allow_inbound %}
-{% set rule_data = generator.config.security_rules | selectattr("name", "equalto", rule) %}
+{% set rule_data = generator.config.security_rules | selectattr("name", "equalto", rule) | list | first %}
 
 resource "ibm_is_security_group_rule" "{{generator.attributes.name | replace("-", "_") }}_{{rule}}" {
     direction = "inbound"
     group = ibm_is_vpc.{{generator.attributes.name | replace("-", "_") }}.default_security_group
-{% if 'tcp' in rule_data[0] %}
+{% if 'tcp' in rule_data %}
     tcp {
-        port_min = {{rule_data[0].tcp.port_min}}
-        port_max = {{rule_data[0].tcp.port_max}}
+        port_min = {{rule_data.tcp.port_min}}
+        port_max = {{rule_data.tcp.port_max}}
     }
 {% endif %}
-{% if 'udp' in rule_data[0] %}
+{% if 'udp' in rule_data %}
     udp {
-        port_min = {{rule_data[0].udp.port_min}}
-        port_max = {{rule_data[0].udp.port_max}}
+        port_min = {{rule_data.udp.port_min}}
+        port_max = {{rule_data.udp.port_max}}
     }
 {% endif %}
-{% if 'icmp' in rule_data[0] %}
+{% if 'icmp' in rule_data %}
     icmp {
-        type = {{rule_data[0].icmp.type}}
-        code = {{rule_data[0].icmp.code}}
+        type = {{rule_data.icmp.type}}
+        code = {{rule_data.icmp.code}}
     }
 {% endif %}
 }
