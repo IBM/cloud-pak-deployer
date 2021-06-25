@@ -1,0 +1,14 @@
+resource "ibm_tg_gateway" "{{generator.attributes.name | replace("-", "_") }}" {
+  name           = "{{generator.attributes.name}}"
+  location           = "{{generator.attributes.location}}"
+  resource_group = data.ibm_resource_group.thisresourcegroup.id
+}
+
+{% for connection in generator.attributes.connections %}
+resource "ibm_tg_connection" "{{generator.attributes.name | replace("-", "_") }}_{{ connection.vpc | replace("-", "_") }}" {
+  name         = "{{ connection.vpc | replace("-", "_") }}"
+  gateway      = ibm_tg_gateway.{{generator.attributes.name | replace("-", "_") }}.id
+  network_type = "vpc"
+  network_id   = ibm_is_vpc.{{connection.vpc | replace("-", "_")}}.resource_crn
+}
+{% endfor %}
