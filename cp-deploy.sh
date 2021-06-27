@@ -201,15 +201,15 @@ while (( "$#" )); do
     fi
     fi
     ;;
-  --log-dir*|-l*)
+  --status-dir*|-l*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export LOG_DIR="${1#*=}"
+      export STATUS_DIR="${1#*=}"
       shift 1
     else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export LOG_DIR=$2
+      export STATUS_DIR=$2
       shift 2
     else
-      echo "Error: Missing argument for --log-dir parameter."
+      echo "Error: Missing argument for --status-dir parameter."
       command_usage 2
     fi
     fi
@@ -284,7 +284,7 @@ fi
 # Run the Cloud Pak Deployer                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 
-# Ensure log directory exists
+# Ensure status directory exists
 if [ -z $STATUS_DIR ];then
   export STATUS_DIR=$(mktemp -d)
   echo "Status directory not specified, setting to $STATUS_DIR" >&2
