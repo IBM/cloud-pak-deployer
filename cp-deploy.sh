@@ -21,6 +21,7 @@ command_usage() {
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
   echo "    delete                  Delete a secret from the vault"
+  echo "    list                    List secrets for the specified vault group"
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
@@ -88,11 +89,11 @@ vault)
   --help|-h)
     command_usage 0
     ;;
-  get|set|delete)
+  get|set|delete|list)
     shift 1
     ;;
   *)
-    echo "Invalid action for environment subcommand."
+    echo "Invalid action for vault subcommand."
     command_usage 1
     ;;
   esac
@@ -201,15 +202,15 @@ while (( "$#" )); do
     fi
     fi
     ;;
-  --log-dir*|-l*)
+  --status-dir*|-l*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export LOG_DIR="${1#*=}"
+      export STATUS_DIR="${1#*=}"
       shift 1
     else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export LOG_DIR=$2
+      export STATUS_DIR=$2
       shift 2
     else
-      echo "Error: Missing argument for --log-dir parameter."
+      echo "Error: Missing argument for --status-dir parameter."
       command_usage 2
     fi
     fi
@@ -284,7 +285,7 @@ fi
 # Run the Cloud Pak Deployer                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 
-# Ensure log directory exists
+# Ensure status directory exists
 if [ -z $STATUS_DIR ];then
   export STATUS_DIR=$(mktemp -d)
   echo "Status directory not specified, setting to $STATUS_DIR" >&2

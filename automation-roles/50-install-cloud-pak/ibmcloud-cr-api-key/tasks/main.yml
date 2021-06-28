@@ -15,7 +15,7 @@
     name: vault-has-secret
   vars:
     secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
-    secret_group: "icr-{{ current_cp4d_cluster.container_registry_namespace }}"
+    secret_group: "{{ environment_name }}"
 
 - name: Create and store the ICR API Key into the vault
   block:
@@ -91,7 +91,7 @@
         secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
         secret_description: "IBM Container Registry API key for namespace {{ current_cp4d_cluster.container_registry_namespace }}" # description is optional
         secret_payload: "{{ ibmcloud_cr_key.apikey }}"
-        secret_group: "icr-{{ current_cp4d_cluster.container_registry_namespace }}"
+        secret_group: "{{ environment_name }}"
 
     - name: Delete the generated ICR API key file
       file:
