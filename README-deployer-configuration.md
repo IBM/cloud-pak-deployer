@@ -10,7 +10,6 @@ GIT_REPO/GIT_REPO_DIR --> /config
                           - client.inv
 ```
 
-
 ## /config/client.yaml
 
 
