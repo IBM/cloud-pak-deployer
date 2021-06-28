@@ -21,6 +21,7 @@ command_usage() {
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
   echo "    delete                  Delete a secret from the vault"
+  echo "    list                    List secrets for the specified vault group"
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
@@ -88,11 +89,11 @@ vault)
   --help|-h)
     command_usage 0
     ;;
-  get|set|delete)
+  get|set|delete|list)
     shift 1
     ;;
   *)
-    echo "Invalid action for environment subcommand."
+    echo "Invalid action for vault subcommand."
     command_usage 1
     ;;
   esac
