@@ -38,28 +38,11 @@ if [ -v GIT_REPO_URL ];then
     #Disable asking for credentials when login fails.
     export GIT_TERMINAL_PROMPT=0
 
-    export GIT_HOST=$(cut -d '/' -f3 <<<"${GIT_REPO_URL}")
-    echo "Using Git host: ${GIT_HOST}"
-
-    #Login to the GH cli to clone the config repo
-    echo "${GIT_ACCESS_TOKEN}" > /tmp/git_api_key.txt
-    gh auth login -h ${GIT_HOST} --with-token < /tmp/git_api_key.txt
-
-    if [ $? -ne 0 ]; then
-    echo "GH cli login command failed..."
-    echo "Exiting with exit code 1"
-    echo ""
-    rm -f /tmp/git_api_key.txt
-    exit 1
-    fi
-
-    rm -f /tmp/git_api_key.txt
-
     # Clear any existing content from the CONF_FOLDER_PATH
     rm -rf ${GIT_DIR}/*
 
     # Clone the config repository
-    export GIT_REPO_URL_WITH_TOKEN="https://iamapikey:${GIT_ACCESS_TOKEN}@${GIT_REPO_URL#https://}"
+    export GIT_REPO_URL_WITH_TOKEN="https://git_token:${GIT_ACCESS_TOKEN}@${GIT_REPO_URL#https://}"
     pushd ${GIT_DIR}
     git clone ${GIT_REPO_URL_WITH_TOKEN} .
     popd
@@ -129,7 +112,6 @@ ansible-playbook \
     --extra-vars config_dir=${CONFIG_DIR} \
     --extra-vars status_dir=${STATUS_DIR} \
     --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
-    --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} \
-    "$@"  
+    --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} 
 
 
