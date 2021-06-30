@@ -27,7 +27,7 @@
   roles:
     - role: nfs-server-ibmcloud-vpc-install
 
-- name: Run Cloud Pak automation
+- name: Configure ROKS and install Cloud Pak for Data
   hosts: localhost
   connection: local
   become: True
@@ -39,6 +39,13 @@
     - role: login-ibmcloud
 
   tasks:
+  - name: Loop through each roks entry
+    include_role:
+      name: roks-cluster
+    loop: "{{ all_config.roks | default([]) }}"
+    loop_control:
+      loop_var: current_roks_cluster
+
   - name: Loop through each cp4d entry
     include_role:
       name: cp4d-cluster
