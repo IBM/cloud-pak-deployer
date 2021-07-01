@@ -9,13 +9,18 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- set_fact:
-    storage_type: "{{ all_config.roks[0].storage_classes[0].storage_type }}"
+- name: Processing storage class
+  debug:
+    var: current_storage_class
 
-- name: NFS storage class
-  block:
-    - name: Configure NFS storage class
-      include_role: 
-        name: nfs-storage-class
-  when: "cloud_platform == 'ibm-cloud' and storage_type == 'nfs'"
+- name: Configure NFS storage class
+  include_role: 
+    name: nfs-storage-class
+  when: "cloud_platform == 'ibm-cloud' and current_storage_class.storage_type == 'nfs'"
+
+- name: Configure OCS storage class
+  include_role: 
+    name: ocs-storage-class
+  when: "cloud_platform == 'ibm-cloud' and current_storage_class.storage_type == 'ocs'"
+  
 
