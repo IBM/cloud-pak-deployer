@@ -39,14 +39,14 @@ assign_CA_authorization.sh
   <CLOUD_PAK_FOR_DATA_COGNOS_ANALYTICS_ROLE>
 ```
 
-- **<CLOUD_PAK_FOR_DATA_URL>**: The URL to the IBM Cloud Pak for Data instance
-- **<CLOUD_PAK_FOR_DATA_LOGIN_USER>**: The login user to IBM Cloud Pak for Data, e.g. the admin user
-- **<CLOUD_PAK_FOR_DATA_LOGIN_PASSWORD>**: The login password to IBM Cloud Pak for Data
-- **<CLOUD_PAK_FOR_DATA_USER_GROUP_NAME>**: The Cloud Pak for Data User Group Name
-- **<CLOUD_PAK_FOR_DATA_USER_GROUP_DESCRIPTION>**: The Cloud Pak for Data User Group Description
-- **<CLOUD_PAK_FOR_DATA_USER_GROUP_ROLES_ASSIGNMENT>**: The Cloud Pak for Data roles associated to the User Group. Use a ; seperated list to assign multiple roles
-- **<CLOUD_PAK_FOR_DATA_USER_GROUP_LDAP_GROUPS_MAPPING>**: The LDAP Groups associated to the User Group. Use a ; seperated list to assign LDAP groups
-- **<CLOUD_PAK_FOR_DATA_COGNOS_ANALYTICS_ROLE>**: The Cognos Analytics Role each member of the User Group will be associated with, which must be one of:
+- **<CLOUD_PAK_FOR_DATA_URL>**  The URL to the IBM Cloud Pak for Data instance
+- **<CLOUD_PAK_FOR_DATA_LOGIN_USER>** The login user to IBM Cloud Pak for Data, e.g. the admin user
+- **<CLOUD_PAK_FOR_DATA_LOGIN_PASSWORD>** The login password to IBM Cloud Pak for Data
+- **<CLOUD_PAK_FOR_DATA_USER_GROUP_NAME>** The Cloud Pak for Data User Group Name
+- **<CLOUD_PAK_FOR_DATA_USER_GROUP_DESCRIPTION>** The Cloud Pak for Data User Group Description
+- **<CLOUD_PAK_FOR_DATA_USER_GROUP_ROLES_ASSIGNMENT>** The Cloud Pak for Data roles associated to the User Group. Use a ; seperated list to assign multiple roles
+- **<CLOUD_PAK_FOR_DATA_USER_GROUP_LDAP_GROUPS_MAPPING>** The LDAP Groups associated to the User Group. Use a ; seperated list to assign LDAP groups
+- **<CLOUD_PAK_FOR_DATA_COGNOS_ANALYTICS_ROLE>** The Cognos Analytics Role each member of the User Group will be associated with, which must be one of:
   - Analytics Administrators
   - Analytics Explorers
   - Analytics Users
