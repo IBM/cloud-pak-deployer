@@ -2,6 +2,16 @@
 - name: "Start {{generator.name}} generator"
   debug:
     msg: 'from {{generator.name}} in {{generator.path}} attributes: {{generator.attributes}}'
+
+- debug:
+    var: generator
+
+- fail:
+    msg: "Number of subnets for ROKS cluster must either be 1 or 3."
+  when: 
+  - (generator.attributes.infrastructure.subnets | length) != 1
+  - (generator.attributes.infrastructure.subnets | length) != 3
+    
 - name: 'generate Region in {{path_to_terraform_folder}}'
   template:
     src: '../templates/main.tf.j2'
