@@ -1,6 +1,6 @@
 # Automated Cognos Authorization configuation using LDAP groups
 
-![Authorization Overview](/images/cognos_authorization.md)
+![Authorization Overview](/images/cognos_authorization.png)
 
 ## Installing the Cloud Pak Deployer
 

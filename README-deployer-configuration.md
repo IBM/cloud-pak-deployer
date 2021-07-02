@@ -12,13 +12,16 @@ GIT_REPO/GIT_REPO_DIR --> /config
 
 ## /config/client.yaml
 
+Placeholder for the client.yaml file
 
 ## /inventory/client.inv
 
 
+
+
 ### Vault configuration
 
-The following Vault implementation can be used to store and retrieve secrets:
+The following Vault implementations can be used to store and retrieve secrets:
 - IBM Cloud Vault
 - Hashicorp Vault (token authentication)
 - Hashicorp Vault (certificate authentication)
