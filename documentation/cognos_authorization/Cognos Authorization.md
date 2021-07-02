@@ -14,6 +14,12 @@ If a User is already present in Cloud Pak for Data, it will not be updated.
 
 If a user is already associated with the Cognos Analytics instance, keep its original membership and do not update the membership
 
+## Pre-requisites
+Prior to running the script, ensure:
+- LDAP configuration in IBM Cloud Pak for Data is completed and validated
+- Cognos Analytics instance is provisioned and running in IBM Cloud Pak for Data
+- The role(s) that will be associated with the User Group are present in IBM Cloud Pak for Data
+
 ## Usage of the Script
 The script is available in automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh
 
@@ -46,102 +52,55 @@ assign_CA_authorization.sh
   - Analytics Users
   - Analytics Viewer
 
-
 ## Running the script
 
-### Pre-requisites
-Prior to running the script, ensure:
-- LDAP configuration in IBM Cloud Pak for Data is completed and validated
-- Cognos Analytics instance is provisioned and running in IBM Cloud Pak for Data
-- The role(s) that will be associated with the User Group are present in IBM Cloud Pak for Data
-
-### Running the script with its arguments
 Using the command example provided by the ./assign_CA_authorization.sh command, run the script
 ```
-./assign_CA_authorization.sh
+./assign_CA_authorization.sh \
   https://...... \
   admin \
-  ****** \
+  ******** \
   "Cognos User Group" \
   "Cognos User Group Description" \
   "wkc_data_scientist_role;zen_administrator_role" \
   "cn=ca_group,ou=groups,dc=ibm,dc=com" \
   "Analytics Viewer"
 ```
+The script execution will run through the following tasks:
 
+**Validation**
+Confirm at least 1 User Group Role assignment is provided.
+Confirm at least 1 LDAP Group is provided
 
+**Login to Cloud Pak for Data and generate a Bearer token**
+Using the provided IBM Cloud for Data URL, username and password, login to Cloud pak for Data and generate the Bearer token used for subsequent commands. Exit with an error if the login to IBM Cloud Pak for Data fails. 
 
+**Confirm the provided User Group role(s) are present in Cloud Pak for Data**
+Acquire all Cloud Pak for Data Roles and confirm the provided User Group role(s) are one of the existing Cloud Pak for Data roles. Exit with an error if a role is provided which is not currently present in IBM Cloud Pak for Data.
 
+**Confirm the provided Cognos Analytics role is valid**
+Ensure the provided Cognos Analytics role is one of the available Cognos Analytics roles. Exit with an error if a Cognos Analytics roles is provided that does not match with the available Cognos Analytics roles.
 
+**Confirm LDAP is configured in IBM Cloud Pak for Data**
+Ensures the LDAP configuration is completed. Exit with an error if there is no current LDAP configuration.
 
+**Confirm the provided LDAP groups are present in the LDAP User Registry**
+Using IBM Cloud Pak for Data, query whether the provided LDAP groups are present in the LDAP User registry. Exit with an error if a LDAP Group is not available.
 
+**Confirm if the IBM Cloud Pak for Data User Group exists**
+Queries the IBM Cloud Pak for Data User Groups. If the provided User Group exists, acquire the Group ID. 
 
+**If the IBM Cloud Pak for Data User Group does not exist, create it**
+If the User Group does not exist, create it, and assign the IBM Cloud Pak for Data Roles and LDAP Groups to the new User Group
 
+**If the IBM Cloud Pak for Data User Group does exist, validate the associated LDAP Groups**
+If the User Group already exists, confirm all provided LDAP groups are associated with the User Group. Add LDAP groups that are not associated.
 
+**Get the Cognos Analytics instance ID**
+Queries the IBM Cloud Pak for Data service instances and acquires the Cognos Analytics instance ID. Exit with an error if no Cognos Analytics instance is available
 
+**Ensure each user member of the IBM Cloud Pak for Data User Group is an existing user**
+Each user that is member of the provided LDAP groups, ensure this member is an IBM Cloud Pak for Data User. Create a new user with the provided User Group role(s) if the the user is not yet available. 
 
-### Clone the current repository
-```
-# TODO: specify eventual location of the Cloud Pak Deployer
-git clone ...
-```
-
-### Build the image
-The container image must be built from the directory that holds the `Dockerfile` file.
-```
-cd cloud-pak-deployer
-podman build -t cloud-pak-deployer .
-```
-
-This process will take 2-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Terraform and operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
-
-## Using the Cloud Pak Deployer
-
-### Create your configuration
-The Cloud Pak Deployer requires the desired end-state to be configured in a pre-defined directory structure. This structure may exist on the server that runs the utility or can be pulled from a (branch of a) Git repository. 
-
-#### Create configuration directory structure
-Use the following directory structure; you can copy a template from the `./sample` directory in included in this repository.
-```
-CONFIG_DIR  --> /config
-                - cp4d.yaml
-                - roks.yaml
-                - vpc.yaml
-            --> /inventory
-                - sample.inv
-```
-
-### Run the deployment
-To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. Please note that the the LOG_DATA_DIR directory must exist and that the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
-```
-IBM_CLOUD_API_KEY=your_api_key
-LOG_DATA_DIR=/Data/sample-log
-CONFIG_DIR=/Data/sample
-
-podman run \
-  -d \
-  -v ${LOG_DATA_DIR}:/Data:Z \
-  -v ${CONFIG_DIR}:${CONFIG_DIR}:Z \
-  -e CONFIG_DIR=${CONFIG_DIR} \
-  -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY} \
-  cloud-pak-deployer
-```
-
-The installation container will run in the background. You can monitor it as follows (this will show the logs of the latest container):
-```
-podman logs -f -l
-```
-
-After the installation is completed, the Terraform tfstate file is stored into IBM Vault. When re-running the automation script it fetches the tfstate file from the vault.
-
-If you need to interrupt the automation, you can find the container as follows:
-```
-podman ps
-```
-
-If multiple containers are active you can double-check that you're terminating the correct container by doing a `podman logs <container name>`.
-
-Then, stop the container as follows:
-```
-podman kill <container name>
-```
+**Ensure each user member of the IBM Cloud Pak for Data User Group is associated to the Cognos Analytics instance**
+Each user that is member of the provided LDAP groups, ensure this member is associated to the Cognos Analytics instance with the provided Cognos Analytics role.
