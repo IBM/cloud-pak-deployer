@@ -22,6 +22,7 @@ Prior to running the script, ensure:
 
 ## Usage of the Script
 The script is available in automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh
+[Cognos Authorization script](/automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh)
 
 Run the script without arguments to show its usage help.
 ```
