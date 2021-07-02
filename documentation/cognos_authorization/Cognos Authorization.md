@@ -54,9 +54,9 @@ assign_CA_authorization.sh
 
 ## Running the script
 
-Using the command example provided by the ./assign_CA_authorization.sh command, run the script
+Using the command example provided by the `./assign_CA_authorization.sh` command, run the script with its arguments
 ```
-./assign_CA_authorization.sh \
+# ./assign_CA_authorization.sh \
   https://...... \
   admin \
   ******** \
@@ -69,8 +69,9 @@ Using the command example provided by the ./assign_CA_authorization.sh command, 
 The script execution will run through the following tasks:
 
 **Validation**  
+Confirm all required arguments are provided.  
 Confirm at least 1 User Group Role assignment is provided.  
-Confirm at least 1 LDAP Group is provided
+Confirm at least 1 LDAP Group is provided.
 
 **Login to Cloud Pak for Data and generate a Bearer token**  
 Using the provided IBM Cloud for Data URL, username and password, login to Cloud pak for Data and generate the Bearer token used for subsequent commands. Exit with an error if the login to IBM Cloud Pak for Data fails. 
