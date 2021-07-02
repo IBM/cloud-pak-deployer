@@ -3,7 +3,7 @@
 ![Authorization Overview](/images/cognos_authorization.png)
 
 ## Description
-The automated cognos authorization capability uses LDAP groups to assign users to a Cognos Analytics Role, which allows these users to login to Cognos Analytics. This capability will perform the following tasks:
+The automated cognos authorization capability uses LDAP groups to assign users to a Cognos Analytics Role, which allows these users to login to IBM Cloud Pak for Data and access the Cognos Analytics instance. This capability will perform the following tasks:
 - Create a User Group and assign the associated LDAP Group(s) and Cloud Pak for Data role(s)
 - For each member of the LDAP Group(s) part of the User Group, create the user as a Cloud Pak for Data User and assigned the Cloud Pak for Data role(s)
 - For each member of the LDAP Group(s) part of the User Group, assign membership to the Cognos Analytics instance and authorize for the Cognos Analytics Role
