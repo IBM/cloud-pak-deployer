@@ -1,0 +1,82 @@
+---
+- name: Get current storage class
+  debug:
+    var: current_storage_class
+
+- name: Check if openshift-container-storage add-on is installed
+  command: |
+    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_roks_cluster.name }} --output json
+  register: ocs_check_addon
+  failed_when: False
+
+# TODO: Remove debug
+- debug:
+    var: ocs_check_addon
+
+- name: Enable openshift-container-storage add-on for ROKS cluster {{ current_roks_cluster.name }}
+  command: |
+    ibmcloud oc cluster addon enable openshift-container-storage \
+      --cluster {{ current_roks_cluster.name }} \
+      --version {{ roks_ocs_addon_version }} -f
+  when: ocs_check_addon.rc != 0
+
+- name: Wait until openshift-container-storage add-on is ready
+  command: |
+    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_roks_cluster.name }} --output json
+  register: ocs_get_addon
+  failed_when: False
+  retries: 60
+  delay: 30
+  until: ((ocs_get_addon.stdout | from_json).healthState | default("")) == "normal"
+
+- name: Get the worker nodes for the OCS storage class
+  command: |
+    ibmcloud oc workers --cluster {{ current_roks_cluster.name }} \
+      --worker-pool {{ current_roks_cluster.name }}-{{ current_storage_class.ocs_storage_label }} \
+      --output json
+  register: ocs_workers
+
+- name: Show OCS workers
+  debug:
+    var: ocs_workers
+
+- name: Map worker list to IP addresses
+  debug:
+    var: (ocs_workers.stdout | to_json).networkInterfaces[0] | map(attribute='ipAddress') | list
+
+- debug: 
+    var: (ocs_workers.stdout | to_json).networkInterfaces[0] | map(attribute='ipAddress') | list | join(',')
+
+
+# - name: Wait until openshift-container-storage add-on is ready
+
+# ibmcloud oc cluster addon get --addon openshift-container-storage -c fkgb-ocs
+
+# ibmcloud oc cluster addon ls -c fkgb-ocs --output json
+
+# ibmcloud oc cluster addon disable openshift-container-storage -c fkgb-ocs -f
+
+# ibmcloud oc cluster addon enable openshift-container-storage -c fkgb-ocs --version 4.6.0 --param "osdSize=500Gi" --param "workerNodes=10.227.0.70,10.227.0.7,10.227.0.135" --param "ocsDeploy=true"
+
+# cat <<EOF |oc apply -f -
+# apiVersion: ocs.ibm.io/v1
+# kind: OcsCluster
+# metadata:
+#  name: ocscluster-fkgb-ocs
+# spec:
+#  monStorageClassName: ibmc-vpc-block-metro-10iops-tier
+#  monSize: 20Gi
+#  osdStorageClassName: ibmc-vpc-block-metro-10iops-tier
+#  osdSize: 500Gi
+#  numOfOsd: 1
+#  billingType: hourly
+#  ocsUpgrade: false
+#  workerNodes: 
+#    - 10.227.0.70
+#    - 10.227.0.7
+#    - 10.227.0.135
+# EOF
+
+# oc describe ocscluster ocscluster-fkgb-ocs
+
+# oc get ocscluster ocscluster-fkgb-ocs -o yaml
