@@ -31,13 +31,20 @@ command_usage() {
   echo "  --git-repo-dir,-rd <dir>      Directory in the Git repository that holds the configuration (\$GIT_REPO_DIR)"
   echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo
   echo "Options for vault subcommand:"
-  echo "  --vault-secret,-s <name>          Secret name to get, set or delete ((\$VAULT_SECRET)"
-  echo "  --vault-secret-value,-sv <value>  Secret value to set (\$VAULT_SECRET_VALUE)"
+  echo "  --vault-group,-vg <name>          Group of secret ((\$VAULT_GROUP)"
+  echo "  --vault-secret,-vs <name>         Secret name to get, set or delete ((\$VAULT_SECRET)"
+  echo "  --vault-secret-value,-vsv <value> Secret value to set (\$VAULT_SECRET_VALUE)"
   echo
   exit $1
 }
+
+# --------------------------------------------------------------------------------------------------------- #
+# Initialize                                                                                                #
+# --------------------------------------------------------------------------------------------------------- #
+if [ ! -v CPD_DEVELOP ];then CPD_DEVELOP=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -176,7 +183,7 @@ while (( "$#" )); do
     fi
     fi
     ;;
-  --vault-secret-value*|-sv*)
+  --vault-secret-value*|-vsv*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
       export VAULT_SECRET_VALUE="${1#*=}"
       shift 1
@@ -189,7 +196,9 @@ while (( "$#" )); do
     fi
     fi
     ;;
-  --vault-secret*|-s*)
+  # The --vault-secret must be parsed after --vault-secret-value, otherwise the secret value is already
+  # picked up when the first part of the option has a match
+  --vault-secret*|-vs*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
       export VAULT_SECRET="${1#*=}"
       shift 1
@@ -198,6 +207,19 @@ while (( "$#" )); do
       shift 2
     else
       echo "Error: Missing argument for --vault-secret parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-group*|-vg*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_GROUP="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_GROUP=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-group parameter."
       command_usage 2
     fi
     fi
@@ -214,6 +236,10 @@ while (( "$#" )); do
       command_usage 2
     fi
     fi
+    ;;
+  --cpd-develop)
+    export CPD_DEVELOP=true
+    shift 1
     ;;
   -*|--*=)
     echo "Invalid option: $1"
@@ -285,6 +311,12 @@ fi
 # Run the Cloud Pak Deployer                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 
+# Show warning if --cpd-develop is used
+if $CPD_DEVELOP;then
+  echo "Warning: CPD_DEVELOP was specified. Current directory $(pwd) will be used for automation script !!!"
+  sleep 0.5
+fi
+
 # Ensure status directory exists
 if [ -z $STATUS_DIR ];then
   export STATUS_DIR=$(mktemp -d)
@@ -292,37 +324,41 @@ if [ -z $STATUS_DIR ];then
 fi
 mkdir -p $STATUS_DIR
 
-if [ ! -z $CONFIG_DIR ];then
-  echo "Running with config dir"
-  podman run \
-    -d \
-    -v ${STATUS_DIR}:${STATUS_DIR}:Z \
-    -v ${CONFIG_DIR}:${CONFIG_DIR}:Z \
-    -e SUBCOMMAND=${SUBCOMMAND} \
-    -e ACTION=${ACTION} \
-    -e CONFIG_DIR=${CONFIG_DIR} \
-    -e STATUS_DIR=${STATUS_DIR} \
-    -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY} \
-    -e VAULT_SECRET=${VAULT_SECRET} \
-    -e VAULT_SECRET=${VAULT_SECRET_VALUE} \
-    cloud-pak-deployer \
-    && podman logs -fl
-else
-  podman run \
-    -d \
-    -v ${STATUS_DIR}:${STATUS_DIR}:Z \
-    -e SUBCOMMAND=${SUBCOMMAND} \
-    -e ACTION=${ACTION} \
-    -e GIT_REPO_URL=${GIT_REPO_URL} \
-    -e GIT_REPO_DIR=${GIT_REPO_DIR} \
-    -e GIT_ACCESS_TOKEN=${GIT_ACCESS_TOKEN} \
-    -e STATUS_DIR=${STATUS_DIR} \
-    -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY} \
-    -e VAULT_SECRET=${VAULT_SECRET} \
-    -e VAULT_SECRET=${VAULT_SECRET_VALUE} \
-    cloud-pak-deployer \
-    && podman logs -fl
+# Build command
+run_cmd="podman run"
+
+# If running "environment" subcommand, run as daemon
+if [ "$SUBCOMMAND" == "environment" ];then
+  run_cmd+=" -d"
 fi
+
+run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
+
+if [ ! -z $CONFIG_DIR ];then run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z";fi
+if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/automation_script:Z";fi
+
+run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
+run_cmd+=" -e ACTION=${ACTION}"
+run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
+run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
+
+if [ ! -z $CONFIG_DIR ];then run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}";fi
+
+if [ ! -z $GIT_REPO_URL ];then
+  run_cmd+=" -e GIT_REPO_URL=${GIT_REPO_URL} \
+            -e GIT_REPO_DIR=${GIT_REPO_DIR} \
+            -e GIT_ACCESS_TOKEN=${GIT_ACCESS_TOKEN}"
+fi
+
+if [ ! -z $VAULT_GROUP ];then
+  run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP} \
+            -e VAULT_SECRET=${VAULT_SECRET} \
+            -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE}"
+fi
+
+run_cmd+=" cloud-pak-deployer"
+
+eval $run_cmd
 
 PODMAN_EXIT_CODE=$?
 exit $PODMAN_EXIT_CODE
