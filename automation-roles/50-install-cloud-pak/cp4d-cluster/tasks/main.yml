@@ -9,10 +9,6 @@
   vars:
     roks_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
-- name: Prepare storage classes for OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
-  include_role:
-    name: storage-classes
-
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_role:
     name: openshift-prepare-project
@@ -37,10 +33,22 @@
 - set_fact:
     cp4d_cli_dir: "{{ status_dir }}/cp4d"
 
-- name: Copy cpd-cli to status directory
+- name: Create {{ cp4d_cli_dir }}
   file:
-    src: /Data/cp4d
+    path: "{{ cp4d_cli_dir }}"
+    state: directory
+
+- name: Find the file that holds cpd-cli
+  find:
+    paths: /assets/cp4d
+    patterns: "*.tgz"
+  register: cpd_cli_file
+
+- name: Unpack the archive
+  unarchive:
+    src: "{{ item.path }}"
     dest: "{{ cp4d_cli_dir }}"
+  with_items: "{{ cpd_cli_file.files }}"
 
 - name: Create repo.yaml
   template:
