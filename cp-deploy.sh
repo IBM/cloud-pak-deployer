@@ -32,6 +32,7 @@ command_usage() {
   echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
+  echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo
   echo "Options for vault subcommand:"
   echo "  --vault-group,-vg <name>          Group of secret ((\$VAULT_GROUP)"
@@ -45,6 +46,7 @@ command_usage() {
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 if [ ! -v CPD_DEVELOP ];then CPD_DEVELOP=false;fi
+if [ ! -v ANSIBLE_VERSBOSE ];then ANSIBLE_VERSBOSE=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -241,6 +243,10 @@ while (( "$#" )); do
     export CPD_DEVELOP=true
     shift 1
     ;;
+  -vvv)
+    export ANSIBLE_VERBOSE=true
+    shift 1
+    ;;
   -*|--*=)
     echo "Invalid option: $1"
     command_usage 2
@@ -356,9 +362,16 @@ if [ ! -z $VAULT_GROUP ];then
             -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE}"
 fi
 
+run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
+
 run_cmd+=" cloud-pak-deployer"
 
 eval $run_cmd
+
+# If running "environment" subcommand, follow log
+if [ "$SUBCOMMAND" == "environment" ];then
+  podman logs -fl
+fi
 
 PODMAN_EXIT_CODE=$?
 exit $PODMAN_EXIT_CODE
