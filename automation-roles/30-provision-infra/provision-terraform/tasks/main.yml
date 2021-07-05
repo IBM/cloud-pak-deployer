@@ -68,6 +68,31 @@
       msg: "No changes were detected in the planning phase, apply will be skipped and tfstate secret will not be updated"
     when: "terraform_plan_result.rc == 0"
 
+  - slurp:
+      src: "{{status_dir}}/terraform/plan.log"
+    register: plan_log
+
+  - set_fact:
+      destroy_result: "{{ plan_log['content'] | b64decode | regex_search('([0-9]+) to destroy', '\\1') }}"
+
+  - debug:
+      var: destroy_result
+
+  - set_fact:
+      number_to_destroy: "{{ destroy_result | first }}"
+    when: destroy_result != ''
+
+  - debug:
+      var: number_to_destroy
+    when: number_to_destroy is defined
+
+  - fail:
+      msg: "Terraform will destroy artifacts and this was not confirmed"
+    when:
+      - number_to_destroy is defined
+      - number_to_destroy != '0'
+      - confirm_destroy | bool != True
+
   - name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/apply.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
