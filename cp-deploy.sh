@@ -16,12 +16,12 @@ command_usage() {
   echo "ACTION:"
   echo "  environment:"
   echo "    apply                   Create a new or modify an existing environment"
-  echo "    destroy                 Destroy an existing environment"
+  echo "    destroy                 Destroy an existing environment (NOT IMPLEMENTED YET)"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
   echo "    delete                  Delete a secret from the vault"
-  echo "    list                    List secrets for the specified vault group"
+  echo "    list                    List secrets for the specified vault group (NOT IMPLEMENTED YET)"
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
@@ -35,8 +35,8 @@ command_usage() {
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo
   echo "Options for vault subcommand:"
-  echo "  --vault-group,-vg <name>          Group of secret ((\$VAULT_GROUP)"
-  echo "  --vault-secret,-vs <name>         Secret name to get, set or delete ((\$VAULT_SECRET)"
+  echo "  --vault-group,-vg <name>          Group of secret (\$VAULT_GROUP)"
+  echo "  --vault-secret,-vs <name>         Secret name to get, set or delete (\$VAULT_SECRET)"
   echo "  --vault-secret-value,-vsv <value> Secret value to set (\$VAULT_SECRET_VALUE)"
   echo
   exit $1
