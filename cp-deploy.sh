@@ -46,7 +46,7 @@ command_usage() {
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 if [ ! -v CPD_DEVELOP ];then CPD_DEVELOP=false;fi
-if [ ! -v ANSIBLE_VERSBOSE ];then ANSIBLE_VERSBOSE=false;fi
+if [ ! -v ANSIBLE_VERBOSE ];then ANSIBLE_VERBOSE=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
