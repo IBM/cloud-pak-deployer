@@ -109,16 +109,33 @@ cd ${SCRIPT_DIR}/..
 VERBOSE_ARG=""
 if $ANSIBLE_VERBOSE;then VERBOSE_ARG="-vvv";fi
 
-if [ "$SUBCOMMAND" == "environment" ];then
-  ansible-playbook \
-    -i ${INV_DIR} \
-    playbooks/playbook-e2e.yml \
-    --extra-vars config_dir=${CONFIG_DIR} \
-    --extra-vars status_dir=${STATUS_DIR} \
-    --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
-    --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} ${VERBOSE_ARG}
-else if [ "$SUBCOMMAND" == "vault" ];then
+# Check that subcommand is valid
+export SUBCOMMAND=${SUBCOMMAND,,}
+export ACTION=${ACTION,,}
+case "$SUBCOMMAND" in
+env|environment)
+  if [ "$ACTION" == "apply" ];then
     ansible-playbook \
+      -i ${INV_DIR} \
+      playbooks/playbook-e2e.yml \
+      --extra-vars config_dir=${CONFIG_DIR} \
+      --extra-vars status_dir=${STATUS_DIR} \
+      --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
+      --extra-vars confirm_destroy=${CONFIRM_DESTROY} \
+      --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} ${VERBOSE_ARG}
+  else
+    ansible-playbook \
+      -i ${INV_DIR} \
+      playbooks/playbook-destroy.yml \
+      --extra-vars config_dir=${CONFIG_DIR} \
+      --extra-vars status_dir=${STATUS_DIR} \
+      --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
+      --extra-vars confirm_destroy=${CONFIRM_DESTROY} ${VERBOSE_ARG}
+  fi
+  ;;
+
+vault)
+  ansible-playbook \
     -i ${INV_DIR} \
     playbooks/playbook-vault.yml \
     --extra-vars ACTION=${ACTION} \
@@ -128,7 +145,11 @@ else if [ "$SUBCOMMAND" == "vault" ];then
     --extra-vars secret_group=${VAULT_GROUP} \
     --extra-vars secret_name=${VAULT_SECRET} \
     --extra-vars secret_payload=${VAULT_SECRET_VALUE} ${VERBOSE_ARG}
-fi
-fi
+  ;;
+*) 
+  echo "Invalid subcommand $SUBCOMMAND."
+  command_usage 1
+  ;;
+esac
 
 
