@@ -13,6 +13,13 @@ yum install -y podman git
 yum clean all
 ```
 
+### Optional - Install EPEL and screen
+If you want to run the deployer in a screen session, you also need to install EPEL and the screen package.
+```
+yum install -y epel-release && \
+yum install -y screen
+```
+
 ### Clone the current repository
 ```
 # TODO: specify eventual location of the Cloud Pak Deployer
