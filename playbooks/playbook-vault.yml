@@ -1,0 +1,28 @@
+---
+- name: Secrets
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  tasks:
+  - include_role:
+      name: vault-connect
+
+  - include_role:
+      name: vault-create-secret
+    when: ACTION == "list"
+
+  - include_role:
+      name: vault-create-secret
+    when: ACTION == "set"
+
+  - include_role:
+      name: vault-delete-secret
+    when: ACTION == "delete"
+
+  - include_role:
+      name: vault-get-secret
+    when: ACTION == "get"
+
+
