@@ -77,11 +77,11 @@
       TF_LOG_PATH: "{{ status_dir }}/terraform/tf_apply.log"
     register: terraform_apply
     ignore_errors: yes
-    when: terraform_plan_result.rc == 2
+    when: terraform_plan_result.rc != 0
 
   - set_fact:
       tf_state_content: "{{ lookup('file', status_dir+'/terraform/terraform.tfstate') }}"
-    when: terraform_plan_result.rc == 2
+    when: terraform_plan_result.rc != 0
 
   - name: Store the terraform tfstate file as secret {{ environment_name }}-terraform-tfstate in group {{ environment_name }}
     include_role:
@@ -91,8 +91,8 @@
       secret_group: "{{ environment_name }}"
       secret_payload: "{{ tf_state_content }}"
     when: 
-    - terraform_plan_result.rc == 2
-    - tfstate_content | length > 0
+    - terraform_plan_result.rc != 0
+    - tf_state_content | length > 0
 
   - fail:
       msg: Error occurred during Terraform apply, state has been preserved. Failing now. Check the apply log for details.
