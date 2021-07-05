@@ -31,6 +31,7 @@ command_usage() {
   echo "  --git-repo-dir,-rd <dir>      Directory in the Git repository that holds the configuration (\$GIT_REPO_DIR)"
   echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo
@@ -47,6 +48,7 @@ command_usage() {
 # --------------------------------------------------------------------------------------------------------- #
 if [ ! -v CPD_DEVELOP ];then CPD_DEVELOP=false;fi
 if [ ! -v ANSIBLE_VERBOSE ];then ANSIBLE_VERBOSE=false;fi
+if [ ! -v CONFIRM_DESTROY ];then CONFIRM_DESTROY=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -239,6 +241,10 @@ while (( "$#" )); do
     fi
     fi
     ;;
+  --confirm-destroy)
+    export CONFIRM_DESTROY=true
+    shift 1
+    ;;
   --cpd-develop)
     export CPD_DEVELOP=true
     shift 1
@@ -363,6 +369,7 @@ if [ ! -z $VAULT_GROUP ];then
 fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
+run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
 
 run_cmd+=" cloud-pak-deployer"
 
