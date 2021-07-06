@@ -55,7 +55,7 @@ export CP4D_URL_LDAP_USERS=${CP4D_URL}/usermgmt/v2/ldap/users
 export CP4D_URL_LDAP_GROUPS=${CP4D_URL}/usermgmt/v2/ldap/groups
 export CP4D_INSTANCES=${CP4D_URL}/zen-data/v3/service_instances
 export CP4D_INSTANCES_USERS=${CP4D_URL}/zen-data/v2/serviceInstance/users
-export CP4D_URL_ROLES
+export CP4D_INSTANCES_USERS_ROLE=${CP4D_INSTANCES_USERS}/role
 
 #Default list of Cognos Analytics Roles
 export CP4D_CA_ROLES=("Analytics Administrators" "Analytics Explorers" "Analytics Users" "Analytics Viewer")
@@ -342,9 +342,23 @@ do
                 echo "Result adding ${LDAP_USER_DISPLAY_NAME} to Cognos Analytics instance ${COGNOS_INSTANCE_ID}: ${ADD_USER_TO_CA}"
             fi
         else
-            echo "Cloud Pak for Data User ${LDAP_USER_DISPLAY_NAME} already assigned to Cognos Analytics instance..."
+            export CP4D_CA_CURRENT_ROLE=$(jq -r ".requestObj[] | select(.UserName==${LDAP_USER}) | .Role" <<< ${CURRENT_CA_CP4D_USERS})
+
+            if [ "${CP4D_CA_CURRENT_ROLE}" == "${CP4D_CA_ROLE}" ]; then
+                echo "User ${LDAP_USER_DISPLAY_NAME} is already assigned Cognos Analytics role ${CP4D_CA_ROLE}"
+            else
+                echo "Moving User ${LDAP_USER_DISPLAY_NAME} Cognos Analytics Role from ${CP4D_CA_CURRENT_ROLE} to ${CP4D_CA_ROLE}"
+                
+                export MODIFY_CA_ROLE=$(curl -s -k -X PATCH -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS_ROLE} \
+                    -d "{\"serviceInstanceID\":\"${COGNOS_INSTANCE_ID}\",\"roles\":[{\"uid\":\"${CP4D_USER_UID}\",\"newrole\":\"${CP4D_CA_ROLE}\"}]}" | jq -r '. | .message')
+                
+                echo "Result modifying ${LDAP_USER_DISPLAY_NAME} role to ${CP4D_CA_ROLE} of Cognos Analytics instance ${COGNOS_INSTANCE_ID}: ${MODIFY_CA_ROLE}"
+            fi
         fi
     done
+
+    #Refresh the current CA CP4D Users when handling multiple LDAP Groups
+    export CURRENT_CA_CP4D_USERS=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS}?sID=${COGNOS_INSTANCE_ID})
 done
 
 echo ""

@@ -101,7 +101,7 @@ If the User Group already exists, confirm all provided LDAP groups are associate
 Queries the IBM Cloud Pak for Data service instances and acquires the Cognos Analytics instance ID. Exit with an error if no Cognos Analytics instance is available
 
 **Ensure each user member of the IBM Cloud Pak for Data User Group is an existing user**  
-Each user that is member of the provided LDAP groups, ensure this member is an IBM Cloud Pak for Data User. Create a new user with the provided User Group role(s) if the the user is not yet available. Any existing User(s) will not be updated.
+Each user that is member of the provided LDAP groups, ensure this member is an IBM Cloud Pak for Data User. Create a new user with the provided User Group role(s) if the the user is not yet available. Any existing User(s) will not be updated. If Users are removed from an LDAP Group, these users will not be removed from Cloud Pak for Data. 
 
 **Ensure each user member of the IBM Cloud Pak for Data User Group is associated to the Cognos Analytics instance**  
-Each user that is member of the provided LDAP groups, ensure this member is associated to the Cognos Analytics instance with the provided Cognos Analytics role. Any user that is already associated to the Cognos Analytics instance will not be updated.
+Each user that is member of the provided LDAP groups, ensure this member is associated to the Cognos Analytics instance with the provided Cognos Analytics role. Any user that is already associated to the Cognos Analytics instance will have its Cognos Analytics role updated to the provided Cognos Analytics Role
