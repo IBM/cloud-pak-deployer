@@ -8,16 +8,7 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-# TODO: Reinstate ROKS Classic
-# - name: OpenShift Terraform for IBM Cloud
-#   block:
-#     - name: Provision OpenShift on IBM Cloud Classic Infrastructure
-#       include_role: 
-#         name: ibmcloud-terraform-classic
-#       when: all_config.roks[0].infrastructure.type == "classic"
-#   when: "cloud_platform == 'ibm-cloud'"
-
-- name: Provision IBM Cloud VPC Infrastructure
+- name: Destroy IBM Cloud VPC Infrastructure
   block:
 
   - name: Generate or retrieve the SSH keys
@@ -44,11 +35,14 @@
       secret_name: "{{ environment_name }}-terraform-tfstate"
       secret_group: "{{ environment_name }}"
 
+  - fail:
+      msg: "No Terraform state found in secret {{ environment_name }}/{{ environment_name }}-terraform-tfstate"
+    when: "secret_value | trim | length == 0"
+
   - name: Write {{ status_dir }}/terraform/terraform.tfstate file
     copy:
       content: "{{ secret_value }}"
       dest: "{{ status_dir }}/terraform/terraform.tfstate"
-    when: "secret_value | trim | length > 0"
 
   - name: "Run terraform init in Terraform directory {{status_dir}}/terraform"
     shell: 
@@ -58,14 +52,14 @@
   - name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform plan -no-color -detailed-exitcode 2>&1 >> plan.log"
+      cmd: bash -c "terraform plan -destroy -no-color -detailed-exitcode 2>&1 >> {{status_dir}}/terraform/plan.log"
     register: terraform_plan_result
     failed_when: "terraform_plan_result.rc == 1"
 
   # If there are no changes, terraform plan will return with exit code 2 (as per -detailed-exitcode)
   # Subsequent steps are skipped if no changes were planned
   - debug:
-      msg: "No changes were detected in the planning phase, apply will be skipped and tfstate secret will not be updated"
+      msg: "No changes were detected in the planning phase, destroy will be skipped and tfstate secret will not be updated"
     when: "terraform_plan_result.rc == 0"
 
   - slurp:
@@ -93,14 +87,14 @@
       - number_to_destroy != '0'
       - confirm_destroy | bool != True
 
-  - name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/apply.log"
+  - name: "Run terraform destroy in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/destroy.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform apply -auto-approve -no-color 2>&1 >> apply.log"
+      cmd: bash -c "terraform destroy -auto-approve -no-color 2>&1 >> destroy.log"
     environment:
       TF_LOG: "info"
-      TF_LOG_PATH: "{{ status_dir }}/terraform/tf_apply.log"
-    register: terraform_apply
+      TF_LOG_PATH: "{{ status_dir }}/terraform/tf_destroy.log"
+    register: terraform_destroy
     ignore_errors: yes
     when: terraform_plan_result.rc != 0
 
@@ -120,10 +114,10 @@
     - tf_state_content | length > 0
 
   - fail:
-      msg: Error occurred during Terraform apply, state has been preserved. Failing now. Check the apply log for details.
+      msg: Error occurred during Terraform destroy, state has been preserved. Failing now. Check the destroy log for details.
     when: 
     - terraform_plan_result.rc == 2
-    - terraform_apply.rc!=0
+    - terraform_destroy.rc!=0
 
   when: "cloud_platform == 'ibm-cloud'"
 
