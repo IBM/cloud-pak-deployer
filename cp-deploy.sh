@@ -16,12 +16,12 @@ command_usage() {
   echo "ACTION:"
   echo "  environment:"
   echo "    apply                   Create a new or modify an existing environment"
-  echo "    destroy                 Destroy an existing environment (NOT IMPLEMENTED YET)"
+  echo "    destroy                 Destroy an existing environment"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
   echo "    delete                  Delete a secret from the vault"
-  echo "    list                    List secrets for the specified vault group (NOT IMPLEMENTED YET)"
+  echo "    list                    List secrets for the specified vault group"
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
@@ -342,6 +342,10 @@ run_cmd="podman run"
 # If running "environment" subcommand, run as daemon
 if [ "$SUBCOMMAND" == "environment" ];then
   run_cmd+=" -d"
+fi
+
+if [ "$SUBCOMMAND" == "vault" ];then
+  run_cmd+=" --cap-add=IPC_LOCK"
 fi
 
 run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "

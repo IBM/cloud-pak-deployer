@@ -1,0 +1,41 @@
+---
+
+- name: Get Secret from Vault Hashicorp
+  block:
+    - name: Validate mandatory variables are defined for Hashicorp Vault
+      assert:
+        that:
+          - vault_secret_path is defined
+          - secret_group is defined
+
+    - name: List secrets in Hashicorp vault (API Key)
+      include_tasks: list-secrets-hashicorp-api-key.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_login_token: "{{ vault_api_key }}"
+        hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}"
+      when: vault_authentication_type == 'api-key'
+
+    - name: List secrets in Hashicorp vault (Certificate)
+      include_tasks: list-secrets-hashicorp-certificate.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_ca_certificate: "{{ vault_ca_cert }}"
+        hashicorp_vault_client_certificate: "{{ vault_client_cert}}"
+        hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}"
+      when: vault_authentication_type == 'certificate'      
+  when: "vault_type == 'hashicorp-vault'"
+
+- name: List secrets from Vault IBM Cloud
+  include_tasks: list-secrets-ibmcloud.yml
+  vars:
+    ibmcloud_vault_address: "{{ vault_url }}"
+  when: "vault_type == 'ibmcloud-vault'"
+
+- name: List secrets from Vault file
+  include_tasks: list-secrets-file.yml
+  when: "vault_type == 'file-vault'"
+
+- name: Secrets in group {{ secret_group }}
+  debug:
+    var: secret_list
