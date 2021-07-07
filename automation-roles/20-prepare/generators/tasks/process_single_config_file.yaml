@@ -1,0 +1,30 @@
+---
+- debug:
+    msg: '{{ relative_path_to_config_file }}'
+- name: include the file
+  include_vars:
+    file: '{{ absolute_path_to_config_file }}'
+    name: 'this_config'
+
+
+
+- name: debug just included config
+  debug: 
+    msg: '{{ this_config }}'
+- name: update raw_config_files
+  set_fact: 
+    raw_config_files: "{{ raw_config_files | combine({ relative_path_to_config_file : this_config }) }}"
+
+
+
+- name: merge this_config with config_merged-fact
+  # "KEY: {{ config_item.key }}"
+  # "VALUE: {{ config_item.value }}"
+  set_fact:
+    config_merged: "{{ config_merged | combine({config_item.key : (config_item.value + ( config_merged[config_item.key]|default([]) ) )  }) }}"
+  #debug:
+  #  msg: "VALUE: {{ config_item.value }}" # KEY: {{ config_item.key }}
+  #config_merged: "{{ dict(this_config) | dict2items | list }}"
+  loop: "{{ this_config | dict2items}}"
+  loop_control:
+    loop_var: config_item

@@ -21,9 +21,7 @@
         path: '{{ path_to_terraform_work_dir }}'
         state: directory
 
-
-### Start - Merge configs ###
-- name: parse the yaml config and provide it as a fact config_merged
+- name: parse the yaml config and provide it as a fact merged_config
   block:
     - name: 'get stats of {{path_to_config_dir}}/config'
       stat:
@@ -42,16 +40,16 @@
         file_type: file
         patterns: '*.yaml'
       register: found_config_files
-    # - name: 
-    #   debug:
-    #     var: found_config_files
+    - name: 
+      debug:
+        var: found_config_files
     
-    - name: prepare config facts
+    - name: show generator directories
       set_fact: 
         raw_config_files: {}
-        config_merged: {}
+        merged_config: {}
     - name: loop over config files
-      include_tasks: process_single_config_file.yaml
+      include_tasks: ./process_single_config_file.yaml
       vars:
         relative_path_to_config_file: "{{ item.path | replace( path_to_config_dir+'/config', '' ) }}"
         absolute_path_to_config_file: "{{ item.path }}"
@@ -77,65 +75,13 @@
       #     var: generators_included_definition.ansible_facts
       # ###
     - debug:
-        msg: "{{config_merged}}"
+        msg: "{{merged_config}}"
           #vars:
           #    jsonVar: "{{ lookup('file', '{{definition_name}}.yaml') | from_yaml }}"
 
-### End - Merge configs ###
-
-### Start - Merge defaults ###
-- name: parse the yaml defaults and provide it as a fact defaults_merged
-  block:
-    - name: 'get stats of {{path_to_config_dir}}/defaults'
-      stat:
-        path: "{{path_to_config_dir}}/defaults"
-      register: stats_of_defaults_dir
-    - name: 'lookup *.yaml files in {{ stats_of_defaults_dir.stat.path }}'
-      find:
-        paths: '{{ stats_of_defaults_dir.stat.path }}'
-        file_type: file
-        patterns: '*.yaml'
-      register: found_defaults_files
-    - name: prepare defaults facts
-      set_fact: 
-        raw_defaults_files: {}
-        defaults_merged: {}
-    - name: loop over defaults files
-      include_tasks: process_single_defaults_file.yaml
-      vars:
-        relative_path_to_defaults_file: "{{ item.path | replace( path_to_config_dir+'/defaults', '' ) }}"
-        absolute_path_to_defaults_file: "{{ item.path }}"
-      loop: '{{ found_defaults_files.files }}'
-      loop_control:
-        label: "{{ item.path }}"
-### End - Merge defaults ###
-
-- debug:
-    var: defaults_merged
 
 
-### we got defaults_merged and config_merged  
-### now iterate over the defined artifacts and merge them
-### with the defaults 
-### as a result we receive config_complete
-# - name: prepare config_complete fact
-#   set_fact: 
-#     config_complete: {}
-- name: loop over defined artifacts in the config
-  include_tasks: merge_single_artifact_with_defaults.yaml
-  vars:
-    artifact_key: "{{ item.key }}"
-    artifact_list: "{{ item.value }}"
-  loop: '{{ config_merged | dict2items }}'
-  loop_control:
-    label: "{{ item.key }}"
-
-- name: OUTPUT config_complete
-  debug:
-    var: config_complete
-
-
-- name: prepare generator facts
+- name: show generator directories
   set_fact: 
     generators_index:
 
@@ -161,11 +107,11 @@
       name: "{{ item[0].key }}"
       path: "{{path_to_generators_dir}}/{{ item[0].key }}"
       attributes: "{{ item[1] }}"
-      config: "{{ config_merged }}"
+      config: "{{ merged_config }}"
     GENERATOR_NAME: "{{ item[0].key }}"
     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
     PATH_TO_TERRAFORM_WORK_DIR: "{{ path_to_terraform_work_dir }}"
-  loop: "{{ config_merged | dict2items | subelements('value')}}"
+  loop: "{{ merged_config | dict2items | subelements('value')}}"
 - name: put the provider config to the terraform folder
   template:
     src: '../templates/provider.tf.j2'
