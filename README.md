@@ -76,7 +76,7 @@ CONFIG_DIR  --> /config
 Adjust the /config/cpd.yaml and /inventory/cpd.inv to set the desired end-state of the deployment. 
 
 ### Run the deployment
-To run cloud-pak-deployer container, a cp-deploy command is available. Run `./cp-deploy.sh` help to display the help
+To run cloud-pak-deployer container, a cp-deploy command is available. Run `./cp-deploy.sh help` to display the help
 
 ```
  ./cp-deploy.sh
@@ -114,8 +114,6 @@ Options for vault subcommand:
   --vault-group,-vg <name>          Group of secret ($VAULT_GROUP)
   --vault-secret,-vs <name>         Secret name to get, set or delete ($VAULT_SECRET)
   --vault-secret-value,-vsv <value> Secret value to set ($VAULT_SECRET_VALUE)
-  ```
-
 ```
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. Please note that the the `LOG_DATA_DIR` directory must exist and that the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
