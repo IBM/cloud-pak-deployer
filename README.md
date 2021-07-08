@@ -50,7 +50,7 @@ During the Deployment of Cloud Pak for Data, the images will be transferred from
 - Ensure you have selected the correct IBM Cloud Account for which you wish to use the Cloud Pak Deployer
 - Using the Hamburger menu button, nagivate to OpenShift --> Registry
 - Select Namespaces
-- Click Create and provide the name for the Container Registry namespace
+- Click Create and provide the name for the Container Registry namespace  
 After the Container Registry namespace is created, ensure you have sufficient quota to store the images
 - Click Settings
 - Make sure the Storage Quota has 200Gb available and the Pull traffic is set to unlimited or has sufficient quota 
@@ -65,7 +65,7 @@ For the Cloud Pak Deployer to access the IBM Cloud Pak for Data source images, a
 The Cloud Pak Deployer requires the desired end-state to be configured in a pre-defined directory structure. This structure may exist on the server that runs the utility or can be pulled from a (branch of a) Git repository. 
 
 #### Create configuration directory structure
-Use the following directory structure; you can copy a template from the `./sample` directory in included in this repository.
+Use the following directory structure; you can copy a template from the `./sample` directory included in this repository.
 ```
 CONFIG_DIR  --> /config
                 - cpd.yaml
@@ -76,7 +76,7 @@ CONFIG_DIR  --> /config
 Adjust the /config/cpd.yaml and /inventory/cpd.inv to set the desired end-state of the deployment. 
 
 ### Run the deployment
-To run cloud-pak-deployer container, a cp-deploy command is available. Run ./cp-deploy.sh help to display the help
+To run cloud-pak-deployer container, a cp-deploy command is available. Run `./cp-deploy.sh` help to display the help
 
 ```
  ./cp-deploy.sh
@@ -118,7 +118,7 @@ Options for vault subcommand:
 
 ```
 
-To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. Please note that the the LOG_DATA_DIR directory must exist and that the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
+To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. Please note that the the `LOG_DATA_DIR` directory must exist and that the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
 IBM_CLOUD_API_KEY=your_api_key
