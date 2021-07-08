@@ -314,10 +314,10 @@ if ! command -v podman &> /dev/null;then
 fi
 
 # Check if the cloud-pak-deployer image exists
-if ! podman image exists cloud-pak-deployer;then
-  echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
-  exit 99
-fi
+# if ! podman image exists cloud-pak-deployer;then
+#   echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
+#   exit 99
+# fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Run the Cloud Pak Deployer                                                                                #

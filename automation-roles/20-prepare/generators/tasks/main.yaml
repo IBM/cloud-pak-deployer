@@ -122,7 +122,7 @@
 #   set_fact: 
 #     config_complete: {}
 - name: loop over defined artifacts in the config
-  include_tasks: merge_single_artifact_with_defaults.yaml
+  include_tasks: prepare_defaults_flavour_and_config.yaml
   vars:
     artifact_key: "{{ item.key }}"
     artifact_list: "{{ item.value }}"
@@ -161,11 +161,12 @@
       name: "{{ item[0].key }}"
       path: "{{path_to_generators_dir}}/{{ item[0].key }}"
       attributes: "{{ item[1] }}"
-      config: "{{ config_merged }}"
+      #config: "{{ config_merged }}"
+      config: "{{ config_complete }}"
     GENERATOR_NAME: "{{ item[0].key }}"
     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
     PATH_TO_TERRAFORM_WORK_DIR: "{{ path_to_terraform_work_dir }}"
-  loop: "{{ config_merged | dict2items | subelements('value')}}"
+  loop: "{{ config_complete | dict2items | subelements('value')}}"
 - name: put the provider config to the terraform folder
   template:
     src: '../templates/provider.tf.j2'
