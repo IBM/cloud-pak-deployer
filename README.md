@@ -5,22 +5,19 @@
 ## Installing the Cloud Pak Deployer
 
 ### Install pre-requisites
-Start with a server running a linux OS, like Red Hat or CentOS
+Start with a server running a linux OS, like Red Hat or CentOS. MacOS should also work (with docker instead of podman).
+
+On Red Hat Enterprise Linux of CentOS:
 ```
 yum install -y podman git
 yum clean all
 ```
 
-### Optional - Install EPEL and screen
-If you want to run the deployer in a screen session, you also need to install EPEL and the screen package.
-```
-yum install -y epel-release && \
-yum install -y screen
-```
+On MacOS:
+* Install Docker from the app store
 
 ### Clone the current repository
 ```
-# TODO: specify eventual location of the Cloud Pak Deployer
 git clone ...
 ```
 
@@ -28,10 +25,10 @@ git clone ...
 The container image must be built from the directory that holds the `Dockerfile` file.
 ```
 cd cloud-pak-deployer
-podman build -t cloud-pak-deployer .
+./cp-deploy.sh build
 ```
 
-This process will take 2-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Terraform and operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
+This process will take 2-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Terraform, IBM Cloud CLI and operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
 
 ## Using the Cloud Pak Deployer
 
@@ -65,18 +62,19 @@ For the Cloud Pak Deployer to access the IBM Cloud Pak for Data source images, a
 The Cloud Pak Deployer requires the desired end-state to be configured in a pre-defined directory structure. This structure may exist on the server that runs the utility or can be pulled from a (branch of a) Git repository. 
 
 #### Create configuration directory structure
-Use the following directory structure; you can copy a template from the `./sample` directory included in this repository.
+Use the following directory structure; you can copy a template from the `sample-configuration` directory included in this repository.
 ```
 CONFIG_DIR  --> /config
-                - cpd.yaml
+                - sample.yaml
+            --> /defaults
+                - defaults.yaml
             --> /inventory
-                - cpd.inv
-            --> /generator_config (do not make any changes in this folder)
+                - sample.inv
 ```
-Adjust the /config/cpd.yaml and /inventory/cpd.inv to set the desired end-state of the deployment. 
+Adjust the `sample.yaml` and `sample.inv` to set the desired end-state of the deployment. Any missing configuration attributes will be completed from the `defaults` directory.
 
 ### Run the deployment
-To run cloud-pak-deployer container, a cp-deploy command is available. Run `./cp-deploy.sh help` to display the help
+To run cloud-pak-deployer container, the `cp-deploy.sh` command is available. Run `./cp-deploy.sh help` to display the help text.
 
 ```
  ./cp-deploy.sh
@@ -86,6 +84,7 @@ Usage: ./cp-deploy.sh SUBCOMMAND ACTION [OPTIONS]
 SUBCOMMAND:
   environment,env           Apply configuration to create, modify or destroy an environment
   vault                     Get, create, modify or delete secrets in the configured vault
+  build                     Build the container image for the Cloud Pak Deployer
   help,h                    Show help
 
 ACTION:
@@ -116,7 +115,7 @@ Options for vault subcommand:
   --vault-secret-value,-vsv <value> Secret value to set ($VAULT_SECRET_VALUE)
 ```
 
-To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. Please note that the the `LOG_DATA_DIR` directory must exist and that the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
+To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the `LOG_DATA_DIR` parameter, the deployer will automatically create a temporary directy. Please note that the temporary status directory will also hold the secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can interrogate. If you specify an existing directory the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
 IBM_CLOUD_API_KEY=your_api_key
@@ -130,7 +129,7 @@ CONFIG_DIR=/Data/sample
  --ibm-cloud-api-key ${IBM_CLOUD_API_KEY}
 ```
 
-After the installation is completed, the Terraform tfstate file is stored into the vault. When re-running the automation script it fetches the tfstate file from the vault.
+When running the command, the container will be run as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run int eh background.
 
 If you need to interrupt the automation, use CTRL-C to stop the output then use:
 ```
@@ -142,3 +141,6 @@ Then, stop the container as follows:
 ```
 podman kill <container name>
 ```
+
+After the installation is completed, the Terraform tfstate file is stored into the vault. When re-running the automation script it fetches the tfstate file from the vault.
+
