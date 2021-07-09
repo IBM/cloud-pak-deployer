@@ -18,7 +18,7 @@ On MacOS:
 
 ### Clone the current repository
 ```
-git clone ...
+git clone https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer.git
 ```
 
 ### Build the image
