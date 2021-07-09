@@ -365,7 +365,7 @@ fi
 mkdir -p $STATUS_DIR
 
 # Build command
-run_cmd="${CONTAINER_ENGINEß} run"
+run_cmd="${CONTAINER_ENGINE} run"
 
 # If running "environment" subcommand, run as daemon
 if [ "$SUBCOMMAND" == "environment" ];then
