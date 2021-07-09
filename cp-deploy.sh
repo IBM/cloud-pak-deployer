@@ -50,9 +50,9 @@ command_usage() {
 # --------------------------------------------------------------------------------------------------------- #
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
-if [ ! -v CPD_DEVELOP ];then CPD_DEVELOP=false;fi
-if [ ! -v ANSIBLE_VERBOSE ];then ANSIBLE_VERBOSE=false;fi
-if [ ! -v CONFIRM_DESTROY ];then CONFIRM_DESTROY=false;fi
+if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
+if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
+if [ "${CONFIRM_DESTROY}" == "" ]];then CONFIRM_DESTROY=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -64,7 +64,7 @@ if [ "$#" -lt 1 ]; then
 fi
 
 # Check that subcommand is valid
-export SUBCOMMAND=${1,,}
+export SUBCOMMAND=$(echo "$1" | tr '[:upper:]' '[:lower:]' )
 case "$SUBCOMMAND" in
 env|environment)
   export SUBCOMMAND="environment"
