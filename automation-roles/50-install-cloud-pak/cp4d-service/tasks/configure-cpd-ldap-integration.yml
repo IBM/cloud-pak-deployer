@@ -62,13 +62,17 @@
             \"externalLDAPSearchPassword\": \"{{ externalLDAPSearchPassword }}\"
          }'"
   register: cp4d_ldap_configuration_result
+  when: (externalLDAPHost | default("")) != ""
 
 - set_fact:
     cp4d_ldap_configuration_result_json: "{{ cp4d_ldap_configuration_result.stdout | from_json }}"
+  when: (externalLDAPHost | default("")) != ""
 
 - name: Error if no success message is returned
   fail: msg="Unable to configure LDAP connectivity. Configure command returned a non success message"
-  when: "not cp4d_ldap_configuration_result_json._messageCode_ == 'success'"
+  when: 
+    - (externalLDAPHost | default("")) != ""
+    - "not cp4d_ldap_configuration_result_json._messageCode_ == 'success'"
 
 # - name: Validate LDAP connectivity with login test
 #   shell: "curl --location --insecure --request PUT 'https://{{ cp4d_url.stdout }}/usermgmt/v1/preauth/validateConfig' \
