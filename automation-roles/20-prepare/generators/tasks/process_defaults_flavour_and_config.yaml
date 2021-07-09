@@ -13,7 +13,9 @@
 - name: process default, flavour and config for merge
   set_fact: 
     this_item_default_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', 'default') | list )                + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
-    this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.flavour) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+    this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.get('flavour') ) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+  # this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.flavour) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+
 
 - name: DEFAULT!!!
   debug:

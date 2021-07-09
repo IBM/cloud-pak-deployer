@@ -16,7 +16,7 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
     worker_count = "{{generator.attributes.worker_count}}"
 
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
-{% set subnet = generator.config.subnets | selectattr("name", "equalto", item) | list | first %}
+{% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
     zones {
         subnet_id = ibm_is_subnet.{{item | replace("-", "_") }}.id
         name      = "{{subnet.zone}}"
@@ -39,7 +39,7 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
     }
 
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
-{% set subnet = generator.config.subnets | selectattr("name", "equalto", item) | list | first %}
+{% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
     zones {
         subnet_id = ibm_is_subnet.{{item | replace("-", "_") }}.id
         name      = "{{subnet.zone}}"
