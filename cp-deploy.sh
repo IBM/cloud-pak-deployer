@@ -6,11 +6,12 @@ SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 # --------------------------------------------------------------------------------------------------------- #
 command_usage() {
   echo
-  echo "Usage: $0 SUBCOMMAND ACTION [OPTIONS]"
+  echo "Usage: $0 SUBCOMMAND [ACTION] [OPTIONS]"
   echo
   echo "SUBCOMMAND:"
   echo "  environment,env           Apply configuration to create, modify or destroy an environment"
   echo "  vault                     Get, create, modify or delete secrets in the configured vault"
+  echo "  build                     Build the container image for the Cloud Pak Deployer"
   echo "  help,h                    Show help"
   echo
   echo "ACTION:"
@@ -22,6 +23,7 @@ command_usage() {
   echo "    set                     Create or update a secret in the vault"
   echo "    delete                  Delete a secret from the vault"
   echo "    list                    List secrets for the specified vault group"
+  echo "  build:                    No actions."
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
@@ -31,9 +33,11 @@ command_usage() {
   echo "  --git-repo-dir,-rd <dir>      Directory in the Git repository that holds the configuration (\$GIT_REPO_DIR)"
   echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
-  echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
+  echo 
+  echo "Options for environment subcommand:"
+  echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
   echo
   echo "Options for vault subcommand:"
   echo "  --vault-group,-vg <name>          Group of secret (\$VAULT_GROUP)"
@@ -46,27 +50,30 @@ command_usage() {
 # --------------------------------------------------------------------------------------------------------- #
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
-if [ ! -v CPD_DEVELOP ];then CPD_DEVELOP=false;fi
-if [ ! -v ANSIBLE_VERBOSE ];then ANSIBLE_VERBOSE=false;fi
-if [ ! -v CONFIRM_DESTROY ];then CONFIRM_DESTROY=false;fi
+if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
+if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
+if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
 # --------------------------------------------------------------------------------------------------------- #
 
 # Check number of parameters
-if [ "$#" -lt 2 ]; then
+if [ "$#" -lt 1 ]; then
   command_usage
 fi
 
 # Check that subcommand is valid
-export SUBCOMMAND=${1,,}
+export SUBCOMMAND=$(echo "$1" | tr '[:upper:]' '[:lower:]' )
 case "$SUBCOMMAND" in
 env|environment)
   export SUBCOMMAND="environment"
   shift 1
   ;;
 vault)
+  shift 1
+  ;;
+build)
   shift 1
   ;;
 h|help)
@@ -79,7 +86,7 @@ h|help)
 esac
 
 # Check that action is valid for subcommand
-export ACTION=${1,,}
+export ACTION=$(echo "$1" | tr '[:upper:]' '[:lower:]' )
 case "$SUBCOMMAND" in
 environment)
   case "$ACTION" in
@@ -108,6 +115,8 @@ vault)
     command_usage 1
     ;;
   esac
+  ;;
+build)
   ;;
 esac
 
@@ -263,6 +272,30 @@ while (( "$#" )); do
     ;;
   esac
 done
+
+# --------------------------------------------------------------------------------------------------------- #
+# Check container engine and build if wanted                                                                #
+# --------------------------------------------------------------------------------------------------------- #
+
+# container engine used to run the registry, either 'docker' or 'podman'
+CONTAINER_ENGINE=
+
+# Check if podman or docker command was found
+if command -v podman &> /dev/null;then
+  CONTAINER_ENGINE="podman"
+elif command -v docker &> /dev/null;then
+  CONTAINER_ENGINE="docker"
+else
+  echo "podman or docker command was not found."
+  exit 99
+fi
+
+# If running "build" subcommand, build the image
+if [ "$SUBCOMMAND" == "build" ];then
+  $CONTAINER_ENGINE build -t cloud-pak-deployer ${SCRIPT_DIR}
+  exit $?
+fi
+
 # --------------------------------------------------------------------------------------------------------- #
 # Check invalid combinations of parameters                                                                  #
 # --------------------------------------------------------------------------------------------------------- #
@@ -304,20 +337,15 @@ fi
 eval set -- "$PARAMS"
 
 # --------------------------------------------------------------------------------------------------------- #
-# The remainder of the parameters will be checked in the pod                                                #
+# For the remainder of the command, it is expected that the image exists                                    #
 # --------------------------------------------------------------------------------------------------------- #
 
-# Check if podman command was found
-if ! command -v podman &> /dev/null;then
-  echo "podman command was not found."
+# Check if the cloud-pak-deployer image exists
+
+if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
+  echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
   exit 99
 fi
-
-# Check if the cloud-pak-deployer image exists
-# if ! podman image exists cloud-pak-deployer;then
-#   echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
-#   exit 99
-# fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Run the Cloud Pak Deployer                                                                                #
@@ -337,7 +365,7 @@ fi
 mkdir -p $STATUS_DIR
 
 # Build command
-run_cmd="podman run"
+run_cmd="${CONTAINER_ENGINEß} run"
 
 # If running "environment" subcommand, run as daemon
 if [ "$SUBCOMMAND" == "environment" ];then
@@ -377,13 +405,12 @@ run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
 
 run_cmd+=" cloud-pak-deployer"
 
-eval $run_cmd
+CONTAINER_ID=$(eval $run_cmd)
+PODMAN_EXIT_CODE=$?
 
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
-  podman logs -fl
+  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
 fi
 
-PODMAN_EXIT_CODE=$?
 exit $PODMAN_EXIT_CODE
-
