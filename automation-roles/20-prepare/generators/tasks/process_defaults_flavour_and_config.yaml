@@ -1,0 +1,49 @@
+---
+# These facts are passed to this task-list via vars:
+#
+# <this_item_artifact_key> is the root attribute from the config
+#   that contains the collection of configs we want to 
+#   pass to the generator with name <artifact_key>
+# <artifact_list> contains the collection of artifacts
+#   inside the <artifact_key>
+# <this_item_config> is one of these elements
+- name: check this items config
+  debug:
+    var: artifact_item
+- name: process default, flavour and config for merge
+  set_fact: 
+    this_item_default_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', 'default') | list )                + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+    this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.get('flavour') ) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+  # this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.flavour) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+
+
+- name: DEFAULT!!!
+  debug:
+    var: this_item_default_config
+
+- name: merge flavour_config over default_config
+  set_fact:
+    this_item_merged_config: "{{ this_item_default_config | combine( this_item_flavour_config, recursive=True) }}"
+
+- name: merge artifact_config over already merged_config
+  set_fact:
+    this_item_merged_config: "{{ this_item_merged_config | combine( artifact_item, recursive=True) }}"
+
+- name: store this_item_merged_config in config_complete
+  set_fact: 
+    config_complete: "{{ config_complete | combine({this_item_artifact_key: (config_complete.get(this_item_artifact_key)+[this_item_merged_config] ) }) }}"
+
+# - name: COMPLETE!!!
+#   debug:
+#     var: config_complete
+
+
+# - name: DEFAULT!!!
+#   debug:
+#     var: this_item_default_config
+# - name: FLAVOUR!!!
+#   debug:
+#     var: this_item_flavour_config
+# - name: MERGED!!!
+#   debug:
+#     var: this_item_merged_config
