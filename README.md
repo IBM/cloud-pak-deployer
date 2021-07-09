@@ -118,10 +118,10 @@ Options for vault subcommand:
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the `LOG_DATA_DIR` parameter, the deployer will automatically create a temporary directy. Please note that the temporary status directory will also hold the secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can interrogate. If you specify an existing directory the current user must be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-IBM_CLOUD_API_KEY=your_api_key
-ibm_cp4d_entitlement_key=your_cp4d_entitlement_key
-LOG_DATA_DIR=/Data/sample-log
-CONFIG_DIR=/Data/sample
+export IBM_CLOUD_API_KEY=your_api_key
+export ibm_cp4d_entitlement_key=your_cp4d_entitlement_key
+export LOG_DATA_DIR=/Data/sample-log
+export CONFIG_DIR=/Data/sample
 
 ./cp-deploy.sh env apply \
  --status-dir ${LOG_DATA_DIR} \
