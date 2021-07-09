@@ -59,28 +59,6 @@
       loop_control:
         label: "{{ item.path }}"
 
-    # ### include_vars doesn't merge list
-    # - name: include files in the config_dir
-    #   include_vars:
-    #     name: included_config
-    #     dir: '{{ stats_of_config_dir.stat.path }}'
-    #     extensions: ['yaml','yml']
-    #   when: stats_of_config_dir.stat.isdir is defined and stats_of_config_dir.stat.isdir
-    # ###
-
-
-      # ### This is is how it worked before
-      # - name: Pull in the path_to_definitions_folder and read the {{ definition_name }}.yaml
-      #   include_vars: "{{path_to_definitions_folder}}/{{definition_name}}.yaml"
-      #   register: generators_included_definition
-      # - debug:
-      #     var: generators_included_definition.ansible_facts
-      # ###
-    - debug:
-        msg: "{{config_merged}}"
-          #vars:
-          #    jsonVar: "{{ lookup('file', '{{definition_name}}.yaml') | from_yaml }}"
-
 ### End - Merge configs ###
 
 ### Start - Merge defaults ###
@@ -117,10 +95,10 @@
 ### we got defaults_merged and config_merged  
 ### now iterate over the defined artifacts and merge them
 ### with the defaults 
-### as a result we receive config_complete
-# - name: prepare config_complete fact
+### as a result we receive all_config
+# - name: prepare all_config fact
 #   set_fact: 
-#     config_complete: {}
+#     all_config: {}
 - name: loop over defined artifacts in the config
   include_tasks: prepare_defaults_flavour_and_config.yaml
   vars:
@@ -130,9 +108,9 @@
   loop_control:
     label: "{{ item.key }}"
 
-- name: OUTPUT config_complete
+- name: OUTPUT all_config
   debug:
-    var: config_complete
+    var: all_config
 
 
 - name: prepare generator facts
@@ -154,6 +132,8 @@
 # ### TODO: check if the roles are available, before we even try to run them
 
 
+
+
 - name: Run generators
   include_tasks: "{{path_to_generators_dir}}/{{ item[0].key }}/main.yaml"
   vars:
@@ -162,11 +142,11 @@
       path: "{{path_to_generators_dir}}/{{ item[0].key }}"
       attributes: "{{ item[1] }}"
       #config: "{{ config_merged }}"
-      config: "{{ config_complete }}"
+      config: "{{ all_config }}"
     GENERATOR_NAME: "{{ item[0].key }}"
     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
     PATH_TO_TERRAFORM_WORK_DIR: "{{ path_to_terraform_work_dir }}"
-  loop: "{{ config_complete | dict2items | subelements('value')}}"
+  loop: "{{ all_config | dict2items | subelements('value')}}"
 - name: put the provider config to the terraform folder
   template:
     src: '../templates/provider.tf.j2'

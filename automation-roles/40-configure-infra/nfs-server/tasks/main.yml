@@ -9,9 +9,12 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+- debug:
+    var: all_config
+
 - name: Configure NFS servers IBM Cloud VPC
   include_tasks: nfs-server-ibmcloud-vpc-prepare.yaml
-  loop: "{{ all_config.nfs_servers | default([]) }}"
+  loop: "{{ all_config.nfs_server | default([]) }}"
   loop_control:
     loop_var: current_nfs_server
   when: current_nfs_server.infrastructure.type == 'vpc'
