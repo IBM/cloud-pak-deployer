@@ -365,7 +365,7 @@ fi
 mkdir -p $STATUS_DIR
 
 # Build command
-run_cmd="${CONTAINER_ENGINEß} run"
+run_cmd="${CONTAINER_ENGINE} run"
 
 # If running "environment" subcommand, run as daemon
 if [ "$SUBCOMMAND" == "environment" ];then
@@ -402,6 +402,7 @@ fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+run_cmd+=" -e ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key}"
 
 run_cmd+=" cloud-pak-deployer"
 

@@ -123,7 +123,7 @@ env|environment)
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
       --extra-vars confirm_destroy=${CONFIRM_DESTROY} \
       --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} ${VERBOSE_ARG}
-  else
+  elif [ "$ACTION" == "destroy" ]
     ansible-playbook \
       -i ${INV_DIR} \
       playbooks/playbook-destroy.yml \
