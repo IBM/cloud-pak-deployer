@@ -24,15 +24,13 @@
     include: ibmcloud-vpc-ssh.yaml
     loop: "{{ all_config.ssh_keys }}"
 
-  - set_fact:
-      generators_dir: "{{ path_to_generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
   - name: "Include 'generators'-role and pass variables to it"
     include_role:
       name: generators
     vars:
       # path_to_config_dir: "{{ config_dir }}/config"
       path_to_config_dir: "{{ config_dir }}"
-      path_to_generators_dir: "{{ generators_dir }}"
+      path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
       path_to_terraform_work_dir: "{{status_dir}}/terraform"
 
   - name: "Copy variables to Terraform directory {{status_dir}}/terraform"
