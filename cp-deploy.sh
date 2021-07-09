@@ -52,7 +52,7 @@ command_usage() {
 # --------------------------------------------------------------------------------------------------------- #
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
-if [ "${CONFIRM_DESTROY}" == "" ]];then CONFIRM_DESTROY=false;fi
+if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -86,7 +86,7 @@ h|help)
 esac
 
 # Check that action is valid for subcommand
-export ACTION=${1,,}
+export ACTION=$(echo "$1" | tr '[:upper:]' '[:lower:]' )
 case "$SUBCOMMAND" in
 environment)
   case "$ACTION" in
