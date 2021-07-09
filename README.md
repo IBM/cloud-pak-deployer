@@ -1,6 +1,6 @@
 # Cloud Pak Deployer
 
-![Provisioner pipeline](/images/Provisioner-pipeline.png)
+![Provisioner pipeline](/images/provisioning-process.png)
 
 ## Installing the Cloud Pak Deployer
 
