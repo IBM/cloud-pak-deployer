@@ -341,6 +341,7 @@ eval set -- "$PARAMS"
 # --------------------------------------------------------------------------------------------------------- #
 
 # Check if the cloud-pak-deployer image exists
+
 if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
   echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
   exit 99

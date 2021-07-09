@@ -7,40 +7,142 @@
           - "{{item}} is defined"
         fail_msg: "'{{item}}' needs to be set for this role to work"
       with_items:
-      - path_to_config_folder
-      - path_to_definitions_folder
-      - path_to_terraform_folder
+      - path_to_config_dir
+      - path_to_generators_dir
+      - path_to_terraform_work_dir
       
     - name: Delete terraform work folder if it already exists
       file:
-        path: '{{ path_to_terraform_folder }}'
+        path: '{{ path_to_terraform_work_dir }}'
         state: absent
 
     - name: Create terraform work folder if it does not exist
       file:
-        path: '{{ path_to_terraform_folder }}'
+        path: '{{ path_to_terraform_work_dir }}'
         state: directory
-# - name: Check if a Statefile exists for the given environment
-#   stat:
-#     path: '{{playbook_dir}}/terraform_state/{{config_name}}/terraform.tfstate'
-#   register: statefile_details
-# - name: 
-#   template:
-- name: Pull in the path_to_definitions_folder and read the {{ definition_name }}.yaml
-  include_vars: "{{path_to_definitions_folder}}/{{definition_name}}.yaml"
-  register: generators_included_definition
-- debug: 
-    var: generators_included_definition.ansible_facts
-- name: show generator directories
+
+
+### Start - Merge configs ###
+- name: parse the yaml config and provide it as a fact config_merged
+  block:
+    - name: 'get stats of {{path_to_config_dir}}/config'
+      stat:
+        path: "{{path_to_config_dir}}/config"
+      register: stats_of_config_dir
+    # - name: debug stats_of_config_dir
+    #   debug:
+    #     var: stats_of_config_dir
+    # - name: debug path_to_definition_file # sorry, no file anymore
+    #   debug:
+    #     var: path_to_definition_file
+
+    - name: 'lookup *.yaml files in {{ stats_of_config_dir.stat.path }}'
+      find:
+        paths: '{{ stats_of_config_dir.stat.path }}'
+        file_type: file
+        patterns: '*.yaml'
+      register: found_config_files
+    # - name: 
+    #   debug:
+    #     var: found_config_files
+    
+    - name: prepare config facts
+      set_fact: 
+        raw_config_files: {}
+        config_merged: {}
+    - name: loop over config files
+      include_tasks: process_single_config_file.yaml
+      vars:
+        relative_path_to_config_file: "{{ item.path | replace( path_to_config_dir+'/config', '' ) }}"
+        absolute_path_to_config_file: "{{ item.path }}"
+      loop: '{{ found_config_files.files }}'
+      loop_control:
+        label: "{{ item.path }}"
+
+    # ### include_vars doesn't merge list
+    # - name: include files in the config_dir
+    #   include_vars:
+    #     name: included_config
+    #     dir: '{{ stats_of_config_dir.stat.path }}'
+    #     extensions: ['yaml','yml']
+    #   when: stats_of_config_dir.stat.isdir is defined and stats_of_config_dir.stat.isdir
+    # ###
+
+
+      # ### This is is how it worked before
+      # - name: Pull in the path_to_definitions_folder and read the {{ definition_name }}.yaml
+      #   include_vars: "{{path_to_definitions_folder}}/{{definition_name}}.yaml"
+      #   register: generators_included_definition
+      # - debug:
+      #     var: generators_included_definition.ansible_facts
+      # ###
+    - debug:
+        msg: "{{config_merged}}"
+          #vars:
+          #    jsonVar: "{{ lookup('file', '{{definition_name}}.yaml') | from_yaml }}"
+
+### End - Merge configs ###
+
+### Start - Merge defaults ###
+- name: parse the yaml defaults and provide it as a fact defaults_merged
+  block:
+    - name: 'get stats of {{path_to_config_dir}}/defaults'
+      stat:
+        path: "{{path_to_config_dir}}/defaults"
+      register: stats_of_defaults_dir
+    - name: 'lookup *.yaml files in {{ stats_of_defaults_dir.stat.path }}'
+      find:
+        paths: '{{ stats_of_defaults_dir.stat.path }}'
+        file_type: file
+        patterns: '*.yaml'
+      register: found_defaults_files
+    - name: prepare defaults facts
+      set_fact: 
+        raw_defaults_files: {}
+        defaults_merged: {}
+    - name: loop over defaults files
+      include_tasks: process_single_defaults_file.yaml
+      vars:
+        relative_path_to_defaults_file: "{{ item.path | replace( path_to_config_dir+'/defaults', '' ) }}"
+        absolute_path_to_defaults_file: "{{ item.path }}"
+      loop: '{{ found_defaults_files.files }}'
+      loop_control:
+        label: "{{ item.path }}"
+### End - Merge defaults ###
+
+- debug:
+    var: defaults_merged
+
+
+### we got defaults_merged and config_merged  
+### now iterate over the defined artifacts and merge them
+### with the defaults 
+### as a result we receive config_complete
+# - name: prepare config_complete fact
+#   set_fact: 
+#     config_complete: {}
+- name: loop over defined artifacts in the config
+  include_tasks: prepare_defaults_flavour_and_config.yaml
+  vars:
+    artifact_key: "{{ item.key }}"
+    artifact_list: "{{ item.value }}"
+  loop: '{{ config_merged | dict2items }}'
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: OUTPUT config_complete
+  debug:
+    var: config_complete
+
+
+- name: prepare generator facts
   set_fact: 
     generators_index:
-  #vars:
-  #    jsonVar: "{{ lookup('file', '{{definition_name}}.yaml') | from_yaml }}"
 
-- name: List the folders in /generators, don't recurse
+- name: List the folders in {{path_to_generators_dir}}, don't recurse
   find:
     file_type: directory
-    paths: "{{path_to_config_folder}}/generators"
+    paths: "{{path_to_generators_dir}}"
     recurse: no
   register: generators_generator_folders
 
@@ -49,37 +151,23 @@
     generators_index:
       available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
 
-### TODO: check if the roles are available, before we even try to run them
+# ### TODO: check if the roles are available, before we even try to run them
 
 
 - name: Run generators
-  include_tasks: "{{path_to_config_folder}}/generators/{{ item[0].key }}/main.yaml"
+  include_tasks: "{{path_to_generators_dir}}/{{ item[0].key }}/main.yaml"
   vars:
     generator:
       name: "{{ item[0].key }}"
-      path: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
+      path: "{{path_to_generators_dir}}/{{ item[0].key }}"
       attributes: "{{ item[1] }}"
-      config: "{{generators_included_definition.ansible_facts}}"
+      #config: "{{ config_merged }}"
+      config: "{{ config_complete }}"
     GENERATOR_NAME: "{{ item[0].key }}"
-    GENERATOR_DIR: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
-  loop: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
+    GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
+    PATH_TO_TERRAFORM_WORK_DIR: "{{ path_to_terraform_work_dir }}"
+  loop: "{{ config_complete | dict2items | subelements('value')}}"
 - name: put the provider config to the terraform folder
   template:
     src: '../templates/provider.tf.j2'
-    dest: '{{ path_to_terraform_folder }}/provider.tf'
-
-
-
-
-### Unfortunately subelements('value') works with loop but refuses to work with with_items
-
-# - name: Run generators
-#   include_tasks: "{{path_to_config_folder}}/generators/{{ item[0].key }}/main.yaml"
-#   vars:
-#     generator:
-#       name: "{{ item[0].key }}"
-#       path: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
-#       attributes: "{{ item[1] }}"
-#     GENERATOR_NAME: "{{ item[0].key }}"
-#     GENERATOR_DIR: "{{path_to_config_folder}}/generators/{{ item[0].key }}"
-#   with_items: "{{generators_included_definition.ansible_facts | dict2items | subelements('value')}}"
+    dest: '{{ path_to_terraform_work_dir }}/provider.tf'

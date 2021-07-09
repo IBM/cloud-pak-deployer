@@ -1,0 +1,53 @@
+resource  "ibm_resource_instance" "{{generator.attributes.name | replace("-", "_") }}" {
+    name     = "{{generator.attributes.name}}-cos"
+    plan     = "standard"
+    location = "global"
+    service  = "cloud-object-storage"
+}
+
+
+resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
+    name = "{{generator.attributes.name}}"
+    cos_instance_crn = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.id
+    kube_version = "{{generator.attributes.kube_version}}"
+    flavor       = "{{generator.attributes.worker_flavour}}"
+    entitlement  = "cloud_pak"
+    vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
+    worker_count = "{{generator.attributes.worker_count}}"
+
+{% for item in generator.attributes.infrastructure.get('subnets',[]) %}
+{% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
+    zones {
+        subnet_id = ibm_is_subnet.{{item | replace("-", "_") }}.id
+        name      = "{{subnet.zone}}"
+    }
+
+{% endfor %}
+}
+
+{% for item in generator.attributes.storage_classes %}
+{% if item.storage_type == "ocs" %}
+resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace("-", "_") }}_ocs" {
+    cluster           = "{{generator.attributes.name }}"
+    worker_pool_name  = "{{generator.attributes.name }}-{{item.ocs_storage_label}}"
+    flavor       = "{{generator.attributes.worker_flavour}}"
+    vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
+    worker_count      = 1
+
+    labels = {
+        "roks-storage" = "{{ item.ocs_storage_label }}"
+    }
+
+{% for item in generator.attributes.infrastructure.get('subnets',[]) %}
+{% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
+    zones {
+        subnet_id = ibm_is_subnet.{{item | replace("-", "_") }}.id
+        name      = "{{subnet.zone}}"
+    }
+
+{% endfor %}
+
+    depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
+}
+{% endif %}
+{% endfor %}

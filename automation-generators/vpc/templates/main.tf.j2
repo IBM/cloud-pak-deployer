@@ -1,0 +1,37 @@
+resource "ibm_is_vpc" "{{generator.attributes.name | replace("-", "_") }}" {
+    name = "{{generator.attributes.name}}"
+    resource_group = data.ibm_resource_group.thisresourcegroup.id
+
+    address_prefix_management = "{{ generator.attributes.address_prefix_management | default('manual')}}"
+    default_network_acl_name = "{{generator.attributes.name }}-acl-default"
+    default_security_group_name = "{{generator.attributes.name }}-sg-default"
+    default_routing_table_name = "{{generator.attributes.name }}-rt-default"
+}
+
+{% for rule in generator.attributes.allow_inbound %}
+{% set rule_data = generator.config.security_rule | selectattr("name", "equalto", rule) | list | first %}
+
+resource "ibm_is_security_group_rule" "{{generator.attributes.name | replace("-", "_") }}_{{rule}}" {
+    direction = "inbound"
+    group = ibm_is_vpc.{{generator.attributes.name | replace("-", "_") }}.default_security_group
+{% if 'tcp' in rule_data %}
+    tcp {
+        port_min = {{rule_data.tcp.port_min}}
+        port_max = {{rule_data.tcp.port_max}}
+    }
+{% endif %}
+{% if 'udp' in rule_data %}
+    udp {
+        port_min = {{rule_data.udp.port_min}}
+        port_max = {{rule_data.udp.port_max}}
+    }
+{% endif %}
+{% if 'icmp' in rule_data %}
+    icmp {
+        type = {{rule_data.icmp.type}}
+        code = {{rule_data.icmp.code}}
+    }
+{% endif %}
+}
+
+{% endfor %}
