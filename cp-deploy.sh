@@ -402,6 +402,7 @@ fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+run_cmd+=" -e ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key}"
 
 run_cmd+=" cloud-pak-deployer"
 
