@@ -47,19 +47,29 @@
   vars:
     get_ips: "[*].networkInterfaces[0].ipAddress"
 
+- name: Check if OcsCluster {{ current_storage_class.ocs_storage_label }} already exists
+  command: |
+    oc get OcsCluster {{ current_storage_class.ocs_storage_label }} 
+  failed_when: False
+  register: ocs_cluster_exists
+
 - name: Create temporary file for the OcsCluster object
   tempfile:
+    path: "{{status_dir}}/openshift"
     state: file
   register: ocscluster_tempfile
+  when: ocs_cluster_exists.rc != 0
 
-- name: Generate OcsCluster object
+- name: "Generate OcsCluster file {{ ocscluster_tempfile.path }}"
   template:
     src: ocscluster.j2
     dest: "{{ ocscluster_tempfile.path }}"
+  when: ocs_cluster_exists.rc != 0
 
 - name: Create OcsCluster {{ current_storage_class.ocs_storage_label }}
   command: |
     oc apply -f "{{ ocscluster_tempfile.path }}"
+  when: ocs_cluster_exists.rc != 0
 
 - name: Wait for OcsCluster {{ current_storage_class.ocs_storage_label }} to be deployed
   command: |
