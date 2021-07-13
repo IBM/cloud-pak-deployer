@@ -8,7 +8,10 @@
 - name: Validate if IBM Container Registry {{ current_cp4d_cluster.container_registry_namespace }} exists
   shell: "ibmcloud cr namespace-list | grep -w '^{{ current_cp4d_cluster.container_registry_namespace }} ' | wc -l"
   register: ibmcloud_cr_exists_result
-  failed_when: "not ibmcloud_cr_exists_result.stdout == '1'"
+
+- name: Create ICR namespace {{ current_cp4d_cluster.container_registry_namespace }} if it does not exist
+  shell: "ibmcloud cr namespace-add {{ current_cp4d_cluster.container_registry_namespace }}"
+  when: "not ibmcloud_cr_exists_result.stdout == '1'"
 
 - name: Validate if the key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
   include_role: 
