@@ -47,6 +47,16 @@
   vars:
     get_ips: "[*].networkInterfaces[0].ipAddress"
 
+- name: Label the OCS nodes as infra
+  command: |
+    oc label nodes {{ item }} node-role.kubernetes.io/infra="" --overwrite
+  loop: "{{ worker_ips }}"
+
+- name: Taint the OCS nodes so they will only run OCS workload
+  command: |
+    oc adm taint nodes {{ item }} node.ocs.openshift.io/storage="true":NoSchedule --overwrite
+  loop: "{{ worker_ips }}"
+
 - name: Check if OcsCluster {{ current_storage_class.ocs_storage_label }} already exists
   command: |
     oc get OcsCluster {{ current_storage_class.ocs_storage_label }} 
