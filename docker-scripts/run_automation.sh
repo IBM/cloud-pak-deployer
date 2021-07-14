@@ -58,7 +58,7 @@ if [ -v GIT_REPO_URL ];then
 
   # Validate if the specified context directory exists
   if [ ! -d "${CONFIG_DIR}" ]; then
-    echo "Context directory ${GIT_REPO_DIR} not found."
+    echo "Git repository directory ${GIT_REPO_DIR} not found."
     echo "Exiting with exit code 1"
     echo ""
     exit 1
@@ -76,7 +76,7 @@ if [ -v GIT_REPO_URL ];then
   # Validate if the inventory directory exists
   INV_DIR="${CONFIG_DIR}/inventory"
   if [ ! -d "${INV_DIR}" ]; then
-    echo "inventroy directory not found in context directory ${GIT_REPO_DIR}."
+    echo "inventory directory not found in context directory ${GIT_REPO_DIR}."
     echo "Exiting with exit code 1"
     echo ""
     exit 1
@@ -94,7 +94,7 @@ else
     # Validate if the inventory directory exists
   INV_DIR="${CONFIG_DIR}/inventory"
   if [ ! -d "${INV_DIR}" ]; then
-    echo "inventroy directory not found in directory ${CONFIG_DIR}."
+    echo "inventory directory not found in directory ${CONFIG_DIR}."
     echo "Exiting with exit code 1"
     echo ""
     exit 1
@@ -144,7 +144,8 @@ vault)
     --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
     --extra-vars secret_group=${VAULT_GROUP} \
     --extra-vars secret_name=${VAULT_SECRET} \
-    --extra-vars secret_payload=${VAULT_SECRET_VALUE} ${VERBOSE_ARG}
+    --extra-vars secret_payload=${VAULT_SECRET_VALUE} \
+    --extra-vars secret_file=${VAULT_SECRET_FILE} ${VERBOSE_ARG}
   ;;
 *) 
   echo "Invalid subcommand $SUBCOMMAND."
