@@ -57,6 +57,12 @@
       include_tasks: get-secret-file.yml
   when: "vault_type == 'file-vault'"
 
+- name: Write secret to file if one was specified
+  copy:
+    content: "{{ secret_value }}"
+    dest: /tmp/secret-value
+  when: "secret_file != ''"
+
 - name: Secret {{ secret_group }}/{{ secret_name }}
   debug:
     var: secret_value

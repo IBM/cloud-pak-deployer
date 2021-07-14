@@ -144,7 +144,8 @@ vault)
     --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
     --extra-vars secret_group=${VAULT_GROUP} \
     --extra-vars secret_name=${VAULT_SECRET} \
-    --extra-vars secret_payload=${VAULT_SECRET_VALUE} ${VERBOSE_ARG}
+    --extra-vars secret_payload=${VAULT_SECRET_VALUE} \
+    --extra-vars secret_file=${VAULT_SECRET_FILE} ${VERBOSE_ARG}
   ;;
 *) 
   echo "Invalid subcommand $SUBCOMMAND."
