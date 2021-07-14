@@ -198,8 +198,12 @@ while (( "$#" )); do
     fi
     ;;
   --vault-secret-file*|-vsf*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];
+    if [[ "${SUBCOMMAND}" != "vault" ]];then
       echo "Error: --vault-secret-file is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    if [ ! -z "${VAULT_SECRET_VALUE}" ];then
+      echo "Error: either specify --vault-secret-file or --vault-secret-value, not both."
       command_usage 2
     fi
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
@@ -213,10 +217,22 @@ while (( "$#" )); do
       command_usage 2
     fi
     fi
+    if [ ! -z ${VAULT_SECRET_FILE} ] && [[ "${ACTION}" == "set" ]] && [ ! -f ${VAULT_SECRET_FILE} ];then
+      echo "Error: Vault secret file ${VAULT_SECRET_FILE} must exist for vault set action."
+      command_usage 2
+    fi
     ;;
   --vault-secret-value*|-vsv*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];
+    if [[ "${SUBCOMMAND}" != "vault" ]];then
       echo "Error: --vault-secret-value is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    if [[ "${ACTION}" != "set" ]];then
+      echo "Error: --vault-secret-value is not valid for action $ACTION."
+      command_usage 2
+    fi
+    if [ ! -z "${VAULT_SECRET_FILE}" ];then
+      echo "Error: either specify --vault-secret-file or --vault-secret-value, not both."
       command_usage 2
     fi
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
@@ -234,7 +250,7 @@ while (( "$#" )); do
   # The --vault-secret must be parsed after --vault-secret-value, otherwise the secret value is already
   # picked up when the first part of the option has a match
   --vault-secret*|-vs*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];
+    if [[ "${SUBCOMMAND}" != "vault" ]];then
       echo "Error: --vault-secret is not valid for $SUBCOMMAND subcommand."
       command_usage 2
     fi
@@ -251,7 +267,7 @@ while (( "$#" )); do
     fi
     ;;
   --vault-group*|-vg*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];
+    if [[ "${SUBCOMMAND}" != "vault" ]];then
       echo "Error: --vault-group is not valid for $SUBCOMMAND subcommand."
       command_usage 2
     fi
@@ -281,7 +297,7 @@ while (( "$#" )); do
     fi
     ;;
   --confirm-destroy)
-    if [[ "${SUBCOMMAND}" != "environment" ]];
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
       echo "Error: --confirm-destroy is not valid for $SUBCOMMAND subcommand."
       command_usage 2
     fi
@@ -364,8 +380,9 @@ if [ ! -z ${GIT_REPO_URL} ];then
     echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
     exit 1
   fi
-
 fi
+
+
 
 # Set remaining parameters
 eval set -- "$PARAMS"
@@ -397,6 +414,11 @@ if [ -z $STATUS_DIR ];then
   echo "Status directory not specified, setting to $STATUS_DIR" >&2
 fi
 mkdir -p $STATUS_DIR
+
+# Ensure vault secret file exists
+if [ ! -z $VAULT_SECRET_FILE ];then
+  touch ${VAULT_SECRET_FILE}
+fi
 
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
@@ -431,10 +453,10 @@ fi
 if [ ! -z $VAULT_GROUP ];then
   run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP} \
             -e VAULT_SECRET=${VAULT_SECRET} \
-            -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \ 
+            -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
             -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
   if [ ! -z $VAULT_SECRET_FILE ];then
-    run_cmd+=" -v ${VALUE_SECRET_FILE}:/tmp/secret-file"
+    run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:Z"
   fi
 fi
 
@@ -443,8 +465,6 @@ run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
 run_cmd+=" -e ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key}"
 
 run_cmd+=" cloud-pak-deployer"
-
-echo $run_cmd
 
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
