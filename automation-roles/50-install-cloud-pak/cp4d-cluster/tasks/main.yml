@@ -3,6 +3,14 @@
 - debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
+- name: Prepare OpenShift cluster for Cloud Pak for Data
+  include_role:
+    name: cp4d-prepare-openshift
+
+- name: Prepare cpd-cli if Cloud Pak for Data 3.5
+  include_tasks: cpd-cli-cp4d-35.yml
+  when: current_cp4d_cluster.cp4d_version | default('3.5') == '3.5'
+
 - name: Login to the OpenShift cluster
   include_role:
     name: openshift-login
@@ -30,35 +38,9 @@
     path: "{{status_dir}}/log"
     state: directory
 
-- set_fact:
-    cp4d_cli_dir: "{{ status_dir }}/cp4d"
-
-- name: Create {{ cp4d_cli_dir }}
-  file:
-    path: "{{ cp4d_cli_dir }}"
-    state: directory
-
-- name: Find the file that holds cpd-cli
-  find:
-    paths: /assets/cp4d
-    patterns: "*.tgz"
-  register: cpd_cli_file
-
-- name: Unpack the archive
-  unarchive:
-    src: "{{ item.path }}"
-    dest: "{{ cp4d_cli_dir }}"
-  with_items: "{{ cpd_cli_file.files }}"
-
-- name: Create repo.yaml
-  template:
-    src: repo.yaml.j2
-    dest: "{{cp4d_cli_dir}}/repo.yaml"
-    mode: '0777'
-
 - name: Loop through each cp4d cartridge of the OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_role:
     name: cp4d-service
-  loop: "{{ current_cp4d_cluster.cartridges }}"
+  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
   loop_control:
     loop_var: current_cp4d_cartridge
