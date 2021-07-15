@@ -1,0 +1,129 @@
+---
+
+- name: Make a temporary work folder available
+  tempfile:
+    state: directory
+  register: cp4d_automation_temp_dir
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: ibmcloud-login-roks-ocp
+  vars: 
+    roks_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+
+- name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
+  shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
+  register: oc_icsp_exists
+
+- name: Create ImageContentSourcePolicy {{ iscp_name }} for CP4D 4.0
+  block:
+    - name: Create ImageContentSourcePolicy yaml
+      template:
+        src: cp4d-icsp.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"
+    - name: Create ImageContentSourcePolicy {{ iscp_name }}
+      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"  
+  when: 
+  - current_cp4d_cluster.cp4d_version | default('3.5') != '3.5'
+  - oc_icsp_exists == "0"
+
+- name: Validate IBM Container Registry Pull secret key exists
+  include_role: 
+     name: connect-container-registry
+
+- name: Get key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+    secret_group: "{{ environment_name }}"  
+
+- name: Validate ICR secret is available
+  fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group {{ environment_name }} is empty"
+  when: secret_value== ""
+
+- name: Set global pull secret for Cloud Pak for Data
+  block:
+  - name: Create temporary directory to hold current pull secret content
+    tempfile:
+      state: directory
+    register: pull_secret_dir
+  - name: Extract the global pull secret
+    shell: |
+      oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
+  - name: Set the global pull secret
+    shell: |
+      cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
+        jq --arg private_registry "{{ ibm_cloud_cr_server }}" \
+          --arg pull_secret $(echo -n "iamapikey:{{ secret_value }}" | base64 -w0) \
+          '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
+          > {{ pull_secret_dir.path }}/newdockerconfigjson
+      oc set data secret/pull-secret -n openshift-config \
+        --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+
+- set_fact:
+    reload_workers: False
+
+- name: Check if the Tuned {{ cp4d_tuned_name }} exists
+  shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
+  register: oc_tuned_exists
+
+- name: Configure Tuned {{ cp4d_tuned_name }}
+  block:
+    - name: Create Tuned yaml
+      template:
+        src: cp4d-tuned.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
+    - name: Create Tuned cp4d_ipc
+      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
+    - set_fact:
+      reload_workers: True
+  when: oc_tuned_exists.stdout == "0"
+
+# TODO: Should we process other worker pools too? Probably all workers pools except OCS should be replaced.
+- name: Get the worker nodes for the default worker pool
+  command: |
+    ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} \
+      --worker-pool default --output json
+  register: default_workers
+
+# TODO: Remove debug
+- name: Show workers from default worker pool
+  debug:
+    var: ocs_workers
+
+- name: Get worker names
+  set_fact:
+    worker_ids: "{{ ocs_workers.stdout | from_json | json_query(get_ids) | list }}"
+  vars:
+    get_ids: "[*].id"
+
+# TODO: Only replace workers when VPC
+- name: Replace the workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+  command: |
+    ibmcloud oc worker replace --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker {{ worker_item }} -f 
+  loop: "{{ worker_ids }}"
+  loop_control:
+    loop_var: worker_item
+  when: reload_workers
+
+- set_fact:
+    number_of_workers: "{{ worker_ids | length }}"
+  when: reload_workers
+
+- name: Wait for 3 minutes to allow workers to start redeploying
+  pause:
+    minutes: 3
+  when: reload_workers
+
+- name: Wait for {{ number_of_workers }} workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }} to be redeployed
+  shell: |
+    ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker-pool default --output json | \
+      jq -r '.[] | select(.lifecycle.actualState=="deployed").lifecycle.actualState' | \
+      wc -l
+  register: deployed_workers
+  retries: 60
+  delay: 60
+  until: deployed_workers.stdout == number_of_workers
+  when: reload_workers
+

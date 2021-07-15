@@ -8,10 +8,17 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: OpenShift Prepare Project for IBM Cloud
-  block:
-    - name: Prepare Project on IBM Cloud
-      include_role: 
-        name: ibmcloud-prepare-project
-    
-  when: "cloud_platform == 'ibm-cloud'"
+- debug:
+    msg: "Handling Project: {{ current_cp4d_cluster.project }}"
+
+- name: Validate if OpenShift project exists
+  shell: "oc get projects | grep -i '^{{ current_cp4d_cluster.project }}' | wc -l"
+  register: cp4d_cluster_project_exists
+
+- name: Create OpenShift Project if it does not exist
+  command: "oc new-project {{ current_cp4d_cluster.project }}"
+  when: cp4d_cluster_project_exists.stdout == "0"
+
+- name: Set OpenShift project {{ current_cp4d_cluster.project }} active
+  command: "oc project {{ current_cp4d_cluster.project }}"
+  when: not cp4d_cluster_project_exists.stdout == "0"
