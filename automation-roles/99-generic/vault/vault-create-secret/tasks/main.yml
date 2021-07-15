@@ -8,17 +8,17 @@
   assert:
     that:
       - secret_payload is defined
-  when: "secret_file == ''"
+  when: secret_file | default("") == ''
 
-- name: Get secret from file {{ secret_file }} if it was specified
+- name: Get secret from secret file if it was specified
   set_fact:
     secret_value: "{{ lookup('file', secret_file) }}"
-  when: "secret_file != ''"
+  when: secret_file | default("") != ''
 
 - name: Set secret value from payload if no file specified
   set_fact:
     secret_value: "{{ secret_payload }}"
-  when: "secret_file == ''"
+  when: secret_file | default("") == ''
 
 - debug:
     var: secret_value
