@@ -12,7 +12,6 @@ Role Variables
 --------------
 
 ibmcloud_api_key: Retrieved from IBM Vault
-ibm_cloud_region: Default set to 'eu-de'
 
 Dependencies
 ------------
