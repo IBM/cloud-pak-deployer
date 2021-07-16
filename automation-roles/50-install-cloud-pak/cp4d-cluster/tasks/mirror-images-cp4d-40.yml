@@ -1,0 +1,26 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - ibm_cp4d_entitlement_key is defined
+
+- name: Get API key for IBM Container Registry
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+    secret_group: "{{ environment_name }}"
+
+- name: Login to entitled registry
+  shell: |
+    podman login {{ entitled_registry }} -u {{ entitled_registry_username }} -p {{ ibm_cp4d_entitlement_key }}
+
+- name: Login to IBM Container Registry
+  shell: |
+    podman login {{ ibm_cloud_cr_server }} -u {{ icr_username }} -p {{ secret_value }}
+
+- name: Mirror images for all files in {{ config_dir }}/case
+  script:
+    cmd: |
+      roks-airgap.sh image mirror --dir {{ config_dir }}/case \
+        --to-registry {{ entitled_registry }}/{{ current_cp4d_cluster.container_registry_namespace }}

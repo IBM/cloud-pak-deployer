@@ -1,0 +1,19 @@
+---
+# Create Foundational Services project for Cloud Pak for Data 4.0
+- name: Validate if OpenShift project ibm-common-services exists
+  shell: "oc get projects | grep -i '^ibm-common-services' | wc -l"
+  register: ics_project_exists
+
+- name: Create OpenShift Project ibm-common-services if it does not exist
+  command: "oc new-project ibm-common-services"
+  when: ics_project_exists.stdout == "0"
+
+# Create Operator Group
+- name: Generate definition for OperatorGroup
+  template:
+    src: ocscluster.j2
+    dest: "{{status_dir}}/openshift/operator-group.yml"
+
+- name: Create OperatorGroup
+  command: |
+    oc apply -f "{{status_dir}}/openshift/operator-group.yml"
