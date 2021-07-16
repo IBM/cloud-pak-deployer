@@ -11,11 +11,14 @@
   vars: 
     roks_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
+- set_fact:
+    reload_workers: False
+
 - name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
   shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
   register: oc_icsp_exists
 
-- name: Create ImageContentSourcePolicy {{ iscp_name }} for CP4D 4.0
+- name: Create ImageContentSourcePolicy {{ icsp_name }} for CP4D 4.0
   block:
     - name: Create ImageContentSourcePolicy yaml
       template:
@@ -23,9 +26,11 @@
         dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"
     - name: Create ImageContentSourcePolicy {{ iscp_name }}
       shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"  
+    - set_fact:
+        reload_workers: True
   when: 
   - current_cp4d_cluster.cp4d_version | default('3.5') != '3.5'
-  - oc_icsp_exists == "0"
+  - oc_icsp_exists.stdout == "0"
 
 - name: Validate IBM Container Registry Pull secret key exists
   include_role: 
@@ -61,9 +66,6 @@
       oc set data secret/pull-secret -n openshift-config \
         --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
 
-- set_fact:
-    reload_workers: False
-
 - name: Check if the Tuned {{ cp4d_tuned_name }} exists
   shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
   register: oc_tuned_exists
@@ -77,7 +79,7 @@
     - name: Create Tuned cp4d_ipc
       shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
     - set_fact:
-      reload_workers: True
+        reload_workers: True
   when: oc_tuned_exists.stdout == "0"
 
 # TODO: Should we process other worker pools too? Probably all workers pools except OCS should be replaced.
@@ -86,17 +88,20 @@
     ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} \
       --worker-pool default --output json
   register: default_workers
+  when: reload_workers
 
 # TODO: Remove debug
 - name: Show workers from default worker pool
   debug:
-    var: ocs_workers
+    var: default_workers
+  when: reload_workers
 
 - name: Get worker names
   set_fact:
-    worker_ids: "{{ ocs_workers.stdout | from_json | json_query(get_ids) | list }}"
+    worker_ids: "{{ default_workers.stdout | from_json | json_query(get_ids) | list }}"
   vars:
     get_ids: "[*].id"
+  when: reload_workers
 
 # TODO: Only replace workers when VPC
 - name: Replace the workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }}
