@@ -1,20 +1,23 @@
 ---
-- name: Retrieve SSH public key if already in the vault
+- name: Retrieve SSH key if already in the vault
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "{{ ssh_key_item.name }}-ssh-key"
     secret_group: "{{ environment_name }}" 
 
+- set_fact:
+    ssh_private_key_value: "{{ secret_value }}"
+
 - fail:
     msg: "SSH key {{ ssh_key_item.name }} not found in vault and not managed"
-  when: 'not ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'not ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - name: Create temporary directory to hold SSH keys
   tempfile:
     state: directory
     suffix: _ssh
-  when: 'ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
   register: ssh_tempdir
 
 - name: Create SSH key if not already in the vault and managed
@@ -22,11 +25,11 @@
     path: "{{ ssh_tempdir.path }}/{{ ssh_key_item.name }}"
     type: rsa
     comment: "provision-key for {{ssh_key_item.name}}"
-  when: 'ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - debug:
     msg: "{{ ssh_tempdir.path }}/{{ ssh_key_item.name }}"
-  when: 'ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - name: Store SSH private key {{ ssh_key_item.name }} in vault
   include_role:
@@ -36,8 +39,10 @@
     secret_description: "Managed private SSH key for environment {{ environment_name }}"
     secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + ssh_key_item.name) }}"
     secret_group: "{{ environment_name }}"
-  when: 'ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
+# Public SSH key must match its private counterpart; therefore always store the public
+# key if the private key was (re-)generated
 - name: Store SSH public key {{ ssh_key_item.name }} in vault
   include_role:
     name: vault-create-secret
@@ -46,13 +51,13 @@
     secret_description: "Managed public SSH key for environment {{ environment_name }}"
     secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + ssh_key_item.name + '.pub') }}"
     secret_group: "{{ environment_name }}"
-  when: 'ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - name: Delete temporary SSH key directory
   file:
     path: "{{ ssh_tempdir.path }}"
     state: absent
-  when: 'ssh_key_item.managed | default(False) | bool and secret_value == ""'
+  when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - name: Retrieve SSH public key from the vault
   include_role: 
