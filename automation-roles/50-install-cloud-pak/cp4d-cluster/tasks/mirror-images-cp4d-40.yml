@@ -11,16 +11,26 @@
     secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
     secret_group: "{{ environment_name }}"
 
-- name: Login to entitled registry
-  shell: |
-    podman login {{ entitled_registry }} -u {{ entitled_registry_username }} -p {{ ibm_cp4d_entitlement_key }}
+- set_fact:
+    entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp4d_entitlement_key }}"
+    icr_auth: "{{ icr_username }}:{{ secret_value }}"
 
-- name: Login to IBM Container Registry
-  shell: |
-    podman login {{ ibm_cloud_cr_server }} -u {{ icr_username }} -p {{ secret_value }}
+- name: Generate /tmp/auth.json
+  template:
+    src: auth.json.j2
+    dest: /tmp/auth.json
 
-- name: Mirror images for all files in {{ config_dir }}/case
-  script:
-    cmd: |
-      roks-airgap.sh image mirror --dir {{ config_dir }}/case \
-        --to-registry {{ entitled_registry }}/{{ current_cp4d_cluster.container_registry_namespace }}
+- name: Generate /tmp/auth.json
+  template:
+    src: auth.json.j2
+    dest: "{{status_dir}}/openshift/auth.json"
+
+
+- name: Mirror images for all files in {{ config_dir }}/case. Check status in {{status_dir}}/log/mirror_images.log
+  shell: |
+    run_mirror_images() {
+      {{ role_path }}/scripts/ibmcloud-roks-mirror-images.sh image mirror --dir {{ config_dir }}/case \
+        --to-registry {{ ibm_cloud_cr_server }}/{{ current_cp4d_cluster.container_registry_namespace }} |& \
+        tee -a {{status_dir}}/log/mirror_images.log; \
+        return "${PIPESTATUS[0]}"; }; \
+    run_mirror_images

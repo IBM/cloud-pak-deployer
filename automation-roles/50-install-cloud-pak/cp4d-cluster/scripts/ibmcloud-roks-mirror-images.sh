@@ -1242,7 +1242,7 @@ do_image_mirror_case_images() {
 
     for map_file in ${map_files}; do
         echo "[INFO] Mirroring ${map_file}"
-        oc_cmd="time oc image mirror -a \"${XDG_RUNTIME_DIR}/containers/auth.json\" -f \"${map_file}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
+        oc_cmd="time oc image mirror -a /tmp/auth.json -f \"${map_file}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
         echo "${oc_cmd}"
         eval ${oc_cmd}
 
