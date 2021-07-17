@@ -7,11 +7,35 @@
   environment:
     KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig_{{ environment_name }}"
 
-  roles:
-    - role: validate-variables
-    - role: vault-connect
-    - role: provision-terraform
-    - role: nfs-server
+  tasks:
+
+  # 10 - Validate
+  - name: Validate variables
+    include_role:
+      name: validate-variables
+
+  # 10 - Prepare
+  - name: Connect to Vault
+    include_role:
+      name: vault-connect
+
+  - name: "Include 'generators'-role and pass variables to it"
+    include_role:
+      name: generators
+    vars:
+      path_to_config_dir: "{{ config_dir }}"
+      path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
+      path_to_terraform_work_dir: "{{status_dir}}/terraform"
+
+  # 30 - Provision infrastructure
+  - name: Provision infrastructure using Terraform
+    include_role:
+      name: provision-terraform
+
+  # 40 - Configure infrastructure
+  - name: Configure infrastructure
+    include_role:
+      name: nfs-server
 
 - hosts: vpc_bastion_server
   become: True
@@ -27,6 +51,7 @@
   roles:
     - role: nfs-server-ibmcloud-vpc-install
 
+
 - name: Configure ROKS and install Cloud Pak for Data
   hosts: localhost
   connection: local
@@ -37,6 +62,7 @@
   roles:
     - role: login-ibmcloud
 
+  # 50 - Install Cloud Pak
   tasks:
   - name: Loop through each roks entry
     include_role:
