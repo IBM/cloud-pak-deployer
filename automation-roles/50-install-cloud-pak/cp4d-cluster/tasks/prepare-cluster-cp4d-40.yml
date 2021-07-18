@@ -1,19 +1,75 @@
 ---
 # Create Foundational Services project for Cloud Pak for Data 4.0
-- name: Validate if OpenShift project ibm-common-services exists
-  shell: "oc get projects | grep -i '^ibm-common-services' | wc -l"
+- name: Validate if OpenShift project {{ foundational_services_project }} exists
+  shell: "oc get projects | grep -i '^{{ foundational_services_project }}' | wc -l"
   register: ics_project_exists
 
-- name: Create OpenShift Project ibm-common-services if it does not exist
-  command: "oc new-project ibm-common-services"
+- name: Create OpenShift Project {{ foundational_services_project }} if it does not exist
+  command: "oc new-project {{ foundational_services_project }}"
   when: ics_project_exists.stdout == "0"
 
 # Create Operator Group
 - name: Generate definition for OperatorGroup
   template:
-    src: ocscluster.j2
+    src: operator-group.j2
     dest: "{{status_dir}}/openshift/operator-group.yml"
 
 - name: Create OperatorGroup
   command: |
     oc apply -f "{{status_dir}}/openshift/operator-group.yml"
+
+- name: Process all case files in the {{ config_dir }}/case directory
+  find:
+    paths: "{{ config_dir }}/case"
+    patterns: "*.tgz"
+  register: case_files
+
+- name: Create catalog source associated with case file
+  include: create-catalog-source.yml
+  loop: "{{ case_files.files }}"
+  loop_control:
+    loop_var: case_file
+
+# Create platform operator subscription
+- name: Prepare yaml file for platform operator subscription
+  template:
+    src: cpd-platform-subscription.j2
+    dest: "{{status_dir}}/openshift/cpd-operator-subscription.yml"
+
+- name: Create subscription for the platform operator
+  command: |
+    oc apply -f "{{status_dir}}/openshift/cpd-operator-subscription.yml"
+
+# Wait until subscription has been successfully created
+- name: Wait until CSV has status Succeeded
+  shell: |
+     oc get csv -n {{ foundational_services_project }} \
+      -l operators.coreos.com/cpd-platform-operator.{{ foundational_services_project }} \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: csv_status
+  retries: 30
+  delay: 10
+  until: csv_status.stdout == "1"
+
+# Create OperandRequest
+- name: Prepare yaml file for platform operator OperandRequest
+  template:
+    src: cpd-platform-operandrequest.j2
+    dest: "{{status_dir}}/openshift/cpd-operator-operandrequest-{{ current_cp4d_cluster.project }}.yml"
+
+- name: Create OperandRequest for the platform operator
+  command: |
+    oc apply -f "{{status_dir}}/openshift/cpd-operator-operandrequest-{{ current_cp4d_cluster.project }}.yml"
+
+# Install Ibmcpd
+- name: Prepare yaml file for Ibmcpd CR
+  template:
+    src: ibmcpd.j2
+    dest: "{{status_dir}}/openshift/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
+
+- name: Create Ibmcpd CR
+  command: |
+    oc apply -f "{{status_dir}}/openshift/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
+  

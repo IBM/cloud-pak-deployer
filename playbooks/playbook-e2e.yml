@@ -59,11 +59,12 @@
   environment:
     KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig_{{ environment_name }}"
 
-  roles:
-    - role: login-ibmcloud
-
-  # 50 - Install Cloud Pak
+  # 40 - Configure OpenShift
   tasks:
+  - name: Login to IBM Cloud
+    include_role:
+      name: login-ibmcloud
+
   - name: Loop through each roks entry
     include_role:
       name: roks-cluster
@@ -71,6 +72,7 @@
     loop_control:
       loop_var: current_roks_cluster
 
+  # 50 - Install Cloud Pak
   - name: Loop through each cp4d entry
     include_role:
       name: cp4d-cluster
