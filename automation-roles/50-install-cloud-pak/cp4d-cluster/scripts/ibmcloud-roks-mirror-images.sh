@@ -1142,7 +1142,7 @@ do_image_mirror_single_image() {
     fi
 
     echo "[INFO] Start mirroring image ..."
-    oc_cmd="oc image mirror -a \"${AUTH_DATA_PATH}/auth.json\" \"${IMAGE}\" \"${TARGET_REGISTRY}/${image_identifier}\" --filter-by-os '.*' --insecure ${DRY_RUN}" 
+    oc_cmd="oc image mirror -a /tmp/auth.json \"${IMAGE}\" \"${TARGET_REGISTRY}/${image_identifier}\" --filter-by-os '.*' --insecure ${DRY_RUN}" 
     echo "${oc_cmd}"
     eval ${oc_cmd}
 
@@ -1165,7 +1165,7 @@ do_skopeo_copy_single_image() {
     fi
     
     echo "[INFO] Start copying image ..."
-    oc_cmd="skopeo copy --all --authfile \"${AUTH_DATA_PATH}/auth.json\" --dest-tls-verify=false --src-tls-verify=false \"docker://${IMAGE}\" \"docker://${TARGET_REGISTRY}/${image_identifier}\""
+    oc_cmd="skopeo copy --all --authfile /tmp/auth.json --dest-tls-verify=false --src-tls-verify=false \"docker://${IMAGE}\" \"docker://${TARGET_REGISTRY}/${image_identifier}\""
     echo "${oc_cmd}"
     eval ${oc_cmd}
 
@@ -1284,7 +1284,7 @@ do_skopeo_copy_case_images() {
     echo "[INFO] Start mirroring CASE images ..."
 
     while read in; do
-        oc_cmd="skopeo copy --all --authfile \"${AUTH_DATA_PATH}/auth.json\" --dest-tls-verify=false --src-tls-verify=false docker://${in}" ;
+        oc_cmd="skopeo copy --all --authfile /tmp/auth.json --dest-tls-verify=false --src-tls-verify=false docker://${in}" ;
         echo "${oc_cmd}"
         eval ${oc_cmd}
 
@@ -1440,9 +1440,9 @@ tag_latest_olm_catalog_images() {
                 validate_image_mirror_required_tools
                 echo "[INFO] Retrieving image tags from ${image}"
                 if [[ "${REGISTRY_TLS_ENABLED}" == "true" ]]; then
-                    skopeo_cmd="skopeo list-tags --authfile ${AUTH_DATA_PATH}/auth.json --cert-dir ${AUTH_DATA_PATH}/certs docker://${image}"
+                    skopeo_cmd="skopeo list-tags --authfile /tmp/auth.json --cert-dir ${AUTH_DATA_PATH}/certs docker://${image}"
                 else
-                    skopeo_cmd="skopeo list-tags --tls-verify=false --authfile ${AUTH_DATA_PATH}/auth.json docker://${image}"
+                    skopeo_cmd="skopeo list-tags --tls-verify=false --authfile /tmp/auth.json docker://${image}"
                 fi
                 echo "[INFO] ${skopeo_cmd}"
                 all_tags=$(${skopeo_cmd} | tr -d "\r|\n| " | sed -e 's|.*"Tags":\[||' | sed -e 's|\].*||' | sed -e 's|"||g' | sed -e 's|,|\n|g' | grep -v '^latest' | sort -V)
@@ -1457,7 +1457,7 @@ tag_latest_olm_catalog_images() {
                         # and the current image is the most recent version
                         echo "[INFO] Tagging ${image}:${tag} as ${image}:${latest_tag}"    
 
-                        oc_cmd="oc image mirror -a \"${AUTH_DATA_PATH}/auth.json\" \"${image}@${sha}\" \"${image}:${latest_tag}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
+                        oc_cmd="oc image mirror -a /tmp/auth.json \"${image}@${sha}\" \"${image}:${latest_tag}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
                         echo "${oc_cmd}"
                         eval ${oc_cmd}
 
@@ -1473,31 +1473,6 @@ tag_latest_olm_catalog_images() {
     fi
 }
 
-#
-# Generates auth.json file for 'oc image mirror'
-#
-generate_auth_json() {
-    echo "[INFO] Generating auth.json"
-    printf "{\n  \"auths\": {" > "${AUTH_DATA_PATH}/auth.json"
-    chmod 600 "${AUTH_DATA_PATH}/auth.json"
-
-    if [ -d "${AUTH_DATA_PATH}/secrets" ]; then
-        all_registry_auths=
-        for secret in $(find "${AUTH_DATA_PATH}/secrets" -name "*.json"); do
-            registry_auth=$(cat ${secret} | sed -e "s/^{\"auths\":{//" | sed -e "s/}}$//")
-            if [[ "$?" -eq 0 ]]; then
-                if [ ! -z "${all_registry_auths}" ]; then
-                    printf ",\n    ${registry_auth}" >> "${AUTH_DATA_PATH}/auth.json"
-                else
-                    printf "\n    ${registry_auth}" >> "${AUTH_DATA_PATH}/auth.json"
-                fi
-                all_registry_auths="${all_registry_auths},${registry_auth}"
-            fi
-        done
-    fi
-
-    printf "\n  }\n}\n" >> "${AUTH_DATA_PATH}/auth.json"
-}
 
 #
 # Generates image mapping file
