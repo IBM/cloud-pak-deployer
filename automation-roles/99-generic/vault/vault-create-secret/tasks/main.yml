@@ -8,22 +8,19 @@
   assert:
     that:
       - secret_payload is defined
-  when: secret_file | default("") == ''
+  when: secret_file is not defined
 
 - name: Get secret from secret file if it was specified
   set_fact:
-    secret_value: "{{ lookup('file', secret_file) }}"
-  when: secret_file | default("") != ''
+    secret_value_to_set: "{{ lookup('file', secret_file) }}"
+  when: secret_file is defined
 
 - name: Set secret value from payload if no file specified
   set_fact:
-    secret_value: "{{ secret_payload }}"
-  when: secret_file | default("") == ''
+    secret_value_to_set: "{{ secret_payload }}"
+  when: secret_file is not defined
 
-- debug:
-    var: secret_value
-
-- name: Create Secret Vault Hashicorp
+- name: Set Secret Vault Hashicorp
   block:
     - name: Validate mandatory variables are defined for Hashicorp Vault
       assert:
@@ -31,17 +28,17 @@
           - vault_secret_path is defined
           - vault_secret_field is defined
 
-    - name: Create Secret Hashicorp vault (API Key)
+    - name: Set Secret Hashicorp vault (API Key)
       include_tasks: create-secret-hashicorp-api-key.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_vault_login_token: "{{ vault_api_key }}"
         hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
         hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value | b64encode }}"
+        hashicorp_secret_payload: "{{ secret_value_to_set | b64encode }}"
       when: vault_authentication_type == 'api-key'
 
-    - name: Get Secret Hashicorp vault (Certificate)
+    - name: Set Secret Hashicorp vault (Certificate)
       include_tasks: create-secret-hashicorp-certificate.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
@@ -50,24 +47,24 @@
         hashicorp_vault_client_key: "{{ vault_client_key }}"
         hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
         hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value | b64encode }}"
+        hashicorp_secret_payload: "{{ secret_value_to_set | b64encode }}"
       when: vault_authentication_type == 'certificate'      
   when: "vault_type == 'hashicorp-vault'"
 
-- name: Create Secret Vault IBM Cloud
+- name: Set secret Vault IBM Cloud
   block:
     - name: Create secret from Vault IBMCloud
       include_tasks: create-secret-ibmcloud.yml
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibm_cloud_secret_name: "{{ secret_name }}"
-        ibm_vault_secret_payload: "{{ secret_value | b64encode }}"
+        ibm_vault_secret_payload: "{{ secret_value_to_set | b64encode }}"
   when: "vault_type == 'ibmcloud-vault'"
 
-- name: Create Secret Vault file
+- name: Set secret in Vault file
   block:
     - name: Set secret in Vault file
       include_tasks: create-secret-file.yml
       vars:
-        file_secret_payload: "{{ secret_value | b64encode }}"
+        file_secret_payload: "{{ secret_value_to_set | b64encode }}"
   when: "vault_type == 'file-vault'"
