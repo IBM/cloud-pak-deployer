@@ -9,11 +9,11 @@
 
 - name: Prepare cpd-cli if Cloud Pak for Data 3.5
   include_tasks: cpd-cli-cp4d-35.yml
-  when: current_cp4d_cluster.cp4d_version | default('3.5') == '3.5'
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
 
 - name: Mirror images for Cloud Pak for Data 4.0
   include_tasks: mirror-images-cp4d-40.yml
-  when: current_cp4d_cluster.cp4d_version | default('3.5') != '3.5'
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
 - name: Login to the OpenShift cluster
   include_role:
@@ -23,7 +23,7 @@
 
 - name: Prepare cluster for Cloud Pak for Data 4.0
   include_tasks: prepare-cluster-cp4d-40.yml
-  when: current_cp4d_cluster.cp4d_version | default('3.5') != '3.5'
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-projects.yml
