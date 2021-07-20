@@ -26,7 +26,11 @@
   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
-  include_tasks: openshift-prepare-projects.yml
+  include_tasks: openshift-prepare-project.yml
+
+- name: Install Control Plane for Cloud Pak for Data 4.0
+  include_tasks: install-control-plane-40.yml
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
 # - name: Check for cp4d service definitions, skip when empty
 #   debug:
