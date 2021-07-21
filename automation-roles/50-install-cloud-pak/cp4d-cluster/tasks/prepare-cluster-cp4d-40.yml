@@ -1,0 +1,67 @@
+---
+# Create Foundational Services project for Cloud Pak for Data 4.0
+- name: Validate if OpenShift project {{ foundational_services_project }} exists
+  shell: "oc get projects | grep -i '^{{ foundational_services_project }}' | wc -l"
+  register: ics_project_exists
+
+- name: Create OpenShift Project {{ foundational_services_project }} if it does not exist
+  command: "oc new-project {{ foundational_services_project }}"
+  when: ics_project_exists.stdout == "0"
+
+# Create Operator Group
+- name: Generate definition for OperatorGroup
+  template:
+    src: operator-group.j2
+    dest: "{{status_dir}}/openshift/operator-group.yml"
+
+- name: Create OperatorGroup
+  command: |
+    oc apply -f "{{status_dir}}/openshift/operator-group.yml"
+
+- name: Process all case files in the {{ config_dir }}/case directory
+  find:
+    paths: "{{ config_dir }}/case"
+    patterns: "*.tgz"
+  register: case_files
+
+- name: Create catalog source associated with case file
+  include: create-catalog-source.yml
+  loop: "{{ case_files.files }}"
+  loop_control:
+    loop_var: case_file
+
+# Create platform operator subscription
+- name: Prepare yaml file for platform operator subscription
+  template:
+    src: cpd-platform-subscription.j2
+    dest: "{{status_dir}}/openshift/cpd-operator-subscription.yml"
+
+- name: Create subscription for the platform operator
+  command: |
+    oc apply -f "{{status_dir}}/openshift/cpd-operator-subscription.yml"
+
+# Wait until subscription has been successfully created
+- name: Wait until Platform Operator CSV has status Succeeded
+  shell: |
+     oc get csv -n {{ foundational_services_project }} \
+      -l operators.coreos.com/cpd-platform-operator.{{ foundational_services_project }} \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: csv_status
+  retries: 30
+  delay: 10
+  until: csv_status.stdout == "1"
+
+# Also wait for OperandRequest CSV to be created (ODLM)
+- name: Wait until ODLM OperandRequest CSV has status Succeeded
+  shell: |
+     oc get csv -n {{ foundational_services_project }} \
+      -l operators.coreos.com/ibm-odlm.{{ foundational_services_project }} \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: odlm_status
+  retries: 30
+  delay: 10
+  until: odlm_status.stdout == "1"

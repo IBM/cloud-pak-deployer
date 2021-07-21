@@ -1,0 +1,27 @@
+---
+
+- set_fact:
+    cp4d_cli_dir: "{{ status_dir }}/cp4d"
+
+- name: Create {{ cp4d_cli_dir }}
+  file:
+    path: "{{ cp4d_cli_dir }}"
+    state: directory
+
+- name: Find the file that holds cpd-cli
+  find:
+    paths: /assets/cp4d
+    patterns: "*.tgz"
+  register: cpd_cli_file
+
+- name: Unpack the archive
+  unarchive:
+    src: "{{ item.path }}"
+    dest: "{{ cp4d_cli_dir }}"
+  with_items: "{{ cpd_cli_file.files }}"
+
+- name: Create repo.yaml
+  template:
+    src: repo.yaml.j2
+    dest: "{{cp4d_cli_dir}}/repo.yaml"
+    mode: '0777'

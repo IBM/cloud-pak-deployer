@@ -59,9 +59,13 @@
 
 - name: Write secret to file {{ secret_file }} if one was specified
   shell: echo "{{ secret_value }}" > "{{ secret_file }}"
-  when: "secret_file != ''"
+  when: secret_file | default("") != ''
 
 - name: Show secret {{ secret_group }}/{{ secret_name }}
   debug:
     var: secret_value
-  when: "secret_file == ''"
+  when: secret_file | default("") == ''
+
+- name: Set secret value variable "{{ secret_name | replace('-', '_') }}"
+  set_fact:
+    "{{ secret_name | replace('-', '_') }}": "{{ secret_value }}"
