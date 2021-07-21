@@ -13,12 +13,14 @@
 - name: Get secret from secret file if it was specified
   set_fact:
     secret_value_to_set: "{{ lookup('file', secret_file) }}"
-  when: secret_file is defined
+  when: 
+  - secret_file is defined
+  - secret_file != ''
 
 - name: Set secret value from payload if no file specified
   set_fact:
     secret_value_to_set: "{{ secret_payload }}"
-  when: secret_file is not defined
+  when: (secret_file is not defined) or (secret_file == '')
 
 - name: Set Secret Vault Hashicorp
   block:
