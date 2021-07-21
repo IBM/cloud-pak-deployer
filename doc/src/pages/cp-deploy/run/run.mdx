@@ -88,17 +88,32 @@ Options for vault subcommand:
   --vault-secret-value,-vsv <value> Secret value to set ($VAULT_SECRET_VALUE)
 ```
 
-## Run with a local configuration directory
+## Prepare for running
+
+### Set environment variables
+```
+export IBM_CLOUD_API_KEY=your_api_key
+export STATUS_DIR=/Data/sample-log
+export CONFIG_DIR=/Data/sample
+export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
+```
+
+### Store Cloud Pak entitlement key in vault
+```
+./cp-deploy.sh vault set \
+  --status-dir ${STATUS_DIR} \
+  --config-dir ${CONFIG_DIR} \
+  --ibm-cloud-api-key ${IBM_CLOUD_API_KEY} \
+  --vault-secret ibm_cp_entitlement_key \
+  --vault-secret-value ${CP_ENTITLEMENT_KEY}
+```
+
+### Run with a local configuration directory
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the `LOG_DATA_DIR` parameter, the deployer will automatically create a temporary directy. Please note that the temporary status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-export IBM_CLOUD_API_KEY=your_api_key
-export ibm_cp4d_entitlement_key=your_cp4d_entitlement_key
-export LOG_DATA_DIR=/Data/sample-log
-export CONFIG_DIR=/Data/sample
-
 ./cp-deploy.sh env apply \
- --status-dir ${LOG_DATA_DIR} \
+ --status-dir ${STATUS_DIR} \
  --config-dir ${CONFIG_DIR} \
  --ibm-cloud-api-key ${IBM_CLOUD_API_KEY}
 ```

@@ -121,8 +121,7 @@ env|environment)
       --extra-vars config_dir=${CONFIG_DIR} \
       --extra-vars status_dir=${STATUS_DIR} \
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
-      --extra-vars confirm_destroy=${CONFIRM_DESTROY} \
-      --extra-vars ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key} ${VERBOSE_ARG}
+      --extra-vars confirm_destroy=${CONFIRM_DESTROY} ${VERBOSE_ARG}
   elif [ "$ACTION" == "destroy" ];then
     ansible-playbook \
       -i ${INV_DIR} \

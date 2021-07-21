@@ -1,8 +1,17 @@
 ---
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - ibm_cp4d_entitlement_key is defined
+- name: Get IBM Entitled Registry key
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ibm_cp_entitlement_key"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    entitled_auth: "{{ entitled_registry_username }}:{{ secret_value }}"
+
+- fail:
+    msg: "Key for entitled registry not found in vault, please create secret ibm_cp_entitlement_key"
+  when: secret_value == ''
 
 - name: Get API key for IBM Container Registry
   include_role: 
@@ -12,7 +21,6 @@
     secret_group: "{{ environment_name }}"
 
 - set_fact:
-    entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp4d_entitlement_key }}"
     icr_auth: "{{ icr_username }}:{{ secret_value }}"
 
 - name: Generate /tmp/auth.json
@@ -24,7 +32,6 @@
   template:
     src: auth.json.j2
     dest: "{{status_dir}}/openshift/auth.json"
-
 
 - name: Mirror images for all files in {{ config_dir }}/case. Check status in {{status_dir}}/log/mirror_images.log
   shell: |
