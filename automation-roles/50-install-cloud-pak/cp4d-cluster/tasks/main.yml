@@ -49,9 +49,17 @@
     path: "{{status_dir}}/log"
     state: directory
 
-- name: Loop through each cp4d cartridge of the OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+- name: Prepare OpenShift custom resources for each of the selected cp4d cartridges
   include_role:
-    name: cp4d-service
+    name: cp4d-service-prepare
+  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
+
+- name: Install cp4d cartridges into OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+  include_role:
+    name: cp4d-service-install
   loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
   loop_control:
     loop_var: current_cp4d_cartridge
