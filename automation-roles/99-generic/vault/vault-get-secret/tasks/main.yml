@@ -65,6 +65,10 @@
   debug:
     var: secret_value
   when: secret_file | default("") == ''
+  vars:
+    ansible_callback_diy_runner_on_ok_msg: |+2
+      {{ secret_name }}: {{ ansible_callback_diy.result.output.secret_value }}
+            
 
 - name: Set secret value variable "{{ secret_name | replace('-', '_') }}"
   set_fact:

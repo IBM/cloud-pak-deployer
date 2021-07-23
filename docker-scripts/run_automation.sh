@@ -134,6 +134,7 @@ env|environment)
   ;;
 
 vault)
+  export ANSIBLE_CONFIG=$PWD/ansible-vault.cfg && \
   ansible-playbook \
     -i ${INV_DIR} \
     playbooks/playbook-vault.yml \
