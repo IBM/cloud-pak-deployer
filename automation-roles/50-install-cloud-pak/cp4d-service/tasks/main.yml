@@ -13,10 +13,25 @@
 - name: Configure CP4D admin password and store in vault
   include_tasks: configure-cpd-admin-password.yml
   when: cp4d_configure_cpd_admin == 0
-  
+
+- set_fact:
+    cp4d_ldap_config: "{{ all_config.ldap_configs|json_query(query_ldap) }}"
+  vars:
+    query_ldap: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
+
+- debug:
+    msg: "{{ cp4d_ldap_config }}"
+
 - name: Configure CP4D LDAP connectivity
   include_tasks: configure-cpd-ldap-integration.yml
   when: cp4d_configure_cpd_ldap == 0
+
+- name: Create CP4D User Groups
+  include_role:
+    name: user_group
+  loop: "{{ cp4d_ldap_config.user_groups | default([]) }}"
+  loop_control:
+    loop_var: cp4d_user_group
 
 - name: Provision Data Virtualization instance if service dv is requested
   block:
@@ -31,3 +46,4 @@
       include_role:
         name: provision_cognos_instance
   when: current_cp4d_cartridge.name != None and current_cp4d_cartridge.name == 'ca'
+

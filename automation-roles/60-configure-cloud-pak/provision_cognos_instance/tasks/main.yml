@@ -169,3 +169,27 @@
 
       - debug:
           msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 45 minutes to complete"
+
+
+      #TODO Wait for CA to deploy
+
+#Get instance configuration
+- set_fact:
+    cp4d_instance_config: "{{ all_config.cp4d_instance_configurations|json_query(query_instance) }}"
+  vars:
+    query_instance: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"      
+
+#Get CA cartridge configuration
+- set_fact:
+    cp4d_ca_instance: "{{ cp4d_instance_config.cartridges|json_query(query_ca_instance_manage_access) }}"
+  vars:
+    query_ca_instance_manage_access: "[?name=='ca']"   
+
+- name: For each manage_access entry set the CA permission
+  include_tasks: manage_ca_access.yml
+  loop: "{{ cp4d_ca_instance.manage_access | default([])  }}"   
+  loop_control:
+    loop_var: current_manage_access    
+
+
+

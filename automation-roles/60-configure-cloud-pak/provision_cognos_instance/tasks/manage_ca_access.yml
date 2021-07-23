@@ -1,0 +1,64 @@
+---
+- debug:
+    var: current_manage_access
+
+
+- set_fact:
+    cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Validate if an existing admin password for {{ cp4d_admin_password_vault_key_name }} exists in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}" 
+
+- name: when the password exists, assign it to the cp4d_login_password variable
+  block:
+
+    - name: set cp4d admin passwordpassword
+      set_fact:
+        cp4d_login_password: "{{ secret_value }}"
+
+    - set_fact:
+        cp4d_configure_cpd_admin: 1
+
+  when: "not secret_value==''"
+
+- name: Error if no secret value is returned
+  fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
+  when: "secret_value==''"
+
+- name: Get Route to Cloud Pak for Data
+  shell: "oc --namespace {{ current_cp4d_cluster.project }} get route {{ current_cp4d_cluster.project }}-cpd -o jsonpath=\"{.spec.host}\""
+  register: cp4d_url
+
+- set_fact:
+    roles_assignments: '{{ current_manage_access.cp4d_roles | json_query("@.role_name") | join(";") }}'
+    ldap_group_mappings: '{{ current_manage_access.ldap_groups | json_query("@.group_name") | join(";") }}'
+
+- debug:
+    var: "{{ roles_assignments }}"
+
+- debug:
+    var: "{{ ldap_group_mappings }}"
+
+- name: "Run assign CA authorization for  {{ current_manage_access.cp4d_user_group }}. Log file for result {{status_dir}}/log/cp4d_{{ current_cp4d_cluster.openshift_cluster_name }}_{{ current_cp4d_cluster.project }}_manage_ca_authorizations.log"
+  script: |
+    runcaauthorization () { \
+      assignCA_authorization.sh \
+         https://{{ cp4d_url.stdout }} \
+         {{ cp4d_login_username }} \
+         "{{ cp4d_login_password }}" \
+         "{{ current_manage_access.cp4d_user_group }}" \
+         "{{ current_manage_access.cp4d_user_group_description }}" \
+         "{{ roles_assignments }}" \
+         "{{ ldap_group_mappings }}" \
+         "{{ current_manage_access.ca_role }} " |& \
+         tee -a {{status_dir}}/log/cp4d_{{ current_cp4d_cluster.openshift_cluster_name }}_{{ current_cp4d_cluster.project }}_manage_ca_authorizations.log; \
+         return "${PIPESTATUS[0]}"; }; \
+    runcaauthorization  
+  register: cpd_ca_authorization_result
+
+- debug: 
+    msg: "{{ cpd_ca_authorization_result }}"
