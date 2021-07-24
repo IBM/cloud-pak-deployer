@@ -23,12 +23,18 @@
     paths: "{{ config_dir }}/case"
     patterns: "*.tgz"
   register: case_files
+  when: not use_entitled_registry
 
-- name: Create catalog source associated with case file
-  include: create-catalog-source.yml
+- name: Create catalog sources associated with case files
+  include: create-catalog-sources-case.yml
   loop: "{{ case_files.files }}"
   loop_control:
     loop_var: case_file
+  when: not use_entitled_registry
+
+- name: Create catalog sources associated with case files
+  include: create-catalog-sources-entitled.yml
+  when: use_entitled_registry
 
 # Create platform operator subscription
 - name: Prepare yaml file for platform operator subscription
