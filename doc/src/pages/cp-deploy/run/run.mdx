@@ -2,7 +2,7 @@
 title: Run the Cloud Pak Deployer
 ---
 
-# Using the Cloud Pak Deployer
+# Running the Cloud Pak Deployer
 
 ## Create an IBM Cloud API Key
 In order for the Cloud Pak Deplyer to create the infrastructure and deploy IBM Cloud Pak for Data, it must perform tasks on IBM Cloud. In order to do so it requires an IBM Cloud API Key. This can be created by following these steps:
@@ -13,17 +13,8 @@ In order for the Cloud Pak Deplyer to create the infrastructure and deploy IBM C
 - Click **Create an IBM Cloud API Key** and provide a name and description
 - Copy the IBM Cloud API key and store it, as you will not be able to retrieve it later
 
-## Configure the Container Registry
-During the Deployment of Cloud Pak for Data, the images will be transferred from the IBM Container Registry to your own Container Registry Namespace.
-- Log on to IBM Cloud on https://cloud.ibm.com/login and login with your IBMId credentials
-- Ensure you have selected the correct IBM Cloud Account for which you wish to use the Cloud Pak Deployer
-- Using the Hamburger menu button, nagivate to OpenShift --> Registry
-- Select Namespaces
-- Click Settings
-- Make sure the Storage Quota has at least 200 GB available and the Pull traffic is set to unlimited or has sufficient quota 
-
 ## Acquire an IBM Cloud Pak for Data Entitlement Key
-For the Cloud Pak Deployer to access the IBM Cloud Pak for Data source images, an entitlement key is required:
+For the Cloud Pak Deployer to access the IBM Cloud Pak for Data images, an entitlement key is required:
 - Navigate to https://myibm.ibm.com/products-services/containerlibrary and login with your IBMId credentials
 - Select **Get Entitlement Key** and create a new key (or copy your existing key)
 - Copy the key value and store it
@@ -43,58 +34,13 @@ CONFIG_DIR  --> /config
 ```
 Adjust the `sample.yaml` and `sample.inv` to set the desired end-state of the deployment. Any missing configuration attributes will be completed from the `defaults` directory.
 
-## Run the deployment
-To run cloud-pak-deployer container, the `cp-deploy.sh` command is available. Use `./cp-deploy.sh help` to display the help text.
-
-![Provisioner pipeline](provisioning-process.png)
-
-## Run help text
-```
- ./cp-deploy.sh
-
-Usage: ./cp-deploy.sh SUBCOMMAND ACTION [OPTIONS]
-
-SUBCOMMAND:
-  environment,env           Apply configuration to create, modify or destroy an environment
-  vault                     Get, create, modify or delete secrets in the configured vault
-  build                     Build the container image for the Cloud Pak Deployer
-  help,h                    Show help
-
-ACTION:
-  environment:
-    apply                   Create a new or modify an existing environment
-    destroy                 Destroy an existing environment
-  vault:
-    get                     Get a secret from the vault and return its value
-    set                     Create or update a secret in the vault
-    delete                  Delete a secret from the vault
-    list                    List secrets for the specified vault group
-
-OPTIONS:
-Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the ./cp-deploy.sh command:
-  --status-dir,-l <dir>         Local directory to store logs and other provisioning files ($STATUS_DIR)
-  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified if configuration read from local server ($CONFIG_DIR)
-  --config-repo-url,-r <url>    Git repository to retrieve the configuration from ($GIT_REPO_URL)
-  --git-repo-dir,-rd <dir>      Directory in the Git repository that holds the configuration ($GIT_REPO_DIR)
-  --git-access-token,-t <token> Token to authenticate to the Git repository ($GIT_ACCESS_TOKEN)
-  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud ($IBM_CLOUD_API_KEY)
-  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure ($CONFIRM_DESTROY)
-  --cpd-develop                 Map current directory to automation scripts, only for development/debug ($CPD_DEVELOP)
-  -vvv                          Show verbose ansible output ($ANSIBLE_VERBOSE)
-
-Options for vault subcommand:
-  --vault-group,-vg <name>          Group of secret ($VAULT_GROUP)
-  --vault-secret,-vs <name>         Secret name to get, set or delete ($VAULT_SECRET)
-  --vault-secret-value,-vsv <value> Secret value to set ($VAULT_SECRET_VALUE)
-```
-
 ## Prepare for running
 
 ### Set environment variables
 ```
 export IBM_CLOUD_API_KEY=your_api_key
-export STATUS_DIR=/Data/sample-log
-export CONFIG_DIR=/Data/sample
+export STATUS_DIR=/data/status/sample
+export CONFIG_DIR=/data/config/sample
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
@@ -103,7 +49,6 @@ export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ./cp-deploy.sh vault set \
   --status-dir ${STATUS_DIR} \
   --config-dir ${CONFIG_DIR} \
-  --ibm-cloud-api-key ${IBM_CLOUD_API_KEY} \
   --vault-secret ibm_cp_entitlement_key \
   --vault-secret-value ${CP_ENTITLEMENT_KEY}
 ```
