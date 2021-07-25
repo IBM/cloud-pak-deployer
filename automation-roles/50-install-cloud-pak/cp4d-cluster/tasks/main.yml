@@ -3,10 +3,6 @@
 - debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
-- name: Prepare OpenShift cluster for Cloud Pak for Data
-  include_role:
-    name: cp4d-prepare-openshift
-
 - name: Get IBM Entitled Registry key
   include_role: 
     name: vault-get-secret
@@ -29,6 +25,10 @@
     use_entitled_registry: True
   when:
     - (current_cp4d_cluster.container_registry_namespace | default("")) == ""
+
+- name: Prepare OpenShift cluster for Cloud Pak for Data
+  include_role:
+    name: cp4d-prepare-openshift
 
 - name: Prepare cpd-cli if Cloud Pak for Data 3.5
   include_tasks: cpd-cli-cp4d-35.yml
