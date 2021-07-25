@@ -142,7 +142,7 @@ vault)
     --extra-vars config_dir=${CONFIG_DIR} \
     --extra-vars status_dir=${STATUS_DIR} \
     --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
-    --extra-vars secret_group=${VAULT_GROUP} \
+    --extra-vars secret_group_param=${VAULT_GROUP} \
     --extra-vars secret_name=${VAULT_SECRET} \
     --extra-vars secret_payload=${VAULT_SECRET_VALUE} \
     --extra-vars secret_file=${VAULT_SECRET_FILE} ${VERBOSE_ARG}
