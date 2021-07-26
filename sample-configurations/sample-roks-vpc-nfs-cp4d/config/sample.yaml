@@ -110,10 +110,58 @@ roks:
   #   ocs_storage_size: 500Gi
 
 cp4d:
-- project: zen-sample            # Mandatory
-  openshift_cluster_name: sample   # Mandatory, references the ROKS cluster that was defined
-  container_registry_namespace: cpd-sample  # Mandatory, references the ibm container registry namespace definition
+# Example Cloud Pak for Data 3.5 instance, using a private registry on IBM Cloud
+- project: zen-35
+  openshift_cluster_name: sample
+  container_registry_namespace: cpd-sample
   cartridges:
-  - name: lite             # Mandatory, indicates the cartridge to be installed
-    version: 3.5.0.0            # Optional, taken from defaults if not specified
-    size: medium                # Optional, taken from defaults if not specified
+  - name: lite
+    version: 3.5.0.0          
+    size: medium
+  - name: wsl
+    version: 3.5.0.0
+    size: medium
+
+# Example Cloud Pak for Data 4.0 instance, using the entitled registry
+- project: zen-40
+  openshift_cluster_name: sample
+  cartridges:
+  - name: lite
+    version: 4.0.1
+    subscription_channel: stable-v1
+    size: medium
+  - name: wsl
+    version: 2.0.0
+    subscription_channel: v2.0
+    size: small
+  - name: wml
+    version: 4.0.0
+    subscription_channel: alpha
+    size: small
+  # Other cartridges - not tested yet
+  # - name: ca
+  #   version: 4.0.0
+  #   subscription_channel: v4.0
+  #   size: small
+  #   metastore_ref: db2-ca-meta
+  # - name: cde
+  #   version: 
+  #   subscription_channel: v1.0
+  #   size: small
+  # - name: datarefinery
+  #   version: 
+  #   subscription_channel: v1.0
+  #   size: small
+  # - name: dv
+  #   version: 
+  #   subscription_channel: v1.0
+  #   size: small
+  # - name: db2
+  #   version: 
+  #   subscription_channel: v1.0
+  #   db2u_subscription_channel: v1.1
+  #   size: small
+  # - name: wkc
+  #   version: 4.0.0
+  #   subscription_channel: v1.0
+  #   size: small
