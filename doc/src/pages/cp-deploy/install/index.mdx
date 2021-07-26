@@ -1,0 +1,65 @@
+---
+title: Install
+---
+
+# Installing the Cloud Pak Deployer
+
+## Install pre-requisites
+Start with your MacBook or a server/VM running Red Hat Enterprise Linux or CentOS. 
+
+
+### Install on MacOS
+* Install Docker from the app store
+* Install GitHub Desktop from the app store or install the command line using `brew`
+
+### Install on Linux
+On Red Hat Enterprise Linux of CentOS:
+```
+yum install -y podman git
+yum clean all
+```
+
+## Obtain a token from IBM GitHub Enterprise
+The Cloud Pak Deployer is maintained in IBM's Enterprise GitHub. To clone (copy) the repository, you need to a token. You cannot use your IBMid to login to GitHub Enterprise.
+
+
+## Clone the current repository
+
+### Using GitHub Desktop
+* Open GitHub Desktop
+* Select **Clone a Repository from the Internet**
+* Go to the **GitHub Enterprise** tab
+* Sign in and enter https://github.ibm.com
+* Sign in with your browswer
+* Go to the **URL** tab and enter: https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer.git
+* Specify the local path where you want to store the repository
+* You will be prompted for a user and password. Enter your GitHub user name and the token you generated above
+
+### Using the command line
+If you clone the repository from the command line, you will need to enter a token when you run the `git clone` command. You can retrieve your token as follows:
+* Login to https://github.ibm.com
+* Click your profile in the right top
+* Settings --> Developer settings --> Personal access tokens
+* Click **Generate new token**
+* Enter a name you can remember, for example **IBM GitHub Clone**
+* Check **repo**, the underlying boxes such as `repo:status` will also be checked
+* Click **Generate token**
+* Copy your token and store it in a safe place
+
+<InlineNotification kind="warning">
+You cannot retrieve your token afterwards, not even when logging into your Enterprise GitHub account. If you fail to store the token and lose it, you will have to generate a new one.
+</InlineNotification>
+
+Go to a directory where you want to download the Git repo.
+```
+git clone https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer.git
+```
+You wil be prompted for user and password. Enter your GitHub user name and the token you generated above.
+
+## Build the image
+First go to the directory where you cloned the GitHub repository, for example `~/cloud-pak-deployer`, then run the following command:
+```
+./cp-deploy.sh build
+```
+
+This process will take 2-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Terraform, IBM Cloud CLI. cloudctl and operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.

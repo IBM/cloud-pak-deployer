@@ -1,0 +1,45 @@
+---
+title: Configure
+---
+
+# Cloud Pak Deployer Configuration
+
+The Cloud Pak Deployer includes several sample configurations which you can use as a basis for your own configuration. You can find them in the `sample-configurations` directory of the repository. Copy the sample configuration directory you want to use to your own directory. 
+
+<InlineNotification kind="warning">
+It is best not to place it under the repository directory structure, otherwise you may not be able to update (pull) the repository with changes applied on github.ibm.com.
+</InlineNotification>
+
+Every configuration have 3 subdirectories:
+* `config`: Keeps one or more YAML files with your OpenShift and Cloud Pak configuration
+* `defaults`: Keeps the defaults which will be merged with your configuration
+* `inventory`: Holds global settings for the configuration such as environment name and type of vault you want to use
+
+You can choose to keep only a single file per subdirectory, or for more complex configurations, you can create multiple yaml files. The generator automatically merges all files in the config and defaults directory.
+
+## `config` directory
+Create one or more yaml files holding the configuration you want to provision. You can create Virtual Private Clouds (VPCs), Security rules, Virtual Server Instances (VSIs), OpenShift clusters, Cloud Pak for Data instances and a few more, simply by adding yaml constructs to files in this directory.
+
+You can find a full list of all supported object types here:
+[Configuration objects](/cpd-design/objects)
+
+## `defaults` directory
+TODO: To be completed
+
+## `inventory` directory
+The Cloud Pak Deployer pipeline has been built using Ansible and it can be configured using "inventory" files. Inventory files hold the global parameters which are available throughout the Ansible playbooks. One of the most important configurations you will find in the Cloud Pak Deployer's inventory files is the vault configuration.
+
+### Vault configuration
+Throughout the deployment process, the Cloud Pak Deployer will create secrets in a vault and retrieve them later. Examples of secrets are: ssh keys, Cloud Pak for Data admin password. Additionally, when provisioning infrastructure no the IBM Cloud, the resulting Terraform state file is also stored in the vault so it can be used later if the configuration needs to be changed.
+
+The following Vault implementations can be used to store and retrieve secrets:
+- File Vault (no encryption)
+- IBM Cloud Secrets Manager
+- Hashicorp Vault (token authentication)
+- Hashicorp Vault (certificate authentication)
+
+Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault.mdx).
+
+The **File Vault** is the default vault and also the simplest. It does not require a password and all secrets are stored in base-64 encoding in a properties file under the `<status_directory>/vault` directory. The name of the vault file is the `environment_name` you specified in the inventory file or at the command line.
+
+All of the other vault options require some secret manager (IBM Cloud service or Hashicorp Vault) to be available and you need to specify a password or provide a certificate.
