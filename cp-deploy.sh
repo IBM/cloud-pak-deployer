@@ -451,8 +451,11 @@ if [ ! -z $GIT_REPO_URL ];then
 fi
 
 if [ ! -z $VAULT_GROUP ];then
-  run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP} \
-            -e VAULT_SECRET=${VAULT_SECRET} \
+  run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
+fi
+
+if [ ! -z $VAULT_SECRET ];then
+   run_cmd+=" -e VAULT_SECRET=${VAULT_SECRET} \
             -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
             -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
   if [ ! -z $VAULT_SECRET_FILE ];then
@@ -462,7 +465,6 @@ fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
-run_cmd+=" -e ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key}"
 
 run_cmd+=" cloud-pak-deployer"
 
