@@ -74,3 +74,18 @@
   loop: "{{ cp4d_ldap_config.user_groups | default([]) }}"
   loop_control:
     loop_var: cp4d_user_group
+
+- set_fact:
+    cp4d_instance_config: "{{ all_config.cp4d_instance_configuration|json_query(query_instance_config) | first }}"
+  vars:
+    query_instance_config: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"    
+
+- debug:
+    msg: "{{ cp4d_instance_config }}"    
+
+- name: Configure CP4D instance authorization
+  include_role:
+    name: instance_configuration
+  loop: "{{ cp4d_instance_config.cartridges | default([]) }}"
+  loop_control:
+    loop_var: cp4d_instance

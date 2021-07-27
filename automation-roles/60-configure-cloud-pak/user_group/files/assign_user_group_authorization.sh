@@ -18,7 +18,7 @@ if [ "$#" -eq 0 ]; then
     echo "  ******"
     echo "  \"DataStage User Group\""
     echo "  \"User Group for DataStage Users\""
-    echo "  \"zen_data_engineer_role\""
+    echo "  \"zen_administrator_role\""
     echo "  \"cn=datastage_group,ou=groups,dc=ibm,dc=com\""
     echo ""
     echo "<CLOUD_PAK_FOR_DATA_USER_GROUP_ROLES_ASSIGNMENT>: Use a ; seperated list to assign multiple roles"
