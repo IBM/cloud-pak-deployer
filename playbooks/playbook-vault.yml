@@ -5,7 +5,27 @@
   become: True
   gather_facts: False
 
+  vars:
+    ansible_callback_diy_playbook_on_task_start_msg: ""
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+
   tasks:
+
+  - set_fact:
+      secret_group: "{{ secret_group_param }}"
+
+  - set_fact:
+      secret_group: "{{ environment_name }}"
+    when: secret_group_param | default("") == ""
+
+  - fail:
+      msg: "Secret group must be specified"
+    when: secret_group == ""
+
+  - debug:
+      var: secret_group
+
   - include_role:
       name: vault-connect
 

@@ -14,57 +14,85 @@
 - set_fact:
     reload_workers: False
 
-- name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
-  shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
-  register: oc_icsp_exists
-
-- name: Create ImageContentSourcePolicy {{ icsp_name }} for CP4D 4.0
+- name: Create ImageContentSourcePolicy for CP4D 4.0 with private registry
   block:
-    - name: Create ImageContentSourcePolicy yaml
-      template:
-        src: cp4d-icsp.j2
-        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"
-    - name: Create ImageContentSourcePolicy {{ iscp_name }}
-      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"  
-    - set_fact:
-        reload_workers: True
-  when: 
-  - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
-  - oc_icsp_exists.stdout == "0"
+    - name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
+      shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
+      register: oc_icsp_exists
 
-- name: Validate IBM Container Registry Pull secret key exists
-  include_role: 
-     name: connect-container-registry
+    - name: Create ImageContentSourcePolicy {{ icsp_name }} for CP4D 4.0
+      block:
+        - name: Create ImageContentSourcePolicy yaml
+          template:
+            src: cp4d-icsp.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"
+        - name: Create ImageContentSourcePolicy {{ iscp_name }}
+          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"  
+        - set_fact:
+            reload_workers: True
+      when: 
+      - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
+      - oc_icsp_exists.stdout == "0"
+  when: not use_entitled_registry
 
-- name: Get key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
-    secret_group: "{{ environment_name }}"  
-
-- name: Validate ICR secret is available
-  fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group {{ environment_name }} is empty"
-  when: secret_value== ""
-
-- name: Set global pull secret for Cloud Pak for Data
+- name: Set global pull secret for private registry
   block:
-  - name: Create temporary directory to hold current pull secret content
-    tempfile:
-      state: directory
-    register: pull_secret_dir
-  - name: Extract the global pull secret
-    shell: |
-      oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
-  - name: Set the global pull secret
-    shell: |
-      cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-        jq --arg private_registry "{{ ibm_cloud_cr_server }}" \
-          --arg pull_secret $(echo -n "iamapikey:{{ secret_value }}" | base64 -w0) \
-          '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
-          > {{ pull_secret_dir.path }}/newdockerconfigjson
-      oc set data secret/pull-secret -n openshift-config \
-        --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+    - name: Validate IBM Container Registry Pull secret key exists
+      include_role: 
+        name: connect-container-registry
+
+    - name: Get key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+        secret_group: "{{ environment_name }}"  
+
+    - name: Validate ICR secret is available
+      fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group {{ environment_name }} is empty"
+      when: secret_value== ""
+
+    - name: Set global pull secret for private registry for Cloud Pak for Data
+      block:
+      - name: Create temporary directory to hold current pull secret content
+        tempfile:
+          state: directory
+        register: pull_secret_dir
+      - name: Extract the global pull secret
+        shell: |
+          oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
+      - name: Set the global pull secret
+        shell: |
+          cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
+            jq --arg private_registry "{{ ibm_cloud_cr_server }}" \
+              --arg pull_secret $(echo -n "iamapikey:{{ secret_value }}" | base64 -w0) \
+              '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
+              > {{ pull_secret_dir.path }}/newdockerconfigjson
+          oc set data secret/pull-secret -n openshift-config \
+            --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+  when: not use_entitled_registry
+
+- name: Set global pull secret for entitled registry
+  block:
+    - name: Set global pull secret for entitled registry for Cloud Pak for Data
+      block:
+      - name: Create temporary directory to hold current pull secret content
+        tempfile:
+          state: directory
+        register: pull_secret_dir
+      - name: Extract the global pull secret
+        shell: |
+          oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
+      - name: Set the global pull secret
+        shell: |
+          cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
+            jq --arg registry "{{ entitled_registry }}" \
+              --arg pull_secret $(echo -n "cp:{{ ibm_cp_entitlement_key }}" | base64 -w0) \
+              '.auths += {($registry): {"auth": $pull_secret, "email": "not-used"}}' \
+              > {{ pull_secret_dir.path }}/newdockerconfigjson
+          oc set data secret/pull-secret -n openshift-config \
+            --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+  when: use_entitled_registry
 
 - name: Check if the Tuned {{ cp4d_tuned_name }} exists
   shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"

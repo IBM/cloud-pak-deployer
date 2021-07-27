@@ -1,0 +1,108 @@
+---
+- set_fact:
+    cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+    cp4d_project_openshift_cluster_name: "{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Validate if an existing admin password for {{ cp4d_admin_password_vault_key_name }} exists in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}" 
+
+- name: when the password exists, assign it to the cp4d_login_password variable
+  block:
+
+    - name: set password
+      set_fact:
+        cp4d_login_password: "{{ secret_value }}"
+
+    - set_fact:
+        cp4d_configure_cpd_admin: 1
+
+  when: "not secret_value==''"
+
+- name: Error if no secret value is returned
+  fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
+  when: "secret_value==''"
+
+- name: Get Route to Cloud Pak for Data
+  shell: |
+    oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+          -o jsonpath="{.items[0].spec.host}"
+  register: cp4d_url
+
+- name: Login to Cloud Pak for Data
+  shell: "curl -k -X POST -H 'cache-control: no-cache' -H 'Content-Type: application/json;charset=UTF-8' -d '{\"username\":\"{{ cp4d_login_username }}\",\"password\":\"{{ cp4d_login_password }}\"}' 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/authorize'"
+  register: cp4d_login_result
+  retries: 60
+  delay: 10
+  until: cp4d_login_result.rc==0
+
+- set_fact:
+    cp4d_login: "{{ cp4d_login_result.stdout | from_json }}"
+
+- name: Configure the LDAP connection
+  shell: "curl --location --insecure --request PUT 'https://{{ cp4d_url.stdout }}/usermgmt/v1/usermgmt/config' \
+          --header 'Authorization: Bearer {{ cp4d_login.token }}' \
+          --header 'Content-Type: application/json' \
+          --data-raw '{
+            \"externalLDAPHost\": \"{{ externalLDAPHost }}\", 
+            \"externalLDAPPort\": {{ externalLDAPPort }}, 
+            \"externalLDAPSearchUser\": \"{{ externalLDAPSearchUser }}\", 
+            \"externalLDAPSearchBase\": \"{{ externalLDAPSearchBase }}\", 
+            \"externalLDAPSearchField\": \"{{ externalLDAPSearchField }}\", 
+            \"externalLDAPEmailField\": \"\", 
+            \"externalLDAPFirstNameField\": \"\", 
+            \"externalLDAPLastNameField\": \"\", 
+            \"externalLDAPGroupField\": \"\", 
+            \"externalLDAPPrefix\": \"\", 
+            \"auto_signup\": {{ auto_signup }}, 
+            \"externalLDAPGroupSearchBase\": \"\", 
+            \"externalLDAPGroupSearchField\": \"\", 
+            \"externalLDAPGroupMemberField\": \"\", 
+            \"externalLDAPSearchPassword\": \"{{ externalLDAPSearchPassword }}\"
+         }'"
+  register: cp4d_ldap_configuration_result
+  when: (externalLDAPHost | default("")) != ""
+
+- set_fact:
+    cp4d_ldap_configuration_result_json: "{{ cp4d_ldap_configuration_result.stdout | from_json }}"
+  when: (externalLDAPHost | default("")) != ""
+
+- name: Error if no success message is returned
+  fail: msg="Unable to configure LDAP connectivity. Configure command returned a non success message"
+  when: 
+    - (externalLDAPHost | default("")) != ""
+    - "not cp4d_ldap_configuration_result_json._messageCode_ == 'success'"
+
+# - name: Validate LDAP connectivity with login test
+#   shell: "curl --location --insecure --request PUT 'https://{{ cp4d_url.stdout }}/usermgmt/v1/preauth/validateConfig' \
+#           --header 'Authorization: Bearer {{ cp4d_login.token }}' \
+#           --header 'Content-Type: application/json' \
+#           --data-raw '{
+#             \"externalLDAPHost\": \"{{ externalLDAPHost }}\", 
+#             \"externalLDAPPort\": {{ externalLDAPPort }}, 
+#             \"externalLDAPSearchUser\": \"{{ externalLDAPSearchUser }}\", 
+#             \"externalLDAPSearchBase\": \"{{ externalLDAPSearchBase }}\", 
+#             \"externalLDAPSearchField\": \"{{ externalLDAPSearchField }}\", 
+#             \"externalLDAPEmailField\": \"\", 
+#             \"externalLDAPFirstNameField\": \"\", 
+#             \"externalLDAPLastNameField\": \"\", 
+#             \"externalLDAPGroupField\": \"\", 
+#             \"externalLDAPPrefix\": \"\", 
+#             \"auto_signup\": {{ auto_signup }}, 
+#             \"externalLDAPGroupSearchBase\": \"\", 
+#             \"externalLDAPGroupSearchField\": \"\", 
+#             \"externalLDAPGroupMemberField\": \"\", 
+#             \"externalLDAPSearchPassword\": \"{{ externalLDAPSearchPassword }}\",
+#             \"username\": \"{{ testldapusername }}\",
+#             \"password\": \"{{ testldapuserpassword }}\"
+#          }'"
+#   register: cp4d_ldap_test_configuration_result
+
+# - debug:
+#     msg: "{{ cp4d_ldap_test_configuration_result }}"
+
+- set_fact:
+    cp4d_configure_cpd_ldap: 1
