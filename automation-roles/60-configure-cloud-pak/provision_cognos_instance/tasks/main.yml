@@ -195,14 +195,14 @@
       - debug:
           msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 45 minutes to complete"
 
-      - name: Wait for Cognos Analytics to finish its provisioning, starting all 8 CA pods
+      - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
         command: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
         register: ca_provision_complete
         retries: 120
         delay: 30
         until:
           - ca_provision_complete.rc==0
-          - ca_provision_complete.stdout=='8'
+          - ca_provision_complete.stdout=='7'
 
       - debug:
           msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"
