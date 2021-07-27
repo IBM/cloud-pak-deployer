@@ -8,26 +8,37 @@
 # The script loops through all cartridges which are being installed and checks the CR status for each.
 # The value returned in stdout is the number of cartridges which have not completed installation.
 # If the CR of a cartridge does not exist, the script fails with exit code 1.
-project=$1
-cartridges=$(echo $2 | base64 -d)
-cartridge_cr=$(echo $3 | base64 -d)
+status_dir=$1
+project=$2
+cartridges=$(echo $3 | base64 -d)
+cartridge_cr=$(echo $4 | base64 -d)
 
 exit_code=0
 number_pending=0
 
-echo "Info: Cartridges to be checked: $(echo $cartridges | jq -r .)"
-echo "Info: Defined cartridges (cartridge_cr): $(echo $cartridge_cr | jq -r .)"
+get_logtime() {
+  echo $(date "+%Y-%m-%d %H:%M:%S")
+}
+
+log() {
+  LOG_TIME=$(get_logtime)
+  printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-cartridges.log
+}
+
+log "----"
+log "Info: Cartridges to be checked: $(echo $cartridges | jq -r .)"
+log "Info: Defined cartridges (cartridge_cr): $(echo $cartridge_cr | jq -r .)"
 
 for c in $(echo $cartridges | jq -r '.[].name');do
-  echo "Checking cartridge $c" 
+  log "Checking cartridge $c" 
   cr_cr=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
   cr_name=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
   cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
-  echo "Info: Cartridge: $c, CR: $cr_cr, CR name: $cr_name, CR status attribute: $cr_status_attribute"
+  log "Info: Cartridge: $c, CR: $cr_cr, CR name: $cr_name, CR status attribute: $cr_status_attribute"
 
   # Check if cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
-    echo "Error: Cartridge $c does not have a definition in object cartridges_cr, it seems to be undefined"
+    log "Error: Cartridge $c does not have a definition in object cartridges_cr, it seems to be undefined"
     exit_code=2
     continue
   fi
@@ -35,14 +46,14 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   # Check if object exists
   oc get --namespace $project $cr_cr $cr_name
   if [ $? -ne 0 ];then
-    echo "Error: $cr_cr object $cr_name does not exist in project $project"
+    log "Error: $cr_cr object $cr_name does not exist in project $project"
     exit_code=3
     continue
   fi
 
   # Check if status is completed
   cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
-  echo "Info: Status of $cr_cr object $cr_name is $cr_status"
+  log "Info: Status of $cr_cr object $cr_name is $cr_status"
   if [ $cr_status -ne "Completed" ];then
     ((number_pending=number_pending+1))
   fi
@@ -52,10 +63,10 @@ if [ $exit_code -ne 0 ];then
   exit $exit_code
 fi
 
-echo "Number of pending cartridge installations: $number_pending"
+log "Number of pending cartridge installations: $number_pending"
 
-if [ $number_pending -eq 0];then
-  echo "All cartridges successfully completed"
+if [ $number_pending -eq 0 ];then
+  log "All cartridges successfully completed"
 fi
 
 exit 0
