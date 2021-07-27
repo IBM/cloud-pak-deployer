@@ -33,7 +33,7 @@
       when: 
       - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
       - oc_icsp_exists.stdout == "0"
-  when: not use_entitled_registry
+  when: not (use_entitled_registry | bool)
 
 - name: Set global pull secret for private registry
   block:
@@ -70,7 +70,7 @@
               > {{ pull_secret_dir.path }}/newdockerconfigjson
           oc set data secret/pull-secret -n openshift-config \
             --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
-  when: not use_entitled_registry
+  when: not (use_entitled_registry | bool)
 
 - name: Set global pull secret for entitled registry
   block:
@@ -92,7 +92,7 @@
               > {{ pull_secret_dir.path }}/newdockerconfigjson
           oc set data secret/pull-secret -n openshift-config \
             --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
-  when: use_entitled_registry
+  when: (use_entitled_registry | bool)
 
 - name: Check if the Tuned {{ cp4d_tuned_name }} exists
   shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
