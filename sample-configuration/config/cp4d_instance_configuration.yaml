@@ -1,0 +1,25 @@
+---
+# Each Cloud Pak for Data Deployment deployed in an OpenShift Project of an OpenShift cluster can have its own configuration for the provisioned instances
+cp4d_instance_configuration:
+- project: zen-sample                      # Mandatory
+  openshift_cluster_name: sample-roks      # Mandatory
+  cartridges:
+  #TODO add sizing of instance to be used during provisioning
+  - name: ca
+    manage_access:                                                    # Optional, requires LDAP connectivity
+    - ca_role: Analytics Viewer                                       # Mandatory, one the CA Access roles
+      cp4d_user_group: CA_Analytics_Viewer                            # Mandatory, the CP4D User Group Name
+      cp4d_user_group_description: Cognos Analytics Viewer User Group # Optional
+      cp4d_roles:                                                     # Mandatory, at least 1 CP4D role must be provided
+        - role_name: wkc_data_scientist_role
+      ldap_groups:                                                    # Mandatory, at least 1 LDAP group must be provided
+        - group_name: cn=ca_user_group,ou=groups,dc=client_backend,dc=eu
+    - ca_role: Analytics Administrator
+      cp4d_user_group: CA_Analytics Administrator
+      cp4d_user_group_description: Cognos Analytics Administrator User Group # Optional
+      cp4d_roles:
+      - role_name: wkc_data_scientist_role
+      - role_name: zen_administrator_role
+      ldap_groups:
+        - group_name: cn=ca_admin_group,ou=groups,dc=client_backend,dc=eu
+        - group_name: cn=internal_admin_group,ou=groups,dc=client_backend,dc=eu
