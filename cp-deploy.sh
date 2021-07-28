@@ -420,6 +420,16 @@ if [ ! -z $VAULT_SECRET_FILE ];then
   touch ${VAULT_SECRET_FILE}
 fi
 
+# Check if a container is currently running
+ps_cmd="${CONTAINER_ENGINE} ps"
+CONTAINER_ID=$(eval $ps_cmd | grep 'cloud-pak-deployer' | awk '{print $1}')
+if [[ "$CONTAINER_ID" != "" ]] && [[ "$SUBCOMMAND" == "environment" ]];then
+  echo "Warning: Cloud Pak Deployer container is already active ($CONTAINER_ID), tailing logs !!!"
+  sleep 2
+  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
+  exit 0
+fi
+
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
 
