@@ -1,0 +1,27 @@
+---
+- debug:
+    msg: "{{ item }}"
+
+- set_fact:
+    ca_role: "{{ item.ca_role }}"
+    cp4d_user_group: "{{ item.cp4d_user_group }}"
+
+- name: Adding execute permission to {{ role_path }}/files/assign_CA_authorization.sh"
+  file: dest={{ role_path }}/files/assign_CA_authorization.sh mode=a+x
+
+- name: "Assign Cognos Analytics role {{ ca_role }} to CP4D User Group {{ cp4d_user_group }}. Log file for result {{status_dir}}/log/cp4d_{{ current_cp4d_cluster.openshift_cluster_name }}_{{ current_cp4d_cluster.project }}_ca_instance_authorization.log"
+  shell: |
+    runcpdcaauthorization () { \
+         {{ role_path }}/files/assign_CA_authorization.sh \
+         https://{{ cp4d_url.stdout }} \
+         {{ cp4d_login_username }} \
+         "{{ cp4d_login_password }}" \
+         "{{ cp4d_user_group }}" \
+         "{{ ca_role }}" |& \
+         tee -a {{status_dir}}/log/cp4d_{{ current_cp4d_cluster.openshift_cluster_name }}_{{ current_cp4d_cluster.project }}_ca_instance_authorization.log; \
+         return "${PIPESTATUS[0]}"; }; \
+    runcpdcaauthorization  
+  register: cpd_ca_authorization_result
+
+- debug: 
+    msg: "Cognos Role {{ ca_role }} assigned to CP4D User Group {{ cp4d_user_group }} completed successfully..."

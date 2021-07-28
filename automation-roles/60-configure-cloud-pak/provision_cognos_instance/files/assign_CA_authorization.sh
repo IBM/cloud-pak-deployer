@@ -218,7 +218,7 @@ then
     export CPD_URL_MEMBERS=${CP4D_URL}/usermgmt/v2/groups/${GROUP_ID}/members
 
     export CP4D_ASSIGN_LDAP_GROUP=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CPD_URL_MEMBERS} \
-        -d "{\"ldap_groups\":${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING},\"user_identifiers\":[]}")
+        -d "{\"ldap_groups\":${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST},\"user_identifiers\":[]}")
 else
     echo "Cloud Pak for Data User Group ${CP4D_ROLE_GROUP_NAME} already exists. Validate LDAP group assignments..."
 

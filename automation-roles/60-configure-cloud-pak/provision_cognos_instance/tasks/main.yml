@@ -15,6 +15,32 @@
       state: directory
     register: cp4d_automation_temp_dir
 
+  - set_fact:
+      cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+  - name: Validate if an existing admin password for {{ cp4d_admin_password_vault_key_name }} exists in the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "{{ cp4d_admin_password_vault_key_name }}"
+      secret_group: "{{ environment_name }}" 
+
+  - name: when the password exists, assign it to the cp4d_login_password variable
+    block:
+
+      - name: set cp4d admin passwordpassword
+        set_fact:
+          cp4d_login_password: "{{ secret_value }}"
+
+      - set_fact:
+          cp4d_configure_cpd_admin: 1
+
+    when: "not secret_value==''"
+
+  - name: Error if no secret value is returned
+    fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
+    when: "secret_value==''"
+
   - name: Get Route to Cloud Pak for Data
     shell: |
       oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
@@ -68,9 +94,6 @@
       - name: Get DB2 service key {{ current_cp4d_service['cp4d_service']['service_name'] }}
         shell: "ibmcloud resource service-key {{ current_cp4d_cartridge.metastore_ref }}-Credentials --output json"
         register: db2_service_key_json
-
-      #- debug:
-      #    msg: "{{ db2_service_key_json }}"
 
       - template:
           src: cognos_service_credentials.json.j2
@@ -171,3 +194,15 @@
 
       - debug:
           msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 45 minutes to complete"
+
+      - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
+        command: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
+        register: ca_provision_complete
+        retries: 120
+        delay: 30
+        until:
+          - ca_provision_complete.rc==0
+          - ca_provision_complete.stdout=='7'
+
+      - debug:
+          msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"

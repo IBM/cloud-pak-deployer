@@ -4,19 +4,19 @@
 
 - name: Find CR name for cartridge {{ current_cp4d_cartridge.name }}
   set_fact:
-    cr_name: "{{ cartridge_cr | json_query(jmes_query) }}"
+    cr_cr: "{{ cartridge_cr | json_query(jmes_query) }}"
   vars:
-    jmes_query: "[?cartridge_name == '{{ current_cp4d_cartridge.name }}'].cr_name | [0]"
+    jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}'].cr_cr | [0]"
   when: current_cp4d_cartridge.name != "lite"
 
 - fail:
     msg: "Label for cartridge {{ current_cp4d_cartridge.name }} not found, cannot check if CR is successfully installed"
   when: 
   - current_cp4d_cartridge.name != "lite"
-  - cr_name == ""
+  - cr_cr == ""
 
 # Create CR
-- name: Prepare yaml file for custom resource {{ cr_name }} for cartridge {{ current_cp4d_cartridge.name }}
+- name: Prepare yaml file for custom resource {{ cr_cr }} for cartridge {{ current_cp4d_cartridge.name }}
   template:
     src: "{{ current_cp4d_cartridge.name }}-cr.j2"
     dest: "{{status_dir}}/openshift/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"

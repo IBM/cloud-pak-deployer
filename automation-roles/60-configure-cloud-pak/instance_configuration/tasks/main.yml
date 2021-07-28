@@ -1,0 +1,12 @@
+---
+- debug:
+    var: cp4d_instance
+
+- name: Get Route to Cloud Pak for Data
+  shell: "oc --namespace {{ current_cp4d_cluster.project }} get route {{ current_cp4d_cluster.project }}-cpd -o jsonpath=\"{.spec.host}\""
+  register: cp4d_url
+
+- name: Set the Cognos Analytics instance authorization
+  include_tasks: ca_instance_authorization.yml
+  loop: "{{ cp4d_instance.manage_access }}"
+  when: cp4d_instance.name == 'ca'

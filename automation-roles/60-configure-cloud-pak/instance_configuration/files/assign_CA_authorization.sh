@@ -9,9 +9,6 @@ if [ "$#" -eq 0 ]; then
     echo "  <CLOUD_PAK_FOR_DATA_LOGIN_USER>"
     echo "  <CLOUD_PAK_FOR_DATA_LOGIN_PASSWORD>"
     echo "  <CLOUD_PAK_FOR_DATA_USER_GROUP_NAME>"
-    echo "  <CLOUD_PAK_FOR_DATA_USER_GROUP_DESCRIPTION>"
-    echo "  <CLOUD_PAK_FOR_DATA_USER_GROUP_ROLES_ASSIGNMENT>"
-    echo "  <CLOUD_PAK_FOR_DATA_USER_GROUP_LDAP_GROUPS_MAPPING>"
     echo "  <CLOUD_PAK_FOR_DATA_COGNOS_ANALYTICS_ROLE>"
     echo ""
     echo "Example command:"
@@ -20,17 +17,12 @@ if [ "$#" -eq 0 ]; then
     echo "  admin"
     echo "  ******"
     echo "  \"Cognos User Group\""
-    echo "  \"Cognos User Group Description\""
-    echo "  \"wkc_data_scientist_role;zen_administrator_role\""
-    echo "  \"cn=ca_group,ou=groups,dc=ibm,dc=com\""
     echo "  \"Analytics Viewer\""
     echo ""
-    echo "<CLOUD_PAK_FOR_DATA_USER_GROUP_ROLES_ASSIGNMENT>: Use a ; seperated list to assign multiple roles"
-    echo "<CLOUD_PAK_FOR_DATA_USER_GROUP_LDAP_GROUPS_MAPPING>: Use a ; seperated list to assign multiple ldap groups"
     exit 0
 fi
 
-if [ "$#" -ne 8 ]; then
+if [ "$#" -ne 5 ]; then
     echo "Incorrect number of parameters provided."
     echo "Run ./assign_CA_authorization.sh for help command"
     exit 1
@@ -40,57 +32,20 @@ export CP4D_URL=$1
 export CP4D_LOGIN_USER=$2
 export CP4D_LOGIN_PASSWORD=$3
 export CP4D_ROLE_GROUP_NAME=$4
-export CP4D_ROLE_GROUP_DESCRIPTION=$5
-export CP4D_ROLE_GROUP_ROLE_ASSIGNMENTS=$6
-export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPINGS=$7
-export CP4D_CA_ROLE=$8
+export CP4D_CA_ROLE=$5
 
 export CP4D_URL_AUTH=${CP4D_URL}/icp4d-api/v1/authorize
 export CP4D_URL_CONFIG=${CP4D_URL}/usermgmt/v1/usermgmt/config
 export CP4D_URL_GROUPS=${CP4D_URL}/usermgmt/v2/groups
-export CP4D_URL_ROLES=${CP4D_URL}/usermgmt/v1/roles
 export CP4D_URL_USER=${CP4D_URL}/usermgmt/v1/user
 export CP4D_URL_USERS=${CP4D_URL}/usermgmt/v1/usermgmt/users
 export CP4D_URL_LDAP_USERS=${CP4D_URL}/usermgmt/v2/ldap/users
-export CP4D_URL_LDAP_GROUPS=${CP4D_URL}/usermgmt/v2/ldap/groups
 export CP4D_INSTANCES=${CP4D_URL}/zen-data/v3/service_instances
 export CP4D_INSTANCES_USERS=${CP4D_URL}/zen-data/v2/serviceInstance/users
 export CP4D_INSTANCES_USERS_ROLE=${CP4D_INSTANCES_USERS}/role
 
 #Default list of Cognos Analytics Roles
 export CP4D_CA_ROLES=("Analytics Administrators" "Analytics Explorers" "Analytics Users" "Analytics Viewer")
-
-#Create an array of the CP4D_ROLE_GROUP_IDENTIFIERS
-export CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY=(${CP4D_ROLE_GROUP_ROLE_ASSIGNMENTS//;/ })
-export CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY_LENGTH=${#CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY[@]}
-
-if [[ -z "${CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY_LENGTH}" || ${CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY_LENGTH} -lt 1 ]]; then
- echo "No Role Group assigmnents provided..."
- exit 1
-fi
-
-#Create an Array of [x,y,z] used in the request to CP4D for the Role Groups
-export CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST="["
-for ROLE in "${CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY[@]}"; do
-    export CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST="${CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST}\"${ROLE}\"," 
-done
-export CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST="${CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST::-1}]"
-
-#Create an array of the CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING
-export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY=(${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPINGS//;/ })
-export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY_LENGTH=${#CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY[@]}
-
-if [[ -z "${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY_LENGTH}" || ${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY_LENGTH} -lt 1 ]]; then
- echo "No LDAP Mapping Groups provided..."
- exit 1
-fi
-
-#Create an Array of [x,y,z] used in the request to CP4D for the LDAP Group mapping
-export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST="["
-for LDAP_GROUP in "${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY[@]}"; do
-    export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST="${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST}\"${LDAP_GROUP}\"," 
-done
-export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST="${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST::-1}]"
 
 echo ""
 echo "==> Summarize task"
@@ -99,9 +54,6 @@ echo "=================="
 echo "IBM Cloud Pak for Data URL: ${CP4D_URL}"
 echo "IBM Cloud Pak for Data User: ${CP4D_LOGIN_USER}"
 echo "User Group Name: ${CP4D_ROLE_GROUP_NAME}" 
-echo "User Group Desription: ${CP4D_ROLE_GROUP_DESCRIPTION}" 
-echo "User Group Role(s) assignments: ${CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST}"
-echo "User Group LDAP Group(s) assignments: ${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_FOR_REQUEST}"
 echo "Cognos Analyics assignment role: ${CP4D_CA_ROLE}"
 
 echo ""
@@ -116,36 +68,7 @@ if [ "${BEARER}" == "null" ]; then
 fi
 
 echo ""
-echo "==> 2. Get All available Cloud Pak for Data roles"
-echo ""
-echo "=================="
-export CP4D_ROLES_RESPONSE=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_ROLES})
-export CP4D_ROLES=()
-
-for CP4D_ROLE in $(jq -r ".rows[] | .id" <<< ${CP4D_ROLES_RESPONSE}); do
-    CP4D_ROLES+=(${CP4D_ROLE})
-done
-
-echo "The following roles are available in Cloud Pak for Data:"
-for ROLE in "${CP4D_ROLES[@]}"
-do
-     echo " - ${ROLE}"
-done
-
-echo ""
-echo "==> 3. Validate the provided role(s) are available in Cloud Pak for Data"
-echo ""
-echo "=================="
-for ROLE in "${CP4D_ROLE_GROUP_IDENTIFIERS_ARRAY[@]}"; do
-    if [[ ! " ${CP4D_ROLES[@]} " =~ " ${ROLE} " ]]; then
-        echo "Provided Role ${ROLE} is not part of the available roles in Cloud Pak for Data."
-        echo "Only roles available in Cloud Pak for Data can be used."
-        exit 1
-    fi
-done
-
-echo ""
-echo "==> 4. Validate the provided Cognos Analytics role ${CP4D_CA_ROLE} is available in Cognos Analytics for Cloud Pak for Data"
+echo "==> 2. Validate the provided Cognos Analytics role ${CP4D_CA_ROLE} is available in Cognos Analytics for Cloud Pak for Data"
 echo ""
 echo "=================="
 if [[ ! " ${CP4D_CA_ROLES[@]} " =~ " ${CP4D_CA_ROLE} " ]]; then
@@ -160,7 +83,7 @@ if [[ ! " ${CP4D_CA_ROLES[@]} " =~ " ${CP4D_CA_ROLE} " ]]; then
 fi
 
 echo ""
-echo "==> 5. Validate if LDAP configuration is present"
+echo "==> 3. Validate if LDAP configuration is present"
 echo ""
 echo "=================="
 export CP4D_CONFIGURATION=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_CONFIG})
@@ -173,78 +96,40 @@ then
 fi
 
 echo ""
-echo "==> 6. Validate if all provided LDAP groups are existing LDAP groups"
-echo ""
-echo "=================="
-for LDAP_GROUP in "${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY[@]}"; do
-    export LDAP_CN_NAME=${LDAP_GROUP%%,*}
-    export LDAP_CN_NAME=${LDAP_CN_NAME:3}
-
-    export LDAP_GROUP_SEARCH=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_LDAP_GROUPS} \
-        -d "{\"search_string\":\"${LDAP_CN_NAME}\",\"limit\":100}" | jq -r ".[] |  select(.name==\"${LDAP_CN_NAME}\") | .name")
-
-    if [ -z "${LDAP_GROUP_SEARCH}" ]
-    then
-        echo "LDAP Group ${LDAP_GROUP} is not found in LDAP registry. Make sure the LDAP group exists.."
-        exit 1
-    else
-        echo "LDAP Group ${LDAP_GROUP} is an existing LDAP Group"
-    fi
-done
-
-echo ""
-echo "==> 7. Validate if User Group \"${CP4D_ROLE_GROUP_NAME}\" already exists"
+echo "==> 4. Validate if User Group \"${CP4D_ROLE_GROUP_NAME}\" already exists"
 echo ""
 echo "=================="
 export GROUP_SEARCH=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_GROUPS})
 export GROUP_ID=$(echo ${GROUP_SEARCH} | jq -r ".results[] | select(.name==\"${CP4D_ROLE_GROUP_NAME}\") | .group_id")
 
-echo ""
-echo "==> 8. Create CP4D User Group \"${CP4D_ROLE_GROUP_NAME}\" if it does not exist"
-echo ""
-echo "=================="
 if [ -z "$GROUP_ID" ]
 then
-    export GROUP_ID=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_GROUPS} \
-        -d "{\"name\":\"${CP4D_ROLE_GROUP_NAME}\",\"description\":\"${CP4D_ROLE_GROUP_DESCRIPTION}\",\"role_identifiers\":${CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST}}" | jq -r '. | .group_id')
-
-    if [ "${GROUP_ID}" == "null" ]; then
-        echo "Unable to create Group ${CP4D_ROLE_GROUP_NAME}, empty group id returned..."
-        exit 1
-    else 
-        echo "Group ${CP4D_ROLE_GROUP_NAME} with group id ${GROUP_ID} created successfully..."
-    fi
-
-    export CPD_URL_MEMBERS=${CP4D_URL}/usermgmt/v2/groups/${GROUP_ID}/members
-
-    export CP4D_ASSIGN_LDAP_GROUP=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CPD_URL_MEMBERS} \
-        -d "{\"ldap_groups\":${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING},\"user_identifiers\":[]}")
-else
-    echo "Cloud Pak for Data User Group ${CP4D_ROLE_GROUP_NAME} already exists. Validate LDAP group assignments..."
-
-    export CPD_URL_MEMBERSHIPS=${CP4D_URL}/usermgmt/v2/groups/${GROUP_ID}/membership_rules
-    export CPD_URL_MEMBERS=${CP4D_URL}/usermgmt/v2/groups/${GROUP_ID}/members
-
-    export GROUP_MEMBERSHIP_RULES=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CPD_URL_MEMBERSHIPS})
-
-    for LDAP_GROUP in "${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY[@]}"
-    do
-        export LDAP_GROUP_LINKED=$(jq -r ".results[] | select(.ldap_group==\"${LDAP_GROUP}\") | .ldap_group" <<< ${GROUP_MEMBERSHIP_RULES})
-
-        if [[ -z "${LDAP_GROUP_LINKED}" || "${LDAP_GROUP_LINKED}" == "null" ]]; then
-
-            export CP4D_ASSIGN_LDAP_GROUP=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CPD_URL_MEMBERS} \
-              -d "{\"ldap_groups\":[\"${LDAP_GROUP}\"],\"user_identifiers\":[]}")
-
-            echo "LDAP Group \"${LDAP_GROUP}\" added as a member of the User Role Group"
-        else
-            echo "LDAP Group \"${LDAP_GROUP}\" is already assigned as a member of the User Role Group"
-        fi
-    done
+    echo "CP4D User Group ${CP4D_ROLE_GROUP_NAME} does not exist. Ensure the User Group exists prior to running this script"
+    exit 1
 fi
 
 echo ""
-echo "==> 9. Acquire Cognos Analytics Instance ID"
+echo "==> 5. Get the list of LDAP Groups of User Group \"${CP4D_ROLE_GROUP_NAME}\""
+echo ""
+echo "=================="
+
+export CP4D_URL_GROUP_MEMBERSHIP=${CP4D_URL_GROUPS}/${GROUP_ID}/membership_rules
+export USER_GROUP_MEMBERS=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_GROUP_MEMBERSHIP})
+
+export CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY=()
+
+for LDAP_GROUP in $(jq -c ".results[] | .ldap_group" <<< ${USER_GROUP_MEMBERS}); do
+  CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY+=("${LDAP_GROUP}")
+  echo " - ${LDAP_GROUP}"
+done
+
+if [ ${#CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY[@]} -lt 1 ]; then
+  echo "CP4D User Group ${CP4D_ROLE_GROUP_NAME} has no LDAP groups assigned. Ensure the User Group is configured with at least 1 LDAP group prior to running this script"
+  exit 1
+fi
+
+echo ""
+echo "==> 6. Acquire Cognos Analytics Instance ID"
 echo ""
 echo "=================="
 export COGNOS_INSTANCE_ID=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES} | jq -r ".service_instances[] | select(.addon_type==\"cognos-analytics-app\") | .id")
@@ -258,7 +143,7 @@ else
 fi
 
 echo ""
-echo "==> 10. For each member of CP4D User Group \"${CP4D_ROLE_GROUP_NAME}\", check if user exists in Cloud Pak for Data"
+echo "==> 7. For each member of CP4D User Group \"${CP4D_ROLE_GROUP_NAME}\", check if user exists in Cloud Pak for Data"
 echo "==> If the user does not exist, create the user"
 echo ""
 echo "=================="
@@ -269,7 +154,7 @@ do
     echo "Handling LDAP Group: ${LDAP_GROUP}"
    
     export LDAP_GROUP_MEMBERS=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_LDAP_USERS} \
-        -d "{\"search_field\":\"ldap_group\",\"search_string\":\"${LDAP_GROUP}\"}")
+        -d "{\"search_field\":\"ldap_group\",\"search_string\":${LDAP_GROUP}}")
     
     for LDAP_USER in $(jq -c ".[] | .username" <<< ${LDAP_GROUP_MEMBERS}); do
 
@@ -288,7 +173,7 @@ do
                 exit 1
             else
                 export CP4D_USER_UID=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_USER} \
-                    -d "{\"username\":\"${LDAP_USER_NAME}\",\"displayName\":\"${LDAP_USER_DISPLAY_NAME}\",\"email\":\"${LDAP_USER_EMAIL}\",\"user_roles\":${CP4D_ROLE_GROUP_IDENTIFIERS_FOR_REQUEST},\"authenticator\":\"external\"}" | jq -r '. | .uid')
+                    -d "{\"username\":\"${LDAP_USER_NAME}\",\"displayName\":\"${LDAP_USER_DISPLAY_NAME}\",\"email\":\"${LDAP_USER_EMAIL}\",\"user_roles\":[\"zen_user_role\"],\"authenticator\":\"external\"}" | jq -r '. | .uid')
                 
                 if [[ -z ${CP4D_USER_UID} || "${CP4D_USER_UID}" == "null " ]]
                 then
@@ -309,17 +194,18 @@ do
 done
 
 echo ""
-echo "==> 11. For each member of CP4D User Group \"${CP4D_ROLE_GROUP_NAME}\", assign the role of \"${CP4D_CA_ROLE}\" to the Cognos Analytics Instance"
+echo "==> 8. For each member of CP4D User Group \"${CP4D_ROLE_GROUP_NAME}\", assign the role of \"${CP4D_CA_ROLE}\" to the Cognos Analytics Instance"
 echo ""
 echo "=================="
 export CURRENT_CA_CP4D_USERS=$(curl -s -k -X GET -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS}?sID=${COGNOS_INSTANCE_ID})
 
 for LDAP_GROUP in "${CP4D_ROLE_GROUP_LDAP_GROUP_MAPPING_ARRAY[@]}"
 do
+    echo ""
     echo "Handling Cognos Analytics access for LDAP Group: ${LDAP_GROUP}"
    
     export LDAP_GROUP_MEMBERS=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_LDAP_USERS} \
-        -d "{\"search_field\":\"ldap_group\",\"search_string\":\"${LDAP_GROUP}\"}")
+        -d "{\"search_field\":\"ldap_group\",\"search_string\":${LDAP_GROUP}}")
 
     for LDAP_USER in $(jq -c ".[] | .username" <<< ${LDAP_GROUP_MEMBERS}); do
 
@@ -362,7 +248,7 @@ do
 done
 
 echo ""
-echo "==> 12. Cognos Analytics user assignment completed"
+echo "==> 9. Cognos Analytics user assignment completed"
 echo ""
 echo "=================="
 echo "Returning with exit code 0"

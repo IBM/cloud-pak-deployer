@@ -42,7 +42,7 @@ export CONFIG_DIR=/data/config/sample
 * `CONFIG_DIR`: Directory that holds the configuration, it must have `config`, `defaults` and `inventory` subdirectories
 
 ### Store Cloud Pak entitlement key in vault
-If you want to pull the Cloud Pak images from the entitlted registry (i.e. an online install), or if you want to mirror the images to your private registry namespace, you need to create a secret called `ibm_cp_entitlement_key` and set its value to your entitlement key.
+If you want to pull the Cloud Pak images from the entitlted registry (i.e. an online install), or if you want to mirror the images to your private registry namespace, you need to create a secret called `ibm_cp_entitlement_key` and set its value to your entitlement key. Create this secret unless the Cloud Pak images are already mirrored to the private registry.
 ```
 ./cp-deploy.sh vault set \
   --vault-secret ibm_cp_entitlement_key \
@@ -58,7 +58,7 @@ To run the container using a local configuration input directory and a data dire
 
 When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
 
-If you need to interrupt the automation, use CTRL-C to stop the output then use:
+If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 ```
 podman ps
 ```
@@ -67,8 +67,6 @@ or, on Mac/Ubuntu/Windows:
 ```
 docker ps
 ```
-
-If multiple containers are active you can double-check that you're terminating the correct container by doing a `podman logs <container name>`.
 
 Then, stop the container as follows:
 ```
@@ -83,6 +81,28 @@ docker kill <container name>
 ## Finishing up
 Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified. The `admin` password can be retrieved from the vault as follows:
 
-TODO: Command to retrieve admin password
+List the secrets in the vault:
 ```
+./cp-deploy.sh vault list
+```
+
+This will show something similar to the following:
+```output
+Secret list for group sample:
+- ibm_cp_entitlement_key
+- sample-provision-ssh-key
+- sample-provision-ssh-pub-key
+- sample-terraform-tfstate
+- cp4d_admin_zen_sample_sample
+```
+
+You can then retrieve the Cloud Pak for Data admin password like this:
+```
+./cp-deploy.sh vault get --vault-secret cp4d_admin_zen_sample_sample
+```
+
+```output
+PLAY [Secrets] *****************************************************************
+included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
+cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
