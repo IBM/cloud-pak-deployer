@@ -43,3 +43,31 @@ Detailed descriptions of the vault settings can be found in the sample inventory
 The **File Vault** is the default vault and also the simplest. It does not require a password and all secrets are stored in base-64 encoding in a properties file under the `<status_directory>/vault` directory. The name of the vault file is the `environment_name` you specified in the inventory file or at the command line.
 
 All of the other vault options require some secret manager (IBM Cloud service or Hashicorp Vault) to be available and you need to specify a password or provide a certificate.
+
+### Cloud Pak for Data LDAP configuration
+
+![LDAP_Overview](/images/ldap_user_groups.png)
+
+IBM Cloud Pak for Data can connect to an LDAP user registry in order for users to connect with their LDAP credentials. The configuration of LDAP can be specified in a seperate yaml file in the config folder:  [LDAP and User Group settings](/cpd-design/objects/ldap_user_groups.mdx).
+
+And `ldap_config' entry contains the connectivity information to the LDAP user registry. The `project` and `openshift_cluster_name` values uniquely identify the Cloud Pak for Data cluster instance.
+he `ldap_domain_search_password_vault` entry contains a reference to the vault, which means that as a preparation the password must be stored in the vault used by the Cloud Pak Deployer. 
+If the password is not available, the Cloud Pak Deployer will fail and not able to configure the LDAP connectivity.
+
+### Cloud Pak for Data User Group configuration
+The `ldap_config` can optionally create User Group(s) with references to LDAP Group(s). A `user_groups` entry must contain at least 1 `role_assignments` and 1 `ldap_groups` entry.
+
+*Role Assignment values:*
+- zen_administrator_role
+- zen_user_role
+- wkc_data_scientist_role
+- zen_developer_role
+- zen_data_engineer_role (requires installation of DataStage cartridge to become available)
+
+During the creation of User Group(s) the following validation is performed:
+- The provided role assignment(s) are available in Cloud Pak for Data
+- The provided LDAP group(s) are available in the LDAP registry
+- If the User Group already exists, it ensures the provided LDAP Group(s) are assigned, but no changes to the existing role assignments are performed
+
+### Cloud Pak for Data provisioned instance authorization
+When using Cloud Pak for Data LDAP connectivity and User Groups, it is possible to 
