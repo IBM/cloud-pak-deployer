@@ -1,0 +1,63 @@
+---
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+    kubernetes.io/description: WKC/IIS provides all features of the restricted SCC
+      but runs as user 10032.
+  name: wkc-iis-scc
+readOnlyRootFilesystem: false
+requiredDropCapabilities:
+- KILL
+- MKNOD
+- SETUID
+- SETGID
+runAsUser:
+  type: MustRunAs
+  uid: 10032
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+- configMap
+- downwardAPI
+- emptyDir
+- persistentVolumeClaim
+- projected
+- secret
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: false
+allowedCapabilities: null
+apiVersion: security.openshift.io/v1
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+users:
+- system:serviceaccount:{{ current_cp4d_cluster.project }}:wkc-iis-sa
+
+---
+apiVersion: wkc.cpd.ibm.com/v1beta1
+kind: WKC
+metadata:
+  name: wkc-cr
+  namespace: {{ current_cp4d_cluster.project }}
+spec:
+  license:
+    accept: true
+    license: Enterprise
+  version: {{ current_cp4d_cartridge.version }}
+  storageClass: {{ nfs_storage_class_name }}
+  # install_wkc_core_only: true     # To install the core version of the service, remove the comment tagging from the beginning of the line.
+  # wkc_db2u_set_kernel_params: True     
+  useODLM: true   
+  csNamespace: {{ foundational_services_project }}
+{% if use_entitled_registry | bool %}
+  docker_registry_prefix: cp.icr.io/cp/cpd
+{% else %}
+  docker_registry_prefix: {{ ibm_cloud_cr_server }}/{{ current_cp4d_cluster.container_registry_namespace }}/cp/cpd
+{% endif %}
