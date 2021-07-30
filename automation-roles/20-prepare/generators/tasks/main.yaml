@@ -129,8 +129,43 @@
     generators_index:
       available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
 
-# ### TODO: check if the roles are available, before we even try to run them
 
+
+
+
+
+
+
+
+- set_fact:
+    generator_validation_error_message: ""
+    generator_validation_error_count: 1
+
+- set_fact:
+    generator_validation_error_message: |
+      Validation errors:
+
+# - set_fact:
+#     generator_validation_error_message: {{}}>-
+#       second line
+
+- name: validate schema of each generator (if it exists)
+  include_tasks: validate.yaml
+  vars: 
+    generator:
+      name: "{{ item[0].key }}"
+      path: "{{path_to_generators_dir}}/{{ item[0].key }}"
+      attributes: "{{ item[1] }}"
+      #config: "{{ config_merged }}"
+      config: "{{ all_config }}"
+    GENERATOR_NAME: "{{ item[0].key }}"
+    GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
+  loop: "{{ all_config | dict2items | subelements('value')}}"
+  
+
+- fail:
+    msg: "{{ generator_validation_error_message }}"
+  when: generator_validation_error_count | int > 0
 
 
 
