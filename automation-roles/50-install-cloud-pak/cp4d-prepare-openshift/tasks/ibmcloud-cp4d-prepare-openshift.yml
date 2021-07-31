@@ -55,58 +55,77 @@
       fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group {{ environment_name }} is empty"
       when: secret_value== ""
 
+    - name: Check if DaemonSet cp4d-pull-secret-private exists
+      shell: "oc get daemonset -n kube-system | grep -i '^cp4d-pull-secret-private' | wc -l"
+      register: oc_pull_secret_ds
+
     - name: Set global pull secret for private registry for Cloud Pak for Data
       block:
-      - name: Create temporary directory to hold current pull secret content
-        tempfile:
-          state: directory
-        register: pull_secret_dir
-      - name: Extract the global pull secret
-        shell: |
-          oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
-      - name: Set the global pull secret
-        shell: |
-          cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-            jq --arg private_registry "{{ ibm_cloud_cr_server }}" \
-              --arg pull_secret $(echo -n "iamapikey:{{ secret_value }}" | base64 -w0) \
-              '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
-              > {{ pull_secret_dir.path }}/newdockerconfigjson
-          oc set data secret/pull-secret -n openshift-config \
-            --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
-      - name: Create DaemonSet to set the current pull secret
-        template:
-          src: cp4d-pull-secret-private.j2
-          dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-private.yaml"
-      - name: Create DaemonSet cp4d-pull-secret-private
-        shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-private.yaml"
+        - name: Create temporary directory to hold current pull secret content
+          tempfile:
+            state: directory
+          register: pull_secret_dir
+        - name: Extract the global pull secret
+          shell: |
+            oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
+        - name: Set the global pull secret
+          shell: |
+            cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
+              jq --arg private_registry "{{ ibm_cloud_cr_server }}" \
+                --arg pull_secret $(echo -n "iamapikey:{{ secret_value }}" | base64 -w0) \
+                '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
+                > {{ pull_secret_dir.path }}/newdockerconfigjson
+            oc set data secret/pull-secret -n openshift-config \
+              --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+        - name: Create DaemonSet to set the current pull secret
+          template:
+            src: cp4d-pull-secret-private.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-private.yaml"
+        - name: Create DaemonSet cp4d-pull-secret-private
+          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-private.yaml"
+        - set_fact:
+           reload_workers: True
+      when: 
+      - oc_pull_secret_ds.stdout == "0"
+
   when: not (use_entitled_registry | bool)
 
 - name: Set global pull secret for entitled registry
   block:
+
+    - name: Check if DaemonSet cp4d-pull-secret-entitled exists
+      shell: "oc get daemonset -n kube-system | grep -i '^cp4d-pull-secret-entitled' | wc -l"
+      register: oc_pull_secret_ds
+
     - name: Set global pull secret for entitled registry for Cloud Pak for Data
       block:
-      - name: Create temporary directory to hold current pull secret content
-        tempfile:
-          state: directory
-        register: pull_secret_dir
-      - name: Extract the global pull secret
-        shell: |
-          oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
-      - name: Set the global pull secret
-        shell: |
-          cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-            jq --arg registry "{{ entitled_registry }}" \
-              --arg pull_secret $(echo -n "cp:{{ ibm_cp_entitlement_key }}" | base64 -w0) \
-              '.auths += {($registry): {"auth": $pull_secret, "email": "not-used"}}' \
-              > {{ pull_secret_dir.path }}/newdockerconfigjson
-          oc set data secret/pull-secret -n openshift-config \
-            --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
-      - name: Create DaemonSet to set the current pull secret
-        template:
-          src: cp4d-pull-secret-entitled.j2
-          dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-entitled.yaml"
-      - name: Create DaemonSet cp4d-pull-secret-entitled
-        shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-entitled.yaml"
+        - name: Create temporary directory to hold current pull secret content
+          tempfile:
+            state: directory
+          register: pull_secret_dir
+        - name: Extract the global pull secret
+          shell: |
+            oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
+        - name: Set the global pull secret
+          shell: |
+            cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
+              jq --arg registry "{{ entitled_registry }}" \
+                --arg pull_secret $(echo -n "cp:{{ ibm_cp_entitlement_key }}" | base64 -w0) \
+                '.auths += {($registry): {"auth": $pull_secret, "email": "not-used"}}' \
+                > {{ pull_secret_dir.path }}/newdockerconfigjson
+            oc set data secret/pull-secret -n openshift-config \
+              --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+        - name: Create DaemonSet to set the current pull secret
+          template:
+            src: cp4d-pull-secret-entitled.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-entitled.yaml"
+        - name: Create DaemonSet cp4d-pull-secret-entitled
+          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-entitled.yaml"
+        - set_fact:
+           reload_workers: True
+      when: 
+      - oc_pull_secret_ds.stdout == "0"
+
   when: (use_entitled_registry | bool)
 
 - name: Check if DaemonSet cp4d-kernel-parms exists
@@ -192,8 +211,8 @@
   shell: |
     oc get no --no-headers | grep -v ' Ready' | wc -l 
   register: unready_workers
-  retries: 60
+  retries: 120
   delay: 60
-  until: unready_workers.stdout == 0
+  until: unready_workers.stdout == "0"
   when: reload_workers
 
