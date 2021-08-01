@@ -1,0 +1,19 @@
+---
+- set_fact:
+    cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Get admin password {{ cp4d_admin_password_vault_key_name }} from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+
+- name: Get Route to Cloud Pak for Data
+  shell: |
+    oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+      -o jsonpath="{.items[0].spec.host}"
+  register: cp4d_url
+
+- debug:
+    msg: "CP4D URL: {{ cp4d_url.stdout }}. CP4D admin password: {{ secret_value }}"
