@@ -1,0 +1,39 @@
+---
+title: LDAP and User Groups configuration
+---
+
+File: config/cp4d_ldap.yaml
+
+```
+# Each Cloud Pak for Data Deployment deployed in an OpenShift Project of an OpenShift cluster can have its own LDAP configuration
+ldap_config:
+- project: zen-sample                                                    # Mandatory
+  openshift_cluster_name: sample                                         # Mandatory
+  ldap_host: ldaps://ldap-host                                           # Mandatory
+  ldap_port: 636                                                         # Mandatory
+  ldap_user_search_base: ou=users,dc=ibm,dc=com                          # Mandatory
+  ldap_user_search_field: uid                                            # Mandatory
+  ldap_domain_search_user: uid=ibm_roks_bind_user,ou=users,dc=ibm,dc=com # Mandatory
+  ldap_domain_search_password_vault: ldap_bind_password                  # Mandatory, Password vault reference
+  auto_signup: "false"                                                   # Mandatory
+  ldap_group_search_base: ou=groups,dc=ibm,dc=com                        # Optional, but mandatory when using user groups
+  ldap_group_search_field: cn                                            # Optional, but mandatory when using user groups
+  ldap_mapping_first_name: cn                                            # Optional, but mandatory when using user groups
+  ldap_mapping_last_name: sn                                             # Optional, but mandatory when using user groups
+  ldap_mapping_email: mail                                               # Optional, but mandatory when using user groups
+  ldap_mapping_group_membership: memberOf                                # Optional, but mandatory when using user groups
+  ldap_mapping_group_member: member                                      # Optional, but mandatory when using user groups
+  user_groups:
+  - name: CA_Analytics_Viewer
+    description: User Group for Cognos Analytics Viewers
+    role_assigmnents:
+    - name: zen_administrator_role
+    ldap_groups:
+    - name: cn=ca_viewers,ou=groups,dc=ibm,dc=com
+  - name: CA_Analytics_Administrators
+    description: User Group for Cognos Analytics Administrators
+    role_assigmnents:
+    - name: zen_administrator_role
+    ldap_groups:
+    - name: cn=ca_admins,ou=groups,dc=ibm,dc=com
+```
