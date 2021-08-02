@@ -51,6 +51,16 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     continue
   fi
 
+  # TODO: Remove the patching of Db2 statefulsets once tty issue has been resolved
+  # If cartridge is wkc, check patch Db2 statefulsets
+  if [ "$c" == "wkc" ];then
+    log "Info: Check if we need to patch the Db2 StatefulSets for WKC"
+    oc patch statefulset --namespace $project c-db2oltp-wkc-db2u \
+      -p='{"spec":{"template":{"spec":{"containers":[{"name":"db2u","tty":false}]}}}}}'
+    oc patch statefulset -namespace $project c-db2oltp-iis-db2u \
+      -p='{"spec":{"template":{"spec":{"containers":[{"name":"db2u","tty":false}]}}}}}'
+  fi
+
   # Check if status is completed
   cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
   log "Info: Status of $cr_cr object $cr_name is $cr_status"
