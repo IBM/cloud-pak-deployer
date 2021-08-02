@@ -77,12 +77,21 @@
                 > {{ pull_secret_dir.path }}/newdockerconfigjson
             oc set data secret/pull-secret -n openshift-config \
               --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+        - name: Create secret for DaemonSet
+          shell: |
+            if ! oc get secret -n kube-system cp4d-pull-secret;then
+              oc create secret generic cp4d-pull-secret -n kube-system > /dev/null 2>&1
+            fi
+        - name: Set data for secret
+          shell: |
+            oc set data secret/cp4d-pull-secret -n kube-system \
+              --from-file=newdockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
         - name: Create DaemonSet to set the current pull secret
           template:
-            src: cp4d-pull-secret-private.j2
-            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-private.yaml"
-        - name: Create DaemonSet cp4d-pull-secret-private
-          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-private.yaml"
+            src: cp4d-pull-secret-ds.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-ds.yaml"
+        - name: Create DaemonSet cp4d-pull-secret-ds
+          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-ds.yaml"
         - set_fact:
            reload_workers: True
       when: 
@@ -115,12 +124,21 @@
                 > {{ pull_secret_dir.path }}/newdockerconfigjson
             oc set data secret/pull-secret -n openshift-config \
               --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+        - name: Create secret for DaemonSet
+          shell: |
+            if ! oc get secret -n kube-system cp4d-pull-secret;then
+              oc create secret generic cp4d-pull-secret -n kube-system > /dev/null 2>&1
+            fi
+        - name: Set data for secret
+          shell: |
+            oc set data secret/cp4d-pull-secret -n kube-system \
+              --from-file=newdockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
         - name: Create DaemonSet to set the current pull secret
           template:
-            src: cp4d-pull-secret-entitled.j2
-            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-entitled.yaml"
-        - name: Create DaemonSet cp4d-pull-secret-entitled
-          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-entitled.yaml"
+            src: cp4d-pull-secret-ds.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-ds.yaml"
+        - name: Create DaemonSet cp4d-pull-secret-ds
+          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-pull-secret-ds.yaml"
         - set_fact:
            reload_workers: True
       when: 
