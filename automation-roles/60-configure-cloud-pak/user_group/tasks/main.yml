@@ -3,7 +3,9 @@
     var: cp4d_user_group
 
 - name: Get Route to Cloud Pak for Data
-  shell: "oc --namespace {{ current_cp4d_cluster.project }} get route {{ current_cp4d_cluster.project }}-cpd -o jsonpath=\"{.spec.host}\""
+  shell: |
+    oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+      -o jsonpath="{.items[0].spec.host}"
   register: cp4d_url
 
 - set_fact:
