@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cp4d-crontab-ds
+  namespace: kube-system
+  labels:
+    tier: management
+    app: cp4d-crontab-ds
+spec:
+  selector:
+    matchLabels:
+      name: cp4d-crontab-ds
+  template:
+    metadata:
+      labels:
+        name: cp4d-crontab-ds
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: sleepforever
+          resources:
+            requests:
+              cpu: 0.01
+          image: registry.access.redhat.com/ubi8:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              date ;
+              /usr/bin/cp -f /cp4d-node-fix-secret/cp4d-node-fix.sh /ext-cp4d-node-fix/ ;
+              chmod +x /ext-cp4d-node-fix/cp4d-node-fix.sh ;
+              touch /ext-var/spool/cron/root ;
+              if ! grep -q 'cp4d-node-fix' /ext-var/spool/cron/root;then 
+                echo '*/5 * * * * bash -c "date >> /tmp/cp4d-node-fix.log; sh /cp4d-node-fix/cp4d-node-fix.sh"' >> /ext-var/spool/cron/root ;
+              fi ;
+              cat /ext-var/spool/cron/root ;
+              while true; do
+                sleep 100000;
+              done
+          volumeMounts:
+            - name: fix-script
+              mountPath: /cp4d-node-fix-secret
+            - name: modifycp4dnodefix
+              mountPath: /ext-cp4d-node-fix
+            - name: modifytmp
+              mountPath: /ext-tmp
+            - name: modifyvar
+              mountPath: /ext-var
+      volumes:
+        - name: fix-script
+          secret:
+            secretName: cp4d-node-fix
+        - name: modifycp4dnodefix
+          hostPath:
+            path: /cp4d-node-fix
+        - name: modifytmp
+          hostPath:
+            path: /tmp
+        - name: modifyvar
+          hostPath:
+            path: /var
+
+

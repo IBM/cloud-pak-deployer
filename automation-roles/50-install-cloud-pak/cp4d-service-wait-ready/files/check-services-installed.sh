@@ -57,7 +57,7 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     log "Info: Check if we need to patch the Db2 StatefulSets for WKC"
     oc patch statefulset --namespace $project c-db2oltp-wkc-db2u \
       -p='{"spec":{"template":{"spec":{"containers":[{"name":"db2u","tty":false}]}}}}}'
-    oc patch statefulset -namespace $project c-db2oltp-iis-db2u \
+    oc patch statefulset --namespace $project c-db2oltp-iis-db2u \
       -p='{"spec":{"template":{"spec":{"containers":[{"name":"db2u","tty":false}]}}}}}'
   fi
 

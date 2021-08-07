@@ -13,6 +13,7 @@
 
 - set_fact:
     reload_workers: False
+    reboot_workers: False
 
 - name: Create private registries configuration (ImageContentSourcePolicy) for CP4D 4.0 with private registry
   block:
@@ -32,7 +33,7 @@
         - debug:
             msg: "TODO: Create DaemonSet to apply the configuration"
         - set_fact:
-            reload_workers: True
+            reboot_workers: True
       when: 
       - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
       - oc_icsp_cm_exists.stdout == "0"
@@ -55,9 +56,11 @@
       fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group {{ environment_name }} is empty"
       when: secret_value== ""
 
-    - name: Check if DaemonSet cp4d-pull-secret-private exists
-      shell: "oc get daemonset -n kube-system | grep -i '^cp4d-pull-secret-private' | wc -l"
-      register: oc_pull_secret_ds
+    - name: Check if private registry already exists in global pull secret
+      shell: |
+        oc extract secret/pull-secret -n openshift-config --confirm --to=- | \
+          jq -r '.auths."{{ ibm_cloud_cr_server }}"' | grep auth | wc -l
+      register: private_pull_secret
 
     - name: Set global pull secret for private registry for Cloud Pak for Data
       block:
@@ -95,16 +98,18 @@
         - set_fact:
            reload_workers: True
       when: 
-      - oc_pull_secret_ds.stdout == "0"
+      - private_pull_secret.stdout == "0"
 
   when: not (use_entitled_registry | bool)
 
 - name: Set global pull secret for entitled registry
   block:
 
-    - name: Check if DaemonSet cp4d-pull-secret-entitled exists
-      shell: "oc get daemonset -n kube-system | grep -i '^cp4d-pull-secret-entitled' | wc -l"
-      register: oc_pull_secret_ds
+    - name: Check if entitled registry already exists in global pull secret
+      shell: |
+        oc extract secret/pull-secret -n openshift-config --confirm --to=- | \
+          jq -r '.auths."{{ entitled_registry }}"' | grep auth | wc -l
+      register: entitled_pull_secret
 
     - name: Set global pull secret for entitled registry for Cloud Pak for Data
       block:
@@ -142,52 +147,28 @@
         - set_fact:
            reload_workers: True
       when: 
-      - oc_pull_secret_ds.stdout == "0"
+      - entitled_pull_secret.stdout == "0"
 
   when: (use_entitled_registry | bool)
 
-- name: Check if DaemonSet cp4d-kernel-parms exists
-  shell: "oc get daemonset -n kube-system | grep -i '^cp4d-kernel-parms' | wc -l"
-  register: oc_tuned_ds_exists
+# Set kernel parameters via Tuned
+- name: Check if the Tuned {{ cp4d_tuned_name }} exists
+  shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
+  register: oc_tuned_exists
 
-- name: Set kernel parameters
+- name: Configure Tuned {{ cp4d_tuned_name }}
   block:
-    - name: Generate kernel parameters DaemonSet
+    - name: Create Tuned yaml
       template:
-        src: cp4d-kernel-parms.j2
-        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-kernel-parms.yaml"
-    - name: Create kernel parameters DaemonSet
-      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-kernel-parms.yaml"
+        src: cp4d-tuned.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
+    - name: Create Tuned cp4d_ipc
+      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
     - set_fact:
         reload_workers: True
-  when: oc_tuned_ds_exists.stdout == "0"
+  when: oc_tuned_exists.stdout == "0"
 
-# On ROKS, the KubeletConfig is not respected, however we can use the existence
-# of the KubeletConfig object to determins if the workers must be reloaded
-# TODO: Replace with smarter logic to determine when nodes must be reloaded
-- name: Check if the KubeletConfig {{ kubelet_config_name }} exists
-  shell: "oc get KubeletConfig | grep -i '^{{ kubelet_config_name }}' | wc -l"
-  register: oc_kubeletconfig_exists
-
-- name: Configure KubeletConfig {{ kubelet_config_name }}
-  block:
-    - name: Create KubeletConfig yaml
-      template:
-        src: cp4d-kubeletconfig.j2
-        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml"
-    - name: Create KubeletConfig {{ kubelet_config_name }}
-      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml"
-    - name: Generate Kubelet config DaemonSet
-      template:
-        src: cp4d-kubeletconfig-ds.j2
-        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig-ds.yaml"
-    - name: Create Kubelet config DaemonSet
-      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig-ds.yaml"    
-    - set_fact:
-        reload_workers: True
-  when: oc_kubeletconfig_exists.stdout == "0"
-
-# TODO: Should we process other worker pools too? Probably all workers pools except OCS should be replaced.
+# TODO: Should we process other worker pools too? Probably all workers pools except OCS should be in scope.
 - name: Get the worker nodes for the default worker pool
   command: |
     ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} \
@@ -208,29 +189,59 @@
     get_ids: "[*].id"
   when: reload_workers
 
-- name: Reboot the workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+- set_fact:
+    number_of_workers: "{{ worker_ids | length }}"
+  when: reload_workers
+
+- name: Reload (replace) the workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   command: |
-    ibmcloud oc worker reboot --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker {{ worker_item }} -f 
+    ibmcloud oc worker replace --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker {{ worker_item }} -f 
   loop: "{{ worker_ids }}"
   loop_control:
     loop_var: worker_item
   when: reload_workers
 
-- set_fact:
-    number_of_workers: "{{ worker_ids | length }}"
-  when: reload_workers
-
-- name: Wait for 3 minutes to allow workers to start rebooting
+- name: Wait for 3 minutes to allow workers to start being replaced
   pause:
     minutes: 3
   when: reload_workers
 
-- name: Wait for all workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }} to become ready
+- name: Wait for {{ number_of_workers }} workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }} to be redeployed
   shell: |
-    oc get no --no-headers | grep -v ' Ready' | wc -l 
-  register: unready_workers
-  retries: 120
+    ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker-pool default --output json | \
+      jq -r '.[] | select(.lifecycle.actualState=="deployed").lifecycle.actualState' | \
+      wc -l
+  register: deployed_workers
+  retries: 60
   delay: 60
-  until: unready_workers.stdout == "0"
+  until: deployed_workers.stdout == number_of_workers
   when: reload_workers
+
+- name: Wait for 5 minutes to allow workers to stabilize
+  pause:
+    minutes: 5
+  when: reload_workers
+
+# On ROKS, there is no MachineConfig operator to update system settings so we're changing kubelet and crio settings
+# in the files directly via a cron job on the worker. If there is a change in the settings, the cron job will recycle
+# the kubelet and crio daemons.
+- name: Create cp4d-node-fix.sh script to change node settings
+  template:
+    src: cp4d-node-fix.j2
+    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix.sh"
+- name: Create secret for DaemonSet cp4d-node-fix-ds
+  shell: |
+    if ! oc get secret -n kube-system cp4d-node-fix;then
+      oc create secret generic cp4d-node-fix -n kube-system > /dev/null 2>&1
+    fi
+- name: Set data for secret cp4d-node-fix
+  shell: |
+    oc set data secret/cp4d-node-fix -n kube-system \
+      --from-file=cp4d-node-fix.sh="{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix.sh"
+- name: Create DaemonSet to change node settings via crontab
+  template:
+    src: cp4d-node-fix-ds.j2
+    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml"
+- name: Create DaemonSet cp4d-node-fix-ds
+  shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml"
 
