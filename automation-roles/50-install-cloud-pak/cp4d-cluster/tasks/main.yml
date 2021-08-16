@@ -3,6 +3,29 @@
 - debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
+- name: Get IBM Entitled Registry key
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ibm_cp_entitlement_key"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    ibm_cp_entitlement_key: "{{ secret_value }}"
+
+- fail:
+    msg: "No registry namespace specified for CP4D but cannot pull from entitled registry because of missing entitlement key in vault"
+  when: ibm_cp_entitlement_key == "" and (current_cp4d_cluster.container_registry_namespace | default("")) == ""
+
+- set_fact:
+    use_entitled_registry: False
+
+- name: Use entitled registry if entitlement key available and no registry namespace specified
+  set_fact:
+    use_entitled_registry: True
+  when:
+    - (current_cp4d_cluster.container_registry_namespace | default("")) == ""
+
 - name: Prepare OpenShift cluster for Cloud Pak for Data
   include_role:
     name: cp4d-prepare-openshift
@@ -11,9 +34,12 @@
   include_tasks: cpd-cli-cp4d-35.yml
   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
 
-- name: Mirror images for Cloud Pak for Data 4.0
+- name: Mirror images for Cloud Pak for Data 4.0 if entitlement key is in vault
   include_tasks: mirror-images-cp4d-40.yml
-  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
+  when: 
+  - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
+  - ibm_cp_entitlement_key != ""
+  - not (use_entitled_registry | bool)
 
 - name: Login to the OpenShift cluster
   include_role:
@@ -49,9 +75,60 @@
     path: "{{status_dir}}/log"
     state: directory
 
-- name: Loop through each cp4d cartridge of the OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+- name: Prepare OpenShift operator subscriptions for each of the selected cp4d cartridges
   include_role:
-    name: cp4d-service
+    name: cp4d-service-prepare
   loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
   loop_control:
     loop_var: current_cp4d_cartridge
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
+
+- name: Install cp4d cartridges into OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+  include_role:
+    name: cp4d-service-install
+  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge
+
+- name: Wait for cartridges in OpenShift Project {{ current_cp4d_cluster.project }} to complete installation
+  include_role:
+    name: cp4d-service-wait-ready
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
+
+- when: "all_config.ldap_config is defined"
+  block:
+    - set_fact:
+        cp4d_ldap_config: "{{ all_config.ldap_config|json_query(query_ldap) | first }}"
+      vars:
+        query_ldap: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
+
+    - debug:
+        msg: "{{ cp4d_ldap_config }}"
+
+    - name: Configure CP4D LDAP connectivity
+      include_tasks: configure-cpd-ldap-integration.yml
+      when: cp4d_configure_cpd_ldap == 0
+
+    - name: Create CP4D User Groups
+      include_role:
+        name: user_group
+      loop: "{{ cp4d_ldap_config.user_groups | default([]) }}"
+      loop_control:
+        loop_var: cp4d_user_group
+
+- when: "all_config.cp4d_instance_configuration is defined"
+  block:
+    - set_fact:
+        cp4d_instance_config: "{{ all_config.cp4d_instance_configuration|json_query(query_instance_config) | first }}"
+      vars:
+        query_instance_config: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"    
+
+    - debug:
+        msg: "{{ cp4d_instance_config }}"    
+
+    - name: Configure CP4D instance authorization
+      include_role:
+        name: instance_configuration
+      loop: "{{ cp4d_instance_config.cartridges | default([]) }}"
+      loop_control:
+        loop_var: cp4d_instance

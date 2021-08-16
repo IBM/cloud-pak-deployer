@@ -2,6 +2,18 @@ data "ibm_is_image" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.infrastructure.image}}"
 }
 
+{% if generator.attributes.storage is defined %}
+{% for storage in generator.attributes.storage %}
+resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}" {
+    name           = "{{generator.attributes.name}}-disk-{{storage.name}}"
+    resource_group = data.ibm_resource_group.thisresourcegroup.id
+    profile        = "{{storage.profile}}"
+    zone           = "{{generator.attributes.infrastructure.zone }}"
+    capacity       = {{storage.size}}
+}
+{% endfor %}
+{% endif %}
+
 resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.name }}"
     resource_group =  data.ibm_resource_group.thisresourcegroup.id
@@ -23,6 +35,14 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
         subnet = ibm_is_subnet.{{generator.attributes.infrastructure.subnet | replace("-", "_") }}.id
         primary_ipv4_address = "{{generator.attributes.infrastructure.primary_ipv4_address}}"
     }
+
+{% if generator.attributes.storage is defined %}
+    volumes = [
+        {% for storage in generator.attributes.storage %}
+        ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}.id{{ "," if not loop.last else "" }}
+        {% endfor %}
+    ]
+{% endif %}
 }
 
 {% if generator.attributes.infrastructure.public_ip is defined and generator.attributes.infrastructure.public_ip is sameas true %}

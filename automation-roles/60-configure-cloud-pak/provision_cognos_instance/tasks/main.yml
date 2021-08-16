@@ -12,11 +12,40 @@
   block:
 
   - tempfile:
+      path: "{{ status_dir }}"
       state: directory
     register: cp4d_automation_temp_dir
 
+  - set_fact:
+      cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+  - name: Validate if an existing admin password for {{ cp4d_admin_password_vault_key_name }} exists in the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "{{ cp4d_admin_password_vault_key_name }}"
+      secret_group: "{{ environment_name }}" 
+
+  - name: when the password exists, assign it to the cp4d_login_password variable
+    block:
+
+      - name: set cp4d admin passwordpassword
+        set_fact:
+          cp4d_login_password: "{{ secret_value }}"
+
+      - set_fact:
+          cp4d_configure_cpd_admin: 1
+
+    when: "not secret_value==''"
+
+  - name: Error if no secret value is returned
+    fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
+    when: "secret_value==''"
+
   - name: Get Route to Cloud Pak for Data
-    shell: "oc --namespace {{ current_cp4d_cluster.project }} get route {{ current_cp4d_cluster.project }}-cpd -o jsonpath=\"{.spec.host}\""
+    shell: |
+      oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+          -o jsonpath="{.items[0].spec.host}"
     register: cp4d_url
 
   - name: Login to Cloud Pak for Data
@@ -38,6 +67,10 @@
       - name: "Cognos Analytics instance already exists in OpenShift project {{ current_cp4d_cluster.project }}"
         debug:
           msg: "Cognos instance already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_cognos_instance"
+  
+  # Name of metastore credentials in Db2aaS
+  - set_fact:
+      ca_metastore_credentials_name: "{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}_{{ current_cp4d_cluster.project| replace('-','_') }}_ca"
 
   - when: "cognos_lookup_result_json.total_count == 0"
     block:
@@ -47,28 +80,25 @@
     - name: Check availability of DB2 service instance {{ current_cp4d_cartridge.metastore_ref }}
       shell: "ibmcloud resource service-instance {{ current_cp4d_cartridge.metastore_ref }}"
 
-    - name: Check availability of DB2 service key {{ current_cp4d_cartridge.metastore_ref }}-Credentials for service instance {{ current_cp4d_cartridge.metastore_ref }}
-      shell: "ibmcloud resource service-keys --instance-name {{ current_cp4d_cartridge.metastore_ref }} | grep {{ current_cp4d_cartridge.metastore_ref }}-Credentials | wc -l"
+    - name: Check availability of DB2 service key {{ ca_metastore_credentials_name }} for service instance {{ current_cp4d_cartridge.metastore_ref }}
+      shell: "ibmcloud resource service-keys --instance-name {{ current_cp4d_cartridge.metastore_ref }} | grep {{ ca_metastore_credentials_name }} | wc -l"
       register: db2_service_key_lookup_result
 
     - when: "not db2_service_key_lookup_result.stdout == '0'"
       block:
         - name: "Skip provision Cognos Analytics instance"
           debug:
-            msg: "The DB service instance {{ current_cp4d_cartridge.metastore_ref }} already contains DB2 service key {{ current_cp4d_cartridge.metastore_ref }}-Credentials. Ensure this database is not used by a different CA instance. Delete the DB2 service key and re-run."
+            msg: "The DB service instance {{ current_cp4d_cartridge.metastore_ref }} already contains DB2 service key {{ ca_metastore_credentials_name }}. Ensure this database is not used by a different CA instance. Delete the DB2 service key and re-run."
 
     - when: "db2_service_key_lookup_result.stdout == '0'"
       block:
       - name: Create DB2 service key {{ cp4d_ca_db2_service_key_name }} if not available
-        shell: "ibmcloud resource service-key-create {{ current_cp4d_cartridge.metastore_ref }}-Credentials --instance-name {{ current_cp4d_cartridge.metastore_ref }}"
+        shell: "ibmcloud resource service-key-create {{ ca_metastore_credentials_name }} --instance-name {{ current_cp4d_cartridge.metastore_ref }}"
         when: db2_service_key_lookup_result.stdout == "0"
 
       - name: Get DB2 service key {{ current_cp4d_service['cp4d_service']['service_name'] }}
-        shell: "ibmcloud resource service-key {{ current_cp4d_cartridge.metastore_ref }}-Credentials --output json"
+        shell: "ibmcloud resource service-key {{ ca_metastore_credentials_name }} --output json"
         register: db2_service_key_json
-
-      #- debug:
-      #    msg: "{{ db2_service_key_json }}"
 
       - template:
           src: cognos_service_credentials.json.j2
@@ -136,10 +166,17 @@
               msg: "{{ create_cognos_connection_result }}"
         when: "cp4d_cognos_db2_content_repo|length == 0"
 
-      - name: Create cognos instance json file
+      - name: Create cognos instance json file for CP4D 3.5
         template:
           src: cognos_instance.json.j2
           dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
+
+      - name: Create cognos instance json file for CP4D 4.0
+        template:
+          src: cognos_instance_40_v2.json.j2
+          dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
       - name: Create Cognos instance
         shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
@@ -151,7 +188,7 @@
       - set_fact:
           cognos_instance_create_result_json: "{{ cognos_instance_create_result.stdout | from_json }}"
 
-      - name: Wait until Cognos Analytics artifacts pod has started and is ready
+      - name: Wait until Cognos Analytics artifacts pod has started and is ready for CP4D 3.5
         command: oc get po -l chart=artifacts --no-headers -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
         register: ca_artifacts_pod
         retries: 60
@@ -159,6 +196,17 @@
         until:
           - ca_artifacts_pod.rc==0
           - ca_artifacts_pod.stdout!=''
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
+
+      - name: Wait until Cognos Analytics artifacts pod has started and is ready for CP4D 4.0
+        command: oc get po -l app.kubernetes.io/component=ca-artifacts --no-headers -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
+        register: ca_artifacts_pod
+        retries: 60
+        delay: 10
+        until:
+          - ca_artifacts_pod.rc==0
+          - ca_artifacts_pod.stdout!=''
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
       - name: Wait for a bit so that all Cognos Analytics containers are starting
         pause:
@@ -169,3 +217,15 @@
 
       - debug:
           msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 45 minutes to complete"
+
+      - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
+        shell: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
+        register: ca_provision_complete
+        retries: 140
+        delay: 30
+        until:
+          - ca_provision_complete.rc==0
+          - ca_provision_complete.stdout=='7'
+
+      - debug:
+          msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"

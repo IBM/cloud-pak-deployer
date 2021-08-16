@@ -1,0 +1,15 @@
+---
+- name: Wait until all cartridges have been installed, check logs in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-cartridges.log
+  script: |
+    check-services-installed.sh \
+      {{ status_dir }} \
+      {{ current_cp4d_cluster.project }} \
+      {{ current_cp4d_cluster.cartridges | default([]) | to_json | b64encode }} \
+      {{ cartridge_cr | to_json | b64encode }}
+  register: wait_cartridges_result
+  until: wait_cartridges_result.stdout.find('All cartridges successfully completed') != -1
+  retries: 500
+  delay: 120
+
+
+

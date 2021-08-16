@@ -13,12 +13,14 @@
 - name: Get secret from secret file if it was specified
   set_fact:
     secret_value_to_set: "{{ lookup('file', secret_file) }}"
-  when: secret_file is defined
+  when: 
+  - secret_file is defined
+  - secret_file != ''
 
 - name: Set secret value from payload if no file specified
   set_fact:
     secret_value_to_set: "{{ secret_payload }}"
-  when: secret_file is not defined
+  when: (secret_file is not defined) or (secret_file == '')
 
 - name: Set Secret Vault Hashicorp
   block:
@@ -68,3 +70,10 @@
       vars:
         file_secret_payload: "{{ secret_value_to_set | b64encode }}"
   when: "vault_type == 'file-vault'"
+
+- name: Secret {{ secret_group }}/{{ secret_name }} was set
+  debug:
+    msg: ""
+  vars:
+    ansible_callback_diy_runner_on_ok_msg: |+2
+      Secret {{ secret_group }}/{{ secret_name }} was set

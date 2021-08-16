@@ -1,0 +1,17 @@
+---
+- name: Provision Data Virtualization instance if service dv is requested
+  block:
+    - name: Run Data Virtualization instance playbook
+      include_role:
+        name: provision_dv_instance
+  when: current_cp4d_cartridge.name != None and current_cp4d_cartridge.name == 'dv'
+
+- name: Provision Cognos instance if service ca is requested
+  block:
+    - name: Run Cognos Analytics instance playbook
+      include_role:
+        name: provision_cognos_instance
+  when: 
+  - current_cp4d_cartridge.name != None 
+  - current_cp4d_cartridge.name == 'ca' 
+  - (current_cp4d_cartridge.metastore_ref | default("")) != ""

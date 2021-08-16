@@ -73,9 +73,25 @@
       loop_var: current_roks_cluster
 
   # 50 - Install Cloud Pak
-  - name: Loop through each cp4d entry
+  - name: Install Cloud Pak
     include_role:
       name: cp4d-cluster
+    loop: "{{ all_config.cp4d | default([]) }}"
+    loop_control:
+      loop_var: current_cp4d_cluster
+
+  # 60 - Configure Cloud Pak
+  - name: Configure Cloud Pak
+    include_role:
+      name: cp4d-cluster-configure
+    loop: "{{ all_config.cp4d | default([]) }}"
+    loop_control:
+      loop_var: current_cp4d_cluster
+
+  # 80 - Smoke tests
+  - name: Cloud Pak smoke tests
+    include_role:
+      name: cp4d-cluster-smoke-tests
     loop: "{{ all_config.cp4d | default([]) }}"
     loop_control:
       loop_var: current_cp4d_cluster

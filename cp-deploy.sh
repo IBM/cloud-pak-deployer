@@ -420,6 +420,16 @@ if [ ! -z $VAULT_SECRET_FILE ];then
   touch ${VAULT_SECRET_FILE}
 fi
 
+# Check if a container is currently running
+ps_cmd="${CONTAINER_ENGINE} ps"
+CONTAINER_ID=$(eval $ps_cmd | grep 'cloud-pak-deployer' | awk '{print $1}')
+if [[ "$CONTAINER_ID" != "" ]] && [[ "$SUBCOMMAND" == "environment" ]];then
+  echo "Warning: Cloud Pak Deployer container is already active ($CONTAINER_ID), tailing logs !!!"
+  sleep 2
+  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
+  exit 0
+fi
+
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
 
@@ -451,8 +461,11 @@ if [ ! -z $GIT_REPO_URL ];then
 fi
 
 if [ ! -z $VAULT_GROUP ];then
-  run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP} \
-            -e VAULT_SECRET=${VAULT_SECRET} \
+  run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
+fi
+
+if [ ! -z $VAULT_SECRET ];then
+   run_cmd+=" -e VAULT_SECRET=${VAULT_SECRET} \
             -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
             -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
   if [ ! -z $VAULT_SECRET_FILE ];then
@@ -462,7 +475,6 @@ fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
-run_cmd+=" -e ibm_cp4d_entitlement_key=${ibm_cp4d_entitlement_key}"
 
 run_cmd+=" cloud-pak-deployer"
 
