@@ -1,0 +1,61 @@
+---
+- name: check if the file exists
+  stat:
+    path: "{{ generator.path }}/preprocessor.py"
+  register: preprocessorscript_stat
+
+- name: if a preprocessor script was found, run it via pre_execution_processing.py
+  block:
+  # - name: include the file
+  #   include_vars: 
+  #     file: "{{ generator.path }}/generator.yaml"
+  #     name: schemafile_content
+
+  # - debug:
+  #     var: schemafile_content
+
+
+
+
+# TODO: decide what comes first: pre-process the config or validate validate the config?
+# TODO: Only preprocess for now, leave the validation untouched. will need cleanup
+  - name: run the preprocess script ({{ generator.name }})
+    shell:
+      cmd: "python3 pre_execution_processor.py -p {{ generator.path }}/preprocessor.py"
+      #cmd: "pwd"
+      chdir: "{{ role_path }}/scripts"
+    register: preprocess_result
+
+# {{schemafile_content | to_yaml | b64encode }} {{generator.attributes | to_yaml | b64encode }} {{generator.config | to_yaml | b64encode }}"
+
+  - debug:
+      var: preprocess_result
+  # - name: 
+  #   set_fact:
+  #     validator_received_errors: "{{ preprocess_result.stdout | from_json}}"
+
+  # - debug:
+  #     var: validator_received_errors
+
+  # - name: create a new error
+  #   set_fact:
+  #     generator_validator_error: ""
+
+  # - name: create a new error
+  #   set_fact:
+  #     generator_validator_error: |
+  #       this is an error for {{ generator.name }} ({{ generator.attributes.name }}) in {{ generator.path }}
+  #       {{ error_item.path }}
+  #       {{ error_item.message }}
+  #   loop: "{{ validator_received_errors.errors }}"
+  #   loop_control:
+  #     loop_var: error_item
+
+  # - set_fact:
+  #     generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
+  #     generator_validation_error_message: |
+  #       {{ generator_validation_error_message }}
+  #       {{ generator_validator_error }}
+  when: preprocessorscript_stat.stat.exists==true
+
+

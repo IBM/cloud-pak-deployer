@@ -149,8 +149,22 @@
 #     generator_validation_error_message: {{}}>-
 #       second line
 
-- name: validate schema of each generator (if it exists)
-  include_tasks: validate.yaml
+# TODO: decide what should happen with the 'old' validation strategy
+# - name: validate schema of each generator (if it exists)
+#   include_tasks: validate.yaml
+#   vars: 
+#     generator:
+#       name: "{{ item[0].key }}"
+#       path: "{{path_to_generators_dir}}/{{ item[0].key }}"
+#       attributes: "{{ item[1] }}"
+#       #config: "{{ config_merged }}"
+#       config: "{{ all_config }}"
+#     GENERATOR_NAME: "{{ item[0].key }}"
+#     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
+#   loop: "{{ all_config | dict2items | subelements('value')}}"
+
+- name: preprocess 
+  include_tasks: pre_execution_processing.yaml
   vars: 
     generator:
       name: "{{ item[0].key }}"
@@ -161,8 +175,8 @@
     GENERATOR_NAME: "{{ item[0].key }}"
     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
   loop: "{{ all_config | dict2items | subelements('value')}}"
-  
 
+# TODO: Remove this 'fail' task 
 - fail:
     msg: "{{ generator_validation_error_message }}"
   when: generator_validation_error_count | int > 0
