@@ -174,7 +174,7 @@
 
       - name: Create cognos instance json file for CP4D 4.0
         template:
-          src: cognos_instance_40_v2.json.j2
+          src: cognos_instance_40.json.j2
           dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
         when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
@@ -214,9 +214,14 @@
 
       - name: Destroy the pod so Cognos Analytics instance provisioning continues
         shell: "oc delete pod -l chart=artifacts"
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
+
+      - name: Destroy the pod so Cognos Analytics 4.0 instance provisioning continues
+        shell: "oc delete pod {{ ca_artifacts_pod.stdout }}"
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
       - debug:
-          msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 45 minutes to complete"
+          msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
       - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
         shell: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
