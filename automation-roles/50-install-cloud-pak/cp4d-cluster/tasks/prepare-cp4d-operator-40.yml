@@ -12,39 +12,38 @@
 - name: Generate definition for OperatorGroup
   template:
     src: operator-group.j2
-    dest: "{{status_dir}}/openshift/operator-group.yml"
+    dest: "{{ status_dir }}/cp4d/operator-group.yml"
 
 - name: Create OperatorGroup
   command: |
-    oc apply -f "{{status_dir}}/openshift/operator-group.yml"
+    oc apply -f "{{ status_dir }}/cp4d/operator-group.yml"
 
-- name: Process all case files in the {{ config_dir }}/case directory
+- name: Retrieve all case files in the {{ case_dir }} directory
   find:
-    paths: "{{ config_dir }}/case"
+    paths: "{{ case_dir }}"
     patterns: "*.tgz"
   register: case_files
   when: not (use_entitled_registry | bool)
 
-- name: Create catalog sources associated with case files
-  include: create-catalog-sources-case.yml
+- name: Create catalog sources from case files in {{ case_dir }} directory
+  include: create-catalog-source-case-file.yml
   loop: "{{ case_files.files }}"
   loop_control:
     loop_var: case_file
   when: not (use_entitled_registry | bool)
 
-- name: Create catalog sources associated with case files
+- name: Create catalog sources for entitled registry
   include: create-catalog-sources-entitled.yml
-  when: (use_entitled_registry | bool)
 
 # Create platform operator subscription
 - name: Prepare yaml file for platform operator subscription
   template:
     src: cpd-platform-subscription.j2
-    dest: "{{status_dir}}/openshift/cpd-operator-subscription.yml"
+    dest: "{{ status_dir }}/cp4d/cpd-operator-subscription.yml"
 
 - name: Create subscription for the platform operator
   command: |
-    oc apply -f "{{status_dir}}/openshift/cpd-operator-subscription.yml"
+    oc apply -f "{{ status_dir }}/cp4d/cpd-operator-subscription.yml"
 
 # Wait until subscription has been successfully created
 - name: Wait until Platform Operator CSV has status Succeeded

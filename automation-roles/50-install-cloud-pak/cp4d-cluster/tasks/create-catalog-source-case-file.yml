@@ -12,26 +12,40 @@
 - debug:
     var: inventory_name
 
-- name: Install CatalogSource for platform operator from case file {{ case_file.path }}
+- name: Install CatalogSource for platform operator from case file {{ case_file.path }} using private registry
   shell: |
     cloudctl case launch --case {{ case_file.path }} \
       --inventory {{ inventory_name }} \
       --namespace openshift-marketplace \
       --action install-catalog \
       --args "--registry {{ ibm_cloud_cr_server }}/{{ current_cp4d_cluster.container_registry_namespace }}/cpopen \
-      --inputDir {{ config_dir }}/case \
+      --inputDir {{ case_dir }} \
       --recursive"
-  when: case_name == "ibm-cp-datacore"
+  when: 
+  - case_name == "ibm-cp-datacore"
 
-- name: Install CatalogSource using case file {{ case_file.path }}
+- name: Install CatalogSource for foundational services from case file {{ case_file.path }} using private registry
+  shell: |
+    cloudctl case launch --case {{ case_file.path }} \
+      --inventory {{ inventory_name }} \
+      --namespace openshift-marketplace \
+      --action install-catalog \
+      --args "--registry {{ ibm_cloud_cr_server }}/{{ current_cp4d_cluster.container_registry_namespace }}/cpopen \
+      --inputDir {{ case_dir }} \
+      --recursive"
+  when: 
+  - case_name == "ibm-cp-common-services"
+
+- name: Install CatalogSource using case file {{ case_file.path }} using private registry
   shell: |
     cloudctl case launch --case {{ case_file.path }} \
       --inventory {{ inventory_name }} \
       --namespace openshift-marketplace \
       --action install-catalog \
       --args "--registry {{ ibm_cloud_cr_server }}/{{ current_cp4d_cluster.container_registry_namespace }} \
-      --inputDir {{ config_dir }}/case \
+      --inputDir {{ case_dir }} \
       --recursive"
   when: 
   - inventory_name != ""
   - case_name != "ibm-cp-datacore"
+  - case_name != "ibm-cp-common-services"
