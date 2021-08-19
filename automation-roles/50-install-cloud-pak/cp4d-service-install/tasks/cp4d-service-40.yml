@@ -19,10 +19,10 @@
 - name: Prepare yaml file for custom resource {{ cr_cr }} for cartridge {{ current_cp4d_cartridge.name }}
   template:
     src: "{{ current_cp4d_cartridge.name }}-cr.j2"
-    dest: "{{status_dir}}/openshift/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
   when: current_cp4d_cartridge.name != "lite"
 
 - name: Create CR for cartridge {{ current_cp4d_cartridge.name }}
   command: |
-    oc apply -f "{{status_dir}}/openshift/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+    oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
   when: current_cp4d_cartridge.name != "lite"
