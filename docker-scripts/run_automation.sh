@@ -115,6 +115,7 @@ export ACTION=${ACTION,,}
 case "$SUBCOMMAND" in
 env|environment)
   if [ "$ACTION" == "apply" ];then
+    export ANSIBLE_CONFIG=$PWD/ansible-apply.cfg && \
     ansible-playbook \
       -i ${INV_DIR} \
       playbooks/playbook-env-apply.yml \
@@ -123,6 +124,7 @@ env|environment)
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
       --extra-vars confirm_destroy=${CONFIRM_DESTROY} ${VERBOSE_ARG}
   elif [ "$ACTION" == "destroy" ];then
+    export ANSIBLE_CONFIG=$PWD/ansible-apply.cfg && \
     ansible-playbook \
       -i ${INV_DIR} \
       playbooks/playbook-env-destroy.yml \
