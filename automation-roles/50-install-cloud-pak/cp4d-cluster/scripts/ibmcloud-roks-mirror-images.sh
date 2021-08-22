@@ -1247,11 +1247,26 @@ do_image_mirror_case_images() {
         echo "${oc_cmd}"
         eval ${oc_cmd}
 
-        if [[ "$?" -ne 0 ]]; then
-            # On error we need to clean up our mirrored csv file
-            cleanup_mirrored_csv_files_from_current_run
-            
-            exit 11
+        mirror_exit=$?
+
+        if [[ "$mirror_exit" -ne 0 ]]; then
+
+            echo "[INFO] Start mirroring CASE images using skopeo ..."
+
+            while read in; do
+                src_image=$(echo $in | cut -d= -f1)
+                tgt_image=$(echo $in | cut -d= -f2)
+                skopeo_cmd="skopeo copy --all --authfile ${AUTH_JSON} --dest-tls-verify=false --src-tls-verify=false docker://${src_image} docker://${tgt_image}" ;
+                echo "${skopeo_cmd}"
+                eval ${skopeo_cmd}
+
+                if [[ "$?" -ne 0 ]]; then
+                    # On error we need to clean up our mirrored csv file
+                    cleanup_mirrored_csv_files_from_current_run
+
+                    exit 11
+                fi
+            done < ${map_file}
         fi
     done
 
