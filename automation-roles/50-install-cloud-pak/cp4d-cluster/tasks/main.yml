@@ -26,6 +26,11 @@
   when:
     - (current_cp4d_cluster.container_registry_namespace | default("")) == ""
 
+- name: Create Cloud Pak for Data directory for generated files
+  file:
+    path: "{{ status_dir }}/cp4d"
+    state: directory
+
 - name: Prepare OpenShift cluster for Cloud Pak for Data
   include_role:
     name: cp4d-prepare-openshift
@@ -34,11 +39,16 @@
   include_tasks: cpd-cli-cp4d-35.yml
   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
 
-- name: Mirror images for Cloud Pak for Data 4.0 if entitlement key is in vault
+- name: Prepare case files for Cloud Pak for Data 4.0 when using private registry
+  include_tasks: prepare-cp4d-case-files-40.yml
+  when: 
+  - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
+  - not (use_entitled_registry | bool)
+
+- name: Mirror images for Cloud Pak for Data 4.0 to private registry
   include_tasks: mirror-images-cp4d-40.yml
   when: 
   - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
-  - ibm_cp_entitlement_key != ""
   - not (use_entitled_registry | bool)
 
 - name: Login to the OpenShift cluster
@@ -47,8 +57,8 @@
   vars:
     roks_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
-- name: Prepare cluster for Cloud Pak for Data 4.0
-  include_tasks: prepare-cluster-cp4d-40.yml
+- name: Prepare Cloud Pak for Data 4.0 operator
+  include_tasks: prepare-cp4d-operator-40.yml
   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data

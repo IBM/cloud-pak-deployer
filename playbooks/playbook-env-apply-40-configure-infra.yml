@@ -5,6 +5,10 @@
   become: True
   gather_facts: False
 
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+
   tasks:
   - name: Assemble NFS Servers group
     include_role:
@@ -15,6 +19,10 @@
   become: True
   gather_facts: False
 
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+
   roles:
     - role: nfs-server-ibmcloud-vpc-bastion
 
@@ -22,6 +30,10 @@
   hosts: vpc_nfs_servers
   become: True
   gather_facts: False
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
 
   roles:
     - role: nfs-server-ibmcloud-vpc-install
@@ -31,7 +43,11 @@
   connection: local
   become: True
   environment:
-    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig_{{ environment_name }}"
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
 
   tasks:
   - name: Configure ROKS cluster

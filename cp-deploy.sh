@@ -34,6 +34,7 @@ command_usage() {
   echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
+  echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo 
   echo "Options for environment subcommand:"
@@ -53,6 +54,7 @@ command_usage() {
 # --------------------------------------------------------------------------------------------------------- #
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
+if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -312,6 +314,11 @@ while (( "$#" )); do
     export ANSIBLE_VERBOSE=true
     shift 1
     ;;
+  -v)
+    export ANSIBLE_STANDARD_OUTPUT=true
+    shift 1
+    ;;
+
   -*|--*=)
     echo "Invalid option: $1"
     command_usage 2
@@ -421,14 +428,14 @@ if [ ! -z $VAULT_SECRET_FILE ];then
 fi
 
 # Check if a container is currently running
-ps_cmd="${CONTAINER_ENGINE} ps"
-CONTAINER_ID=$(eval $ps_cmd | grep 'cloud-pak-deployer' | awk '{print $1}')
-if [[ "$CONTAINER_ID" != "" ]] && [[ "$SUBCOMMAND" == "environment" ]];then
-  echo "Warning: Cloud Pak Deployer container is already active ($CONTAINER_ID), tailing logs !!!"
-  sleep 2
-  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
-  exit 0
-fi
+# ps_cmd="${CONTAINER_ENGINE} ps"
+# CONTAINER_ID=$(eval $ps_cmd | grep 'cloud-pak-deployer' | awk '{print $1}')
+# if [[ "$CONTAINER_ID" != "" ]] && [[ "$SUBCOMMAND" == "environment" ]];then
+#   echo "Warning: Cloud Pak Deployer container is already active ($CONTAINER_ID), tailing logs !!!"
+#   sleep 2
+#   ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
+#   exit 0
+# fi
 
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
@@ -474,6 +481,7 @@ if [ ! -z $VAULT_SECRET ];then
 fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
+run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
 
 run_cmd+=" cloud-pak-deployer"
