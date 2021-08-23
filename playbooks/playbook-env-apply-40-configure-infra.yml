@@ -1,0 +1,42 @@
+---
+- name: 40 - Configure infrastructure
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  tasks:
+  - name: Assemble NFS Servers group
+    include_role:
+      name: nfs-server
+
+- name: 40 - Configure infrastructure - Bastion servers
+  hosts: vpc_bastion_server
+  become: True
+  gather_facts: False
+
+  roles:
+    - role: nfs-server-ibmcloud-vpc-bastion
+
+- name: 40 - Configure infrastructure - NFS servers
+  hosts: vpc_nfs_servers
+  become: True
+  gather_facts: False
+
+  roles:
+    - role: nfs-server-ibmcloud-vpc-install
+
+- name: 40 - Configure infrastructure - Configure OpenShift
+  hosts: localhost
+  connection: local
+  become: True
+  environment:
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig_{{ environment_name }}"
+
+  tasks:
+  - name: Configure ROKS cluster
+    include_role:
+      name: roks-cluster
+    loop: "{{ all_config.roks | default([]) }}"
+    loop_control:
+      loop_var: current_roks_cluster

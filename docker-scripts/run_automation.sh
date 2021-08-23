@@ -117,7 +117,7 @@ env|environment)
   if [ "$ACTION" == "apply" ];then
     ansible-playbook \
       -i ${INV_DIR} \
-      playbooks/playbook-e2e.yml \
+      playbooks/playbook-env-apply.yml \
       --extra-vars config_dir=${CONFIG_DIR} \
       --extra-vars status_dir=${STATUS_DIR} \
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
@@ -125,7 +125,7 @@ env|environment)
   elif [ "$ACTION" == "destroy" ];then
     ansible-playbook \
       -i ${INV_DIR} \
-      playbooks/playbook-destroy.yml \
+      playbooks/playbook-env-destroy.yml \
       --extra-vars config_dir=${CONFIG_DIR} \
       --extra-vars status_dir=${STATUS_DIR} \
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
