@@ -1,13 +1,13 @@
 import json
 
-def test():
-    print('this is from test()')
+# TODO: put all return types and structs to a external module
+
+
 def preprocessor(attributes=None, full_config=None):
     result = {
-        attributes_updated: {}
-
+        'attributes_updated': {},
+        'errors':[]
     }
-    #test()
     # check if the vpc is defined
     #print(full_config)
     if 'infrastructure' in attributes:
@@ -17,5 +17,7 @@ def preprocessor(attributes=None, full_config=None):
                 attributes['infrastructure']['vpc'] = full_config.get('vpc')[0].get('name')
             else:
                 # add an error to the output
-                
-    return {'attributes_updated': attributes}
+                result['errors'].append({
+                    'message': "Can't find a unique definition of a VPC"
+                })
+    return result
