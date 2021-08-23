@@ -1,4 +1,216 @@
 ---
-title: Vault configuration
+title: Infrastructure configuration
 tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartridges', 'Configuration', 'Other']
 ---
+
+# Infrastructure configuration
+
+## IBM Cloud
+
+For IBM Cloud, the following object types are supported:
+* [provider](#provider_defines_the_provider_for_terraform)
+* [resource_group](#resource_group)
+* [ssh_keys](#ssh_keys)
+* [address_prefix](#address_prefix)
+* [subnet](#subnet)
+* [vsi](#vsi)
+* [nfs_server](#nfs_server)
+
+### `provider`
+Defines the provider that Terraform will use for managing the IBM Cloud assets.
+```
+provider:
+- name: ibm
+  region: eu-de
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the provider cluster                                         | Yes       | ibm |
+| region   | Region to connect to                                                 | Yes       | Any IBM Cloud region  |
+
+
+### `resource_group`
+The resource group is for cloud asset grouping purposes. You can define multiple resource groups in your IBM cloud account to group the provisioned assets. If you do not need to group your assets, choose `default`.
+
+```
+resource_group:
+- name: default
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the existing resource group                                  | Yes       |  |
+
+
+### `ssh_keys`
+SSH keys to connect to VSIs. If you have Virtual Server Instances in your VPC, you will need an SSH key to connect to them. SSH keys defined here will be looked up in the vault and created if they don't exist already.
+
+```
+ssh_keys:
+- name: vsi-access
+  managed: True
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the SSH key in IBM Cloud                                     | Yes       |  |
+| managed  | Determines if the SSH key will be created if it doesn't exist        | No        | true (default), false |
+
+
+### `security_rule`
+Defines the services (or ports) which are allowed within the context of a VPC and/or VSI.
+
+```
+security_rule:
+- name: https
+  tcp: {port_min: 443, port_max: 443}
+- name: ssh
+  tcp: {port_min: 22, port_max: 22}
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the security rule                                            | Yes       |  |
+| tcp      | Range of tcp ports (`port_min` and `port_max`) to allow              | tcp and/or udp |  |
+| udp      | Range of udp ports (`port_min` and `port_max`) to allow              | tcp and/or udp |  |
+
+
+### `vpc`
+Defines the virtual private cloud which groups the provisioned objects (including VSIs and OpenShift cluster).
+
+```
+vpc:
+- name: sample
+  allow_inbound: ['ssh', 'https']
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the Virtual Private Cloud                                    | Yes       |  |
+| allow_inbound | Security rules which are allowed for inbound traffic            | No | Existing `security_rule`s |
+
+
+### `address_prefix`
+Defines the zones used within the VPC, along with the subnet the addresses will be issued for.
+
+```
+- name: sample-zone-1
+  vpc: sample
+  zone: eu-de-1
+  cidr: 10.27.0.0/26
+- name: sample-zone-2
+  vpc: sample
+  zone: eu-de-2
+  cidr: 10.27.0.64/26
+- name: sample-zone-3
+  vpc: sample
+  zone: eu-de-3
+  cidr: 10.27.0.128/26
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the zone                                                     | Yes       |  |
+| zone     | Zone in the IBM Cloud                                                | Yes       |  |
+| cidr     | Address range that IPs in this zone will fall into                   | Yes       |  |
+| vpc      | Virtual Private Cloud this address prefix belongs to                 | Yes, inferred |  |
+
+
+### `subnet`
+Defines the subnet that Virtual Server Intances and ROKS workers will be attached to.
+
+```
+subnet:
+- name: sample-subnet-zone-1
+  address_prefix: sample-zone-1
+  ipv4_cidr_block: 10.27.0.0/26
+  zone: eu-de-1
+  vpc: sample
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the subnet                                                   | Yes       |  |
+| address_prefix | Zone this subnet belongs to                                    | Yes       | Existing zone |
+| ipv4_cidr_block | Address range that IPs in this subnet will fall into          | Yes       | Range of subrange of zone |
+| zone     | Zone of the address prefix definition                                | Yes, inferred |  |
+| vpc      | Virtual Private Cloud this subnet prefix belongs to                  | Yes, inferred from zone |  |
+
+
+### `vsi`
+Defines a Virtual Server Instance within the VPC.
+
+```
+vsi:
+- name: sample-bastion
+  infrastructure:
+    keys:
+    - "vsi-access"
+    image: ibm-redhat-8-3-minimal-amd64-3
+    subnet: sample-subnet-zone-1
+    primary_ipv4_address: 10.27.0.4
+    public_ip: True
+    vpc_name: sample
+    zone: eu-de-3
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the Virtual Server Instance                                  | Yes       |  |
+| infrastructure | Infrastructure attributes                                      | Yes       |  |
+| infrastructure.keys | List of SSH keys to attach to the VSI                     | Yes       | Existing `ssh_key` |
+| infrastructure.image | Operating system image to be used                        | Yes | Existing image in IBM Cloud |
+| infrastructure.subnet | Subnet the VSI will be connected to                     | Yes | Existing `subnet` |
+| infrastructure.primary_ipv4_address | IP v4 address that will be assigned to the VSI | No | If specified, address in the `subnet` range  |
+| infrastructure.public_ip | Must a public IP address be attached to this VSI? | No | False (default), True |
+| infrastructure.vpc_name | Virtual Private Cloud this VSI belongs to              | Yes, inferred from subnet |  |
+| infrastructure.zone | Zone the VSI will be plaed into                            | Yes, inferred from subnet |  |
+
+### `nfs_server`
+<InlineNotification kind="warning">
+TO BE COMPLETED!!!
+</InlineNotification>
+
+
+```
+nfs_server:
+- name: sample-nfs
+  infrastructure:
+    keys:
+      - "vsi-access"
+    image: ibm-redhat-8-3-minimal-amd64-3
+    type: vpc
+    subnet: sample-subnet-zone-1
+    primary_ipv4_address: 10.27.0.5
+    zone: eu-de-1
+    vpc_name: sample
+    bastion_host: sample-bastion
+    volume_selector: 1000G
+    mount_path: /data
+    storage_folder: /data/nfs    
+  storage:
+  - name: sample-nfs-data
+    profile: 10iops-tier
+    size: 1000
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the Virtual Server Instance                                  | Yes       |  |
+| infrastructure | Infrastructure attributes                                      | Yes       |  |
+| infrastructure.keys | List of SSH keys to attach to the VSI                     | Yes       | Existing `ssh_key` |
+| infrastructure.image | Operating system image to be used                        | Yes | Existing image in IBM Cloud |
+| infrastructure.subnet | Subnet the VSI will be connected to                     | Yes | Existing `subnet` |
+| infrastructure.primary_ipv4_address | IP v4 address that will be assigned to the VSI | No | If specified, address in the `subnet` range  |
+| infrastructure.vpc_name | Virtual Private Cloud this VSI belongs to              | Yes, inferred from subnet |  |
+| infrastructure.zone | Zone the VSI will be plaed into                            | Yes, inferred from subnet |  |
