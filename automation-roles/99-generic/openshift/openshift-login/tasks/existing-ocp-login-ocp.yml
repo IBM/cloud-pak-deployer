@@ -1,0 +1,25 @@
+---
+
+- name: Get KUBECONFIG for the current cluster
+
+- name: Get KUBECONFIG for OpenShift cluster {{ openshift_cluster_name }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ openshift_cluster_name }}-kubeconfig"
+    secret_group: "{{ environment_name }}"
+
+- fail:
+    msg: Secret {{ openshift_cluster_name }}-kubeconfig needed to connect to OpenShift was not found or is empty
+
+- name: Write KUBECONFIG for OpenShift cluster {{ openshift_cluster_name }} to output file {{ status_dir }}/openshift/kubeconfig
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ openshift_cluster_name }}-kubeconfig"
+    secret_group: "{{ environment_name }}"
+    secret_file: "{{ status_dir }}/openshift/kubeconfig"
+
+- name: Check that we can retrieve cluster information
+  shell: |
+    oc cluster-info
