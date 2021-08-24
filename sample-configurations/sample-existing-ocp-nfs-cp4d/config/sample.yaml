@@ -1,0 +1,82 @@
+---
+nfs_server:
+- name: sample-nfs
+  infrastructure:
+    host_name: nfs-server
+    volume_selector: 1000G
+    mount_path: /data
+    storage_folder: /data/nfs    
+
+openshift:
+- name: sample
+  ocp_version: 4.6
+  cluster_name: sample
+  domain_name: example.com
+  worker_cpu: 16
+  worker_memory_gb: 64
+  worker_count: 3
+  max_worker_count: 10 # Optional, default is no maximum
+  storage_classes:
+  - storage_type: nfs
+    nfs_server_name: sample-nfs
+  # - storage_type: ocs
+  #   ocs_storage_label: ocs
+  #   ocs_storage_size: 500Gi
+
+cp4d:
+# Example Cloud Pak for Data 4.0 instance, using the entitled registry
+- project: zen-40
+  openshift_cluster_name: sample
+  cp4d_version: 4.0
+  cartridges:
+  - name: lite
+    version: 4.0.1
+    subscription_channel: stable-v1
+    size: medium
+  - name: wsl
+    version: 2.0.0
+    subscription_channel: v2.0
+    size: small
+  - name: wml
+    version: 4.0.0
+    subscription_channel: alpha
+    size: small
+  # - name: wkc
+  #   version: 4.0.0
+  #   subscription_channel: v1.0
+  #   size: small
+
+# Other cartridges - tested
+  # - name: ca
+  #   version: 4.0.0
+  #   subscription_channel: v4.0
+  #   size: small
+  #   metastore_ref: db2-ca-meta
+  # - name: analyticsengine 
+  #   version: 4.0.0
+  #   subscription_channel: stable-v1
+  #   size: small 
+
+# Other cartridges - not tested yet
+  # - name: bigsql
+  #   version: 4.0.0
+  #   subscription_channel: v7.2
+  #   size: small
+  # - name: cde
+  #   version: 
+  #   subscription_channel: v1.0
+  #   size: small
+  # - name: datarefinery
+  #   version: 
+  #   subscription_channel: v1.0
+  #   size: small
+  # - name: dv
+  #   version: 
+  #   subscription_channel: v1.0
+  #   size: small
+  # - name: db2
+  #   version: 
+  #   subscription_channel: v1.0
+  #   db2u_subscription_channel: v1.1
+  #   size: small
+
