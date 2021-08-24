@@ -1,0 +1,17 @@
+---
+# tasks file for roks-cluster
+- debug:
+    msg: "Handling ROKS cluster {{ current_openshift_cluster.name }}"
+
+- name: Login to the OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: openshift-login
+  vars:
+    roks_name: "{{ current_openshift_cluster.name }}"
+
+- name: Prepare storage classes for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: storage-classes
+  loop: "{{ current_openshift_cluster.storage_classes | default([]) }}"
+  loop_control:
+    loop_var: current_storage_class
