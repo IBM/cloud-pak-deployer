@@ -1,11 +1,4 @@
 ---
-
-- name: Login to the OpenShift cluster
-  include_role:
-    name: openshift_login
-  vars: 
-    openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
-
 - name: Pause the MachineConfig operator to disable rebooting of workers
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
@@ -123,7 +116,7 @@
 
 - name: Get number of workers
   shell: |
-    oc get mcp worker -o jsonpath='{.status.readyMachineCount}'
+    oc get mcp worker -o jsonpath='{.status.machineCount}'
   register: number_of_workers
 
 - name: Wait for {{ number_of_workers.stdout }} workers for cluster to become ready according to the MachineConfig operator
