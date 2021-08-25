@@ -5,13 +5,16 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 
 # OpenShift configuration
 
-### `roks` - Red Hat OpenShift Kubernetes Service on IBM Cloud
-<InlineNotification kind="warning">
-The roks entry will be replaced by "openshift" soon to allow for other infrastructure types.
-</InlineNotification>
+### `openshift`
+For OpenShift, there are 2 flavours:
+* OpenShift on IBM Cloud (within VPC)
+* Existing OpenShift
 
+When running the Cloud Pak Deployer for IBM Cloud, the ROKS cluster will be provisioned and managed by Terraform. For existing OpenShift clusters, other parameters must be specified to identify the cluster on which the Cloud Pak(s) must be deployed. Below we will show 2 examples.
+
+### OpenShift on IBM Cloud (ROKS)
 ```
-roks:
+openshift:
 - name: sample
   kube_version: 4.6_openshift
   worker_flavour: bx2.16x64
@@ -33,7 +36,7 @@ roks:
     ocs_storage_size: 500Gi
 ```
 
-#### Property explanation
+#### Property explanation OpenShift clusters on IBM Cloud (ROKS)
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
@@ -49,3 +52,25 @@ roks:
 | storage_classes.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
 | storage_classes.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
 | storage_classes.ocs_storage_size | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
+
+
+### Existing OpenShift
+When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts assume that the cluster is already operational and that any storage classes have been pre-created. The deployer accesses the cluster through a vault secret with the kubeconfig information; the name of the secret is `<name>-kubeconfig`.
+```
+openshift:
+- name: sample
+  ocp_version: 4.6
+  cluster_name: sample
+  domain_name: example.com
+  storage_classes:
+  - storage_type: nfs
+```
+
+#### Property explanation for existing OpenShift clusters
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the OpenShift cluster                                        | Yes       |  |
+| ocp_version | OpenShift version of the cluster (not used for now)               | No        | 4.6 |
+| cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
+| domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
+| storage_classes.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs |
