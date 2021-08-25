@@ -8,8 +8,19 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: OpenShift Prepare Cluster
+- name: Make a temporary work folder available
+  tempfile:
+    state: directory
+  register: cp4d_automation_temp_dir
+
+- name: Prepare OpenShift Cluster on IBM Cloud
   block:
-    - name: Prepare cluster-wide configuration for OpenShift
+    - name: Prepare cluster-wide configuration for Cloud Pak for Data on IBM Cloud
       include_tasks: ibmcloud-cp4d-prepare-openshift.yml
+  when: "cloud_platform == 'ibm-cloud'"
+
+- name: Prepare OpenShift Cluster
+  block:
+    - name: Prepare cluster-wide configuration for Cloud Pak for Data
+      include_tasks: cp4d-prepare-openshift.yml
   when: "cloud_platform == 'ibm-cloud'"
