@@ -427,15 +427,18 @@ if [ ! -z $VAULT_SECRET_FILE ];then
   touch ${VAULT_SECRET_FILE}
 fi
 
-# Check if a container is currently running
-# ps_cmd="${CONTAINER_ENGINE} ps"
-# CONTAINER_ID=$(eval $ps_cmd | grep 'cloud-pak-deployer' | awk '{print $1}')
-# if [[ "$CONTAINER_ID" != "" ]] && [[ "$SUBCOMMAND" == "environment" ]];then
-#   echo "Warning: Cloud Pak Deployer container is already active ($CONTAINER_ID), tailing logs !!!"
-#   sleep 2
-#   ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
-#   exit 0
-# fi
+# Check if a container is currently running for this status directory
+if [ -f ${STATUS_DIR}/pid/container.id ];then
+  CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
+  # If container ID was specified, check if it is currently running
+  if [ "${CURRENT_CONTAINER_ID}" != "" ];then
+    if ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
+      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}, container ID is ${CURRENT_CONTAINER_ID}"
+      echo "You can view the logs by running: ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}"
+      exit 1
+    fi
+  fi
+fi
 
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
@@ -489,6 +492,8 @@ run_cmd+=" cloud-pak-deployer"
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
   CONTAINER_ID=$(eval $run_cmd)
+  mkdir -p ${STATUS_DIR}/pid
+  echo "${CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
   PODMAN_EXIT_CODE=$?
   ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
 else
