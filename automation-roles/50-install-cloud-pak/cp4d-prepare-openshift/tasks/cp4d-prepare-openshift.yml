@@ -112,6 +112,43 @@
       shell: oc label machineconfigpool worker db2u-kubelet=sysctl
   when: oc_kubeletconfig_exists.stdout == "0"
 
+- name: Get first worker node
+  shell: |
+    oc get no --no-headers -l node-role.kubernetes.io/worker -o custom-columns='name:.metadata.name' | head -1
+  register: ocp_workers
+
+- name: Retrieve /etc/crio/crio.conf
+  shell: |
+    oc debug no/{{ ocp_workers.stdout }} -- cat /host/etc/crio/crio.conf > {{ cp4d_automation_temp_dir.path }}/worker_crio.conf
+
+- name: Set pids_limit
+  community.general.ini_file:
+    path: "{{ cp4d_automation_temp_dir.path }}/worker_crio.conf"
+    section: "crio.runtime"
+    option: pids_limit
+    value: 12288
+
+- name: Set default_ulimit
+  community.general.ini_file:
+    path: "{{ cp4d_automation_temp_dir.path }}/worker_crio.conf"
+    section: "crio.runtime"
+    option: default_ulimit
+    value: '[ "nofile=66560:66560" ]'
+
+- name: Convert {{ cp4d_automation_temp_dir.path }}/worker_crio.conf to string
+  shell:
+    cat {{ cp4d_automation_temp_dir.path }}/worker_crio.conf | \
+      python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"
+  register: crio_conf_string
+
+- name: Create CRIO config MachineConfig file {{ cp4d_automation_temp_dir.path }}/cp4d-crio-mc.yaml
+  template:
+    src: cp4d-crio-mc.j2
+    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-crio-mc.yaml"
+
+- name: Apply CRIO MachineConfig
+  shell: oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-crio-mc.yaml
+
 - name: Allow MachineConfig operator to reboot wokers again
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
