@@ -107,7 +107,9 @@
         src: cp4d-kubeletconfig.j2
         dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml"
     - name: Create KubeletConfig {{ kubelet_config_name }}
-      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml"
+      shell: oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml
+    - name: Label worker machine config pool to allow KubeletConfig
+      shell: oc label machineconfigpool worker db2u-kubelet=sysctl
   when: oc_kubeletconfig_exists.stdout == "0"
 
 - name: Allow MachineConfig operator to reboot wokers again
