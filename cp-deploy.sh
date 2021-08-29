@@ -361,6 +361,48 @@ if [ -z ${CONFIG_DIR} ] && [ -z ${GIT_REPO_URL} ];then
   command_usage 1
 fi
 
+# Validate combination of parameters when --git-repo-url specified
+if [ ! -z ${GIT_REPO_URL} ];then
+  if [ -z ${GIT_REPO_DIR} ];then
+    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
+    exit 1
+  fi
+  if [ -z ${GIT_ACCESS_TOKEN} ];then
+    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
+    exit 1
+  fi
+fi
+
+# Validate combination of parameters for subcommand vault
+if [[ "${SUBCOMMAND}" == "vault" ]];then
+  if [[ "${ACTION}" == "set" && "${VAULT_SECRET_VALUE}" == "" && "${VAULT_SECRET_FILE}" == "" ]] ;then
+    echo "--vault-secret-value or --vault-secret-file must be specified for subcommand vault and action set."
+    exit 1
+  fi
+  if [[ "${ACTION}" != "list" && "${VAULT_SECRET}" == "" ]];then
+    echo "--vault-secret must be specified for subcommand vault and action ${ACTION}."
+    exit 1
+  fi
+  if [[ "${ACTION}" == "list" && \
+        ( "${VAULT_SECRET}" != "" || "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
+    echo "Only --secret-group can be specified for subcommand vault and action list."
+    exit 1
+  fi
+
+  if [[ "${ACTION}" != "set" && "${VAULT_SECRET_VALUE}" != "" ]];then
+    echo "--vault-secret-value must not be specified for subcommand vault and action ${ACTION}."
+    exit 1
+  fi
+  if [[ "${VAULT_SECRET_VALUE}" != "" && "${VAULT_SECRET_FILE}" != "" ]];then
+    echo "Specify either --vault-secret-value or --vault-secret-file, not both."
+    exit 1
+  fi
+fi
+
+# --------------------------------------------------------------------------------------------------------- #
+# Check existence of directories                                                                            #
+# --------------------------------------------------------------------------------------------------------- #
+
 # Validate if the configuration directory exists and has the correct subdirectories
 if [ ! -z ${CONFIG_DIR} ];then
   if [ ! -z ${GIT_REPO_URL} ];then
@@ -377,17 +419,7 @@ if [ ! -z ${CONFIG_DIR} ];then
   fi
 fi
 
-# Validate combination of parameters when --git-repo-url specified
-if [ ! -z ${GIT_REPO_URL} ];then
-  if [ -z ${GIT_REPO_DIR} ];then
-    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-  if [ -z ${GIT_ACCESS_TOKEN} ];then
-    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-fi
+
 
 
 
