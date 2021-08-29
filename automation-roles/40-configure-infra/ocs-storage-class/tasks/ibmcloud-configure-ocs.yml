@@ -28,6 +28,11 @@
   retries: 60
   delay: 30
   until: ((ocs_get_addon.stdout | from_json).healthState | default("")) == "normal"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
 
 - name: Get the worker nodes for the OCS storage class
   command: |
@@ -89,4 +94,9 @@
   retries: 60
   delay: 30
   until: ((ocscluster_status.stdout | from_yaml).status.storageClusterStatus | default("")) == "Ready"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
 

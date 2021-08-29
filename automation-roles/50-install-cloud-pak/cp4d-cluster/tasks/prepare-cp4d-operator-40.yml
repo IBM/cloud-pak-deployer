@@ -57,6 +57,12 @@
   retries: 30
   delay: 30
   until: csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
+
 
 # Also wait for OperandRequest CSV to be created (ODLM)
 - name: Wait until ODLM OperandRequest CSV has status Succeeded
@@ -70,3 +76,8 @@
   retries: 30
   delay: 30
   until: odlm_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
