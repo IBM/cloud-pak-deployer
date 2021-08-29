@@ -101,34 +101,34 @@
     var: all_config
 
 
-- name: prepare generator facts
-  set_fact: 
-    generators_index:
+# - name: prepare generator facts
+#   set_fact: 
+#     generators_index:
 
-- name: List the folders in {{path_to_generators_dir}}, don't recurse
-  find:
-    file_type: directory
-    paths: "{{path_to_generators_dir}}"
-    recurse: no
-  register: generators_generator_folders
+# - name: List the folders in {{path_to_generators_dir}}, don't recurse
+#   find:
+#     file_type: directory
+#     paths: "{{path_to_generators_dir}}"
+#     recurse: no
+#   register: generators_generator_folders
 
-- name: show generator directories
-  set_fact: 
-    generators_index:
-      available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
+# - name: show generator directories
+#   set_fact: 
+#     generators_index:
+#       available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
 
-# ### TODO: check if the roles are available, before we even try to run them
+# # ### TODO: check if the roles are available, before we even try to run them
 
-- name: Run generators
-  include_tasks: "{{path_to_generators_dir}}/{{ item[0].key }}/main.yaml"
-  vars:
-    generator:
-      name: "{{ item[0].key }}"
-      path: "{{path_to_generators_dir}}/{{ item[0].key }}"
-      attributes: "{{ item[1] }}"
-      #config: "{{ config_merged }}"
-      config: "{{ all_config }}"
-    GENERATOR_NAME: "{{ item[0].key }}"
-    GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
-    PATH_TO_TERRAFORM_WORK_DIR: "{{status_dir}}/generated"
-  loop: "{{ all_config | dict2items | subelements('value')}}"
+# - name: Run generators
+#   include_tasks: "{{path_to_generators_dir}}/{{ item[0].key }}/main.yaml"
+#   vars:
+#     generator:
+#       name: "{{ item[0].key }}"
+#       path: "{{path_to_generators_dir}}/{{ item[0].key }}"
+#       attributes: "{{ item[1] }}"
+#       #config: "{{ config_merged }}"
+#       config: "{{ all_config }}"
+#     GENERATOR_NAME: "{{ item[0].key }}"
+#     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
+#     PATH_TO_TERRAFORM_WORK_DIR: "{{status_dir}}/generated"
+#   loop: "{{ all_config | dict2items | subelements('value')}}"
