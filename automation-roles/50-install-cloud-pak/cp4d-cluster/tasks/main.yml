@@ -93,17 +93,20 @@
     loop_var: current_cp4d_cartridge
   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
 
-- name: Install cp4d cartridges into OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
-  include_role:
-    name: cp4d-service-install
-  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
-  loop_control:
-    loop_var: current_cp4d_cartridge
+# - name: Install cp4d cartridges into OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+#   include_role:
+#     name: cp4d-service-install
+#   loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
+#   loop_control:
+#     loop_var: current_cp4d_cartridge
 
-- name: Wait for cartridges in OpenShift Project {{ current_cp4d_cluster.project }} to complete installation
-  include_role:
-    name: cp4d-service-wait-ready
-  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
+# - name: Wait for cartridges in OpenShift Project {{ current_cp4d_cluster.project }} to complete installation
+#   include_role:
+#     name: cp4d-service-wait-ready
+#   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
+
+- debug:
+    msg: "{{ all_config.ldap_config }}"
 
 - when: "all_config.ldap_config is defined"
   block:

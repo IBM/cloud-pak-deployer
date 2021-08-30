@@ -9,24 +9,6 @@
 - when: "cp4d_dv_provision_data_virtualization_instance == true"
   block:
 
-  - name: "Validate if cartridge {{ current_cp4d_cartridge.name }} is installed"
-    shell: "./cpd-cli status -n {{ current_cp4d_cluster.project }} -a {{ current_cp4d_cartridge.name }}  --load-from {{ cp4d_cli_dir }}/cpd-cli-workspace"
-    args:
-      chdir: "{{ cp4d_cli_dir }}"
-
-  - name: Get Route to Cloud Pak for Data
-    shell: |
-      oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
-          -o jsonpath="{.items[0].spec.host}"
-    register: cp4d_url
-
-  - name: Login to Cloud Pak for Data
-    shell: "curl -k -X POST -H 'cache-control: no-cache' -H 'Content-Type: application/json;charset=UTF-8' -d '{\"username\":\"{{ cp4d_login_username }}\",\"password\":\"{{ cp4d_login_password }}\"}' 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/authorize'"
-    register: cp4d_login_result
-
-  - set_fact:
-      cp4d_login: "{{ cp4d_login_result.stdout | from_json }}"
-
   - name: check if Data Virtualization is installed
     shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_type }}&addon_version={{ cp4d_dv_version }}'"
     register: dv_lookup_result

@@ -1,0 +1,56 @@
+---
+- debug:
+    var: db2_instance
+
+- name: "Check if the DB2 instance {{ db2_instance.name }} is already running"
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances'"
+  register: db2_instance_lookup_result
+
+- debug:
+    msg: "{{ db2_instance_lookup_result }}"
+
+- name: Get CP4D Database details
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases/'"
+  register: databases_details_result
+
+- set_fact:
+    databases_details: "{{ databases_details_result.stdout | from_json }}"
+
+- set_fact:
+    db2_cartridge_details: "{{ databases_details.result | json_query(query_db2_details) }}"
+  vars:
+    cartridge_type: "db2oltp"
+    query_db2_details: "[?type=='{{ cartridge_type }}']"
+
+- debug:
+    msg: "{{ db2_cartridge_details }}"
+
+- set_fact:
+    db2_version: "{{ db2_cartridge_details[0].version }}"
+    db2_repositories: " {{ db2_cartridge_details[0].create.repositories | regex_replace(\"'\", '\"')  }}"
+    db2_chart: "{{ db2_cartridge_details[0].chart }}"
+    db2_storage_class: "managed-nfs-storage"
+
+- name: Prepare DB2 instance {{ db2_instance.name }} json file
+  template:
+    src: db2_instance_40.json.j2
+    dest: "{{ status_dir }}/cp4d/db2_instance_40.json"
+
+
+- name: Create DB2 instance {{ db2_instance.name }}
+  shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ status_dir }}/cp4d/db2_instance_40.json"
+  register: create_db2_instance_result
+
+- debug:
+    msg: "{{ create_db2_instance_result }}"
+
+- name: Waiting for DB2 instance {{ db2_instance.name }} to complete its provisioning
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?display_name={{ db2_instance.name }}'"
+  register: wait_for_db2_service
+  until: wait_for_db2_service.stdout.find('"provision_status":"COMPLETE"') != -1
+  retries: 500
+  delay: 120  
+
+  
+
+

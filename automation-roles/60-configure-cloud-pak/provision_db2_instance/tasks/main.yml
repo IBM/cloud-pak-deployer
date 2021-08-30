@@ -1,0 +1,28 @@
+---
+- set_fact:
+    db2_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
+  vars:
+    cartridge_name: "db2"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"
+
+- debug:
+    var: db2_cartridge
+
+- name: Set the required privileges for DB2 instance creation for OpenShift Project {{ current_cp4d_cluster.project }}
+  shell: "oc adm policy add-cluster-role-to-user system:controller:persistent-volume-binder system:serviceaccount:{{ current_cp4d_cluster.project }}:zen-databases-sa"
+
+
+- name: Loop throught each DB2 instance
+  block:
+
+  - debug:
+      msg: "{{ db2_cartridge.instances | length }}"
+
+  - name: Provision each DB2 instance from the DB2 cartridge specification
+    include_tasks: provision_db2_instance.yml
+    loop: "{{ db2_cartridge.instances | default([]) }}"
+    loop_control:
+      loop_var: db2_instance
+    when: db2_cartridge.instances | length > 0
+
+  when: db2_cartridge.instances is defined
