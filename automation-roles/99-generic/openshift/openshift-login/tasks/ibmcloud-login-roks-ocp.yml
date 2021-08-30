@@ -1,0 +1,35 @@
+---
+
+- name: Login to IBM Cloud
+  include_role:
+    name: login-ibmcloud
+
+- name: Validate if the OpenShift cluster {{ openshift_cluster_name }} exists
+  command: "ibmcloud oc cluster get -c {{ openshift_cluster_name }} --output json"
+  register: ibmcloud_oc_cluster_result_json
+
+- set_fact:
+    ibmcloud_oc_cluster: "{{ ibmcloud_oc_cluster_result_json.stdout | from_json }}"
+
+- debug:
+    msg: "{{ ibmcloud_oc_cluster }}"
+
+- set_fact:
+    roks_publicEndpoint: "{{ ibmcloud_oc_cluster.serviceEndpoints.publicServiceEndpointURL | 
+      default(ibmcloud_oc_cluster.publicServiceEndpointURL) }}"
+
+- debug:
+    msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
+
+- name: Set terminal context for OpenShift cluster {{ openshift_cluster_name }}
+  command: "ibmcloud oc cluster config -c {{ openshift_cluster_name }}  --admin"
+
+- name: Login to OpenShift ROKS cluster
+  command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}"
+  register: oc_login_result
+  retries: 360
+  delay: 10
+  until: oc_login_result.rc==0
+
+- debug:
+    msg: "{{ oc_login_result }}"

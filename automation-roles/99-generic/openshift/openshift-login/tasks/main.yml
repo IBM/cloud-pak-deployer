@@ -8,10 +8,15 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: OpenShift login for IBM Cloud
-  block:
-    - name: Login to OpenShift on IBM Cloud
-      include_role: 
-        name: ibmcloud-login-roks-ocp
-    
-  when: "cloud_platform == 'ibm-cloud'"
+- name: Create OpenShift configuration directory
+  file:
+    path: "{{ status_dir }}/openshift"
+    state: directory
+
+- name: Login to OpenShift on IBM Cloud
+  include_tasks: ibmcloud-login-roks-ocp.yml
+  when: cloud_platform == 'ibm-cloud'
+
+- name: Login to existing OpenShift
+  include_tasks: existing-ocp-login-ocp.yml
+  when: cloud_platform == 'existing-ocp'

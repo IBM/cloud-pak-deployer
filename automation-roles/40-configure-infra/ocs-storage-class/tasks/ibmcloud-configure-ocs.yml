@@ -5,7 +5,7 @@
 
 - name: Check if openshift-container-storage add-on is installed
   command: |
-    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_roks_cluster.name }} --output json
+    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_openshift_cluster.name }} --output json
   register: ocs_check_addon
   failed_when: False
 
@@ -13,26 +13,31 @@
 - debug:
     var: ocs_check_addon
 
-- name: Enable openshift-container-storage add-on for ROKS cluster {{ current_roks_cluster.name }}
+- name: Enable openshift-container-storage add-on for ROKS cluster {{ current_openshift_cluster.name }}
   command: |
     ibmcloud oc cluster addon enable openshift-container-storage \
-      --cluster {{ current_roks_cluster.name }} \
+      --cluster {{ current_openshift_cluster.name }} \
       --version {{ roks_ocs_addon_version }} -f
   when: ocs_check_addon.rc != 0
 
 - name: Wait until openshift-container-storage add-on is ready
   command: |
-    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_roks_cluster.name }} --output json
+    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_openshift_cluster.name }} --output json
   register: ocs_get_addon
   failed_when: False
   retries: 60
   delay: 30
   until: ((ocs_get_addon.stdout | from_json).healthState | default("")) == "normal"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
 
 - name: Get the worker nodes for the OCS storage class
   command: |
-    ibmcloud oc workers --cluster {{ current_roks_cluster.name }} \
-      --worker-pool {{ current_roks_cluster.name }}-{{ current_storage_class.ocs_storage_label }} \
+    ibmcloud oc workers --cluster {{ current_openshift_cluster.name }} \
+      --worker-pool {{ current_openshift_cluster.name }}-{{ current_storage_class.ocs_storage_label }} \
       --output json
   register: ocs_workers
 
@@ -89,4 +94,9 @@
   retries: 60
   delay: 30
   until: ((ocscluster_status.stdout | from_yaml).status.storageClusterStatus | default("")) == "Ready"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
 
