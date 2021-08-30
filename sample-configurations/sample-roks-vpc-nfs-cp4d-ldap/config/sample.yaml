@@ -88,7 +88,7 @@ nfs_server:
     profile: 10iops-tier
     size: 1000
 
-roks:
+openshift:
 - name: sample
   kube_version: 4.6_openshift # Mandatory
   worker_flavour: bx2.16x64
@@ -103,9 +103,11 @@ roks:
     - sample-subnet-zone-2
     - sample-subnet-zone-3
   storage_classes:
-  - storage_type: nfs
+  - storage_class_name: nfs
+    storage_type: nfs
     nfs_server_name: sample-nfs
-  # - storage_type: ocs
+  # - storage_class_name: nfs
+  #   storage_type: ocs
   #   ocs_storage_label: ocs
   #   ocs_storage_size: 500Gi
 
@@ -114,6 +116,7 @@ cp4d:
 - project: zen-35
   openshift_cluster_name: sample
   container_registry_namespace: cpd-sample
+  storage_class_name: nfs
   cartridges:
   - name: lite
     version: 3.5.0.0          
@@ -126,6 +129,7 @@ cp4d:
 - project: zen-40
   openshift_cluster_name: sample
   cp4d_version: 4.0
+  storage_class_name: nfs
   cartridges:
   - name: lite
     version: 4.0.1
@@ -143,12 +147,23 @@ cp4d:
     version: 4.0.0
     subscription_channel: v1.0
     size: small
-  # Other cartridges - not tested yet
+
+# Other cartridges - tested
   # - name: ca
   #   version: 4.0.0
   #   subscription_channel: v4.0
   #   size: small
   #   metastore_ref: db2-ca-meta
+  # - name: analyticsengine 
+  #   version: 4.0.0
+  #   subscription_channel: stable-v1
+  #   size: small   
+
+# Other cartridges - not tested yet
+  # - name: bigsql
+  #   version: 4.0.0
+  #   subscription_channel: v7.2
+  #   size: small
   # - name: cde
   #   version: 
   #   subscription_channel: v1.0

@@ -4,8 +4,8 @@
   include_role:
     name: login-ibmcloud
 
-- name: Validate if the OpenShift cluster {{ roks_name }} exists
-  command: "ibmcloud oc cluster get -c {{ roks_name }} --output json"
+- name: Validate if the OpenShift cluster {{ openshift_cluster_name }} exists
+  command: "ibmcloud oc cluster get -c {{ openshift_cluster_name }} --output json"
   register: ibmcloud_oc_cluster_result_json
 
 - set_fact:
@@ -21,13 +21,8 @@
 - debug:
     msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
 
-- name: Create OpenShift configuration directory
-  file:
-    path: "{{ status_dir }}/openshift"
-    state: directory
-
-- name: Set terminal context for OpenShift cluster {{ roks_name }}
-  command: "ibmcloud oc cluster config -c {{ roks_name }}  --admin"
+- name: Set terminal context for OpenShift cluster {{ openshift_cluster_name }}
+  command: "ibmcloud oc cluster config -c {{ openshift_cluster_name }}  --admin"
 
 - name: Login to OpenShift ROKS cluster
   command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}"
