@@ -1,0 +1,20 @@
+---
+
+- name: Save Cloud Pak for Data operator case file {{ case_inventory.search_string }}-{{ case_inventory.version }}
+  shell: |
+    cloudctl case save \
+      --case https://github.com/IBM/cloud-pak/raw/master/repo/case/{{ case_inventory.search_string }}-{{ case_inventory.version }}.tgz \
+      --outputdir {{ case_dir }} \
+      --no-dependency
+  when:  
+  - case_inventory.search_string == "ibm-cp-datacore"
+  - case_inventory.version is defined
+
+- name: Save case file {{ case_inventory.search_string }}-{{ case_inventory.version }}
+  shell: |
+    cloudctl case save \
+      --case https://github.com/IBM/cloud-pak/raw/master/repo/case/{{ case_inventory.search_string }}-{{ case_inventory.version }}.tgz \
+      --outputdir {{ case_dir }} 
+  when:  
+  - case_inventory.search_string != "ibm-cp-datacore"
+  - case_inventory.version is defined

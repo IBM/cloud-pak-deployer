@@ -34,6 +34,7 @@ command_usage() {
   echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
+  echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo 
   echo "Options for environment subcommand:"
@@ -53,6 +54,7 @@ command_usage() {
 # --------------------------------------------------------------------------------------------------------- #
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
+if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -312,6 +314,11 @@ while (( "$#" )); do
     export ANSIBLE_VERBOSE=true
     shift 1
     ;;
+  -v)
+    export ANSIBLE_STANDARD_OUTPUT=true
+    shift 1
+    ;;
+
   -*|--*=)
     echo "Invalid option: $1"
     command_usage 2
@@ -354,6 +361,49 @@ if [ -z ${CONFIG_DIR} ] && [ -z ${GIT_REPO_URL} ];then
   command_usage 1
 fi
 
+# Validate combination of parameters when --git-repo-url specified
+if [ ! -z ${GIT_REPO_URL} ];then
+  if [ -z ${GIT_REPO_DIR} ];then
+    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
+    exit 1
+  fi
+  if [ -z ${GIT_ACCESS_TOKEN} ];then
+    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
+    exit 1
+  fi
+fi
+
+# Validate combination of parameters for subcommand vault
+if [[ "${SUBCOMMAND}" == "vault" ]];then
+  if [[ "${ACTION}" == "set" && "${VAULT_SECRET_VALUE}" == "" && "${VAULT_SECRET_FILE}" == "" ]] ;then
+    echo "--vault-secret-value or --vault-secret-file must be specified for subcommand vault and action set."
+    exit 1
+  fi
+  if [[ "${ACTION}" != "list" && "${VAULT_SECRET}" == "" ]];then
+    echo "--vault-secret must be specified for subcommand vault and action ${ACTION}."
+    exit 1
+  fi
+  if [[ "${ACTION}" == "list" && \
+        ( "${VAULT_SECRET}" != "" || "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
+    echo "Only --secret-group can be specified for subcommand vault and action list."
+    exit 1
+  fi
+
+  if [[ "${ACTION}" != "set" && "${VAULT_SECRET_VALUE}" != "" ]];then
+    echo "--vault-secret-value must not be specified for subcommand vault and action ${ACTION}."
+    exit 1
+  fi
+  if [[ "${VAULT_SECRET_VALUE}" != "" && "${VAULT_SECRET_FILE}" != "" ]];then
+    echo "Specify either --vault-secret-value or --vault-secret-file, not both."
+    exit 1
+  fi
+fi
+
+
+# --------------------------------------------------------------------------------------------------------- #
+# Check existence of directories                                                                            #
+# --------------------------------------------------------------------------------------------------------- #
+
 # Validate if the configuration directory exists and has the correct subdirectories
 if [ ! -z ${CONFIG_DIR} ];then
   if [ ! -z ${GIT_REPO_URL} ];then
@@ -369,20 +419,6 @@ if [ ! -z ${CONFIG_DIR} ];then
     exit 1
   fi
 fi
-
-# Validate combination of parameters when --git-repo-url specified
-if [ ! -z ${GIT_REPO_URL} ];then
-  if [ -z ${GIT_REPO_DIR} ];then
-    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-  if [ -z ${GIT_ACCESS_TOKEN} ];then
-    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-fi
-
-
 
 # Set remaining parameters
 eval set -- "$PARAMS"
@@ -420,14 +456,27 @@ if [ ! -z $VAULT_SECRET_FILE ];then
   touch ${VAULT_SECRET_FILE}
 fi
 
-# Check if a container is currently running
-ps_cmd="${CONTAINER_ENGINE} ps"
-CONTAINER_ID=$(eval $ps_cmd | grep 'cloud-pak-deployer' | awk '{print $1}')
-if [[ "$CONTAINER_ID" != "" ]] && [[ "$SUBCOMMAND" == "environment" ]];then
-  echo "Warning: Cloud Pak Deployer container is already active ($CONTAINER_ID), tailing logs !!!"
-  sleep 2
-  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
-  exit 0
+# Check if a container is currently running for this status directory
+if [ -f ${STATUS_DIR}/pid/container.id ];then
+  CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
+  # If container ID was specified, check if it is currently running
+  if [ "${CURRENT_CONTAINER_ID}" != "" ];then
+    if ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
+      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}, container ID is ${CURRENT_CONTAINER_ID}"
+      echo "You can view the logs by running: ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}"
+      exit 1
+    fi
+  fi
+fi
+
+# If CP_ENTITLEMENT_KEY was specified, create secret automatically
+if [[ "${SUBCOMMAND}" == "environment" && ! -z ${CP_ENTITLEMENT_KEY} ]];then
+  echo "CP_ENTITLEMENT_KEY environment variables set, creating secret first."
+  ${SCRIPT_DIR}/cp-deploy.sh vault set --config-dir ${CONFIG_DIR} --status-dir ${STATUS_DIR} \
+    --vault-secret ibm_cp_entitlement_key --vault-secret-value ${CP_ENTITLEMENT_KEY}
+  if [ $? -ne 0 ];then
+    exit 1
+  fi
 fi
 
 # Build command
@@ -474,6 +523,7 @@ if [ ! -z $VAULT_SECRET ];then
 fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
+run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
 
 run_cmd+=" cloud-pak-deployer"
@@ -481,6 +531,8 @@ run_cmd+=" cloud-pak-deployer"
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
   CONTAINER_ID=$(eval $run_cmd)
+  mkdir -p ${STATUS_DIR}/pid
+  echo "${CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
   PODMAN_EXIT_CODE=$?
   ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
 else

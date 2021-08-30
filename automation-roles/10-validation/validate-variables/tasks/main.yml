@@ -4,8 +4,13 @@
     that:
       - vault_type is defined
       - vault_authentication_type is defined
-      - ibmcloud_api_key is defined
       - cloud_platform is defined
+
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - ibmcloud_api_key is defined
+  when: cloud_platform == 'ibm-cloud'
 
 - debug:
     msg: "{{ vars }}"
@@ -15,6 +20,7 @@
 
 - set_fact:
     vault_api_key: "{{ ibmcloud_api_key }}"
+  when: cloud_platform == 'ibm-cloud'
 
 - name: Validate cloud_platform is supported
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "

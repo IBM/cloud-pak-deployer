@@ -8,21 +8,21 @@
 - name: Prepare yaml file for platform operator OperandRequest
   template:
     src: cpd-platform-operandrequest.j2
-    dest: "{{status_dir}}/openshift/cpd-operator-operandrequest-{{ current_cp4d_cluster.project }}.yml"
+    dest: "{{ status_dir }}/cp4d/cpd-operator-operandrequest-{{ current_cp4d_cluster.project }}.yml"
 
 - name: Create OperandRequest for the platform operator
   command: |
-    oc apply -f "{{status_dir}}/openshift/cpd-operator-operandrequest-{{ current_cp4d_cluster.project }}.yml"
+    oc apply -f "{{ status_dir }}/cp4d/cpd-operator-operandrequest-{{ current_cp4d_cluster.project }}.yml"
 
 # Install Ibmcpd --> Move this to cartridges
 - name: Prepare yaml file for Ibmcpd CR
   template:
     src: ibmcpd.j2
-    dest: "{{status_dir}}/openshift/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
+    dest: "{{ status_dir }}/cp4d/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
 
 - name: Create Ibmcpd CR
   command: |
-    oc apply -f "{{status_dir}}/openshift/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
+    oc apply -f "{{ status_dir }}/cp4d/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
   
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for Ibmcpd to be completed
@@ -34,3 +34,8 @@
   retries: 60
   delay: 60
   until: deployed_ibmcpd.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  

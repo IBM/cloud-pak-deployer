@@ -115,17 +115,23 @@ export ACTION=${ACTION,,}
 case "$SUBCOMMAND" in
 env|environment)
   if [ "$ACTION" == "apply" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
+    if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+    export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE} && \
     ansible-playbook \
       -i ${INV_DIR} \
-      playbooks/playbook-e2e.yml \
+      playbooks/playbook-env-apply.yml \
       --extra-vars config_dir=${CONFIG_DIR} \
       --extra-vars status_dir=${STATUS_DIR} \
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
       --extra-vars confirm_destroy=${CONFIRM_DESTROY} ${VERBOSE_ARG}
   elif [ "$ACTION" == "destroy" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
+    if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+    export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE} && \
     ansible-playbook \
       -i ${INV_DIR} \
-      playbooks/playbook-destroy.yml \
+      playbooks/playbook-env-destroy.yml \
       --extra-vars config_dir=${CONFIG_DIR} \
       --extra-vars status_dir=${STATUS_DIR} \
       --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
@@ -134,7 +140,9 @@ env|environment)
   ;;
 
 vault)
-  export ANSIBLE_CONFIG=$PWD/ansible-vault.cfg && \
+  ANSIBLE_CONFIG_FILE=$PWD/ansible-vault.cfg
+  if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+  export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE} && \
   ansible-playbook \
     -i ${INV_DIR} \
     playbooks/playbook-vault.yml \

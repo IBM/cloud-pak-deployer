@@ -56,7 +56,7 @@
       cp4d_login: "{{ cp4d_login_result.stdout | from_json }}"
 
   - name: Check if the Cognos Analytics instance is already running
-    shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&addon_version={{ cp4d_cognos_instance_addon_version }}'"
+    shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&addon_version={{ current_cp4d_cartridge.version }}'"
     register: cognos_lookup_result
 
   - set_fact:
@@ -174,7 +174,7 @@
 
       - name: Create cognos instance json file for CP4D 4.0
         template:
-          src: cognos_instance_40_v2.json.j2
+          src: cognos_instance_40.json.j2
           dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
         when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
@@ -196,6 +196,11 @@
         until:
           - ca_artifacts_pod.rc==0
           - ca_artifacts_pod.stdout!=''
+        vars:
+          ansible_callback_diy_runner_retry_msg: >-
+            {%- set result = ansible_callback_diy.result.output -%}
+            {%- set retries_left = result.retries - result.attempts -%}
+            "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
         when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
 
       - name: Wait until Cognos Analytics artifacts pod has started and is ready for CP4D 4.0
@@ -206,6 +211,11 @@
         until:
           - ca_artifacts_pod.rc==0
           - ca_artifacts_pod.stdout!=''
+        vars:
+          ansible_callback_diy_runner_retry_msg: >-
+            {%- set result = ansible_callback_diy.result.output -%}
+            {%- set retries_left = result.retries - result.attempts -%}
+            "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
         when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
       - name: Wait for a bit so that all Cognos Analytics containers are starting
@@ -214,9 +224,14 @@
 
       - name: Destroy the pod so Cognos Analytics instance provisioning continues
         shell: "oc delete pod -l chart=artifacts"
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) == '3.5'
+
+      - name: Destroy the pod so Cognos Analytics 4.0 instance provisioning continues
+        shell: "oc delete pod {{ ca_artifacts_pod.stdout }}"
+        when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
       - debug:
-          msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 45 minutes to complete"
+          msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
       - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
         shell: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
@@ -226,6 +241,11 @@
         until:
           - ca_provision_complete.rc==0
           - ca_provision_complete.stdout=='7'
+        vars:
+          ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
 
       - debug:
           msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"

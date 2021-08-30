@@ -1,0 +1,26 @@
+---
+- name: Check if {{ config_dir }}/case directory exists
+  stat:
+    path: "{{ config_dir }}/case"
+  register: case_dir_exists
+
+- set_fact:
+    case_dir: "{{ config_dir }}/case"
+  when: case_dir_exists.stat.exists
+
+- name: Create directory for case files
+  file:
+    path: "{{ status_dir }}/cp4d/case"
+    state: directory
+  when: not case_dir_exists.stat.exists
+
+- set_fact:
+    case_dir: "{{ status_dir }}/cp4d/case"
+  when: not case_dir_exists.stat.exists
+
+- name: Download online case files to {{ status_dir }}/cp4d/case
+  include: download-case-online.yml
+  loop: "{{ case_inventories }}"
+  loop_control:
+    loop_var: case_inventory
+  when: not case_dir_exists.stat.exists

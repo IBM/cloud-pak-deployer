@@ -13,11 +13,13 @@
     var: all_config
 
 - name: Configure NFS servers IBM Cloud VPC
-  include_tasks: nfs-server-ibmcloud-vpc-prepare.yaml
+  include_tasks: ibmcloud-nfs-server-vpc-prepare.yaml
   loop: "{{ all_config.nfs_server | default([]) }}"
   loop_control:
     loop_var: current_nfs_server
-  when: current_nfs_server.infrastructure.type == 'vpc'
+  when:
+  - cloud_platform == 'ibm-cloud'
+  - current_nfs_server.infrastructure.type == 'vpc'
 
 # TODO - Add steps for file server preparation (if needed here)
 # - name: Configure NFS server IBM Cloud SaaS

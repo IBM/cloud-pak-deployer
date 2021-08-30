@@ -1,0 +1,40 @@
+- debug:
+    msg: Current CP4D cluster is {{ current_cp4d_cluster }}
+
+- set_fact:
+    cluster_storage_classes: "{{ all_config.openshift | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}'].storage_classes
+
+- debug:
+    msg: "{{ cluster_storage_classes }}"
+
+- set_fact:
+    storage_type: "{{ cluster_storage_classes | json_query(query) | first | default('') }}"
+  vars:
+    query: >-
+      [?storage_class_name=='{{ current_cp4d_cluster.storage_class_name }}'].storage_type
+
+- fail:
+    msg: "Storage type for storage class name {{ current_cp4d_cluster.storage_class_name }} specified for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }} not found. Check the configuration."
+  when: storage_type == ''
+
+- set_fact:
+    ocp_storage_class_file: 'managed-nfs-storage'
+    ocp_storage_class_block: 'managed-nfs-storage'
+  when: storage_type == 'nfs'
+
+- set_fact:
+    ocp_storage_class_file: 'ocs-storagecluster-cephfs'
+    ocp_storage_class_block: 'ocs-storagecluster-ceph-rbd'
+  when: storage_type == 'ocs'
+
+- name: Check if file storage class {{ ocp_storage_class_file }} exists
+  shell:
+    oc get sc {{ ocp_storage_class_file }}
+
+- name: Check if block storage class {{ ocp_storage_class_block }} exists
+  shell:
+    oc get sc {{ ocp_storage_class_block }}
+  when: ocp_storage_class_block != ocp_storage_class_file

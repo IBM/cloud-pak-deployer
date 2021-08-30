@@ -1,0 +1,20 @@
+---
+- name: 80 - Smoke tests
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+  environment:
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+
+  tasks:
+  - name: Cloud Pak smoke tests
+    include_role:
+      name: cp4d-cluster-smoke-tests
+    loop: "{{ all_config.cp4d | default([]) }}"
+    loop_control:
+      loop_var: current_cp4d_cluster
