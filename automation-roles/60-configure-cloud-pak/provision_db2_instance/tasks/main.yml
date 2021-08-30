@@ -10,7 +10,9 @@
 
 - name: Set the required privileges for DB2 instance creation for OpenShift Project {{ current_cp4d_cluster.project }}
   shell: "oc adm policy add-cluster-role-to-user system:controller:persistent-volume-binder system:serviceaccount:{{ current_cp4d_cluster.project }}:zen-databases-sa"
-
+  when:
+    - db2_cartridge is defined
+    - not db2_cartridge = ""
 
 - name: Loop throught each DB2 instance
   block:

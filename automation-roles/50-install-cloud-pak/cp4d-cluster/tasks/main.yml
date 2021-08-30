@@ -96,23 +96,24 @@
     loop_var: current_cp4d_cartridge
   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
 
-# - name: Install cp4d cartridges into OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
-#   include_role:
-#     name: cp4d-service-install
-#   loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
-#   loop_control:
-#     loop_var: current_cp4d_cartridge
+- name: Install cp4d cartridges into OpenShift Project {{ current_cp4d_cluster.project }} from cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+  include_role:
+    name: cp4d-service-install
+  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge
 
-# - name: Wait for cartridges in OpenShift Project {{ current_cp4d_cluster.project }} to complete installation
-#   include_role:
-#     name: cp4d-service-wait-ready
-#   when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
-
-- debug:
-    msg: "{{ all_config.ldap_config }}"
+- name: Wait for cartridges in OpenShift Project {{ current_cp4d_cluster.project }} to complete installation
+  include_role:
+    name: cp4d-service-wait-ready
+  when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'  
 
 - when: "all_config.ldap_config is defined"
   block:
+
+    - debug:
+        msg: "{{ all_config.ldap_config }}"  
+
     - set_fact:
         cp4d_ldap_config: "{{ all_config.ldap_config|json_query(query_ldap) | first }}"
       vars:
@@ -131,20 +132,3 @@
       loop: "{{ cp4d_ldap_config.user_groups | default([]) }}"
       loop_control:
         loop_var: cp4d_user_group
-
-- when: "all_config.cp4d_instance_configuration is defined"
-  block:
-    - set_fact:
-        cp4d_instance_config: "{{ all_config.cp4d_instance_configuration|json_query(query_instance_config) | first }}"
-      vars:
-        query_instance_config: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"    
-
-    - debug:
-        msg: "{{ cp4d_instance_config }}"    
-
-    - name: Configure CP4D instance authorization
-      include_role:
-        name: instance_configuration
-      loop: "{{ cp4d_instance_config.cartridges | default([]) }}"
-      loop_control:
-        loop_var: cp4d_instance
