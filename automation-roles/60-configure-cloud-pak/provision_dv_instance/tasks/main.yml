@@ -9,6 +9,15 @@
 - when: "cp4d_dv_provision_data_virtualization_instance == true"
   block:
 
+- set_fact:
+    dv_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
+  vars:
+    cartridge_name: "dv"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"
+
+- debug:
+    var: dv_cartridge  
+
   - name: check if Data Virtualization is installed
     shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_type }}&addon_version={{ cp4d_dv_version }}'"
     register: dv_lookup_result

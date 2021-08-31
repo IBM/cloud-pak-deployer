@@ -8,11 +8,11 @@
 - debug:
     var: db2_cartridge
 
-- name: Set the required privileges for DB2 instance creation for OpenShift Project {{ current_cp4d_cluster.project }}
+- name: "Set the required privileges for DB2 instance creation for OpenShift Project {{ current_cp4d_cluster.project }}"
   shell: "oc adm policy add-cluster-role-to-user system:controller:persistent-volume-binder system:serviceaccount:{{ current_cp4d_cluster.project }}:zen-databases-sa"
   when:
     - db2_cartridge is defined
-    - not db2_cartridge = ""
+    - not db2_cartridge == ""
 
 - name: Loop throught each DB2 instance
   block:
@@ -27,4 +27,6 @@
       loop_var: db2_instance
     when: db2_cartridge.instances | length > 0
 
-  when: db2_cartridge.instances is defined
+  when: 
+    - not db2_cartridge == ""
+    - db2_cartridge.instances is defined
