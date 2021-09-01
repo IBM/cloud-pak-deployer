@@ -1,14 +1,12 @@
-from _typeshed import Self
 from benedict import benedict
-
-# could be an alternative
-# https://github.com/fabiocaccamo/python-benedict
 
 class GeneratorPreProcessor:
     def __init__(self,attributes=None, fullConfig=None) -> None:
         self.d = benedict()
         self.attributes = attributes
-        self.attributesDict = benedict(attributes)
+        # these are the attributes we'll modify 
+        # during preprocessing
+        self.attributesDict = benedict(attributes) 
         self.fullConfig = fullConfig
         self.fullConfigDict = benedict(fullConfig)
         self.errors = []
@@ -23,13 +21,30 @@ class GeneratorPreProcessor:
             return self.attributesDict[self.pathToCheck]
     def mustBeDefined(self):
         if((self.pathToCheck in self.attributesDict)==False):
-            self.__appendError("Attribute {path} is not defined".format(path=self.pathToCheck))
+            self.__appendError(msg="Attribute {path} is not defined".format(path=self.pathToCheck))
         return self
     def mustBeOneOf(self,matchPattern):
         listOfMatches = self.fullConfigDict.match(matchPattern)
         #print(self.attributesDict[ lookupPath ])
         return self
-    def __appendError(self, errorToAdd):
-        self.errors.append(errorToAdd)
+    def expandWith(self, matchPattern):
+        #listOfMatches = self.fullConfigDict.match(matchPattern)
+        if((self.pathToCheck in self.attributesDict)==False):
+            # print("expandWith:",self.pathToCheck, "is missing")
+            listOfMatches = self.fullConfigDict.match(matchPattern)
+            if(len(listOfMatches)==1):
+                self.attributesDict[ self.pathToCheck ]=listOfMatches[0]
+            else:
+                self.__appendError(msg="Can't expand, result of given path not unique, found:" + ','.join(listOfMatches))
+        return self
+    def __appendError(self, type='error', path=None, msg=None):
+        if(path==None):
+            path=self.pathToCheck
+        self.errors.append({'type':type, 'path':path, 'message': msg})
+    def getExpandedAttributes(self):
+        return self.attributesDict
     def getErrors(self):
+        return self.errors
+    def getErrorsAsString(self):
+        
         return self.errors

@@ -35,32 +35,33 @@
   - debug:
       var: preprocess_result
 
-  - name: include the file
-    include_vars: 
-      file: "{{ generator.path }}/generator.yaml"
-      name: schemafile_content
+  # - name: include the file
+  #   include_vars: 
+  #     file: "{{ generator.path }}/generator.yaml"
+  #     name: schemafile_content
 
   # - debug:
   #     var: schemafile_content
 
   - name: 
     set_fact:
-      validator_received_errors: "{{ preprocess_result.stdout | from_json}}"
+      validator_received_result: "{{ preprocess_result.stdout | from_json}}"
 
   - debug:
-      var: validator_received_errors
+      var: validator_received_result
 
-  - name: create a new error
+  - name: create a new error (to trigger the reporting)
     set_fact:
       generator_validator_error: ""
 
-  - name: create a new error
+  - name: add errors from generator
     set_fact:
       generator_validator_error: |
-        this is an error for {{ generator.name }} ({{ generator.attributes.name }}) in {{ generator.path }}
-        {{ error_item.path }}
+        {{generator_validator_error}}
+        {{error_item.type}}: {{ generator.name }} in {{ generator.path }}
+        /{{ generator.name }}/{{ error_item.path }}
         {{ error_item.message }}
-    loop: "{{ validator_received_errors.errors }}"
+    loop: "{{ validator_received_result.errors }}"
     loop_control:
       loop_var: error_item
 
