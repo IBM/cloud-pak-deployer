@@ -34,9 +34,15 @@
       --no-headers \
       -l {{ cartridge_csv_label }} \
       -o custom-columns='name:metadata.name,phase:status.phase' | \
-      grep {{ current_cp4d_cartridge.name }} | grep -i succeeded | wc -l
+      grep -i succeeded | wc -l
   register: csv_status
   retries: 30
   delay: 30
-  until: csv_status.stdout == "1"
+  until: csv_status.stdout != "0"
   when: current_cp4d_cartridge.name != "lite"
+  vars:
+    # ansible_callback_diy_playbook_on_task_start_msg: "TASK [{{ ansible_callback_diy.task.name }}] \n{{ lookup('pipe','date') }}"
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."

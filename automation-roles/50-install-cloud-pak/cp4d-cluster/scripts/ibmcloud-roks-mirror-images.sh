@@ -113,6 +113,9 @@ REGISTRY_DIR=/tmp/docker-registry
 # registry container name
 REGISTRY_NAME=docker-registry
 
+# auth.json file
+AUTH_JSON=/tmp/auth.json
+
 # registry service host
 REGISTRY_HOST=$(hostname -f)
 
@@ -1095,8 +1098,6 @@ do_image_mirror() {
     if [[ "${SHOW_REGISTRIES}" == "true" || "${SHOW_REGISTRIES_NAMESPACES}" == "true" ]]; then
         do_image_mirror_show_registries
     else
-        # generates auth.json for 'oc image mirror'
-        #generate_auth_json
 
         # mirror images
         if [ ! -z "${IMAGE}" ]; then
@@ -1142,7 +1143,7 @@ do_image_mirror_single_image() {
     fi
 
     echo "[INFO] Start mirroring image ..."
-    oc_cmd="oc image mirror -a /tmp/auth.json \"${IMAGE}\" \"${TARGET_REGISTRY}/${image_identifier}\" --filter-by-os '.*' --insecure ${DRY_RUN}" 
+    oc_cmd="oc image mirror -a ${AUTH_JSON} \"${IMAGE}\" \"${TARGET_REGISTRY}/${image_identifier}\" --filter-by-os '.*' --insecure ${DRY_RUN}" 
     echo "${oc_cmd}"
     eval ${oc_cmd}
 
@@ -1165,7 +1166,7 @@ do_skopeo_copy_single_image() {
     fi
     
     echo "[INFO] Start copying image ..."
-    oc_cmd="skopeo copy --all --authfile /tmp/auth.json --dest-tls-verify=false --src-tls-verify=false \"docker://${IMAGE}\" \"docker://${TARGET_REGISTRY}/${image_identifier}\""
+    oc_cmd="skopeo copy --all --authfile ${AUTH_JSON} --dest-tls-verify=false --src-tls-verify=false \"docker://${IMAGE}\" \"docker://${TARGET_REGISTRY}/${image_identifier}\""
     echo "${oc_cmd}"
     eval ${oc_cmd}
 
@@ -1242,15 +1243,30 @@ do_image_mirror_case_images() {
 
     for map_file in ${map_files}; do
         echo "[INFO] Mirroring ${map_file}"
-        oc_cmd="time oc image mirror -a /tmp/auth.json -f \"${map_file}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
+        oc_cmd="time oc image mirror -a ${AUTH_JSON} -f \"${map_file}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
         echo "${oc_cmd}"
         eval ${oc_cmd}
 
-        if [[ "$?" -ne 0 ]]; then
-            # On error we need to clean up our mirrored csv file
-            cleanup_mirrored_csv_files_from_current_run
-            
-            exit 11
+        mirror_exit=$?
+
+        if [[ "$mirror_exit" -ne 0 ]]; then
+
+            echo "[INFO] Start mirroring CASE images using skopeo ..."
+
+            while read in; do
+                src_image=$(echo $in | cut -d= -f1)
+                tgt_image=$(echo $in | cut -d= -f2)
+                skopeo_cmd="skopeo copy --all --authfile ${AUTH_JSON} --dest-tls-verify=false --src-tls-verify=false docker://${src_image} docker://${tgt_image}" ;
+                echo "${skopeo_cmd}"
+                eval ${skopeo_cmd}
+
+                if [[ "$?" -ne 0 ]]; then
+                    # On error we need to clean up our mirrored csv file
+                    cleanup_mirrored_csv_files_from_current_run
+
+                    exit 11
+                fi
+            done < ${map_file}
         fi
     done
 
@@ -1284,7 +1300,7 @@ do_skopeo_copy_case_images() {
     echo "[INFO] Start mirroring CASE images ..."
 
     while read in; do
-        oc_cmd="skopeo copy --all --authfile /tmp/auth.json --dest-tls-verify=false --src-tls-verify=false docker://${in}" ;
+        oc_cmd="skopeo copy --all --authfile ${AUTH_JSON} --dest-tls-verify=false --src-tls-verify=false docker://${in}" ;
         echo "${oc_cmd}"
         eval ${oc_cmd}
 
@@ -1440,9 +1456,9 @@ tag_latest_olm_catalog_images() {
                 validate_image_mirror_required_tools
                 echo "[INFO] Retrieving image tags from ${image}"
                 if [[ "${REGISTRY_TLS_ENABLED}" == "true" ]]; then
-                    skopeo_cmd="skopeo list-tags --authfile /tmp/auth.json --cert-dir ${AUTH_DATA_PATH}/certs docker://${image}"
+                    skopeo_cmd="skopeo list-tags --authfile ${AUTH_JSON} --cert-dir ${AUTH_DATA_PATH}/certs docker://${image}"
                 else
-                    skopeo_cmd="skopeo list-tags --tls-verify=false --authfile /tmp/auth.json docker://${image}"
+                    skopeo_cmd="skopeo list-tags --tls-verify=false --authfile ${AUTH_JSON} docker://${image}"
                 fi
                 echo "[INFO] ${skopeo_cmd}"
                 all_tags=$(${skopeo_cmd} | tr -d "\r|\n| " | sed -e 's|.*"Tags":\[||' | sed -e 's|\].*||' | sed -e 's|"||g' | sed -e 's|,|\n|g' | grep -v '^latest' | sort -V)
@@ -1723,6 +1739,7 @@ print_image_mirror_usage() {
     echo "   --ns-replace string            Replace the namespace of the mirror image"
     echo "   --ns-prefix string             Append a prefix to the namespace of the mirror image"
     echo "   --ns-suffix string             Append a suffix to the namespace of the mirror image"
+    echo "   --auth string                  auth.json file name to use for authentication to the registry"
     echo "   --from-registry string         Mirror the images from a private registry"
     echo "   --to-registry string           Mirror the images to another private registry"
     echo "   --split-size int               Mirror the images in batches with a given split size. Default is 100"
@@ -1815,6 +1832,10 @@ parse_image_mirror_arguments() {
             NAMESPACE_ACTION="suffix"
             NAMESPACE_ACTION_VALUE="$1"
             ;;
+        --auth)
+            shift
+            AUTH_JSON="$1"
+            ;;            
         --from-registry)
             shift
             SOURCE_REGISTRY="$1"

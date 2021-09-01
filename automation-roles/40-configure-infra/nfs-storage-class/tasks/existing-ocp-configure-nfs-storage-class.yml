@@ -1,0 +1,8 @@
+---
+- name: Validate if Dynamic NFS Storage {{ nfs_storage_class_name }}  class exists
+  shell: "oc get sc | grep -i '^{{ nfs_storage_class_name }}' | wc -l"
+  register: oc_storage_class_exists
+
+- fail:
+    msg: "StorageClass {{ nfs_storage_class_name }} does not exist"
+  when: oc_storage_class_exists.stdout == "0"
