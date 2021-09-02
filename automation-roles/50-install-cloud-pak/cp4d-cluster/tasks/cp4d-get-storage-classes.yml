@@ -11,24 +11,28 @@
     msg: "{{ cluster_storage_classes }}"
 
 - set_fact:
-    storage_type: "{{ cluster_storage_classes | json_query(query) | first | default('') }}"
+    storage_class: "{{ cluster_storage_classes | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?storage_class_name=='{{ current_cp4d_cluster.storage_class_name }}'].storage_type
+      [?storage_class_name=='{{ current_cp4d_cluster.storage_class_name }}']
 
 - fail:
-    msg: "Storage type for storage class name {{ current_cp4d_cluster.storage_class_name }} specified for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }} not found. Check the configuration."
-  when: storage_type == ''
+    msg: "Storage information for storage class name {{ current_cp4d_cluster.storage_class_name }} specified for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }} not found. Check the configuration."
+  when: storage_class == {}
+
+- name: Show storage class construct
+  debug:
+    var: storage_class
 
 - set_fact:
-    ocp_storage_class_file: 'managed-nfs-storage'
-    ocp_storage_class_block: 'managed-nfs-storage'
-  when: storage_type == 'nfs'
+    ocp_storage_class_file: "{{ storage_class.ocp_storage_class_file | default('managed-nfs-storage') }}"
+    ocp_storage_class_block: "{{ storage_class.ocp_storage_class_block | default('managed-nfs-storage') }}"
+  when: storage_class.storage_type == 'nfs'
 
 - set_fact:
-    ocp_storage_class_file: 'ocs-storagecluster-cephfs'
-    ocp_storage_class_block: 'ocs-storagecluster-ceph-rbd'
-  when: storage_type == 'ocs'
+    ocp_storage_class_file: "{{ storage_class.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
+    ocp_storage_class_block: "{{ storage_class.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
+  when: storage_class.storage_type == 'ocs'
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists
   shell:

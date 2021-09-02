@@ -1,8 +1,13 @@
 ---
-- name: Validate if Dynamic NFS Storage {{ nfs_storage_class_name }}  class exists
-  shell: "oc get sc | grep -i '^{{ nfs_storage_class_name }}' | wc -l"
-  register: oc_storage_class_exists
+- set_fact:
+    ocp_storage_class_file: "{{ current_storage_class.ocp_storage_class_file | default('managed-nfs-storage') }}"
+    ocp_storage_class_block: "{{ current_storage_class.ocp_storage_class_block | default('managed-nfs-storage') }}"
 
-- fail:
-    msg: "StorageClass {{ nfs_storage_class_name }} does not exist"
-  when: oc_storage_class_exists.stdout == "0"
+- name: Check if file storage class {{ ocp_storage_class_file }} exists
+  shell:
+    oc get sc {{ ocp_storage_class_file }}
+
+- name: Check if block storage class {{ ocp_storage_class_block }} exists
+  shell:
+    oc get sc {{ ocp_storage_class_block }}
+  when: ocp_storage_class_block != ocp_storage_class_file
