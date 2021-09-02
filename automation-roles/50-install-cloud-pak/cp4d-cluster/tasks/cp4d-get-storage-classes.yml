@@ -1,44 +1,46 @@
 - debug:
     msg: Current CP4D cluster is {{ current_cp4d_cluster }}
 
+# Retrieve the openshift storage definition referenced in the cp4d instance
 - set_fact:
-    cluster_storage_classes: "{{ all_config.openshift | json_query(query) | first }}"
+    openshift_storage: "{{ all_config.openshift | json_query(query) | first }}"
   vars:
     query: >-
-      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}'].storage_classes
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}'].openshift_storage
 
 - debug:
-    msg: "{{ cluster_storage_classes }}"
+    msg: "{{ openshift_storage }}"
 
+# Obtain the OpenShift storage element from the openshift storage definitions
 - set_fact:
-    storage_class: "{{ cluster_storage_classes | json_query(query) | first | default({}) }}"
+    selected_openshift_storage: "{{ openshift_storage | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?storage_class_name=='{{ current_cp4d_cluster.storage_class_name }}']
+      [?storage_name=='{{ current_cp4d_cluster.openshift_storage_name }}']
 
 - fail:
-    msg: "Storage information for storage class name {{ current_cp4d_cluster.storage_class_name }} specified for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }} not found. Check the configuration."
-  when: storage_class == {}
+    msg: "Storage information for storage name {{ current_cp4d_cluster.openshift_storage_name }} specified for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }} not found. Check the configuration."
+  when: selected_openshift_storage == {}
 
 - name: Show storage class construct
   debug:
-    var: storage_class
+    var: selected_openshift_storage
 
 - set_fact:
-    ocp_storage_class_file: "{{ storage_class.ocp_storage_class_file | default('managed-nfs-storage') }}"
-    ocp_storage_class_block: "{{ storage_class.ocp_storage_class_block | default('managed-nfs-storage') }}"
-  when: storage_class.storage_type == 'nfs'
+    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('managed-nfs-storage') }}"
+    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('managed-nfs-storage') }}"
+  when: selected_openshift_storage.storage_type == 'nfs'
 
 - set_fact:
-    ocp_storage_class_file: "{{ storage_class.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
-    ocp_storage_class_block: "{{ storage_class.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
-  when: storage_class.storage_type == 'ocs'
+    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
+    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
+  when: selected_openshift_storage.storage_type == 'ocs'
 
-- name: Check if file storage class {{ ocp_storage_class_file }} exists
+- name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
     oc get sc {{ ocp_storage_class_file }}
 
-- name: Check if block storage class {{ ocp_storage_class_block }} exists
+- name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
   shell:
     oc get sc {{ ocp_storage_class_block }}
   when: ocp_storage_class_block != ocp_storage_class_file
