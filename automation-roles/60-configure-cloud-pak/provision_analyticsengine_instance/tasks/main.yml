@@ -1,0 +1,26 @@
+---
+- set_fact:
+    analyticsengine_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
+  vars:
+    cartridge_name: "analyticsengine"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"
+
+- debug:
+    var: analyticsengine_cartridge
+
+- name: Loop throught each analyticsengine instance
+  block:
+
+  - debug:
+      msg: "{{ analyticsengine_cartridge.instances | length }}"
+
+  - name: Provision each analyticsengine instance from the analyticsengine cartridge specification
+    include_tasks: provision_analyticsengine_instance.yml
+    loop: "{{ analyticsengine_cartridge.instances | default([]) }}"
+    loop_control:
+      loop_var: analyticsengine_instance
+    when: analyticsengine_cartridge.instances | length > 0
+
+  when: 
+    - not analyticsengine_cartridge == ""
+    - analyticsengine_cartridge.instances is defined
