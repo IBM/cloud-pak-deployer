@@ -2,4 +2,71 @@
 - debug:
     msg: "Handling configuration for CP4D cluster {{ current_cp4d_cluster.project }}"
 
-# TODO: Place configuration of instances here
+- name: Login to Cloud Pak for Data
+  include_tasks: cluster-configure-prepare.yml
+
+# Cartridge: DB2
+- set_fact:
+    db2_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+  vars:
+    cartridge_name: "db2"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+- name: Provision DB2 instances
+  include_role:
+    name: provision_db2_instance
+  when: db2_service_enabled == '1'
+
+# Cartridge: CA
+- set_fact:
+    ca_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+  vars:
+    cartridge_name: "ca"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+- name: Provision Cognos instances
+  include_role:
+    name: provision_cognos_instance
+  when: ca_service_enabled == '1'
+
+# Cartridge: DV
+- set_fact:
+    dv_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+  vars:
+    cartridge_name: "dv"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+- name: Provision Data Virtualization instances
+  include_role:
+    name: provision_dv_instance
+  when: dv_service_enabled == '1'
+
+# Cartridge: AnalyticsEngine
+- set_fact:
+    ae_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+  vars:
+    cartridge_name: "analyticsengine"
+    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+- name: Provision Analytics Engine instances
+  include_role:
+    name: provision_analyticsengine_instance
+  when: ae_service_enabled == '1'
+
+# Handle instance configurations
+- when: "all_config.cp4d_instance_configuration is defined"
+  block:
+    - set_fact:
+        cp4d_instance_config: "{{ all_config.cp4d_instance_configuration|json_query(query_instance_config) | first }}"
+      vars:
+        query_instance_config: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"    
+
+    - debug:
+        msg: "{{ cp4d_instance_config }}"    
+
+    - name: Configure CP4D instance authorization
+      include_role:
+        name: instance_configuration
+      loop: "{{ cp4d_instance_config.cartridges | default([]) }}"
+      loop_control:
+        loop_var: cp4d_instance
