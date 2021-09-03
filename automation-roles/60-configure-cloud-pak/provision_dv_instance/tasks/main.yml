@@ -9,43 +9,50 @@
 - when: "cp4d_dv_provision_data_virtualization_instance == true"
   block:
 
-- set_fact:
-    dv_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
-  vars:
-    cartridge_name: "dv"
-    query_cartridge: "[?name=='{{ cartridge_name }}']"
+    - set_fact:
+        dv_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
+      vars:
+        cartridge_name: "dv"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"  
 
-- debug:
-    var: dv_cartridge  
+    - name: "Check if the DV instance {{ cp4d_dv_display_name }} is already running"
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_addon_type }}&display_name={{ cp4d_dv_display_name }}'"
+      register: dv_instance_lookup_result
 
-  - name: check if Data Virtualization is installed
-    shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_type }}&addon_version={{ cp4d_dv_version }}'"
-    register: dv_lookup_result
+    - set_fact:
+        dv_instance_lookup_result_json: "{{ dv_instance_lookup_result.stdout | from_json }}"
 
-  - set_fact:
-      dv_lookup: "{{ dv_lookup_result.stdout | from_json }}"
+    - debug:
+        msg: "DV instance {{ cp4d_dv_display_name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_dv_instance"
+      when: "not dv_instance_lookup_result_json.total_count == 0"
 
-  - debug:
-      msg: "Data Virtualization instance already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_dv_instance"
-    when: "not dv_lookup.total_count  == 0"
+    - when: "dv_instance_lookup_result_json.total_count == 0"
+      block:
+        - tempfile:
+            state: directory
+          register: cp4d_automation_temp_dir
 
-  - name: Create Data virtualization instance
-    block:
+        - name: Create Data Virtualization configuration file
+          template:
+            src: dv_instance_40.json.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/dv_instance.json"
 
-      - tempfile:
-          state: directory
-        register: cp4d_automation_temp_dir
+        - name: Provision Data Virtualization
+          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/dv_instance.json"
+          register: provision_dv_result
 
-      - name: Create Data Virtualization configuration file
-        template:
-          src: dv_instance.json.j2
-          dest: "{{ cp4d_automation_temp_dir.path }}/dv_instance.json"
+        - debug:
+            msg: "{{ provision_dv_result }}"
 
-      - name: Provision Data Virtualization
-        shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/dv_instance.json"
-        register: provision_dv_result
+        - set_fact:
+            provision_dv_result_json: "{{ provision_dv_result.stdout | from_json }}"
 
-      - debug:
-          msg: "{{ provision_dv_result }}"
+        - set_fact:
+            dv_instance_id: "{{ provision_dv_result_json.id }}"
 
-    when: dv_lookup.total_count == 0
+        - name: Waiting for DV instance {{ cp4d_dv_display_name }} to complete its provisioning
+          shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v1/boilerplates/service_instances/{{ dv_instance_id }}?include_service_status=true'"
+          register: wait_for_dv_service
+          until: wait_for_dv_service.stdout.find('"services_status":"RUNNING"') != -1
+          retries: 90
+          delay: 30 
