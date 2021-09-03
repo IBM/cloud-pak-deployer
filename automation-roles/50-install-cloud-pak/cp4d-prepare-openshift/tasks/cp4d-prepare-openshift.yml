@@ -120,13 +120,17 @@
 - name: Retrieve /etc/crio/crio.conf
   shell: |
     oc debug no/{{ ocp_workers.stdout }} -- cat /host/etc/crio/crio.conf > {{ cp4d_automation_temp_dir.path }}/worker_crio.conf
+  register: debug_node_result
+  retries: 3
+  delay: 10
+  until: debug_node_result.rc==0
 
 - name: Set pids_limit
   community.general.ini_file:
     path: "{{ cp4d_automation_temp_dir.path }}/worker_crio.conf"
     section: "crio.runtime"
     option: pids_limit
-    value: 12288
+    value: "12288"
 
 - name: Set default_ulimit
   community.general.ini_file:
@@ -169,6 +173,6 @@
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
-      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 
