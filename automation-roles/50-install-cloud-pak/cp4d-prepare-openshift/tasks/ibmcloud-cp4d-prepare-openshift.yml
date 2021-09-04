@@ -3,7 +3,7 @@
     reload_workers: False
     reboot_workers: False
 
-- name: Create private registries configuration (ImageContentSourcePolicy) for CP4D 4.0 with private registry
+- name: Create private registries configuration (ImageContentSourcePolicy) for Cloud Pak for Data with private registry
   block:
     - name: Check if ConfigMap cp4d-icsp-registries exists
       shell: "oc get configmap -n kube-system | grep -i '^cp4d-icsp-registries' | wc -l"
@@ -23,7 +23,6 @@
         - set_fact:
             reboot_workers: True
       when: 
-      - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
       - oc_icsp_cm_exists.stdout == "0"
   when: not (use_entitled_registry | bool)
 

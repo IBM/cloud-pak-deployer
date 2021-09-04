@@ -3,13 +3,13 @@
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
 
-- name: Create ImageContentSourcePolicy for CP4D 4.0 with private registry
+- name: Create ImageContentSourcePolicy for Cloud Pak for Data with private registry
   block:
     - name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
       shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
       register: oc_icsp_exists
 
-    - name: Create ImageContentSourcePolicy {{ icsp_name }} for CP4D 4.0
+    - name: Create ImageContentSourcePolicy {{ icsp_name }} for Cloud Pak for Data
       block:
         - name: Create ImageContentSourcePolicy yaml
           template:
@@ -18,7 +18,6 @@
         - name: Create ImageContentSourcePolicy {{ iscp_name }}
           shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"  
       when: 
-      - (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
       - oc_icsp_exists.stdout == "0"
   when: not (use_entitled_registry | bool)
 

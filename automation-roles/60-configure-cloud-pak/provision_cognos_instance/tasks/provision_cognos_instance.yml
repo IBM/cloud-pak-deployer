@@ -86,11 +86,10 @@
           register: create_cognos_connection_result
       when: "cp4d_cognos_db2_content_repo|length == 0"
 
-    - name: Create cognos instance json file for CP4D 4.0
+    - name: Create cognos instance json file
       template:
         src: cognos_instance_40.json.j2
         dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
-      when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
     - name: Create Cognos instance
       shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
@@ -99,7 +98,7 @@
     - set_fact:
         cognos_instance_create_result_json: "{{ cognos_instance_create_result.stdout | from_json }}"
 
-    - name: Wait until Cognos Analytics artifacts pod has started and is ready for CP4D 4.0
+    - name: Wait until Cognos Analytics artifacts pod has started and is ready
       command: oc get po -l app.kubernetes.io/component=ca-artifacts --no-headers -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
       register: ca_artifacts_pod
       retries: 60
@@ -107,15 +106,13 @@
       until:
         - ca_artifacts_pod.rc==0
         - ca_artifacts_pod.stdout!=''
-      when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
     - name: Wait for a bit so that all Cognos Analytics containers are starting
       pause:
        seconds: 90
 
-    - name: Destroy the pod so Cognos Analytics 4.0 instance provisioning continues
+    - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
       shell: "oc delete pod {{ ca_artifacts_pod.stdout }}"
-      when: (current_cp4d_cluster.cp4d_version | default('3.5') | string ) != '3.5'
 
     - debug:
         msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
