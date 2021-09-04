@@ -28,10 +28,7 @@ command_usage() {
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
-  echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified if configuration read from local server (\$CONFIG_DIR)"
-  echo "  --config-repo-url,-r <url>    Git repository to retrieve the configuration from (\$GIT_REPO_URL)"
-  echo "  --git-repo-dir,-rd <dir>      Directory in the Git repository that holds the configuration (\$GIT_REPO_DIR)"
-  echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
+  echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
@@ -143,45 +140,6 @@ while (( "$#" )); do
       shift 2
     else
       echo "Error: Missing configuration directory for --config-dir parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
-  --git-repo-url*|-r*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export GIT_REPO_URL="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export GIT_REPO_URL=$2
-      shift 2
-    else
-      echo "Error: Missing configuration git repository for --git-repo-url parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
-  --git-repo-dir*|-rd*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export GIT_REPO_DIR="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export GIT_REPO_DIR=$2
-      shift 2
-    else
-      echo "Error: Missing configuration git repository directory for --git-repo-dir parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
-  --git-access-token*|-t*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export GIT_ACCESS_TOKEN="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export GIT_ACCESS_TOKEN=$2
-      shift 2
-    else
-      echo "Error: Missing argument for --git-access-token parameter."
       command_usage 2
     fi
     fi
@@ -356,22 +314,6 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 # Check invalid combinations of parameters                                                                  #
 # --------------------------------------------------------------------------------------------------------- #
-if [ -z ${CONFIG_DIR} ] && [ -z ${GIT_REPO_URL} ];then
-  echo "Error: Either specify --config-dir or --git-repo-url."
-  command_usage 1
-fi
-
-# Validate combination of parameters when --git-repo-url specified
-if [ ! -z ${GIT_REPO_URL} ];then
-  if [ -z ${GIT_REPO_DIR} ];then
-    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-  if [ -z ${GIT_ACCESS_TOKEN} ];then
-    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-fi
 
 # Validate combination of parameters for subcommand vault
 if [[ "${SUBCOMMAND}" == "vault" ]];then
@@ -405,19 +347,17 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [ ! -z ${CONFIG_DIR} ];then
-  if [ ! -z ${GIT_REPO_URL} ];then
-    echo "Error: Either specify --config-dir or --git-repo-url, not both."
-    exit 1
-  fi
-  if [ ! -d "${CONFIG_DIR}/config" ]; then
-    echo "config directory not found in directory ${CONFIG_DIR}."
-    exit 1
-  fi
-  if [ ! -d "${CONFIG_DIR}/inventory" ]; then
-    echo "inventory directory not found in directory ${CONFIG_DIR}."
-    exit 1
-  fi
+if [ ! -d "${CONFIG_DIR}" ]; then
+  echo "config directory ${CONFIG_DIR} not found."
+  exit 1
+fi
+if [ ! -d "${CONFIG_DIR}/config" ]; then
+  echo "config directory not found in directory ${CONFIG_DIR}."
+  exit 1
+fi
+if [ ! -d "${CONFIG_DIR}/inventory" ]; then
+  echo "inventory directory not found in directory ${CONFIG_DIR}."
+  exit 1
 fi
 
 # Set remaining parameters
@@ -500,14 +440,7 @@ run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
 run_cmd+=" -e ACTION=${ACTION}"
 run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
 run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
-
-if [ ! -z $CONFIG_DIR ];then run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}";fi
-
-if [ ! -z $GIT_REPO_URL ];then
-  run_cmd+=" -e GIT_REPO_URL=${GIT_REPO_URL} \
-            -e GIT_REPO_DIR=${GIT_REPO_DIR} \
-            -e GIT_ACCESS_TOKEN=${GIT_ACCESS_TOKEN}"
-fi
+run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
 
 if [ ! -z $VAULT_GROUP ];then
   run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
