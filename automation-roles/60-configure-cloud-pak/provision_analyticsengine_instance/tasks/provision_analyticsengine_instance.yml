@@ -57,7 +57,12 @@
       register: wait_for_aestorage_service
       until: wait_for_aestorage_service.stdout.find('"services_status":"RUNNING"') != -1
       retries: 60
-      delay: 30 
+      delay: 30
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
     - name: Waiting for AnalyticsEngine instance {{ analyticsengine_instance.name }} to complete its provisioning
       shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ analyticsengine_id }}?include_service_status=true'"
@@ -65,6 +70,8 @@
       until: wait_for_ae_service.stdout.find('"services_status":"RUNNING"') != -1
       retries: 60
       delay: 30 
-      
-
-
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

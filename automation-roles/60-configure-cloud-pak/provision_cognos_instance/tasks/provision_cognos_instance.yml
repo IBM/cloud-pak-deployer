@@ -128,6 +128,11 @@
       until:
         - ca_provision_complete.rc==0
         - ca_provision_complete.stdout=='7'
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
     - debug:
         msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"

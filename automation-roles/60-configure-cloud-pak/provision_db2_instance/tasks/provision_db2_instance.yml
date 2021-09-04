@@ -57,7 +57,8 @@
       until: wait_for_db2_service.stdout.find('"provision_status":"PROVISIONED"') != -1
       retries: 60
       delay: 30 
-
-      
-
-
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
