@@ -30,6 +30,7 @@ command_usage() {
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
   echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
@@ -53,6 +54,9 @@ if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
+
+arrExtraKey=()
+arrExtraValue=()
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -144,6 +148,19 @@ while (( "$#" )); do
     fi
     fi
     ;;
+  --status-dir*|-l*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export STATUS_DIR="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export STATUS_DIR=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --status-dir parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
   --ibm-cloud-api-key*|-k*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
       export IBM_CLOUD_API_KEY="${1#*=}"
@@ -156,6 +173,28 @@ while (( "$#" )); do
       command_usage 2
     fi
     fi
+    ;;
+  --extra-vars*|-e*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      CURRENT_EXTRA_VAR="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      CURRENT_EXTRA_VAR=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --extra-vars parameter."
+      command_usage 2
+    fi
+    fi
+    # Check if the environment variable has the format of key=value
+    extra_key=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f1)
+    extra_value=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f2)
+    if [[ "${extra_key}" == "" || "${extra_value}" == "" ]];then
+      echo "Error: --extra-vars must be specified as <key>=<value>."
+      command_usage 2
+    fi
+    arrExtraKey+=("${extra_key}")
+    arrExtraValue+=("${extra_value}")
     ;;
   --vault-secret-file*|-vsf*)
     if [[ "${SUBCOMMAND}" != "vault" ]];then
@@ -239,19 +278,6 @@ while (( "$#" )); do
       shift 2
     else
       echo "Error: Missing argument for --vault-group parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
-  --status-dir*|-l*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export STATUS_DIR="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export STATUS_DIR=$2
-      shift 2
-    else
-      echo "Error: Missing argument for --status-dir parameter."
       command_usage 2
     fi
     fi
@@ -458,6 +484,15 @@ fi
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+
+# Handle extra variables
+if [ ${#arrExtraKey[@]} -ne 0 ];then
+  for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
+    echo "Extra parameters ($i): ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+    run_cmd+=" -e ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+  done
+  run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
+fi
 
 run_cmd+=" cloud-pak-deployer"
 

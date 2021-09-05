@@ -46,29 +46,29 @@ export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
 case "$SUBCOMMAND" in
 env|environment)
+  # Set Ansible config file to use
+  ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
+  if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+  export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
+  # Assemble command
+  run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
-    ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
-    if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
-    export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE} && \
-    ansible-playbook \
-      -i ${INV_DIR} \
-      playbooks/playbook-env-apply.yml \
-      --extra-vars config_dir=${CONFIG_DIR} \
-      --extra-vars status_dir=${STATUS_DIR} \
-      --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
-      --extra-vars confirm_destroy=${CONFIRM_DESTROY} ${VERBOSE_ARG}
+    run_cmd+=" playbooks/playbook-env-apply.yml"
   elif [ "$ACTION" == "destroy" ];then
-    ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
-    if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
-    export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE} && \
-    ansible-playbook \
-      -i ${INV_DIR} \
-      playbooks/playbook-env-destroy.yml \
-      --extra-vars config_dir=${CONFIG_DIR} \
-      --extra-vars status_dir=${STATUS_DIR} \
-      --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY} \
-      --extra-vars confirm_destroy=${CONFIRM_DESTROY} ${VERBOSE_ARG}
+    run_cmd+=" playbooks/playbook-env-destroy.yml"
   fi
+  run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
+  run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
+  run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
+  run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
+  run_cmd+=" ${VERBOSE_ARG}"
+  if [ -v EXTRA_PARMS ];then
+    for p in ${EXTRA_PARMS};do
+      echo "Extra param $p=${!p}"
+      run_cmd+=" --extra-vars $p=${!p}"
+    done
+  fi
+  eval $run_cmd
   ;;
 
 vault)
