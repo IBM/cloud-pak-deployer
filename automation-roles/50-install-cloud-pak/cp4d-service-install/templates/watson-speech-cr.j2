@@ -1,0 +1,51 @@
+apiVersion: speech.watson.ibm.com/v1
+kind: WatsonSpeech
+metadata:
+  name: speech-prod-cr     # The recommended name of the custom resource, which you can change
+  namespace: {{ current_cp4d_cluster.project }}
+spec:
+  license:
+    accept: true
+    version: {{ current_cp4d_cartridge.version }}
+################
+# Storage class
+################
+  storageClass: {{ ocp_storage_class_file }}
+########################
+# Configuration scaling
+########################
+  scaleConfig:  
+    stt:  
+      size: {{ current_cp4d_cartridge.stt_size }}
+    tts:  
+      size: {{ current_cp4d_cartridge.tts_size }}
+#############################
+# Speech services components
+#############################
+  tags:
+    sttRuntime: true         # Enables the Speech to Text runtime component
+    sttAsync: true           # Enables the Speech to Text asynchronous HTTP component
+    sttCustomization: true   # Enables the Speech to Text customization component
+    ttsRuntime: false        # Enables the Text to Speech runtime component
+    ttsCustomization: false  # Enables the Text to Speech customization component
+############################################
+# Speech to Text previous-generation models
+############################################
+  global:
+    sttModels:
+      enUsBroadbandModel:            # US English (en-US) Broadband model
+        enabled: true
+      enUsNarrowbandModel:           # US English (en-US) Narrowband model
+        enabled: true
+      enUsShortFormNarrowbandModel:  # US English (en-US) Short-Form Narrowband model
+        enabled: true
+########################################
+# Text to Speech enhanced neural voices
+########################################
+    ttsVoices:
+      enUSAllisonV3Voice:  # US English (en-US) Allison enhanced neural voice 
+        enabled: true
+      enUSLisaV3Voice:     # US English (en-US) Lisa enhanced neural voice 
+        enabled: true
+      enUSMichaelV3Voice:  # US English (en-US) Michael enhanced neural voice 
+        enabled: true

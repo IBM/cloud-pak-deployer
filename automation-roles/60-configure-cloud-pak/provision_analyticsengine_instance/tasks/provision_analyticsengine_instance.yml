@@ -1,0 +1,70 @@
+---
+- debug:
+    var: analyticsengine_instance
+
+- name: "Check if the analyticsengine instance {{ analyticsengine_instance.name }} is already running"
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_analyticsengine_instance_addon_type }}&display_name={{ analyticsengine_instance.name }}'"
+  register: analyticsengine_instance_lookup_result
+
+- set_fact:
+    analyticsengine_instance_lookup_result_json: "{{ analyticsengine_instance_lookup_result.stdout | from_json }}"
+
+- debug:
+    msg: "AnalyticsEngine instance {{ analyticsengine_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_analytics_instance"
+  when: "not analyticsengine_instance_lookup_result_json.total_count == 0"
+
+
+- when: "analyticsengine_instance_lookup_result_json.total_count == 0"
+  block:
+
+    - name: Prepare AnalyticsEngine storage instance {{ analyticsengine_instance.name }}-storage json file
+      template:
+        src: analyticsengine_storage_instance_40.json.j2
+        dest: "{{ status_dir }}/cp4d/analyticsengine_storage_instance_40.json"
+
+    - name: Prepare AnalyticsEngine instance {{ analyticsengine_instance.name }} json file
+      template:
+        src: analyticsengine_instance_40.json.j2
+        dest: "{{ status_dir }}/cp4d/analyticsengine_instance_40.json"
+
+
+    - name: Create AnalyticsEngine storage instance {{ analyticsengine_instance.name }}
+      shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ status_dir }}/cp4d/analyticsengine_storage_instance_40.json"
+      register: create_analyticsengine_storage_instance_result
+
+    - set_fact:
+        create_analyticsengine_storage_instance_result_json: "{{ create_analyticsengine_storage_instance_result.stdout | from_json }}"
+
+    - name: Create AnalyticsEngine instance {{ analyticsengine_instance.name }}
+      shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ status_dir }}/cp4d/analyticsengine_instance_40.json"
+      register: create_analyticsengine_instance_result
+
+    - set_fact:
+        create_analyticsengine_instance_result_json: "{{ create_analyticsengine_instance_result.stdout | from_json }}"
+
+    - debug:
+        msg: "{{ create_analyticsengine_storage_instance_result_json}}"
+
+    - debug:
+        msg: "{{ create_analyticsengine_instance_result_json}}"
+
+    - set_fact:
+        analyticsengine_storage_id: "{{ create_analyticsengine_storage_instance_result_json.id }}"
+        analyticsengine_id: "{{ create_analyticsengine_instance_result_json.id }}"
+
+    - name: Waiting for AnalyticsEngine Storage instance {{ analyticsengine_instance.name }} to complete its provisioning
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ analyticsengine_storage_id }}/?include_service_status=true'"
+      register: wait_for_aestorage_service
+      until: wait_for_aestorage_service.stdout.find('"services_status":"RUNNING"') != -1
+      retries: 60
+      delay: 30 
+
+    - name: Waiting for AnalyticsEngine instance {{ analyticsengine_instance.name }} to complete its provisioning
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ analyticsengine_id }}?include_service_status=true'"
+      register: wait_for_ae_service
+      until: wait_for_ae_service.stdout.find('"services_status":"RUNNING"') != -1
+      retries: 60
+      delay: 30 
+      
+
+

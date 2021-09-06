@@ -1,0 +1,99 @@
+apiVersion: assistant.watson.ibm.com/v1
+kind: WatsonAssistant
+metadata:
+  name: wa
+  namespace: {{ current_cp4d_cluster.project }}
+  annotations:
+    oppy.ibm.com/disable-rollback: "true"
+    oppy.ibm.com/log-default-level: "debug"
+    oppy.ibm.com/log-filters: ""
+    oppy.ibm.com/log-thread-id: "false"
+    oppy.ibm.com/log-json: "false"
+  labels:
+    app.kubernetes.io/managed-by: "Ansible"
+    app.kubernetes.io/name: "watson-assistant"
+    app.kubernetes.io/instance: "wa"    # This should match the value for metadata.name
+spec:
+  backup:
+    offlineQuiesce: false
+    onlineQuiesce: false
+  cluster:
+    dockerRegistryPrefix: ""
+    imagePullSecrets:
+    - wa-pull-secret
+    storageClassName: {{ ocp_storage_class_block }}
+    type: private
+    name: prod # Do not change this value 
+  cpd:
+    namespace: {{ current_cp4d_cluster.project }}
+  datastores:
+    cos:
+      storageClassName: ""
+      storageSize: 20Gi
+    datagovernor:
+      elasticSearch:
+        storageSize: 55Gi
+      etcd:
+        storageSize: 55Gi
+      kafka:
+        storageSize: 55Gi
+      storageClassName: {{ ocp_storage_class_block }}
+      zookeeper:
+        storageSize: 55Gi
+    elasticSearch:
+      analytics:
+        storageClassName: ""
+        storageSize: ""
+      store:
+        storageClassName: ""
+        storageSize: ""
+    etcd:
+      storageClassName: ""
+      storageSize: 1Gi
+    kafka:
+      storageClassName: ""
+      storageSize: 5Gi
+      zookeeper:
+        storageSize: 1Gi
+    modelTrain:
+      postgres:
+        storageClassName: {{ ocp_storage_class_block }}
+        storageSize: 55Gi
+      rabbitmq:
+        storageClassName: {{ ocp_storage_class_block }}
+        storageSize: 55Gi
+    postgres:
+      backupStorageClassName: ""
+      storageClassName: ""
+      storageSize: 5Gi
+    redis:
+      storageClassName: ""
+      storageSize: ""
+  features:
+    analytics:
+      enabled: true
+    recommends:
+      enabled: true
+    tooling:
+      enabled: true
+    voice:
+      enabled: false
+  labels: {}
+  languages:
+  - en
+  #- es
+  #- pt-br
+  #- fr
+  #- it
+  #- ja
+  #- de
+  #- ko
+  #- ar
+  #- nl
+  #- zh-tw
+  #- zh-cn
+  #- cs
+  license:
+    accept: true
+  size: {{ current_cp4d_cartridge.size }}
+  version: {{ current_cp4d_cartridge.version }}

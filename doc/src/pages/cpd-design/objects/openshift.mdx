@@ -28,8 +28,9 @@ openshift:
     - sample-subnet-zone-1
     - sample-subnet-zone-2
     - sample-subnet-zone-3
-  storage_classes:
-  - storage_type: nfs
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
     nfs_server_name: sample-nfs
   - storage_type: ocs
     ocs_storage_label: ocs
@@ -48,10 +49,10 @@ openshift:
 | infrastructure.type | Type of infrastructure to provision ROKS cluster on | No | vpc (default), classic |
 | infrastructure.vpc_name | Name of the VPC if type is `vpc` | Yes, inferrred | Existing VPC |
 | infrastructure.subnets | List of subnets within the VPC to use. Either 1 or 3 subnets must be specified | Yes | Existing subnet |
-| storage_classes.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs or ocs |
-| storage_classes.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
-| storage_classes.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
-| storage_classes.ocs_storage_size | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs or ocs |
+| openshift_storage.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
+| openshift_storage.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.ocs_storage_size | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
 
 
 ### Existing OpenShift
@@ -62,8 +63,11 @@ openshift:
   ocp_version: 4.6
   cluster_name: sample
   domain_name: example.com
-  storage_classes:
-  - storage_type: nfs
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+    # ocp_storage_class_file: nfs-client 
+    # ocp_storage_class_block: nfs-client
 ```
 
 #### Property explanation for existing OpenShift clusters
@@ -73,4 +77,7 @@ openshift:
 | ocp_version | OpenShift version of the cluster (not used for now)               | No        | 4.6 |
 | cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
 | domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
-| storage_classes.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs |
+| openshift_storage.name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
+| openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs |
+| openshift_storage.ocp_storage_class_file | OpenShift storage class to use for file storage, defaults to `managed-nfs-storage` | No | |
+| storaopenshift_storagege_classes.ocp_storage_class_block | OpenShift storage class to use for block storage, defaults to `managed-nfs-storage` | No | |
