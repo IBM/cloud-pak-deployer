@@ -1,0 +1,55 @@
+---
+# TODO: REMOVE THIS FILE - it's only left here to lookup snippets
+- name: check if the file exists
+  stat:
+    path: "{{ generator.path }}/generator.yaml"
+  register: schemafile_stat
+
+- name: if a schemafile was found, validate the config against it
+  block:
+  - name: include the file
+    include_vars: 
+      file: "{{ generator.path }}/generator.yaml"
+      name: schemafile_content
+
+  - debug:
+      var: schemafile_content
+
+  - name: run the validator script
+    shell:
+      cmd: "python3 validator.py ansible {{schemafile_content | to_yaml | b64encode }} {{generator.attributes | to_yaml | b64encode }} {{generator.config | to_yaml | b64encode }}"
+      #cmd: "pwd"
+      chdir: "{{ role_path }}/scripts"
+    register: validator_result
+
+  - debug:
+      var: validator_result
+  - name: 
+    set_fact:
+      validator_received_errors: "{{ validator_result.stdout | from_json}}"
+
+  - debug:
+      var: validator_received_errors
+
+  - name: create a new error
+    set_fact:
+      generator_validator_error: ""
+
+  - name: create a new error
+    set_fact:
+      generator_validator_error: |
+        this is an error for {{ generator.name }} ({{ generator.attributes.name }}) in {{ generator.path }}
+        {{ error_item.path }}
+        {{ error_item.message }}
+    loop: "{{ validator_received_errors.errors }}"
+    loop_control:
+      loop_var: error_item
+
+  - set_fact:
+      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
+      generator_validation_error_message: |
+        {{ generator_validation_error_message }}
+        {{ generator_validator_error }}
+  when: schemafile_stat.stat.exists==true
+
+
