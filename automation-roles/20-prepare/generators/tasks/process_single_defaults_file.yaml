@@ -1,12 +1,16 @@
 ---
 - debug:
     msg: '{{ relative_path_to_defaults_file }}'
+
+- name: Generate defaults through template
+  template:
+    src: "{{ absolute_path_to_defaults_file }}"
+    dest: "{{ status_dir }}/generated_defaults/{{ absolute_path_to_defaults_file | basename }}"
+
 - name: include the file
   include_vars:
-    file: '{{ absolute_path_to_defaults_file }}'
+    file: "{{ status_dir }}/generated_defaults/{{ absolute_path_to_defaults_file | basename }}"
     name: 'this_defaults'
-
-
 
 - name: debug just included defaults
   debug: 
@@ -14,8 +18,6 @@
 - name: update raw_defaults_files
   set_fact: 
     raw_defaults_files: "{{ raw_defaults_files | combine({ relative_path_to_defaults_file : this_defaults }) }}"
-
-
 
 - name: merge this_defaults with defaults_merged-fact
   # "KEY: {{ defaults_item.key }}"
