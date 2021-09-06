@@ -58,9 +58,11 @@
     set_fact:
       generator_validator_error: |
         {{generator_validator_error}}
-        {{error_item.type}}: {{ generator.name }} in {{ generator.path }}
-        /{{ generator.name }}/{{ error_item.path }}
-        {{ error_item.message }}
+
+        {{ generator.name }}:
+        {{ generator.attributes | to_nice_yaml }}
+
+        ERROR: {{ error_item.message }}
     loop: "{{ validator_received_result.errors }}"
     loop_control:
       loop_var: error_item
