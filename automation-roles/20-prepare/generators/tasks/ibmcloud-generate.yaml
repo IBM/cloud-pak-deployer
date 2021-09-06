@@ -118,6 +118,44 @@
 
 # ### TODO: check if the roles are available, before we even try to run them
 
+
+### Start: generator preprocessing
+
+- set_fact:
+    generator_validation_error_message: ""
+    generator_validation_error_count: 1
+
+- set_fact:
+    generator_validation_error_message: |
+      Validation errors:
+
+- name: preprocess 
+  include_tasks: pre_execution_processing.yaml
+  vars: 
+    generator:
+      this_item: "{{ item }}"
+      name: "{{ item[0].key }}"
+      path: "{{path_to_generators_dir}}/{{ item[0].key }}"
+      attributes: "{{ item[1] }}"
+      #config: "{{ config_merged }}"
+      config: "{{ all_config }}"
+    GENERATOR_NAME: "{{ item[0].key }}"
+    GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
+  loop: "{{ all_config | dict2items | subelements('value')}}"
+
+- debug:
+    msg: |
+      this is a multiline string
+      second line
+# TODO: Remove this 'fail' task 
+- fail:
+    msg: "{{ generator_validation_error_message }}"
+    #msg: |
+    #  this is a multiline string
+  when: generator_validation_error_count | int > 0
+
+### end: generator preprocessing
+
 - name: Run generators
   include_tasks: "{{path_to_generators_dir}}/{{ item[0].key }}/main.yaml"
   vars:
