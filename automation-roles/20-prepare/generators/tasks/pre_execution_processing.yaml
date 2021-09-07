@@ -23,7 +23,7 @@
 # TODO: Only preprocess for now, leave the validation untouched. will need cleanup
   - name: run the preprocess script ({{ generator.name }})
     shell:
-      cmd: "python3 pre_execution_processor.py -p {{ generator.path }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
+      cmd: "python3 pre_execution_processor.py -p {{ generator.path }} -i {{ generator_element_index }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
       #cmd: "pwd"
       chdir: "{{ role_path }}/scripts"
     register: preprocess_result # in the old version this was called 'validator_result'
@@ -89,7 +89,7 @@
 
 ### merge the updated attributes into the all_config
 - set_fact:
-    all_config: "{{ all_config[ generator.name ][generator_element_index]  }}"
+    "{{ all_config[foo]:'bar' }}"
 
 
 ### end of loop, prepare next iteration

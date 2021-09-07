@@ -11,6 +11,7 @@ parser.add_argument('--full', '-f', help="merged all_config object containing co
 parser.add_argument('--generatorpath', '-p', help="absolute path to the generator directory", type= str, required=True)
 parser.add_argument('--output', '-o', help="output file", type= str)
 parser.add_argument('--script', '-s', help="filename of the preprocess-script", type= str)
+parser.add_argument('--index', '-i', help="index of the element inside the generator array", type=int)
 args = parser.parse_args()
 
 generatorAttributes = yaml.load(base64.b64decode(args.attributes), Loader=yaml.FullLoader)
