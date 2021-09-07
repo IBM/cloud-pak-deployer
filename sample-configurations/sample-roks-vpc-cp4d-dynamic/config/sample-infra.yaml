@@ -1,7 +1,7 @@
 ---
 provider:
 - name: ibm
-  region: eu-de
+  region: {{ ibm_cloud_region }}
 
 resource_group:
 - name: "Default" # should exist already
@@ -24,15 +24,15 @@ address_prefix:
 ### Prefixes for the client environment
 - name: "{{ env_id }}-zone-1"
   vpc: "{{ env_id }}"
-  zone: eu-de-1
+  zone: {{ ibm_cloud_region }}-1
   cidr: 10.231.0.0/26
 - name: "{{ env_id }}-zone-2"
   vpc: "{{ env_id }}"
-  zone: eu-de-2
+  zone: {{ ibm_cloud_region }}-2
   cidr: 10.231.0.64/26
 - name: "{{ env_id }}-zone-3"
   vpc: "{{ env_id }}"
-  zone: eu-de-3
+  zone: {{ ibm_cloud_region }}-3
   cidr: 10.231.0.128/25 
 
 subnet:
@@ -41,29 +41,29 @@ subnet:
   vpc: "{{ env_id }}"
   address_prefix: "{{ env_id }}-zone-1"
   ipv4_cidr_block: 10.231.0.0/26
-  zone: eu-de-1 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-1 # TODO: resolve this via the prefix
 - name: "{{ env_id }}-subnet-zone-2"
   vpc: "{{ env_id }}"
   address_prefix: "{{ env_id }}-zone-2"
   ipv4_cidr_block: 10.231.0.64/26
-  zone: eu-de-2 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-2 # TODO: resolve this via the prefix
 - name: "{{ env_id }}-subnet-zone-3"
   vpc: "{{ env_id }}"
   address_prefix: "{{ env_id }}-zone-3"
   ipv4_cidr_block: 10.231.0.128/26
-  zone: eu-de-3 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-3 # TODO: resolve this via the prefix
 - name: "{{ env_id }}-subnet-zone-shared"
   vpc: "{{ env_id }}"
   address_prefix: "{{ env_id }}-zone-3"
   ipv4_cidr_block: 10.231.0.192/26
-  zone: eu-de-3 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-3 # TODO: resolve this via the prefix
 
 vsi:
 - name: "{{ env_id }}-bastion"
   infrastructure:
     type: vpc
     vpc_name: "{{ env_id }}"
-    zone: eu-de-3
+    zone: {{ ibm_cloud_region }}-3
     subnet: "{{ env_id }}-subnet-zone-shared"
     primary_ipv4_address: 10.231.0.196
     public_ip: True
@@ -76,7 +76,7 @@ nfs_server:
     type: vpc
     subnet: "{{ env_id }}-subnet-zone-shared"
     primary_ipv4_address: 10.231.0.197
-    zone: eu-de-3 
+    zone: {{ ibm_cloud_region }}-3 
     vpc_name: "{{ env_id }}"
     bastion_host: "{{ env_id }}-bastion"
     volume_selector: 1000G
