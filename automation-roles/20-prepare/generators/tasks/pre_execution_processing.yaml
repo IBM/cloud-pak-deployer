@@ -1,12 +1,22 @@
 ---
+# This File is included via a loop from
+# ./ibmcloud-generate.yaml
 - name: check if the preprocessor.py file exists
   stat:
     path: "{{ generator.path }}/preprocessor.py"
   register: preprocessorscript_stat
 
+- set_fact:
+    generator_element_index: 0
+  when: generator.name != generator_last_name
+
 - name: debug generator.this_item
   debug:
-    msg: "{{ generator.this_item }}"
+    msg: |
+      {{ generator.this_item }}
+      item_index:{{ all_config_item_index }} 
+      generator_element_index:{{ generator_element_index }}
+      {{ generator.name }} -- {{ generator_last_name }}
 - name: if a preprocessor script was found, run it via pre_execution_processing.py
   block:
 # TODO: decide what comes first: pre-process the config or validate validate the config?
@@ -74,4 +84,15 @@
         {{ generator_validator_error }}
   when: preprocessorscript_stat.stat.exists==true
 
+- debug:
+    var: all_config
 
+### merge the updated attributes into the all_config
+- set_fact:
+    all_config: "{{ all_config[ generator.name ][generator_element_index]  }}"
+
+
+### end of loop, prepare next iteration
+- set_fact:
+    generator_last_name: "{{ generator.name }}"
+    generator_element_index: "{{ (generator_element_index | int)  + 1 }}"

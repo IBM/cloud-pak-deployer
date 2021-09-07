@@ -124,7 +124,7 @@
 - set_fact:
     generator_validation_error_message: ""
     generator_validation_error_count: 1
-
+    generator_last_name: ""
 - set_fact:
     generator_validation_error_message: |
       Validation errors:
@@ -142,6 +142,8 @@
     GENERATOR_NAME: "{{ item[0].key }}"
     GENERATOR_DIR: "{{path_to_generators_dir}}/{{ item[0].key }}"
   loop: "{{ all_config | dict2items | subelements('value')}}"
+  loop_control:
+    index_var: all_config_item_index
 
 - debug:
     msg: |
