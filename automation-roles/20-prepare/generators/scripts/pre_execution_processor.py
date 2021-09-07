@@ -6,6 +6,7 @@ import base64, json, yaml
 import sys
 
 parser = argparse.ArgumentParser()
+parser.add_argument('--key', '-k', help="Generator key inside the config, somehow identical to the generator name")
 parser.add_argument('--attributes', '-a', help="attributes for this generator instance", type= str, required=True)
 parser.add_argument('--full', '-f', help="merged all_config object containing config for each an every generator instance", type= str, required=True)
 parser.add_argument('--generatorpath', '-p', help="absolute path to the generator directory", type= str, required=True)
@@ -43,7 +44,7 @@ from preprocessor import preprocessor
 
 result = preprocessor(attributes=generatorAttributes, fullConfig=generatorFullConfig)
 
-
+generatorFullConfig[args.key][args.index] = result.get('attributes_updated')
 
 # print('--- preprocessor result ---')
 # print(result)
@@ -54,5 +55,6 @@ result = preprocessor(attributes=generatorAttributes, fullConfig=generatorFullCo
 
 print(json.dumps({
     'attributes_updated': result.get('attributes_updated'),
+    'updated_config': generatorFullConfig,
     'errors': result.get('errors')
     }, indent=4, separators=(',', ': '), sort_keys=True))
