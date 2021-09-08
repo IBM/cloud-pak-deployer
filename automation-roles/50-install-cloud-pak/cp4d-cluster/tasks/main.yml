@@ -14,17 +14,27 @@
     ibm_cp_entitlement_key: "{{ secret_value }}"
 
 - fail:
-    msg: "No registry namespace specified for CP4D but cannot pull from entitled registry because of missing entitlement key in vault"
-  when: ibm_cp_entitlement_key == "" and (current_cp4d_cluster.container_registry_namespace | default("")) == ""
+    msg: "No image registry name specified for CP4D but cannot pull from entitled registry because of missing entitlement key in vault"
+  when: ibm_cp_entitlement_key == "" and (current_cp4d_cluster.image_registry_name | default("")) == ""
+
+- set_fact:
+    entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
+  when: ibm_cp_entitlement_key != ""
 
 - set_fact:
     use_entitled_registry: False
 
-- name: Use entitled registry if entitlement key available and no registry namespace specified
+- name: Use entitled registry if entitlement key available and no image registry name specified
   set_fact:
     use_entitled_registry: True
   when:
-    - (current_cp4d_cluster.container_registry_namespace | default("")) == ""
+  - (current_cp4d_cluster.image_registry_name | default("")) == ""
+
+- name: Connect to private image registry
+  include_role: 
+    name: connect-private-image-registry
+  when:
+  - (current_cp4d_cluster.image_registry_name | default("")) != ""
 
 - name: Create Cloud Pak for Data directory for generated files
   file:
@@ -40,7 +50,7 @@
   when: 
   - not (use_entitled_registry | bool)
 
-- name: Mirror images for Cloud Pak for Data to private registry
+- name: Mirror images for Cloud Pak for Data to private registry {{ current_cp4d_cluster.image_registry_name }}
   include_tasks: mirror-images-cp4d-40.yml
   when: 
   - not (use_entitled_registry | bool)
