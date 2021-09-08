@@ -12,9 +12,11 @@ class GeneratorPreProcessor:
         self.errors = []
     def __call__(self,pathToCheck):
         self.pathToCheck = pathToCheck
+        # check, that it actually exists
         return self
     def __eq__(self,other):
         # in normal conditions 'other' will be True/typeof bool
+        # self.pathToCheck = pathToCheck
         if(type(other) is bool):
             return (self.pathToCheck in self.attributesDict)
         if(type(other) is (str or int)):

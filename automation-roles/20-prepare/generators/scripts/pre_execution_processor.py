@@ -31,7 +31,7 @@ generatorFullConfig = yaml.load(base64.b64decode(args.full), Loader=yaml.FullLoa
 # to load definitions from the preprocessor-file
 sys.path.append(os.getcwd())
 sys.path.append(args.generatorpath)
-sys.path.append(args.generatorpath)
+
 # global GeneratorPreProcessor
 # from generatorPreProcessor import GeneratorPreProcessor
 
