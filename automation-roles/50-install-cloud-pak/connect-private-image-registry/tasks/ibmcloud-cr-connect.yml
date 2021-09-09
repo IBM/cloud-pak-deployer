@@ -7,6 +7,10 @@
     msg: Registry namespace for image registry {{ current_image_registry.name }} not specified
   when: (current_image_registry.registry_namespace | default("")) == ""
  
+- name: Set IBM Cloud region
+  shell: |
+    ibmcloud target -r {{ ibm_cloud_region }}
+
 - name: Validate if IBM Container Registry {{ current_image_registry.registry_namespace }} exists
   shell: "ibmcloud cr namespace-list | grep -w '^{{ current_image_registry.registry_namespace }} ' | wc -l"
   register: ibmcloud_cr_exists_result
