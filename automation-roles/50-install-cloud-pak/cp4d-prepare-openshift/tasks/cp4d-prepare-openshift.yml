@@ -47,7 +47,7 @@
         - name: Set the global pull secret
           shell: |
             cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-              jq --arg private_registry "{{ lookup('template','private_registry.j2') }}" \
+              jq --arg private_registry "{{ private_registry_url }}" \
                 --arg pull_secret $(echo -n "{{ secret_value }}" | base64 -w0) \
                 '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
                 > {{ pull_secret_dir.path }}/newdockerconfigjson

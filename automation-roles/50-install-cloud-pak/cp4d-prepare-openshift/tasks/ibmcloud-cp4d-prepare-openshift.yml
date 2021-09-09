@@ -26,27 +26,23 @@
       - oc_icsp_cm_exists.stdout == "0"
   when: not (use_entitled_registry | bool)
 
-- name: Set global pull secret for private registry
+- name: Set global pull secret for specified private registry
   block:
-    - name: Validate IBM Container Registry Pull secret key exists
-      include_role: 
-        name: connect-container-registry
-
-    - name: Get key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
+    - name: Get credential for container registry {{ current_cp4d_cluster.image_registry_name }} if it exists in the vault
       include_role: 
         name: vault-get-secret
       vars:
-        secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
+        secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
         secret_group: "{{ environment_name }}"  
 
-    - name: Validate ICR secret is available
-      fail: msg="ICR key icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }} value from group {{ environment_name }} is empty"
+    - name: Validate if container registry credentials secret is available
+      fail: msg="Container registry credentials secret image-registry-{{ current_cp4d_cluster.image_registry_name }} from group {{ environment_name }} is empty"
       when: secret_value== ""
 
     - name: Check if private registry already exists in global pull secret
       shell: |
         oc extract secret/pull-secret -n openshift-config --confirm --to=- | \
-          jq -r '.auths."{{ ibm_cloud_cr_server }}"' | grep auth | wc -l
+          jq -r '.auths."{{ private_registry_url }}"' | grep auth | wc -l
       register: private_pull_secret
 
     - name: Set global pull secret for private registry for Cloud Pak for Data
@@ -61,8 +57,8 @@
         - name: Set the global pull secret
           shell: |
             cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-              jq --arg private_registry "{{ ibm_cloud_cr_server }}" \
-                --arg pull_secret $(echo -n "iamapikey:{{ secret_value }}" | base64 -w0) \
+              jq --arg private_registry "{{ private_registry_url }}" \
+                --arg pull_secret $(echo -n "{{ secret_value }}" | base64 -w0) \
                 '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
                 > {{ pull_secret_dir.path }}/newdockerconfigjson
             oc set data secret/pull-secret -n openshift-config \
@@ -180,34 +176,37 @@
     number_of_workers: "{{ worker_ids | length }}"
   when: reload_workers
 
-- name: Reload (replace) the workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }}
-  command: |
-    ibmcloud oc worker replace --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker {{ worker_item }} -f 
-  loop: "{{ worker_ids }}"
-  loop_control:
-    loop_var: worker_item
-  when: reload_workers
+# - fail:
+#     msg: "DO NOT REPLACE WORKERS!"
 
-- name: Wait for 3 minutes to allow workers to start being replaced
-  pause:
-    minutes: 3
-  when: reload_workers
+# - name: Reload (replace) the workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }}
+#   command: |
+#     ibmcloud oc worker replace --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker {{ worker_item }} -f 
+#   loop: "{{ worker_ids }}"
+#   loop_control:
+#     loop_var: worker_item
+#   when: reload_workers
 
-- name: Wait for {{ number_of_workers }} workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }} to be redeployed
-  shell: |
-    ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker-pool default --output json | \
-      jq -r '.[] | select(.lifecycle.actualState=="deployed").lifecycle.actualState' | \
-      wc -l
-  register: deployed_workers
-  retries: 60
-  delay: 60
-  until: deployed_workers.stdout == number_of_workers
-  when: reload_workers
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+# - name: Wait for 3 minutes to allow workers to start being replaced
+#   pause:
+#     minutes: 3
+#   when: reload_workers
+
+# - name: Wait for {{ number_of_workers }} workers for cluster {{ current_cp4d_cluster.openshift_cluster_name }} to be redeployed
+#   shell: |
+#     ibmcloud oc workers --cluster {{ current_cp4d_cluster.openshift_cluster_name }} --worker-pool default --output json | \
+#       jq -r '.[] | select(.lifecycle.actualState=="deployed").lifecycle.actualState' | \
+#       wc -l
+#   register: deployed_workers
+#   retries: 60
+#   delay: 60
+#   until: deployed_workers.stdout == number_of_workers
+#   when: reload_workers
+#   vars:
+#     ansible_callback_diy_runner_retry_msg: >-
+#       {%- set result = ansible_callback_diy.result.output -%}
+#       {%- set retries_left = result.retries - result.attempts -%}
+#       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 
 - name: Wait for 5 minutes to allow workers to stabilize
