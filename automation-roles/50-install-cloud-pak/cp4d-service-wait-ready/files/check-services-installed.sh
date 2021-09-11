@@ -39,8 +39,7 @@ for c in $(echo $cartridges | jq -r '.[].name');do
 
   # Check if cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
-    log "Error: Cartridge $c does not have a definition in object cartridges_cr, it seems to be undefined"
-    exit_code=2
+    log "Warning: Cartridge $c does not have a definition in object cartridges_cr, it will not be counted."
     continue
   fi
 
