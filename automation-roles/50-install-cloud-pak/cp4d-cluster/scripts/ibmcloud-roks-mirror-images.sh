@@ -1198,8 +1198,8 @@ do_image_mirror_case_images() {
     echo "[INFO] Found ${images_count} images"
 
     # Remove ppc64le and s390x images
-    sed -i "/ppc64le/d" ${OC_TMP_IMAGE_MAP}
-    sed -i "/x390x/d" ${OC_TMP_IMAGE_MAP}
+    # sed -i "/ppc64le/d" ${OC_TMP_IMAGE_MAP}
+    # sed -i "/x390x/d" ${OC_TMP_IMAGE_MAP}
     images_count=$(wc -l "${OC_TMP_IMAGE_MAP}" | awk '{ print $1 }')
 
     echo "[INFO] Found ${images_count} images after filtering"
@@ -1473,7 +1473,7 @@ tag_latest_olm_catalog_images() {
                         # and the current image is the most recent version
                         echo "[INFO] Tagging ${image}:${tag} as ${image}:${latest_tag}"    
 
-                        oc_cmd="oc image mirror -a /tmp/auth.json \"${image}@${sha}\" \"${image}:${latest_tag}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
+                        oc_cmd="oc image mirror -a ${AUTH_JSON} \"${image}@${sha}\" \"${image}:${latest_tag}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
                         echo "${oc_cmd}"
                         eval ${oc_cmd}
 
