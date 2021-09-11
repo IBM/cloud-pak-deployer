@@ -18,9 +18,9 @@
     case_dir: "{{ status_dir }}/cp4d/case"
   when: not case_dir_exists.stat.exists
 
-- name: Download online case files to {{ status_dir }}/cp4d/case
+- name: Download operator case files to {{ status_dir }}/cp4d/case
   include: download-case-online.yml
-  loop: "{{ case_inventories }}"
+  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
   loop_control:
-    loop_var: case_inventory
+    loop_var: current_cp4d_cartridge
   when: not case_dir_exists.stat.exists

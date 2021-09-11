@@ -18,23 +18,6 @@
   command: |
     oc apply -f "{{ status_dir }}/cp4d/operator-group.yml"
 
-- name: Retrieve all case files in the {{ case_dir }} directory
-  find:
-    paths: "{{ case_dir }}"
-    patterns: "*.tgz"
-  register: case_files
-  when: not (use_entitled_registry | bool)
-
-- name: Create catalog sources from case files in {{ case_dir }} directory
-  include: create-catalog-source-case-file.yml
-  loop: "{{ case_files.files }}"
-  loop_control:
-    loop_var: case_file
-  when: not (use_entitled_registry | bool)
-
-- name: Create catalog sources for entitled registry
-  include: create-catalog-sources-entitled.yml
-
 # Create platform operator subscription
 - name: Prepare yaml file for platform operator subscription
   template:

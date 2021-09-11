@@ -36,6 +36,11 @@
   when:
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
 
+- name: Rmove Cloud Pak for Data directory for generated files
+  file:
+    path: "{{ status_dir }}/cp4d"
+    state: absent
+
 - name: Create Cloud Pak for Data directory for generated files
   file:
     path: "{{ status_dir }}/cp4d"
@@ -45,15 +50,33 @@
   include_role:
     name: cp4d-prepare-openshift
 
-- name: Prepare case files for Cloud Pak for Data when using private registry
+- set_fact:
+    _use_case_files: False
+
+- set_fact:
+    _use_case_files: True
+  when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool)
+
+- name: Prepare case files for Cloud Pak for Data when using private registry or when explicitly using case files
   include_tasks: prepare-cp4d-case-files-40.yml
-  when: 
-  - not (use_entitled_registry | bool)
+  when: _use_case_files
 
 - name: Mirror images for Cloud Pak for Data to private registry {{ current_cp4d_cluster.image_registry_name }}
   include_tasks: mirror-images-cp4d-40.yml
   when: 
-  - not (use_entitled_registry | bool)
+  - (current_cp4d_cluster.image_registry_name | default("")) != ""
+  - ibm_cp_entitlement_key != ""
+
+- name: Create catalog sources for entitled registry when not using case files
+  include: create-catalog-sources-entitled.yml
+  when: not _use_case_files
+
+- name: Create catalog sources from case files in {{ case_dir }} directory when using case files
+  include: create-catalog-source-case-file.yml
+  loop: "{{ case_inventories }}"
+  loop_control:
+    loop_var: case_inventory
+  when: _use_case_files
 
 - name: Login to the OpenShift cluster
   include_role:
