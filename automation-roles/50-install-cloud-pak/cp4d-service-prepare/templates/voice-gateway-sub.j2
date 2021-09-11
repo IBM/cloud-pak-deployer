@@ -4,8 +4,13 @@ metadata:
   name: ibm-voice-gateway-operator-subscription
   namespace: {{ foundational_services_project }}
 spec:
-    channel: {{ current_cp4d_cartridge.subscription_channel }}
-    installPlanApproval: Automatic
-    name: ibm-voice-gateway-operator
-    source: ibm-operator-catalog
-    sourceNamespace: openshift-marketplace
+  channel: {{ current_cp4d_cartridge.subscription_channel }}
+  installPlanApproval: Automatic
+  name: ibm-voice-gateway-operator
+{% if not (_use_case_files | bool) %}
+  source: ibm-operator-catalog
+  sourceNamespace: openshift-marketplace
+{% else %}
+  source: ibm-voice-gateway-operator-catalog
+  sourceNamespace: openshift-marketplace
+{% endif %}

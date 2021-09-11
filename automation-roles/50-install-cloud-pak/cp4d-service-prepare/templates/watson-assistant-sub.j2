@@ -4,8 +4,13 @@ metadata:
   name: ibm-watson-assistant-operator-subscription
   namespace: {{ foundational_services_project }}
 spec:
-    channel: {{ current_cp4d_cartridge.subscription_channel }}
-    installPlanApproval: Automatic
-    name: ibm-watson-assistant-operator
-    source: ibm-operator-catalog
-    sourceNamespace: openshift-marketplace
+  channel: {{ current_cp4d_cartridge.subscription_channel }}
+  installPlanApproval: Automatic
+  name: ibm-watson-assistant-operator
+{% if not (_use_case_files | bool) %}
+  source: ibm-operator-catalog
+  sourceNamespace: openshift-marketplace
+{% else %}
+  source: ibm-watson-assistant-operator-catalog
+  sourceNamespace: openshift-marketplace
+{% endif %}
