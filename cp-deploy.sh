@@ -436,7 +436,7 @@ if [ -f ${STATUS_DIR}/pid/container.id ];then
 fi
 
 # If CP_ENTITLEMENT_KEY was specified, create secret automatically
-if [[ "${SUBCOMMAND}" == "environment" && ! -z ${CP_ENTITLEMENT_KEY} ]];then
+if [[ "${SUBCOMMAND}" == "environment" && "${ACTION}" == "apply" && ! -z ${CP_ENTITLEMENT_KEY} ]];then
   echo "CP_ENTITLEMENT_KEY environment variables set, creating secret first."
   ${SCRIPT_DIR}/cp-deploy.sh vault set --config-dir ${CONFIG_DIR} --status-dir ${STATUS_DIR} \
     --vault-secret ibm_cp_entitlement_key --vault-secret-value ${CP_ENTITLEMENT_KEY}
