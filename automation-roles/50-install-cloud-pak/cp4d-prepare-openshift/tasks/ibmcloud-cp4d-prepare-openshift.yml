@@ -8,22 +8,30 @@
     - name: Check if ConfigMap cp4d-icsp-registries exists
       shell: "oc get configmap -n kube-system | grep -i '^cp4d-icsp-registries' | wc -l"
       register: oc_icsp_cm_exists
-    - name: Create ConfigMap if it doesn't exist
-      block:      
-        - name: Create private registries configuration
-          template:
-            src: cp4d-icsp-registries-conf.j2
-            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries.conf"
-        - name: Create ConfigMap cp4d-icsp-registries
-          shell: |
-            oc create configmap -n kube-system cp4d-icsp-registries \
-              --from-file={{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries.conf
-        - debug:
-            msg: "TODO: Create DaemonSet to apply the configuration"
-        - set_fact:
-            reboot_workers: True
-      when: 
-      - oc_icsp_cm_exists.stdout == "0"
+    - name: Create private registries configuration
+      template:
+        src: cp4d-icsp-registries-conf.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries.conf"
+    - name: Create ConfigMap cp4d-icsp-registries
+      shell: |
+        if ! oc get configmap -n kube-system cp4d-icsp-registries;then
+          oc create configmap -n kube-system cp4d-icsp-registries \
+            --from-file={{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries.conf
+        fi
+    - name: Set data for secret
+      shell: |
+        oc set data configmap/cp4d-icsp-registries -n kube-system \
+          --from-file={{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries.conf
+    - name: Generate DaemonSet to set the private registry configuration for all nodes
+      template:
+        src: cp4d-icsp-registries-conf-ds.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries-conf-ds.yaml"
+    - name: Create or replace DaemonSet cp4d-icsp-registries-conf-ds
+      shell: |
+        if oc get ds -n kube-system cp4d-icsp-registries-conf-ds;then
+          oc delete ds -n kube-system cp4d-icsp-registries-conf-ds
+        fi
+        oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp-registries-conf-ds.yaml
   when: not (use_entitled_registry | bool)
 
 - name: Set global pull secret for specified private registry
@@ -209,5 +217,9 @@
     src: cp4d-node-fix-ds.j2
     dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml"
 - name: Create DaemonSet cp4d-node-fix-ds
-  shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml"
+  shell: |
+    if oc get ds -n kube-system cp4d-crontab-ds;then
+      oc delete ds -n kube-system cp4d-crontab-ds
+    fi
+    oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml
 

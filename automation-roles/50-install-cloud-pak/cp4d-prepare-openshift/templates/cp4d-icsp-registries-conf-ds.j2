@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cp4d-icsp-registries-ds
+  namespace: kube-system
+  labels:
+    tier: management
+    app: cp4d-icsp-registries-ds
+spec:
+  selector:
+    matchLabels:
+      name: cp4d-icsp-registries-ds
+  template:
+    metadata:
+      labels:
+        name: cp4d-icsp-registries-ds
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: sleepforever
+          resources:
+            requests:
+              cpu: 0.01
+          image: registry.access.redhat.com/ubi8:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              date >> /ext-tmp/cp4d-icsp-registries-ds.log ;
+              echo "The following will be added to the registries configuration" ;
+              cat /cp4d-icsp-registries/cp4d-icsp-registries.conf ;
+              cat /cp4d-icsp-registries/cp4d-icsp-registries.conf > /ext-cp4d-node-fix/cp4d-icsp-registries.conf ;
+              while true; do
+                sleep 100000;
+              done
+          volumeMounts:
+            - name: cp4d-icsp-registries
+              mountPath: /cp4d-icsp-registries
+              readOnly: true
+            - name: modifytmp
+              mountPath: /ext-tmp
+            - name: modifycp4dnodefix
+              mountPath: /ext-cp4d-node-fix
+      volumes:
+        - name: cp4d-icsp-registries
+          configMap:
+            name: cp4d-icsp-registries
+        - name: modifytmp
+          hostPath:
+            path: /tmp
+        - name: modifycp4dnodefix
+          hostPath:
+            path: /cp4d-node-fix
