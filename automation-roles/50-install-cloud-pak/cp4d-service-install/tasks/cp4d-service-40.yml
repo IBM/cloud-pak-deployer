@@ -7,11 +7,14 @@
     cr_cr: "{{ cartridge_cr | json_query(jmes_query) }}"
   vars:
     jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}'].cr_cr | [0]"
-  when: current_cp4d_cartridge.name != "lite"
+  when:
+  - current_cp4d_cartridge.name != "cp-foundation"
+  - current_cp4d_cartridge.name != "lite"
 
 - fail:
     msg: "Label for cartridge {{ current_cp4d_cartridge.name }} not found, cannot check if CR is successfully installed"
   when: 
+  - current_cp4d_cartridge.name != "cp-foundation"
   - current_cp4d_cartridge.name != "lite"
   - cr_cr == ""
 
@@ -20,9 +23,13 @@
   template:
     src: "{{ current_cp4d_cartridge.name }}-cr.j2"
     dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
-  when: current_cp4d_cartridge.name != "lite"
+  when: 
+  - current_cp4d_cartridge.name != "cp-foundation"
+  - current_cp4d_cartridge.name != "lite"
 
 - name: Create CR for cartridge {{ current_cp4d_cartridge.name }}
   command: |
     oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
-  when: current_cp4d_cartridge.name != "lite"
+  when: 
+  - current_cp4d_cartridge.name != "cp-foundation"
+  - current_cp4d_cartridge.name != "lite"
