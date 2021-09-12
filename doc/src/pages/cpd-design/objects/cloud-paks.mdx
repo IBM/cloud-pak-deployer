@@ -1,4 +1,37 @@
 ---
-title: Vault configuration
+title: Cloud Pak configuration
 tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartridges', 'Configuration', 'Other']
 ---
+
+# Cloud Pak configuration
+
+### `cp4d`
+Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
+```
+cp4d:
+- project: zen-40
+  openshift_cluster_name: sample
+  cp4d_version: 4.0
+  use_case_files: False
+  image_registry_name: cpd401
+  openshift_storage_name: nfs-storage
+  
+  cartridges:
+  - name: cp-foundation
+    operator_version: 1.6.0
+  - name: lite
+    subscription_channel: v2.0
+    version: 4.0.1
+    operator_version: 2.0.4
+```
+
+#### Properties
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
+| openshift_cluster_name | Name of the OpenShift cluster                  | Yes       | Existing `openshift` cluster |
+| cp4d_version | Cloud Pak for Data version (not used)                            | No       | 4.0 |
+| use_case_files | This property indicates whether or not the case files will be used to install the catalog sources in case of an online install from the entitled registry. If `true`, operator case files are downloaded from the case repository to define the catalog sources. If a private registry has been specified (property `image_registry_name`), it is assumed that case file are used to install the catalog sources.                | No       | True, False (default) |
+| image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
+| openshift_storage_name |References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | Yes, inferred | |
+| cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](/cpd-design/objects/cartridges#cp4d.cartridges) for more details | Yes | |
