@@ -18,6 +18,8 @@ command_usage() {
   echo "  environment:"
   echo "    apply                   Create a new or modify an existing environment"
   echo "    destroy                 Destroy an existing environment"
+  echo "    logs                    Show (tail) the logs of the apply/destroy process"
+  echo "    kill                    Kill the current apply/destroy process"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
@@ -45,6 +47,11 @@ command_usage() {
   echo "  --vault-secret-file,-vsf <value>  File with secret value to set or get (\$VAULT_SECRET_FILE)"
   echo
   exit $1
+}
+
+# Show the logs of the currently running env process
+run_env_logs() {
+  ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}
 }
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -97,7 +104,7 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy)
+  apply|destroy|logs|kill)
     shift 1
     ;;
   *)
@@ -423,15 +430,35 @@ if [ ! -z $VAULT_SECRET_FILE ];then
 fi
 
 # Check if a container is currently running for this status directory
+CURRENT_CONTAINER_ID=""
 if [ -f ${STATUS_DIR}/pid/container.id ];then
   CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
   # If container ID was specified, check if it is currently running
   if [ "${CURRENT_CONTAINER_ID}" != "" ];then
-    if ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
-      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}, container ID is ${CURRENT_CONTAINER_ID}"
-      echo "You can view the logs by running: ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}"
-      exit 1
+    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
+      CURRENT_CONTAINER_ID=""
     fi
+  fi
+fi
+
+if [[ "${CURRENT_CONTAINER_ID}" == "" &&  ("${ACTION}" == "kill" || "${ACTION}" == "logs") ]];then
+  echo "Error: No Cloud Pak Deployer process is active for the current status directory."
+  exit 1
+fi
+
+if [[ "${CURRENT_CONTAINER_ID}" != "" ]];then
+  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+    echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
+    echo "Showing the logs of the currently running container ${CURRENT_CONTAINER_ID}"
+    sleep 0.5
+    run_env_logs
+    exit 0
+  elif [[ "${ACTION}" == "logs" ]];then
+    run_env_logs
+    exit 0
+  elif [[ "${ACTION}" == "kill" ]];then
+    ${CONTAINER_ENGINE} kill ${CURRENT_CONTAINER_ID}
+    exit 0
   fi
 fi
 
@@ -498,11 +525,11 @@ run_cmd+=" cloud-pak-deployer"
 
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
-  CONTAINER_ID=$(eval $run_cmd)
+  CURRENT_CONTAINER_ID=$(eval $run_cmd)
   mkdir -p ${STATUS_DIR}/pid
-  echo "${CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+  echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
   PODMAN_EXIT_CODE=$?
-  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
+  run_env_logs
 else
   eval $run_cmd
   PODMAN_EXIT_CODE=$?
