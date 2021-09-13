@@ -1,0 +1,54 @@
+---
+title: Advanced Configuration
+---
+
+# Cloud Pak Deployer Advanced Configuration
+
+### Cloud Pak for Data LDAP configuration
+
+![LDAP_Overview](ldap_user_groups.png "LDAP connection and User Groups")
+
+IBM Cloud Pak for Data can connect to an LDAP user registry in order for users to log on with their LDAP credentials. The configuration of LDAP can be specified in a seperate yaml file in the `config` folder:  [Example LDAP and User Group settings](/cpd-design/objects/ldap_user_groups).
+
+An `ldap_config` entry contains the connectivity information to the LDAP user registry. The `project` and `openshift_cluster_name` values uniquely identify the Cloud Pak for Data cluster instance.
+The `ldap_domain_search_password_vault` entry contains a reference to the vault, which means that as a preparation the LDAP bind user password must be stored in the vault used by the Cloud Pak Deployer using the key referenced in the configuration. 
+If the password is not available, the Cloud Pak Deployer will fail and not able to configure the LDAP connectivity.
+
+### Cloud Pak for Data User Group configuration
+The `ldap_config` can optionally create User Group(s) with references to LDAP Group(s). A `user_groups` entry must contain at least 1 `role_assignments` and 1 `ldap_groups` entry.
+
+**Role Assignment values:**
+- zen_administrator_role
+- zen_user_role
+- wkc_data_scientist_role
+- zen_developer_role
+- zen_data_engineer_role (requires installation of DataStage cartridge to become available)
+
+During the creation of User Group(s) the following validations are performed:
+- LDAP configuration is completed
+- The provided role assignment(s) are available in Cloud Pak for Data
+- The provided LDAP group(s) are available in the LDAP registry
+- If the User Group already exists, it ensures the provided LDAP Group(s) are assigned, but no changes to the existing role assignments are performed and no LDAP groups are removed from the User Group
+
+### Cloud Pak for Data provisioned instance authorization
+When using Cloud Pak for Data LDAP connectivity and User Groups, the User Groups can be assigned to authorize the users of the LDAP groups access to the proviosioned instance(s).
+[Example Cloud Pak for Data instance configuration](/cpd-design/objects/cp4d_instance_configuration).
+
+Currently supported instance authorization:  
+- Cognos Analytics (ca)
+
+#### Cognos Analytics instance authorization
+
+![Cognos Analytics Authorization](cognos_authorization.png "Cognos Analytics Authorization")
+
+A Cognos Analytics (ca) instance can have multiple `manage_access` entries. Each entry consists of 1 `ca_role` and 1 `cp4d_user_group` element. 
+The `ca_role` must be one of the following possible values:
+- Analytics Administrators
+- Analytics Explorers
+- Analytics Users 
+- Analytics Viewer
+
+During the configuration of the instance authorization the following validations are performend:
+- LDAP configuration is completed
+- The provided `ca_role` is valid
+- The provided `cp4d_user_group` exists

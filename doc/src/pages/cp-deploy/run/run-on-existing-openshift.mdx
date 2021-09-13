@@ -46,11 +46,11 @@ Because you will be deploying the Cloud Pak on an existing OpenShift cluster, th
 
 ```
 ./cp-deploy.sh vault set \
-    --vault-secret sample-kubeconfig 
+    --vault-secret kubeconfig 
     --vault-secret-file ~/.kube/config
 ```
 
-`sample-kubeconfig` is a composition of the cluster name you specified in the `openshift` configuration and the fixed string `-kubeconfig`. The deployer will retrieve this secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret with a valid Kubernetes config file.
+The deployer will retrieve this secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret with a valid Kubernetes config file.
 
 ## Run the Cloud Pak Deployer
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
@@ -67,7 +67,7 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 podman ps
 ```
 
-or, on Mac/Ubuntu/Windows:
+or, on Mac/Ubuntu:
 ```
 docker ps
 ```
@@ -77,7 +77,7 @@ Then, stop the container as follows:
 podman kill <container name>
 ```
 
-or, on Mac/Ubuntu/Windows:
+or, on Mac/Ubuntu:
 ```
 docker kill <container name>
 ```
@@ -94,7 +94,7 @@ This will show something similar to the following:
 ```output
 Secret list for group sample:
 - ibm_cp_entitlement_key
-- sample-kubeconfig
+- kubeconfig
 - cp4d_admin_zen_sample_sample
 ```
 
