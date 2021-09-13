@@ -1,13 +1,13 @@
 # Cloud Pak Deployer Configuration
 
-When either using the CONFIG_DIR or the GIT_REPO/GIT_REPO_DIR, the structure and content of the configuration files are identical
+The structure and content of the configuration files must be as follows:
 
 ```
 CONFIG_DIR  
-GIT_REPO/GIT_REPO_DIR --> /config
-                          - client.yaml
-                      --> /inventory
-                          - client.inv
+  --> /config
+      - client.yaml
+  --> /inventory
+      - client.inv
 ```
 
 ## /config/client.yaml
@@ -60,18 +60,12 @@ vault_secret_field=value
 It is strongly recommended not to store the **vault_api_key** in the inventory file when using a GIT repository for security reasons. Instead the vault_api_key can be passed as a parameter when running the container:
 ```
 IBM_CLOUD_API_KEY=your_ibm_cloud_api_key
-LOG_DATA_DIR=/Data/sample-log
-GIT_REPO_URL=https://github.ibm.com/<ACCOUNT>/<REPO>
-GIT_ACCESS_TOKEN=your_config_git_access_token
-GIT_REPO_DIR=sample-config
+STATUS_DIR=/Data/sample-log
 VAULT_API_KEY=hashicorp_vault_token
 
 podman run \
   -d \
-  -v ${LOG_DATA_DIR}:/Data:Z \
-  -e GIT_REPO_URL=${GIT_REPO_URL} \
-  -e GIT_ACCESS_TOKEN=${GIT_ACCESS_TOKEN} \
-  -e GIT_REPO_DIR=${GIT_REPO_DIR} \
+  -v ${STATUS_DIR}:/Data:Z \
   -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY} \
   -e vault_api_key=${VAULT_API_KEY}
   cloud-pak-deployer

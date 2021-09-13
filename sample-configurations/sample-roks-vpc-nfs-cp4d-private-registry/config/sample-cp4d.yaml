@@ -1,0 +1,179 @@
+---
+cp4d:
+
+image_registry:
+- name: cpd401
+  registry_host_name: de.icr.io
+  registry_namespace: cpd401
+  registry_insecure: false
+
+# Example Cloud Pak for Data 4.0 instance, using the specified private registry
+- project: zen-40
+  openshift_cluster_name: sample
+  cp4d_version: 4.0
+  image_registry_name: cpd401
+  openshift_storage_name: nfs-storage
+  cartridges:
+  - name: cp-foundation
+    operator_version: 1.6.0
+  - name: lite
+    version: not_used
+    subscription_channel: v2.0
+    operator_version: 2.0.3
+  - name: wsl
+    version: 4.0.1
+    subscription_channel: v2.0
+    operator_version: 2.0.1
+  - name: wml
+    version: not_used
+    subscription_channel: v1.1
+    operator_version: 4.0.2
+    size: small
+  - name: wkc
+    version: 4.0.1
+    subscription_channel: v1.0
+    operator_version: 4.0.1
+    size: small
+#
+# Other cartridges - tested
+#
+
+  # - name: analyticsengine 
+  #   version: 4.0.1
+  #   subscription_channel: stable-v1
+  #   operator_version: 4.0.1
+  #   size: small 
+  # - name: bigsql
+  #   version: 7.2.1
+  #   subscription_channel: v7.2
+  #   operator_version: 7.2.0
+  # - name: ca
+  #   version: 4.0.1
+  #   subscription_channel: v4.0
+  #   operator_version: 4.0.3
+  #   size: small
+  #   instances:
+  #   - name: ca-instance
+  #     metastore_ref: ca-metastore
+  # - name: cde
+  #   version: 4.0.1
+  #   subscription_channel: v1.0
+  #   operator_version: 2.0.1
+  # - name: datagate
+  #   version: 2.0.1
+  #   subscription_channel: v2.0
+  #   operator_version: ???
+  # - name: db2
+  #   version: not_used  
+  #   subscription_channel: v1.0
+  #   operator_version: 4.0.2 
+  #   size: small
+  #   instances:
+  #   - name: ca-metastore
+  #     metadata_size_gb: 20
+  #     data_size_gb: 20
+  #     backup_size_gb: 20  
+  #     transactionlog_size_gb: 20
+  # - name: db2wh
+  #   version: not_used
+  #   subscription_channel: v1.0
+  #   operator_version: 4.0.2
+  # - name: dmc
+  #   version: 4.0.1
+  #   subscription_channel: v1.0
+  #   operator_version: 4.0.1
+  # - name: dods
+  #   version: 4.0.1
+  #   subscription_channel: v4.0
+  #   operator_version: 4.0.1
+  #   size: small
+  # - name: dv
+  #   version: 1.7.1
+  #   subscription_channel: v1.7
+  #   size: small
+  #   operator_version: 1.7.1
+  # - name: mdm
+  #   version: not_used
+  #   subscription_channel: v1.1
+  #   operator_version: ???
+  #   size: small
+  #   wkc_enabled: true
+  # - name: openpages
+  #   version: 8.203.1
+  #   subscription_channel: v1.0
+  #   operator_version: 1.7.1
+  # - name: planning-analytics
+  #   version: 4.0.1
+  #   subscription_channel: v1.0
+  #   operator_version: ???
+  # - name: rstudio
+  #   version: not_used
+  #   subscription_channel: v1.0
+  #   operator_version: 1.0.1
+  #   size: small
+  # - name: spss
+  #   version: not_used
+  #   subscription_channel: v1.0
+  #   operator_version: 1.0.1
+  # - name: watson-openscale
+  #   version: 4.0.1
+  #   subscription_channel: v1
+  #   operator_version: 2.1.0
+  #   size: small
+  # - name: wkc
+  #   version: 4.0.1
+  #   subscription_channel: v1.0
+  #   operator_version: 4.0.1
+  #   size: small
+  # - name: wml
+  #   version: not_used
+  #   subscription_channel: v1.1
+  #   operator_version: 4.0.2
+  #   size: small
+  # - name: wml-accelerator
+  #   version: 2.3.1
+  #   subscription_channel: WML-Accelerator-2.3
+  #   operator_version: ???
+  #   replicas: 1
+  #   size: small
+  # - name: wsl
+  #   version: 4.0.1
+  #   subscription_channel: v2.0
+  #   operator_version: 2.0.1
+
+#
+# Cartridges where extra work is needed (will not install automatically)
+# 
+  # DataStage requires other services to be installed first
+  # - name: datastage
+  #   version: 1.7.1
+  #   subscription_channel: v1.0
+
+  # Product Master requires set up of the Db2 instance secret before install
+  # - name: productmaster
+  #   version: 1.0.0
+  #   subscription_channel: alpha
+  #   size: small  
+
+  # Voice Gateway installs ok but status cannot be checked by looking at the CR
+  # - name: voice-gateway
+  #   version: not_used
+  #   subscription_channel: v1.0
+  #   replicas: 1  
+
+  # Watson Assistant requires additional setup using the case tool
+  # - name: watson-assistant
+  #   version: 4.0.0
+  #   subscription_channel: v4.0
+
+  # Watson Discovery requires additional setup using the case tool
+  # - name: watson-discovery
+  #   version: 4.0.0
+  #   subscription_channel: v4.0
+
+  # Watson Speech requires additional setup using the case tool
+  # - name: watson-speech
+  #   version: 4.0.0
+  #   subscription_channel: v4.0
+  #   stt_size: xsmall
+  #   tts_size: xsmall

@@ -1,34 +1,16 @@
 ---
-
-- fail:
-    msg: "Key for entitled registry not found in vault, please create secret ibm_cp_entitlement_key"
-  when: secret_value == ''
-
-- name: Get API key for IBM Container Registry
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "icr_api_key_{{ current_cp4d_cluster.container_registry_namespace }}"
-    secret_group: "{{ environment_name }}"
-
-- set_fact:
-    icr_auth: "{{ icr_username }}:{{ secret_value }}"
-
-- set_fact:
-    entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
-
 - name: Generate /tmp/auth.json
   template:
     src: auth.json.j2
     dest: "{{ status_dir }}/cp4d/auth.json"
 
-- name: Mirror images for all files in {{ config_dir }}/case. Check status in {{status_dir}}/log/mirror_images.log
+- name: Mirror images for all files in {{ config_dir }}/case. Check status in {{ status_dir }}/log/mirror_images.log
   shell: |
     run_mirror_images() {
       {{ role_path }}/scripts/ibmcloud-roks-mirror-images.sh image mirror --dir {{ case_dir }} \
-        --to-registry {{ ibm_cloud_cr_server }}/{{ current_cp4d_cluster.container_registry_namespace }} \
-        --auth {{ status_dir}}/cp4d/auth.json |& \
-        tee -a {{status_dir}}/log/mirror_images.log; \
+        --to-registry "{{ private_registry_url_namespace }}" \
+        --auth {{ status_dir }}/cp4d/auth.json |& \
+        tee -a {{ status_dir }}/log/mirror_images.log; \
         return "${PIPESTATUS[0]}"; }; \
     run_mirror_images
   register: mirror_images_result

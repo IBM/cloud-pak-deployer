@@ -9,11 +9,12 @@ resource  "ibm_resource_instance" "{{generator.attributes.name | replace("-", "_
 resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.name}}"
     cos_instance_crn = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.id
-    kube_version = "{{generator.attributes.kube_version}}"
+    kube_version = "{{generator.attributes.ocp_version}}_openshift"
     flavor       = "{{generator.attributes.worker_flavour}}"
     entitlement  = "cloud_pak"
     vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
     worker_count = "{{generator.attributes.worker_count}}"
+    resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
 {% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
@@ -25,7 +26,7 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
 {% endfor %}
 }
 
-{% for item in generator.attributes.storage_classes %}
+{% for item in generator.attributes.openshift_storage %}
 {% if item.storage_type == "ocs" %}
 resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace("-", "_") }}_ocs" {
     cluster           = "{{generator.attributes.name }}"
@@ -33,6 +34,7 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
     flavor       = "{{generator.attributes.worker_flavour}}"
     vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
     worker_count      = 1
+    resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
     labels = {
         "roks-storage" = "{{ item.ocs_storage_label }}"

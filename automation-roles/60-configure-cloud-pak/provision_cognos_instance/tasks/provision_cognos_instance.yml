@@ -1,0 +1,135 @@
+---
+- debug:
+    msg: "{{ cognos_instance }}"
+
+- tempfile:
+    path: "{{ status_dir }}"
+    state: directory
+  register: cp4d_automation_temp_dir
+
+- name: Check if the Cognos Analytics instance is already running
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&display_name={{ cognos_instance.name }}'"
+  register: cognos_lookup_result
+
+- set_fact:
+    cognos_lookup_result_json: "{{ cognos_lookup_result.stdout | from_json }}"
+
+- debug:
+    msg: "Cognos instance {{ cognos_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_cognos_instance for {{ cognos_instance.name }}"
+  when: "not cognos_lookup_result_json.total_count == 0"
+
+- when: "cognos_lookup_result_json.total_count == 0"
+  block:
+    - name: "Get provisioned db2oltp instances with name {{ cognos_instance.metastore_ref }}"
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type=db2oltp&display_name={{ cognos_instance.metastore_ref }}'"
+      register: db2_lookup_result
+
+    - set_fact:
+        db2_lookup_result_json: "{{ db2_lookup_result.stdout | from_json }}"
+
+    - name: "Prepare Cognos instance creation using internal provisioned DB2 OLTP instance {{ cognos_instance.metastore_ref }}"
+      include_tasks: prepare_provision_cognos_instance_internal.yml
+      when: db2_lookup_result_json.total_count == 1
+
+    - name: "Prepare Cognos instance creation using external DB2 service {{ cognos_instance.metastore_ref }}"
+      include_tasks: prepare_provision_cognos_instance_external.yml
+      when: db2_lookup_result_json.total_count == 0
+
+    - name: Get the Catalog 'Platform assets catalog'
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/catalogs?entity.name={{ cp4d_all_assets_catalog_name }}'"
+      register: cp4d_get_catalog_result
+
+    - set_fact:
+        cp4d_catalog: "{{ cp4d_get_catalog_result.stdout | from_json }}"
+
+    - name: Validate if the connection to the Cognos DB2 Content Repository '{{ cp4d_platform_connection_name }}' is available
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials&entity.name={{ cp4d_platform_connection_name }}'"
+      register: cp4d_cognos_db2_content_repo_result
+
+    - set_fact:
+        cp4d_cognos_db2_content_repo_json: "{{ cp4d_cognos_db2_content_repo_result.stdout | from_json }}"
+
+    - set_fact:
+        cp4d_cognos_db2_content_repo: "{{ cp4d_cognos_db2_content_repo_json.resources|json_query(query_db) }}"
+      vars:
+        db2_name: "{{ cp4d_platform_connection_name }}"
+        query_db: "[?entity.name=='{{ db2_name }}']"
+
+    - debug:
+        msg: "Number of datasources found with name {{ cp4d_platform_connection_name }}: {{ cp4d_cognos_db2_content_repo|length }}"
+
+    - name: Create Cognos Repository DB connection {{ cp4d_platform_connection_name }} if it does not exist
+      block:
+        - name: Get the available connection types
+          shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/datasource_types'"
+          register: cp4d_datasource_types_result
+
+        - set_fact:
+            cp4d_datasource_types: "{{ cp4d_datasource_types_result.stdout | from_json }}"
+
+        - set_fact:
+            cp4d_datasource_db2_type: "{{ cp4d_datasource_types.resources|json_query(query) }}"
+          vars:
+            db2_name: 'db2'
+            query: "[?entity.name=='{{ db2_name }}'].metadata.asset_id"
+
+        - set_fact:
+            cp4d_cognos_instance_storage_class: "{{ ocp_storage_class_file }}"
+
+        - name: Create Datasource connection json file
+          template:
+            src: cognos_connection.json.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cognos_connection.json"
+
+        - name: Create Datasource connection {{ cp4d_platform_connection_name }}
+          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }} -T {{ cp4d_automation_temp_dir.path }}/cognos_connection.json"
+          register: create_cognos_connection_result
+      when: "cp4d_cognos_db2_content_repo|length == 0"
+
+    - name: Create cognos instance json file
+      template:
+        src: cognos_instance_40.json.j2
+        dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
+
+    - name: Create Cognos instance
+      shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
+      register: cognos_instance_create_result
+
+    - set_fact:
+        cognos_instance_create_result_json: "{{ cognos_instance_create_result.stdout | from_json }}"
+
+    - name: Wait until Cognos Analytics artifacts pod has started and is ready
+      command: oc get po -l app.kubernetes.io/component=ca-artifacts --no-headers -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
+      register: ca_artifacts_pod
+      retries: 60
+      delay: 10
+      until:
+        - ca_artifacts_pod.rc==0
+        - ca_artifacts_pod.stdout!=''
+
+    - name: Wait for a bit so that all Cognos Analytics containers are starting
+      pause:
+       seconds: 90
+
+    - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
+      shell: "oc delete pod {{ ca_artifacts_pod.stdout }}"
+
+    - debug:
+        msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
+
+    - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
+      shell: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
+      register: ca_provision_complete
+      retries: 140
+      delay: 30
+      until:
+        - ca_provision_complete.rc==0
+        - ca_provision_complete.stdout=='7'
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+    - debug:
+        msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"

@@ -1,5 +1,5 @@
 ---
-# Create Foundational Services project for Cloud Pak for Data 4.0
+# Create Foundational Services project for Cloud Pak for Data
 - name: Validate if OpenShift project {{ foundational_services_project }} exists
   shell: "oc get projects | grep -i '^{{ foundational_services_project }}' | wc -l"
   register: ics_project_exists
@@ -17,23 +17,6 @@
 - name: Create OperatorGroup
   command: |
     oc apply -f "{{ status_dir }}/cp4d/operator-group.yml"
-
-- name: Retrieve all case files in the {{ case_dir }} directory
-  find:
-    paths: "{{ case_dir }}"
-    patterns: "*.tgz"
-  register: case_files
-  when: not (use_entitled_registry | bool)
-
-- name: Create catalog sources from case files in {{ case_dir }} directory
-  include: create-catalog-source-case-file.yml
-  loop: "{{ case_files.files }}"
-  loop_control:
-    loop_var: case_file
-  when: not (use_entitled_registry | bool)
-
-- name: Create catalog sources for entitled registry
-  include: create-catalog-sources-entitled.yml
 
 # Create platform operator subscription
 - name: Prepare yaml file for platform operator subscription
@@ -61,7 +44,7 @@
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
-      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 
 # Also wait for OperandRequest CSV to be created (ODLM)
@@ -80,4 +63,4 @@
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
-      "RETRYING: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ..."  
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

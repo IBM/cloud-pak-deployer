@@ -1,12 +1,16 @@
 ---
 - debug:
     msg: '{{ relative_path_to_config_file }}'
-- name: include the file
+
+- name: Generate config through template
+  template:
+    src: "{{ absolute_path_to_config_file }}"
+    dest: "{{ status_dir }}/generated_config/{{ absolute_path_to_config_file | basename }}"
+
+- name: Include the genrated config file
   include_vars:
-    file: '{{ absolute_path_to_config_file }}'
+    file: "{{ status_dir }}/generated_config/{{ absolute_path_to_config_file | basename }}"
     name: 'this_config'
-
-
 
 - name: debug just included config
   debug: 

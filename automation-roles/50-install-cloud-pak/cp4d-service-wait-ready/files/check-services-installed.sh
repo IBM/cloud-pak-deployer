@@ -34,12 +34,12 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   cr_cr=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
   cr_name=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
   cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
+  cr_status_completed=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
   log "Info: Cartridge: $c, CR: $cr_cr, CR name: $cr_name, CR status attribute: $cr_status_attribute"
 
   # Check if cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
-    log "Error: Cartridge $c does not have a definition in object cartridges_cr, it seems to be undefined"
-    exit_code=2
+    log "Warning: Cartridge $c does not have a definition in object cartridges_cr, it will not be counted."
     continue
   fi
 
@@ -63,8 +63,8 @@ for c in $(echo $cartridges | jq -r '.[].name');do
 
   # Check if status is completed
   cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
-  log "Info: Status of $cr_cr object $cr_name is $cr_status"
-  if [ "$cr_status" != "Completed" ];then
+  log "Info: Status of $cr_cr object $cr_name is $cr_status, status when completed is $cr_status_completed"
+  if [ "$cr_status" != "$cr_status_completed" ];then
     ((number_pending=number_pending+1))
   fi
 done
