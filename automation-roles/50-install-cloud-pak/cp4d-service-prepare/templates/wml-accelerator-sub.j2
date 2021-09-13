@@ -4,8 +4,13 @@ metadata:
   name: ibm-cpd-wml-accelerator-operator
   namespace: {{ foundational_services_project }}
 spec:
-    channel: {{ current_cp4d_cartridge.subscription_channel }}
-    installPlanApproval: Automatic
-    name: ibm-cpd-wml-accelerator-operator
-    source: ibm-operator-catalog
-    sourceNamespace: openshift-marketplace
+  channel: {{ current_cp4d_cartridge.subscription_channel }}
+  installPlanApproval: Automatic
+  name: ibm-cpd-wml-accelerator-operator
+{% if not (_use_case_files | bool) %}
+  source: ibm-operator-catalog
+  sourceNamespace: openshift-marketplace
+{% else %}
+  source: ibm-cpd-wml-accelerator-catalog
+  sourceNamespace: openshift-marketplace
+{% endif %}

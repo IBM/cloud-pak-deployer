@@ -1,20 +1,32 @@
 ---
 
-- name: Save Cloud Pak for Data operator case file {{ case_inventory.search_string }}-{{ case_inventory.version }}
+# Find the latest version
+# curl -s -X GET https://api.github.com/repos/IBM/cloud-pak/contents/repo/case/ibm-cp-datacore | jq -r '.[] | select(.name|test("^[0-9].*")) | .name'
+
+- name: Get the CASE details for cartridge {{ current_cp4d_cartridge.name }}
+  set_fact:
+    current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cartridge.name }}']
+
+- fail:
+    msg: Case file details for cartridge {{ current_cp4d_cartridge.name }} not found
+  when: current_case_inventory=={}
+
+- name: Save Cloud Pak for Data operator case file {{ case_inventory.search_string }}-{{ current_cp4d_cartridge.operator_version }}
   shell: |
     cloudctl case save \
-      --case https://github.com/IBM/cloud-pak/raw/master/repo/case/{{ case_inventory.search_string }}-{{ case_inventory.version }}.tgz \
+      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4d_cartridge.operator_version }}.tgz \
       --outputdir {{ case_dir }} \
       --no-dependency
   when:  
-  - case_inventory.search_string == "ibm-cp-datacore"
-  - case_inventory.version is defined
+  - current_cp4d_cartridge.name == "lite"
 
-- name: Save case file {{ case_inventory.search_string }}-{{ case_inventory.version }}
+- name: Save case file {{ case_inventory.search_string }}-{{ current_cp4d_cartridge.operator_version }}
   shell: |
     cloudctl case save \
-      --case https://github.com/IBM/cloud-pak/raw/master/repo/case/{{ case_inventory.search_string }}-{{ case_inventory.version }}.tgz \
+      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4d_cartridge.operator_version }}.tgz \
       --outputdir {{ case_dir }} 
   when:  
-  - case_inventory.search_string != "ibm-cp-datacore"
-  - case_inventory.version is defined
+  - current_cp4d_cartridge.name != "lite"

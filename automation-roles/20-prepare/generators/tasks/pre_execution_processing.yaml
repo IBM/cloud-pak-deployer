@@ -1,0 +1,77 @@
+---
+- name: check if the preprocessor.py file exists
+  stat:
+    path: "{{ generator.path }}/preprocessor.py"
+  register: preprocessorscript_stat
+
+- name: debug generator.this_item
+  debug:
+    msg: "{{ generator.this_item }}"
+- name: if a preprocessor script was found, run it via pre_execution_processing.py
+  block:
+# TODO: decide what comes first: pre-process the config or validate validate the config?
+# TODO: Only preprocess for now, leave the validation untouched. will need cleanup
+  - name: run the preprocess script ({{ generator.name }})
+    shell:
+      cmd: "python3 pre_execution_processor.py -p {{ generator.path }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
+      #cmd: "pwd"
+      chdir: "{{ role_path }}/scripts"
+    register: preprocess_result # in the old version this was called 'validator_result'
+
+# The output of the script should look like:
+# {
+#   'errors': [
+#     {
+#       'path': 
+#       'attributeValue': 
+#       'message': 
+#     }
+#   ]
+# }
+
+
+# {{schemafile_content | to_yaml | b64encode }} {{generator.attributes | to_yaml | b64encode }} {{generator.config | to_yaml | b64encode }}"
+
+  - debug:
+      var: preprocess_result
+
+  # - name: include the file
+  #   include_vars: 
+  #     file: "{{ generator.path }}/generator.yaml"
+  #     name: schemafile_content
+
+  # - debug:
+  #     var: schemafile_content
+
+  - name: 
+    set_fact:
+      validator_received_result: "{{ preprocess_result.stdout | from_json}}"
+
+  - debug:
+      var: validator_received_result
+
+  - name: create a new error (to trigger the reporting)
+    set_fact:
+      generator_validator_error: ""
+
+  - name: add errors from generator
+    set_fact:
+      generator_validator_error: |
+        {{generator_validator_error}}
+
+        {{ generator.name }}:
+        {{ generator.attributes | to_nice_yaml }}
+
+        ERROR: {{ error_item.message }}
+    loop: "{{ validator_received_result.errors }}"
+    loop_control:
+      loop_var: error_item
+
+  - set_fact:
+      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
+      generator_validation_error_message: |
+        {{ generator_validation_error_message }}
+        {{ generator_validator_error }}
+  when: preprocessorscript_stat.stat.exists==true
+
+

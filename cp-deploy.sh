@@ -18,6 +18,8 @@ command_usage() {
   echo "  environment:"
   echo "    apply                   Create a new or modify an existing environment"
   echo "    destroy                 Destroy an existing environment"
+  echo "    logs                    Show (tail) the logs of the apply/destroy process"
+  echo "    kill                    Kill the current apply/destroy process"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
@@ -28,11 +30,9 @@ command_usage() {
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
-  echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified if configuration read from local server (\$CONFIG_DIR)"
-  echo "  --config-repo-url,-r <url>    Git repository to retrieve the configuration from (\$GIT_REPO_URL)"
-  echo "  --git-repo-dir,-rd <dir>      Directory in the Git repository that holds the configuration (\$GIT_REPO_DIR)"
-  echo "  --git-access-token,-t <token> Token to authenticate to the Git repository (\$GIT_ACCESS_TOKEN)"
+  echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
@@ -49,6 +49,11 @@ command_usage() {
   exit $1
 }
 
+# Show the logs of the currently running env process
+run_env_logs() {
+  ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}
+}
+
 # --------------------------------------------------------------------------------------------------------- #
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
@@ -56,6 +61,9 @@ if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
+
+arrExtraKey=()
+arrExtraValue=()
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -96,7 +104,7 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy)
+  apply|destroy|logs|kill)
     shift 1
     ;;
   *)
@@ -147,41 +155,15 @@ while (( "$#" )); do
     fi
     fi
     ;;
-  --git-repo-url*|-r*)
+  --status-dir*|-l*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export GIT_REPO_URL="${1#*=}"
+      export STATUS_DIR="${1#*=}"
       shift 1
     else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export GIT_REPO_URL=$2
+      export STATUS_DIR=$2
       shift 2
     else
-      echo "Error: Missing configuration git repository for --git-repo-url parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
-  --git-repo-dir*|-rd*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export GIT_REPO_DIR="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export GIT_REPO_DIR=$2
-      shift 2
-    else
-      echo "Error: Missing configuration git repository directory for --git-repo-dir parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
-  --git-access-token*|-t*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export GIT_ACCESS_TOKEN="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export GIT_ACCESS_TOKEN=$2
-      shift 2
-    else
-      echo "Error: Missing argument for --git-access-token parameter."
+      echo "Error: Missing argument for --status-dir parameter."
       command_usage 2
     fi
     fi
@@ -198,6 +180,28 @@ while (( "$#" )); do
       command_usage 2
     fi
     fi
+    ;;
+  --extra-vars*|-e*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      CURRENT_EXTRA_VAR="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      CURRENT_EXTRA_VAR=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --extra-vars parameter."
+      command_usage 2
+    fi
+    fi
+    # Check if the environment variable has the format of key=value
+    extra_key=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f1)
+    extra_value=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f2)
+    if [[ "${extra_key}" == "" || "${extra_value}" == "" ]];then
+      echo "Error: --extra-vars must be specified as <key>=<value>."
+      command_usage 2
+    fi
+    arrExtraKey+=("${extra_key}")
+    arrExtraValue+=("${extra_value}")
     ;;
   --vault-secret-file*|-vsf*)
     if [[ "${SUBCOMMAND}" != "vault" ]];then
@@ -285,19 +289,6 @@ while (( "$#" )); do
     fi
     fi
     ;;
-  --status-dir*|-l*)
-    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export STATUS_DIR="${1#*=}"
-      shift 1
-    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export STATUS_DIR=$2
-      shift 2
-    else
-      echo "Error: Missing argument for --status-dir parameter."
-      command_usage 2
-    fi
-    fi
-    ;;
   --confirm-destroy)
     if [[ "${SUBCOMMAND}" != "environment" ]];then
       echo "Error: --confirm-destroy is not valid for $SUBCOMMAND subcommand."
@@ -356,22 +347,6 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 # Check invalid combinations of parameters                                                                  #
 # --------------------------------------------------------------------------------------------------------- #
-if [ -z ${CONFIG_DIR} ] && [ -z ${GIT_REPO_URL} ];then
-  echo "Error: Either specify --config-dir or --git-repo-url."
-  command_usage 1
-fi
-
-# Validate combination of parameters when --git-repo-url specified
-if [ ! -z ${GIT_REPO_URL} ];then
-  if [ -z ${GIT_REPO_DIR} ];then
-    echo "Error: --git-repo-dir must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-  if [ -z ${GIT_ACCESS_TOKEN} ];then
-    echo "Error: --git-access-token must be specified if pulling the configuration from a Git repository."
-    exit 1
-  fi
-fi
 
 # Validate combination of parameters for subcommand vault
 if [[ "${SUBCOMMAND}" == "vault" ]];then
@@ -405,19 +380,17 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [ ! -z ${CONFIG_DIR} ];then
-  if [ ! -z ${GIT_REPO_URL} ];then
-    echo "Error: Either specify --config-dir or --git-repo-url, not both."
-    exit 1
-  fi
-  if [ ! -d "${CONFIG_DIR}/config" ]; then
-    echo "config directory not found in directory ${CONFIG_DIR}."
-    exit 1
-  fi
-  if [ ! -d "${CONFIG_DIR}/inventory" ]; then
-    echo "inventory directory not found in directory ${CONFIG_DIR}."
-    exit 1
-  fi
+if [ ! -d "${CONFIG_DIR}" ]; then
+  echo "config directory ${CONFIG_DIR} not found."
+  exit 1
+fi
+if [ ! -d "${CONFIG_DIR}/config" ]; then
+  echo "config directory not found in directory ${CONFIG_DIR}."
+  exit 1
+fi
+if [ ! -d "${CONFIG_DIR}/inventory" ]; then
+  echo "inventory directory not found in directory ${CONFIG_DIR}."
+  exit 1
 fi
 
 # Set remaining parameters
@@ -457,20 +430,40 @@ if [ ! -z $VAULT_SECRET_FILE ];then
 fi
 
 # Check if a container is currently running for this status directory
+CURRENT_CONTAINER_ID=""
 if [ -f ${STATUS_DIR}/pid/container.id ];then
   CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
   # If container ID was specified, check if it is currently running
   if [ "${CURRENT_CONTAINER_ID}" != "" ];then
-    if ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
-      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}, container ID is ${CURRENT_CONTAINER_ID}"
-      echo "You can view the logs by running: ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}"
-      exit 1
+    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
+      CURRENT_CONTAINER_ID=""
     fi
   fi
 fi
 
+if [[ "${CURRENT_CONTAINER_ID}" == "" &&  ("${ACTION}" == "kill" || "${ACTION}" == "logs") ]];then
+  echo "Error: No Cloud Pak Deployer process is active for the current status directory."
+  exit 1
+fi
+
+if [[ "${CURRENT_CONTAINER_ID}" != "" ]];then
+  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+    echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
+    echo "Showing the logs of the currently running container ${CURRENT_CONTAINER_ID}"
+    sleep 0.5
+    run_env_logs
+    exit 0
+  elif [[ "${ACTION}" == "logs" ]];then
+    run_env_logs
+    exit 0
+  elif [[ "${ACTION}" == "kill" ]];then
+    ${CONTAINER_ENGINE} kill ${CURRENT_CONTAINER_ID}
+    exit 0
+  fi
+fi
+
 # If CP_ENTITLEMENT_KEY was specified, create secret automatically
-if [[ "${SUBCOMMAND}" == "environment" && ! -z ${CP_ENTITLEMENT_KEY} ]];then
+if [[ "${SUBCOMMAND}" == "environment" && "${ACTION}" == "apply" && ! -z ${CP_ENTITLEMENT_KEY} ]];then
   echo "CP_ENTITLEMENT_KEY environment variables set, creating secret first."
   ${SCRIPT_DIR}/cp-deploy.sh vault set --config-dir ${CONFIG_DIR} --status-dir ${STATUS_DIR} \
     --vault-secret ibm_cp_entitlement_key --vault-secret-value ${CP_ENTITLEMENT_KEY}
@@ -500,14 +493,7 @@ run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
 run_cmd+=" -e ACTION=${ACTION}"
 run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
 run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
-
-if [ ! -z $CONFIG_DIR ];then run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}";fi
-
-if [ ! -z $GIT_REPO_URL ];then
-  run_cmd+=" -e GIT_REPO_URL=${GIT_REPO_URL} \
-            -e GIT_REPO_DIR=${GIT_REPO_DIR} \
-            -e GIT_ACCESS_TOKEN=${GIT_ACCESS_TOKEN}"
-fi
+run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
 
 if [ ! -z $VAULT_GROUP ];then
   run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
@@ -526,15 +512,24 @@ run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
 
+# Handle extra variables
+if [ ${#arrExtraKey[@]} -ne 0 ];then
+  for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
+    echo "Extra parameters ($i): ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+    run_cmd+=" -e ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+  done
+  run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
+fi
+
 run_cmd+=" cloud-pak-deployer"
 
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
-  CONTAINER_ID=$(eval $run_cmd)
+  CURRENT_CONTAINER_ID=$(eval $run_cmd)
   mkdir -p ${STATUS_DIR}/pid
-  echo "${CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+  echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
   PODMAN_EXIT_CODE=$?
-  ${CONTAINER_ENGINE} logs -f ${CONTAINER_ID}
+  run_env_logs
 else
   eval $run_cmd
   PODMAN_EXIT_CODE=$?
