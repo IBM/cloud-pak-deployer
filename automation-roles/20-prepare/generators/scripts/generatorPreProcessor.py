@@ -30,12 +30,13 @@ class GeneratorPreProcessor:
         #print(self.attributesDict[ lookupPath ])
         return self
     def lookupFromProperty(self, localProperty, generatorName, remotePath, identifierProp='name'):
-        localPropertyValue =  self.attributesDict[ localProperty ] # first_zone_prefix
-        generatorsListOfEntities = self.fullConfigDict.get(generatorName,[])
-        for i in range(len(generatorsListOfEntities)):
-            if generatorsListOfEntities[i][identifierProp]==localPropertyValue:
-                self.attributesDict[ self.pathToCheck ]=generatorsListOfEntities[i][remotePath]
-        return self
+        if((self.pathToCheck in self.attributesDict)==False):
+            localPropertyValue =  self.attributesDict[ localProperty ] # first_zone_prefix
+            generatorsListOfEntities = self.fullConfigDict.get(generatorName,[])
+            for i in range(len(generatorsListOfEntities)):
+                if generatorsListOfEntities[i][identifierProp]==localPropertyValue:
+                    self.attributesDict[ self.pathToCheck ]=generatorsListOfEntities[i][remotePath]
+            return self
         # generatorsListOfEntities = self.fullConfigDict.get(generatorName,[])
         # if len(generatorsListOfEntities)==0:
         #     self.appendError(msg="Can't expand, no instances of " + generatorName + " found.")
