@@ -23,12 +23,31 @@ class GeneratorPreProcessor:
             return self.attributesDict[self.pathToCheck]
     def mustBeDefined(self):
         if((self.pathToCheck in self.attributesDict)==False):
-            self.__appendError(msg="Attribute {path} is not defined".format(path=self.pathToCheck))
+            self.appendError(msg="Attribute {path} is not defined".format(path=self.pathToCheck))
         return self
     def mustBeOneOf(self,matchPattern):
         listOfMatches = self.fullConfigDict.match(matchPattern)
         #print(self.attributesDict[ lookupPath ])
         return self
+    def lookupFromProperty(self, localProperty, generatorName, remotePath, identifierProp='name'):
+        localPropertyValue =  self.attributesDict[ localProperty ] # first_zone_prefix
+        generatorsListOfEntities = self.fullConfigDict.get(generatorName,[])
+        for i in range(len(generatorsListOfEntities)):
+            if generatorsListOfEntities[i][identifierProp]==localPropertyValue:
+                self.attributesDict[ self.pathToCheck ]=generatorsListOfEntities[i][remotePath]
+        return self
+        # generatorsListOfEntities = self.fullConfigDict.get(generatorName,[])
+        # if len(generatorsListOfEntities)==0:
+        #     self.appendError(msg="Can't expand, no instances of " + generatorName + " found.")
+        #     return self
+        # if len(generatorsListOfEntities)>1:
+        #     self.appendError(msg="Can't expand, " + generatorName + " not unique.")
+        #     return self
+        # if len(generatorsListOfEntities)==1:
+        #     print( generatorsListOfEntities[0] )
+        #     self.attributesDict[self.pathToCheck] = generatorsListOfEntities[0][remotePath]
+        #     return self
+            
     def expandWith(self, matchPattern):
         #listOfMatches = self.fullConfigDict.match(matchPattern)
         if((self.pathToCheck in self.attributesDict)==False):
@@ -37,9 +56,11 @@ class GeneratorPreProcessor:
             if(len(listOfMatches)==1):
                 self.attributesDict[ self.pathToCheck ]=listOfMatches[0]
             else:
-                self.__appendError(msg="Can't expand, result of given path not unique, found:" + ','.join(listOfMatches))
+                self.appendError(msg="Can't expand, result of given path not unique, found:" + ','.join(listOfMatches))
         return self
-    def __appendError(self, type='error', path=None, msg=None):
+    def do(self):
+        return self
+    def appendError(self, type='error', path=None, msg=None):
         if(path==None):
             path=self.pathToCheck
         self.errors.append({'type':type, 'path':path, 'message': msg})
