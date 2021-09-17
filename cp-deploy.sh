@@ -34,6 +34,7 @@ command_usage() {
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
+  echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo 
@@ -61,6 +62,7 @@ if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
+if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
 
 arrExtraKey=()
 arrExtraValue=()
@@ -301,6 +303,14 @@ while (( "$#" )); do
     export CPD_DEVELOP=true
     shift 1
     ;;
+  --cp-config-only)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --cp-config-only is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CP_CONFIG_ONLY=true
+    shift 1
+    ;;    
   -vvv)
     export ANSIBLE_VERBOSE=true
     shift 1
@@ -511,6 +521,7 @@ fi
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
 
 # Handle extra variables
 if [ ${#arrExtraKey[@]} -ne 0 ];then
