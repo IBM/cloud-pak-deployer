@@ -53,7 +53,11 @@ env|environment)
   # Assemble command
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
-    run_cmd+=" playbooks/playbook-env-apply.yml"
+    if [ "$CP_CONFIG_ONLY" == "true" ];then
+      run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
+    else
+      run_cmd+=" playbooks/playbook-env-apply.yml"
+    fi
   elif [ "$ACTION" == "destroy" ];then
     run_cmd+=" playbooks/playbook-env-destroy.yml"
   fi
@@ -61,6 +65,7 @@ env|environment)
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
+  run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
   run_cmd+=" ${VERBOSE_ARG}"
   if [ -v EXTRA_PARMS ];then
     for p in ${EXTRA_PARMS};do
