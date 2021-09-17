@@ -4,17 +4,17 @@
   assert:
     that:
       - hashicorp_vault_address is defined
-      - hashicorp_vault_ca_certificate is defined
-      - hashicorp_vault_client_certificate is defined
-      - hashicorp_vault_client_key is defined
+      - VAULT_CERT_CA_FILE is defined
+      - VAULT_CERT_KEY_FILE is defined
+      - VAULT_CERT_CERT_FILE is defined
 
 
 - name: Validate if valid login session is available
   shell: |
     vault kv list \
-    -ca-cert={{ hashicorp_vault_ca_certificate }} \
-    -client-cert={{ hashicorp_vault_client_certificate }} \
-    -client-key={{ hashicorp_vault_client_key }} \
+    -ca-cert={{ VAULT_CERT_CA_FILE }} \
+    -client-cert={{ VAULT_CERT_CERT_FILE }} \
+    -client-key={{ VAULT_CERT_KEY_FILE }} \
     -address={{ hashicorp_vault_address }} \ 
     secret/
   ignore_errors: yes
@@ -32,9 +32,9 @@
       shell: |
          vault login \
           -method=cert \
-          -ca-cert={{ hashicorp_vault_ca_certificate }} \
-          -client-cert={{ hashicorp_vault_client_certificate }} \
-          -client-key={{ hashicorp_vault_client_key }} \
+          -ca-cert={{ VAULT_CERT_CA_FILE }} \
+          -client-cert={{ VAULT_CERT_CERT_FILE }} \
+          -client-key={{ VAULT_CERT_KEY_FILE }} \
           -address={{ hashicorp_vault_address }} 
       register: hashicorp_vault_login_result
       failed_when: "not hashicorp_vault_login_result.rc == 0"
@@ -42,9 +42,9 @@
     - name: Test connection to vault
       shell: |
         vault kv list \
-          -ca-cert={{ hashicorp_vault_ca_certificate }} \
-          -client-cert={{ hashicorp_vault_client_certificate }} \
-          -client-key={{ hashicorp_vault_client_key }} \
+          -ca-cert={{ VAULT_CERT_CA_FILE }} \
+          -client-cert={{ VAULT_CERT_CERT_FILE }} \
+          -client-key={{ VAULT_CERT_KEY_FILE }} \
           -address={{ hashicorp_vault_address }} \ 
           secret/
       register: hashicorp_vault_list_after_login_result

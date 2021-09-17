@@ -32,6 +32,10 @@ command_usage() {
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
   echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
+  echo "  --vault-cert-ca-file          File with CA of login certificate (\$VAULT_CERT_CA_FILE)"
+  echo "  --vault-cert-key-file         File with login certificate key (\$VAULT_CERT_KEYFILE)"
+  echo "  --vault-cert-cert-file        File with login certificate (\$VAULT_CERT_CERT_FILE)"
   echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
@@ -291,6 +295,58 @@ while (( "$#" )); do
     fi
     fi
     ;;
+  --vault-password*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_PASSWORD="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_PASSWORD=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-password parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-cert-ca-file*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_CERT_CA_FILE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_CERT_CA_FILE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-cert-ca-file parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-cert-key-file*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_CERT_KEY_FILE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_CERT_KEY_FILE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-cert-key-file parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-cert-cert-file*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_CERT_CERT_FILE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_CERT_CERT_FILE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-cert-cert-file parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
   --confirm-destroy)
     if [[ "${SUBCOMMAND}" != "environment" ]];then
       echo "Error: --confirm-destroy is not valid for $SUBCOMMAND subcommand."
@@ -401,6 +457,21 @@ fi
 if [ ! -d "${CONFIG_DIR}/inventory" ]; then
   echo "inventory directory not found in directory ${CONFIG_DIR}."
   exit 1
+fi
+
+# --------------------------------------------------------------------------------------------------------- #
+# Check existence of certificate files if specified                                                         #
+# --------------------------------------------------------------------------------------------------------- #
+
+# Ensure vault certificate files exists
+if [[ ! -z $VAULT_CERT_CA_FILE && ! -f $VAULT_CERT_CA_FILE ]];then
+    echo "Vault certificate CA file ${VAULT_CERT_CA_FILE} not found."
+fi
+if [[ ! -z $VAULT_CERT_KEY_FILE && ! -f $VAULT_CERT_KEY_FILE ]];then
+    echo "Vault certificate key file ${VAULT_CERT_KEY_FILE} not found."
+fi
+if [[ ! -z $VAULT_CERT_CERT_FILE && ! -f $VAULT_CERT_CERT_FILE ]];then
+    echo "Vault certificate file ${VAULT_CERT_CERT_FILE} not found."
 fi
 
 # Set remaining parameters
@@ -516,6 +587,25 @@ if [ ! -z $VAULT_SECRET ];then
   if [ ! -z $VAULT_SECRET_FILE ];then
     run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:Z"
   fi
+fi
+
+if [ ! -z $VAULT_PASSWORD ];then
+  run_cmd+=" -e VAULT_PASSWORD=${VAULT_PASSWORD}"
+fi
+
+if [ ! -z $VAULT_CERT_CA_FILE ];then
+  run_cmd+=" -e VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
+  run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:Z"
+fi
+
+if [ ! -z $VAULT_CERT_KEY_FILE ];then
+  run_cmd+=" -e VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
+  run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:Z"
+fi
+
+if [ ! -z $VAULT_CERT_CERT_FILE ];then
+  run_cmd+=" -e VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
+  run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:Z"
 fi
 
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"

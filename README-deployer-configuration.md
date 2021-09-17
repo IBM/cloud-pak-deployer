@@ -77,26 +77,17 @@ podman run \
 vault_type=hashicorp-vault
 vault_authentication_type=certificate
 vault_url=https://<hashicorp_vault_url>:8200
-vault_ca_cert=/Data/<ca_certificate_filename>
-vault_client_cert=/Data/<client_certificate_filename>
-vault_client_key=/Data/<client_key_certificate_filename>
 vault_secret_path=secret/base/path
 vault_secret_field=value
 ```
 
-- vault_ca_cert
-  CA certificate to trust the Hashicorp Vault TLS listener
-- vault_client_cert
-  Client certificate authorized to access the Hashicorp vault
-- vault_client_key
-  Client certificate key authorized to access the Hashicorp vault
 - vault_secret_path:
   The base path of the location where the secrets are stores/retrieved
 - vault_secret_field
   The field name used when storing/retrieving a secret
 
 **note:**
-It is strongly recommended that the file **vault_ca_cert**, **vault_client_cert** and **vault_client_key** are not in the GIT repository for security reasons. Instead when preparing to run the Cloud Pak Deployer, copy the certificate file to the /Data folder.
+When using vault certificate authentication, the CA certificate, the key and the certificate must be passed at the cp-deploy.sh command line.
 
 #### File Vault 
 ```
