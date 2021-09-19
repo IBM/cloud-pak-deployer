@@ -173,8 +173,8 @@ do
                 exit 1
             else
                 export CP4D_USER_UID=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_URL_USER} \
-                    -d "{\"username\":\"${LDAP_USER_NAME}\",\"displayName\":\"${LDAP_USER_DISPLAY_NAME}\",\"email\":\"${LDAP_USER_EMAIL}\",\"user_roles\":[\"zen_user_role\"],\"authenticator\":\"external\"}" | jq -r '. | .uid')
-                
+                    -d "{\"username\":\"${LDAP_USER_NAME}\",\"displayName\":\"${LDAP_USER_DISPLAY_NAME}\",\"email\":\"${LDAP_USER_EMAIL}\",\"authenticator\":\"external\",\"user_roles\":[\"zen_user_role\"]}" | jq -r '. | .uid')
+
                 if [[ -z ${CP4D_USER_UID} || "${CP4D_USER_UID}" == "null " ]]
                 then
                     echo "Error occurred when creating user ${LDAP_USER_NAME}"
@@ -225,7 +225,7 @@ do
                 export ADD_USER_TO_CA=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS} \
                     -d "{\"users\":[{\"uid\":\"${CP4D_USER_UID}\",\"username\":\"${LDAP_USER_NAME}\",\"display_name\":\"${LDAP_USER_DISPLAY_NAME}\",\"role\":\"${CP4D_CA_ROLE}\"}],\"serviceInstanceID\":\"${COGNOS_INSTANCE_ID}\"}" | jq -r '. | .message')
 
-                echo "Result adding ${LDAP_USER_DISPLAY_NAME} to Cognos Analytics instance ${COGNOS_INSTANCE_ID}: ${ADD_USER_TO_CA}"
+                echo "Result adding ${LDAP_USER_DISPLAY_NAME} to Cognos Analytics instance ${COGNOS_INSTANCE_ID} with Role ${CP4D_CA_ROLE}: ${ADD_USER_TO_CA}"
             fi
         else
             export CP4D_CA_CURRENT_ROLE=$(jq -r ".requestObj[] | select(.UserName==${LDAP_USER}) | .Role" <<< ${CURRENT_CA_CP4D_USERS})
@@ -234,11 +234,16 @@ do
                 echo "User ${LDAP_USER_DISPLAY_NAME} is already assigned Cognos Analytics role ${CP4D_CA_ROLE}"
             else
                 echo "Moving User ${LDAP_USER_DISPLAY_NAME} Cognos Analytics Role from ${CP4D_CA_CURRENT_ROLE} to ${CP4D_CA_ROLE}"
-                
-                export MODIFY_CA_ROLE=$(curl -s -k -X PATCH -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS_ROLE} \
-                    -d "{\"serviceInstanceID\":\"${COGNOS_INSTANCE_ID}\",\"roles\":[{\"uid\":\"${CP4D_USER_UID}\",\"newrole\":\"${CP4D_CA_ROLE}\"}]}" | jq -r '. | .message')
-                
-                echo "Result modifying ${LDAP_USER_DISPLAY_NAME} role to ${CP4D_CA_ROLE} of Cognos Analytics instance ${COGNOS_INSTANCE_ID}: ${MODIFY_CA_ROLE}"
+
+                export DELETE_CA_ROLE=$(curl -s -k -X DELETE -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS} \
+                    -d "{\"users\":[\"${CP4D_USER_UID}\"],\"serviceInstanceID\":\"${COGNOS_INSTANCE_ID}\"}" | jq -r '. | .message')
+
+                echo "Result Delete User ${LDAP_USER_DISPLAY_NAME} from instance ${COGNOS_INSTANCE_ID}: ${DELETE_CA_ROLE}"
+
+                export ADD_USER_TO_CA=$(curl -s -k -X POST -H "Authorization: Bearer ${BEARER}" -H 'Content-Type: application/json' ${CP4D_INSTANCES_USERS} \
+                    -d "{\"users\":[{\"uid\":\"${CP4D_USER_UID}\",\"username\":\"${LDAP_USER_NAME}\",\"display_name\":\"${LDAP_USER_DISPLAY_NAME}\",\"role\":\"${CP4D_CA_ROLE}\"}],\"serviceInstanceID\":\"${COGNOS_INSTANCE_ID}\"}" | jq -r '. | .message')
+
+                echo "Result adding ${LDAP_USER_DISPLAY_NAME} to Cognos Analytics instance ${COGNOS_INSTANCE_ID} with Role ${CP4D_CA_ROLE}: ${ADD_USER_TO_CA}"
             fi
         fi
     done
