@@ -1,169 +1,54 @@
 ---
-- name: Pause the MachineConfig operator to disable rebooting of workers
-  shell: |
-    oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
 
-- name: Create ImageContentSourcePolicy for Cloud Pak for Data with private registry
-  block:
-    - name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
-      shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
-      register: oc_icsp_exists
+- name: Pause the Machine Config Operator
+  include_role:
+    name: cp-ocp-mco-pause
 
-    - name: Create ImageContentSourcePolicy {{ icsp_name }} for Cloud Pak for Data
-      block:
-        - name: Create ImageContentSourcePolicy yaml
-          template:
-            src: cp4d-icsp.j2
-            dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"
-        - name: Create ImageContentSourcePolicy {{ iscp_name }}
-          shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-icsp.yaml"  
-      when: 
-      - oc_icsp_exists.stdout == "0"
+- name: Create ImageContentSourcePolicy for the Cloud Pak with private registry
+  include_role:
+    name: cp-ocp-icsp
   when: not (use_entitled_registry | bool)
 
-# TODO: Use specified registry
 - name: Set global pull secret for specified private registry
   block:
-    - name: Get key for ICR {{ current_cp4d_cluster.container_registry_namespace }} exists in the vault
+    - name: Get pull secret for image registry {{ current_cp4d_cluster.image_registry_name }} from the vault
       include_role: 
         name: vault-get-secret
       vars:
         secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
-        secret_group: "{{ environment_name }}"  
-
+        secret_group: "{{ environment_name }}"
     - name: Validate if container registry credentials secret is available
       fail: msg="Container registry credentials secret image-registry-{{ current_cp4d_cluster.image_registry_name }} from group {{ environment_name }} is empty"
       when: secret_value== ""
-
-    - name: Create temporary directory to hold current pull secret content
-      tempfile:
-        state: directory
-      register: pull_secret_dir
-    - name: Extract the global pull secret
-      shell: |
-        oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
-    - name: Set the global pull secret
-      shell: |
-        cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-          jq --arg private_registry "{{ private_registry_url }}" \
-            --arg pull_secret $(echo -n "{{ secret_value }}" | base64 -w0) \
-            '.auths += {($private_registry): {"auth": $pull_secret, "email": "not-used"}}' \
-            > {{ pull_secret_dir.path }}/newdockerconfigjson
-        oc set data secret/pull-secret -n openshift-config \
-          --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+    - name: Set the global pull secret for the private registry
+      include_role:
+        name: cp-ocp-global-pull-secret
+      vars:
+        _p_registry_url: "{{ private_registry_url }}" 
+        _p_registry_pull_secret: "{{ secret_value }}"
   when: not (use_entitled_registry | bool)
 
-- name: Set global pull secret for entitled registry
-  block:
-    - name: Create temporary directory to hold current pull secret content
-      tempfile:
-        state: directory
-      register: pull_secret_dir
-    - name: Extract the global pull secret
-      shell: |
-        oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
-    - name: Set the global pull secret
-      shell: |
-        cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
-          jq --arg registry "{{ entitled_registry }}" \
-            --arg pull_secret $(echo -n "cp:{{ ibm_cp_entitlement_key }}" | base64 -w0) \
-            '.auths += {($registry): {"auth": $pull_secret, "email": "not-used"}}' \
-            > {{ pull_secret_dir.path }}/newdockerconfigjson
-        oc set data secret/pull-secret -n openshift-config \
-          --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+- name: Set the global pull secret for the entitled registry
+  include_role:
+    name: cp-ocp-global-pull-secret
+  vars:
+    _p_registry_url: "{{ entitled_registry }}" 
+    _p_registry_pull_secret: "cp:{{ ibm_cp_entitlement_key }}"
   when: (use_entitled_registry | bool)
 
-- name: Check if the Tuned {{ cp4d_tuned_name }} exists
-  shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
-  register: oc_tuned_exists
+- name: Set the kernel parameters via the Tuned object if not on IBM Cloud
+  include_role:
+    name: cp4d-ocp-tuned
+  when: cloud_platform != 'ibm-cloud'
+  
+- name: Set the kubelet configuration
+  include_role:
+    name: cp4d-ocp-kubelet-config
 
-- name: Configure Tuned {{ cp4d_tuned_name }}
-  block:
-    - name: Create Tuned yaml
-      template:
-        src: cp4d-tuned.j2
-        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
-    - name: Create Tuned cp4d_ipc
-      shell: "oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-tuned.yaml"
-  when: oc_tuned_exists.stdout == "0"
+- name: Set the CRI-O configuration
+  include_role:
+    name: cp4d-ocp-crio-config
 
-- name: Check if the KubeletConfig {{ kubelet_config_name }} exists
-  shell: "oc get KubeletConfig | grep -i '^{{ kubelet_config_name }}' | wc -l"
-  register: oc_kubeletconfig_exists
-
-- name: Configure KubeletConfig {{ kubelet_config_name }}
-  block:
-    - name: Create KubeletConfig yaml
-      template:
-        src: cp4d-kubeletconfig.j2
-        dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml"
-    - name: Create KubeletConfig {{ kubelet_config_name }}
-      shell: oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-kubeletconfig.yaml
-    - name: Label worker machine config pool to allow KubeletConfig
-      shell: oc label machineconfigpool worker db2u-kubelet=sysctl
-  when: oc_kubeletconfig_exists.stdout == "0"
-
-- name: Get first worker node
-  shell: |
-    oc get no --no-headers -l node-role.kubernetes.io/worker -o custom-columns='name:.metadata.name' | head -1
-  register: ocp_workers
-
-- name: Retrieve /etc/crio/crio.conf
-  shell: |
-    oc debug no/{{ ocp_workers.stdout }} -- cat /host/etc/crio/crio.conf > {{ cp4d_automation_temp_dir.path }}/worker_crio.conf
-  register: debug_node_result
-  retries: 3
-  delay: 10
-  until: debug_node_result.rc==0
-
-- name: Set pids_limit
-  community.general.ini_file:
-    path: "{{ cp4d_automation_temp_dir.path }}/worker_crio.conf"
-    section: "crio.runtime"
-    option: pids_limit
-    value: "12288"
-
-- name: Set default_ulimit
-  community.general.ini_file:
-    path: "{{ cp4d_automation_temp_dir.path }}/worker_crio.conf"
-    section: "crio.runtime"
-    option: default_ulimit
-    value: '[ "nofile=66560:66560" ]'
-
-- name: Convert {{ cp4d_automation_temp_dir.path }}/worker_crio.conf to string
-  shell:
-    cat {{ cp4d_automation_temp_dir.path }}/worker_crio.conf | \
-      python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"
-  register: crio_conf_string
-
-- name: Create CRIO config MachineConfig file {{ cp4d_automation_temp_dir.path }}/cp4d-crio-mc.yaml
-  template:
-    src: cp4d-crio-mc.j2
-    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-crio-mc.yaml"
-
-- name: Apply CRIO MachineConfig
-  shell: oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-crio-mc.yaml
-
-- name: Allow MachineConfig operator to reboot wokers again
-  shell: |
-    oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
-
-- name: Get number of workers
-  shell: |
-    oc get mcp worker -o jsonpath='{.status.machineCount}'
-  register: number_of_workers
-
-- name: Wait for {{ number_of_workers.stdout }} workers for cluster to become ready according to the MachineConfig operator
-  shell: |
-    oc get mcp worker -o jsonpath='{.status.readyMachineCount}'
-  register: ready_number_of_workers
-  retries: 60
-  delay: 60
-  until: ready_number_of_workers.stdout == number_of_workers.stdout
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-
-
+- name: Resume the Machine Config operator
+  include_role:
+    name: cp-ocp-mco-resume

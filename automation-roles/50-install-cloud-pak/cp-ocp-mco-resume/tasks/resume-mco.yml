@@ -1,0 +1,22 @@
+---
+- name: Allow MachineConfig operator to reboot workers again
+  shell: |
+    oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
+
+- name: Get number of workers
+  shell: |
+    oc get mcp worker -o jsonpath='{.status.machineCount}'
+  register: number_of_workers
+
+- name: Wait for {{ number_of_workers.stdout }} workers for cluster to become ready according to the MachineConfig operator
+  shell: |
+    oc get mcp worker -o jsonpath='{.status.readyMachineCount}'
+  register: ready_number_of_workers
+  retries: 60
+  delay: 60
+  until: ready_number_of_workers.stdout == number_of_workers.stdout
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

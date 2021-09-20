@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#
+# This script changes the node settings on ever worker for Cloud Pak for Data
+#
+
+NODE_UPDATED=0
+
+# Add ImageContentSourcePolicy to registries.conf
+if [ -e /cloud-pak-node-fix/cloud-pak-icsp-registries.conf ];then
+  cp -r /etc/containers/registries.conf /tmp
+  sed -i '/## ICSP replacement START/,/## ICSP replacement END/d' /tmp/registries.conf
+  cat /cloud-pak-node-fix/cloud-pak-icsp-registries.conf >> /tmp/registries.conf
+  if ! cmp -s /tmp/registries.conf /etc/containers/registries.conf;then
+    cp -r /tmp/registries.conf /etc/containers/registries.conf
+    NODE_UPDATED=1
+    echo "Registries changes made to /etc/containers/registries.conf" >> /tmp/cloud-pak-node-fix.log
+  fi
+fi
+
+# Change kubelet.conf to allow Db2 pods to run with unsafe Sysctls
+if [ -e /cloud-pak-node-fix/cp4d-kubelet.conf ];then 
+  if ! cmp -s /cloud-pak-node-fix/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf;then
+    cp -r /cloud-pak-node-fix/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf
+    NODE_UPDATED=1
+    echo "Kubelet configuration changes made in /etc/kubernetes/kubelet.conf" >> /tmp/cloud-pak-node-fix.log
+  fi
+fi
+
+# Change crio.conf to allow more processes in a container
+if [ -e /cloud-pak-node-fix/cp4d-crio.conf ];then 
+  if ! cmp -s /cloud-pak-node-fix/cp4d-crio.conf /etc/crio/crio.conf;then
+    cp -r /cloud-pak-node-fix/cp4d-crio.conf /etc/crio/crio.conf
+    NODE_UPDATED=1
+    echo "CRI-O configuration changes made in /etc/crio/crio.conf" >> /tmp/cloud-pak-node-fix.log
+  fi
+fi
+
+if [ $NODE_UPDATED -eq 1 ];then
+  echo "Restarting kubelet and crio daemons" >> /tmp/cloud-pak-node-fix.log
+  systemctl restart kubelet
+  systemctl restart crio
+fi
+
+echo "Finished checking node cloud-pak node settings" >> /tmp/cloud-pak-node-fix.log

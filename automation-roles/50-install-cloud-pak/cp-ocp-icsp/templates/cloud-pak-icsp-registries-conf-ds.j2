@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: cp4d-icsp-registries-ds
+  name: cloud-pak-icsp-registries-ds
   namespace: kube-system
   labels:
     tier: management
-    app: cp4d-icsp-registries-ds
+    app: cloud-pak-icsp-registries-ds
 spec:
   selector:
     matchLabels:
-      name: cp4d-icsp-registries-ds
+      name: cloud-pak-icsp-registries-ds
   template:
     metadata:
       labels:
-        name: cp4d-icsp-registries-ds
+        name: cloud-pak-icsp-registries-ds
     spec:
       hostNetwork: true
       hostPID: true
@@ -27,28 +27,28 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - >
-              date >> /ext-tmp/cp4d-icsp-registries-ds.log ;
+              date >> /ext-tmp/cloud-pak-icsp-registries-ds.log ;
               echo "The following will be added to the registries configuration" ;
-              cat /cp4d-icsp-registries/cp4d-icsp-registries.conf ;
-              cat /cp4d-icsp-registries/cp4d-icsp-registries.conf > /ext-cp4d-node-fix/cp4d-icsp-registries.conf ;
+              cat /cloud-pak-icsp-registries/cloud-pak-icsp-registries.conf ;
+              cat /cloud-pak-icsp-registries/cloud-pak-icsp-registries.conf > /ext-cloud-pak-node-fix/cloud-pak-icsp-registries.conf ;
               while true; do
                 sleep 100000;
               done
           volumeMounts:
-            - name: cp4d-icsp-registries
-              mountPath: /cp4d-icsp-registries
+            - name: cloud-pak-icsp-registries
+              mountPath: /cloud-pak-icsp-registries
               readOnly: true
             - name: modifytmp
               mountPath: /ext-tmp
-            - name: modifycp4dnodefix
-              mountPath: /ext-cp4d-node-fix
+            - name: modifycpnodefix
+              mountPath: /ext-cloud-pak-node-fix
       volumes:
-        - name: cp4d-icsp-registries
+        - name: cloud-pak-icsp-registries
           configMap:
-            name: cp4d-icsp-registries
+            name: cloud-pak-icsp-registries
         - name: modifytmp
           hostPath:
             path: /tmp
-        - name: modifycp4dnodefix
+        - name: modifycpnodefix
           hostPath:
-            path: /cp4d-node-fix
+            path: /cloud-pak-node-fix

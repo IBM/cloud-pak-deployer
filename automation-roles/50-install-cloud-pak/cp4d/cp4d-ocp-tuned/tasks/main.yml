@@ -1,0 +1,14 @@
+---
+- name: Check if the Tuned {{ cp4d_tuned_name }} exists
+  shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
+  register: oc_tuned_exists
+
+- name: Configure Tuned {{ cp4d_tuned_name }}
+  block:
+    - name: Create Tuned yaml
+      template:
+        src: cp4d-tuned.j2
+        dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-tuned.yaml"
+    - name: Create Tuned cp4d_ipc
+      shell: "oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-tuned.yaml"
+  when: oc_tuned_exists.stdout == "0"

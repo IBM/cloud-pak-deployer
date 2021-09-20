@@ -191,35 +191,4 @@
 #       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 
-- name: Wait for 5 minutes to allow workers to stabilize
-  pause:
-    minutes: 5
-  when: reload_workers
-
-# On ROKS, there is no MachineConfig operator to update system settings so we're changing kubelet and crio settings
-# in the files directly via a cron job on the worker. If there is a change in the settings, the cron job will recycle
-# the kubelet and crio daemons.
-- name: Create cp4d-node-fix.sh script to change node settings
-  template:
-    src: cp4d-node-fix.j2
-    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix.sh"
-- name: Create secret for DaemonSet cp4d-node-fix-ds
-  shell: |
-    if ! oc get secret -n kube-system cp4d-node-fix;then
-      oc create secret generic cp4d-node-fix -n kube-system > /dev/null 2>&1
-    fi
-- name: Set data for secret cp4d-node-fix
-  shell: |
-    oc set data secret/cp4d-node-fix -n kube-system \
-      --from-file=cp4d-node-fix.sh="{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix.sh"
-- name: Create DaemonSet to change node settings via crontab
-  template:
-    src: cp4d-node-fix-ds.j2
-    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml"
-- name: Create DaemonSet cp4d-node-fix-ds
-  shell: |
-    if oc get ds -n kube-system cp4d-crontab-ds;then
-      oc delete ds -n kube-system cp4d-crontab-ds
-    fi
-    oc apply -f {{ cp4d_automation_temp_dir.path }}/cp4d-node-fix-ds.yaml
 
