@@ -56,7 +56,11 @@ command_usage() {
 
 # Show the logs of the currently running env process
 run_env_logs() {
-  ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}
+  if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
+    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+  else
+    ${CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
+  fi
 }
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -512,33 +516,44 @@ fi
 
 # Check if a container is currently running for this status directory
 CURRENT_CONTAINER_ID=""
+ACTIVE_CONTAINER_ID=""
 if [ -f ${STATUS_DIR}/pid/container.id ];then
   CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
-  # If container ID was specified, check if it is currently running
-  if [ "${CURRENT_CONTAINER_ID}" != "" ];then
-    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
-      CURRENT_CONTAINER_ID=""
+  ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
+  # If container ID was found, check if it is currently running
+  if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
+    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+      ACTIVE_CONTAINER_ID=""
     fi
   fi
 fi
 
-if [[ "${CURRENT_CONTAINER_ID}" == "" &&  ("${ACTION}" == "kill" || "${ACTION}" == "logs") ]];then
-  echo "Error: No Cloud Pak Deployer process is active for the current status directory."
-  exit 1
-fi
-
-if [[ "${CURRENT_CONTAINER_ID}" != "" ]];then
-  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+# If trying to apply or destroy for an active container, just display the logs
+if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
     echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
-    echo "Showing the logs of the currently running container ${CURRENT_CONTAINER_ID}"
+    echo "Showing the logs of the currently running container ${ACTIVE_CONTAINER_ID}"
     sleep 0.5
     run_env_logs
     exit 0
-  elif [[ "${ACTION}" == "logs" ]];then
+  fi
+# Display the logs if an active or inactive container was found
+elif [[ "${ACTION}" == "logs" ]];then
+  if [[ "${CURRENT_CONTAINER_ID}" == "" ]];then
+    echo "Error: No Cloud Pak Deployer process found for the current status directory."
+    exit 1
+  else
     run_env_logs
     exit 0
-  elif [[ "${ACTION}" == "kill" ]];then
-    ${CONTAINER_ENGINE} kill ${CURRENT_CONTAINER_ID}
+  fi
+# Terminate if an active container was found
+elif [[ "${ACTION}" == "kill" ]];then
+  if [[ "${ACTIVE_CONTAINER_ID}" == "" ]];then
+    echo "Error: No active Cloud Pak Deployer process found for the current status directory."
+    exit 1
+  else
+    echo "Terminating container process ${ACTIVE_CONTAINER_ID}"
+    ${CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
     exit 0
   fi
 fi
@@ -627,6 +642,7 @@ run_cmd+=" cloud-pak-deployer"
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
   CURRENT_CONTAINER_ID=$(eval $run_cmd)
+  ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
   mkdir -p ${STATUS_DIR}/pid
   echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
   PODMAN_EXIT_CODE=$?
