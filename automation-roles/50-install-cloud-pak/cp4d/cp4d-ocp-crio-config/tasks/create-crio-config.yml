@@ -1,0 +1,15 @@
+---
+
+- name: Convert {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf to string
+  shell:
+    cat {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf | \
+      python3 -c "import sys, urllib.parse; print(urllib.parse.quote(''.join(sys.stdin.readlines())))"
+  register: crio_conf_string
+
+- name: Create CRI-O config MachineConfig file {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio-mc.yaml
+  template:
+    src: cp4d-crio-mc.j2
+    dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio-mc.yaml"
+
+- name: Apply CRI-O MachineConfig
+  shell: oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio-mc.yaml

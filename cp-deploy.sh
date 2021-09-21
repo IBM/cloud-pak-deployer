@@ -32,6 +32,10 @@ command_usage() {
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
   echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
+  echo "  --vault-cert-ca-file          File with CA of login certificate (\$VAULT_CERT_CA_FILE)"
+  echo "  --vault-cert-key-file         File with login certificate key (\$VAULT_CERT_KEYFILE)"
+  echo "  --vault-cert-cert-file        File with login certificate (\$VAULT_CERT_CERT_FILE)"
   echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
@@ -52,7 +56,11 @@ command_usage() {
 
 # Show the logs of the currently running env process
 run_env_logs() {
-  ${CONTAINER_ENGINE} logs -f ${CURRENT_CONTAINER_ID}
+  if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
+    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+  else
+    ${CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
+  fi
 }
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -291,6 +299,58 @@ while (( "$#" )); do
     fi
     fi
     ;;
+  --vault-password*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_PASSWORD="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_PASSWORD=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-password parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-cert-ca-file*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_CERT_CA_FILE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_CERT_CA_FILE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-cert-ca-file parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-cert-key-file*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_CERT_KEY_FILE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_CERT_KEY_FILE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-cert-key-file parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-cert-cert-file*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_CERT_CERT_FILE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_CERT_CERT_FILE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-cert-cert-file parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
   --confirm-destroy)
     if [[ "${SUBCOMMAND}" != "environment" ]];then
       echo "Error: --confirm-destroy is not valid for $SUBCOMMAND subcommand."
@@ -403,6 +463,21 @@ if [ ! -d "${CONFIG_DIR}/inventory" ]; then
   exit 1
 fi
 
+# --------------------------------------------------------------------------------------------------------- #
+# Check existence of certificate files if specified                                                         #
+# --------------------------------------------------------------------------------------------------------- #
+
+# Ensure vault certificate files exists
+if [[ ! -z $VAULT_CERT_CA_FILE && ! -f $VAULT_CERT_CA_FILE ]];then
+    echo "Vault certificate CA file ${VAULT_CERT_CA_FILE} not found."
+fi
+if [[ ! -z $VAULT_CERT_KEY_FILE && ! -f $VAULT_CERT_KEY_FILE ]];then
+    echo "Vault certificate key file ${VAULT_CERT_KEY_FILE} not found."
+fi
+if [[ ! -z $VAULT_CERT_CERT_FILE && ! -f $VAULT_CERT_CERT_FILE ]];then
+    echo "Vault certificate file ${VAULT_CERT_CERT_FILE} not found."
+fi
+
 # Set remaining parameters
 eval set -- "$PARAMS"
 
@@ -441,33 +516,44 @@ fi
 
 # Check if a container is currently running for this status directory
 CURRENT_CONTAINER_ID=""
+ACTIVE_CONTAINER_ID=""
 if [ -f ${STATUS_DIR}/pid/container.id ];then
   CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
-  # If container ID was specified, check if it is currently running
-  if [ "${CURRENT_CONTAINER_ID}" != "" ];then
-    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${CURRENT_CONTAINER_ID};then
-      CURRENT_CONTAINER_ID=""
+  ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
+  # If container ID was found, check if it is currently running
+  if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
+    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+      ACTIVE_CONTAINER_ID=""
     fi
   fi
 fi
 
-if [[ "${CURRENT_CONTAINER_ID}" == "" &&  ("${ACTION}" == "kill" || "${ACTION}" == "logs") ]];then
-  echo "Error: No Cloud Pak Deployer process is active for the current status directory."
-  exit 1
-fi
-
-if [[ "${CURRENT_CONTAINER_ID}" != "" ]];then
-  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+# If trying to apply or destroy for an active container, just display the logs
+if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
     echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
-    echo "Showing the logs of the currently running container ${CURRENT_CONTAINER_ID}"
+    echo "Showing the logs of the currently running container ${ACTIVE_CONTAINER_ID}"
     sleep 0.5
     run_env_logs
     exit 0
-  elif [[ "${ACTION}" == "logs" ]];then
+  fi
+# Display the logs if an active or inactive container was found
+elif [[ "${ACTION}" == "logs" ]];then
+  if [[ "${CURRENT_CONTAINER_ID}" == "" ]];then
+    echo "Error: No Cloud Pak Deployer process found for the current status directory."
+    exit 1
+  else
     run_env_logs
     exit 0
-  elif [[ "${ACTION}" == "kill" ]];then
-    ${CONTAINER_ENGINE} kill ${CURRENT_CONTAINER_ID}
+  fi
+# Terminate if an active container was found
+elif [[ "${ACTION}" == "kill" ]];then
+  if [[ "${ACTIVE_CONTAINER_ID}" == "" ]];then
+    echo "Error: No active Cloud Pak Deployer process found for the current status directory."
+    exit 1
+  else
+    echo "Terminating container process ${ACTIVE_CONTAINER_ID}"
+    ${CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
     exit 0
   fi
 fi
@@ -518,6 +604,25 @@ if [ ! -z $VAULT_SECRET ];then
   fi
 fi
 
+if [ ! -z $VAULT_PASSWORD ];then
+  run_cmd+=" -e VAULT_PASSWORD=${VAULT_PASSWORD}"
+fi
+
+if [ ! -z $VAULT_CERT_CA_FILE ];then
+  run_cmd+=" -e VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
+  run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:Z"
+fi
+
+if [ ! -z $VAULT_CERT_KEY_FILE ];then
+  run_cmd+=" -e VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
+  run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:Z"
+fi
+
+if [ ! -z $VAULT_CERT_CERT_FILE ];then
+  run_cmd+=" -e VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
+  run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:Z"
+fi
+
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
@@ -537,6 +642,7 @@ run_cmd+=" cloud-pak-deployer"
 # If running "environment" subcommand, follow log
 if [ "$SUBCOMMAND" == "environment" ];then
   CURRENT_CONTAINER_ID=$(eval $run_cmd)
+  ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
   mkdir -p ${STATUS_DIR}/pid
   echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
   PODMAN_EXIT_CODE=$?
