@@ -1,7 +1,7 @@
 ---
 - name: Get current storage class
   debug:
-    var: current_storage_class
+    var: current_openshift_storage
 
 - name: Check if openshift-container-storage add-on is installed
   command: |
@@ -37,7 +37,7 @@
 - name: Get the worker nodes for the OCS storage class
   command: |
     ibmcloud oc workers --cluster {{ current_openshift_cluster.name }} \
-      --worker-pool {{ current_openshift_cluster.name }}-{{ current_storage_class.ocs_storage_label }} \
+      --worker-pool {{ current_openshift_cluster.name }}-{{ current_openshift_storage.ocs_storage_label }} \
       --output json
   register: ocs_workers
 
@@ -62,9 +62,9 @@
     oc adm taint nodes {{ item }} node.ocs.openshift.io/storage="true":NoSchedule --overwrite
   loop: "{{ worker_ips }}"
 
-- name: Check if OcsCluster {{ current_storage_class.ocs_storage_label }} already exists
+- name: Check if OcsCluster {{ current_openshift_storage.ocs_storage_label }} already exists
   command: |
-    oc get OcsCluster {{ current_storage_class.ocs_storage_label }} 
+    oc get OcsCluster {{ current_openshift_storage.ocs_storage_label }} 
   failed_when: False
   register: ocs_cluster_exists
 
@@ -81,14 +81,14 @@
     dest: "{{ ocscluster_tempfile.path }}"
   when: ocs_cluster_exists.rc != 0
 
-- name: Create OcsCluster {{ current_storage_class.ocs_storage_label }}
+- name: Create OcsCluster {{ current_openshift_storage.ocs_storage_label }}
   command: |
     oc apply -f "{{ ocscluster_tempfile.path }}"
   when: ocs_cluster_exists.rc != 0
 
-- name: Wait for OcsCluster {{ current_storage_class.ocs_storage_label }} to be deployed
+- name: Wait for OcsCluster {{ current_openshift_storage.ocs_storage_label }} to be deployed
   command: |
-    oc get OcsCluster {{ current_storage_class.ocs_storage_label }} -o yaml
+    oc get OcsCluster {{ current_openshift_storage.ocs_storage_label }} -o yaml
   register: ocscluster_status
   failed_when: False
   retries: 60
