@@ -1,4 +1,8 @@
-## Methods provided by the preprocessor
+# Methods provided by the preprocessor
+
+[Chainable Methods](#chainable-methods)  
+[Instance Methods](#instance-methods)
+
 
 ### initializing it
 
@@ -19,6 +23,7 @@ g('name')
 g('infrastructure.type')
 ```
 
+## Chainable Methods
 
 ### .isRequired()
 Will do a check if the property represented by the instance is present. If not it will generate an error
@@ -146,5 +151,17 @@ subnet:
 - name: sample-subnet-zone-1
   address_prefix: first_zone_prefix
   ipv4_cidr_block: 192.168.1.0/24
+```
+
+## Instance Methods
+
+The functionality from the chainable methods is far from beeing perfect. The internal methods have been made public to be able to implement own logic if required.
+
+### g.appendError(type='error', path=None, msg=None)
+
+
+```
+if(g('localProp')=='foo'):
+	self.appendError(msg="localProp shouldn't equal 'foo'")
 ```
 
