@@ -130,6 +130,8 @@ class GeneratorPreProcessor:
         if(path==None):
             path=self.recentCheck.get('pathToCheck')
         self.errors.append({'type':type, 'path':path, 'message': msg})
+    def getFullConfig(self):
+        return self.fullConfigDict
     def getExpandedAttributes(self):
         return self.attributesDict
     def getErrors(self):

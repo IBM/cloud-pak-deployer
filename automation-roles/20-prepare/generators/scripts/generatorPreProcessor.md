@@ -157,11 +157,25 @@ subnet:
 
 The functionality from the chainable methods is far from beeing perfect. The internal methods have been made public to be able to implement own logic if required.
 
+internally [python-benedict](https://github.com/fabiocaccamo/python-benedict) is being used to do the heavy querying. Therefore the objects returned by **.getFullConfig()** and **getExpandedAttributes()** are benedict instance and provide [all the methods](https://github.com/fabiocaccamo/python-benedict#api) provided by the benedict lib
+
 ### g.appendError(type='error', path=None, msg=None)
 
 
 ```
 if(g('localProp')=='foo'):
-	self.appendError(msg="localProp shouldn't equal 'foo'")
+	g.appendError(msg="localProp shouldn't equal 'foo'")
 ```
+
+### g.getFullConfig()
+
+returns a queryable version of the all_config object that was initially passed to the instance.
+
+```
+all_config = g.getFullConfig()
+
+if len( all_config.match('vpc[*]') ) == 0:
+	g.appendError(msg="There are no VPCs defined")
+```
+
 
