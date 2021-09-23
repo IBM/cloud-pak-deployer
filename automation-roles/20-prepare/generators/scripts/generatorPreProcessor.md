@@ -44,6 +44,7 @@ g('something_else').isRequired()
 
 Like required it will do a check if the property represented by the instance is present.
 But if it isn't it will stop the execution of the check/chain and won't process further.
+
 ```
 
 ```

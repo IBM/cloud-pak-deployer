@@ -91,6 +91,9 @@ class GeneratorPreProcessor:
 
     def lookupFromProperty(self, localProperty, generatorName, remotePath, identifierProp='name'):
         if((self.recentCheck.get('pathToCheck') in self.attributesDict)==False):
+            if(localProperty in self.attributesDict )==False:
+                self.appendError(msg="Can't lookup "+self.recentCheck.get('pathToCheck')+" via "+localProperty+" because "+localProperty+" was not set")
+                return self
             localPropertyValue =  self.attributesDict[ localProperty ] # first_zone_prefix
             generatorsListOfEntities = self.fullConfigDict.get(generatorName,[])
             for i in range(len(generatorsListOfEntities)):
