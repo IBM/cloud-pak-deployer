@@ -1,0 +1,43 @@
+---
+# Custom installer for the IIS Operator
+- debug:
+    msg: "Running Custom Playbook for IIS Operator"
+
+- name: Make a temporary work folder available
+  tempfile:
+    path: "{{status_dir}}/cp4d"
+    state: directory
+  register: iis_operator_temp_dir
+
+- name: Validate if the iis-operator is already present
+  shell: " oc get pod -n {{ foundational_services_project }} | grep ibm-cpd-iis-operator | wc -l"
+  register: get_iis_operator_result
+
+- when: get_iis_operator_result.stdout == "1"
+  block:
+
+    - debug:
+        msg: "The iis-operator is already present, skipping creating operator"
+
+- when: get_iis_operator_result.stdout == "0"
+  block:
+    
+    - name: Prepare yaml file for IIS operator Security Context Constraints
+      template:
+        src: "iis-scc.j2"
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-scc.yml"
+
+    - name: Create ISS Security Context Constraints
+      command: |
+        oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-scc.yml"
+   
+    - name: Install IIS Operator, check logs in {{ status_dir }}/log/iis_operator.log
+      script: |
+        cp4d-install-iis-operator.sh \
+        {{ status_dir }} \
+        {{ iis_operator_temp_dir.path }} \
+        {{ case_github_url }} \
+        "ibm-iis-{{ current_cp4d_cartridge.version }}.tgz" \
+        {{ foundational_services_project }} \
+        {{ cartridge_details.inventory }}
+      register: install_iis_operator_result
