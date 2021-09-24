@@ -51,8 +51,26 @@ class GeneratorPreProcessor:
     # value represented by path is allowed to be a string or a list of strings
     def mustBeOneOf(self,matchPattern, remoteIdentifier='name'):
         if self.recentCheck['canceled']==False:
-            if (type(matchPattern) is str):
-                
+            # mustBeOneOf is supposed to compare lists against lists
+            # if localPropertyValue is not a list we'll convert it to 
+            # a list with a single element
+            localPropertyValue =  self.attributesDict[  self.recentCheck.get('pathToCheck') ]
+            if (type(localPropertyValue) is not list):
+                localPropertyList = [ localPropertyValue ]
+            else:
+                localPropertyList = localPropertyValue
+
+            if (type(matchPattern) is list):
+                checkPassed=False
+                #localPropertyValue =  self.attributesDict[  self.recentCheck.get('pathToCheck') ]
+                for i in range(len(matchPattern)):
+                    if(localPropertyValue==matchPattern[i]):
+                        checkPassed=True
+                if checkPassed==False:
+                    self.appendError(msg="'{value}' is not one of [{listValues}]".format(value=localPropertyList[i],listValues=', '.join(matchPattern) ))
+            else:
+                # matchPattern is a string that resolves to a list of strings
+
                 matchPatternCombined=matchPattern+'.'+remoteIdentifier
                 #print( self.attributesDict[ self.recentCheck.get('pathToCheck') ] )
                 #print(self.attributesDict)
@@ -64,15 +82,8 @@ class GeneratorPreProcessor:
                 if(type(localPropertyValue) is list):
                     for i in range(len(localPropertyValue)):
                         if( (localPropertyValue[i] in listOfMatches)==False):
-                            self.appendError(msg="{value} is not one of [{remoteValues}]".format(value=localPropertyValue[i],remoteValues=', '.join(listOfMatches) ))
-            if (type(matchPattern) is list):
-                checkPassed=False
-                localPropertyValue =  self.attributesDict[  self.recentCheck.get('pathToCheck') ]
-                for i in range(len(matchPattern)):
-                    if(localPropertyValue==matchPattern[i]):
-                        checkPassed=True
-                if checkPassed==False:
-                    self.appendError(msg="{value} is not one of [{listValues}]".format(value=localPropertyValue[i],listValues=', '.join(matchPattern) ))
+                            self.appendError(msg="'{value}' is not one of [{remoteValues}]".format(value=localPropertyValue[i],remoteValues=', '.join(listOfMatches) ))
+
 
         #print(listOfMatches)
         #print(self.attributesDict[ lookupPath ])
