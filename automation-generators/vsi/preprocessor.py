@@ -5,7 +5,7 @@ def preprocessor(attributes=None, fullConfig=None):
     g = GeneratorPreProcessor(attributes,fullConfig)
     g('name').isRequired()
 
-    g('infrastructure.type').isRequired()
+    g('infrastructure.type').isRequired().mustBeOneOf(['vpc'])
     if(g('infrastructure.type')=='vpc'):
         g('infrastructure.allow_ip_spoofing').isOptional().mustBeOneOf([True,False])
         g('infrastructure.keys').isRequired()

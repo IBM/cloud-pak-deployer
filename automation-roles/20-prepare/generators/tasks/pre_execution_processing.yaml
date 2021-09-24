@@ -64,15 +64,21 @@
     set_fact:
       generator_validator_error: ""
 
-  - name: add errors from generator
+  - name: add error header if errors were found
     set_fact:
-      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
       generator_validator_error: |
         {{generator_validator_error}}
 
         {{ generator.name }}:
         {{ generator.attributes | to_nice_yaml }}
+    when: validator_received_result['errors'] is defined and (validator_received_result['errors']|length>0)
 
+
+  - name: add errors from generator
+    set_fact:
+      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
+      generator_validator_error: |
+        {{generator_validator_error}}
         ERROR: {{ error_item.message }}
     loop: "{{ validator_received_result.errors }}"
     loop_control:
