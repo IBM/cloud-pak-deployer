@@ -4,7 +4,7 @@
     check-services-installed.sh \
       {{ status_dir }} \
       {{ current_cp4d_cluster.project }} \
-      {{ current_cp4d_cluster.cartridges | default([]) | to_json | b64encode }} \
+      {{ wait_for_cartridges | default([]) | to_json | b64encode }} \
       {{ cartridge_cr | to_json | b64encode }}
   register: wait_cartridges_result
   until: wait_cartridges_result.stdout.find('All cartridges successfully completed') != -1
@@ -15,6 +15,3 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-
-
-
