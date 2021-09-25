@@ -1,0 +1,17 @@
+---
+- name: Create ImageContentSourcePolicy for Cloud Pak with private registry
+  block:
+    - name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
+      shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
+      register: oc_icsp_exists
+
+    - name: Create ImageContentSourcePolicy {{ icsp_name }} for the Cloud Pak
+      block:
+        - name: Create ImageContentSourcePolicy yaml
+          template:
+            src: cloud-pak-icsp.j2
+            dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp.yaml"
+        - name: Create ImageContentSourcePolicy {{ iscp_name }}
+          shell: "oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp.yaml"  
+      when: 
+      - oc_icsp_exists.stdout == "0"

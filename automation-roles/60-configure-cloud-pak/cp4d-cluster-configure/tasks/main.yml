@@ -5,53 +5,95 @@
 - name: Login to Cloud Pak for Data
   include_tasks: cluster-configure-prepare.yml
 
-# Cartridge: DB2
-- set_fact:
-    db2_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
-  vars:
-    cartridge_name: "db2"
-    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+#LDAP configuration
+- when: "all_config.ldap_config is defined"
+  block:
+    - debug:
+        msg: "{{ all_config.ldap_config }}"  
 
-- name: Provision DB2 instances
-  include_role:
-    name: provision_db2_instance
-  when: db2_service_enabled == '1'
+    - set_fact:
+        cp4d_ldap_config: "{{ all_config.ldap_config|json_query(query_ldap) | first }}"
+      vars:
+        query_ldap: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
 
-# Cartridge: CA
-- set_fact:
-    ca_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
-  vars:
-    cartridge_name: "ca"
-    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+    - debug:
+        msg: "{{ cp4d_ldap_config }}"
 
-- name: Provision Cognos instances
-  include_role:
-    name: provision_cognos_instance
-  when: ca_service_enabled == '1'
+    - name: Configure CP4D LDAP connectivity
+      include_tasks: configure-cpd-ldap-integration.yml
+      when: cp4d_configure_cpd_ldap == 0
 
-# Cartridge: DV
-- set_fact:
-    dv_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
-  vars:
-    cartridge_name: "dv"
-    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+#Cloud Pak for Data User Groups Configuration
+- when: "all_config.cp4d_user_group_configuration is defined"
+  block:
+    - debug:
+        msg: "{{ all_config.cp4d_user_group_configuration }}"  
 
-- name: Provision Data Virtualization instances
-  include_role:
-    name: provision_dv_instance
-  when: dv_service_enabled == '1'
+    - set_fact:
+        cp4d_user_group_config: "{{ all_config.cp4d_user_group_configuration|json_query(query_user_group) | first }}"
+      vars:
+        query_user_group: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
 
-# Cartridge: AnalyticsEngine
-- set_fact:
-    ae_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
-  vars:
-    cartridge_name: "analyticsengine"
-    query_cartridge: "[?name=='{{ cartridge_name }}']"    
+    - debug:
+        msg: "{{ cp4d_user_group_config }}"
 
-- name: Provision Analytics Engine instances
-  include_role:
-    name: provision_analyticsengine_instance
-  when: ae_service_enabled == '1'
+    - name: Create CP4D User Groups
+      include_role:
+        name: user_group
+      loop: "{{ cp4d_user_group_config.user_groups | default([]) }}"
+      loop_control:
+        loop_var: cp4d_user_group  
+
+- name: Loop through all cartridges for instance configuration
+  when: "current_cp4d_cluster.cartridges is defined"
+  block:
+    # Cartridge: DB2
+    - set_fact:
+        db2_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+      vars:
+        cartridge_name: "db2"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+    - name: Provision DB2 instances
+      include_role:
+        name: provision_db2_instance
+      when: db2_service_enabled == '1'
+
+    # Cartridge: CA
+    - set_fact:
+        ca_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+      vars:
+        cartridge_name: "ca"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+    - name: Provision Cognos instances
+      include_role:
+        name: provision_cognos_instance
+      when: ca_service_enabled == '1'
+
+    # Cartridge: DV
+    - set_fact:
+        dv_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+      vars:
+        cartridge_name: "dv"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+    - name: Provision Data Virtualization instances
+      include_role:
+        name: provision_dv_instance
+      when: dv_service_enabled == '1'
+
+    # Cartridge: AnalyticsEngine
+    - set_fact:
+        ae_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+      vars:
+        cartridge_name: "analyticsengine"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+    - name: Provision Analytics Engine instances
+      include_role:
+        name: provision_analyticsengine_instance
+      when: ae_service_enabled == '1'
 
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloud-pak-crontab-ds
+  namespace: kube-system
+  labels:
+    tier: management
+    app: cloud-pak-crontab-ds
+spec:
+  selector:
+    matchLabels:
+      name: cloud-pak-crontab-ds
+  template:
+    metadata:
+      labels:
+        name: cloud-pak-crontab-ds
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: sleepforever
+          resources:
+            requests:
+              cpu: 0.01
+          image: registry.access.redhat.com/ubi8:latest
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              date ;
+              /usr/bin/cp -f /cloud-pak-node-fix-secret/cloud-pak-node-fix.sh /ext-cloud-pak-node-fix/ ;
+              chmod +x /ext-cloud-pak-node-fix/cloud-pak-node-fix.sh ;
+              touch /ext-var/spool/cron/root ;
+              if ! grep -q 'cloud-pak-node-fix' /ext-var/spool/cron/root;then 
+                echo '*/5 * * * * bash -c "date >> /tmp/cloud-pak-node-fix.log; sh /cloud-pak-node-fix/cloud-pak-node-fix.sh"' >> /ext-var/spool/cron/root ;
+              fi ;
+              cat /ext-var/spool/cron/root ;
+              while true; do
+                sleep 100000;
+              done
+          volumeMounts:
+            - name: fix-script
+              mountPath: /cloud-pak-node-fix-secret
+            - name: modifycpnodefix
+              mountPath: /ext-cloud-pak-node-fix
+            - name: modifytmp
+              mountPath: /ext-tmp
+            - name: modifyvar
+              mountPath: /ext-var
+      volumes:
+        - name: fix-script
+          secret:
+            secretName: cloud-pak-node-fix
+        - name: modifycpnodefix
+          hostPath:
+            path: /cloud-pak-node-fix
+        - name: modifytmp
+          hostPath:
+            path: /tmp
+        - name: modifyvar
+          hostPath:
+            path: /var
+
+
