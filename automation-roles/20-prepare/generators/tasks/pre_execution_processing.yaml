@@ -4,7 +4,7 @@
 
 - name: check if the preprocessor.py file exists
   stat:
-    path: "{{ _generator_dir }}/preprocessor.py"
+    path: "{{ _generator_dir }}/{{ GENERATOR_NAME }}/preprocessor.py"
   register: preprocessorscript_stat
 
 - set_fact:
@@ -24,7 +24,7 @@
 # TODO: Only preprocess for now, leave the validation untouched. will need cleanup
   - name: run the preprocess script ({{ generator.name }})
     shell:
-      cmd: "python3 pre_execution_processor.py -k {{ generator.name }} -p {{ _generator_dir }} -i {{ generator_element_index }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
+      cmd: "python3 pre_execution_processor.py -k {{ generator.name }} -p {{ _generator_dir }}/{{ GENERATOR_NAME }} -i {{ generator_element_index }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
       #cmd: "pwd"
       chdir: "{{ role_path }}/scripts"
     register: preprocess_result # in the old version this was called 'validator_result'
