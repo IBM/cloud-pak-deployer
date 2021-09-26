@@ -18,9 +18,163 @@
   file:
     path: '{{status_dir}}/generated_defaults'
     state: directory
+    
+    
+### Start - Merge configs ###
+- name: Parse the yaml config and provide it as a fact config_merged
+  block:
+    - name: 'Get stats of {{path_to_config_dir}}/config'
+      stat:
+        path: "{{path_to_config_dir}}/config"
+      register: stats_of_config_dir
 
-- include_tasks: ibmcloud-generate.yaml
+    - name: 'Lookup *.yaml files in {{ stats_of_config_dir.stat.path }}'
+      find:
+        paths: '{{ stats_of_config_dir.stat.path }}'
+        file_type: file
+        patterns: '*.yaml'
+      register: found_config_files
+    
+    - name: Prepare config facts
+      set_fact: 
+        raw_config_files: {}
+        config_merged: {}
+    - name: Loop over config files
+      include_tasks: process_single_config_file.yaml
+      vars:
+        relative_path_to_config_file: "{{ item.path | replace( path_to_config_dir+'/config', '' ) }}"
+        absolute_path_to_config_file: "{{ item.path }}"
+      loop: '{{ found_config_files.files }}'
+      loop_control:
+        label: "{{ item.path }}"
+
+### End - Merge configs ###
+
+### Start - Merge defaults ###
+- name: Parse the yaml defaults and provide it as a fact defaults_merged
+  block:
+    - name: 'get stats of {{path_to_config_dir}}/defaults'
+      stat:
+        path: "{{path_to_config_dir}}/defaults"
+      register: stats_of_defaults_dir
+    - name: 'Lookup *.yaml files in {{ stats_of_defaults_dir.stat.path }}'
+      find:
+        paths: '{{ stats_of_defaults_dir.stat.path }}'
+        file_type: file
+        patterns: '*.yaml'
+      register: found_defaults_files
+    - name: Prepare defaults facts
+      set_fact: 
+        raw_defaults_files: {}
+        defaults_merged: {}
+    - name: Loop over defaults files
+      include_tasks: process_single_defaults_file.yaml
+      vars:
+        relative_path_to_defaults_file: "{{ item.path | replace( path_to_config_dir+'/defaults', '' ) }}"
+        absolute_path_to_defaults_file: "{{ item.path }}"
+      loop: '{{ found_defaults_files.files }}'
+      loop_control:
+        label: "{{ item.path }}"
+### End - Merge defaults ###
+
+- debug:
+    var: defaults_merged
+
+### we got defaults_merged and config_merged  
+### now iterate over the defined artifacts and merge them
+### with the defaults 
+### as a result we receive all_config
+# - name: prepare all_config fact
+#   set_fact: 
+#     all_config: {}
+- name: Loop over defined artifacts in the config
+  include_tasks: prepare_defaults_flavour_and_config.yaml
+  vars:
+    artifact_key: "{{ item.key }}"
+    artifact_list: "{{ item.value }}"
+  loop: '{{ config_merged | dict2items }}'
+  loop_control:
+    label: "{{ item.key }}"
+
+- name: OUTPUT all_config
+  debug:
+    var: all_config
+
+# - name: Prepare generator facts
+#   set_fact: 
+#     generators_index:
+
+# - name: List the folders in {{path_to_generators_dir}}, don't recurse
+#   find:
+#     file_type: directory
+#     paths: "{{path_to_generators_dir}}"
+#     recurse: no
+#   register: generators_generator_folders
+
+# - name: Show generator directories
+#   set_fact: 
+#     generators_index:
+#       available: "{{ generators_generator_folders['files'] | map(attribute='path') | map('regex_replace','^.*/(.*)$','\\1') | list }}"
+
+### Start: generator preprocessing
+
+# ### TODO: Find a way to change the order in which the generators are processed
+  ###       right now they are run in the same order in which they occur in the
+  ###       all_config.
+
+- set_fact:
+    generator_validation_error_message: ""
+    generator_validation_error_count: 0
+    generator_last_name: ""
+- set_fact:
+    generator_validation_error_message: |
+      Validation errors:
+
+- name: Preprocess 
+  include_tasks: pre_execution_processing.yaml
+  vars: 
+    generator:
+      this_item: "{{ item }}"
+      name: "{{ item[0].key }}"
+      attributes: "{{ item[1] }}"
+      config: "{{ all_config }}"
+    GENERATOR_NAME: "{{ item[0].key }}"
+  loop: "{{ all_config | dict2items | subelements('value')}}"
+  loop_control:
+    index_var: all_config_item_index
+
+- debug:
+    var: generator_validation_error_count
+
+- fail:
+    msg: "{{ generator_validation_error_message }}"
+  when: generator_validation_error_count | int > 0
+  vars:
+    ansible_callback_diy_runner_on_failed_msg: "{{ ansible_callback_diy.result.output.msg }}\n"
+
+### end: generator preprocessing
+
+- block:
+    - name: Delete terraform work folder if it already exists
+      file:
+        path: '{{status_dir}}/terraform'
+        state: absent
+
+    - name: Create terraform work folder if it does not exist
+      file:
+        path: '{{status_dir}}/terraform'
+        state: directory
   when: cloud_platform == 'ibm-cloud'
+  
+- name: Run generators
+  include_tasks: run-generator.yaml
+  vars:
+    GENERATOR_NAME: "{{ item[0].key }}"
+    GENERATOR_ATTRIBUTES: "{{ item[1] }}"
+  loop: "{{ all_config | dict2items | subelements('value')}}"
 
-- include_tasks: existing-ocp-generate.yaml
-  when: cloud_platform == 'existing-ocp'
+- name: Put the provider config to the terraform folder
+  template:
+    src: '../templates/provider.tf.j2'
+    dest: '{{status_dir}}/terraform/provider.tf'
+  when: cloud_platform == 'ibm-cloud'  
