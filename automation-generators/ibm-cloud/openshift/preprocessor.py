@@ -1,4 +1,5 @@
 from generatorPreProcessor import GeneratorPreProcessor
+import sys
 
 # Validating:
 # ---
@@ -31,9 +32,9 @@ def preprocessor(attributes=None, fullConfig=None):
     g('name').isRequired()
     g('ocp_version').isRequired()
     g('worker_flavour').isRequired()
-    g('worker_count').isRequired()
+    g('number_of_workers').isRequired()
     g('resource_group_name').isRequired()
-    g('max_worker_count').isOptional()
+    g('max_number_of_workers').isOptional()
     
     g('infrastructure').isRequired()
     g('infrastructure.type').mustBeOneOf(['vpc'])
@@ -47,6 +48,9 @@ def preprocessor(attributes=None, fullConfig=None):
         ge=g.getExpandedAttributes()
         if len(ge['infrastructure']['subnets']) != 1 and len(ge['infrastructure']['subnets']) != 3:
             g.appendError(msg='Number of subnets specified is ' + str(len(ge['infrastructure']['subnets'])) + ' must be 1 or 3')
+
+        if (ge['number_of_workers'] % len(ge['infrastructure']['subnets'])) != 0:
+            g.appendError(msg='number_of_workers must be a factor of the number of subnets')
 
         if len(ge['openshift_storage']) < 1:
             g.appendError(msg='At least one openshift_storage element must be specified.')
