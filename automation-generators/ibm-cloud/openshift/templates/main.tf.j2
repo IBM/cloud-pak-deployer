@@ -13,7 +13,7 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
     flavor       = "{{generator.attributes.worker_flavour}}"
     entitlement  = "cloud_pak"
     vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
-    worker_count = "{{ (generator.attributes.number_of_workers) / (generator.attributes.infrastructure.get('subnets',[]) | length) }}"
+    worker_count = "{{ ((generator.attributes.number_of_workers) / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
@@ -33,7 +33,7 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
     worker_pool_name  = "{{generator.attributes.name }}-{{item.ocs_storage_label}}"
     flavor       = "{{generator.attributes.worker_flavour}}"
     vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
-    worker_count      = "{{ 3 / (generator.attributes.infrastructure.get('subnets',[]) | length) }}"
+    worker_count      = "{{ (3 / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
     labels = {
