@@ -99,7 +99,7 @@
         cognos_instance_create_result_json: "{{ cognos_instance_create_result.stdout | from_json }}"
 
     - name: Wait until Cognos Analytics artifacts pod has started and is ready
-      command: oc get po -l app.kubernetes.io/component=ca-artifacts --no-headers -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
+      command: oc get po -n {{ current_cp4d_cluster.project }} -l app.kubernetes.io/component=ca-artifacts --no-headers -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
       register: ca_artifacts_pod
       retries: 60
       delay: 10
@@ -112,13 +112,14 @@
        seconds: 90
 
     - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
-      shell: "oc delete pod {{ ca_artifacts_pod.stdout }}"
+      shell: "oc delete pod -n {{ current_cp4d_cluster.project }} {{ ca_artifacts_pod.stdout }}"
 
     - debug:
         msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
     - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
-      shell: oc get po | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
+      shell: |
+        oc get po -n {{ current_cp4d_cluster.project }} | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
       register: ca_provision_complete
       retries: 140
       delay: 30
