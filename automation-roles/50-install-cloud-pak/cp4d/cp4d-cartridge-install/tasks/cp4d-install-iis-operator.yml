@@ -10,7 +10,7 @@
   register: iis_operator_temp_dir
 
 - name: Validate if the iis-operator is already present
-  shell: " oc get pod -n {{ foundational_services_project }} | grep ibm-cpd-iis-operator | wc -l"
+  shell: "oc get pod -n {{ foundational_services_project }} | grep ibm-cpd-iis-operator | wc -l"
   register: get_iis_operator_result
 
 - when: get_iis_operator_result.stdout == "1"
@@ -31,13 +31,35 @@
       command: |
         oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-scc.yml"
    
-    - name: Install IIS Operator, check logs in {{ status_dir }}/log/iis_operator.log
-      script: |
-        cp4d-install-iis-operator.sh \
-        {{ status_dir }} \
-        {{ iis_operator_temp_dir.path }} \
-        {{ case_github_url }} \
-        "ibm-iis-{{ current_cp4d_cartridge.version }}.tgz" \
-        {{ foundational_services_project }} \
-        {{ cartridge_details.inventory }}
-      register: install_iis_operator_result
+    - name: "Save Case file for inventory {{ cartridge_details.inventory }}"
+      shell: |
+        cloudctl case save \
+          --case {{ case_github_url }}/ibm-iis-{{ current_cp4d_cartridge.version }}.tgz \ 
+          --outputdir {{ iis_operator_temp_dir.path }}
+      register: case_save_result
+
+    - name: "Case launch install Operator for inventory {{ cartridge_details.inventory }}"
+      shell: |
+        cloudctl case launch \
+          --case {{ iis_operator_temp_dir.path }}/ibm-iis-{{ current_cp4d_cartridge.version }}.tgz \
+          --tolerance 1 \
+          --namespace {{ foundational_services_project }} \
+          --action installOperatorNative \
+          --inventory {{ cartridge_details.inventory }}
+      register: case_launch_result
+
+    - name: Wait for the ibm-cpd-iis-operator to start
+      shell: "oc get pod -n {{ foundational_services_project }} | grep ibm-cpd-iis-operator | wc -l"
+      register: get_iis_operator_startup_result          
+      until:  get_iis_operator_startup_result.stdout == "1"
+      retries: 10
+      delay: 10
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+
+          
+
