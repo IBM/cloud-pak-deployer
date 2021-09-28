@@ -1,0 +1,27 @@
+---
+
+- set_fact:
+    _generator_dir: ""
+
+- name: Check if specific generator {{ GENERATOR_NAME }} for cloud platform {{ cloud_platform }} exists
+  stat:
+    path: "{{path_to_generators_dir}}/{{ cloud_platform }}/{{ GENERATOR_NAME }}"
+  register: _cloud_platform_generator
+
+- set_fact:
+    _generator_dir: "{{path_to_generators_dir}}/{{ cloud_platform }}"
+  when: _cloud_platform_generator.stat.exists
+
+- name: Check if generic generator {{ GENERATOR_NAME }} exists
+  block:
+    - stat:
+        path: "{{path_to_generators_dir}}/generic/{{ GENERATOR_NAME }}"
+      register: _generic_platform_generator
+    - set_fact:
+        _generator_dir: "{{path_to_generators_dir}}/generic"
+      when: _generic_platform_generator.stat.exists==true
+  when: not _cloud_platform_generator.stat.exists
+
+- fail:
+    msg: "No specific cloud platorm or generic generator exists for object {{ GENERATOR_NAME }}"
+  when: _generator_dir==""

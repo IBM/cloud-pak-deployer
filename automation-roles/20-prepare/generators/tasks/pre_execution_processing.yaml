@@ -1,19 +1,30 @@
 ---
+- name: Get generator to be used for platform {{ cloud_platform }}
+  include_tasks: get-generator-dir.yaml
+
 - name: check if the preprocessor.py file exists
   stat:
-    path: "{{ generator.path }}/preprocessor.py"
+    path: "{{ _generator_dir }}/{{ GENERATOR_NAME }}/preprocessor.py"
   register: preprocessorscript_stat
+
+- set_fact:
+    generator_element_index: 0
+  when: generator.name != generator_last_name
 
 - name: debug generator.this_item
   debug:
-    msg: "{{ generator.this_item }}"
+    msg: |
+      {{ generator.this_item }}
+      item_index:{{ all_config_item_index }} 
+      generator_element_index:{{ generator_element_index }}
+      {{ generator.name }} -- {{ generator_last_name }}
 - name: if a preprocessor script was found, run it via pre_execution_processing.py
   block:
 # TODO: decide what comes first: pre-process the config or validate validate the config?
 # TODO: Only preprocess for now, leave the validation untouched. will need cleanup
   - name: run the preprocess script ({{ generator.name }})
     shell:
-      cmd: "python3 pre_execution_processor.py -p {{ generator.path }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
+      cmd: "python3 pre_execution_processor.py -k {{ generator.name }} -p {{ _generator_dir }}/{{ GENERATOR_NAME }} -i {{ generator_element_index }} -s preprocessor.py -a {{generator.attributes | to_yaml | b64encode }} -f {{generator.config | to_yaml | b64encode }}"
       #cmd: "pwd"
       chdir: "{{ role_path }}/scripts"
     register: preprocess_result # in the old version this was called 'validator_result'
@@ -37,7 +48,7 @@
 
   # - name: include the file
   #   include_vars: 
-  #     file: "{{ generator.path }}/generator.yaml"
+  #     file: "{{ _generator_dir }}/generator.yaml"
   #     name: schemafile_content
 
   # - debug:
@@ -54,24 +65,44 @@
     set_fact:
       generator_validator_error: ""
 
-  - name: add errors from generator
+  - name: add error header if errors were found
     set_fact:
       generator_validator_error: |
         {{generator_validator_error}}
 
         {{ generator.name }}:
         {{ generator.attributes | to_nice_yaml }}
+    when: validator_received_result['errors'] is defined and (validator_received_result['errors']|length>0)
 
+
+  - name: add errors from generator
+    set_fact:
+      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
+      generator_validator_error: |-
+        {{generator_validator_error}}
         ERROR: {{ error_item.message }}
     loop: "{{ validator_received_result.errors }}"
     loop_control:
       loop_var: error_item
 
   - set_fact:
-      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
       generator_validation_error_message: |
         {{ generator_validation_error_message }}
         {{ generator_validator_error }}
+  # update the global all_config dict
+  - set_fact:
+      all_config: "{{ validator_received_result.get('updated_config') }}"
   when: preprocessorscript_stat.stat.exists==true
+  
 
 
+- debug:
+    var: all_config
+
+
+
+
+### end of loop, prepare next iteration
+- set_fact:
+    generator_last_name: "{{ generator.name }}"
+    generator_element_index: "{{ (generator_element_index | int)  + 1 }}"
