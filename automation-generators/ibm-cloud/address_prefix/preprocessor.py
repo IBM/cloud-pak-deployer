@@ -3,12 +3,14 @@ from generatorPreProcessor import GeneratorPreProcessor
 def preprocessor(attributes=None, fullConfig=None):
 
     g = GeneratorPreProcessor(attributes,fullConfig)
-    g('name').mustBeDefined()
-    #g('allow_inbound')
+    g('name').isRequired()
+    g('zone').isRequired()
+    g('cidr').isRequired()
 
+    g('vpc').expandWith('vpc[*]',remoteIdentifier='name').isRequired()
     result = {
         'attributes_updated': g.getExpandedAttributes(),
-        'errors': []
+        'errors': g.getErrors()
     }
     return result
 
