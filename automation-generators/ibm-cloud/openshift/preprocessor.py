@@ -27,8 +27,13 @@ import sys
 #     ocs_storage_size: 500Gi
 
 def preprocessor(attributes=None, fullConfig=None):
-
     g = GeneratorPreProcessor(attributes,fullConfig)
+    fc = g.getFullConfig()
+
+    nfs_server_names = []
+    if 'vpc' in fc:
+        nfs_server_names = fc.match('nfs_server[*].name')
+
     g('name').isRequired()
     g('ocp_version').isRequired()
     g('worker_flavour').isRequired()
@@ -64,8 +69,9 @@ def preprocessor(attributes=None, fullConfig=None):
             if "storage_type" in os and os['storage_type']=='nfs':
                 if "nfs_server_name" not in os:
                     g.appendError(msg='nfs_server_name must be specified when storage_type is nfs')
-                # TODO: Check if nfs_server object exists
-
+                elif os['nfs_server_name'] not in nfs_server_names:
+                    g.appendError(msg="'"+ os['nfs_server_name'] + "' is not an existing nfs_server name (Found nfs_server: ["+ ','.join(nfs_server_names) +"] )")
+                
             if "storage_type" in os and os['storage_type']=='ocs':
                 if "ocs_storage_label" not in os:
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
