@@ -44,32 +44,21 @@
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_pathe }}"
         hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value_to_set | b64encode }}"
+        hashicorp_secret_payload: "{{ secret_value_to_set }}"
       when: 
       - vault_authentication_type == 'api-key'
-      - (vault_secret_base64 | default(True))
+      - (secret_file | default("") == "")
 
-    - name: Set Secret Hashicorp vault (API Key)
+    - name: Set Secret Hashicorp vault via file (API Key)
       include_tasks: create-secret-hashicorp-api-key.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_pathe }}"
         hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value_to_set }}"
+        hashicorp_secret_file: "{{ secret_file }}"
       when: 
       - vault_authentication_type == 'api-key'
-      - not (vault_secret_base64 | default(True))
-
-    - name: Set Secret Hashicorp vault (Certificate)
-      include_tasks: create-secret-hashicorp-certificate.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-        hashicorp_secret_field: "{{ vault_secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value_to_set | b64encode }}"
-      when: 
-      - vault_authentication_type == 'certificate'
-      - (vault_secret_base64 | default(True))
+      - (secret_file | default("") != "")
 
     - name: Set Secret Hashicorp vault (Certificate)
       include_tasks: create-secret-hashicorp-certificate.yml
@@ -78,9 +67,21 @@
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
         hashicorp_secret_field: "{{ vault_secret_field }}"
         hashicorp_secret_payload: "{{ secret_value_to_set }}"
-      when: 
+      when:
       - vault_authentication_type == 'certificate'
-      - not (vault_secret_base64 | default(True))
+      - (secret_file | default("") == "")
+
+    - name: Set Secret Hashicorp vault via file (Certificate)
+      include_tasks: create-secret-hashicorp-certificate.yml
+      vars:
+        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
+        hashicorp_secret_field: "{{ vault_secret_field }}"
+        hashicorp_secret_file: "{{ secret_file }}"
+      when:
+      - vault_authentication_type == 'certificate'
+      - (secret_file | default("") != "")
+
 
   when: vault_type == 'hashicorp-vault'
 
