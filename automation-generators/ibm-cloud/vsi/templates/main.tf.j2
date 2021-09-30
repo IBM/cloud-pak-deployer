@@ -34,7 +34,9 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
     primary_network_interface {
         name = "{{generator.attributes.name }}-nic"
         subnet = ibm_is_subnet.{{generator.attributes.infrastructure.subnet | replace("-", "_") }}.id
+        {% if generator.attributes.infrastructure.primary_ipv4_address is defined %}
         primary_ipv4_address = "{{generator.attributes.infrastructure.primary_ipv4_address}}"
+        {% endif %}
         allow_ip_spoofing = "{{ generator.attributes.infrastructure.allow_ip_spoofing | default('false') | lower }}"
     }
 
