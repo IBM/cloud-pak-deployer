@@ -576,9 +576,7 @@ if [ "$SUBCOMMAND" == "environment" ];then
   run_cmd+=" -d"
 fi
 
-if [ "$SUBCOMMAND" == "vault" ];then
-  run_cmd+=" --cap-add=IPC_LOCK"
-fi
+run_cmd+=" --cap-add=IPC_LOCK"
 
 run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
 

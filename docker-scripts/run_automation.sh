@@ -71,13 +71,13 @@ env|environment)
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
   fi
   if [ ! -z $VAULT_CERT_CA_FILE ];then
-    run_cmd+=" -extra-vars VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
+    run_cmd+=" --extra-vars VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
   fi
   if [ ! -z $VAULT_CERT_KEY_FILE ];then
-    run_cmd+=" -extra-vars VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
+    run_cmd+=" --extra-vars VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
   fi
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
-    run_cmd+=" -extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
+    run_cmd+=" --extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
   fi
   run_cmd+=" ${VERBOSE_ARG}"
   if [ -v EXTRA_PARMS ];then
