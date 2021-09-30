@@ -1,0 +1,37 @@
+---
+- debug:
+    var: all_config.cp4d_connection
+
+- tempfile:
+    path: "{{ status_dir }}/cp4d"
+    state: directory
+  register: cp4d_connection_temp_dir
+
+- name: Get the Catalog 'Platform assets catalog'
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/catalogs?entity.name={{ cp4d_all_assets_catalog_name }}'"
+  register: cp4d_get_catalog_result
+
+- set_fact:
+    cp4d_catalog: "{{ cp4d_get_catalog_result.stdout | from_json }}"
+
+- name: Get the available connection types
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/datasource_types'"
+  register: cp4d_datasource_types_result
+
+- set_fact:
+    cp4d_datasource_types: "{{ cp4d_datasource_types_result.stdout | from_json }}"
+
+- name: "Get all cp4d_connection database entries of current CP4D cluster {{ current_cp4d_cluster.project }} and OpenShift cluster name {{ current_cp4d_cluster.openshift_cluster_name }}"
+  set_fact:
+    cp4d_db_connections: "{{ all_config.cp4d_connection | json_query(connections_current_cluster) | default([]) }}"
+  vars:
+    connection_type: "database"
+    connections_current_cluster: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && type=='{{ connection_type }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+
+#Loop through all database connections of the current CP4D instance and Openshift cluster
+- name: "Loop through each cp4d connection of type database of CP4D cluster {{ current_cp4d_cluster.project }}"
+  include_tasks: cp4d_db_connection.yml
+  loop: "{{ cp4d_db_connections | default([]) }}"
+  loop_control:
+    loop_var: cp4d_connection
+
