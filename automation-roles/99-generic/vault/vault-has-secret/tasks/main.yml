@@ -11,13 +11,13 @@
 
     - set_fact:
         _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
-      when: (vault_secret_path_append_group | default(True))
+      when: (vault_secret_path_append_group | default(True) | bool)
 
     - set_fact:
         _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_name }}"
-      when: not (vault_secret_path_append_group | default(True))
+      when: not (vault_secret_path_append_group | default(True) | bool)
 
-    - name: Has Secret Hashicorp vault (API Key)
+    - name: Has Secret Hashicorp vault (API Key), path {{ _hashicorp_secret_name_path }}
       include_tasks: has-secret-hashicorp-api-key.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
@@ -25,7 +25,7 @@
         hashicorp_secret_field: "{{ vault_secret_field }}"
       when: vault_authentication_type == 'api-key'
 
-    - name: Has Secret Hashicorp vault (Certificate)
+    - name: Has Secret Hashicorp vault (Certificate), path {{ _hashicorp_secret_name_path }}
       include_tasks: has-secret-hashicorp-certificate.yml
       vars:
         hashicorp_vault_address: "{{ vault_url }}"
