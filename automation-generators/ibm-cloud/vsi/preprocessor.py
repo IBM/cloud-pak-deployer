@@ -14,7 +14,7 @@ def preprocessor(attributes=None, fullConfig=None):
         g('infrastructure.vpc_name').expandWith('vpc[*]').isRequired().mustBeOneOf('vpc[*]')
         g('infrastructure.primary_ipv4_address').isOptional()
         g('infrastructure.public_ip').isOptional()
-        g('infrastructure.zone').lookupFromProperty('infrastructure.subnet','address_prefix','zone').isRequired()
+        g('infrastructure.zone').lookupFromProperty('infrastructure.subnet','subnet','zone').isRequired()
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
