@@ -1,0 +1,143 @@
+---
+- debug:
+    msg: "{{ cp4d_connection }}"
+
+- name: Validate if the connection to the'{{ cp4d_connection.name }}' is available
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials&entity.name={{ cp4d_connection.name }}'"
+  register: cp4d_connection_existing_result
+
+- set_fact:
+    cp4d_connection_existing_result_json: "{{ cp4d_connection_existing_result.stdout | from_json }}"
+
+- set_fact:
+    cp4d_database_name: "{{ cp4d_connection.name }}"
+    cp4d_database_type: "{{ cp4d_connection.type }}"
+    cp4d_database_connection_type: "{{ cp4d_connection.database_type }}"
+    cp4d_database_database: "{{ cp4d_connection.database_name }}"
+    cp4d_database_hostname: "{{ cp4d_connection.database_hostname }}"
+    cp4d_database_port: "{{ cp4d_connection.database_port }}"
+    cp4d_database_port_ssl: "{{ cp4d_connection.database_port_ssl | default('false') }}"
+    cp4d_database_database_credentials_secret: "{{ cp4d_connection.database_credentials_secret | default('') }}"
+    cp4d_database_inherit_access_token: "false"
+    cp4d_database_credentials_username: ""
+    cp4d_database_credentials_password: ""
+    cp4d_database_ssl_certificate_secret: "{{ cp4d_connection.database_ssl_certificate_secret | default('') }}"
+    cp4d_database_ssl_certificate: ""
+    cp4d_database_ssl_certificate_line_breaks: ""
+
+- set_fact:
+    cp4d_datasource_type_asset_id: "{{ cp4d_datasource_types.resources|json_query(query) }}"
+  vars:
+    query: "[?entity.name=='{{ cp4d_database_connection_type }}'].metadata.asset_id"        
+
+- fail:
+    msg: "cp4d_connection.database_type set to {{ cp4d_database_connection_type }}, which is not a recognized database type in Cloud Pak for Data"
+  when: "cp4d_datasource_type_asset_id|length == 0"
+
+#Retrieve database credentials (optional)
+- when: "cp4d_database_database_credentials_secret != ''"
+  block:
+    - name: Get the database credentials {{ cp4d_database_database_credentials_secret }} from the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "{{ cp4d_database_database_credentials_secret }}"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        cp4d_database_credentials_username: "{{ secret_value.split(\":\")[0] }}"
+        cp4d_database_credentials_password: "{{ secret_value.split(\":\")[1] }}"
+
+#Retrieve database SSL certificate (optional)
+- when: "cp4d_database_ssl_certificate_secret != ''"
+  block:
+    - name: Get the database SSL certificate {{ cp4d_database_ssl_certificate_secret }} from the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "{{ cp4d_database_ssl_certificate_secret }}"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        cp4d_database_ssl_certificate: "{{ secret_value }}"
+        cp4d_database_ssl_certificate_line_breaks: "{{ secret_value.replace('\n','\\n') }}"
+
+#Create a new Resource
+- when: "cp4d_connection_existing_result_json.resources|length == 0"
+  block:
+    - debug:
+        msg: "Create {{ cp4d_database_name }} as a new resource"
+
+    - name: Create Datasource connection json file
+      template:
+        src: db_connection.json.j2
+        dest: "{{ cp4d_connection_temp_dir.path }}/db_connection.json"
+
+    - name: Create Datasource connection {{ cp4d_database_name }}
+      shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }} -T {{ cp4d_connection_temp_dir.path }}/db_connection.json"
+      register: create_db_connection_result       
+      
+    - set_fact:
+        create_db_connection_result_json: "{{ create_db_connection_result.stdout | from_json }}"
+
+    - fail:
+        msg: "Error creating database source {{ cp4d_connection.name }}: {{ create_db_connection_result_json }}"
+      when: create_db_connection_result_json.errors is defined
+
+- fail:
+    msg: "Found more than 1 occurance of resource {{ cp4d_database_name }}. Unable to determine which resource to validate. "
+  when: "cp4d_connection_existing_result_json.resources|length > 1"
+
+#Update Existing Resource
+- when: "cp4d_connection_existing_result_json.resources|length == 1"
+  block:
+    - set_fact:
+        connection_asset_id: "{{ cp4d_connection_existing_result_json.resources[0].metadata.asset_id }}"
+
+    - name: Create Datasource PATCH connection json file
+      template:
+        src: db_connection_patch.json.j2
+        dest: "{{ cp4d_connection_temp_dir.path }}/db_patch_connection.json"
+
+    - set_fact:
+        connection_patch_json: "{{ lookup('file','{{ cp4d_connection_temp_dir.path }}/db_patch_connection.json') | from_json }}"
+
+    - set_fact:
+        connection_patch_changes_json: "{{ connection_patch_json| json_query(query)| default([]) }}"
+      vars:
+        query: "[?value!='no change']"        
+
+    - when: "connection_patch_changes_json|length == 0"
+      block:
+        - debug:
+            msg: "No changes to Resource {{ cp4d_connection.name }} made, no patch required"
+
+    - when: "connection_patch_changes_json|length > 0"
+      block:
+        - debug:
+            msg: "Update {{ cp4d_connection.name }} resource"
+
+        - name: Delete existing {{ cp4d_database_name }}
+          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X DELETE https://{{ cp4d_url.stdout }}/v2/connections/{{ connection_asset_id }}?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}"
+          register: delete_db_connection_result       
+
+        - name: Create Datasource connection json file
+          template:
+            src: db_connection.json.j2
+            dest: "{{ cp4d_connection_temp_dir.path }}/db_connection.json"
+
+        - name: Create Datasource connection {{ cp4d_database_name }}
+          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }} -T {{ cp4d_connection_temp_dir.path }}/db_connection.json"
+          register: create_db_connection_result       
+
+        - set_fact:
+            create_db_connection_result_json: "{{ create_db_connection_result.stdout | from_json }}"
+
+        - fail:
+            msg: "Error updating database source {{ cp4d_connection.name }}: {{ create_db_connection_result_json }}"
+          when: create_db_connection_result_json.errors is defined
+
+- name: Delete temporary directory 
+  file:
+    state: absent
+    path: "{{ cp4d_connection_temp_dir.path }}"
