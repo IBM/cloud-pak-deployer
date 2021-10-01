@@ -1,7 +1,7 @@
 ---
 provider:
 - name: ibm
-  region: eu-de
+  region: {{ ibm_cloud_region }}
 
 resource_group:
 - name: "default" # should exist already
@@ -24,15 +24,15 @@ address_prefix:
 ### Prefixes for the client environment
 - name: sample-zone-1
   vpc: sample
-  zone: eu-de-1
+  zone: {{ ibm_cloud_region }}-1
   cidr: 10.231.0.0/26
 - name: sample-zone-2
   vpc: sample
-  zone: eu-de-2
+  zone: {{ ibm_cloud_region }}-2
   cidr: 10.231.0.64/26
 - name: sample-zone-3
   vpc: sample
-  zone: eu-de-3
+  zone: {{ ibm_cloud_region }}-3
   cidr: 10.231.0.128/25 
 
 subnet:
@@ -41,29 +41,29 @@ subnet:
   vpc: sample # TODO: resolve this via the prefix
   address_prefix: sample-zone-1
   ipv4_cidr_block: 10.231.0.0/26
-  zone: eu-de-1 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-1 # TODO: resolve this via the prefix
 - name: sample-subnet-zone-2
   vpc: sample # TODO: resolve this via the prefix
   address_prefix: sample-zone-2
   ipv4_cidr_block: 10.231.0.64/26
-  zone: eu-de-2 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-2 # TODO: resolve this via the prefix
 - name: sample-subnet-zone-3
   vpc: sample # TODO: resolve this via the prefix
   address_prefix: sample-zone-3
   ipv4_cidr_block: 10.231.0.128/26
-  zone: eu-de-3 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-3 # TODO: resolve this via the prefix
 - name: sample-subnet-zone-shared
   vpc: sample # TODO: resolve this via the prefix
   address_prefix: sample-zone-3
   ipv4_cidr_block: 10.231.0.192/26
-  zone: eu-de-3 # TODO: resolve this via the prefix
+  zone: {{ ibm_cloud_region }}-3 # TODO: resolve this via the prefix
 
 vsi:
 - name: sample-bastion
   infrastructure:
     type: vpc
     vpc_name: sample
-    zone: eu-de-3
+    zone: {{ ibm_cloud_region }}-3
     subnet: sample-subnet-zone-shared
     primary_ipv4_address: 10.231.0.196
     public_ip: True
@@ -76,7 +76,7 @@ nfs_server:
     type: vpc
     subnet: sample-subnet-zone-shared
     primary_ipv4_address: 10.231.0.197
-    zone: eu-de-3 # TODO: resolve this via the subnet->prefix
+    zone: {{ ibm_cloud_region }}-3 # TODO: resolve this via the subnet->prefix
     vpc_name: sample # TODO: resolve this via the subnet->prefix
     bastion_host: sample-bastion
     volume_selector: 1000G
