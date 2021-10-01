@@ -191,17 +191,37 @@ def preprocessor(attributes=None, fullConfig=None):
 # Check that cp-foundation element exists
 # Check that lite element exists
 
+        # Iterate over all cartridges 
+        # to check if name-attribute is given
+        # if not throw an error
+        cpFoundationFound=False
+        liteFound=False
+        for c in ge['cartridges']:
+            if "name" not in c:
+                g.appendError(msg='name must be specified for all cartridges elements')
+            else:
+                if c['name'] == "lite":
+                    liteFound=True
+                if c['name'] == "cp-foundation":
+                    cpFoundationFound=True
+                else:
+                    if "subscription_channel" not in c:
+                        g.appendError(msg='subscription_channel ust be specified for all cartridges, except for cp-foundation')
+        # iteration over cartridges is done
+        # now check if the required fields were found in the 
+        # for-loop
+        if cpFoundationFound==False:
+            g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
+        if liteFound==False:
+            g.appendError(msg='You need to specify a cartridge with name "lite"')
+
+
+
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name
 # - Within the openshift element retrieve, there must be an openshift_storage element with the name cp4d.openshift_storage_name
 
-        # Iterate over all cartridges to check attributes
-        for c in ge['cartridges']:
-            if "name" not in c:
-                g.appendError(msg='name must be specified for all cartridges elements')
-            if "name" in c and c['name'] != "cp-foundation":
-                if "subscription_channel" not in c:
-                    g.appendError(msg='subscription_channel ust be specified for all cartridges, except for cp-foundation')
+
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
