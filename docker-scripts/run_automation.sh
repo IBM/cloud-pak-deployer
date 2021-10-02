@@ -116,6 +116,12 @@ vault)
     run_cmd+=" --extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
   fi
   run_cmd+=" ${VERBOSE_ARG}"
+  if [ -v EXTRA_PARMS ];then
+    for p in ${EXTRA_PARMS};do
+      echo "Extra param $p=${!p}"
+      run_cmd+=" --extra-vars $p=${!p}"
+    done
+  fi
   eval $run_cmd
   ;;
 *) 
