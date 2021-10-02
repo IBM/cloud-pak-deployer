@@ -63,7 +63,7 @@ for c in $(echo $cartridges | jq -r '.[].name');do
 
   # Check if status is completed
   cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
-  log "Info: Status of $cr_cr object $cr_name is $cr_status, status when completed is $cr_status_completed"
+  log "Info: Status of $cr_cr object $cr_name is $cr_status"
   if [ "$cr_status" != "$cr_status_completed" ];then
     ((number_pending=number_pending+1))
   fi
