@@ -429,8 +429,8 @@ if [[ "${SUBCOMMAND}" == "vault" ]];then
     exit 1
   fi
   if [[ "${ACTION}" == "list" && \
-        ( "${VAULT_SECRET}" != "" || "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
-    echo "Only --secret-group can be specified for subcommand vault and action list."
+        ( "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
+    echo "--vault-secret-value and --vault-secret-file not allowed for subcommand vault and action list."
     exit 1
   fi
 
