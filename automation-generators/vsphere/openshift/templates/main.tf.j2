@@ -1,0 +1,47 @@
+# {{ ansible_managed }}
+
+apiVersion: v1
+baseDomain: {{ domain_name }}
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: {{vm_number_of_workers}}
+  platform:
+    vsphere:
+      cpus: {{vm_worker_cpu}}
+      coresPerSocket: 2
+      memoryMB: {{vm_worker_mem}}
+      osDisk:
+        diskSizeGB: {{vm_worker_disk}}
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: {{vm_number_of_masters}}
+  platform:
+    vsphere:
+      cpus: {{vm_master_cpu}}
+      coresPerSocket: 2
+      memoryMB: {{vm_master_mem}}
+      osDisk:
+        diskSizeGB: {{vm_master_disk}}
+metadata:
+  name: {{ cluster_name }}
+platform:
+  vsphere:
+    apiVIP: {{apiVIP}}
+    ingressVIP: {{ingressVIP}}
+    cluster: {{vc_cluster}}
+    datacenter: {{vc_datacenter}}
+    defaultDatastore: {{vc_datastore}}
+    network: {{vc_network}}
+    username: {{vc_user}}
+    password: {{vc_password}}
+    vCenter: {{vc_vcenter}}
+    folder: /{{vc_datacenter}}/vm/{{vc_folder}}
+{% if service_network is defined %}
+networking:
+  serviceNetwork:
+  - {{ service_network }}
+{% endif %}
+pullSecret: '{{ pull_secret['content'] | b64decode | trim }}'
+sshKey: '{{ ssh_key['content'] | b64decode | trim }}'
