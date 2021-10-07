@@ -4,11 +4,66 @@
     msg: 'from {{generator.name}} in {{generator.path}} attributes: {{generator.attributes}}'
 
 
-- block:
-  - debug:
-      var: generator
-      
-  - name: 'generate instance of "{{generator.name}}" in {{PATH_TO_TERRAFORM_WORK_DIR}}'
-    template:
-      src: '../templates/main.tf.j2'
-      dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/{{generator.name}}_{{generator.attributes.name}}.tf'
+- debug:
+    var: generator
+
+- set_fact:
+    _vsphere_config: "{{ all_config.vsphere | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ generator.attributes.vsphere_name }}']
+
+- set_fact:
+    _master_vm_config: "{{ all_config.vm_definition | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ generator.attributes.master_vm_definition }}']
+
+- set_fact:
+    _worker_vm_config: "{{ all_config.vm_definition | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ generator.attributes.worker_vm_definition }}']
+
+- name: Retrieve vSphere user
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "vsphere-user"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _vsphere_user: "{{ secret_value }}"
+
+- name: Retrieve vSphere password
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "vsphere-password"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _vsphere_password: "{{ secret_value }}"
+
+- name: Retrieve pull secret from vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-pullsecret"
+    secret_group: "{{ environment_name }}" 
+    secret_file: /tmp/ocp_pullsecret.json
+
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-ssh-pub-key"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _ocp_ssh_pub_key: "{{ secret_value }}"
+
+- name: 'generate instance of "{{generator.name}}" in {{ PATH_TO_OUTPUT_DIR }}'
+  template:
+    src: '../templates/main.tf.j2'
+    dest: '{{ PATH_TO_OUTPUT_DIR }}/{{generator.name}}_{{generator.attributes.name}}.yaml'
