@@ -1,47 +1,46 @@
 # {{ ansible_managed }}
-
 apiVersion: v1
-baseDomain: {{ domain_name }}
-compute:
-- hyperthreading: Enabled
-  name: worker
-  replicas: {{vm_number_of_workers}}
-  platform:
-    vsphere:
-      cpus: {{vm_worker_cpu}}
-      coresPerSocket: 2
-      memoryMB: {{vm_worker_mem}}
-      osDisk:
-        diskSizeGB: {{vm_worker_disk}}
+
+metadata:
+  name: {{ generator.attributes.cluster_name }}
+baseDomain: {{ generator.attributes.domain_name }}
+
+platform:
+  vsphere:
+    apiVIP: {{ generator.attributes.api_vip }}
+    ingressVIP: {{ generator.attributes.ingress_vip }}
+    cluster: {{ _vsphere_config.cluster }}
+    datacenter: {{ _vsphere_config.datacenter }}
+    defaultDatastore: {{ _vsphere_config.datastore }}
+    network: {{ _vsphere_config.network }}
+    vCenter: {{ _vsphere_config.vcenter }}
+    folder: {{ _vsphere_config.folder }}
+    username: {{ _vsphere_user }}
+    password: {{ _vsphere_password }}
+
 controlPlane:
   hyperthreading: Enabled
   name: master
-  replicas: {{vm_number_of_masters}}
+  replicas: {{ generator.attributes.number_of_masters }}
   platform:
     vsphere:
-      cpus: {{vm_master_cpu}}
+      cpus: {{ _master_vm_config.vcpu }}
       coresPerSocket: 2
-      memoryMB: {{vm_master_mem}}
+      memoryMB: {{ _master_vm_config.memory_mb }}
       osDisk:
-        diskSizeGB: {{vm_master_disk}}
-metadata:
-  name: {{ cluster_name }}
-platform:
-  vsphere:
-    apiVIP: {{apiVIP}}
-    ingressVIP: {{ingressVIP}}
-    cluster: {{vc_cluster}}
-    datacenter: {{vc_datacenter}}
-    defaultDatastore: {{vc_datastore}}
-    network: {{vc_network}}
-    username: {{vc_user}}
-    password: {{vc_password}}
-    vCenter: {{vc_vcenter}}
-    folder: /{{vc_datacenter}}/vm/{{vc_folder}}
-{% if service_network is defined %}
-networking:
-  serviceNetwork:
-  - {{ service_network }}
-{% endif %}
-pullSecret: '{{ pull_secret['content'] | b64decode | trim }}'
-sshKey: '{{ ssh_key['content'] | b64decode | trim }}'
+        diskSizeGB: {{ _master_vm_config.boot_disk_size_gb }}
+
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: {{ generator.attributes.number_of_workers }}
+  platform:
+    vsphere:
+      cpus: {{ _worker_vm_config.vcpu }}
+      coresPerSocket: 2
+      memoryMB: {{ _worker_vm_config.memory_mb }}
+      osDisk:
+        diskSizeGB: {{ _worker_vm_config.boot_disk_size_gb }}
+
+pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
+sshKey: '{{ _ocp_ssh_pub_key }}'
