@@ -21,36 +21,20 @@ vpc:
   allow_inbound: ['ssh']
 
 address_prefix:
-- name: {{ env_id }}-zone-1
+- name: {{ env_id }}-zone
   zone: {{ ibm_cloud_region }}-1
-  cidr: 10.231.0.0/26
-- name: {{ env_id }}-zone-2
-  zone: {{ ibm_cloud_region }}-2
-  cidr: 10.231.0.64/26
-- name: {{ env_id }}-zone-3
-  zone: {{ ibm_cloud_region }}-3
-  cidr: 10.231.0.128/25 
+  cidr: 10.231.0.0/24
 
 subnet:
-  ### subnets for the client vpc ###
-- name: {{ env_id }}-subnet-zone-1
-  address_prefix: {{ env_id }}-zone-1
-  ipv4_cidr_block: 10.231.0.0/26
-- name: {{ env_id }}-subnet-zone-2
-  address_prefix: {{ env_id }}-zone-2
-  ipv4_cidr_block: 10.231.0.64/26
-- name: {{ env_id }}-subnet-zone-3
-  address_prefix: {{ env_id }}-zone-3
-  ipv4_cidr_block: 10.231.0.128/26
-- name: {{ env_id }}-subnet-zone-shared
-  address_prefix: {{ env_id }}-zone-3
-  ipv4_cidr_block: 10.231.0.192/26
+- name: {{ env_id }}-subnet
+  address_prefix: {{ env_id }}-zone
+  ipv4_cidr_block: 10.231.0.0/24
 
 vsi:
 - name: {{ env_id }}-bastion
   infrastructure:
     type: vpc
-    subnet: {{ env_id }}-subnet-zone-shared
+    subnet: {{ env_id }}-subnet
     primary_ipv4_address: 10.231.0.196
     public_ip: True
     keys:
@@ -60,7 +44,7 @@ nfs_server:
 - name: {{ env_id }}-nfs
   infrastructure:
     type: vpc
-    subnet: {{ env_id }}-subnet-zone-shared
+    subnet: {{ env_id }}-subnet-zone
     primary_ipv4_address: 10.231.0.197
     bastion_host: {{ env_id }}-bastion
     volume_selector: 1000G
