@@ -25,15 +25,15 @@
     oc apply -f "{{ status_dir }}/cp4d/ibmcpd-{{ current_cp4d_cluster.project }}.yml"
   
 # Wait for ZenService to be created (can take 10-15 minutes)
-- name: Wait for Ibmcpd to be completed
+- name: Wait for ZenService to be completed
   shell: |
-    oc get Ibmcpd -n {{ current_cp4d_cluster.project }} ibmcpd-cr --output json | \
-      jq -r '.status.controlPlaneStatus' | grep -i 'completed' | \
+    oc get ZenService -n {{ current_cp4d_cluster.project }} lite-cr --output json | \
+      jq -r '.status.zenStatus' | grep -i 'completed' | \
       wc -l
-  register: deployed_ibmcpd
+  register: deployed_zenservice
   retries: 60
   delay: 60
-  until: deployed_ibmcpd.stdout == "1"
+  until: deployed_zenservice.stdout == "1"
   vars:
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
