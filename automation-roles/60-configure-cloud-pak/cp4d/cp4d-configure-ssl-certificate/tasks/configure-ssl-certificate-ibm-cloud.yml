@@ -30,7 +30,7 @@
     security_manager_instance_id_encode: "{{ encode_crn_output.stdout }}"
 
 - name: Generate Bearer token to communicate with the certificate manager endpoint
-  shell: "curl -X POST 'https://iam.cloud.ibm.com/identity/token' -H 'Content-Type: application/x-www-form-urlencoded' -d 'grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey={{ ibmcloud_api_key }}"
+  shell: "curl -X POST 'https://iam.cloud.ibm.com/identity/token' -H 'Content-Type: application/x-www-form-urlencoded' -d 'grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey={{ ibmcloud_api_key }}'"
   register: generate_bearer_result_output
 
 - set_fact:
@@ -44,7 +44,7 @@
     bearer_token: "{{ generate_bearer_result.access_token }}"
 
 - name: Get List of certificates
-  shell: "curl -H "Authorization: Bearer ${BEARER_TOKEN}" https://eu-de.certificate-manager.cloud.ibm.com/api/v3/{{ security_manager_instance_id_encode }}/certificates/"
+  shell: "curl -H 'Authorization: Bearer ${BEARER_TOKEN}' https://eu-de.certificate-manager.cloud.ibm.com/api/v3/{{ security_manager_instance_id_encode }}/certificates/"
   register: list_of_certificates_output
 
 - set_fact:
@@ -58,7 +58,7 @@
     current_certificate: "{{ current_ingress_certificate_result.stdout }}"
 
 - name: Get the current tls.crt from secret {{ current_certificate }}
-  shell: "oc -n openshift-ingress get secret {{ current_certificate }} -o json | jq -r '.data."tls.crt"' | base64 --decode"
+  shell: "oc -n openshift-ingress get secret {{ current_certificate }} -o json | jq -r '.data.\"tls.crt\"' | base64 --decode"
   register: ocp_certificate_tls_crt_result
 
 - name: Create the cert.crt file
@@ -67,7 +67,7 @@
     dest: "{{ cloud_pak_cert_temp_dir.path }}/cert.crt"
 
 - name: Get the current tls.key from secret {{ current_certificate }}
-  shell: "oc -n openshift-ingress get secret {{ current_certificate }} -o json | jq -r '.data."tls.key"' | base64 --decode"
+  shell: "oc -n openshift-ingress get secret {{ current_certificate }} -o json | jq -r '.data.\"tls.key\"' | base64 --decode"
   register: ocp_certificate_tls_key_result
 
 - name: Create the cert.key file
@@ -89,41 +89,47 @@
 - when: cp4d_existing_external_tls_secret_result.stdout == "1"
   block:
     - name: Get current cert.crt from Cloud Pak for Data
-      shell: "oc -n {{ current_cp4d_cluster.project }} get secret external-tls-secret -o json | jq -r '.data."cert.crt"' | base64 --decode"
+      shell: "oc -n {{ current_cp4d_cluster.project }} get secret external-tls-secret -o json | jq -r '.data.\"cert.crt\"' | base64 --decode"
       register: cp4d_certificate_cert_crt_result
 
     - name: Get current cert.key from Cloud Pak for Data
-      shell: "oc -n {{ current_cp4d_cluster.project }} get secret external-tls-secret -o json | jq -r '.data."cert.key"' | base64 --decode"
+      shell: "oc -n {{ current_cp4d_cluster.project }} get secret external-tls-secret -o json | jq -r '.data.\"cert.key\"' | base64 --decode"
       register: cp4d_certificate_cert_key_result
 
     - set_fact:
         update_cp4d_ssl_config: 1
-      when: cp4d_certificate_cert_key_result.stdout == ocp_certificate_tls_key_result.stdout
+      when: cp4d_certificate_cert_key_result.stdout != ocp_certificate_tls_key_result.stdout
 
     - set_fact:
         update_cp4d_ssl_config: 1
-      when: cp4d_certificate_cert_crt_result.stdout == ocp_certificate_tls_crt_result.stdout
+      when: cp4d_certificate_cert_crt_result.stdout != ocp_certificate_tls_crt_result.stdout
 
-- when: update_cp4d_ssl_config == "1"
+- debug:
+    msg: "No changes to current SSL certificate of Cloud Pak for Data, skipping configuration of SSL certificate"
+  when: update_cp4d_ssl_config == 0
+
+- when: update_cp4d_ssl_config == 1
   block:
 
     - name: Delete existing external-tls-secret if present
-      shell: "oc delete secret -n {{ current_cp4d_cluster.project }} generic external-tls-secret"
+      shell: "oc delete secret -n {{ current_cp4d_cluster.project }} external-tls-secret"
       when: cp4d_existing_external_tls_secret_result.stdout == "1"
 
     - name: Create the Cloud Pak for Data secret external-tls-secret
-      shell: "oc create secret -n {{ current_cp4d_cluster.project }} generic external-tls-secret --from-file=cert.crt={{ cloud_pak_cert_temp_dir.path }}/cert.crt --from-file=cert.key={{ cloud_pak_cert_temp_dir.path }}/cert.key --dry-run -o yaml | oc apply -f -"
+      shell: "oc create secret -n {{ current_cp4d_cluster.project }} generic external-tls-secret --from-file=cert.crt={{ cloud_pak_cert_temp_dir.path }}/cert.crt --from-file=cert.key={{ cloud_pak_cert_temp_dir.path }}/cert.key --dry-run=client -o yaml | oc apply -f -"
       register: create_cp4d_external_tls_secret
 
-    - debug:
-        msg: "{{ create_cp4d_external_tls_secret }}"
-
     - name: Reload the Cloud Pak for Data nginx pods
-      shell: "for i in `oc get pods -n {{ current_cp4d_cluster.project }} | grep ibm-nginx |  cut -f1 -d\ `; do oc exec -n {{ current_cp4d_cluster.project }} ${i} -- /scripts/reload.sh; done"
+      shell: "for i in `oc get pods -n {{ current_cp4d_cluster.project }} | grep ibm-nginx |  cut -f1 -d\\ `; do oc exec -n {{ current_cp4d_cluster.project }} ${i} -- /scripts/reload.sh; done"
       register: reload_nginx_pods_result
-
-    - debug:
-        msg: "{{ reload_nginx_pods_result }}"
+      until: reload_nginx_pods_result.stdout.find('Custom ssl certificate files were found') != -1
+      retries: 10
+      delay: 30  
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...         
 
 - name: Delete temporary directory 
   file:
