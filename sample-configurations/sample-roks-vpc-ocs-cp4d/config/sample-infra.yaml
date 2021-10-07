@@ -1,0 +1,43 @@
+---
+provider:
+- name: ibm
+  region: {{ ibm_cloud_region }}
+
+resource_group:
+- name: "default" # should exist already
+
+ssh_keys:
+- name: {{ env_id }}-provision
+  managed: True 
+
+security_rule:
+- name: https
+  tcp: {port_min: 443, port_max: 443}
+- name: ssh
+  tcp: {port_min: 22, port_max: 22}
+
+vpc:
+- name: {{ env_id }}
+  allow_inbound: ['ssh']
+
+address_prefix:
+- name: {{ env_id }}-zone-1
+  zone: {{ ibm_cloud_region }}-1
+  cidr: 10.231.0.0/26
+- name: {{ env_id }}-zone-2
+  zone: {{ ibm_cloud_region }}-2
+  cidr: 10.231.0.64/26
+- name: {{ env_id }}-zone-3
+  zone: {{ ibm_cloud_region }}-3
+  cidr: 10.231.0.128/25 
+
+subnet:
+- name: {{ env_id }}-subnet-zone-1
+  address_prefix: {{ env_id }}-zone-1
+  ipv4_cidr_block: 10.231.0.0/26
+- name: {{ env_id }}-subnet-zone-2
+  address_prefix: {{ env_id }}-zone-2
+  ipv4_cidr_block: 10.231.0.64/26
+- name: {{ env_id }}-subnet-zone-3
+  address_prefix: {{ env_id }}-zone-3
+  ipv4_cidr_block: 10.231.0.128/26
