@@ -9,25 +9,37 @@ done
 ```
 
 ## Remove all cartridge CRs
+```
+oc delete wkc --all
+oc delete ws --all
+oc delete wmlbase --all
+oc delete ccs --all
+...
+```
 
 ## Remove Cloud Pak for Data CR
 ```
 oc delete ibmcpd --all
 ```
 
+Repeat the command to check all CRs in the cluster and wait until all objects in the Cloud Pak for Data namespace have been deleted.
+
+## Delete CP4D namespace
+Now you can delete the CP4D namespace. This can take a few minutes.
+
 ## Remove FS
 
 ### Remove CommonService operator
 ```
 oc delete CommonService -n ibm-common-services common-service
-oc delete sub -n ibm-common-services ibm-common-service-operator-v3-opencloud-operators-openshift-marketplace
-oc delete csv -n ibm-common-services ibm-common-service-operator.v3.11.0
+oc delete sub -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services
+oc delete csv -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services
 
-oc delete operandrequest -n ibm-common-services $(oc get operandrequest -n ibm-common-services --no-headers | awk '{print $1}')
+oc delete operandrequest -n ibm-common-services --all
 
-oc delete operandconfig -n ibm-common-services $(oc get operandconfig -n ibm-common-services --no-headers | awk '{print $1}')
+oc delete operandconfig -n ibm-common-services --all
 
-oc delete operandregistry -n ibm-common-services $(oc get operandregistry -n ibm-common-services --no-headers | awk '{print $1}')
+oc delete operandregistry --all
 
 oc delete nss -n ibm-common-services --all
 
