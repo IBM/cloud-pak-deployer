@@ -17,7 +17,11 @@ oc delete ccs --all
 ...
 ```
 
+If you want to, you can hit Ctrl-C when deleting the CCS object, the deletion continues to be carried out in the background by the operator. 
+
 ## Remove Cloud Pak for Data CR
+
+** IMPORTANT: You must now wait until all CRs have been deleted from the namespace before deleting the Ibmcpd CR.**
 ```
 oc delete ibmcpd --all
 ```
@@ -27,7 +31,7 @@ Repeat the command to check all CRs in the cluster and wait until all objects in
 ## Delete CP4D namespace
 Now you can delete the CP4D namespace. This can take a few minutes.
 
-## Remove FS
+## Remove Foundational Services
 
 ### Remove CommonService operator
 ```
@@ -49,7 +53,11 @@ oc delete csv -n ibm-common-services --all
 oc delete ns ibm-common-services
 
 oc delete catsrc -n openshift-marketplace $(oc get catsrc -n openshift-marketplace --no-headers | grep -i ibm | awk '{print $1}')
+```
 
+### Clean up left-over objects
+Most of the below commands will issue an error because the object no longer exists.
+```
 oc -n kube-system delete secret icp-metering-api-secret 
 oc -n kube-public delete configmap ibmcloud-cluster-info
 oc -n kube-public delete secret ibmcloud-cluster-ca-cert
