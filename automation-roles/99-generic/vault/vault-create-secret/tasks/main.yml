@@ -12,14 +12,14 @@
 
 - name: Get secret from secret file if it was specified
   set_fact:
-    secret_value_to_set: "{{ lookup('file', secret_file) }}"
+    secret_value_to_set: "{{ lookup('file', secret_file) | b64encode }}"
   when: 
   - secret_file is defined
   - secret_file != ''
 
 - name: Set secret value from payload if no file specified
   set_fact:
-    secret_value_to_set: "{{ secret_payload }}"
+    secret_value_to_set: "{{ secret_payload | b64encode}}"
   when: (secret_file is not defined) or (secret_file == '')
 
 - name: Set Secret Vault Hashicorp
@@ -62,7 +62,7 @@
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
         hashicorp_secret_field: "{{ _secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value_to_set }}"
+        hashicorp_secret_payload: "{{ secret_payload }}"
       when: 
       - vault_authentication_type == 'api-key'
       - (secret_file | default("") == "")
@@ -84,7 +84,7 @@
         hashicorp_vault_address: "{{ vault_url }}"
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
         hashicorp_secret_field: "{{ _secret_field }}"
-        hashicorp_secret_payload: "{{ secret_value_to_set }}"
+        hashicorp_secret_payload: "{{ secret_payload }}"
       when:
       - vault_authentication_type == 'certificate'
       - (secret_file | default("") == "")
@@ -114,7 +114,7 @@
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibm_cloud_secret_name: "{{ secret_name }}"
-        ibm_vault_secret_payload: "{{ secret_value_to_set | b64encode }}"
+        ibm_vault_secret_payload: "{{ secret_value_to_set }}"
   when: "vault_type == 'ibmcloud-vault'"
 
 - name: Set secret in Vault file
@@ -126,7 +126,7 @@
     - name: Set secret in Vault file
       include_tasks: create-secret-file.yml
       vars:
-        file_secret_payload: "{{ secret_value_to_set | b64encode }}"
+        file_secret_payload: "{{ secret_value_to_set }}"
   when: "vault_type == 'file-vault'"
 
 - name: Secret {{ secret_group }}/{{ secret_name }} was set
