@@ -1,0 +1,54 @@
+---
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }}
+  name: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}
+  namespace: openshift-machine-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }}
+      machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }}
+        machine.openshift.io/cluster-api-machine-role: infra
+        machine.openshift.io/cluster-api-machine-type: infra
+        machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}
+    spec:
+      metadata:
+        creationTimestamp: null
+        labels:
+          node-role.kubernetes.io/infra: ""
+      taints: 
+      - key: node-role.kubernetes.io/infra
+        effect: NoSchedule
+      providerSpec:
+        value:
+          apiVersion: vsphereprovider.openshift.io/v1beta1
+          credentialsSecret:
+            name: vsphere-cloud-credentials
+          diskGiB: 120
+          kind: VSphereMachineProviderSpec
+          memoryMiB: 65536
+          metadata:
+            creationTimestamp: null
+          network:
+            devices:
+            - networkName: {{ _vsphere_config.network }}
+          numCPUs: 16
+          numCoresPerSocket: 2
+          snapshot: ""
+          template: {{ _infrastructure_id }}-rhcos
+          userDataSecret:
+            name: worker-user-data
+          workspace:
+            datacenter: {{ _vsphere_config.datacenter }}
+            datastore: {{ _vsphere_config.datastore }}
+            folder: {{ _vsphere_config.folder }}
+            resourcePool: {{ _vsphere_config.resource_pool }}
+            server: {{ _vsphere_config.vcenter }}
