@@ -1,20 +1,27 @@
 ---
-# TODO: Retrieve NFS server details from configured NFS server
-- set_fact:
-    nfs_storage_server_ip: "{{ all_config.nfs_server[0].infrastructure.primary_ipv4_address }}"
-    nfs_storage_server_path: "{{ all_config.nfs_server[0].infrastructure.storage_folder }}"
-
 - name: Validate if Dynamic NFS Storage {{ nfs_storage_class_name }}  class exists
-  shell: "oc get sc | grep -i '^{{ nfs_storage_class_name }}' | wc -l"
+  shell: |
+    oc get sc {{ nfs_storage_class_name }}
+  failed_when: False
   register: oc_storage_class_exists
-
-- name: Skip creation of NFS Storage class {{ nfs_storage_class_name }}
-  debug:
-    msg: "StorageClass {{ nfs_storage_class_name }} already exists, skipping creation"
-  when: oc_storage_class_exists.stdout == "1"
 
 - name: Install NFS Storage class {{ nfs_storage_class_name }}
   block:
+    - set_fact:
+        _nfs_server: "{{ all_config.nfs_server | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?name=='{{ current_openshift_storage.nfs_server_name }}']
+
+    - set_fact:
+        nfs_storage_server_ip: "{{ _nfs_server.infrastructure.primary_ipv4_address }}"
+        nfs_storage_server_path: "{{ _nfs_server.infrastructure.storage_folder }}"
+      when: cloud_platform == 'ibmcloud'
+
+    - set_fact:
+        nfs_storage_server_ip: "{{ _nfs_server.infrastructure.host_ip }}"
+        nfs_storage_server_path: "{{ _nfs_server.infrastructure.storage_folder }}"
+      when: cloud_platform == 'vsphere'
 
     - tempfile:
         state: directory
@@ -57,4 +64,4 @@
       pause:
         seconds: 15
 
-  when: not oc_storage_class_exists.stdout == "1"
+  when: oc_storage_class_exists.rc != 0
