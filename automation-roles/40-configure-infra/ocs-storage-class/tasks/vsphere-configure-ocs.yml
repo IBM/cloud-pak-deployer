@@ -106,7 +106,7 @@
     for machine in $(oc get machines -n openshift-machine-api --no-headers \
       -l machine.openshift.io/cluster-api-machineset={{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
       -o custom-columns=':.metadata.name');do
-      oc label node $machine cluster.ocs.openshift.io/openshift-storage=""
+      oc label node $machine cluster.ocs.openshift.io/openshift-storage="" --overwrite
     done
   when: _ocs_cluster_exists.rc != 0
 
@@ -115,12 +115,15 @@
     path: "{{status_dir}}/openshift"
     state: file
   register: _ocs_cluster_tempfile
+  when: _ocs_cluster_exists.rc != 0
 
 - name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
   template:
     src: ocs-storagecluster.j2
     dest: "{{ _ocs_cluster_tempfile.path }}"
+  when: _ocs_cluster_exists.rc != 0
 
 - name: Create OCS StorageCluster
   shell: |
     oc apply -f {{ _ocs_cluster_tempfile.path }}
+  when: _ocs_cluster_exists.rc != 0
