@@ -17,9 +17,9 @@
     cp4d_database_hostname: "{{ cp4d_connection.database_hostname }}"
     cp4d_database_port: "{{ cp4d_connection.database_port }}"
     cp4d_database_port_ssl: "{{ cp4d_connection.database_port_ssl | default('false') }}"
-    cp4d_database_database_credentials_secret: "{{ cp4d_connection.database_credentials_secret | default('') }}"
+    cp4d_database_credentials_username: "{{ cp4d_connection.database_credentials_username | default('') }}"
+    cp4d_database_database_password_secret: "{{ cp4d_connection.database_credentials_password_secret | default('') }}"
     cp4d_database_inherit_access_token: "false"
-    cp4d_database_credentials_username: ""
     cp4d_database_credentials_password: ""
     cp4d_database_ssl_certificate_secret: "{{ cp4d_connection.database_ssl_certificate_secret | default('') }}"
     cp4d_database_ssl_certificate: ""
@@ -34,19 +34,18 @@
     msg: "cp4d_connection.database_type set to {{ cp4d_database_connection_type }}, which is not a recognized database type in Cloud Pak for Data"
   when: "cp4d_datasource_type_asset_id|length == 0"
 
-#Retrieve database credentials (optional)
-- when: "cp4d_database_database_credentials_secret != ''"
+#Retrieve database password (optional)
+- when: "cp4d_database_database_password_secret != ''"
   block:
-    - name: Get the database credentials {{ cp4d_database_database_credentials_secret }} from the vault
+    - name: Get the database password {{ cp4d_database_database_password_secret }} from the vault
       include_role: 
         name: vault-get-secret
       vars:
-        secret_name: "{{ cp4d_database_database_credentials_secret }}"
+        secret_name: "{{ cp4d_database_database_password_secret }}"
         secret_group: "{{ environment_name }}"
 
     - set_fact:
-        cp4d_database_credentials_username: "{{ secret_value.split(\":\")[0] }}"
-        cp4d_database_credentials_password: "{{ secret_value.split(\":\")[1] }}"
+        cp4d_database_credentials_password: "{{ secret_value }}"
 
 #Retrieve database SSL certificate (optional)
 - when: "cp4d_database_ssl_certificate_secret != ''"
