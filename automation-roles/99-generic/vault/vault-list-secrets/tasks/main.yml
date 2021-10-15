@@ -9,12 +9,23 @@
           - secret_group is defined
 
     - set_fact:
+        _secret_name: "{{ secret_name | default('') }}"
+
+    - set_fact:
+        _hashicorp_secret_name_path: "{{ _secret_name }}"
+      when: _secret_name is search("/")
+
+    - set_fact:
         _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}"
-      when: (vault_secret_path_append_group | default(True) | bool)
+      when: 
+      - (vault_secret_path_append_group | default(True) | bool)
+      - not _secret_name is search("/")
 
     - set_fact:
         _hashicorp_secret_name_path: "{{ vault_secret_path }}"
-      when: not (vault_secret_path_append_group | default(True) | bool)
+      when: 
+      - not (vault_secret_path_append_group | default(True) | bool)
+      - not _secret_name is search("/")
 
     - name: List secrets in Hashicorp vault (API Key), path {{ _hashicorp_secret_name_path }}
       include_tasks: list-secrets-hashicorp-api-key.yml
