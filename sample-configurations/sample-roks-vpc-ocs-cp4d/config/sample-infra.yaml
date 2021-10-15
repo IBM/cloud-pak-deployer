@@ -32,7 +32,6 @@ address_prefix:
   cidr: 10.231.0.128/25 
 
 subnet:
-  ### subnets for the client vpc ###
 - name: {{ env_id }}-subnet-zone-1
   address_prefix: {{ env_id }}-zone-1
   ipv4_cidr_block: 10.231.0.0/26
@@ -42,33 +41,3 @@ subnet:
 - name: {{ env_id }}-subnet-zone-3
   address_prefix: {{ env_id }}-zone-3
   ipv4_cidr_block: 10.231.0.128/26
-- name: {{ env_id }}-subnet-zone-shared
-  address_prefix: {{ env_id }}-zone-3
-  ipv4_cidr_block: 10.231.0.192/26
-
-vsi:
-- name: {{ env_id }}-bastion
-  infrastructure:
-    type: vpc
-    subnet: {{ env_id }}-subnet-zone-shared
-    primary_ipv4_address: 10.231.0.196
-    public_ip: True
-    keys:
-    - {{ env_id }}-provision
-
-nfs_server:
-- name: {{ env_id }}-nfs
-  infrastructure:
-    type: vpc
-    subnet: {{ env_id }}-subnet-zone-shared
-    primary_ipv4_address: 10.231.0.197
-    bastion_host: {{ env_id }}-bastion
-    volume_selector: 1000G
-    mount_path: /data
-    storage_folder: /data/nfs    
-    keys:
-    - {{ env_id }}-provision
-  storage:
-  - name: {{ env_id }}-nfs-data
-    profile: 10iops-tier
-    size: 1000
