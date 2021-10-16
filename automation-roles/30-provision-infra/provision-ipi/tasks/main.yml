@@ -59,11 +59,6 @@
       password: "{{ _vsphere_password }}"
       state: present
 
-  - name: Add API address and oauth-openshift to /etc/hosts
-    shell:
-      echo "{{ _current_openshift_cluster.api_vip }} api.{{ _current_openshift_cluster.name }}.{{_current_openshift_cluster.domain_name }}" >> /etc/hosts
-      echo "{{ _current_openshift_cluster.ingress_vip }} oauth-openshift.apps.{{ _current_openshift_cluster.name }}.{{_current_openshift_cluster.domain_name }}" >> /etc/hosts
-
   - name: Run IPI installer
     shell:
       openshift-install create cluster --dir={{ status_dir }}/vsphere-ipi/{{ _current_openshift_cluster.name }}

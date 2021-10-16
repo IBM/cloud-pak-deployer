@@ -16,6 +16,16 @@
 - set_fact:
     _kubeadmin_password: "{{ secret_value }}"
 
+- name: Add API address and oauth-openshift to /etc/hosts
+  shell:
+    grep -q "^{{ _openshift_config.api_vip }}" /etc/hosts || \
+      echo "{{ _openshift_config.api_vip }} api.{{ _openshift_config.name }}.{{_openshift_config.domain_name }}" >> /etc/hosts
+
+- name: Add ingress address and oauth-openshift to /etc/hosts
+  shell:
+    grep -q "^{{ _openshift_config.ingress_vip }}" /etc/hosts || \
+      echo "{{ _openshift_config.ingress_vip }} oauth-openshift.apps.{{ _openshift_config.name }}.{{_openshift_config.domain_name }}" >> /etc/hosts
+
 - name: Login to OpenShift cluster
   shell: |
     oc login api.{{ _openshift_config.name }}.{{ _openshift_config.domain_name }}:6443 \
