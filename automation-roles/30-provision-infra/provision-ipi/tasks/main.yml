@@ -1,0 +1,87 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - cloud_platform is defined
+
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- set_fact:
+    _vsphere_config: "{{ all_config.vsphere | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _current_openshift_cluster.vsphere_name }}']
+
+- name: Check if OpenShift cluster already exists by checking kubeadmin password secret
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _kubeadmin_password: "{{ secret_value }}"
+
+# Run OpenShift IPI installer if no OpenShift cluster does not exist yet
+- block:
+  - name: Trust certificates for vSphere
+    include_tasks: vsphere-trust-certificates.yml
+
+  - name: Retrieve vSphere user
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "vsphere-user"
+      secret_group: "{{ environment_name }}" 
+
+  - set_fact:
+      _vsphere_user: "{{ secret_value }}"
+
+  - name: Retrieve vSphere password
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "vsphere-password"
+      secret_group: "{{ environment_name }}" 
+
+  - set_fact:
+      _vsphere_password: "{{ secret_value }}"
+
+  - name: Make sure the specified VM folder exists
+    community.vmware.vcenter_folder:
+      hostname: "{{ _vsphere_config.vcenter }}"
+      datacenter: "{{ _vsphere_config.datacenter }}"
+      folder_name:  "{{ _vsphere_config.folder | basename }}"
+      folder_type: vm
+      username: "{{ _vsphere_user }}"
+      password: "{{ _vsphere_password }}"
+      state: present
+
+  - name: Add API address and oauth-openshift to /etc/hosts
+    shell:
+      grep -q "^{{ _current_openshift_cluster.api_vip }}" /etc/hosts || \
+        echo "{{ _current_openshift_cluster.api_vip }} api.{{ _current_openshift_cluster.name }}.{{_current_openshift_cluster.domain_name }}" >> /etc/hosts
+
+  - name: Add ingress address and oauth-openshift to /etc/hosts
+    shell:
+      grep -q "^{{ _current_openshift_cluster.ingress_vip }}" /etc/hosts || \
+        echo "{{ _current_openshift_cluster.ingress_vip }} oauth-openshift.apps.{{ _current_openshift_cluster.name }}.{{_current_openshift_cluster.domain_name }}" >> /etc/hosts
+
+  - name: Run IPI installer
+    shell:
+      openshift-install create cluster --dir={{ status_dir }}/vsphere-ipi/{{ _current_openshift_cluster.name }}
+
+  - name: Retrieve kubeadmin password
+    set_fact:
+      _new_kubeadmin_password: "{{ lookup('file', status_dir + '/vsphere-ipi/' + _current_openshift_cluster.name + '/auth/kubeadmin-password') }}"
+
+  - name: Store kubeadmin password into the vault
+    include_role: 
+      name: vault-create-secret
+    vars:
+      secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+      secret_group: "{{ environment_name }}" 
+      secret_payload: "{{ _new_kubeadmin_password }}"
+  when: _kubeadmin_password==""
