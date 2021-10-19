@@ -12,6 +12,12 @@
       - ibmcloud_api_key is defined
   when: cloud_platform == 'ibm-cloud'
 
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - azure_location is defined
+  when: cloud_platform == 'azure-aro'
+
 - debug:
     msg: "{{ vars }}"
 
@@ -25,4 +31,3 @@
 - name: Validate cloud_platform is supported
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
-
