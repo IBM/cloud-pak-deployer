@@ -3,7 +3,7 @@ resource "ibm_resource_instance" "{{generator.attributes.name | replace("-", "_"
     name     = "{{generator.attributes.name }}"
     plan     = "{{generator.attributes.plan }}"
     location = "{{generator.attributes.location }}"
-    service  =  "{{generator.attributes.service }}"
+    service  =  "cloud-object-storage"
 }
 
 {% if generator.attributes.buckets is defined %}
@@ -27,11 +27,18 @@ resource "ibm_cos_bucket" "{{generator.attributes.name | replace("-", "_") }}_{{
 {% endfor %}
 {% endif %}
 
-{% if generator.attributes.service_keys is defined %}
-{% for key in generator.attributes.service_keys %}
-resource "ibm_service_key" "{{generator.attributes.name | replace("-", "_") }}_{{key.name | replace("-", "_")}}" {
-    name = "{{ key.name }}"
-    service_instance_guid = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.id
+{% if generator.attributes.serviceids is defined %}
+{% for serviceid in generator.attributes.serviceids %}
+
+resource "ibm_iam_service_policy" "policy" {
+  iam_service_id = ibm_iam_service_id.{{serviceid.name | replace("-", "_") }}.id
+  roles          = {{serviceid.roles | default([]) | to_json }}
+
+  resources {
+    service              = "cloud-object-storage"
+    resource_instance_id = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.guid
+  }
 }
+
 {% endfor %}
 {% endif %}
