@@ -1,0 +1,22 @@
+---
+- name: Create temporary directory for certificates
+  tempfile:
+    state: directory
+  register: temp_dir
+
+- name: Unpack the certificates
+  unarchive:
+    src: "https://{{ _vsphere_config.vcenter }}/certs/download.zip"
+    dest: "{{temp_dir.path}}"
+    remote_src: True
+    validate_certs: False
+
+- name: Add to trust store
+  copy:
+    src: "{{item}}"
+    dest: "/etc/pki/ca-trust/source/anchors/"
+  with_fileglob:
+    - "{{temp_dir.path}}/certs/lin/*"
+
+- name: Update certificate authorities
+  shell: update-ca-trust
