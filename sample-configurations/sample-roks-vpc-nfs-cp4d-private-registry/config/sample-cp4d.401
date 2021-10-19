@@ -1,25 +1,32 @@
 ---
 cp4d:
 
+image_registry:
+- name: cpd401
+  registry_host_name: de.icr.io
+  registry_namespace: cpd401
+  registry_insecure: false
+
+# Example Cloud Pak for Data 4.0 instance, using the specified private registry
 - project: zen-40
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.0
-  openshift_storage_name: ocs-storage
-  use_case_files: True
+  image_registry_name: cpd401
+  openshift_storage_name: nfs-storage
   cartridges:
   - name: cp-foundation
     case_version: 1.6.0
   - name: lite
     subscription_channel: v2.0
-    case_version: 2.0.5
+    case_version: 2.0.3
   - name: wsl
-    version: 4.0.2
+    version: 4.0.1
     subscription_channel: v2.0
-    case_version: 2.0.2
+    case_version: 2.0.1
   - name: wml
-    version: 4.0.2
+    version: 4.0.1
     subscription_channel: v1.1
-    case_version: 4.0.3
+    case_version: 4.0.2
     size: small
 
 #
@@ -28,38 +35,42 @@ cp4d:
 #
 
   # - name: analyticsengine 
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: stable-v1
-  #   case_version: 4.0.2
+  #   case_version: 4.0.1
   #   size: small 
   # - name: bigsql
-  #   version: 7.2.2
+  #   version: 7.2.1
   #   subscription_channel: v7.2
-  #   case_version: 7.2.2
+  #   case_version: 7.2.1+20210819.120000
   # - name: ca
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v4.0
-  #   case_version: 4.0.4
+  #   case_version: 4.0.3
   #   size: small
   #   instances:
   #   - name: ca-instance
   #     metastore_ref: ca-metastore
   # - name: cde
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 2.0.2
+  #   case_version: 2.0.1
   # - name: datagate
-  #   version: 2.0.2
+  #   version: 2.0.1
   #   subscription_channel: v2.0
-  #   case_version: 4.0.2
+  #   case_version: 4.0.1
   # - name: datastage
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
   #   case_version: 4.0.3
+  #   dependencies:
+  #   - name: db2u
+  #   - name: iis
+  #   - name: db2uaaservice 
   # - name: db2
-  #   version: 4.0.3
+  #   version: 4.0.1  
   #   subscription_channel: v1.0
-  #   case_version: 4.0.3 
+  #   case_version: 4.0.1
   #   size: small
   #   instances:
   #   - name: ca-metastore
@@ -68,35 +79,38 @@ cp4d:
   #     backup_size_gb: 20  
   #     transactionlog_size_gb: 20
   # - name: db2aaservice
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 4.0.3 
+  #   case_version: 4.0.1
   #   size: small
   # - name: db2u
-  #   version: 4.0.3
+  #   version: 4.0.1
   #   subscription_channel: v1.1
-  #   case_version: 4.0.3
+  #   case_version: 4.0.1
   # - name: datastage
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 4.0.3
+  #   dependencies:
+  #   - name: db2u
+  #   - name: iis
+  #   - name: db2uaaservice   
   # - name: db2wh
-  #   version: 4.0.3
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 4.0.3
+  #   case_version: 4.0.1
   # - name: dmc
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 4.0.2
+  #   case_version: 4.0.1
   # - name: dods
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v4.0
-  #   case_version: 4.0.2
+  #   case_version: 4.0.1
   #   size: small
   # - name: dv
-  #   version: 1.7.2
+  #   version: 1.7.1
   #   subscription_channel: v1.7
-  #   case_version: 1.7.2
+  #   case_version: 1.7.1
   #   size: small
   # - name: iis
   #   version: 4.0.2
@@ -104,53 +118,53 @@ cp4d:
   #   subscription_channel: not_used
   #   case_version: 4.0.2
   # - name: mdm
-  #   version: 1.1.90
+  #   version: 1.1.14
   #   subscription_channel: v1.1
-  #   case_version: 1.0.115
+  #   case_version: 1.0.48
   #   size: small
   #   wkc_enabled: true
   # - name: openpages
-  #   version: 8.203.2
+  #   version: 8.203.1
   #   subscription_channel: v1.0
-  #   case_version: 2.0.2+20210910.011848.82030838
+  #   case_version: 2.0.1+20210715.004828.82030714
   # - name: planning-analytics
   #   version: 4.0.1
   #   subscription_channel: v1.0
   #   case_version: 4.0.1
   # - name: rstudio
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 1.0.2
+  #   case_version: 1.0.1
   #   size: small
   # - name: spss
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 1.0.2
+  #   case_version: 1.0.1
   # - name: watson-openscale
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1
-  #   case_version: 2.2.0
+  #   case_version: 2.1.0
   #   size: small
   # - name: wkc
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
-  #   case_version: 4.0.2
+  #   case_version: 4.0.1
   #   size: small
   # - name: wml
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.1
-  #   case_version: 4.0.3
+  #   case_version: 4.0.2
   #   size: small
   # - name: wml-accelerator
-  #   version: 2.3.2
+  #   version: 2.3.1
   #   subscription_channel: WML-Accelerator-2.3
-  #   case_version: 2.3.2
+  #   case_version: 2.3.1
   #   replicas: 1
   #   size: small
   # - name: wsl
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v2.0
-  #   case_version: 2.0.2
+  #   case_version: 2.0.1
 
 #
 # Cartridges where extra work is needed (will not install automatically)
@@ -166,20 +180,20 @@ cp4d:
   # - name: voice-gateway
   #   version: 1.0.7
   #   subscription_channel: v1.0
-  #   case_version: 1.0.3
+  #   case_version: 1.0.2
   #   replicas: 1  
 
   # Watson Assistant requires additional setup using the case tool
   # - name: watson-assistant
-  #   version: 4.0.2
+  #   version: 4.0.0
   #   subscription_channel: v4.0
-  #   case_version: 4.0.2
+  #   case_version: 4.0.0
 
   # Watson Discovery requires additional setup using the case tool
   # - name: watson-discovery
-  #   version: 4.0.2
+  #   version: 4.0.0
   #   subscription_channel: v4.0
-  #   case_version: 4.0.2
+  #   case_version: 4.0.0
 
   # Watson Speech requires additional setup using the case tool
   # - name: watson-speech
