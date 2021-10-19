@@ -1,0 +1,28 @@
+---
+---
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  annotations:
+    uninstall.ocs.openshift.io/cleanup-policy: delete
+    uninstall.ocs.openshift.io/mode: graceful
+  name: ocs-storagecluster
+  namespace: openshift-storage
+spec:
+  storageDeviceSets:
+  - config: {}
+    count: 1
+    dataPVCTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: {{ current_openshift_storage.ocs_storage_size_gb }}Gi
+        storageClassName: {{ current_openshift_storage.ocs_dynamic_storage_class }}
+        volumeMode: Block
+    name: ocs-deviceset-{{ current_openshift_storage.ocs_dynamic_storage_class }}
+    portable: true
+    replica: 3

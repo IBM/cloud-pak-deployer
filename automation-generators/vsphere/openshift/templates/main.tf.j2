@@ -1,0 +1,46 @@
+# {{ ansible_managed }}
+apiVersion: v1
+
+metadata:
+  name: {{ generator.attributes.name }}
+baseDomain: {{ generator.attributes.domain_name }}
+
+platform:
+  vsphere:
+    apiVIP: {{ generator.attributes.api_vip }}
+    ingressVIP: {{ generator.attributes.ingress_vip }}
+    cluster: {{ _vsphere_config.cluster }}
+    datacenter: {{ _vsphere_config.datacenter }}
+    defaultDatastore: {{ _vsphere_config.datastore }}
+    network: {{ _vsphere_config.network }}
+    vCenter: {{ _vsphere_config.vcenter }}
+    folder: {{ _vsphere_config.folder }}
+    username: {{ _vsphere_user }}
+    password: {{ _vsphere_password }}
+
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: {{ generator.attributes.number_of_masters }}
+  platform:
+    vsphere:
+      cpus: {{ _master_vm_config.vcpu }}
+      coresPerSocket: 2
+      memoryMB: {{ _master_vm_config.memory_mb }}
+      osDisk:
+        diskSizeGB: {{ _master_vm_config.boot_disk_size_gb }}
+
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: {{ generator.attributes.number_of_workers }}
+  platform:
+    vsphere:
+      cpus: {{ _worker_vm_config.vcpu }}
+      coresPerSocket: 2
+      memoryMB: {{ _worker_vm_config.memory_mb }}
+      osDisk:
+        diskSizeGB: {{ _worker_vm_config.boot_disk_size_gb }}
+
+pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
+sshKey: '{{ _ocp_ssh_pub_key }}'
