@@ -40,6 +40,19 @@
     - set_fact:
         _tenant_id: "{{ secret_value }}"
 
+    - name: "[Clean up] Remove remaining .terraform directory and other files if exist"
+      file:
+        path: "{{ item }}"
+        state: absent
+      with_items:
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/.terraform"
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/.terraform.lock.hcl"
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/terraform.tfstate"
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/terraform.tfstate.backup"
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/plan.log"
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/apply.log"
+        - "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/tf_apply.log"
+
     - name: "Run terraform init in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
       shell:
         chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
