@@ -8,18 +8,22 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+- name: Check if ARO cluster already exists by checking kubeadmin password secret
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _aro_start_provisioning: "{{ true if secret_value == '' else false }}"
+
+# We could even check if the resource group in Azure exists
+# - if it exists -> skip this block
+# - if it does not exist -> continue with this block
+
 - name: Provision Azure ARO
   block:
-    - debug:
-        var: _current_openshift_cluster
-
-    - debug:
-        var: _service_principal_id
-
-    # TODO - CHECK IF the resource group in Azure already exist
-    # if it exists -> skipping this block
-    # if it does not exist -> remove terraform residuums which can be included in the folder
-
     - name: Retrieve Azure subscription id
       include_role:
         name: vault-get-secret
@@ -57,7 +61,6 @@
       shell:
         chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
         cmd: "terraform init"
-      # when: resource group does not exist
 
     - name: "Run terraform plan in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/plan.log"
       shell:
@@ -73,10 +76,14 @@
       # terraform_plan_result.rc == 0 -> success, no changes
       # terraform_plan_result.rc == 1 -> error
       # terraform_plan_result.rc == 2 -> sucess, changes present
-      # when: resource group does not exist
 
     - debug:
         var: terraform_plan_result
+
+    - fail:
+        msg: Error occurred during Terraform plan. Failing now. Check the plan.log file for details.
+      when:
+        - terraform_plan_result.rc == 1
 
     - name: "Run terraform apply in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/apply.log"
       shell:
@@ -93,12 +100,15 @@
       ignore_errors: yes
       when: terraform_plan_result.rc == 2
 
-    # Either from tf_apply.log or from apply.log take info about aro-cluster-output
+    - debug:
+        var: terraform_apply_result
 
     - fail:
-        msg: Error occurred during Terraform plan or apply procedure. Failing now. Check the plan.log and apply.log files for details.
-      when:
-        - terraform_plan_result.rc == 1
-        - terraform_apply_result.rc != 0
+        msg: Error occurred during Terraform apply procedure. Failing now. Check the apply.log file for details.
+      when: terraform_apply_result.rc != 0
 
-  when: "cloud_platform == 'azure'"
+    - name: Parse output log (kubeadmin password and API endpoints) and store into the vault
+      include_tasks: parse-output-store-vault.yml
+      when: terraform_apply_result.rc == 0
+
+  when: _aro_start_provisioning
