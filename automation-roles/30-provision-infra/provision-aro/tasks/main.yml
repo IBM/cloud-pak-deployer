@@ -1,0 +1,91 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - cloud_platform is defined
+
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Provision Azure ARO
+  block:
+    - debug:
+        var: _current_openshift_cluster
+
+    - debug:
+        var: _service_principal_id
+
+    # TODO - CHECK IF the resource group in Azure already exist
+    # if it exists -> skipping this block
+    # if it does not exist -> remove terraform residuums which can be included in the folder
+
+    - name: Retrieve Azure subscription id
+      include_role:
+        name: vault-get-secret
+      vars:
+        secret_name: "aro-subscription-id"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        _subscription_id: "{{ secret_value }}"
+
+    - name: Retrieve Azure tenant id
+      include_role:
+        name: vault-get-secret
+      vars:
+        secret_name: "aro-tenant-id"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        _tenant_id: "{{ secret_value }}"
+
+    - name: "Run terraform init in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
+      shell:
+        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
+        cmd: "terraform init"
+      # when: resource group does not exist
+
+    - name: "Run terraform plan in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/plan.log"
+      shell:
+        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
+        cmd: bash -c "terraform plan -no-color -detailed-exitcode 2>&1 >> plan.log"
+      environment:
+        ARM_CLIENT_ID: "{{ _service_principal_id }}"
+        ARM_CLIENT_SECRET: "{{ _service_principal_secret }}"
+        ARM_SUBSCRIPTION_ID: "{{ _subscription_id }}"
+        ARM_TENANT_ID: "{{ _tenant_id }}"
+      register: terraform_plan_result
+      failed_when: "terraform_plan_result.rc == 1"
+      # terraform_plan_result.rc == 0 -> success, no changes
+      # terraform_plan_result.rc == 1 -> error
+      # terraform_plan_result.rc == 2 -> sucess, changes present
+      # when: resource group does not exist
+
+    - debug:
+        var: terraform_plan_result
+
+    - name: "Run terraform apply in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/apply.log"
+      shell:
+        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
+        cmd: bash -c "terraform apply -auto-approve -no-color 2>&1 >> apply.log"
+      environment:
+        TF_LOG: "info"
+        TF_LOG_PATH: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/tf_apply.log"
+        ARM_CLIENT_ID: "{{ _service_principal_id }}"
+        ARM_CLIENT_SECRET: "{{ _service_principal_secret }}"
+        ARM_SUBSCRIPTION_ID: "{{ _subscription_id }}"
+        ARM_TENANT_ID: "{{ _tenant_id }}"
+      register: terraform_apply_result
+      ignore_errors: yes
+      when: terraform_plan_result.rc == 2
+
+    # Either from tf_apply.log or from apply.log take info about aro-cluster-output
+
+    - fail:
+        msg: Error occurred during Terraform plan or apply procedure. Failing now. Check the plan.log and apply.log files for details.
+      when:
+        - terraform_plan_result.rc == 1
+        - terraform_apply_result.rc != 0
+
+  when: "cloud_platform == 'azure'"
