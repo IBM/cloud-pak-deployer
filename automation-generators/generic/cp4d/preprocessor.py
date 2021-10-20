@@ -26,7 +26,7 @@ import sys
 #   - storage_name: ocs-storage
 #     storage_type: ocs
 #     ocs_storage_label: ocs
-#     ocs_storage_size: 500Gi
+#     ocs_storage_size_gb: 500
 
 # Validating:
 # ---
