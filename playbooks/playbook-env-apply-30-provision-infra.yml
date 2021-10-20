@@ -10,15 +10,23 @@
     ansible_callback_diy_runner_on_ok_msg: ""
 
   tasks:
-  - name: Provision infrastructure using Terraform
-    include_role:
-      name: provision-terraform
-    when: cloud_platform == 'ibm-cloud'
+    - name: Provision infrastructure using Terraform
+      include_role:
+        name: provision-terraform
+      when: cloud_platform == 'ibm-cloud'
 
-  - name: Provision OpenShift using IPI installer
-    include_role:
-      name: provision-ipi
-    loop: "{{ all_config.openshift | default([]) }}"
-    loop_control:
-      loop_var: _current_openshift_cluster
-    when: cloud_platform == 'vsphere'
+    - name: Provision OpenShift using IPI installer
+      include_role:
+        name: provision-ipi
+      loop: "{{ all_config.openshift | default([]) }}"
+      loop_control:
+        loop_var: _current_openshift_cluster
+      when: cloud_platform == 'vsphere'
+
+    - name: Provision Azure ARO using Terraform
+      include_role:
+        name: provision-aro
+      loop: "{{ all_config.openshift | default([]) }}"
+      loop_control:
+        loop_var: _current_openshift_cluster
+      when: cloud_platform == 'azure'
