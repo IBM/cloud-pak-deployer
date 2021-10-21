@@ -4,21 +4,25 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 ---
 
 # Infrastructure configuration
+Infrastructure definitions depend on the cloud provider that is used for the provisioning.
+
+There are 3 cloud providers for the objects:
+* [IBM Cloud](#ibm-cloud)
+* [vSphere](#vsphere)
+* [Existing OpenShift](#existing-openshift)
 
 ## IBM Cloud
 
 For IBM Cloud, the following object types are supported:
-* [provider](#provider_defines_the_provider_for_terraform)
-* [resource_group](#resource_group)
-* [ssh_keys](#ssh_keys)
-* [address_prefix](#address_prefix)
-* [subnet](#subnet)
-* [vsi](#vsi)
-* [nfs_server](#nfs_server)
-* [serviceid](#serviceid)
-* [cos](#cos)
+* [provider](#ibm-cloud-provider)
+* [resource_group](#ibm-cloud-resource_group)
+* [ssh_keys](#ibm-cloud-ssh_keys)
+* [address_prefix](#ibm-cloud-address_prefix)
+* [subnet](#ibm-cloud-subnet)
+* [vsi](#ibm-cloud-vsi)
+* [nfs_server](#ibm-cloud-nfs_server)
 
-### `provider`
+### IBM Cloud `provider`
 Defines the provider that Terraform will use for managing the IBM Cloud assets.
 ```
 provider:
@@ -33,7 +37,7 @@ provider:
 | region   | Region to connect to                                                 | Yes       | Any IBM Cloud region  |
 
 
-### `resource_group`
+### IBM Cloud `resource_group`
 The resource group is for cloud asset grouping purposes. You can define multiple resource groups in your IBM cloud account to group the provisioned assets. If you do not need to group your assets, choose `default`.
 
 ```
@@ -47,7 +51,7 @@ resource_group:
 | name     | Name of the existing resource group                                  | Yes       |  |
 
 
-### `ssh_keys`
+### IBM Cloud `ssh_keys`
 SSH keys to connect to VSIs. If you have Virtual Server Instances in your VPC, you will need an SSH key to connect to them. SSH keys defined here will be looked up in the vault and created if they don't exist already.
 
 ```
@@ -63,7 +67,7 @@ ssh_keys:
 | managed  | Determines if the SSH key will be created if it doesn't exist        | No        | true (default), false |
 
 
-### `security_rule`
+### IBM Cloud `security_rule`
 Defines the services (or ports) which are allowed within the context of a VPC and/or VSI.
 
 ```
@@ -82,7 +86,7 @@ security_rule:
 | udp      | Range of udp ports (`port_min` and `port_max`) to allow              | tcp and/or udp |  |
 
 
-### `vpc`
+### IBM Cloud `vpc`
 Defines the virtual private cloud which groups the provisioned objects (including VSIs and OpenShift cluster).
 
 ```
@@ -98,7 +102,7 @@ vpc:
 | allow_inbound | Security rules which are allowed for inbound traffic            | No | Existing `security_rule`s |
 
 
-### `address_prefix`
+### IBM Cloud `address_prefix`
 Defines the zones used within the VPC, along with the subnet the addresses will be issued for.
 
 ```
@@ -125,7 +129,7 @@ Defines the zones used within the VPC, along with the subnet the addresses will 
 | vpc      | Virtual Private Cloud this address prefix belongs to                 | Yes, inferred |  |
 
 
-### `subnet`
+### IBM Cloud `subnet`
 Defines the subnet that Virtual Server Intances and ROKS workers will be attached to.
 
 ```
@@ -147,7 +151,7 @@ subnet:
 | vpc      | Virtual Private Cloud this subnet prefix belongs to                  | Yes, inferred from zone |  |
 
 
-### `vsi`
+### IBM Cloud `vsi`
 Defines a Virtual Server Instance within the VPC.
 
 ```
@@ -178,11 +182,8 @@ vsi:
 | infrastructure.vpc_name | Virtual Private Cloud this VSI belongs to              | Yes, inferred from subnet |  |
 | infrastructure.zone | Zone the VSI will be plaed into                            | Yes, inferred from subnet |  |
 
-### `nfs_server`
-<InlineNotification kind="warning">
-TO BE COMPLETED!!!
-</InlineNotification>
-
+### IBM Cloud `nfs_server`
+Defines a Virtual Server Instance within the VPC that will be used as an NFS server.
 
 ```
 nfs_server:
@@ -212,9 +213,95 @@ nfs_server:
 | name     | Name of the Virtual Server Instance                                  | Yes       |  |
 | infrastructure | Infrastructure attributes                                      | Yes       |  |
 | infrastructure.allow_ip_spoofing | Decide if IP spoofing is allowed for the interface or not | No | False (default), True  |
-| infrastructure.keys | List of SSH keys to attach to the VSI                     | Yes       | Existing `ssh_key` |
+| infrastructure.keys | List of SSH keys to attach to the NFS server VSI          | Yes       | Existing `ssh_key` |
 | infrastructure.image | Operating system image to be used                        | Yes | Existing image in IBM Cloud |
 | infrastructure.subnet | Subnet the VSI will be connected to                     | Yes | Existing `subnet` |
 | infrastructure.primary_ipv4_address | IP v4 address that will be assigned to the VSI | No | If specified, address in the `subnet` range  |
 | infrastructure.vpc_name | Virtual Private Cloud this VSI belongs to              | Yes, inferred from subnet |  |
 | infrastructure.zone | Zone the VSI will be plaed into                            | Yes, inferred from subnet |  |
+| infrastructure.bastion_host | If the NFS Server VSI can only be reached via a bastion host, specify the VSI of the bastion | No |  |
+| infrastructure.volume_selector | Value by which the empty volume will be selected for formatting | Yes |  |
+| infrastructure.mount_path | Path on the NFS server that will be mounted for the data | Yes |  |
+| infrastructure.storage_folder | Folder that holds the data, this will be mounted from the NFS storage class | Yes |  |
+| storage | Defines storage attributes | Yes |  |
+| storage.name | Name of the storage that will be configured on the IBM Cloud | Yes |  |
+| storage.profile | Storage profile that will be used | Yes | 3iops-tier, 5iops-tier, 10iops-tier |
+| storage.size | Size of the storage in GiB | Yes | |
+
+## vSphere
+
+For vSphere, the following object types are supported:
+* [vsphere](#vsphere-vsphere)
+* [vm_definition](#vsphere-vm_definition)
+* [nfs_server](#vsphere-nfs_server)
+
+### vSphere `vsphere`
+Defines the vSphere vCenter onto which OpenShift will be provisioned.
+
+```
+vsphere:
+- name: sample
+  vcenter: 10.99.92.13
+  datacenter: Datacenter1
+  datastore: Datastore1
+  cluster: Cluster1
+  network: "VM Network"
+  folder: /Datacenter1/vm/sample
+  resource_pool: gold
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the vSphere definition, will be referenced by `openshift`    | Yes       |  |
+| vcenter  | Host or IP address of the vSphere Center                             | Yes       |  |
+| datacenter | vSphere Data Center to be used for the virtual machines            | Yes |   |
+| datastore | vSphere Data Store to be used for the virtual machines              | Yes |   |
+| cluster  | vSphere cluster to be used for the virtual machines                  | Yes |   |
+| network  | vSphere network to be used for the virtual machines                  | Yes |   |
+| folder   | Fully qualified folder name into which the OpenShift cluster will be placed    | Yes |   |
+| resource_pool | vSphere resource pool to be assigned to the virtual machines    | Yes |  |
+
+### vSphere `vm_definition`
+Defines the virtual machine properties to be used for the masters and workers.
+
+```
+vm_definition:
+- name: master
+  vcpu: 8
+  memory_mb: 32768
+  boot_disk_size_gb: 100
+- name: worker
+  vcpu: 16
+  memory_mb: 65536
+  boot_disk_size_gb: 200
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the VM definition, will be referenced by `openshift`         | Yes       |  |
+| vcpu     | Number of virtual CPUs to be assigned to the VMs                     | Yes       |  |
+| memory_mb | Amount of memory in MiB of the virtual machines                     | Yes |   |
+| boot_disk_size_gb | Size of the virtual machine boot disk in GiB                | Yes |   |
+
+### vSphere `nfs_server`
+Defines an existing NFS server that will be used for the OpenShift NFS storage class.
+
+```
+nfs_server:
+- name: sample-nfs
+  infrastructure:
+    host_ip: 10.99.92.31
+    storage_folder: /data/nfs
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the NFS server                                               | Yes       |  |
+| infrastructure | Infrastructure attributes                                      | Yes       |  |
+| infrastructure.host_ip | Host or IP address of the NFS server                   | Yes |   |
+| infrastructure.storage_folder | Folder that holds the data, this will be mounted from the NFS storage class | Yes |  |
+
+## Existing OpenShift

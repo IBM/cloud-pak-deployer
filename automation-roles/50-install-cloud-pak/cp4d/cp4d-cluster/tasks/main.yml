@@ -1,5 +1,4 @@
 ---
-# tasks file for cp4d-cluster
 - debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
@@ -36,7 +35,7 @@
   when:
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
 
-- name: Rmove Cloud Pak for Data directory for generated files
+- name: Remove Cloud Pak for Data directory for generated files
   file:
     path: "{{ status_dir }}/cp4d"
     state: absent
@@ -95,6 +94,10 @@
 
 - name: Install Control Plane for Cloud Pak for Data
   include_tasks: install-control-plane-40.yml
+
+- name: Add Cloud Pak for Data route to /etc/hosts for vSphere
+  include_tasks: vsphere-configure-etc-hosts.yml
+  when: cloud_platform == "vsphere"
 
 - name: Configure CP4D admin password and store in vault
   include_tasks: configure-cpd-admin-password.yml

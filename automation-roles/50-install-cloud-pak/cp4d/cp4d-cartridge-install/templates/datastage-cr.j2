@@ -1,10 +1,13 @@
-apiVersion: dfd.cpd.ibm.com/v1alpha1
-kind: DataStageService
+apiVersion: ds.cpd.ibm.com/v1alpha1
+kind: DataStage
 metadata:
-  name: datastage-cr
-  namespace: {{ current_cp4d_cluster.project }}
+  name: datastage    # This is the recommended name, but you can change it
+  namespace: {{ current_cp4d_cluster.project }}     # Replace with the project where you will install DataStage
 spec:
   license:
     accept: true
     license: Enterprise
+{% if current_cp4d_cartridge.version is defined %}
   version: {{ current_cp4d_cartridge.version }}
+  storageClass: {{ ocp_storage_class_file }}
+{% endif %}
