@@ -1,0 +1,63 @@
+---
+- name: Get current storage class
+  debug:
+    var: current_openshift_storage
+
+- name: Retrieve infrastructure ID
+  shell: |
+    oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
+  register: _get_infrastructure_id
+
+- set_fact:
+    _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"
+
+- debug:
+    var: _infrastructure_id
+
+- name: Retrieve image details
+  shell: |
+    oc -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.image}{"\n"}' get machineset/{{ _infrastructure_id }}-worker-{{ azure_location }}1
+  register: _get_image_details
+
+- set_fact:
+    _image_details: "{{ _get_image_details.stdout }}"
+
+- debug:
+    var: _image_details
+
+- name: Create temporary file for the MachineSet object
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: _machineset_tempfile
+
+- name: Generate MachineSet file {{ ocscluster_tempfile.path }}
+  template:
+    src: azure-aro-ocs-machineset.j2
+    dest: "{{ _machineset_tempfile.path }}"
+
+- name: Create or update machine set
+  shell: oc apply -f {{ _machineset_tempfile.path }}
+
+- name: Get number of workers in machine set
+  shell: |
+    oc get machineset -n openshift-machine-api \
+      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      -o jsonpath='{.status.replicas}'
+  register: _machineset_replicas
+
+- name: Wait for {{ _machineset_replicas.stdout }} machines to be added to the cluster and become available
+  shell: |
+    oc get machineset -n openshift-machine-api \
+      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      -o jsonpath='{.status.availableReplicas}'
+  register: _available_replicas
+  retries: 120
+  delay: 60
+  until: _available_replicas.stdout == _machineset_replicas.stdout
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
