@@ -1,0 +1,43 @@
+---
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ openshift_cluster_name }}']
+
+- name: Retrieve kubeadmin password from vault
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ openshift_cluster_name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _kubeadmin_password: "{{ secret_value }}"
+
+- name: Retrieve ARO API URL from vault
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ openshift_cluster_name }}-api-url"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _api_url: "{{ secret_value }}"
+
+- name: Validate ARO API URL exists
+  fail: msg="{{ openshift_cluster_name }}-api-url is missing in the vault"
+  when: _api_url == ""
+
+- name: Login to OpenShift cluster
+  shell: |
+    oc login {{ _api_url }} \
+      -u kubeadmin -p {{ _kubeadmin_password }} \
+      --insecure-skip-tls-verify=true
+  register: oc_login_result
+  retries: 60
+  delay: 10
+  until: oc_login_result.rc==0
+
+- debug:
+    msg: "{{ oc_login_result }}"
