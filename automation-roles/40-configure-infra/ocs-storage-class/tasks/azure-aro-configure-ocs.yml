@@ -67,6 +67,17 @@
       oc create ns openshift-storage
     fi
 
+- name: Get OpenShift version
+  shell: |
+    oc version -o yaml
+  register: _get_ocp_version
+
+- set_fact:
+    _azure_current_ocp_version: "{{ _get_ocp_version.stdout | regex_search('openshiftVersion: ([0-9]+.[0-9]+)', '\\1') | first }}"
+
+- debug:
+    var: _azure_current_ocp_version
+
 - name: Create temporary file for the OCS operator
   tempfile:
     path: "{{status_dir}}/openshift"
@@ -75,7 +86,7 @@
 
 - name: Generate OCS operator file {{ _ocs_operator_tempfile.path }}
   template:
-    src: ocs-operator-azure.j2
+    src: ocs-operator.j2
     dest: "{{ _ocs_operator_tempfile.path }}"
 
 - name: Create OCS operator
