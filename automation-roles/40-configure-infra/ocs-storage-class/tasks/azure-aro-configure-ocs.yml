@@ -39,27 +39,14 @@
 - name: Create or update machine set
   shell: oc apply -f {{ _machineset_tempfile.path }}
 
-- name: Get number of workers in machine set
-  shell: |
-    oc get machineset -n openshift-machine-api \
-      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
-      -o jsonpath='{.status.replicas}'
-  register: _machineset_replicas
-
-- name: Wait for {{ _machineset_replicas.stdout }} machines to be added to the cluster and become available
-  shell: |
-    oc get machineset -n openshift-machine-api \
-      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
-      -o jsonpath='{.status.availableReplicas}'
-  register: _available_replicas
-  retries: 120
-  delay: 60
-  until: _available_replicas.stdout == _machineset_replicas.stdout
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+- name: Wait for machine sets
+  include_tasks: wait-for-machine-set.yml
+  with_items:
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}1"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}2"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}3"
+  loop_control:
+    loop_var: machine_set_name
 
 - name: Create openshift-storage OpenShift project
   shell: |
