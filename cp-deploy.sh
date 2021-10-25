@@ -643,8 +643,8 @@ if [ "$SUBCOMMAND" == "environment" ];then
   ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
   mkdir -p ${STATUS_DIR}/pid
   echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
-  PODMAN_EXIT_CODE=$?
   run_env_logs
+  PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
 else
   eval $run_cmd
   PODMAN_EXIT_CODE=$?
