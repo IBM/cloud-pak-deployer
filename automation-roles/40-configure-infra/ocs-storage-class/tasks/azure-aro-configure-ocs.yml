@@ -97,3 +97,42 @@
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
+- name: Check if StorageCluster ocs-storagecluster already exists
+  command: |
+    oc get StorageCluster ocs-storagecluster -n openshift-storage
+  failed_when: False
+  register: _ocs_cluster_exists
+
+- name: Create temporary file for the StorageCluster
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: _ocs_cluster_tempfile
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
+  template:
+    src: ocs-storagecluster.j2
+    dest: "{{ _ocs_cluster_tempfile.path }}"
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Create OCS StorageCluster
+  shell: |
+    oc apply -f {{ _ocs_cluster_tempfile.path }}
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Wait until OCS StorageCluster has status Ready
+  shell: |
+    oc get StorageCluster ocs-storagecluster -n openshift-storage \
+     --no-headers \
+     -o custom-columns='name:metadata.name,phase:status.phase' | \
+     grep -i ready | wc -l
+  register: _ocs_csv_status
+  retries: 30
+  delay: 30
+  until: _ocs_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
