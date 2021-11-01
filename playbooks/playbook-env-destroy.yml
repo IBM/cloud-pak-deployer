@@ -5,7 +5,21 @@
   become: True
   gather_facts: False
 
-  roles:
-    - role: validate-variables
-    - role: vault-connect
-    - role: destroy-terraform
+  tasks:
+    - name: Validate variables
+      include_role:
+        name: validate-variables
+
+    - name: Connect to vault
+      include_role:
+        name: vault-connect
+
+    - name: Destroy infrastructure - IBM Cloud
+      include_role:
+        name: destroy-terraform
+      when: cloud_platform == 'ibm-cloud'
+
+    - name: Destroy infrastructure - Microsoft Azure
+      include_role:
+        name: destroy-aro
+      when: cloud_platform == 'azure'
