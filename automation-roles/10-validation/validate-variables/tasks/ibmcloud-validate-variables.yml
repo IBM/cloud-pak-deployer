@@ -1,0 +1,12 @@
+---
+- name: Validate mandatory variables for ibm-cloud are defined
+  assert:
+    that:
+      - ibmcloud_api_key is defined
+
+- fail:
+    msg: "IBM Cloud API key must be specified for an ibm-cloud deployment"
+  when: ibmcloud_api_key==""
+
+- set_fact:
+    vault_api_key: "{{ ibmcloud_api_key }}"
