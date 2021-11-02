@@ -1,0 +1,49 @@
+---
+title: Destroy IBM Cloud resources
+tabs: ["Destroy IBM Cloud resources", "Destroy Microsoft Azure (ARO) resources"]
+---
+
+# Destroy the created resources
+
+If you have previously used the Cloud Pak Deployer to create resources on IBM Cloud, you can destroy the resources such as ROKS cluster, VSIs, VPCs with the same command. In the below steps we assume you have already created an IBM Cloud API Key.
+
+## Prepare for destroy
+
+### Set environment variables
+
+```
+export IBM_CLOUD_API_KEY=your_api_key
+
+export STATUS_DIR=/data/status/sample
+export CONFIG_DIR=/data/config/sample
+```
+
+- `IBM_CLOUD_API_KEY`: This is the API key you generated using your IBM Cloud account, this is a 40+ character string
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and log files. **Please note** that if you have chosen to use a File Vault, the directory specified must be the one you used when you created the environment
+- `CONFIG_DIR`: Directory that holds the configuration. This must be the same directory you used when you created the environment
+
+## Run the Cloud Pak Deployer
+
+```
+./cp-deploy.sh env destroy -e env_id=pluto-01 -e ibm_cloud_region=eu-gb --confirm-destroy
+```
+
+Please ensure you specify the same extra (dynamic) variables that you used when you ran the `env apply` command.
+
+When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
+
+You can return to view the logs as follows:
+
+```
+./cp-deploy.sh env logs
+```
+
+If you need to interrupt the process, use CTRL-C to stop the logging output and then use:
+
+```
+./cp-deploy.sh env kill
+```
+
+## Finishing up
+
+Once the process has finished successfully, you can delete the status directory.
