@@ -25,19 +25,13 @@
 - debug:
     var: _image_details
 
-- name: Create temporary file for the MachineSet object
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: _machineset_tempfile
-
-- name: Generate MachineSet file {{ ocscluster_tempfile.path }}
+- name: Generate MachineSet file {{status_dir}}/openshift/azure-aro-ocs-machineset.yaml
   template:
-    src: azure-aro-ocs-machineset.j2
-    dest: "{{ _machineset_tempfile.path }}"
+    src: "azure-aro-ocs-machineset.j2"
+    dest: "{{status_dir}}/openshift/azure-aro-ocs-machineset.yaml"
 
 - name: Create or update machine set
-  shell: oc apply -f {{ _machineset_tempfile.path }}
+  shell: oc apply -f {{status_dir}}/openshift/azure-aro-ocs-machineset.yaml
 
 - name: Wait for machine sets
   include_tasks: wait-for-machine-set.yml
@@ -65,20 +59,14 @@
 - debug:
     var: _azure_current_ocp_version
 
-- name: Create temporary file for the OCS operator
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: _ocs_operator_tempfile
-
-- name: Generate OCS operator file {{ _ocs_operator_tempfile.path }}
+- name: Generate OCS operator file {{status_dir}}/openshift/ocs-operator.yaml
   template:
-    src: ocs-operator.j2
-    dest: "{{ _ocs_operator_tempfile.path }}"
+    src: "ocs-operator.j2"
+    dest: "{{status_dir}}/openshift/ocs-operator.yaml"
 
 - name: Create OCS operator
   shell: |
-    oc apply -f {{ _ocs_operator_tempfile.path }}
+    oc apply -f {{status_dir}}/openshift/ocs-operator.yaml
 
 - name: Wait until OCS Operator CSV has status Succeeded
   shell: |
@@ -103,22 +91,15 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Create temporary file for the StorageCluster
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: _ocs_cluster_tempfile
-  when: _ocs_cluster_exists.rc != 0
-
-- name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
+- name: Generate OCS StorageCluster file {{status_dir}}/openshift/ocs-storagecluster.yaml
   template:
-    src: ocs-storagecluster.j2
-    dest: "{{ _ocs_cluster_tempfile.path }}"
+    src: "ocs-storagecluster.j2"
+    dest: "{{status_dir}}/openshift/ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
 - name: Create OCS StorageCluster
   shell: |
-    oc apply -f {{ _ocs_cluster_tempfile.path }}
+    oc apply -f {{status_dir}}/openshift/ocs-storagecluster.yaml
   when: _ocs_cluster_exists.rc != 0
 
 - name: Wait until OCS StorageCluster has status Ready
