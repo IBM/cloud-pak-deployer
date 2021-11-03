@@ -59,4 +59,21 @@
       register: _destroy_resource_group
       failed_when: "_destroy_resource_group.rc != 0"
 
+    - name: "Find all directories in {{status_dir}} except config, defaults, inventory, and vault"
+      find:
+        path: "{{ status_dir }}"
+        file_type: directory
+        excludes:
+          - "config"
+          - "defaults"
+          - "inventory"
+          - "vault"
+      register: found_dirs
+
+    - name: "Delete all directories in {{status_dir}} except config, defaults, inventory and vault"
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ found_dirs['files'] }}"
+
   when: "cloud_platform == 'azure'"
