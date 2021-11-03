@@ -69,11 +69,17 @@
       grep -q "^{{ _current_openshift_cluster.ingress_vip }}" /etc/hosts || \
         echo "{{ _current_openshift_cluster.ingress_vip }} oauth-openshift.apps.{{ _current_openshift_cluster.name }}.{{_current_openshift_cluster.domain_name }}" >> /etc/hosts
 
-  - name: Run IPI installer
+  - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
+    include_role:
+      name: openshift-download-installer
+    vars:
+      _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+  - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}
     shell:
       openshift-install create cluster --dir={{ status_dir }}/vsphere-ipi/{{ _current_openshift_cluster.name }}
 
-  - name: Retrieve kubeadmin password
+  - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
     set_fact:
       _new_kubeadmin_password: "{{ lookup('file', status_dir + '/vsphere-ipi/' + _current_openshift_cluster.name + '/auth/kubeadmin-password') }}"
 
