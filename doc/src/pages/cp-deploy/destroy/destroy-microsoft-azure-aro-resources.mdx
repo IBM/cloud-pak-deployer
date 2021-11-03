@@ -21,11 +21,13 @@ export CONFIG_DIR=/data/config/sample
 
 ## Run the Cloud Pak Deployer
 
-Since the Cloud Pak Deployer creates all the resources within the resource group which you must specify as part of the configuration, the easiest way how to destroy is to remove the given resource group. Double-check your configuration and specify the `azure_resource_group_name` extra (dynamic) parameter in the following command. Mandatory credentials are automatically taken from the vault.
+Since the Cloud Pak Deployer creates all the resources within the resource group which you must specify as part of the configuration, the easiest way how to destroy is to remove the given resource group. Double-check your configuration and specify the `azure_resource_group_name` and `azure_cluster_name` extra (dynamic) parameters in the following command. Mandatory credentials are automatically taken from the vault.
 
 ```
-./cp-deploy.sh env destroy -e azure_resource_group_name=<your-resource-name> --confirm-destroy
+./cp-deploy.sh env destroy -e azure_resource_group_name=<your-resource-name> -e azure_cluster_name=<your-cluster-name> --confirm-destroy
 ```
+
+The process also removes `STATUS_DIR` residual folders (except `config`, `defaults`, `inventory`, and `vault`), and removes `kubeadmin-password` secret from the vault.
 
 When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
 

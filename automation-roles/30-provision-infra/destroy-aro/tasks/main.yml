@@ -4,6 +4,7 @@
     that:
       - cloud_platform is defined
       - azure_resource_group_name is defined
+      - azure_cluster_name is defined
 
 - name: Validate cloud_platform is implemented
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
@@ -58,6 +59,13 @@
         az group delete --name {{ azure_resource_group_name }} -y
       register: _destroy_resource_group
       failed_when: "_destroy_resource_group.rc != 0"
+
+    - name: Delete "{{ azure_cluster_name }}-kubeadmin-password" secret from the vault
+      include_role:
+        name: vault-delete-secret
+      vars:
+        secret_name: "{{ azure_cluster_name }}-kubeadmin-password"
+        secret_group: "{{ environment_name }}"
 
     - name: "Find all directories in {{status_dir}} except config, defaults, inventory, and vault"
       find:
