@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: {{ current_cp4d_cluster.project }}
+  name: zen-alert-{{ _monitor_name }}-monitor-extension
+  labels:
+    app: "zen-adv"
+    icpdata_addon: "true"
+    icpdata_addon_version: "4.3.0"
+    release: "zen-adv"
+data:
+  extensions: |
+    [
+      {
+        "extension_point_id": "zen_alert_monitor",
+        "extension_name": "zen_alert_monitor_{{ _monitor_name }}",
+        "display_name": "Hello World Monitor example",
+        "details": {
+          "name": "{{ _monitor_name }}",
+          "image": "{{ _monitor_target_cr }}/{{ _monitor_name }}:{{ _monitor_label }}",
+          "schedule": "{{ _monitor_schedule }}",
+          "event_types": [
+{% for eventtype in _monitor_event_types %}              
+            {
+              "name": "{{ eventtype['name'] }}",
+              "simple_name": "{{ eventtype['simple_name'] }}",
+              "alert_type": "{{ eventtype['alert_type'] }}",
+              "short_description": "{{ eventtype['short_description'] }}",
+              "long_description": "{{ eventtype['long_description'] }}",                
+              "resolution": "{{ eventtype['resolution'] }}",
+              "reason_code_prefix": "{{ eventtype['reason_code_prefix'] }}"
+            }{% if not loop.last -%},{%- endif %}
+{%- endfor %}
+          ]
+        }
+      }
+    ]
