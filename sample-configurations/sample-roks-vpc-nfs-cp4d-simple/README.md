@@ -1,7 +1,7 @@
 # IBM Cloud ROKS on VPC with NFS storage class and Cloud Pak for Data
 This is a sample configuration for ROKS on IBM Cloud, provisioned in a VPC with NFS storage. All infrastructure, OpenShift and Cloud Pak for Data are managed by the deployer and deployment requires nothing but an IBM Cloud API key and a Cloud Pak entitlement key.
 
-![Picture of the environment](./sample-roks-vpc-nfs-cp4d.png)
+![Picture of the environment](./sample-roks-vpc-nfs-cp4d-simple.png)
 
 ## Infrastructure
 

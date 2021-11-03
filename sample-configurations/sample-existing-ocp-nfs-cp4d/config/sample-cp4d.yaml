@@ -1,38 +1,45 @@
 ---
 cp4d:
 
-# Example Cloud Pak for Data 4.0 instance, using the entitled registry
 - project: zen-40
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.0
   openshift_storage_name: nfs-storage
+  use_case_files: True
   cartridges:
   - name: cp-foundation
+    case_version: 1.6.0
   - name: lite
     subscription_channel: v2.0
+    case_version: 2.0.5
   - name: wsl
     version: 4.0.2
     subscription_channel: v2.0
+    case_version: 2.0.2
   - name: wml
     version: 4.0.2
     subscription_channel: v1.1
+    case_version: 4.0.3
     size: small
 
 #
-# All tested cartridges cartridges. To install, uncomment the entry, make sure that the "-"" and properties
+# All tested cartridges. To install, uncomment the entry, make sure that the "-"" and properties
 # are aligned with the other "cartridges" entries.
 #
 
   # - name: analyticsengine 
   #   version: 4.0.2
   #   subscription_channel: stable-v1
+  #   case_version: 4.0.2
   #   size: small 
   # - name: bigsql
   #   version: 7.2.2
   #   subscription_channel: v7.2
+  #   case_version: 7.2.2
   # - name: ca
   #   version: 4.0.2
   #   subscription_channel: v4.0
+  #   case_version: 4.0.4
   #   size: small
   #   instances:
   #   - name: ca-instance
@@ -40,20 +47,20 @@ cp4d:
   # - name: cde
   #   version: 4.0.2
   #   subscription_channel: v1.0
+  #   case_version: 2.0.2
   # - name: datagate
   #   version: 2.0.2
   #   subscription_channel: v2.0
+  #   case_version: 4.0.2
   # - name: datastage
   #   version: 4.0.2
   #   subscription_channel: v1.0
-  #   dependencies:
-  #   - name: db2u
-  #   - name: iis
-  #   - name: db2uaaservice 
+  #   case_version: 4.0.3
   # - name: db2
+  #   version: 4.0.3
   #   subscription_channel: v1.0
+  #   case_version: 4.0.3 
   #   size: small
-  #   version: 4.0.3  
   #   instances:
   #   - name: ca-metastore
   #     metadata_size_gb: 20
@@ -63,66 +70,91 @@ cp4d:
   # - name: db2aaservice
   #   version: 4.0.2
   #   subscription_channel: v1.0
+  #   case_version: 4.0.3 
   #   size: small
   # - name: db2u
-  #   version: 4.0.3
+  #   version: 4.0.2
   #   subscription_channel: v1.1
+  #   case_version: 4.0.4
+  # - name: datastage
+  #   version: 4.0.2
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.3
   # - name: db2wh
-  #   subscription_channel: v1.0
   #   version: 4.0.3
-  # - name: dmc
-  #   version: 3.1.5.2
   #   subscription_channel: v1.0
+  #   case_version: 4.0.3
+  # - name: dmc
+  #   version: 4.0.2
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.2
   # - name: dods
   #   version: 4.0.2
   #   subscription_channel: v4.0
+  #   case_version: 4.0.2
   #   size: small
   # - name: dv
   #   version: 1.7.2
   #   subscription_channel: v1.7
-  #   size: small
+  #   case_version: 1.7.2
+  #   size: small 
+  #   dependencies:
+  #   - name: db2u
+  #   instances:
+  #   - name: data-virtualization
   # - name: iis
   #   version: 4.0.2
   #   size: small
   #   subscription_channel: not_used
+  #   case_version: 4.0.2
   # - name: mdm
-  #   version: not_used
+  #   version: 1.1.90
   #   subscription_channel: v1.1
+  #   case_version: 1.0.115
   #   size: small
   #   wkc_enabled: true
   # - name: openpages
   #   version: 8.203.2
   #   subscription_channel: v1.0
+  #   case_version: 2.0.2+20210910.011848.82030838
   # - name: planning-analytics
-  #   version: 4.0.2
+  #   version: 4.0.1
   #   subscription_channel: v1.0
+  #   case_version: 4.0.1
   # - name: rstudio
   #   version: 4.0.2
   #   subscription_channel: v1.0
+  #   case_version: 1.0.2
   #   size: small
   # - name: spss
   #   version: 4.0.2
   #   subscription_channel: v1.0
+  #   case_version: 1.0.2
   # - name: watson-openscale
   #   version: 4.0.2
   #   subscription_channel: v1
+  #   case_version: 2.2.0
   #   size: small
   # - name: wkc
   #   version: 4.0.2
   #   subscription_channel: v1.0
+  #   case_version: 4.0.2
   #   size: small
   # - name: wml
   #   version: 4.0.2
   #   subscription_channel: v1.1
+  #   case_version: 4.0.3
   #   size: small
   # - name: wml-accelerator
   #   version: 2.3.2
   #   subscription_channel: WML-Accelerator-2.3
+  #   case_version: 2.3.2
   #   replicas: 1
   #   size: small
   # - name: wsl
   #   version: 4.0.2
   #   subscription_channel: v2.0
+  #   case_version: 2.0.2
 
 #
 # Cartridges where extra work is needed (will not install automatically)
@@ -132,26 +164,32 @@ cp4d:
   #   version: 1.0.1
   #   subscription_channel: alpha
   #   size: small  
+  #   case_version: 1.0.1
 
   # Voice Gateway installs ok but status cannot be checked by looking at the CR
   # - name: voice-gateway
   #   version: 1.0.7
   #   subscription_channel: v1.0
+  #   case_version: 1.0.3
   #   replicas: 1  
 
   # Watson Assistant requires additional setup using the case tool
   # - name: watson-assistant
   #   version: 4.0.2
   #   subscription_channel: v4.0
+  #   case_version: 4.0.2
 
   # Watson Discovery requires additional setup using the case tool
   # - name: watson-discovery
-  #   version: 4.0.0
+  #   version: 4.0.2
   #   subscription_channel: v4.0
+  #   case_version: 4.0.2
 
   # Watson Speech requires additional setup using the case tool
   # - name: watson-speech
   #   version: 4.0.0
   #   subscription_channel: v4.0
+  #   case_version: 4.0.0
   #   stt_size: xsmall
   #   tts_size: xsmall
+
