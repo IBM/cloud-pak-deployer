@@ -19,6 +19,7 @@ command_usage() {
   echo "    apply                   Create a new or modify an existing environment"
   echo "    destroy                 Destroy an existing environment"
   echo "    logs                    Show (tail) the logs of the apply/destroy process"
+  echo "    command,cmd             Opens a shell environment to run commands such as the OpenShift client (oc)"
   echo "    kill                    Kill the current apply/destroy process"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
@@ -114,7 +115,7 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy|logs|kill)
+  apply|destroy|logs|command|cmd|kill)
     shift 1
     ;;
   *)
@@ -571,8 +572,8 @@ fi
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
 
-# If running "environment" subcommand, run as daemon
-if [ "$SUBCOMMAND" == "environment" ];then
+# If running "environment" subcommand with apply or destroy, run as daemon
+if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
   run_cmd+=" -d"
 fi
 
@@ -635,10 +636,14 @@ if [ ${#arrExtraKey[@]} -ne 0 ];then
   run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
 fi
 
+if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "command" || "${ACTION}" == "cmd" ]];then
+  run_cmd+=" -ti --entrypoint /automation_script/docker-scripts/env-command.sh"
+fi
+
 run_cmd+=" cloud-pak-deployer"
 
-# If running "environment" subcommand, follow log
-if [ "$SUBCOMMAND" == "environment" ];then
+# If running "environment" subcommand with apply/destroy, follow log
+if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
   CURRENT_CONTAINER_ID=$(eval $run_cmd)
   ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
   mkdir -p ${STATUS_DIR}/pid
