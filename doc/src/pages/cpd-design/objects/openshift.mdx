@@ -81,6 +81,7 @@ openshift:
 - name: sample
   azure_aro_name: sample
   subdomain_name: example
+  ocp_version: 4.8
   network:
     pod_cidr: "10.128.0.0/14"
     service_cidr: "172.30.0.0/16"
@@ -98,11 +99,22 @@ openshift:
 
 #### Property explanation for OpenShift cluster on Microsoft Azure (ARO)
 
+<InlineNotification kind="warning">
+  You are not allowed to specify the OCP version of the ARO cluster. The latest
+  current version is provisioned automatically instead no matter what value is
+  specified in the "ocp_version" parameter. The "ocp_version" parameter is
+  mandatory for backward compatibility of other layers of the provisioning. For
+  instance, the value is used by the process which downloads and installs the
+  `oc` client. Please, specify the value according to what OCP version will be
+  provisioned.
+</InlineNotification>
+
 | Property                                    | Description                                                                                                                                                                                                                                | Mandatory                      | Allowed values                      |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | ----------------------------------- |
 | name                                        | Name of the OpenShift cluster                                                                                                                                                                                                              | Yes                            |                                     |
 | azure_aro_name                              | Name of the `azure_aro` infrastructure object                                                                                                                                                                                              | Yes                            |                                     |
 | subdomain_name                              | A random unique alphabetic string that is used as a part of the full domain address, i.e. for the `westeurope` location the console URL will be: `https://console-openshift-console.apps.<subdomain_name>.westeurope.aroapp.io/dashboards` | Yes                            |                                     |
+| ocp_version                                 | The version of the `oc` client which will be installed during the provisioning to operate the cluster.                                                                                                                                     | Yes                            |                                     |
 | network                                     | Cluster network attributes                                                                                                                                                                                                                 | Yes                            |                                     |
 | network.pod_cidr                            | CIDR of pod network                                                                                                                                                                                                                        | Yes                            | Must be a minimum of /18 or larger. |
 | network.service_cidr                        | CIDR of service network                                                                                                                                                                                                                    | Yes                            | Must be a minimum of /18 or larger. |
@@ -112,11 +124,6 @@ openshift:
 | openshift_storage.ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id                                                                                               | Yes if `storage_type` is `ocs` |                                     |
 | openshift_storage.ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                                                                                                                  | Yes if `storage_type` is `ocs` |                                     |
 | openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select `managed-premium`                                                                                                                                          | Yes if `storage_type` is `ocs` | `managed-premium`                   |
-
-<InlineNotification kind="info">
-  You are not allowed to specify the OCP version. The latest current version is
-  provisioned automatically instead.
-</InlineNotification>
 
 ### OpenShift on vSphere
 
