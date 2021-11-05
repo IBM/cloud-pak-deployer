@@ -1,0 +1,171 @@
+- debug:
+    var: all_config
+
+# Retrieve Etcd user connection details
+- name: Get details of pwx Etc user {{ all_config.portworx_storage}}
+  command: |
+    ibmcloud cdb deployment-connections {{all_config.portworx_storage[0].etcd_name}} -u {{all_config.portworx_storage[0].pwx_etcd_serviceid_user}} -all -j
+  register: create_pwx_user_id_response
+
+- set_fact:
+    _pwx_user_details: "{{ create_pwx_user_id_response.stdout | from_json }}"
+
+# TODO: Remove debug
+- name: Debug pwx_user_details
+  debug:
+    var: _pwx_user_details
+
+- set_fact:
+    _pwx_user_base64: "{{all_config.portworx_storage[0].pwx_etcd_serviceid_user | b64encode}}"
+
+# TODO: Remove debug
+- name: Debug pwx_user_base64
+  debug:
+    var: _pwx_user_base64
+      
+- set_fact:
+    _pwx_password_base64: "{{all_config.portworx_storage[0].pwx_etcd_serviceid_password | b64encode}}"
+
+# TODO: Remove debug
+- name: Debug pwx_password_base64
+  debug:
+    var: _pwx_password_base64
+
+- name: Get Etcd scheme
+  set_fact:
+    _pwx_etc_scheme: "{{ _pwx_user_details | json_query(query_etc_scheme) | first }}"
+  vars:
+    query_etc_scheme: "[connection.grpc.scheme]"
+  failed_when: "_pwx_etc_scheme|length == 0"
+
+# TODO: Remove debug
+- name: Debug pwx_etc_scheme
+  debug:
+    var: _pwx_etc_scheme
+
+- name: Get Etcd hosts
+  set_fact:
+    _pwx_etc_hosts: "{{ _pwx_user_details | json_query(query_etc_hosts) | first }}"
+  vars:
+    query_etc_hosts: "[connection.grpc.hosts]"
+  failed_when: "_pwx_etc_hosts|length == 0"
+
+# TODO: Remove debug
+- name: Debug pwx_etc_hosts
+  debug:
+    var: _pwx_etc_hosts
+
+- name: Combine fields to create Etcd endpoint
+  set_fact:
+    _pwx_etc_endpoint: "{{ _pwx_etc_scheme }}://{{ _pwx_etc_hosts[0].hostname }}:{{ _pwx_etc_hosts[0].port }}"
+  failed_when: "_pwx_etc_endpoint|length == 0"
+
+# TODO: Remove debug
+- name: Debug pwx_etc_endpoint
+  debug:
+    var: _pwx_etc_endpoint
+
+- name: Get Etcd certificate
+  set_fact:
+    _pwx_etc_certificate_base64: "{{ _pwx_user_details|json_query(query_etc_certificate) }}"
+  vars:
+    query_etc_certificate: "[connection.grpc.certificate.certificate_base64]"
+  failed_when: "_pwx_etc_certificate_base64|length == 0"
+
+# TODO: Remove debug
+- name: Debug pwx_etc_certificate_base64
+  debug:
+    var: _pwx_etc_certificate_base64
+
+
+# Create kubernetes secret used by Portworx Helm chart
+- name: Create secret for pwx
+  shell: |
+    if ! oc get secret -n kube-system px-etcd-certs;then
+      oc create secret generic px-etcd-certs -n kube-system > /dev/null 2>&1
+    fi
+- name: Set data for pwx secret
+  shell: |
+    oc set data secret/px-etcd-certs -n kube-system \
+      "ca.pem"="{{ _pwx_etc_certificate_base64 }}" username="{{ _pwx_user_base64 }}" password="{{ _pwx_password_base64 }}"
+
+#Set individual Etcd credentials to the vault
+- set_fact:
+    etcd_pwx_vault_key_name: "etcd_pwx_{{ current_openshift_cluster.name| replace('-','_') }}"
+
+- name: Store the Etcd ca.pem into the vault as "{{etcd_pwx_vault_key_name}}_ca.pem"
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{etcd_pwx_vault_key_name}}_ca.pem"
+    secret_description: "Etcd ca.pem used by Portworx"
+    secret_payload: "{{ _pwx_etc_certificate_base64 }}"
+    secret_group: "{{ environment_name }}"
+
+- name: Store the Etcd username into the vault as "{{etcd_pwx_vault_key_name}}_username"
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{etcd_pwx_vault_key_name}}_username"
+    secret_description: "Etcd username used by Portworx"
+    secret_payload: "{{ _pwx_user_base64 }}"
+    secret_group: "{{ environment_name }}"
+
+- name: Store the Etcd username into the vault as "{{etcd_pwx_vault_key_name}}_username"
+  include_role:
+    name: vault-create-secret
+  vars:
+    secret_name: "{{etcd_pwx_vault_key_name}}_password"
+    secret_description: "Etcd password used by Portworx"
+    secret_payload: "{{ _pwx_password_base64 }}"
+    secret_group: "{{ environment_name }}"
+    
+
+# Deploy Portworx with Terraform, assumes the provider.tf and variables.tf is already present from terraform activities at step 30.
+- name: Write the portworx.tf file
+  template:
+    src: portworx.tf.j2
+    dest: "{{status_dir}}/terraform/portworx.tf"
+
+- name: "Run terraform init in Terraform directory {{status_dir}}/terraform"
+  shell: 
+    chdir: '{{status_dir}}/terraform'
+    cmd: 'terraform init'
+
+- name: Provision PWX Service via Terraform and Helm
+  block:
+  - name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
+    shell: 
+      chdir: '{{status_dir}}/terraform'
+      cmd: bash -c "terraform plan -no-color -detailed-exitcode 2>&1 >> plan.log"
+    register: terraform_plan_result
+    failed_when: "terraform_plan_result.rc == 1"
+
+  - name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/apply.log"
+    shell: 
+      chdir: '{{status_dir}}/terraform'
+      cmd: bash -c "terraform apply -auto-approve -no-color 2>&1 >> apply.log"
+    environment:
+      TF_LOG: "info"
+      TF_LOG_PATH: "{{ status_dir }}/terraform/tf_apply.log"
+    register: terraform_apply
+    ignore_errors: yes
+    when: terraform_plan_result.rc != 0
+
+  - name: Store the terraform tfstate file as secret {{ environment_name }}-terraform-tfstate in group {{ environment_name }}
+    include_role:
+      name: vault-create-secret
+    vars:
+      secret_name: "{{ environment_name }}-terraform-tfstate"
+      secret_group: "{{ environment_name }}"
+      secret_file: "{{ status_dir }}/terraform/terraform.tfstate"
+    when: 
+    - terraform_plan_result.rc != 0
+
+  - fail:
+      msg: Error occurred during Terraform apply, state has been preserved. Failing now. Check the apply log for details.
+    when: 
+    - terraform_plan_result.rc == 2
+    - terraform_apply.rc!=0      
+
+  when: "cloud_platform == 'ibm-cloud'"

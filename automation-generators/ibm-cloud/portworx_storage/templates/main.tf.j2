@@ -1,0 +1,33 @@
+resource "ibm_database" "pwx_etcd_db" {
+  name                         = "{{generator.attributes.etcd_name}}"
+  plan                         = "{{generator.attributes.etcd_plan}}"
+  location                     = "{{generator.attributes.etcd_location}}"
+  service                      = "databases-for-etcd"
+  adminpassword                = "{{generator.attributes.etcd_admin_password}}"
+  members_memory_allocation_mb = "{{generator.attributes.etcd_mmem_allocation}}"
+  members_disk_allocation_mb   = "{{generator.attributes.etcd_mdisk_allocation}}"
+  tags                         = ["cpd"]
+  users {
+    name     = "{{generator.attributes.pwx_etcd_serviceid_user}}"
+    password = "{{generator.attributes.pwx_etcd_serviceid_password}}"
+  }
+}
+
+resource "ibm_is_volume" "testacc_volume1" {
+  name     = "pwx-vol-1"
+  profile  = "10iops-tier"
+  zone     = "{{generator.attributes.etcd_location}}-1"
+  capacity = "{{generator.attributes.pwx_storage_size}}"
+}
+  resource "ibm_is_volume" "testacc_volume2" {
+  name     = "pwx-vol-2"
+  profile  = "10iops-tier"
+  zone     = "{{generator.attributes.etcd_location}}-2"
+  capacity = "{{generator.attributes.pwx_storage_size}}"
+}
+  resource "ibm_is_volume" "testacc_volume3" {
+  name     = "pwx-vol-3"
+  profile  = "10iops-tier"
+  zone     = "{{generator.attributes.etcd_location}}-3"
+  capacity = "{{generator.attributes.pwx_storage_size}}"
+}

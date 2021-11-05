@@ -1,0 +1,37 @@
+---
+openshift:
+- name: sample
+  ocp_version: 4.6
+  worker_flavour: bx2.16x64
+  number_of_workers: 3
+  max_number_of_workers: 10
+  resource_group_name: ibm
+  infrastructure:
+    type: vpc
+    vpc_name: sample
+    subnets: 
+    - sample-subnet-zone-1
+    - sample-subnet-zone-2
+    - sample-subnet-zone-3
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+    nfs_server_name: sample-nfs
+  # - storage_name: ocs-storage
+  #   storage_type: ocs
+  #   ocs_storage_label: ocs
+  #   ocs_storage_size: 500Gi
+portworx_storage:
+- name: pwx-storage-cluster
+  storage_type: pwx
+  pwx_storage_label: pwx
+  pwx_storage_size: 200
+  # vars for etcd
+  etcd_name: "etc-for-pwx"
+  etcd_admin_password: "12sample34"
+  etcd_location: {{ ibm_cloud_region }}
+  etcd_plan: standard
+  etcd_mmem_allocation: 3072 #Portworx recommends 24000
+  etcd_mdisk_allocation: 61440 #Portworx recommends 384000
+  pwx_etcd_serviceid_user: "pwxetcduser"
+  pwx_etcd_serviceid_password: "12pwxsample34"

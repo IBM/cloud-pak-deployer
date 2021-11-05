@@ -61,3 +61,22 @@
     loop: "{{ all_config.openshift | default([]) }}"
     loop_control:
       loop_var: current_openshift_cluster
+
+- name: 40 - Configure infrastructure - Portworx
+  hosts: localhost
+  connection: local
+  become: True
+  environment:
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+
+  tasks:
+  - name: Configure Portworx servers
+    include_role: 
+      name: pwx-ibmcloud-vpc-install
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: current_openshift_cluster
