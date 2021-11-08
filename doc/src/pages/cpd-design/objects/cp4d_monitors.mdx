@@ -1,0 +1,133 @@
+---
+title: Cloud Pak for Data Monitor configuration
+---
+
+With the Cloud Pak Deployer capability monitors can be deployed which uses the Cloud Pak for Data zen-watchdog monitor framework. 
+This allows adding custom monitors to the zen-watchdog framework, making these custom monitors visible in the Cloud Pak for Data metrics.
+
+Using the Cloud Pak Deployer cp4d_monitors capability implements the following:
+- Enable OpenShift Cluster monitoring
+- Create Cloud Pak for Data ServiceMonitor endpoint to forward zen-watchdog monitor events to OpenShift Cluster monitoring
+- Create source repository auth secrets (optional, if pulling monitors from secure repo)
+- Create target container registry auth secrets (optional, if pushing monitor images to secure container registry)
+- Deploy custom monitors, which will be added to the zen-watchdog monitor framework
+
+Each `cp4d_monitors` entry contains a set of default settings, which are applicable to the `monitors` list. These defauls can be overwritten per monitor if needed.
+- *name*
+  Mandatory
+  The name of the monitor set, must use lowercase RFC 1123 subdomain.
+  Must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character (e.g. 'example.com', regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*')
+- *cp4d_instance*
+  Mandatory
+  The OpenShift project (namespace) on which the Cloud Pak for Data instance resides
+- *openshift_cluster_name*
+  Mandatory
+  The Openshift cluster name
+- *default_monitor_source_repo*
+  Optional
+  The default repository location of all monitors located in the `monitors` section
+- *default_monitor_source_token_secret*
+  Optional
+  The default repo access token secret name, must be available in the vault
+- *default_monitor_target_cr*
+  Optional  
+  The default target container registry (cr) for the monitor image to be pushed
+  When omitted, the OpenShift internal registry is used
+- *default_monitor_target_cr_user_secret*
+  Optional
+  The default target container registry user name secret name used to push the monitor image. Must be available in the vault
+- *default_monitor_target_cr_password_secret*
+  Optional
+  The default target container registry password secret name used to push the monitor image. Must be available in the vault
+
+- *monitors*
+  Mandatory
+  List of monitors
+- *name*
+  Mandatory
+  Name of the monitor, must be a lowercase RFC 1123 subdomain
+- *monitor_source_repo*
+  Optional
+  Overrides default_monitor_source_repo for this single monitor
+- *monitor_source_token_secret*
+  Optional
+  Overrides default_monitor_source_token_secret for this single monitor
+- *monitor_target_cr*
+  Optional
+  Overrides default_monitor_target_cr for this single monitor
+- *monitor_target_cr_user_secret*
+  Optional
+  Overrides default_monitor_target_cr_user_secret for this single monitor
+- *monitor_target_cr_user_password*
+  Optional
+  Overrides default_monitor_target_cr_user_password for this single monitor
+- *context*
+  Mandatory
+  Sets the context of the monitor the the source repo (sub folder name)
+- *label*
+  Optional
+  Set the label of the pushed image, default to 'latest'
+- *schedule*
+  Mandatory
+  Sets the schedule of the generated Cloud Pak for Data monitor cronjob
+
+- *event_types*
+  Mandatory
+  List of monitor event types
+- *name*
+  Mandatory
+  Name of the event type
+- *simple_name*
+  Mandatory
+  Simple name of the event type
+- *alert_type*
+  Mandatory
+  Alert type of the event type
+- *short_description*
+  Mandatory
+  Short description of the event type
+- *long_description*
+  Mandatory
+  Long description of the monitor. The <item> must be available in the metadata of the monitor response
+- *resolution*
+  Mandatory
+  Short description of proposed solution
+- *reason_code_prefix*
+  Mandatory
+  Used for SNMP alerts, custom prefixes should be > 60
+  
+
+File: config/cp4d_monitors.yaml
+
+```
+---
+# List of cp4d_monitors
+cp4d_monitors:
+- name: cp4d-monitor-set-1
+  cp4d_instance: zen-40
+  openshift_cluster_name: {{ env_id }}
+  default_monitor_source_repo: https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer-monitors
+  default_monitor_source_token_secret: monitors_source_repo_secret
+  default_monitor_target_cr: de.icr.io/monitorrepo  
+  default_monitor_target_cr_user_secret: monitors_target_cr_username
+  default_monitor_target_cr_password_secret: monitors_target_cr_password
+  # List of monitors
+  monitors:
+  - name: helloworld
+    #monitor_source_repo:             
+    #monitor_source_token_secret:    
+    #monitor_target_cr:              
+    #monitor_target_cr_user_secret:  
+    #monitor_target_cr_user_password:
+    context: helloworld
+    label: latest
+    schedule: "*/2 * * * *"
+    event_types:
+    - name: "hello_world_status"
+      simple_name: "Hello World example"
+      alert_type: "platform"
+      short_description: "A custom HelloWorld monitor"
+      long_description: "HelloWorld: <Available>"
+      resolution: "none"
+      reason_code_prefix: "70"
+```
