@@ -159,11 +159,31 @@
       file:
         path: '{{status_dir}}/terraform'
         state: absent
+    
+    - name: Delete terraform modules work folders if it already exists
+      file:
+         path: '{{status_dir}}/terraform/modules/portworx/scripts'
+         state: absent
+
+    - name: Delete terraform modules folders if it already exists
+      file:
+         path: '{{status_dir}}/terraform/modules/portworx/cleanup'
+         state: absent
 
     - name: Create terraform work folder if it does not exist
       file:
         path: '{{status_dir}}/terraform'
         state: directory
+
+    - name: Create terraform modules folders if it does not exist
+      file:
+        path: '{{status_dir}}/terraform/modules/portworx/scripts'
+        state: directory
+
+    - name: Create terraform modules folders if it does not exist
+      file:
+        path: '{{status_dir}}/terraform/modules/portworx/cleanup'
+        state: directory        
   when: cloud_platform == 'ibm-cloud'
   
 - name: Run generators

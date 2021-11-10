@@ -21,17 +21,10 @@ openshift:
   #   storage_type: ocs
   #   ocs_storage_label: ocs
   #   ocs_storage_size: 500Gi
-portworx_storage:
-- name: pwx-storage-cluster
-  storage_type: pwx
-  pwx_storage_label: pwx
-  pwx_storage_size: 200
-  # vars for etcd
-  etcd_name: "etc-for-pwx"
-  etcd_admin_password: "12sample34"
-  etcd_location: {{ ibm_cloud_region }}
-  etcd_plan: standard
-  etcd_mmem_allocation: 3072 #Portworx recommends 24000
-  etcd_mdisk_allocation: 61440 #Portworx recommends 384000
-  pwx_etcd_serviceid_user: "pwxetcduser"
-  pwx_etcd_serviceid_password: "12pwxsample34"
+  - storage_name: pwx-storage
+    storage_type: pwx 
+    pwx_storage_label: pwx
+    pwx_etcd_location: {{ ibm_cloud_region }}
+    pwx_storage_size: 200 #In GBs
+    pwx_storage_iops: 10  #Must be a number, it will not be used unless a storage_profile is set to a custom profile
+    pwx_storage_profile: "10iops-tier"
