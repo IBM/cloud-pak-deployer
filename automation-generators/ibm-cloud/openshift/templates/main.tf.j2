@@ -55,12 +55,11 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
 
 {% if item.storage_type == "pwx" %}
 
-data "ibm_container_cluster_config" "cluster_config" {
-  depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
-  cluster_name_id   = "{{generator.attributes.name}}"
-  resource_group_id = data.ibm_resource_group.thisresourcegroup.id
-  config_dir        = "{{status_dir}}/openshift/kubeconfig"
-}
+//data "ibm_container_cluster_config" "cluster_config" {
+//  cluster_name_id   = "{{generator.attributes.name}}"
+//  resource_group_id = data.ibm_resource_group.thisresourcegroup.id
+//  config_dir        = "{{status_dir}}/openshift/kubeconfig"
+//}
 
 // Module:
 
@@ -72,8 +71,10 @@ module "portworx" {
   ibmcloud_api_key = var.ibmcloud_api_key
 
   // Cluster parameters
-  kube_config_path = data.ibm_container_cluster_config.cluster_config.config_file_path
+  kube_config_path = "{{status_dir}}/openshift/kubeconfig"
+  //kube_config_path = data.ibm_container_cluster_config.cluster_config.config_file_path
   worker_nodes     = {{generator.attributes.number_of_workers}} // Number of workers
+  // cluster          = ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}
 
   // Storage parameters
   install_storage  = true
@@ -82,7 +83,7 @@ module "portworx" {
   storage_profile  = "{{item.pwx_storage_profile}}"
 
   // Portworx parameters
-  resource_group_name = "{{generator.attributes.name}}"
+  resource_group_name = "{{ all_config.resource_group[0].name }}"
   region              = "{{ ibm_cloud_region }}"
   cluster_id          = "{{generator.attributes.name}}"
   unique_id           = "{{generator.attributes.name}}"
