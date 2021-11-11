@@ -1,0 +1,15 @@
+---
+- debug:
+    msg: "{{ cp4d_export_connections }}"
+
+- debug:
+    msg: "https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credential"
+
+- name: Get all connections
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials'"
+  register: cp4d_connections
+
+- debug:
+    msg: "{{ cp4d_connections }}"
+
+    
