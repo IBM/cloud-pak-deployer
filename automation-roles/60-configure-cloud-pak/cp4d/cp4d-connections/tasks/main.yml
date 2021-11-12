@@ -35,18 +35,5 @@
   loop_control:
     loop_var: cp4d_connection
 
-#Export connections of the current cluster if requests
-- name: "Get export_cp4d_connections entry of current CP4D cluster {{ current_cp4d_cluster.project }} and OpenShift cluster name {{ current_cp4d_cluster.openshift_cluster_name }}"
-  set_fact:
-    cp4d_export_connections: "{{ all_config.cp4d_export_connections | json_query(export_connections_current_cluster) | default([]) }}"
-  vars:
-    connection_type: "database"
-    cp4d_export_connections: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && export_connections=='true']"
-
-- name: "Export CP4D connections of CP4D cluster {{ current_cp4d_cluster.project }}"
-  include_tasks: cp4d_export_connections.yml
-  loop: "{{ cp4d_export_connections | default([]) }}"
-  loop_control:
-    loop_var: cp4d_export_connections
 
 
