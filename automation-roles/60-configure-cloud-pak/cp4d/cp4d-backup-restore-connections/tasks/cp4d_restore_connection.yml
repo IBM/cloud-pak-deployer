@@ -29,7 +29,7 @@
 - set_fact:
     _create_connection: "False"
   when:
-    - _cp4d_connection_existing_connection|length == 1
+    - _cp4d_connection_existing_connection|length > 1
     - _overwrite_connection == False
 
 - when: 
@@ -41,8 +41,7 @@
 
       - name: Delete existing {{ cp4d_database_name }}
         shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X DELETE https://{{ cp4d_url.stdout }}/v2/connections/{{ _connection_asset_id }}?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }}"
-        register: delete_db_connection_result
-
+        register: _delete_db_connection_result
 
 - when: _create_connection == True
   block:
