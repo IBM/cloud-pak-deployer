@@ -159,11 +159,31 @@
       file:
         path: '{{status_dir}}/terraform'
         state: absent
+    
+    - name: Delete terraform scripts work folder if it already exists (used by portworx only)
+      file:
+         path: '{{status_dir}}/terraform/scripts'
+         state: absent
+
+    - name: Delete terraform cleanup folder if it already exists (used by portworx only)
+      file:
+         path: '{{status_dir}}/terraform/cleanup'
+         state: absent
 
     - name: Create terraform work folder if it does not exist
       file:
         path: '{{status_dir}}/terraform'
         state: directory
+
+    - name: Create terraform scripts folder if it does not exist (used by portworx only)
+      file:
+        path: '{{status_dir}}/terraform/scripts'
+        state: directory
+
+    - name: Create terraform cleanup folder if it does not exist (used by portworx only)
+      file:
+        path: '{{status_dir}}/terraform/cleanup'
+        state: directory        
   when: cloud_platform == 'ibm-cloud'
 
 - name: Delete vSphere IPI work folder if it already exists

@@ -64,8 +64,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs']:
-                g.appendError(msg='storage_type must be nfs or ocs')
+            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs','pwx']:
+                g.appendError(msg='storage_type must be nfs, ocs or pwx')
             if "storage_type" in os and os['storage_type']=='nfs':
                 nfs_server_names = []
                 if 'nfs_server' in fc:
@@ -81,7 +81,13 @@ def preprocessor(attributes=None, fullConfig=None):
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
                 if len(ge['infrastructure']['subnets']) != 3:
                     g.appendError(msg='Storage type OCS was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement OCS.')
-
+            if "storage_type" in os and os['storage_type']=='pwx':
+                if "pwx_storage_label" not in os:
+                    g.appendError(msg='pwx_storage_label must be specified when storage_type is pwx')
+                if "pwx_storage_size" not in os:
+                    g.appendError(msg='pwx_storage_size must be specified when storage_type is pwx')
+                if len(ge['infrastructure']['subnets']) != 3:
+                    g.appendError(msg='Storage type PWX was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement PWX.')
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()
