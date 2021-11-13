@@ -56,14 +56,14 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
 {% if item.storage_type == "pwx" %}
 
 data "ibm_container_cluster_config" "{{generator.attributes.name | replace("-", "_") }}" {
-cluster_name_id   = "{{generator.attributes.name}}"
-resource_group_id = data.ibm_resource_group.thisresourcegroup.id
-config_dir        = "{{status_dir}}/terraform/kubeconfig"
-depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
+  cluster_name_id   = "{{generator.attributes.name}}"
+  resource_group_id = data.ibm_resource_group.thisresourcegroup.id
+  config_dir        = "{{status_dir}}/terraform/kubeconfig"
+  depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
 }
 
 provider "kubernetes" {
-  config_path = "{{status_dir}}/terraform/kubeconfig"
+  config_path = data.ibm_container_cluster_config.{{generator.attributes.name | replace("-", "_") }}.config_file_path
 }
 
 //locals used only in openshift.tf
@@ -260,17 +260,17 @@ resource "ibm_resource_instance" "portworx_{{generator.attributes.name | replace
     )
     etcd_secret      = local.create_external_etcd ? local.etcd_secret_name : null
     internal_kvdb    = local.create_external_etcd ? "external" : "internal"
-    portworx_version = "Portworx: 2.6.2.1 , Stork: 2.6.0"
+    portworx_version = "Portworx: 2.7.2 , Stork: 2.6.2"
     secret_type      = "k8s"
   }
 
-  provisioner "local-exec" {
-    environment = {
-      KUBECONFIG = local.kube_config_path
-    }
-    interpreter = ["/bin/bash", "-c"]
-    command     = file("./scripts/portworx_wait_until_ready.sh")
-  }
+//  provisioner "local-exec" {
+//    environment = {
+//      KUBECONFIG = local.kube_config_path
+//    }
+//    interpreter = ["/bin/bash", "-c"]
+//    command     = file("./scripts/portworx_wait_until_ready.sh")
+//  }
   /*
   #
   # Currently, deleting the portworx service instance does not uninstall portworx
