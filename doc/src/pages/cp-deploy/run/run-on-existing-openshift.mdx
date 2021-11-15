@@ -1,6 +1,6 @@
 ---
 title: Run on existing OpenShift cluster
-tabs: ['Run on IBM Cloud', 'Run on existing OpenShift']
+tabs: ['Run on IBM Cloud', 'Run on vSphere', 'Run on existing OpenShift']
 ---
 
 # Running the Cloud Pak Deployer on an existing OpenShift cluster
@@ -46,7 +46,7 @@ Because you will be deploying the Cloud Pak on an existing OpenShift cluster, th
 
 ```
 ./cp-deploy.sh vault set \
-    --vault-secret kubeconfig 
+    --vault-secret kubeconfig \
     --vault-secret-file ~/.kube/config
 ```
 
@@ -63,6 +63,8 @@ If you have chosen to use dynamic properties (extra variables), you can specify 
 ./cp-deploy.sh env apply -e env_id=acme-01
 ```
 
+In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+
 When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
 
 You can return to view the logs as follows:
@@ -78,7 +80,18 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ```
 
 ## Finishing up
-Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified. The `admin` password can be retrieved from the vault as follows:
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
+
+To retrieve the Cloud Pak URL(s):
+```
+cat $STATUS_DIR/cloud-paks/*
+```
+
+This will show the Cloud Pak URLs:
+```output
+Cloud Pak for Data URL for cluster acme-01 and project zen-40:
+https://cpd-zen-40.apps.acme-01.example.com
+```
 
 List the secrets in the vault:
 ```

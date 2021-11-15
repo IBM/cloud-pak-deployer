@@ -10,12 +10,23 @@
           - secret_group is defined
 
     - set_fact:
-        _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ secret_name }}"
-      when: (vault_secret_path_append_group | default(True) | bool)
+        _secret_name: "{{ secret_name }}"
 
     - set_fact:
-        _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_name }}"
-      when: not (vault_secret_path_append_group | default(True) | bool)
+        _hashicorp_secret_name_path: "{{ _secret_name }}"
+      when: _secret_name is search("/")
+
+    - set_fact:
+        _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ _secret_name }}"
+      when: 
+      - (vault_secret_path_append_group | default(True) | bool)
+      - not _secret_name is search("/")
+
+    - set_fact:
+        _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ _secret_name }}"
+      when: 
+      - not (vault_secret_path_append_group | default(True) | bool)
+      - not _secret_name is search("/")
 
     - name: Delete Secret Hashicorp vault (API Key), path {{ _hashicorp_secret_name_path }}
       include_tasks: delete-secret-hashicorp-api-key.yml

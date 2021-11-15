@@ -19,6 +19,7 @@ command_usage() {
   echo "    apply                   Create a new or modify an existing environment"
   echo "    destroy                 Destroy an existing environment"
   echo "    logs                    Show (tail) the logs of the apply/destroy process"
+  echo "    command,cmd             Opens a shell environment to run commands such as the OpenShift client (oc)"
   echo "    kill                    Kill the current apply/destroy process"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
@@ -114,7 +115,7 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy|logs|kill)
+  apply|destroy|logs|command|cmd|kill)
     shift 1
     ;;
   *)
@@ -429,8 +430,8 @@ if [[ "${SUBCOMMAND}" == "vault" ]];then
     exit 1
   fi
   if [[ "${ACTION}" == "list" && \
-        ( "${VAULT_SECRET}" != "" || "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
-    echo "Only --secret-group can be specified for subcommand vault and action list."
+        ( "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
+    echo "--vault-secret-value and --vault-secret-file not allowed for subcommand vault and action list."
     exit 1
   fi
 
@@ -571,8 +572,8 @@ fi
 # Build command
 run_cmd="${CONTAINER_ENGINE} run"
 
-# If running "environment" subcommand, run as daemon
-if [ "$SUBCOMMAND" == "environment" ];then
+# If running "environment" subcommand with apply or destroy, run as daemon
+if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
   run_cmd+=" -d"
 fi
 
@@ -635,16 +636,20 @@ if [ ${#arrExtraKey[@]} -ne 0 ];then
   run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
 fi
 
+if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "command" || "${ACTION}" == "cmd" ]];then
+  run_cmd+=" -ti --entrypoint /automation_script/docker-scripts/env-command.sh"
+fi
+
 run_cmd+=" cloud-pak-deployer"
 
-# If running "environment" subcommand, follow log
-if [ "$SUBCOMMAND" == "environment" ];then
+# If running "environment" subcommand with apply/destroy, follow log
+if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
   CURRENT_CONTAINER_ID=$(eval $run_cmd)
   ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
   mkdir -p ${STATUS_DIR}/pid
   echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
-  PODMAN_EXIT_CODE=$?
   run_env_logs
+  PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
 else
   eval $run_cmd
   PODMAN_EXIT_CODE=$?

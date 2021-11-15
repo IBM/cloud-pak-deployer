@@ -24,7 +24,7 @@ import sys
 #   - storage_name: ocs-storage
 #     storage_type: ocs
 #     ocs_storage_label: ocs
-#     ocs_storage_size: 500Gi
+#     ocs_storage_size_gb: 500
 
 def preprocessor(attributes=None, fullConfig=None):
     g = GeneratorPreProcessor(attributes,fullConfig)
@@ -77,8 +77,8 @@ def preprocessor(attributes=None, fullConfig=None):
             if "storage_type" in os and os['storage_type']=='ocs':
                 if "ocs_storage_label" not in os:
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
-                if "ocs_storage_size" not in os:
-                    g.appendError(msg='ocs_storage_size must be specified when storage_type is ocs')
+                if "ocs_storage_size_gb" not in os:
+                    g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
                 if len(ge['infrastructure']['subnets']) != 3:
                     g.appendError(msg='Storage type OCS was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement OCS.')
             if "storage_type" in os and os['storage_type']=='pwx':

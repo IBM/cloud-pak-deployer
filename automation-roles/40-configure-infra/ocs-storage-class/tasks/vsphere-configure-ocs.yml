@@ -1,0 +1,129 @@
+---
+- name: Get current storage class
+  debug:
+    var: current_openshift_storage
+
+- set_fact:
+    _vsphere_config: "{{ all_config.vsphere | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.vsphere_name }}']
+
+- debug:
+    var: _vsphere_config
+
+- name: Retrieve infrastructure ID
+  shell: |
+    oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
+  register: _get_infrastructure_id
+
+- set_fact:
+    _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"
+
+- name: Create temporary file for the MachineSet object
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: _machineset_tempfile
+
+- name: Generate MachineSet file {{ ocscluster_tempfile.path }}
+  template:
+    src: vsphere-ocs-machineset.j2
+    dest: "{{ _machineset_tempfile.path }}"
+
+- name: Create or update machine set
+  shell:
+    oc apply -f {{ _machineset_tempfile.path }}
+
+- name: Get number of workers in machine set
+  shell: |
+    oc get machineset -n openshift-machine-api \
+      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      -o jsonpath='{.status.replicas}'
+  register: _machineset_replicas
+
+- name: Wait for {{ _machineset_replicas.stdout }} machines to be added to the cluster and become available
+  shell: |
+    oc get machineset -n openshift-machine-api \
+      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      -o jsonpath='{.status.availableReplicas}'
+  register: _available_replicas
+  retries: 120
+  delay: 60
+  until: _available_replicas.stdout == _machineset_replicas.stdout
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Create openshift-storage OpenShift project
+  shell: |
+    if ! oc get ns openshift-storage > /dev/null 2>&1;then
+      oc create ns openshift-storage
+    fi
+
+- name: Create temporary file for the OCS operator
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: _ocs_operator_tempfile
+
+- name: Generate OCS operator file {{ _ocs_operator_tempfile.path }}
+  template:
+    src: ocs-operator.j2
+    dest: "{{ _ocs_operator_tempfile.path }}"
+
+- name: Create OCS operator
+  shell: |
+    oc apply -f {{ _ocs_operator_tempfile.path }}
+
+- name: Wait until OCS Operator CSV has status Succeeded
+  shell: |
+     oc get csv -n openshift-storage \
+      -l operators.coreos.com/ocs-operator.openshift-storage \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _ocs_csv_status
+  retries: 30
+  delay: 30
+  until: _ocs_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Check if StorageCluster ocs-storagecluster already exists
+  command: |
+    oc get StorageCluster -n openshift-storage ocs-storagecluster
+  failed_when: False
+  register: _ocs_cluster_exists
+
+- name: Label the OCS worker nodes
+  shell: |
+    for machine in $(oc get machines -n openshift-machine-api --no-headers \
+      -l machine.openshift.io/cluster-api-machineset={{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      -o custom-columns=':.metadata.name');do
+      oc label node $machine cluster.ocs.openshift.io/openshift-storage="" --overwrite
+    done
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Create temporary file for the StorageCluster
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: _ocs_cluster_tempfile
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
+  template:
+    src: ocs-storagecluster.j2
+    dest: "{{ _ocs_cluster_tempfile.path }}"
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Create OCS StorageCluster
+  shell: |
+    oc apply -f {{ _ocs_cluster_tempfile.path }}
+  when: _ocs_cluster_exists.rc != 0

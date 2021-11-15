@@ -1,5 +1,5 @@
 ---
-implemented_cloud_platform_types: ['ibm-cloud', 'existing-ocp']
+implemented_cloud_platform_types: ['ibm-cloud','existing-ocp','vsphere']
 
 case_github_url: "https://github.com/IBM/cloud-pak/raw/master/repo/case"
 
@@ -20,110 +20,88 @@ case_inventories:
   - name: lite
     inventory: cpdPlatformOperator
     search_string: ibm-cp-datacore
-    # version: 2.0.3
   - name: cp-foundation
     inventory: ibmCommonServiceOperatorSetup
     search_string: ibm-cp-common-services
-    # version: 1.6.0
   - name: analyticsengine
     inventory: analyticsengineOperatorSetup
     search_string: ibm-analyticsengine
-    # version: 4.0.1
   - name: bigsql
     inventory: bigsql
     search_string: ibm-bigsql-case
-    # version: 7.2.0
   - name: ca
     inventory: ibmCaOperatorSetup
     search_string: ibm-cognos-analytics-prod
-    # version: 4.0.3
   - name: cde
     inventory: cdeOperatorSetup
     search_string: ibm-cde
-    # version: 2.0.1
   - name: datarefinery
     inventory: datarefinerySetup
     search_string: ibm-datarefinery
-    # version: 1.0.1
   - name: datastage
-    inventory: datastageOperatorSetup
+    inventory: dsOperatorSetup 
     search_string: ibm-datastage
-    # version: 4.0.2
   - name: datastage-enterprise
-    inventory: datastageOperatorSetup
+    inventory: dsOperatorSetup 
     search_string: ibm-datastage-enterprise
-    # version: 4.0.2
   - name: db2
     inventory: db2oltpOperatorSetup
     search_string: ibm-db2oltp
-    # version: 4.0.2
   - name: db2aaservice
     inventory: db2aaserviceOperatorSetup
     search_string: ibm-db2aaservice
-    # version: 4.0.2
   - name: db2u
     inventory: db2uOperatorSetup
     search_string: ibm-db2uoperator
-    # version: 4.0.3
   - name: db2wh
     inventory: db2whOperatorSetup
     search_string: ibm-db2wh
-    # version: 4.0.2
   - name: iis
     type: custom
     install_operator_script: cp4d-install-iis-operator.yml
     inventory: iisOperatorSetup
     search_string: ibm-cpd-iis-operator
-    # version: 4.0.1
   - name: dmc
     inventory: dmcOperatorSetup
     search_string: ibm-dmc
-    # version: 4.0.1
   - name: dods
     inventory: dodsOperatorSetup
     search_string: ibm-dods
-    # version: 4.0.1
   - name: dv
     inventory: dv
     search_string: ibm-dv-case
-    # version: 1.7.1
   - name: hadoop
     inventory: hadoopSetup
     search_string: ibm-hadoop
-    # version: 4.0.1
+  - name: openpages
+    inventory: operatorSetup
+    search_string: ibm-openpages
   - name: rstudio
     inventory: rstudioSetup
     search_string: ibm-rstudio
-    # version: 1.0.1
   - inventory: runtimesOperatorSetup
     search_string: ibm-wsl-runtimes
-    # version: 1.0.1
   - name: spss
     inventory: spssSetup
     search_string: ibm-spss
-    # version: 1.0.1
   - name: wkc
     inventory: wkcOperatorSetup
     search_string: ibm-wkc
-    # version: 4.0.1
   - name: wml
     inventory: wmlOperatorSetup
     search_string: ibm-wml-cpd
-    # version: 4.0.2
   - name: watson-openscale
     inventory: ibmWatsonOpenscaleOperatorSetup
     search_string: ibm-watson-openscale
-    # version: 2.1.0
   - name: wsl
     inventory: wslSetup
     search_string: ibm-wsl
-    # version: 2.0.1
   
 cartridge_cr:
   - name: lite
-    cr_cr: Ibmcpd
-    cr_name: ibmcpd-cr
-    cr_status_attribute: controlPlaneStatus
+    cr_cr: ZenService
+    cr_name: lite-cr
+    cr_status_attribute: zenStatus
     cr_status_completed: Completed
   - name: analyticsengine
     cr_cr: AnalyticsEngine
@@ -151,8 +129,13 @@ cartridge_cr:
     cr_status_attribute: datagateStatus  
     cr_status_completed: Completed
   - name: datastage
-    cr_cr: DataStageService
-    cr_name: datastage-cr
+    cr_cr: DataStage
+    cr_name: datastage
+    cr_status_attribute: dsStatus  
+    cr_status_completed: Completed
+  - name: datastage-enterprise
+    cr_cr: DataStage
+    cr_name: datastage
     cr_status_attribute: dsStatus  
     cr_status_completed: Completed
   - name: db2
@@ -284,7 +267,9 @@ cartridge_csv:
   - name: datagate
     cartridge_label: operators.coreos.com/ibm-datagate-operator.ibm-common-services
   - name: datastage
-    cartridge_label: operators.coreos.com/ibm-datastage-operator.ibm-common-services
+    cartridge_label: operators.coreos.com/ibm-cpd-datastage-operator.ibm-common-services
+  - name: datastage-enterprise
+    cartridge_label: operators.coreos.com/ibm-cpd-datastage-operator.ibm-common-services
   - name: db2
     cartridge_label: operators.coreos.com/ibm-db2oltp-cp4d-operator.ibm-common-services
   - name: db2aaservice

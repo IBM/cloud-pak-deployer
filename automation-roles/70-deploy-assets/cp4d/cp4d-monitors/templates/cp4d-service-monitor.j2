@@ -1,0 +1,15 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  namespace: {{ current_cp4d_cluster.project }}
+  labels:
+    k8s-app: zen-watchdog-service-monitor
+  name: zen-watchdog
+spec:
+  endpoints:
+    - interval: 30s
+      port: zenwatchdog-notls
+      scheme: http
+  selector:
+    matchLabels:
+      component: zen-watchdog

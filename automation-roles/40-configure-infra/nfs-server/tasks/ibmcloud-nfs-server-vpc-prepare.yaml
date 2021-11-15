@@ -2,7 +2,7 @@
 
 - set_fact:
     bastion_host: "{{ current_nfs_server['infrastructure']['bastion_host'] }}"
-    nfs_server_ip: "{{ current_nfs_server['infrastructure']['primary_ipv4_address'] }}"
+    # nfs_server_ip: "{{ current_nfs_server['infrastructure']['primary_ipv4_address'] }}"
     nfs_server_ssh_key: "{{ current_nfs_server['infrastructure']['keys'][0] }}"
     # TODO: Search through the available SSH keys and retrieve the one that has both a private and public key in the vault
 
@@ -19,6 +19,7 @@
 - debug:
     var: tfstate
 
+# Retrieve the public IP address of the bastion, which will be used as a jump host
 - set_fact:
     bastion_fip: "{{ tfstate.resources | json_query(query) | first }}"
   vars:
@@ -28,6 +29,17 @@
 
 - debug:
     msg: "{{ bastion_fip }}"
+
+# Retrieve the private IP address of the NFS server
+- set_fact:
+    _nfs_server_ip: "{{ tfstate.resources | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?type=='ibm_is_instance' && instances[0].attributes.name=='{{ current_nfs_server.name }}'].instances[0].attributes.primary_network_interface[0].primary_ipv4_address
+
+- name: NFS Server IP address
+  debug:
+    msg: "{{ _nfs_server_ip }}"    
 
 - name: Create temporary directory to hold SSH private key
   tempfile:
@@ -72,7 +84,7 @@
 
 - name: Create dynamic Ansible group vpc_nfs_servers
   add_host:
-    name: "{{nfs_server_ip}}"
+    name: "{{ _nfs_server_ip }}" 
     groups: vpc_nfs_servers
     ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
     ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ ssh_key_dir.path }}/id_rsa -W %h:%p -q {{ bastion_fip.public_ip_address }}"'

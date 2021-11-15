@@ -6,9 +6,10 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 # OpenShift configuration
 
 ### `openshift`
-For OpenShift, there are 2 flavours:
-* OpenShift on IBM Cloud (within VPC)
-* Existing OpenShift
+For OpenShift, there are 3 flavours:
+* [OpenShift on IBM Cloud](#openshift-on-ibm-cloud)
+* [OpenShift on vSphere](#openshift-on-vsphere)
+* [Existing OpenShift](#existing-openshift)
 
 When running the Cloud Pak Deployer for IBM Cloud, the ROKS cluster will be provisioned and managed by Terraform. For existing OpenShift clusters, other parameters must be specified to identify the cluster on which the Cloud Pak(s) must be deployed. Below we will show 2 examples.
 
@@ -34,7 +35,7 @@ openshift:
     nfs_server_name: sample-nfs
   - storage_type: ocs
     ocs_storage_label: ocs
-    ocs_storage_size: 500Gi
+    ocs_storage_size_gb: 500
 ```
 
 #### Property explanation OpenShift clusters on IBM Cloud (ROKS)
@@ -49,11 +50,56 @@ openshift:
 | infrastructure.type | Type of infrastructure to provision ROKS cluster on | No | vpc (default), classic |
 | infrastructure.vpc_name | Name of the VPC if type is `vpc` | Yes, inferrred | Existing VPC |
 | infrastructure.subnets | List of subnets within the VPC to use. Either 1 or 3 subnets must be specified | Yes | Existing subnet |
+| openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
 | openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs or ocs |
 | openshift_storage.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
 | openshift_storage.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
-| openshift_storage.ocs_storage_size | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
 
+### OpenShift on vSphere
+```
+openshift:
+- name: sample
+  domain_name: example.com
+  vsphere_name: sample
+  ocp_version: 4.6
+  number_of_masters: 3
+  master_vm_definition: master
+  number_of_workers: 3
+  worker_vm_definition: worker
+  max_number_of_workers: 10  
+  api_vip: 10.99.92.51
+  ingress_vip: 10.99.92.52
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+    nfs_server_name: sample-nfs
+  - storage_name: ocs-storage
+    storage_type: ocs
+    ocs_storage_label: ocs
+    ocs_storage_size_gb: 512
+    ocs_dynamic_storage_class: thin
+```
+
+#### Property explanation OpenShift clusters on IBM Cloud (ROKS)
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the OpenShift cluster                                        | Yes       |  |
+| domain_name | Domain name of the cluster, this will also depict the route to the API and ingress endpoints | Yes       |  |
+| ocp_version | OpenShift version version, the value specified here will also be used for OpenShift Container Storage | Yes       | |
+| number_of_masters | Total number of masters, typically 3                        | Yes | Integer |
+| master_vm_definition | `vm_definition` object that will be used to define number of vCPUs and memory for the master nodes | Yes | Existing `vm_definition` |
+| number_of_workers | Total number of workers                                     | Yes | Integer |
+| worker_vm_definition | `vm_definition` object that will be used to define number of vCPUs and memory for the worker nodes | Yes | Existing `vm_definition` |
+| max_number_of_workers | Maximum number of workers allowed. If total number of workers exceeds this value, the cluster will not be provisioned | Yes | Integer |
+| api_vip | Virtual IP address that the installer will provision for the API server | Yes |  |
+| ingress_vip | Virtual IP address that the installer will provision for the ingress server | Yes |  |
+| openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
+| openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs or ocs |
+| openshift_storage.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
+| openshift_storage.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On vSphere clusters, `thin` i usually available after OpenShift installation | Yes if `storage_type` is `ocs` |  |
 
 ### Existing OpenShift
 When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts assume that the cluster is already operational and that any storage classes have been pre-created. The deployer accesses the cluster through a vault secret with the kubeconfig information; the name of the secret is `<name>-kubeconfig`.
@@ -77,7 +123,7 @@ openshift:
 | ocp_version | OpenShift version of the cluster (not used for now)               | No        | 4.6 |
 | cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
 | domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
-| openshift_storage.name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
+| openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
 | storage_classes.storage_type | Type of storage class to use in the OpenShift cluster | Yes | nfs, ocs |
 | openshift_storage.ocp_storage_class_file | OpenShift storage class to use for file storage, defaults to `managed-nfs-storage` | No | |
 | openshift_storage.ocp_storage_class_block | OpenShift storage class to use for block storage, defaults to `managed-nfs-storage` | No | |

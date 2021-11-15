@@ -2,8 +2,31 @@
 - debug:
     msg: "Handling configuration for CP4D cluster {{ current_cp4d_cluster.project }}"
 
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
+
+- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-client
+  vars:
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: openshift-login
+  vars: 
+    openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+
 - name: Login to Cloud Pak for Data
   include_tasks: cluster-configure-prepare.yml
+
+#Configure SSL certificate from the OpenShift Cluster to Cloud Pak for Data
+- name: Configure CLoud Pak for Data SSL certificate
+  include_role:
+    name: cp4d-configure-ssl-certificate
 
 #LDAP configuration
 - when: "all_config.ldap_config is defined"

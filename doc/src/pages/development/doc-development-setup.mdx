@@ -1,0 +1,81 @@
+---
+title: Development
+tabs: ['Deployer Development Setup', 'Doc Development Setup', 'Doc Guidelines']
+---
+
+# Documentation Development Setup
+
+Gatsby themes encapsulate all of the configuration and implementation details of Gatsby websites. This GitHub repository has been built with a dependancy on the gatsby-theme-carbon package. The primary goal of gatsby-theme-carbon is to get content authors speaking the IBM Design Language with Carbon as soon as possible. This GiHub repository is connected to Travis any commit will cause a build of the GitHub pages to be triggered. A better way of working is to use the tooling from a loacal system
+
+## Local tooling installation
+If you want to test the documentation pages you're developing, it is best to run Gatsby in a container and map your local doc folder to a folder inside the container. This avoids having to install nvm and many modules on your workstation.
+
+Do the following:
+* Make sure you have cloned this repository to your workstation
+* Install Docker on your workstation
+* Start from the main directory of the cloud-pak-deployer repository
+```
+cd doc
+docker build -t cpd-doc .
+```
+
+This will build a CentOS image with `nvm` and the required Node.js modules already installed. It will take ~5-10 minutes to complete this step, dependent on your network bandwidth.
+
+## Running the docker image
+```
+docker run --name cpd-doc -d -p 8000:8000 -v $PWD:/doc cpd-doc:latest
+```
+
+This will start the docker container as a daemon. You can monitor its progress by tailing the logs.
+
+```
+docker logs -f cpd-doc 
+```
+
+It will take approximately 10 minutes to install all Node.js packages into the `node_modules` directory, this is only the first time. The `node_modules` directory is ignored by Git so it will no be synchronized with the upstream repository. Next time you start the container, it should take less than 1 minute.
+
+Once finished, you will see the following message:
+```output
+✖ 6 problems (0 errors, 6 warnings)
+
+success Building development bundle - 369.543s
+```
+
+Whenever you save changes to a document, the logs will show something:
+```output
+info changed file at /doc/src/pages/tools/development-setup.mdx
+success building schema - 0.634s
+info Total nodes: 147, SitePage nodes: 17 (use --verbose for breakdown)
+success createPages - 0.004s
+success Checking for changed pages - 0.001s
+success update schema - 0.047s
+success onPreExtractQueries - 0.001s
+success extract queries from components - 0.624s
+...
+success Re-building development bundle - 2.436s
+```
+
+## Starting the browswer
+Once you the container has fully started, it automatically tracks all changes in under the `doc` folder and updates the pages site automatically. You can view the site by opening a browswer for URL:
+
+http://localhost:8000
+
+## Stopping the docker container
+If you don't want to test your changes locally anymore, stop the docker container.
+```
+docker kill cpd-doc
+```
+
+Next time you want to test your changes, you only have to run:
+```
+docker start cpd-doc
+```
+
+## Removing the docker container and image
+If you want to remove all from your workstation, do the following:
+```
+docker rm -f cpd-doc
+docker rmi -f cpd-doc:latest
+```
+
+Note that after pushing your updated documentation, a request will be sent to a Travis job that will rebuild the pages site. The Travis job can be followed at https://travis.ibm.com, you can login to follow the build using your github credentials. 

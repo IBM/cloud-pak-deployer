@@ -1,0 +1,17 @@
+---
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
+
+- name: Get Route to Cloud Pak for Data
+  shell: |
+    oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+      -o jsonpath="{.items[0].spec.host}"
+  register: _cp4d_url
+
+- name: Add Cloud Pak for Data host to /etc/hosts
+  shell:
+    grep -q "^{{ _openshift_config.ingress_vip }} {{ _cp4d_url.stdout }}" /etc/hosts || \
+      echo "{{ _openshift_config.ingress_vip }} {{ _cp4d_url.stdout }}" >> /etc/hosts
