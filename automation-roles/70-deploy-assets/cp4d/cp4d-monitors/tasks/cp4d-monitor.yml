@@ -1,0 +1,182 @@
+---
+- debug:
+    msg: "{{ _monitor }}"
+
+- set_fact:
+    _monitor_source_repo: "{{ _monitor.source_repo | default(_default_monitor_source_repo) }}"
+    _monitor_source_token_secret: "{{ _monitor.monitor_source_token_secret | default(_default_monitor_source_token_secret) }}"
+    _monitor_source_token: "{{ _default_monitor_source_token }}"
+    _monitor_source_secret: "{{ _default_monitor_source_secret }}"
+    _monitor_target_cr: "{{ _monitor.monitor_target_cr | default(_default_monitor_target_cr) }}"
+    _monitor_target_cr_user_secret: "{{ _monitor.monitor_target_cr_user_secret | default(_default_monitor_target_cr_user_secret) }}"
+    _monitor_target_cr_user: "{{ _default_monitor_target_cr_user }}"
+    _monitor_target_cr_password_secret: "{{ _monitor.monitor_target_cr_password_secret | default(_default_monitor_target_cr_password_secret) }}"
+    _monitor_target_cr_password: "{{ _default_monitor_target_cr_password }}"
+    _monitor_target_cr_secret: "{{ _default_monitor_target_cr_secret }}"
+
+- name: Validate if the monitor build config is already present
+  shell: |
+    oc get bc -n {{ current_cp4d_cluster.project }} | grep ^{{ _monitor.name }} | wc -l
+  register: _bc_exists  
+
+- debug:
+    msg: "Build Config for monitor {{ _monitor }} is already present, skipping monitor..."
+  when: _bc_exists.stdout == "1"
+
+- when: _bc_exists.stdout == "0"
+  block:
+
+    #Retrieve monitor source git access token
+    - when: "_default_monitor_source_token_secret != _monitor_source_token_secret"
+      block:
+        - name: Get the monitor source repo access token {{ _monitor_source_token_secret }} from the vault
+          include_role: 
+            name: vault-get-secret
+          vars:
+            secret_name: "{{ _monitor_source_token_secret }}"
+            secret_group: "{{ environment_name }}"
+
+        - fail:
+            msg: "Unable to get secret value for {{ _monitor_source_token_secret }} from the vault"
+          when: "secret_value == ''"
+
+        - set_fact:
+            _monitor_source_token: "{{ secret_value }}"
+
+        - name: Create repo secret yaml
+          template:
+            src: source-secret-repository.j2
+            dest: "{{ _cloud_pak_service_monitor_dir.path }}/source-repo-secret.yaml"           
+
+        - name: Create secret {{ _monitor.name}}-repo-auth
+          shell: |
+            oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/source-repo-secret.yaml        
+            
+        - set_fact:
+            _monitor_source_secret: "{{ _monitor.name}}-repo-auth"
+
+    #Retrieve monitor target cr user
+    - when: "_default_monitor_target_cr_user_secret != _monitor_target_cr_user_secret"
+      block:
+        - name: Get the default monitor target cr {{ _monitor_target_cr_user_secret }} from the vault
+          include_role: 
+            name: vault-get-secret
+          vars:
+            secret_name: "{{ _monitor_target_cr_user_secret }}"
+            secret_group: "{{ environment_name }}"
+
+        - fail:
+            msg: "Unable to get secret value for {{ _monitor_target_cr_user_secret }} from the vault"
+          when: "secret_value == ''"            
+
+        - set_fact:
+            _monitor_target_cr_user: "{{ secret_value }}"
+
+    #Retrieve monitor target cr password
+    - when: "_default_monitor_target_cr_password_secret != _monitor_target_cr_password_secret"
+      block:
+        - name: Get the default monitor target cr {{ _monitor_target_cr_password_secret }} from the vault
+          include_role: 
+            name: vault-get-secret
+          vars:
+            secret_name: "{{ _monitor_target_cr_password_secret }}"
+            secret_group: "{{ environment_name }}"
+
+        - fail:
+            msg: "Unable to get secret value for {{ _monitor_target_cr_password_secret }} from the vault"
+          when: "secret_value == ''"            
+
+        - set_fact:
+            _monitor_target_cr_password: "{{ secret_value }}"
+
+        - set_fact:
+            _monitor_target_cr_auth: "{{ _monitor_target_cr_user }}:{{ _monitor_target_cr_password }}"            
+
+        - name: Create cr docker registry auth
+          template:
+            src: docker-cr-auth.j2
+            dest: "{{ _cloud_pak_service_monitor_dir.path }}/cr_auth.json"
+
+        - set_fact:
+            _cr_auth_b64: "{{ lookup('file','{{ _cloud_pak_service_monitor_dir.path }}/cr_auth.json') | b64encode }}"
+
+        - name: Create cr secret yaml
+          template:
+            src: docker-cr-secret.j2
+            dest: "{{ _cloud_pak_service_monitor_dir.path }}/docker-cr-secret.yaml"        
+
+        - name: Create secret {{ _monitors.name}}-cr-auth
+          shell: |
+            oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/docker-cr-secret.yaml     
+        
+        - set_fact:
+            _monitor_target_cr_secret: "{{ _monitor.name }}-cr-auth"
+
+        - name: Add the secret {{ _monitor_target_cr_secret }} for pull by the sa zen-editor-sa 
+          shell: "oc -n {{ current_cp4d_cluster.project }} secrets link --for=pull zen-editor-sa {{ _monitor.name }}-cr-auth"
+
+
+- set_fact:
+    _monitor_context: "{{ _monitor.context }}"
+    _monitor_name: "{{ _monitor.name }}"
+    _monitor_label: "{{ _monitor.label | default('latest') }}"
+    _monitor_schedule: "{{ _monitor.schedule }}"
+    _monitor_event_types: "{{ _monitor.event_types }}"
+
+- name: Validate if the monitor configmap is already present
+  shell: |
+    oc get cm -n {{ current_cp4d_cluster.project }} | grep ^zen-alert-{{ _monitor_name }}-monitor-extension | wc -l
+  register: _cm_monitor_exists
+
+- debug:
+    msg: "ConfigMap zen-alert-{{ _monitor_name }}-monitor-extension already exists. Skip creating ConfigMap..."
+  when: "_cm_monitor_exists.stdout == '1'"
+
+- when: "_cm_monitor_exists.stdout == '0'"
+  block:
+
+    - set_fact:
+        _monitor_source_repo_address: "{{ _monitor_source_repo[8:] }}"
+
+    - name: Create oc build-config command
+      template:
+        src: create-build-config.j2
+        dest: "{{ _cloud_pak_service_monitor_dir.path }}/create-build-config.sh"           
+
+    - set_fact:
+        _bc_command: "{{ lookup('file','{{ _cloud_pak_service_monitor_dir.path }}/create-build-config.sh') }}"
+        
+    - name: Create the Build Config {{ _monitor_name }}
+      shell: |
+        sh {{ _cloud_pak_service_monitor_dir.path }}/create-build-config.sh
+      register: _bc_command_result
+    
+    - name: Wait for build to {{ _monitor_name }}-1 complete
+      shell: |
+        oc get build {{ _monitor_name }}-1 -n {{ current_cp4d_cluster.project }} \
+        -o jsonpath='{.status.phase}'
+      register: _wait_for_build
+      retries: 50
+      delay: 10
+      until:
+        - _wait_for_build.rc==0
+        - _wait_for_build.stdout=='Complete'      
+
+    - name: Create monitor extension configmap yaml
+      template:
+        src: cp4d-monitor-extension.j2
+        dest: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml"           
+    
+    - name: Create monitor extension configmap
+      shell: |
+        oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml
+      register: _create_monitor_cm
+
+
+
+
+
+
+
+
+

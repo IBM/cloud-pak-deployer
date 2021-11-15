@@ -3,9 +3,9 @@
   debug:
     var: current_openshift_storage
 
-- name: Check if openshift-container-storage add-on is installed
+- name: Check if openshift-data-foundation add-on is installed
   command: |
-    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_openshift_cluster.name }} --output json
+    ibmcloud oc cluster addon get --addon openshift-data-foundation --cluster {{ current_openshift_cluster.name }} --output json
   register: ocs_check_addon
   failed_when: False
 
@@ -13,16 +13,17 @@
 - debug:
     var: ocs_check_addon
 
-- name: Enable openshift-container-storage add-on for ROKS cluster {{ current_openshift_cluster.name }}
+- name: Enable openshift-data-foundation add-on for ROKS cluster {{ current_openshift_cluster.name }}
   command: |
-    ibmcloud oc cluster addon enable openshift-container-storage \
+    ibmcloud oc cluster addon enable openshift-data-foundation \
       --cluster {{ current_openshift_cluster.name }} \
-      --version {{ roks_ocs_addon_version }} -f
+      --param "odfDeploy=false" \
+      -f
   when: ocs_check_addon.rc != 0
 
-- name: Wait until openshift-container-storage add-on is ready
+- name: Wait until openshift-data-foundation add-on is ready
   command: |
-    ibmcloud oc cluster addon get --addon openshift-container-storage --cluster {{ current_openshift_cluster.name }} --output json
+    ibmcloud oc cluster addon get --addon openshift-data-foundation --cluster {{ current_openshift_cluster.name }} --output json
   register: ocs_get_addon
   failed_when: False
   retries: 60

@@ -52,7 +52,7 @@ To run the container using a local configuration input directory and a data dire
 ./cp-deploy.sh env apply -e env_id=pluto-01 -e ibm_cloud_region=eu-gb
 ```
 
-For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. Also, the default `ibm_cloud_region` as configured in the inventory file (under the `inventory` directory) is overridden by `eu-gb`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
 
 When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
 
@@ -69,7 +69,18 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ```
 
 ## Finishing up
-Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified. The `admin` password can be retrieved from the vault as follows:
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
+
+To retrieve the Cloud Pak URL(s):
+```
+cat $STATUS_DIR/cloud-paks/*
+```
+
+This will show the Cloud Pak URLs:
+```output
+Cloud Pak for Data URL for cluster pluto-01 and project zen-40:
+https://cpd-zen-40.fke16h-a939e0e6a37f1ce85dbfddbb7ab97418-0000.eu-de.containers.appdomain.cloud
+```
 
 List the secrets in the vault:
 ```

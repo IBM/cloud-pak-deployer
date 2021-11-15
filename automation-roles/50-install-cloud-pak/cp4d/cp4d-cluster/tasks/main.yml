@@ -2,6 +2,24 @@
 - debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
+
+- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-client
+  vars:
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: openshift-login
+  vars:
+    openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+
 - name: Get IBM Entitled Registry key
   include_role: 
     name: vault-get-secret
@@ -77,12 +95,6 @@
     loop_var: case_inventory
   when: _use_case_files
 
-- name: Login to the OpenShift cluster
-  include_role:
-    name: openshift-login
-  vars:
-    openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
-
 - name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.storage_class_name }}
   include_tasks: cp4d-get-storage-classes.yml
 
@@ -101,6 +113,10 @@
 
 - name: Configure CP4D admin password and store in vault
   include_tasks: configure-cpd-admin-password.yml
+
+- name: Output Cloud pak for Data URL and admin password
+  include_role:
+    name: cp4d-cluster-show
 
 # - name: Check for cp4d service definitions, skip when empty
 #   debug:
