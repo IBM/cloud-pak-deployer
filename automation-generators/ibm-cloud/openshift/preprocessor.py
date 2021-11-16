@@ -79,8 +79,6 @@ def preprocessor(attributes=None, fullConfig=None):
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
                 if "ocs_storage_size_gb" not in os:
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
-                if len(ge['infrastructure']['subnets']) != 3:
-                    g.appendError(msg='Storage type OCS was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement OCS.')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

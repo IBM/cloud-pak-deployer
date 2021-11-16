@@ -17,9 +17,9 @@ When running the Cloud Pak Deployer for IBM Cloud, the ROKS cluster will be prov
 ```
 openshift:
 - name: sample
-  ocp_version: 4.6
+  ocp_version: 4.8
   worker_flavour: bx2.16x64
-  number_of_workers: 2
+  number_of_workers: 3
   max_number_of_workers: 10
   resource_group_name: ibm
   infrastructure:
@@ -42,7 +42,7 @@ openshift:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
-| ocp_version | ROKS Kubernetes version                                           | Yes       | 4.6 |
+| ocp_version | ROKS Kubernetes version                                           | Yes       |  |
 | worker_flavour | Type of worker to be used                                      | Yes       | [link]  |
 | number_of_workers | Total number of workers. This must be a factor of the number of subnets | Yes | Integer |
 | max_number_of_workers | Maximum number of workers allowed. If total number of workers exceeds this value, the cluster will not be provisioned | Yes | Integer |
@@ -56,13 +56,17 @@ openshift:
 | openshift_storage.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
 | openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
 
+<InlineNotification kind="warning">
+When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
+</InlineNotification>
+
 ### OpenShift on vSphere
 ```
 openshift:
 - name: sample
   domain_name: example.com
   vsphere_name: sample
-  ocp_version: 4.6
+  ocp_version: 4.8
   number_of_masters: 3
   master_vm_definition: master
   number_of_workers: 3
@@ -106,7 +110,7 @@ When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts 
 ```
 openshift:
 - name: sample
-  ocp_version: 4.6
+  ocp_version: 4.8
   cluster_name: sample
   domain_name: example.com
   openshift_storage:
@@ -120,7 +124,7 @@ openshift:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
-| ocp_version | OpenShift version of the cluster (not used for now)               | No        | 4.6 |
+| ocp_version | OpenShift version of the cluster, used to download the client     | Yes        | |
 | cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
 | domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
 | openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
