@@ -12,7 +12,7 @@ The vSphere cluster onto which the OpenShift cluster is provisioned using the IP
 An optionally existing NFS server that will be used to create the `managed-nfs-storage` storage class in OpenShift.
 
 ## OpenShift
-An OpenShift cluster with the specified version (4.6) is provisioned inside the specified VM folder. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the specified NFS server. Additionally 3 additional nodes are created using an OpenShift MachineSet and which will run the OpenShift Container Storge. For back-end storage for the OCS cluster, the `thin` storage class is used.
+An OpenShift cluster with the specified version (4.8) is provisioned inside the specified VM folder. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the specified NFS server. Additionally 3 additional nodes are created using an OpenShift MachineSet and which will run the OpenShift Container Storge. For back-end storage for the OCS cluster, the `thin` storage class is used.
 
 ## Cloud Pak for Data
 Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the entitled registry and referencing the NFS storage class in OpenShift.
