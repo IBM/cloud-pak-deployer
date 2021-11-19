@@ -1,11 +1,5 @@
-{% if generator.attributes.infrastructure.cos_name is not defined  %}
-resource  "ibm_resource_instance" "{{generator.attributes.name | replace("-", "_") }}" {
-    name     = "{{generator.attributes.name}}-cos"
-    plan     = "standard"
-    location = "global"
-    service  = "cloud-object-storage"
-}
-{% endif %}
+# Generate assets if OpenShift cluster is managed
+{% if (generator.attributes.managed | default(True)) %}
 
 resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.name}}"
@@ -58,3 +52,15 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
 }
 {% endif %}
 {% endfor %}
+
+{% endif %}
+
+
+# Retrieve assets if OpenShift cluster is NOT managed
+{% if not (generator.attributes.managed | default(True)) %}
+
+data "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
+    name = "{{generator.attributes.name}}"
+}
+
+{% endif %}
