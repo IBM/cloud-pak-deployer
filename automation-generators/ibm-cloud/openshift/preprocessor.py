@@ -9,7 +9,6 @@ import sys
 #   worker_flavour: bx2.16x64
 #   number_of_workers: 3
 #   max_number_of_workers: 10
-#   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
 #     vpc_name: sample
@@ -33,7 +32,6 @@ def preprocessor(attributes=None, fullConfig=None):
     g('ocp_version').isRequired()
     g('worker_flavour').isRequired()
     g('number_of_workers').isRequired()
-    g('resource_group_name').isRequired()
     g('max_number_of_workers').isOptional()
     
     g('infrastructure').isRequired()
