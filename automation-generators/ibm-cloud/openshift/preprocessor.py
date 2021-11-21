@@ -40,6 +40,7 @@ def preprocessor(attributes=None, fullConfig=None):
     g('infrastructure.type').mustBeOneOf(['vpc'])
     g('infrastructure.vpc_name').expandWith('vpc[*]',remoteIdentifier='name')
     g('infrastructure.subnets').isRequired()
+    g('infrastructure.cos_name').isRequired()
 
     g('openshift_storage').isRequired()
 
