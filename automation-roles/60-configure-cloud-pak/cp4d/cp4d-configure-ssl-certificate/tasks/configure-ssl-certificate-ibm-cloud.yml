@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show current CP4D cluster
+  debug:
     msg: "{{ current_cp4d_cluster }}"
 
 - name: Make a temporary work folder available
@@ -105,8 +106,9 @@
         update_cp4d_ssl_config: 1
       when: cp4d_certificate_cert_crt_result.stdout != ocp_certificate_tls_crt_result.stdout
 
-- debug:
-    msg: "No changes to current SSL certificate of Cloud Pak for Data, skipping configuration of SSL certificate"
+- name: Determine if TLS certificate must be configured
+  debug:
+    msg: "No changes to current TLS certificate of Cloud Pak for Data, skipping configuration of TLS certificate"
   when: update_cp4d_ssl_config == 0
 
 - when: update_cp4d_ssl_config == 1

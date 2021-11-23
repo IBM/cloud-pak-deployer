@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show Db2 instance
+  debug:
     var: db2_instance
 
 - name: "Check if the DB2 instance {{ db2_instance.name }} is already running"
@@ -9,8 +10,9 @@
 - set_fact:
     db2_instance_lookup_result_json: "{{ db2_instance_lookup_result.stdout | from_json }}"
 
-- debug:
-    msg: "DB2 instance {{ db2_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_db2_instance"
+- name: Determine if Db2 instance already exists
+  debug:
+    msg: "Db2 instance {{ db2_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_db2_instance"
   when: "not db2_instance_lookup_result_json.total_count == 0"
 
 
@@ -29,7 +31,8 @@
         cartridge_type: "db2oltp"
         query_db2_details: "[?type=='{{ cartridge_type }}']"
 
-    - debug:
+    - name: Show Db2 cartridge details
+      debug:
         msg: "{{ db2_cartridge_details }}"
 
     - set_fact:
@@ -48,7 +51,8 @@
       shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ status_dir }}/cp4d/db2_instance_40.json"
       register: create_db2_instance_result
 
-    - debug:
+    - name: Show results of Db2 instance creation
+      debug:
         msg: "{{ create_db2_instance_result }}"
 
     - name: Waiting for DB2 instance {{ db2_instance.name }} to complete its provisioning

@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Handling configuration for CP4D cluster
+  debug:
     msg: "Handling configuration for CP4D cluster {{ current_cp4d_cluster.project }}"
 
 - set_fact:
@@ -36,7 +37,8 @@
 #LDAP configuration
 - when: "all_config.ldap_config is defined"
   block:
-    - debug:
+    - name: Show LDAP configuration
+      debug:
         msg: "{{ all_config.ldap_config }}"  
 
     - set_fact:
@@ -44,7 +46,8 @@
       vars:
         query_ldap: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
 
-    - debug:
+    - name: Show CP4D LDAP configuration
+      debug:
         msg: "{{ cp4d_ldap_config }}"
 
     - name: Configure CP4D LDAP connectivity
@@ -54,7 +57,8 @@
 #Cloud Pak for Data User Groups Configuration
 - when: "all_config.cp4d_user_group_configuration is defined"
   block:
-    - debug:
+    - name: Show CP4D user group configuration
+      debug:
         msg: "{{ all_config.cp4d_user_group_configuration }}"  
 
     - set_fact:
@@ -62,7 +66,8 @@
       vars:
         query_user_group: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
 
-    - debug:
+    - name: Show found CP4D user group configuration
+      debug:
         msg: "{{ cp4d_user_group_config }}"
 
     - name: Create CP4D User Groups
@@ -131,7 +136,8 @@
       vars:
         query_instance_config: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"    
 
-    - debug:
+    - name: Show CP4D instance configuration
+      debug:
         msg: "{{ cp4d_instance_config }}"    
 
     - name: Configure CP4D instance authorization

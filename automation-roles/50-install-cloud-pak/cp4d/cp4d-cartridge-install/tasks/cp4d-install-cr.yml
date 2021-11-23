@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Create custom resources for CP4D cartridge
+  debug:
     msg: "Creating custom resources for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ current_cp4d_cluster.project }}"
 
 
@@ -10,7 +11,8 @@
 
 - when: not cr_file_exists_result.stat.exists
   block:
-    - debug:
+    - name: Detemrine if custom resource already exists
+      debug:
         msg: "Customer Resource File {{ role_path }}/templates/{{ current_cp4d_cartridge.name }}-cr.j2 does not exist. Skip creating CR for cartridge {{ current_cp4d_cartridge.name }}"
 
 - when: cr_file_exists_result.stat.exists

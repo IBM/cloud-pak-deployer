@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show current CP4D connection
+  debug:
     msg: "{{ cp4d_connection }}"
 
 - name: Validate if the connection to the'{{ cp4d_connection.name }}' is available
@@ -65,7 +66,8 @@
 #Create a new Resource
 - when: "cp4d_connection_existing_result_json.resources|length == 0"
   block:
-    - debug:
+    - name: Create new data source connection
+      debug:
         msg: "Create {{ cp4d_database_name }} as a new resource"
 
     - name: Create Datasource connection json file
@@ -111,12 +113,14 @@
 
     - when: "connection_patch_changes_json|length == 0"
       block:
-        - debug:
+        - name: No changes made to connection
+          debug:
             msg: "No changes to Resource {{ cp4d_connection.name }} made, no patch required"
 
     - when: "connection_patch_changes_json|length > 0"
       block:
-        - debug:
+        - name: Updating existing connection
+          debug:
             msg: "Update {{ cp4d_connection.name }} resource"
 
         - name: Delete existing {{ cp4d_database_name }}

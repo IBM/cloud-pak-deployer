@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show current Cognos Analytics instance
+  debug:
     msg: "{{ cognos_instance }}"
 
 - tempfile:
@@ -14,7 +15,8 @@
 - set_fact:
     cognos_lookup_result_json: "{{ cognos_lookup_result.stdout | from_json }}"
 
-- debug:
+- name: Determine if Cognos Analytics instance already exists
+  debug:
     msg: "Cognos instance {{ cognos_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_cognos_instance for {{ cognos_instance.name }}"
   when: "not cognos_lookup_result_json.total_count == 0"
 
@@ -55,7 +57,8 @@
         db2_name: "{{ cp4d_platform_connection_name }}"
         query_db: "[?entity.name=='{{ db2_name }}']"
 
-    - debug:
+    - name: Show number of data sources matching platform connection name
+      debug:
         msg: "Number of datasources found with name {{ cp4d_platform_connection_name }}: {{ cp4d_cognos_db2_content_repo|length }}"
 
     - name: Create Cognos Repository DB connection {{ cp4d_platform_connection_name }} if it does not exist
@@ -114,8 +117,9 @@
     - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
       shell: "oc delete pod -n {{ current_cp4d_cluster.project }} {{ ca_artifacts_pod.stdout }}"
 
-    - debug:
-        msg: "Cognos Analytics instance building. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
+    - name: Cognos Analytics instance being provisioned
+      debug:
+        msg: "Cognos Analytics instance being provisioned. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
     - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
       shell: |
@@ -132,5 +136,6 @@
           {%- set retries_left = result.retries - result.attempts -%}
           Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-    - debug:
+    - name: Cognos Analytics instance provisioning completed
+      debug:
         msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"

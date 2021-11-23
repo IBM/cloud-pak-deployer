@@ -43,22 +43,16 @@
 
 # {{schemafile_content | to_yaml | b64encode }} {{generator.attributes | to_yaml | b64encode }} {{generator.config | to_yaml | b64encode }}"
 
-  - debug:
+  - name: Show pre-processor results
+    debug:
       var: preprocess_result
-
-  # - name: include the file
-  #   include_vars: 
-  #     file: "{{ _generator_dir }}/generator.yaml"
-  #     name: schemafile_content
-
-  # - debug:
-  #     var: schemafile_content
 
   - name: 
     set_fact:
       validator_received_result: "{{ preprocess_result.stdout | from_json}}"
 
-  - debug:
+  - name: Show results from validator
+    debug:
       var: validator_received_result
 
   - name: create a new error (to trigger the reporting)
@@ -94,13 +88,9 @@
       all_config: "{{ validator_received_result.get('updated_config') }}"
   when: preprocessorscript_stat.stat.exists==true
   
-
-
-- debug:
+- name: Show all configuration
+  debug:
     var: all_config
-
-
-
 
 ### end of loop, prepare next iteration
 - set_fact:
