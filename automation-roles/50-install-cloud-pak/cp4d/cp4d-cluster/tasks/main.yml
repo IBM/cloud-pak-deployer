@@ -30,7 +30,8 @@
 - set_fact:
     ibm_cp_entitlement_key: "{{ secret_value }}"
 
-- fail:
+- name: Fail if the entitlement key was not found in the vault and no private registry was specified
+  fail:
     msg: "No image registry name specified for CP4D but cannot pull from entitled registry because of missing entitlement key in vault"
   when: ibm_cp_entitlement_key == "" and (current_cp4d_cluster.image_registry_name | default("")) == ""
 

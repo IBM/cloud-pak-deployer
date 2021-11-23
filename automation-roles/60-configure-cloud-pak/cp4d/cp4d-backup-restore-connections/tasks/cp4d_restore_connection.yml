@@ -57,7 +57,8 @@
       - set_fact:
           _create_db_connection_result_json: "{{ _create_db_connection_result.stdout | from_json }}"
 
-      - fail:
+      - name: Fail if the restore of the connection failed
+        fail:
           msg: "Error restore connection source {{ _cp4d_connection_name }}: {{ _create_db_connection_result_json }}"
         when: _create_db_connection_result_json.errors is defined    
 

@@ -31,7 +31,8 @@
       secret_name: "{{ environment_name }}-terraform-tfstate"
       secret_group: "{{ environment_name }}"
 
-  - fail:
+  - name: Check that terraform state has been found in the vault
+    fail:
       msg: "No Terraform state found in secret {{ environment_name }}/{{ environment_name }}-terraform-tfstate"
     when: "secret_value | trim | length == 0"
 
@@ -104,7 +105,8 @@
     when: 
     - terraform_plan_result.rc != 0
 
-  - fail:
+  - name: Fail if there were errors in the terraform destroy process
+    fail:
       msg: Error occurred during Terraform destroy, state has been preserved. Failing now. Check the destroy log for details.
     when: 
     - terraform_plan_result.rc == 2

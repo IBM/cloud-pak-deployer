@@ -16,7 +16,8 @@
     query: >-
       [?name=='{{ current_cp4d_cluster.image_registry_name }}']
 
-- fail:
+- name: Fail if the registry details for the image registry have not been found
+  fail:
     msg: "Image registry details for image_registry_name {{ current_cp4d_cluster.image_registry_name }} not found."
   when: 
   - current_image_registry | default({}) == {}
@@ -36,7 +37,8 @@
     secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
     secret_group: "{{ environment_name }}"
 
-- fail:
+- name: Fail if the credentials for the image registry have not been found in the vault
+  fail:
     msg: "Credentials for specified image registry {{ current_cp4d_cluster.image_registry_name }} not found in vault"
   when: 
   - secret_value == ""

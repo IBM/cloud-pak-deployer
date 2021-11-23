@@ -74,7 +74,8 @@
       var: number_to_destroy
     when: number_to_destroy is defined
 
-  - fail:
+  - name: Fail if terraform plans to destroy artifacts and this was not confirmed at the command line
+    fail:
       msg: "Terraform will destroy artifacts and this was not confirmed"
     when:
       - number_to_destroy is defined
@@ -102,7 +103,8 @@
     when: 
     - terraform_plan_result.rc != 0
 
-  - fail:
+  - name: Fail if there were errors during the terraform apply
+    fail:
       msg: Error occurred during Terraform apply, state has been preserved. Failing now. Check the apply log for details.
     when: 
     - terraform_plan_result.rc == 2
