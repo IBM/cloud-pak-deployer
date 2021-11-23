@@ -1,0 +1,44 @@
+resource "ibm_resource_instance" "{{generator.attributes.name | replace("-", "_") }}" {
+    resource_group_id = data.ibm_resource_group.thisresourcegroup.id
+    name     = "{{generator.attributes.name }}"
+    plan     = "{{generator.attributes.plan }}"
+    location = "{{generator.attributes.location }}"
+    service  =  "cloud-object-storage"
+}
+
+{% if generator.attributes.buckets is defined %}
+{% for bucket in generator.attributes.buckets %}
+
+resource "ibm_cos_bucket" "{{generator.attributes.name | replace("-", "_") }}_{{bucket.name | replace("-", "_")}}" {
+    bucket_name = "{{ bucket.name }}"
+    resource_instance_id = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.id
+    endpoint_type = "{{ bucket.endpoint_type | default("public") }}"
+    storage_class = "{{ bucket.storage_class | default("standard") }}"
+    {% if bucket.cross_region_location is defined %}
+    cross_region_location = "{{ bucket.cross_region_location }}"
+    {% endif %}
+    {% if bucket.region_location is defined %}
+    region_location = "{{ bucket.region_location }}"
+    {% endif %}
+    {% if bucket.single_site_location is defined %}
+    single_site_location = "{{ bucket.single_site_location }}"
+    {% endif %}
+}
+{% endfor %}
+{% endif %}
+
+{% if generator.attributes.serviceids is defined %}
+{% for serviceid in generator.attributes.serviceids %}
+
+resource "ibm_iam_service_policy" "policy" {
+  iam_service_id = ibm_iam_service_id.{{serviceid.name | replace("-", "_") }}.id
+  roles          = {{serviceid.roles | default([]) | to_json }}
+
+  resources {
+    service              = "cloud-object-storage"
+    resource_instance_id = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.guid
+  }
+}
+
+{% endfor %}
+{% endif %}

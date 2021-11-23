@@ -9,7 +9,6 @@ import sys
 #   worker_flavour: bx2.16x64
 #   number_of_workers: 3
 #   max_number_of_workers: 10
-#   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
 #     vpc_name: sample
@@ -33,13 +32,13 @@ def preprocessor(attributes=None, fullConfig=None):
     g('ocp_version').isRequired()
     g('worker_flavour').isRequired()
     g('number_of_workers').isRequired()
-    g('resource_group_name').isRequired()
     g('max_number_of_workers').isOptional()
     
     g('infrastructure').isRequired()
     g('infrastructure.type').mustBeOneOf(['vpc'])
     g('infrastructure.vpc_name').expandWith('vpc[*]',remoteIdentifier='name')
     g('infrastructure.subnets').isRequired()
+    g('infrastructure.cos_name').isRequired()
 
     g('openshift_storage').isRequired()
 
@@ -79,8 +78,6 @@ def preprocessor(attributes=None, fullConfig=None):
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
                 if "ocs_storage_size_gb" not in os:
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
-                if len(ge['infrastructure']['subnets']) != 3:
-                    g.appendError(msg='Storage type OCS was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement OCS.')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
