@@ -131,6 +131,23 @@
 #   loop_control:
 #     loop_var: cp4d_service
 
+- name: Retrieve Cloud Pak Foundational Services 
+  set_fact:
+    _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='cp-foundation']
+
+- debug:
+    var: _cp_fs
+
+- name: Activate or deactivate license service
+  include_role:
+    name: cp-fs-license-service
+  vars:
+    _p_fs_project: "{{ foundational_services_project }}"
+    _install_license_service: "{{ _cp_fs.license_service | default(False) }}"
+
 - name: Ensure the status log folder exists
   file:
     path: "{{status_dir}}/log"

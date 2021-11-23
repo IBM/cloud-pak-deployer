@@ -7,19 +7,11 @@
     name: vault-get-secret
   vars:
     secret_name: "{{ cp4d_admin_password_vault_key_name }}"
-    secret_group: "{{ environment_name }}" 
+    secret_group: "{{ environment_name }}"
 
-- name: when the password exists, assign it to the cp4d_login_password variable
-  block:
-
-    - name: set cp4d admin passwordpassword
-      set_fact:
-        cp4d_login_password: "{{ secret_value }}"
-
-    - set_fact:
-        cp4d_configure_cpd_admin: 1
-
-  when: "not secret_value==''"
+- name: Keep admin password
+  set_fact:
+    _cp4d_login_password: "{{ secret_value }}"
 
 - name: Error if no secret value is returned
   fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
@@ -31,10 +23,20 @@
         -o jsonpath="{.items[0].spec.host}"
   register: cp4d_url
 
-- name: Login to Cloud Pak for Data
-  shell: "curl -k -X POST -H 'cache-control: no-cache' -H 'Content-Type: application/json;charset=UTF-8' -d '{\"username\":\"{{ cp4d_login_username }}\",\"password\":\"{{ cp4d_login_password }}\"}' 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/authorize'"
-  register: cp4d_login_result
+- name: Login to Cloud Pak for Data using password in OpenShift secret
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/authorize'
+    method: POST
+    body_format: json
+    body: '{"username":"{{ cp4d_login_username }}","password":"{{ _cp4d_login_password }}"}'
+    force: yes
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_login_result
+  retries: 3
+  delay: 5
+  until: _cp4d_login_result.status == 200
 
 - set_fact:
-    cp4d_login: "{{ cp4d_login_result.stdout | from_json }}"
-
+    cp4d_login: "{{ _cp4d_login_result.json }}"

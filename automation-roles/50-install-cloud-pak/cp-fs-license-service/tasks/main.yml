@@ -1,0 +1,39 @@
+---
+- name: Validate that mandatory parameters have been specified
+  assert:
+    that:
+      - _p_fs_project is defined
+      - _install_license_service is defined
+
+- name: Install license service in project {{ _p_fs_project }}
+  block:
+
+  - name: Make sure that directory {{ status_dir }}/cloud-paks exists
+    file:
+      path: "{{ status_dir }}/cloud-paks"
+      state: directory
+
+  - name: Generate license-service OperandRequest file {{ status_dir }}/cloud-pak/license-service.yml
+    template:
+      src: license-service.j2
+      dest: "{{ status_dir }}/cloud-paks/license-service.yml"
+  - name: Create license service OperandRequest
+    shell: |
+      oc create -f {{ status_dir }}/cloud-paks/license-service.yml
+
+  when: (_install_license_service | bool)
+
+- name: Uninstall license service in project {{ _p_fs_project }}
+  block:
+
+  - name: Delete license service OperandRequest
+    shell: |
+      oc delete IBMLicensing instance
+    failed_when: false
+    
+  - name: Delete license service OperandRequest
+    shell: |
+      oc delete operandrequest -n {{ _p_fs_project }} ibm-licensing
+    failed_when: false
+
+  when: not (_install_license_service | bool)

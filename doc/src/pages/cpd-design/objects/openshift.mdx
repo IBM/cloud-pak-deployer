@@ -17,6 +17,7 @@ When running the Cloud Pak Deployer for IBM Cloud, the ROKS cluster will be prov
 ```
 openshift:
 - name: sample
+  managed: True
   ocp_version: 4.8
   worker_flavour: bx2.16x64
   number_of_workers: 3
@@ -42,6 +43,7 @@ openshift:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
+| managed  | Is the ROKS cluster managed by this deployer? See note below.        | No        | True, False |
 | ocp_version | ROKS Kubernetes version                                           | Yes       |  |
 | worker_flavour | Type of worker to be used                                      | Yes       | [link]  |
 | number_of_workers | Total number of workers. This must be a factor of the number of subnets | Yes | Integer |
@@ -59,6 +61,8 @@ openshift:
 <InlineNotification kind="warning">
 When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
 </InlineNotification>
+
+The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
 
 ### OpenShift on vSphere
 ```
