@@ -26,14 +26,16 @@
     - set_fact:
         ibmcloud_oc_cluster: "{{ ibmcloud_oc_cluster_result_json.stdout | from_json }}"
 
-    - debug:
+    - name: Show results from ibmcloud oc cluster command
+      debug:
         msg: "{{ ibmcloud_oc_cluster }}"
 
     - set_fact:
         roks_publicEndpoint: "{{ ibmcloud_oc_cluster.serviceEndpoints.publicServiceEndpointURL | 
           default(ibmcloud_oc_cluster.publicServiceEndpointURL) }}"
 
-    - debug:
+    - name: Show ROKS public endpoint
+      debug:
         msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
 
     - name: Set terminal context for OpenShift cluster {{ openshift_cluster_name }}
@@ -51,6 +53,7 @@
         oc config delete-context {{ openshift_cluster_name }} || true
         oc config rename-context $(oc config current-context) {{ openshift_cluster_name }}
 
-    - debug:
+    - name: Show OpenShift login result
+      debug:
         msg: "{{ oc_login_result }}"
   when: _oc_use_context.rc != 0 or _oc_cluster_info.rc != 0

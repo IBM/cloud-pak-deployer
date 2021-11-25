@@ -41,7 +41,9 @@
     status_code: 200
   register: response_getPublicNetworkSubnets
 
-- debug: var=response_getPublicNetworkSubnets
+- name: Show result of get public network subnets
+  debug: 
+    var: response_getPublicNetworkSubnets
 
 # - name: get private VLAN ids from softlayer-api
 #   uri:
@@ -65,7 +67,9 @@
     status_code: 200
   register: response_getPrivateNetworkSubnets
 
-- debug: var=response_getPrivateNetworkSubnets
+- name: Show response of get private network subnets
+  debug: 
+    var: response_getPrivateNetworkSubnets
 
 - name: construct the querystring to filter the list of secrets
   set_fact:
@@ -75,9 +79,6 @@
 - set_fact:
     response_getPrivateNetworkSubnets_filtered: "{{ (response_getPrivateNetworkSubnets.json | json_query(vlan_query) ) }}"
     response_getPublicNetworkSubnets_filtered:  "{{ (response_getPublicNetworkSubnets.json | json_query(vlan_query) ) }}"
-
-- debug: var=response_getPrivateNetworkSubnets_filtered
-- debug: var=response_getPublicNetworkSubnets_filtered
 
 # - name: Save public and private vlans in iaas_vlans
 #   set_fact:
@@ -117,7 +118,8 @@
     chdir: "{{status_dir}}/terraform"
     creates: "{{status_dir}}/terraform/.terraform"
 
-- debug: 
+- name: Show terraform apply command to run
+  debug: 
     msg: "Executing: terraform apply -var 'ibmcloud_api_key={{ibmcloud_api_key}}' -var 'iaas_classic_username={{iaas_classic_username}}' -var 'iaas_classic_api_key={{iaas_classic_api_key}}'"
 
 - name: Run terraform apply via shell

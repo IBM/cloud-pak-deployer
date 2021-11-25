@@ -33,7 +33,8 @@
     - set_fact:
         dv_instance_lookup_result_json: "{{ dv_instance_lookup_result.stdout | from_json }}"
 
-    - debug:
+    - name: Determine if Data Virtualization instance already exists
+      debug:
         msg: "DV instance {{ dv_instance_name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_dv_instance"
       when: "not dv_instance_lookup_result_json.total_count == 0"
 
@@ -52,7 +53,8 @@
           shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/dv_instance.json"
           register: provision_dv_result
 
-        - debug:
+        - name: Show Data Virtualization instance provisioning result
+          debug:
             msg: "{{ provision_dv_result }}"
 
         - set_fact:
