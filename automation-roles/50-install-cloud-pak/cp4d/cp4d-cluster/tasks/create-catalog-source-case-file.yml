@@ -7,14 +7,12 @@
     use_regex: yes
   register: case_files
 
-- debug:
+- name: Show case file definitions
+  debug:
     var: case_files
 
 - set_fact:
     case_file: "{{ case_files.files | first | default({}) }}"
-
-- debug:
-    var: case_file
 
 - name: Install CatalogSource for case file {{ case_file.path }} using private registry
   block:
