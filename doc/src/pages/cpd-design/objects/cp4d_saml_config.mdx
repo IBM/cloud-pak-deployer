@@ -27,7 +27,7 @@ cp4d_saml_config:
 #### Property explanation
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| project  | Name of OpenShift project of the `cp4d` entry                        | Yes       |  |
+| project  | Name of OpenShift project of the matching `cp4d` entry. The cp4d project must exist. | Yes       |  |
 | entrypoint | URL of the identity provider (idP) login page                      | Yes       |  |
 | field_to_authenticate | Name of the parameter to authenticate with the idP      | Yes       |  |
 | sp_cert_secret | Vault secret that holds the private certificate to authenticate to the idP. If not specified, requests will not be signed.  | No       |  |
@@ -36,3 +36,5 @@ cp4d_saml_config:
 | identifier_format | Format of the requests from Cloud Pak for Data to the idP. If not specified, `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` is used  | No   |  |
 
 The SAML configuration file in the Cloud Pak for Data user management pods holds one more field: `callbackUrl`. This field is automatically populated by the deployer and consists of the Cloud Pak for Data base URL appended with `/auth/login/sso/callback`.
+
+Before running the deployer with SAML configuration, ensure that the secret configured for `idp_cert_secret` exists in the vault. Check [Deployer configuration](/cp-deploy/configure#vault-secrets) for instructions on adding secrets to the vault.
