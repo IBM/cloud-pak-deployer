@@ -65,7 +65,7 @@
 - name: Retrieve current SAML config from user management pod
   shell:
     oc cp -n {{ current_cp4d_cluster.project }} \
-      $(oc get po -l app.kubernetes.io/component=usermgmt -n {{ current_cp4d_cluster.project }}  \
+      $(oc get po -l component=usermgmt -n {{ current_cp4d_cluster.project }}  \
         --no-headers -o=custom-columns=':.metadata.name' | head -1):/user-home/_global_/config/saml/samlConfig.json \
         {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}_current_samlConfig.json
   failed_when: False
@@ -93,7 +93,7 @@
     - shell:
         oc cp {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}_new_samlConfig.json \
           -n {{ current_cp4d_cluster.project }} \
-          $(oc get po -l app.kubernetes.io/component=usermgmt -n {{ current_cp4d_cluster.project }}  \
+          $(oc get po -l component=usermgmt -n {{ current_cp4d_cluster.project }}  \
           --no-headers -o=custom-columns=':.metadata.name' | head -1):/user-home/_global_/config/saml/samlConfig.json
       when: _saml_copy_result.changed
 
@@ -107,7 +107,7 @@
     - name: Remove SAML configuraton from pod
       shell:
         oc rsh -n {{ current_cp4d_cluster.project }} \
-        $(oc get po -l app.kubernetes.io/component=usermgmt -n {{ current_cp4d_cluster.project }}  \
+        $(oc get po -l component=usermgmt -n {{ current_cp4d_cluster.project }}  \
           --no-headers -o=custom-columns=':.metadata.name' | head -1) \
           bash -c "rm -f /user-home/_global_/config/saml/samlConfig.json"
     - set_fact:
@@ -120,13 +120,13 @@
   block:
   - name: Delete user management pods to force restart
     shell: |
-      oc delete po -l app.kubernetes.io/component=usermgmt -n {{ current_cp4d_cluster.project }}
+      oc delete po -l component=usermgmt -n {{ current_cp4d_cluster.project }}
 
   - name: Wait until user management pods are up again
     shell: |
       oc wait --for=condition=Ready \
         -n {{ current_cp4d_cluster.project }} pod \
-        -l app.kubernetes.io/component=usermgmt \
+        -l component=usermgmt \
         --timeout=5m
 
   when: _saml_config_changed
