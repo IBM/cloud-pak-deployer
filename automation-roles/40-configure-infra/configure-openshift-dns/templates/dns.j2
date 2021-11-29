@@ -1,0 +1,9 @@
+[
+    {% for dns in _p_upstream_dns %}
+    { "name" : "{{ dns.name }}", 
+        "zones": [ {% for zone in dns.zones %} "{{ zone }}" {% if not loop.last %},{% endif %} {% endfor %} ],
+        "forwardPlugin": { "upstreams": [ {% for dns_server in dns.dns_servers %} "{{ dns_server }}" {% if not loop.last %},{% endif %} {% endfor %} ] }
+    } {% if not loop.last %},{% endif %}
+
+    {% endfor %}
+]

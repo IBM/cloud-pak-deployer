@@ -1,4 +1,9 @@
 ---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - ibmcloud_api_key is defined
+      
 - name: Show OpenShift cluster that is being processed
   debug:
     msg: "Handling OpenShift cluster {{ current_openshift_cluster.name }}"
@@ -14,6 +19,12 @@
     name: openshift-login
   vars:
     openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
+- name: Configure upstream DNS for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: configure-openshift-dns
+  vars:
+    _p_upstream_dns: "{{ current_openshift_cluster.upstream_dns | default([]) }}"
 
 - name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
