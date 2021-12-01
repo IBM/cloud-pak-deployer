@@ -38,6 +38,9 @@ import sys
 #  openshift_storage_name: nfs-storage
 #  cartridges:
 #  - name: cp-foundation
+#    license_service:
+#      state: disabled
+#      threads_per_core: 2
 #  - name: lite
 #    version: not_used
 #    subscription_channel: v2.0
@@ -174,6 +177,7 @@ import sys
 
 
 def preprocessor(attributes=None, fullConfig=None):
+    global g
     g = GeneratorPreProcessor(attributes,fullConfig)
 
     g('project').isRequired()
@@ -190,30 +194,6 @@ def preprocessor(attributes=None, fullConfig=None):
 # Check for cp4d:     
 # Check that cp-foundation element exists
 # Check that lite element exists
-
-        # Iterate over all cartridges 
-        # to check if name-attribute is given
-        # if not throw an error
-        cpFoundationFound=False
-        liteFound=False
-        for c in ge['cartridges']:
-            if "name" not in c:
-                g.appendError(msg='name must be specified for all cartridges elements')
-            else:
-                if c['name'] == "lite":
-                    liteFound=True
-                if c['name'] == "cp-foundation":
-                    cpFoundationFound=True
-                if  (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel ust be specified for all cartridges, except for cp-foundation')
-        # iteration over cartridges is done
-        # now check if the required fields were found in the 
-        # for-loop
-        if cpFoundationFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
-        if liteFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "lite"')
-
 
 
 # Check reference
@@ -250,11 +230,39 @@ def preprocessor(attributes=None, fullConfig=None):
                                     if ge['openshift_storage_name'] not in remote_storage_names:
                                         g.appendError(msg="The cluster with name "+ ge['openshift_cluster_name'] +" doesn't have a openshift_storage element with name "+ge['openshift_storage_name'] +"")
 
-        
+
+        # Iterate over all cartridges to check if name-attribute is given. If not throw an error
+        cpFoundationFound=False
+        liteFound=False
+        for c in ge['cartridges']:
+            if "name" not in c:
+                g.appendError(msg='name must be specified for all cartridges elements')
+            else:
+                if c['name'] == "lite":
+                    liteFound=True
+                if c['name'] == "cp-foundation":
+                    cpFoundationFound=True
+                    check_cp_foundation(c)
+                if  (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
+                    g.appendError(msg='subscription_channel ust be specified for all cartridges, except for cp-foundation')
+        # Iteration over cartridges is done, now check if the required fields were found in the for-loop
+        if cpFoundationFound==False:
+            g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
+        if liteFound==False:
+            g.appendError(msg='You need to specify a cartridge with name "lite"')
+
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()
     }
     return result
 
-
+def check_cp_foundation(c):
+    if "license_service" in c:
+        license_service=c['license_service']
+        if "state" in license_service:
+            if license_service['state'] not in ['enabled','disabled']:
+                g.appendError(msg='License service state (license_service.state) must be enabled or disabled')
+        if "threads_per_core" in license_service:
+            if not isinstance(license_service['threads_per_core'],int):
+                g.appendError(msg='Number of threads per core (license_service.threads_per_core) must be numeric')

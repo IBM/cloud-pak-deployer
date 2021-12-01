@@ -3,7 +3,7 @@
   assert:
     that:
       - _p_fs_project is defined
-      - _install_license_service is defined
+      - _p_license_service is defined
 
 - name: Install license service in project {{ _p_fs_project }}
   block:
@@ -17,11 +17,26 @@
     template:
       src: license-service.j2
       dest: "{{ status_dir }}/cloud-paks/license-service.yml"
+
   - name: Create license service OperandRequest
     shell: |
-      oc create -f {{ status_dir }}/cloud-paks/license-service.yml
+      oc apply -f {{ status_dir }}/cloud-paks/license-service.yml
 
-  when: (_install_license_service | bool)
+  - name: Wait until IBMLicensing CR is present
+    shell: |
+      oc get ibmlicensing instance
+    register: _ibm_licensing_cr
+    retries: 60
+    delay: 10
+    until: _ibm_licensing_cr.rc == 0
+
+  - name: Set number of threads per core
+    shell: |
+      oc patch ibmlicensing instance \
+        --type=merge \
+        -p '{"spec": {"features": {"hyperThreading": {"threadsPerCore" : {{ _p_license_service.threads_per_core | default(1) }}  }}}}'
+
+  when: (_p_license_service.state | default('disabled')) == 'enabled'
 
 - name: Uninstall license service in project {{ _p_fs_project }}
   block:
@@ -36,4 +51,4 @@
       oc delete operandrequest -n {{ _p_fs_project }} ibm-licensing
     failed_when: false
 
-  when: not (_install_license_service | bool)
+  when: (_p_license_service.state | default('disabled')) == 'disabled'
