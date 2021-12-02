@@ -1,6 +1,7 @@
 ---
 
-- debug:
+- name: Show LDAP host
+  debug:
     msg: "LDAP Host {{ cp4d_ldap_config.ldap_host }}"
 
 - when: (cp4d_ldap_config.ldap_host | default("")) != ""
@@ -14,26 +15,15 @@
         name: vault-get-secret
       vars:
         secret_name: "{{ cp4d_admin_password_vault_key_name }}"
-        secret_group: "{{ environment_name }}" 
+        secret_group: "{{ environment_name }}"
 
-    - name: when the password exists, assign it to the cp4d_login_password variable
-      block:
-
-        - name: set cp4d admin passwordpassword
-          set_fact:
-            cp4d_login_password: "{{ secret_value }}"
-
-        - set_fact:
-            cp4d_configure_cpd_admin: 1
-
-      when: "not secret_value==''"
+    - name: Keep admin password
+      set_fact:
+        _cp4d_login_password: "{{ secret_value }}"
 
     - name: Error if no secret value is returned
       fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
       when: "secret_value==''"
-
-    - set_fact:
-        cp4d_login: "{{ cp4d_login_result.stdout | from_json }}"
 
     - name: Get the LDAP domain search password from the vault
       include_role: 
@@ -42,7 +32,7 @@
         secret_name: "{{ cp4d_ldap_config.ldap_domain_search_password_vault }}"
         secret_group: "{{ environment_name }}" 
       
-    - name: set password
+    - name: Keep LDAP bind password
       set_fact:
         cp4d_ldap_domain_search_password: "{{ secret_value }}"
       
@@ -51,27 +41,30 @@
       when: "secret_value==''"
 
     - name: Configure the LDAP connection
-      shell: "curl --location --insecure --request PUT 'https://{{ cp4d_url.stdout }}/usermgmt/v1/usermgmt/config' \
-              --header 'Authorization: Bearer {{ cp4d_login.token }}' \
-              --header 'Content-Type: application/json' \
-              --data-raw '{
-                \"externalLDAPHost\": \"{{ cp4d_ldap_config.ldap_host }}\", 
-                \"externalLDAPPort\": {{ cp4d_ldap_config.ldap_port }}, 
-                \"externalLDAPSearchUser\": \"{{ cp4d_ldap_config.ldap_domain_search_user }}\", 
-                \"externalLDAPSearchBase\": \"{{ cp4d_ldap_config.ldap_user_search_base }}\", 
-                \"externalLDAPSearchField\": \"{{ cp4d_ldap_config.ldap_user_search_field }}\", 
-                \"externalLDAPEmailField\": \"{{ cp4d_ldap_config.ldap_mapping_email }}\", 
-                \"externalLDAPFirstNameField\": \"{{ cp4d_ldap_config.ldap_mapping_first_name }}\", 
-                \"externalLDAPLastNameField\": \"{{ cp4d_ldap_config.ldap_mapping_last_name }}\", 
-                \"externalLDAPGroupField\": \"{{ cp4d_ldap_config.ldap_mapping_group_membership }}\", 
-                \"externalLDAPPrefix\": \"\", 
-                \"auto_signup\": {{  cp4d_ldap_config.auto_signup }}, 
-                \"externalLDAPGroupSearchBase\": \"{{ cp4d_ldap_config.ldap_group_search_base }}\", 
-                \"externalLDAPGroupSearchField\": \"{{ cp4d_ldap_config.ldap_group_search_field }}\", 
-                \"externalLDAPGroupMemberField\": \"{{ cp4d_ldap_config.ldap_mapping_group_member }}\", 
-                \"externalLDAPSearchPassword\": \"{{ cp4d_ldap_domain_search_password }}\"
-            }'"
+      shell: |
+        curl --location --insecure --request PUT 'https://{{ cp4d_url.stdout }}/usermgmt/v1/usermgmt/config' \
+             --header 'Authorization: Bearer {{ cp4d_login.token }}' \
+             --header 'Content-Type: application/json' \
+             --data-raw '{
+               "externalLDAPHost": "{{ cp4d_ldap_config.ldap_host }}", 
+               "externalLDAPPort": {{ cp4d_ldap_config.ldap_port }}, 
+               "externalLDAPSearchUser": "{{ cp4d_ldap_config.ldap_domain_search_user }}", 
+               "externalLDAPSearchBase": "{{ cp4d_ldap_config.ldap_user_search_base }}", 
+               "externalLDAPSearchField": "{{ cp4d_ldap_config.ldap_user_search_field }}", 
+               "externalLDAPEmailField": "{{ cp4d_ldap_config.ldap_mapping_email }}", 
+               "externalLDAPFirstNameField": "{{ cp4d_ldap_config.ldap_mapping_first_name }}", 
+               "externalLDAPLastNameField": "{{ cp4d_ldap_config.ldap_mapping_last_name }}", 
+               "externalLDAPGroupField": "{{ cp4d_ldap_config.ldap_mapping_group_membership }}", 
+               "externalLDAPPrefix": "", 
+               "auto_signup": {{  cp4d_ldap_config.auto_signup }}, 
+               "externalLDAPGroupSearchBase": "{{ cp4d_ldap_config.ldap_group_search_base }}", 
+               "externalLDAPGroupSearchField": "{{ cp4d_ldap_config.ldap_group_search_field }}", 
+               "externalLDAPGroupMemberField": "{{ cp4d_ldap_config.ldap_mapping_group_member }}", 
+               "externalLDAPSearchPassword": "{{ cp4d_ldap_domain_search_password }}"
+            }'
       register: cp4d_ldap_configuration_result
+      args:
+        warn: false
 
     - set_fact:
         cp4d_ldap_configuration_result_json: "{{ cp4d_ldap_configuration_result.stdout | from_json }}"

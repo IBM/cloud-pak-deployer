@@ -12,7 +12,8 @@
       file: "{{ generator.path }}/generator.yaml"
       name: schemafile_content
 
-  - debug:
+  - name: Show schema file content
+    debug:
       var: schemafile_content
 
   - name: run the validator script
@@ -22,13 +23,15 @@
       chdir: "{{ role_path }}/scripts"
     register: validator_result
 
-  - debug:
+  - name: Show validator results
+    debug:
       var: validator_result
   - name: 
     set_fact:
       validator_received_errors: "{{ validator_result.stdout | from_json}}"
 
-  - debug:
+  - name: Show validator received errors
+    debug:
       var: validator_received_errors
 
   - name: create a new error

@@ -5,18 +5,21 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 
 # OpenShift configuration
 
-### `openshift`
+## `openshift`
 For OpenShift, there are 3 flavours:
 * [OpenShift on IBM Cloud](#openshift-on-ibm-cloud)
 * [OpenShift on vSphere](#openshift-on-vsphere)
 * [Existing OpenShift](#existing-openshift)
 
-When running the Cloud Pak Deployer for IBM Cloud, the ROKS cluster will be provisioned and managed by Terraform. For existing OpenShift clusters, other parameters must be specified to identify the cluster on which the Cloud Pak(s) must be deployed. Below we will show 2 examples.
+When running the Cloud Pak Deployer for IBM Cloud or vSphere, the OpenShift cluster will be provisioned and managed by Terraform or the OpenShift IPI installer. For existing OpenShift clusters, other parameters must be specified to identify the cluster on which the Cloud Pak(s) must be deployed.
+
+Every OpenShift cluster consists of a few mandatory properties that control which version of OpenShift is installed, the number and type of master nodes and worker nodes and the underlying infrastructure. Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and storage definitions.
 
 ### OpenShift on IBM Cloud (ROKS)
 ```
 openshift:
 - name: sample
+  managed: True
   ocp_version: 4.8
   worker_flavour: bx2.16x64
   number_of_workers: 3
@@ -29,6 +32,12 @@ openshift:
     - sample-subnet-zone-1
     - sample-subnet-zone-2
     - sample-subnet-zone-3
+  upstream_dns: 
+  - name: sample-dns
+     zones:
+     - example.com
+     dns_servers:
+     - 172.31.2.73:53
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -42,6 +51,7 @@ openshift:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
+| managed  | Is the ROKS cluster managed by this deployer? See note below.        | No        | True, False |
 | ocp_version | ROKS Kubernetes version                                           | Yes       |  |
 | worker_flavour | Type of worker to be used                                      | Yes       | [link]  |
 | number_of_workers | Total number of workers. This must be a factor of the number of subnets | Yes | Integer |
@@ -50,6 +60,10 @@ openshift:
 | infrastructure.type | Type of infrastructure to provision ROKS cluster on | No | vpc (default), classic |
 | infrastructure.vpc_name | Name of the VPC if type is `vpc` | Yes, inferrred | Existing VPC |
 | infrastructure.subnets | List of subnets within the VPC to use. Either 1 or 3 subnets must be specified | Yes | Existing subnet |
+| upstream_dns | Defines alternative upstream DNS servers(s) for OpenShift         | No | |
+| upstream_dns.name | Name of the upstream DNS server                              | Yes | |
+| upstream_dns_zones | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes | |
+| upstream_dns.dns_servers | List of DNS servers which must be used to resolve host names within the specified zones | Yes | |
 | openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
 | openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs or ocs |
 | openshift_storage.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
@@ -59,6 +73,8 @@ openshift:
 <InlineNotification kind="warning">
 When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
 </InlineNotification>
+
+The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
 
 ### OpenShift on vSphere
 ```
@@ -74,6 +90,12 @@ openshift:
   max_number_of_workers: 10  
   api_vip: 10.99.92.51
   ingress_vip: 10.99.92.52
+  upstream_dns: 
+  - name: sample-dns
+     zones:
+     - example.com
+     dns_servers:
+     - 172.31.2.73:53
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -98,6 +120,10 @@ openshift:
 | max_number_of_workers | Maximum number of workers allowed. If total number of workers exceeds this value, the cluster will not be provisioned | Yes | Integer |
 | api_vip | Virtual IP address that the installer will provision for the API server | Yes |  |
 | ingress_vip | Virtual IP address that the installer will provision for the ingress server | Yes |  |
+| upstream_dns | Defines alternative upstream DNS servers(s) for OpenShift         | No | |
+| upstream_dns.name | Name of the upstream DNS server                              | Yes | |
+| upstream_dns_zones | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes | |
+| upstream_dns.dns_servers | List of DNS servers which must be used to resolve host names within the specified zones | Yes | |
 | openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
 | openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | nfs or ocs |
 | openshift_storage.nfs_server_name | Name of the NFS server within the VPC | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
@@ -113,6 +139,12 @@ openshift:
   ocp_version: 4.8
   cluster_name: sample
   domain_name: example.com
+  upstream_dns: 
+  - name: sample-dns
+     zones:
+     - example.com
+     dns_servers:
+     - 172.31.2.73:53
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -127,8 +159,34 @@ openshift:
 | ocp_version | OpenShift version of the cluster, used to download the client     | Yes        | |
 | cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
 | domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
+| upstream_dns | Defines alternative upstream DNS servers(s) for OpenShift         | No | |
+| upstream_dns.name | Name of the upstream DNS server                              | Yes | |
+| upstream_dns_zones | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes | |
+| upstream_dns.dns_servers | List of DNS servers which must be used to resolve host names within the specified zones | Yes | |
 | openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
 | storage_classes.storage_type | Type of storage class to use in the OpenShift cluster | Yes | nfs, ocs |
 | openshift_storage.ocp_storage_class_file | OpenShift storage class to use for file storage, defaults to `managed-nfs-storage` | No | |
 | openshift_storage.ocp_storage_class_block | OpenShift storage class to use for block storage, defaults to `managed-nfs-storage` | No | |
 
+## Advanced configuration
+
+### Upstream DNS servers
+When deploying OpenShift in a private network, one may want to reach servers by their host name instead of IP addresses. OpenShift provides a DNS operator which deploys and manages CoreDNS which takes care of name resolution for pods running inside the container platform, also known as DNS forwarding.
+
+```
+  upstream_dns: 
+  - name: sample-dns
+     zones:
+     - example.com
+     dns_servers:
+     - 172.31.2.73:53
+```
+
+The zones which have been defined for each of the upstream_dns configurations control which DNS server(s) will be used for name resolution. For example, if `example.com` is given as the zone and an upstream DNS server of `172.31.2.73:53`, any host name matching `*.example.com` will be resolved using DNS server `172.31.2.73` and port `53`.
+
+If you want to remove the upstream DNS that was previously configured, you can change the deployer configuration as below and run the deployer. Removing the `upstream_dns` element altogether will not make changes to the OpenShift DNS operator.
+```
+  upstream_dns: []
+```
+
+See https://docs.openshift.com/container-platform/4.8/networking/dns-operator.html for more information about the operator that is configured by specifying upstream DNS servers.

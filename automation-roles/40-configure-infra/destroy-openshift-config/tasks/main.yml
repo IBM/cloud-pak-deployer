@@ -1,5 +1,11 @@
 ---
-- debug:
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - ibmcloud_api_key is defined
+      
+- name: Show OpenShift cluster that is being processed
+  debug:
     msg: "Handling OpenShift cluster {{ current_openshift_cluster.name }}"
 
 - name: Download and activate OpenShift client for version {{ current_openshift_cluster.ocp_version }}
@@ -14,9 +20,6 @@
   vars:
     openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
-- name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
-  include_role:
-    name: prepare-openshift-storage
-  loop: "{{ current_openshift_cluster.openshift_storage | default([]) }}"
-  loop_control:
-    loop_var: current_openshift_storage
+- name: Destroy the OpenShift Container Storage for IBM Cloud
+  include_tasks: ibmcloud-destroy-ocs.yml
+  when: cloud_platform == 'ibm-cloud'

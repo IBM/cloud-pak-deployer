@@ -1,6 +1,7 @@
 ---
 # Custom installer for the IIS Operator
-- debug:
+- name: Run custom playbook for IIS operator
+  debug:
     msg: "Running Custom Playbook for IIS Operator"
 
 - name: Make a temporary work folder available
@@ -16,7 +17,8 @@
 - when: get_iis_operator_result.stdout == "1"
   block:
 
-    - debug:
+    - name: IIS operator is already present and creation of operator will be skipped
+      debug:
         msg: "The iis-operator is already present, skipping creating operator"
 
 - when: get_iis_operator_result.stdout == "0"

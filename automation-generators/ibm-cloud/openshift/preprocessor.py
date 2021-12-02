@@ -9,7 +9,6 @@ import sys
 #   worker_flavour: bx2.16x64
 #   number_of_workers: 3
 #   max_number_of_workers: 10
-#   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
 #     vpc_name: sample
@@ -17,6 +16,12 @@ import sys
 #     - sample-subnet-zone-1
 #     - sample-subnet-zone-2
 #     - sample-subnet-zone-3
+#   upstream_dns:
+#   - name: sample-dns
+#     zones:
+#     - sample.com
+#     dns_servers:
+#     - 172.31.2.73:53
 #   openshift_storage:
 #   - storage_name: nfs-storage
 #     storage_type: nfs
@@ -33,13 +38,13 @@ def preprocessor(attributes=None, fullConfig=None):
     g('ocp_version').isRequired()
     g('worker_flavour').isRequired()
     g('number_of_workers').isRequired()
-    g('resource_group_name').isRequired()
     g('max_number_of_workers').isOptional()
     
     g('infrastructure').isRequired()
     g('infrastructure.type').mustBeOneOf(['vpc'])
     g('infrastructure.vpc_name').expandWith('vpc[*]',remoteIdentifier='name')
     g('infrastructure.subnets').isRequired()
+    g('infrastructure.cos_name').isRequired()
 
     g('openshift_storage').isRequired()
 
@@ -55,6 +60,20 @@ def preprocessor(attributes=None, fullConfig=None):
         # Number of workers must be a factor of the number of subnets
         if (ge['number_of_workers'] % len(ge['infrastructure']['subnets'])) != 0:
             g.appendError(msg='number_of_workers must be a factor of the number of subnets')
+
+        # Check upstream DNS server
+        if 'upstream_dns' in ge:
+            for dns in ge['upstream_dns']:
+                if 'name' not in dns:
+                    g.appendError(msg='name must be specified for all upstream_dns elements')
+                if 'zones' not in dns:
+                    g.appendError(msg='zones must be specified for all upstream_dns elements')
+                elif len(dns['zones']) < 1:
+                    g.appendError(msg='At least 1 zones element must be specified for all upstream_dns configurations')
+                if 'dns_servers' not in dns:
+                    g.appendError(msg='dns_servers must be specified for all upstream_dns elements')
+                elif len(dns['dns_servers']) < 1:
+                    g.appendError(msg='At least 1 dns_servers element must be specified for all upstream_dns configurations')
 
         # Check openshift_storage atttributes
         if len(ge['openshift_storage']) < 1:

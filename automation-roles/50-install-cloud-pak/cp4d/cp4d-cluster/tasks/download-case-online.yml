@@ -5,28 +5,26 @@
 
 - name: Get the CASE details for cartridge {{ current_cp4d_cartridge.name }}
   set_fact:
-    current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
+    _current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?name=='{{ current_cp4d_cartridge.name }}']
 
-- fail:
+- name: Fail if the case file details for the cartridge cannot be found
+  fail:
     msg: Case file details for cartridge {{ current_cp4d_cartridge.name }} not found
-  when: current_case_inventory=={}
+  when: _current_case_inventory=={}
 
-- name: Save Cloud Pak for Data operator case file {{ case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}
-  shell: |
-    cloudctl case save \
-      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}.tgz \
-      --outputdir {{ case_dir }} \
-      --no-dependency
+- set_fact:
+    _dependency: ""
+
+- set_fact:
+    _dependency: "--no-dependency"
   when:  
   - current_cp4d_cartridge.name == "lite"
 
-- name: Save case file {{ case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}
+- name: Save case file {{ _current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}
   shell: |
     cloudctl case save \
-      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}.tgz \
-      --outputdir {{ case_dir }} 
-  when:  
-  - current_cp4d_cartridge.name != "lite"
+      --case {{ case_github_url }}/{{ _current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}.tgz \
+      --outputdir {{ case_dir }} {{ _dependency }}

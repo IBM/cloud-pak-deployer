@@ -74,6 +74,9 @@ When the Cloud Pak for Data operator has been installed, the process continues b
 
 The Cloud Pak for Data control plane is a pre-requisite for all cartridges so at this stage, the deployer waits until the Ibmcpd status reached the `Completed` state.
 
+### Install the license service
+If the `cp-foundation` cartridge specifies `license_service` and the `state` attribute is `enabled`, the OperandRequest for the license service is created in OpenShift project `ibm-common-services`. This automatically takes care of installing the operator and an instance of `IBMLicensing` and set the number of threads per core (default 1). The value of `threads_per_core` is applied to the `IBMLicensing` instance once it has been created by the operator.
+
 ### Install the specified Cloud Pak for Data cartridges
 Now that the control plane has been installed in the specified OpenShift project, cartridges can be installed. Every cartridge is controlled by its own operator subscription in the `ibm-common-services` project and a custom resource. The deployer iterates twice over the specified cartridges, first to create the operator subscriptions, then to create the custom resources.
 

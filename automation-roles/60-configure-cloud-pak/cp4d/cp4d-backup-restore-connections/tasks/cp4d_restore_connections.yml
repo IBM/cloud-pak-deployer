@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show connections to restore
+  debug:
     msg: "{{ _cp4d_restore_connections }}"
 
 - when: not _cp4d_restore_connections.connections_restore_file is defined
@@ -17,7 +18,8 @@
         path: "{{ _cp4d_connections_file }}"
       register: _stat_result
 
-    - debug:
+    - name: Determine if connections file exists for restore
+      debug:
         msg: "File {{ _cp4d_connections_file }} does not exist, skip restoring connections"
       when: not _stat_result.stat.exists    
 
