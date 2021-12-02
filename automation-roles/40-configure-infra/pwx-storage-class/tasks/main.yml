@@ -11,6 +11,22 @@
   shell:
     oc delete sc portworx-db2-sc || true
 
-- name: Create other storage classes
-  script:
-    px-sc.sh
+#- name: Create other storage classes
+#  script:
+#    px-sc.sh
+#  ignore_errors: yes
+
+- name: Create temporary file for the pwx storage class yaml
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: pwx_tempfile
+
+- name: Create other storage classes yaml file {{ pwx_tempfile.path }}
+  template:
+    src: pwx_cp4d_storage_classes.j2
+    dest: "{{ pwx_tempfile.path }}"
+
+- name: Create pwx storage classes required for CP4D
+  command: |
+    oc apply -f "{{ pwx_tempfile.path }}"
