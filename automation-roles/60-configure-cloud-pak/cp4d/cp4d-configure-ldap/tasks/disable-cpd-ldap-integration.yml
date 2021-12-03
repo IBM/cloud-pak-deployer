@@ -6,25 +6,31 @@
           --header 'Authorization: Bearer {{ cp4d_login.token }}' \
           --header 'Content-Type: application/json' \
           --data-raw '{
-            "externalLDAPHost": "", 
-            "externalLDAPPort": "", 
-            "externalLDAPSearchUser": "", 
-            "externalLDAPSearchBase": "", 
-            "externalLDAPSearchField": "", 
-            "externalLDAPEmailField": "", 
-            "externalLDAPFirstNameField": "", 
-            "externalLDAPLastNameField": "", 
-            "externalLDAPGroupField": "", 
-            "externalLDAPPrefix": "", 
-            "auto_signup": false, 
-            "externalLDAPGroupSearchBase": "", 
-            "externalLDAPGroupSearchField": "", 
-            "externalLDAPGroupMemberField": "", 
-            "externalLDAPSearchPassword": ""
+            "externalLDAPHost":"",
+            "externalLDAPPort":0,
+            "externalLDAPPrefix":"",
+            "externalLDAPSuffix":"",
+            "auto_signup":false,
+            "externalLDAPSearchUser":"",
+            "externalLDAPSearchPassword":"",
+            "externalLDAPSearchBase":"",
+            "externalLDAPSearchField":"",
+            "externalLDAPGroupField":"",
+            "externalLDAPFirstNameField":"",
+            "externalLDAPLastNameField":"",
+            "externalLDAPEmailField":"",
+            "externalLDAPGroupSearchBase":"",
+            "externalLDAPGroupSearchField":"",
+            "externalLDAPGroupMemberField":""
         }'
+
+      
   register: _cp4d_disable_ldap_configuration_result
   args:
     warn: false
+
+- debug:
+    msg: "{{ _cp4d_disable_ldap_configuration_result }}"
 
 - set_fact:
     _cp4d_ldap_configuration_result_json: "{{ _cp4d_disable_ldap_configuration_result.stdout | from_json }}"
