@@ -4,21 +4,18 @@ title: Uninstall Cloud Pak for Data
 
 # Uninstall Cloud Pak for Data and Foundational Services
 
-## Check all CRs in cluster
+## Check all IBM CRs in the Cloud Pak for Data project
 ```
-export ns=zen-40
-for crd in $(oc get crd --no-headers | grep ibm | awk '{print $1}');do 
-    cr=$(oc get crd $crd -o=jsonpath='{.spec.names.kind}')
-    echo $cr;oc get $cr -n $ns
-done
+export NAMESPACE=zen-40
+oc get $(oc api-resources --namespaced=true --verbs=list -o name | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -n ${NAMESPACE} -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind'
 ```
 
 ## Remove all cartridge CRs
 ```
-oc delete wkc --all
-oc delete ws --all
-oc delete wmlbase --all
-oc delete ccs --all
+oc delete -n $NAMESPACE wkc --all
+oc delete -n $NAMESPACE ws --all
+oc delete -n $NAMESPACE wmlbase --all
+oc delete -n $NAMESPACE ccs --all
 ...
 ```
 
@@ -28,7 +25,7 @@ If you want to, you can hit Ctrl-C when deleting the CCS object, the deletion co
 
 ** IMPORTANT: You must now wait until all CRs have been deleted from the namespace before deleting the Ibmcpd CR.**
 ```
-oc delete ibmcpd --all
+oc delete -n $NAMESPACE ibmcpd --all
 ```
 
 Repeat the command to check all CRs in the cluster and wait until all objects in the Cloud Pak for Data namespace have been deleted.
@@ -37,6 +34,13 @@ Repeat the command to check all CRs in the cluster and wait until all objects in
 Now you can delete the CP4D namespace. This can take a few minutes.
 
 ## Remove Foundational Services
+
+### Check CRs in ibm-common-services
+```
+export NAMESPACE=ibm-common-services
+oc get $(oc api-resources --namespaced=true --verbs=list -o name | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -n ${NAMESPACE} -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind'
+```
+
 
 ### Remove CommonService operator
 ```
