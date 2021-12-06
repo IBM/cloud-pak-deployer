@@ -1,0 +1,33 @@
+---
+# Preprocess Watson Assistant installation
+- name: Run preparation for Watson Assistant
+  debug:
+    msg: "Running preparation for Watson Assistant installation"
+
+- debug:
+    var: "{{ current_cp4d_cartridge }}"
+
+- name: Create Postgres license key using CASE tool
+  shell: |
+    cloudctl case launch \
+      --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ current_cp4d_cartridge.case_version }}.tgz \
+      --inventory assistantOperator \
+      --action create-postgres-licensekey \
+      --namespace {{ current_cp4d_cluster.project }}
+
+- name: Install Postgres operator using CASE tool
+  shell: |
+    cloudctl case launch \
+      --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ current_cp4d_cartridge.case_version }}.tgz \
+      --inventory assistantOperator \
+      --action install-postgres-operator \
+      --namespace {{ current_cp4d_cluster.project }} \
+      --args "--inputDir {{ status_dir }}/cp4d/case"
+
+# TODO: Also set pull secret for private registry
+- name: Set Watson Assistant pull secret
+  shell: |
+    oc create secret docker-registry --namespace {{ current_cp4d_cluster.project }} wa-pull-secret \
+      --docker-server="cp.icr.io" --docker-username="cp" --docker-password="{{ ibm_cp_entitlement_key }}" \
+      --docker-email="not-used" 
+  ignore_errors: yes
