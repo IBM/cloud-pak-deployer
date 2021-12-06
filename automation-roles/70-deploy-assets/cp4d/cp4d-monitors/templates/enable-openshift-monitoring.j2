@@ -6,3 +6,13 @@ metadata:
 data:
   config.yaml: |
     enableUserWorkload: true
+{% if (_monitor_persist_sc != "") -%}
+    prometheusK8s: 
+      volumeClaimTemplate:
+       spec:
+         storageClassName: {{ _monitor_persist_sc }}
+         volumeMode: Filesystem
+         resources:
+           requests:
+             storage: {{ _monitor_persist_size_gb }}Gi
+{%- endif %}
