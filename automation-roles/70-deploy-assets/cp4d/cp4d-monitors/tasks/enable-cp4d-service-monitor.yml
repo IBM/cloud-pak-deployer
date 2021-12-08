@@ -29,15 +29,9 @@
       shell: oc wait -n openshift-monitoring --for=condition=Ready pod -l app=prometheus --timeout=240s
       register: _openshift_user_workload_pod
 
-    - debug:
-        msg: "{{ _openshift_user_workload_pod }}"
-
     - name: Wait until openshift-user-workload-monitoring pods are ready
       shell: oc wait -n openshift-user-workload-monitoring --for=condition=Ready pod --all --timeout=240s
       register: _openshift_user_workload_pod_enable_persist
-
-    - debug:
-        msg: "{{ _openshift_user_workload_pod_enable_persist }}"        
 
     - when: _monitor_persist_sc != ""
       block:
@@ -58,8 +52,6 @@
           shell: oc wait -n openshift-user-workload-monitoring --for=condition=Ready pod/prometheus-user-workload-0 pod/prometheus-user-workload-1 --timeout=240s
           register: _openshift_user_workload_pod_enable_persist
 
-        - debug:
-            msg: "{{ _openshift_user_workload_pod_enable_persist }}"
 
 - name: Validate Cloud Pak for Data ServiceMonitor is configured
   shell: |
