@@ -1,0 +1,62 @@
+---
+# Preprocess Watson Assistant installation
+- name: Run preparation for Watson Assistant
+  debug:
+    msg: "Running preparation for Watson Assistant installation"
+
+- debug:
+    var: "{{ current_cp4d_cartridge }}"
+
+- name: Create Postgres license key using CASE tool
+  shell: |
+    cloudctl case launch \
+      --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ current_cp4d_cartridge.case_version }}.tgz \
+      --inventory assistantOperator \
+      --action create-postgres-licensekey \
+      --namespace {{ current_cp4d_cluster.project }}
+
+- name: Install Postgres operator using CASE tool
+  shell: |
+    cloudctl case launch \
+      --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ current_cp4d_cartridge.case_version }}.tgz \
+      --inventory assistantOperator \
+      --action install-postgres-operator \
+      --namespace {{ current_cp4d_cluster.project }} \
+      --args "--inputDir {{ status_dir }}/cp4d/case"
+
+- name: Set Watson Assistant pull secret for specified private registry
+  block:
+    - name: Get pull secret for image registry {{ current_cp4d_cluster.image_registry_name }} from the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
+        secret_group: "{{ environment_name }}"
+    - name: Validate if container registry credentials secret is available
+      fail: msg="Container registry credentials secret image-registry-{{ current_cp4d_cluster.image_registry_name }} from group {{ environment_name }} is empty"
+      when: secret_value== ""
+
+    - set_fact:
+        _p_registry_url: "{{ private_registry_url }}"
+        _p_registry_pull_secret: "{{ secret_value }}"
+
+  when: not (use_entitled_registry | bool)
+
+- name: Set Watson Assistant pull secret for the entitled registry
+  set_fact:
+    _p_registry_url: "{{ entitled_registry }}" 
+    _p_registry_pull_secret: "cp:{{ ibm_cp_entitlement_key }}"
+  when: (use_entitled_registry | bool)
+
+- name: Generate dockerconfig for pull secret
+  template:
+    src: watson-assistant-pull-secret.j2
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-wa-pull-secret.json"
+
+- name: Create secret wa-pull-secret and set data
+  shell: |
+    oc create secret generic -n {{ current_cp4d_cluster.project }} wa-pull-secret \
+      --from-file=.dockerconfigjson={{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-wa-pull-secret.json \
+      --type=kubernetes.io/dockerconfigjson | true
+    oc set data secret/wa-pull-secret -n {{ current_cp4d_cluster.project }} \
+      --from-file=.dockerconfigjson={{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-wa-pull-secret.json
