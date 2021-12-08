@@ -9,14 +9,14 @@
   block:
 
     - set_fact:
-        _monitor_persist_sc: "{{ all_config.cp4d_monitors.openshift_monitoring_persist_storage_class | default ('') }}"
-        _monitor_persist_size_gb: "{{ all_config.cp4d_monitors.openshift_persist_storage_size_in_gb | default ('100') }}"
+        _monitor_persist_sc: "{{ _monitors.openshift_monitoring_persist_storage_class | default ('') }}"
+        _monitor_persist_size_gb: "{{ _monitors.openshift_persist_storage_size_in_gb | default ('100') }}"
 
     - name: Create cluster monitor configuration file
       template:
         src: enable-openshift-monitoring.j2
         dest: "{{ _cloud_pak_service_monitor_dir.path }}/cluster-monitor-config.yaml"
-    
+
     - name: Create cluster monitor configuration
       shell: |
         oc create -f {{ _cloud_pak_service_monitor_dir.path }}/cluster-monitor-config.yaml
