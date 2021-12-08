@@ -60,8 +60,7 @@ case_inventories:
     inventory: db2whOperatorSetup
     search_string: ibm-db2wh
   - name: iis
-    type: custom
-    install_operator_script: cp4d-install-iis-operator.yml
+    operator_install_script: cp4d-install-iis-operator.yml
     inventory: iisOperatorSetup
     search_string: ibm-cpd-iis-operator
   - name: dmc
@@ -87,15 +86,31 @@ case_inventories:
   - name: spss
     inventory: spssSetup
     search_string: ibm-spss
+  - name: voice-gateway
+    inventory: voiceGatewayOperatorSetup
+    search_string: ibm-voice-gateway
+  - name: watson-assistant
+    cr_preprocessing_script: cp4d-prep-watson-assistant.yml
+    inventory: assistantOperator
+    search_string: ibm-watson-assistant
+  - name: watson-discovery
+    inventory: discoveryOperators
+    search_string: ibm-watson-discovery
+  - name: watson-ks
+    inventory: wksOperatorSetup
+    search_string: ibm-watson-ks
+  - name: watson-openscale
+    inventory: ibmWatsonOpenscaleOperatorSetup
+    search_string: ibm-watson-openscale
+  - name: watson-speech
+    inventory: speechOperatorSetup
+    search_string: ibm-watson-speech
   - name: wkc
     inventory: wkcOperatorSetup
     search_string: ibm-wkc
   - name: wml
     inventory: wmlOperatorSetup
     search_string: ibm-wml-cpd
-  - name: watson-openscale
-    inventory: ibmWatsonOpenscaleOperatorSetup
-    search_string: ibm-watson-openscale
   - name: wsl
     inventory: wslSetup
     search_string: ibm-wsl
@@ -214,8 +229,9 @@ cartridge_cr:
   - name: voice-gateway
     cr_cr: VoiceGateway
     cr_name: voicegateway-cr 
-    cr_status_attribute: voicegatewayStatus
-    cr_status_completed: Completed
+    # Completion status attribute has been commented out as this is inconsistent with other cartridges
+    # cr_status_attribute: voicegatewayStatus
+    # cr_status_completed: Completed
   - name: watson-assistant
     cr_cr: WatsonAssistant
     cr_name: wa
@@ -230,6 +246,11 @@ cartridge_cr:
     cr_cr: WOService
     cr_name: aiopenscale
     cr_status_attribute: wosStatus
+    cr_status_completed: Completed
+  - name: watson-ks
+    cr_cr: KnowledgeStudio
+    cr_name: wks
+    cr_status_attribute: wksStatus
     cr_status_completed: Completed
   - name: watson-speech
     cr_cr: WatsonSpeech
@@ -309,6 +330,8 @@ cartridge_csv:
     cartridge_label: operators.coreos.com/ibm-watson-discovery-operator.ibm-common-services
   - name: watson-openscale
     cartridge_label: operators.coreos.com/ibm-cpd-wos.ibm-common-services
+  - name: watson-ks
+    cartridge_label: operators.coreos.com/ibm-watson-ks-operator.ibm-common-services
   - name: watson-speech
     cartridge_label: operators.coreos.com/ibm-watson-speech-operator.ibm-common-services
   - name: wkc
