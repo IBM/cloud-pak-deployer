@@ -48,9 +48,15 @@
         _saml_sp_cert: "{{ secret_value }}"
       when: (_cp4d_saml_config.sp_cert_secret | default("")) != ""
 
-    - name: Set Cloud Pak for Data callback URL
+    - name: Set Cloud Pak for Data callback URL to default value if not configured
       set_fact:
         _cp4d_callback_url: "https://{{ cp4d_url.stdout }}/auth/login/sso/callback"
+      when: (_cp4d_saml_config.callback_url | default("")) == ""
+
+    - name: Set Cloud Pak for Data callback URL to specified value if configured
+      set_fact:
+        _cp4d_callback_url: "{{ _cp4d_saml_config.callback_url }}"
+      when: (_cp4d_saml_config.callback_url | default("")) != ""
 
     - template:
         src: samlConfig.j2

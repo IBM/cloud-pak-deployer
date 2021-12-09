@@ -1,18 +1,19 @@
-apiVersion: discovery.watson.ibm.com/v1
-kind: WatsonDiscovery
+apiVersion: knowledgestudio.watson.ibm.com/v1
+kind: KnowledgeStudio
 metadata:
-  name: wd
+  name: wks
   namespace: {{ current_cp4d_cluster.project }}
   annotations:
     oppy.ibm.com/disable-rollback: 'true'
 spec:
   license:
     accept: true
-  shared:
-    deploymentType: Production
+  global:
     storageClassName: {{ ocp_storage_class_block }}
-  watsonGateway:
-    version: main
+    size: {{ current_cp4d_cartridge.size }}
+  awt:
+    persistentVolume: 
+      storageClassName: {{ ocp_storage_class_file }}
 {% if current_cp4d_cartridge.version is defined %}
   version: {{ current_cp4d_cartridge.version }}
 {% endif %}
