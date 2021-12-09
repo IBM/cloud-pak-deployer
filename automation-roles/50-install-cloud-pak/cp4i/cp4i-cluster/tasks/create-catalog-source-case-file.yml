@@ -1,0 +1,89 @@
+---
+
+- name: Retrieve case file for {{ case_inventory.name }} in the {{ case_dir }} directory
+  find:
+    paths: "{{ case_dir }}"
+    patterns: "^{{ case_inventory.search_string }}-[0-9][.][0-9][.][0-9][.]tgz"
+    use_regex: yes
+  register: case_files
+
+- debug:
+    var: case_files
+
+- set_fact:
+    case_file: "{{ case_files.files | first | default({}) }}"
+
+- debug:
+    var: case_file
+
+- name: Install CatalogSource for case file {{ case_file.path }} using private registry
+  block:
+  - name: Install CatalogSource for foundational services from case file {{ case_file.path }} using private registry
+    shell: |
+      cloudctl case launch --case {{ case_file.path }} \
+        --inventory {{ case_inventory.inventory }} \
+        --namespace openshift-marketplace \
+        --action install-catalog \
+        --args "--registry {{ private_registry_url_namespace }} --inputDir {{ case_dir }} --recursive"
+    when: 
+    - case_inventory.search_string == "ibm-cp-common-services"
+  - name: Install CatalogSource from case file {{ case_file.path }} using private registry
+    shell: |
+      cloudctl case launch --case {{ case_file.path }} \
+        --inventory {{ case_inventory.inventory }} \
+        --namespace openshift-marketplace \
+        --action install-catalog \
+        --args "--inputDir {{ case_dir }} --recursive"
+    when: 
+    - case_inventory.search_string != "ibm-cp-common-services"        
+  when: 
+    - (current_cp4i_cluster.image_registry_name | default("")) != ""
+    - case_file != {}
+
+- name: Install CatalogSource for case file {{ case_file.path }} using entitled registry
+  block:
+  - name: Install CatalogSource for foundational services from case file {{ case_file.path }} using entitled registry
+    shell: |
+      cloudctl case launch --case {{ case_file.path }} \
+        --inventory {{ case_inventory.inventory }} \
+        --namespace openshift-marketplace \
+        --action install-catalog \
+        --args "--registry icr.io --inputDir {{ case_dir }}"
+    when: 
+    - case_inventory.search_string == "ibm-cp-common-services"
+  - name: Install CatalogSource using case file {{ case_file.path }} using entitled registry
+    shell: |
+      cloudctl case launch --case {{ case_file.path }} \
+        --inventory {{ case_inventory.inventory }} \
+        --namespace openshift-marketplace \
+        --action install-catalog \
+        --args "--inputDir {{ case_dir }}"
+    when: 
+    - case_inventory.search_string != "ibm-cp-common-services"
+  when: 
+    - (current_cp4i_cluster.image_registry_name | default("")) == ""
+    - case_file != {}
+
+#- name: Install CatalogSource for case file {{ case_file.path }} using entitled registry
+#  block:
+#  - name: Install CatalogSource for foundational services from case file {{ case_file.path }} using entitled registry
+#    shell: |
+#      cloudctl case launch --case {{ case_file.path }} \
+#        --inventory {{ case_inventory.inventory }} \
+#        --namespace openshift-marketplace \
+#        --action install-catalog \
+#        --args "--registry icr.io --inputDir {{ case_dir }} --recursive"
+#    when: 
+#    - case_inventory.search_string == "ibm-cp-common-services"
+#  - name: Install CatalogSource using case file {{ case_file.path }} using entitled registry
+#    shell: |
+#      cloudctl case launch --case {{ case_file.path }} \
+#        --inventory {{ case_inventory.inventory }} \
+#        --namespace openshift-marketplace \
+#        --action install-catalog \
+#        --args "--inputDir {{ case_dir }} --recursive"
+#    when: 
+#    - case_inventory.search_string != "ibm-cp-common-services"
+#  when: 
+#    - (current_cp4i_cluster.image_registry_name | default("")) == ""
+#    - case_file != {}
