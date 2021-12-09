@@ -11,6 +11,7 @@ import sys
 #   idp_cert_secret: {{ env_id }}-zen-40-idp-cert
 #   issuer: "cp4d"
 #   identifier_format: ""
+#   callback_url: ""
 
 def preprocessor(attributes=None, fullConfig=None):
     g = GeneratorPreProcessor(attributes,fullConfig)

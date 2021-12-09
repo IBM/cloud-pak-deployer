@@ -20,6 +20,7 @@ For IBM Cloud, the following object types are supported:
 * [address_prefix](#ibm-cloud-address_prefix)
 * [subnet](#ibm-cloud-subnet)
 * [vsi](#ibm-cloud-vsi)
+* [transit_gateway](#ibm-cloud-transit_gateway)
 * [nfs_server](#ibm-cloud-nfs_server)
 * [serviceid](#serviceid)
 * [cos](#cos)
@@ -101,6 +102,7 @@ vpc:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the Virtual Private Cloud                                    | Yes       |  |
+| managed  | Controls whether the VPC is managed. The default is `True`. Only set to `False` if the VPC is not managed but only referenced by other objects such as transit gateways. | No | True (default), False |
 | allow_inbound | Security rules which are allowed for inbound traffic            | No | Existing `security_rule`s |
 
 
@@ -183,6 +185,26 @@ vsi:
 | infrastructure.public_ip | Must a public IP address be attached to this VSI? | No | False (default), True |
 | infrastructure.vpc_name | Virtual Private Cloud this VSI belongs to              | Yes, inferred from subnet |  |
 | infrastructure.zone | Zone the VSI will be plaed into                            | Yes, inferred from subnet |  |
+
+### IBM Cloud `transit_gateway`
+Connects one or more VPCs to each other.
+
+```
+transit_gateway:
+- name: sample-tgw
+  location: eu-de
+  connections:
+  - vpc: other-vpc
+  - vpc: sample
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the transit gateway                                          | Yes       |  |
+| location | IBM Cloud location of the transit gateway                            | Yes       |  |
+| connections | Defines which VPCs must be included in the transit gateway        | Yes       |  |
+| connection.vpc | Defines the VPC to include. Every VPC must exist in the configuration, even if not managed by this configuration. When referencing an existing VPC, make sure that there is a `vpc` object of that name with `managed` set to `False`.  | Yes       | Existing `vpc` |
 
 ### IBM Cloud `nfs_server`
 Defines a Virtual Server Instance within the VPC that will be used as an NFS server.

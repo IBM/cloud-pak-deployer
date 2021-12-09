@@ -22,6 +22,7 @@ cp4d_saml_config:
   idp_cert_secret: {{ env_id }}-zen-40-idp-cert
   issuer: "cp4d"
   identifier_format: ""
+  callback_url: ""
 ```
 
 #### Property explanation
@@ -34,7 +35,8 @@ cp4d_saml_config:
 | idp_cert_secret | Vault secret that holds the public certificate of the idP. This confirms the identity of the idP  | Yes   |  |
 | issuer | The name you chose to register the Cloud Pak for Data instance with your idP  | Yes   |  |
 | identifier_format | Format of the requests from Cloud Pak for Data to the idP. If not specified, `urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress` is used  | No   |  |
+| callback_url | Specify the callback URL if you want to override the default of **cp4d_url**`/auth/login/sso/callback` | No | |
 
-The SAML configuration file in the Cloud Pak for Data user management pods holds one more field: `callbackUrl`. This field is automatically populated by the deployer and consists of the Cloud Pak for Data base URL appended with `/auth/login/sso/callback`.
+The `callbackUrl` field in the `samlConfig.json` file is automatically populated by the deployer if it is not specified by the `cp4d_saml_config` entry. It then consists of the Cloud Pak for Data base URL appended with `/auth/login/sso/callback`.
 
 Before running the deployer with SAML configuration, ensure that the secret configured for `idp_cert_secret` exists in the vault. Check [Deployer configuration](/cp-deploy/configure#vault-secrets) for instructions on adding secrets to the vault.
