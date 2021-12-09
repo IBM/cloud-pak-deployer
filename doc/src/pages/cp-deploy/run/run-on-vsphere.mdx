@@ -5,6 +5,19 @@ tabs: ['Run on IBM Cloud', 'Run on vSphere', 'Run on existing OpenShift']
 
 # Running the Cloud Pak Deployer on vSphere
 
+## Topology
+A typical setup of the vSphere cluster with OpenShift is pictured below:
+![vSphere configuration](sample-vsphere-nfs-ocs-cp4d.png)
+
+When deploying OpenShift and the Cloud Pak(s) on VMWare vSphere, there is a dependency on a DHCP server for issuing IP addresses to the newly configured cluster nodes. Also, once the OpenShift cluster has been installed, valid fully qualified host names are required to connect to the OpenShift API server at port `6443` and applications running behind the ingress server at port `443`. The Cloud Pak deployer cannot set up a DHCP server or a DNS server and to be able to connect to OpenShift or to reach the Cloud Pak after installation, name entries must be set up.
+
+### DNS configuration
+Ensure that the DNS server has the following entries:
+* `api.openshift_name.domain_name` --> Point to the `api_vip` address configured in the `openshift` object
+* `*.apps.openshift_name.domain_name` --> Point to the `ingress_vip` address configured in the `openshift` object
+
+If you do not configure the DNS entries upfront, the deployer will still run and it will "spoof" the required entries in the container's `/etc/hosts` file. However to be able to connect to OpenShift and access the Cloud Pak, the DNS entries are required.
+
 ## Obtain the vSphere user and password
 In order for the Cloud Pak Deployer to create the infrastructure and deploy the IBM Cloud Pak, it must have provisioning access to vSphere and it needs the vSphere user and password. The user must have permissions to create VM folders and virtual machines.
 
