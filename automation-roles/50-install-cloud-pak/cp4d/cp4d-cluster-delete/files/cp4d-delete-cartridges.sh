@@ -9,5 +9,5 @@ for cr in \
         | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found \
         -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' \
         --no-headers --namespace $1 | awk '{print $1}' | grep -vi -E 'comonservice|ibmcpd|operandrequest|zenservice');do
-    oc delete $cr --all --namespace $1 --grace-period 120
+    oc delete $cr --all --namespace $1 --grace-period 300
 done
