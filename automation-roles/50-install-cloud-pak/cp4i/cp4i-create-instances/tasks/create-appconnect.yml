@@ -8,10 +8,28 @@
 - debug:
     msg: "### Creating App Connect"
 
-# Input: 'current_cp4i_instance' with details defined in the configuration
+# Input: 
+# - 'current_cp4i_instance' current instance details defined in the configuration
+# - 'current_cp4i_cluster'  all properties defined in the configuration
 
-# TODO(SJ): Consider moving this control to the cp4i-cluster/prepare-cp4i-opeartor.yml
 # Check if the subscription is in the Succeeded state
+
+- debug:
+    msg: "######### {{current_cp4i_instance.package}}-{{current_cp4i_instance.channel}}-{{current_cp4i_instance.source}}-openshift-marketplace"
+
+- name: Wait for the {{current_cp4i_instance.package}} subscription
+  shell: |
+    subscription_name="{{current_cp4i_instance.package}}-{{current_cp4i_instance.channel}}-{{current_cp4i_instance.source}}-openshift-marketplace"
+    csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
+    if [[ "$csv" == "null" ]]; then
+      echo "null"
+    else
+      oc get csv -n openshift-operators ${csv} -o json 2>/dev/null | jq -r .status.phase
+    fi
+  register: pn_phase
+  retries: 100
+  delay: 20
+  until: pn_phase.stdout == "Succeeded"
 
 # Create instance
 
