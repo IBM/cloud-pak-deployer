@@ -1,5 +1,19 @@
 ---
 
+- name: Wait for the {{current_cp4i_instance.package}} subscription
+  shell: |
+    subscription_name="{{current_cp4i_instance.package}}-{{current_cp4i_instance.channel}}-{{current_cp4i_instance.source}}-openshift-marketplace"
+    csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
+    if [[ "$csv" == "null" ]]; then
+      echo "null"
+    else
+      oc get csv -n openshift-operators ${csv} -o json 2>/dev/null | jq -r .status.phase
+    fi
+  register: pn_phase
+  retries: 100
+  delay: 20
+  until: pn_phase.stdout == "Succeeded"
+
 - set_fact:
     cp4i_package: "{{ current_cp4i_instance.package }}"
 
