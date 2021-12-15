@@ -13,9 +13,16 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-  - name: Install Cloud Pak
+  - name: Install Cloud Pak for Data
     include_role:
       name: cp4d-cluster
     loop: "{{ all_config.cp4d | default([]) }}"
     loop_control:
       loop_var: current_cp4d_cluster
+
+  - name: Install Cloud Pak for Integration
+    include_role:
+      name: cp4i-cluster
+    loop: "{{ all_config.cp4i | default([]) }}"
+    loop_control:
+      loop_var: current_cp4i_cluster
