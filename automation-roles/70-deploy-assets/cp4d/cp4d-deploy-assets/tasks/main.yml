@@ -3,9 +3,28 @@
   debug:
     msg: "Handling deploy assets for CP4D cluster {{ current_cp4d_cluster.project }}"
 
-- name: Install cpdctl tool
-  include_tasks: install-cpdctl.yml
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
 
-- name: Configure Monitors
+- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-client
+  vars:
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: openshift-login
+  vars: 
+    openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+
+- name: Deploy Cloud Pak for Data Assets
+  include_role:
+    name: cp4d-assets
+
+- name: Configure Cloud Pak for Data Monitors
   include_role:
     name: cp4d-monitors 
