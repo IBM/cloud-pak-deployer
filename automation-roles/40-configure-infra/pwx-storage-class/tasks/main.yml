@@ -1,0 +1,32 @@
+---
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Wait until Portworx is ready
+  script:
+    portworx_wait_until_ready.sh
+
+- name: Delete db2 Storage class that is created by provider
+  shell:
+    oc delete sc portworx-db2-sc || true
+
+#- name: Create other storage classes
+#  script:
+#    px-sc.sh
+#  ignore_errors: yes
+
+- name: Create temporary file for the pwx storage class yaml
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: pwx_tempfile
+
+- name: Create other storage classes yaml file {{ pwx_tempfile.path }}
+  template:
+    src: pwx_cp4d_storage_classes.j2
+    dest: "{{ pwx_tempfile.path }}"
+
+- name: Create pwx storage classes required for CP4D
+  command: |
+    oc apply -f "{{ pwx_tempfile.path }}"

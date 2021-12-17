@@ -233,7 +233,11 @@ spec:
     dockerRegistryPrefix: ""
     imagePullSecrets:
     - wa-pull-secret
+    {% if selected_openshift_storage.storage_type == "pwx" %}
+    storageClassName: portworx-watson-assistant-sc
+    {% else %}  
     storageClassName: {{ ocp_storage_class_block }}
+    {% endif %}
     type: private
     name: prod # Do not change this value 
   cpd:
@@ -249,7 +253,11 @@ spec:
         storageSize: 55Gi
       kafka:
         storageSize: 55Gi
-      storageClassName: {{ ocp_storage_class_block }}
+        {% if selected_openshift_storage.storage_type == "pwx" %}
+        storageClassName: portworx-watson-assistant-sc
+        {% else %}
+        storageClassName: {{ ocp_storage_class_block }}
+        {% endif %}
       zookeeper:
         storageSize: 55Gi
     elasticSearch:
@@ -269,10 +277,18 @@ spec:
         storageSize: 1Gi
     modelTrain:
       postgres:
+        {% if selected_openshift_storage.storage_type == "pwx" %}
+        storageClassName: portworx-watson-assistant-sc
+        {% else %}
         storageClassName: {{ ocp_storage_class_block }}
+        {% endif %}
         storageSize: 55Gi
       rabbitmq:
+        {% if selected_openshift_storage.storage_type == "pwx" %}
+        storageClassName: portworx-watson-assistant-sc
+        {% else %}
         storageClassName: {{ ocp_storage_class_block }}
+        {% endif %}
         storageSize: 55Gi
     postgres:
       backupStorageClassName: ""
