@@ -8,7 +8,11 @@ spec:
     accept: true
   shared:
     deploymentType: Production
+    {% if selected_openshift_storage.storage_type == "pwx" %}
+    storageClassName: portworx-db-gp2-sc
+    {% else %}
     storageClassName: {{ ocp_storage_class_block }}
+    {% endif %}
   watsonGateway:
     version: main
 {% if current_cp4d_cartridge.version is defined %}
