@@ -1,0 +1,22 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - vault_type is defined
+      - vault_authentication_type is defined
+      - cloud_platform is defined
+
+- name: Validate cloud_platform is supported
+  fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
+  when: "cloud_platform not in supported_cloud_platform_types"
+
+- name: Validate mandatory variables and secrets for ibm-cloud
+  include_tasks: ibmcloud-validate-variables.yml
+  when:
+  - cloud_platform == 'ibm-cloud'
+
+- name: Fail if destroy was not confirmed
+  fail:
+    msg: "Destroy was not confirmed with --confirm-destroy parameter"
+  when:
+    - confirm_destroy | bool != True

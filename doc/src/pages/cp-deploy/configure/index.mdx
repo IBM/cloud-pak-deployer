@@ -42,6 +42,9 @@ Every configuration has 3 mandatory subdirectories.
 
 You can choose to keep only a single file per subdirectory, or for more complex configurations, you can create multiple yaml files. The generator automatically merges all files in the config and defaults directory.
 
+Additionally, there is 1 optional subdirectory:
+* `assets`: Keeps directories of assets which must be deployed onto the Cloud Pak
+
 ### `config` directory
 Create one or more `.yaml` files holding the configuration you want to provision. You can create Virtual Private Clouds (VPCs), Security rules, Virtual Server Instances (VSIs), OpenShift clusters, Cloud Pak for Data instances and a few more, simply by adding yaml constructs to files in this directory.
 
@@ -62,3 +65,42 @@ You should not need to edit the files under this directory in most circumstances
 The Cloud Pak Deployer pipeline has been built using Ansible and it can be configured using "inventory" files. Inventory files hold the global parameters which are available throughout the Ansible playbooks. 
 
 The most important configuration you will find in the Cloud Pak Deployer's inventory files is the vault configuration. All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault).
+
+### `assets` directory
+Holds one directory per Cloud Pak for which assets must be deployed. For Cloud Pak for Data, the assets are assumed to be in subdirectories of the `assets/cp4d` directory.
+
+#### Cloud Pak for Data assets under `assets/cp4d`
+Each asset must be contained in a directory under `assets/cp4d`, which makes it easier to distribute as a unit. The specific directory must either have a script called `cp4d-asset.sh` or an Ansible task file called `cp4d-asset.yaml` and it will be executed without any parameters.
+
+The following runtime attributes will be set prior to running the shell script or the Ansible task:
+* `cpdctl` is configured for the current Cloud Pak for Data instance and the current context is set to the `admin` user of the instance. This means you can run all `cpdctl` commands without first having to login to Cloud Pak for Data.
+* The current working directory is set to the directory holding the `cp4d-asset.sh` script.
+* When running the `cp4d-asset.sh` shell script, the following environment variables are available:
+    - `CP4D_URL`: Cloud Pak for Data URL
+    - `CP4D_ADMIN_PASSWORD`: Cloud Pak for Data admin password
+    - `CP4D_OCP_PROJECT`: OpenShift project that holds the Cloud Pak for Data instance
+    - `KUBECONFIG`: OpenShift configuration file that allows you to run `oc` commands for the cluster
+
+## Vault secrets
+
+User passwords, certificates and other "secret" information is kept in the vault, which can be either a flat file (not encrypted), HashiCorp Vault or the IBM Cloud Secrets Manager service. Some of the deployment configurations require that the vault is pre-populated with secrets which as needed during the deployment. For example, a vSphere deployment needs the vSphere user and password to authenticate to vSphere and Cloud Pak for Data SAML configuration requires the idP certificate.
+
+To set secrets, ensure that the environment variables for the configuration and status directories are set:
+```
+export STATUS_DIR=/data/status/sample
+export CONFIG_DIR=/data/config/sample
+```
+
+Set vSphere user secret:
+```
+./cp-deploy.sh vault set \
+    --vault-secret vsphere-user \
+    --vault-secret-value super_user@vsphere.local
+```
+
+Or, if you want to create the secret from an input file:
+```
+./cp-deploy.sh vault set \
+    --vault-secret kubeconfig \
+    --vault-secret-file ~/.kube/config
+```    

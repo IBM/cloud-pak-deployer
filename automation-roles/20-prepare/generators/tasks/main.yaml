@@ -77,7 +77,8 @@
         label: "{{ item.path }}"
 ### End - Merge defaults ###
 
-- debug:
+- name: Show merged defaults
+  debug:
     var: defaults_merged
 
 ### we got defaults_merged and config_merged  
@@ -143,10 +144,8 @@
   loop_control:
     index_var: all_config_item_index
 
-- debug:
-    var: generator_validation_error_count
-
-- fail:
+- name: Fail if configuration errors have been found
+  fail:
     msg: "{{ generator_validation_error_message }}"
   when: generator_validation_error_count | int > 0
   vars:

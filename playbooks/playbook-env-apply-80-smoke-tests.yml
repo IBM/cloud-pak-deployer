@@ -10,8 +10,18 @@
   vars:
     ansible_callback_diy_runner_on_skipped_msg: ""
     ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
+  - name: Store all configuration into the vault for later comparison
+    include_role:
+      name: vault-create-secret
+    vars:
+      secret_name: all-config
+      secret_description: "All configuration"
+      secret_payload: "{{ all_config }}"
+      secret_group: "{{ environment_name }}"
+
   - name: Cloud Pak smoke tests
     include_role:
       name: cp4d-cluster-smoke-tests

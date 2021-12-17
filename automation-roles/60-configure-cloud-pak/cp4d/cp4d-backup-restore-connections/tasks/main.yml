@@ -1,0 +1,37 @@
+---
+- name: Show exporting of connections
+  debug:
+    var: all_config.cp4d_export_connections
+
+- name: Create connections exports folders
+  file:
+    state: directory
+    path: "{{ status_dir }}/cp4d/exports/connections"
+
+- name: Get the Catalog 'Platform assets catalog'
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/catalogs?entity.name={{ cp4d_all_assets_catalog_name }}'"
+  register: _cp4d_get_catalog_result
+
+- set_fact:
+    _cp4d_catalog: "{{ _cp4d_get_catalog_result.stdout | from_json }}"
+
+- name: "Get cp4d_backup_restore_connections entry of current CP4D cluster {{ current_cp4d_cluster.project }} and OpenShift cluster name {{ current_cp4d_cluster.openshift_cluster_name }}"
+  set_fact:
+    _cp4d_backup_restore_connections: "{{ all_config.cp4d_backup_restore_connections | json_query(_backup_restore_connections_current_cluster) | default([]) }}"
+  vars:
+    _backup_restore_connections_current_cluster: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+
+- name: "Backup CP4D connections of CP4D cluster {{ current_cp4d_cluster.project }}"
+  include_tasks: cp4d_backup_connections.yml
+  loop: "{{ _cp4d_backup_restore_connections | default([]) }}"
+  loop_control:
+    loop_var: _cp4d_backup_connections
+
+- name: "Restore CP4D connections of CP4D cluster {{ current_cp4d_cluster.project }}"
+  include_tasks: cp4d_restore_connections.yml
+  loop: "{{ _cp4d_backup_restore_connections | default([]) }}"
+  loop_control:
+    loop_var: _cp4d_restore_connections    
+
+
+

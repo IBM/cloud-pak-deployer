@@ -1,0 +1,28 @@
+---
+- name: Show connections backup
+  debug:
+    msg: "{{ _cp4d_backup_connections }}"
+
+- when: not _cp4d_backup_connections.connections_backup_file is defined
+  debug:
+    msg: "No connections_backup_file specified. Skipping backup...."
+
+- when: _cp4d_backup_connections.connections_backup_file is defined
+  block:
+    - name: Get all connections
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }}'"
+      register: _cp4d_backup_connections_result
+
+    - set_fact:
+        _cp4d_backup_connections_json: "{{ _cp4d_backup_connections_result.stdout }}"
+
+    - copy:
+        content: "{{ _cp4d_backup_connections_json }}"
+        dest: "{{ status_dir }}/cp4d/exports/connections/{{ _cp4d_backup_connections.connections_backup_file }}"
+
+    - name: Show connections backup file being created
+      debug:
+        msg: "Connections backup file created: {{ status_dir }}/cp4d/exports/connections/{{ _cp4d_backup_connections.connections_backup_file }}"
+
+
+    

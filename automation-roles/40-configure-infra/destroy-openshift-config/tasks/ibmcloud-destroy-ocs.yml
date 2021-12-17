@@ -1,0 +1,15 @@
+---
+- name: Check if OcsCluster custom resource exists
+  command: |
+    oc get OcsCluster
+  failed_when: False
+  register: ocs_cluster_exists
+
+- name: Show OcsCluster objects
+  debug:
+    var: ocs_cluster_exists
+
+- name: Delete all OcsCluster custom resources
+  command: |
+    oc delete OcsCluster --all
+  when: ocs_cluster_exists.rc == 0
