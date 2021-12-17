@@ -14,17 +14,23 @@
   delay: 20
   until: pn_phase.stdout == "Succeeded"
 
-# Check if the instance already exists
-- name: Verify if platform navigator already exists
+- name: Check if the {{current_cp4i_instance.kind}} {{current_cp4i_instance.name}} already exists
   shell: |
-    oc get PlatformNavigator {{current_cp4i_cluster.platform_navigator.instance_name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{current_cp4i_cluster.platform_navigator.instance_name}}' | wc -l
-  register: pn_exists
+    oc get {{current_cp4i_instance.kind}} {{current_cp4i_instance.name}} -n {{current_cp4i_cluster.project}} | | grep -i '^{{current_cp4i_instance.name}}' | wc -l
+  register: instance_exists  
 
-- debug:
-    msg: "-----> {{pn_exists}}"
+- name: Prepare yaml file for creating instance
+  template:
+    src: "{{current_cp4i_instance.template}}.j2"
+    dest: "{{ status_dir }}/cp4i/{{current_cp4i_instance.name}}.yml"
+  when: instance_exists.stdout == "0"
 
-# Create an instance using current_cp4i_instance.template
-# TODO(SJ): Implement template references in the configuration file
-# TODO(SJ): Implement j2 templates for each possible combination 
+- name: Create instance from {{ status_dir }}/cp4di/{{current_cp4i_instance.name}}.yml
+  shell: |
+    oc apply -f {{ status_dir }}/cp4i/{{current_cp4i_instance.name}}.yml
+  when: instance_exists.stdout == "0"
 
-# Wait until instance is created
+
+# We don't wait here that the instance becomes ready. Insead, we just "fire and forget". 
+# If there is a requirement that the instance must be ready before any of the further actions,
+# we will check this in the cloud pak configuration tasks (60-configure-cloud-pak).

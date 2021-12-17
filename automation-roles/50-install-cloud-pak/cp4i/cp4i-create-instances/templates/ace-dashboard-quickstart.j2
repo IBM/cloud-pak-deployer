@@ -1,0 +1,34 @@
+apiVersion: appconnect.ibm.com/v1beta1
+kind: Dashboard
+metadata:
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  license:
+    accept: true
+    license: {{current_cp4i_instance.license}}
+    use: CloudPakForIntegrationNonProduction
+  pod:
+    containers:
+      content-server:
+        resources:
+          limits:
+            cpu: 250m
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+      control-ui:
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 125Mi
+  replicas: 1
+  storage:
+    size: 5Gi
+    type: persistent-claim
+  useCommonServices: true
+  version: {{current_cp4i_instance.version}}
