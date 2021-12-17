@@ -43,6 +43,12 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     continue
   fi
 
+  # Check if cartridge has been defined
+  if [[ "$cr_status_attribute" == "null" ]] || [[ "$cr_status_attribute" == "" ]];then
+    log "Warning: Cartridge $c does not have a completion status attribute in cartridges_cr, it will not be counted."
+    continue
+  fi
+
   # Check if object exists
   oc get --namespace $project $cr_cr $cr_name
   if [ $? -ne 0 ];then

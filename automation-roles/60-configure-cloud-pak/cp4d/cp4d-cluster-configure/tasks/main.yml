@@ -35,24 +35,9 @@
     name: cp4d-configure-ssl-certificate
 
 #LDAP configuration
-- when: "all_config.ldap_config is defined"
-  block:
-    - name: Show LDAP configuration
-      debug:
-        msg: "{{ all_config.ldap_config }}"  
-
-    - set_fact:
-        cp4d_ldap_config: "{{ all_config.ldap_config|json_query(query_ldap) | first }}"
-      vars:
-        query_ldap: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
-
-    - name: Show CP4D LDAP configuration
-      debug:
-        msg: "{{ cp4d_ldap_config }}"
-
-    - name: Configure CP4D LDAP connectivity
-      include_tasks: configure-cpd-ldap-integration.yml
-      when: cp4d_configure_cpd_ldap == 0
+- name: Configure Cloud Pak for Data LDAP configuration
+  include_role:
+    name: cp4d-configure-ldap
 
 #Cloud Pak for Data User Groups Configuration
 - when: "all_config.cp4d_user_group_configuration is defined"

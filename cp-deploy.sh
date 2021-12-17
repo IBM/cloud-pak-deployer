@@ -39,6 +39,7 @@ command_usage() {
   echo "  --vault-cert-cert-file        File with login certificate (\$VAULT_CERT_CERT_FILE)"
   echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
+  echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
@@ -71,6 +72,7 @@ if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
+if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
 
 arrExtraKey=()
@@ -352,6 +354,14 @@ while (( "$#" )); do
     fi
     fi
     ;;
+  --skip-infra)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --skip-infra is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CPD_SKIP_INFRA=true
+    shift 1
+    ;;
   --confirm-destroy)
     if [[ "${SUBCOMMAND}" != "environment" ]];then
       echo "Error: --confirm-destroy is not valid for $SUBCOMMAND subcommand."
@@ -625,6 +635,7 @@ fi
 run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
 run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
 run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
 run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
 
 # Handle extra variables
