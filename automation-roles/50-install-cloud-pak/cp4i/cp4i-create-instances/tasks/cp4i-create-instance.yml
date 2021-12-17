@@ -14,6 +14,15 @@
   delay: 20
   until: pn_phase.stdout == "Succeeded"
 
+# Check if the instance already exists
+- name: Verify if platform navigator already exists
+  shell: |
+    oc get PlatformNavigator {{current_cp4i_cluster.platform_navigator.instance_name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{current_cp4i_cluster.platform_navigator.instance_name}}' | wc -l
+  register: pn_exists
+
+- debug:
+    msg: "-----> {{pn_exists}}"
+
 # Create an instance using current_cp4i_instance.template
 # TODO(SJ): Implement template references in the configuration file
 # TODO(SJ): Implement j2 templates for each possible combination 
