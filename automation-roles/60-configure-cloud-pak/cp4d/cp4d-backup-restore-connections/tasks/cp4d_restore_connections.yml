@@ -1,0 +1,43 @@
+---
+- name: Show connections to restore
+  debug:
+    msg: "{{ _cp4d_restore_connections }}"
+
+- when: not _cp4d_restore_connections.connections_restore_file is defined
+  debug:
+    msg: "No connections_restore_file specified. Skipping restore...."
+
+- when: _cp4d_restore_connections.connections_restore_file is defined
+  block:
+
+    - set_fact:
+        _cp4d_connections_file: "{{ status_dir }}/cp4d/exports/connections/{{ _cp4d_restore_connections.connections_restore_file }}"
+
+    - name: Check that the {{ _cp4d_connections_file }} exists
+      stat:
+        path: "{{ _cp4d_connections_file }}"
+      register: _stat_result
+
+    - name: Determine if connections file exists for restore
+      debug:
+        msg: "File {{ _cp4d_connections_file }} does not exist, skip restoring connections"
+      when: not _stat_result.stat.exists    
+
+    - when: _stat_result.stat.exists    
+      block:
+
+        - set_fact:
+            _cp4d_restore_connections_content: "{{ lookup('file',_cp4d_connections_file) | from_json }}"
+
+        - tempfile:
+            path: "{{ status_dir }}/cp4d"
+            state: directory
+          register: _cp4d_restore_connection_temp_dir
+
+        - name: "Loop through each connection to restore"
+          include_tasks: cp4d_restore_connection.yml
+          loop: "{{ _cp4d_restore_connections_content.resources | default([]) }}"
+          loop_control:
+            loop_var: _cp4d_restore_connection           
+
+

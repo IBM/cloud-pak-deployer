@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show monitor details
+  debug:
     msg: "{{ _monitor }}"
 
 - set_fact:
@@ -19,7 +20,8 @@
     oc get bc -n {{ current_cp4d_cluster.project }} | grep ^{{ _monitor.name }} | wc -l
   register: _bc_exists  
 
-- debug:
+- name: Determine if build config for the monitor is already present
+  debug:
     msg: "Build Config for monitor {{ _monitor }} is already present, skipping monitor..."
   when: _bc_exists.stdout == "1"
 
@@ -36,7 +38,8 @@
             secret_name: "{{ _monitor_source_token_secret }}"
             secret_group: "{{ environment_name }}"
 
-        - fail:
+        - name: Fail if the monitor source token was not found in the vault
+          fail:
             msg: "Unable to get secret value for {{ _monitor_source_token_secret }} from the vault"
           when: "secret_value == ''"
 
@@ -65,7 +68,8 @@
             secret_name: "{{ _monitor_target_cr_user_secret }}"
             secret_group: "{{ environment_name }}"
 
-        - fail:
+        - name: Fail if the secret for the target container registry was not in the vault
+          fail:
             msg: "Unable to get secret value for {{ _monitor_target_cr_user_secret }} from the vault"
           when: "secret_value == ''"            
 
@@ -82,7 +86,8 @@
             secret_name: "{{ _monitor_target_cr_password_secret }}"
             secret_group: "{{ environment_name }}"
 
-        - fail:
+        - name: Fail if the container registry password was not found in the vault
+          fail:
             msg: "Unable to get secret value for {{ _monitor_target_cr_password_secret }} from the vault"
           when: "secret_value == ''"            
 
@@ -128,7 +133,8 @@
     oc get cm -n {{ current_cp4d_cluster.project }} | grep ^zen-alert-{{ _monitor_name }}-monitor-extension | wc -l
   register: _cm_monitor_exists
 
-- debug:
+- name: Determine if ConfigMap for monitor already exist
+  debug:
     msg: "ConfigMap zen-alert-{{ _monitor_name }}-monitor-extension already exists. Skip creating ConfigMap..."
   when: "_cm_monitor_exists.stdout == '1'"
 

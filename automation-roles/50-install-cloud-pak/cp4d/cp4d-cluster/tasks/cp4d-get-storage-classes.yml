@@ -1,4 +1,5 @@
-- debug:
+- name: Show current CP4D cluster
+  debug:
     msg: Current CP4D cluster is {{ current_cp4d_cluster }}
 
 # Retrieve the openshift storage definition referenced in the cp4d instance
@@ -8,7 +9,8 @@
     query: >-
       [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}'].openshift_storage
 
-- debug:
+- name: Show OpenShift storage objects
+  debug:
     msg: "{{ openshift_storage }}"
 
 # Obtain the OpenShift storage element from the openshift storage definitions
@@ -18,7 +20,8 @@
     query: >-
       [?storage_name=='{{ current_cp4d_cluster.openshift_storage_name }}']
 
-- fail:
+- name: Fail if the storage information for the Cloud Pak for Data cluster cannot be found
+  fail:
     msg: "Storage information for storage name {{ current_cp4d_cluster.openshift_storage_name }} specified for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }} not found. Check the configuration."
   when: selected_openshift_storage == {}
 

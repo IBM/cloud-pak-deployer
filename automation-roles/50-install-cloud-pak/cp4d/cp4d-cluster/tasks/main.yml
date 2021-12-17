@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show current CP4D cluster
+  debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
 - set_fact:
@@ -30,7 +31,8 @@
 - set_fact:
     ibm_cp_entitlement_key: "{{ secret_value }}"
 
-- fail:
+- name: Fail if the entitlement key was not found in the vault and no private registry was specified
+  fail:
     msg: "No image registry name specified for CP4D but cannot pull from entitled registry because of missing entitlement key in vault"
   when: ibm_cp_entitlement_key == "" and (current_cp4d_cluster.image_registry_name | default("")) == ""
 
@@ -61,6 +63,11 @@
 - name: Create Cloud Pak for Data directory for generated files
   file:
     path: "{{ status_dir }}/cp4d"
+    state: directory
+
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
     state: directory
 
 - name: Prepare OpenShift cluster for Cloud Pak for Data
@@ -118,23 +125,27 @@
   include_role:
     name: cp4d-cluster-show
 
-# - name: Check for cp4d service definitions, skip when empty
-#   debug:
-#     msg: "OpenShift Project {{ current_cp4d_cluster.project }} from OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }} on VPC {{ vpc.vpc_name }} has no cp4d_services definitions. No installation will be performed..."
-#   when: current_cp4d_cluster.cp4d_services|length == 0
+- name: Retrieve Cloud Pak Foundational Services 
+  set_fact:
+    _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='cp-foundation']
 
-# TODO: Apply to CP4D 4.0
-# - name: Loop through each available service and uninstall service not included in cp4d_services for OpenShift project {{ current_cp4d_cluster.project }}
-#   include_role:
-#     name: cp4d-service-uninstall
-#   loop: "{{ all_cp4d_services }}"
-#   loop_control:
-#     loop_var: cp4d_service
+- name: Show foundational services element
+  debug:
+    var: _cp_fs
 
-- name: Ensure the status log folder exists
-  file:
-    path: "{{status_dir}}/log"
-    state: directory
+- name: Activate or deactivate license service
+  include_role:
+    name: cp-fs-license-service
+  vars:
+    _p_fs_project: "{{ foundational_services_project }}"
+    _p_license_service: "{{ _cp_fs.license_service | default({}) }}"
+
+- name: Delete obsolete cartridges
+  include_role:
+    name: cp4d-cartridge-remove
 
 - name: Install selected cartridges for the cluster
   include_role:

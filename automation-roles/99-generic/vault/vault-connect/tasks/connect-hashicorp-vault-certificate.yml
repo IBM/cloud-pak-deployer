@@ -22,7 +22,8 @@
   register: hashicorp_vault_list_result
   failed_when: False
 
-- debug:
+- name: Check if login to Hashicorp Vault can be skipped
+  debug:
     msg: "Login to {{ hashicorp_vault_address }} already available, skip login..."
   when: "hashicorp_vault_list_result.rc == 0"
 
@@ -52,5 +53,6 @@
       failed_when: "not hashicorp_vault_list_after_login_result.rc == 0"
   when: "not hashicorp_vault_list_result.rc == 0"
 
-- debug:
+- name: Successfully logged into Hashicorp Vault using certificate
+  debug:
     msg: "Successfully logged into {{ hashicorp_vault_address }} with certificate"

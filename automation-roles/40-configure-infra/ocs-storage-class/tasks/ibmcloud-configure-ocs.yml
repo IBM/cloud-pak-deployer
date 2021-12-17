@@ -3,6 +3,10 @@
   debug:
     var: current_openshift_storage
 
+- name: Login to IBM Cloud
+  include_role:
+    name: login-ibmcloud
+
 - name: Check if openshift-data-foundation add-on is installed
   command: |
     ibmcloud oc cluster addon get --addon openshift-data-foundation --cluster {{ current_openshift_cluster.name }} --output json
@@ -10,7 +14,8 @@
   failed_when: False
 
 # TODO: Remove debug
-- debug:
+- name: Show result of ocs add-on check
+  debug:
     var: ocs_check_addon
 
 - name: Enable openshift-data-foundation add-on for ROKS cluster {{ current_openshift_cluster.name }}

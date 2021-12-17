@@ -23,7 +23,7 @@ The NFS server provides the back-end storage for the `managed-nfs-storage` stora
 Images will be pulled from the specified namespace in the IBM Container Registry. If the Cloud Pak entitlement key is configured, images will be mirrored to the private registry namespace.
 
 ## OpenShift
-An OpenShift cluster with the specified version (4.6) is provisioned inside the VPC. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the NFS server that is provisioned in the VPC.
+An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the NFS server that is provisioned in the VPC.
 
 ## Cloud Pak for Data
 Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the private registry and referencing the NFS storage class in OpenShift.

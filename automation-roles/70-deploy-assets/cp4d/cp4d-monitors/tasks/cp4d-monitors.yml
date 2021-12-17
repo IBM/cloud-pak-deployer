@@ -1,6 +1,10 @@
 ---
-- debug:
+- name: Show monitors
+  debug:
     msg: "{{ _monitors }}"
+
+- name: Enable Cloud Pak for Data ServiceMonitor
+  include_tasks: enable-cp4d-service-monitor.yml
 
 - set_fact:
     _default_monitor_source_repo: "{{ _monitors.default_monitor_source_repo | default('') }}"
@@ -24,7 +28,8 @@
         secret_name: "{{ _default_monitor_source_token_secret }}"
         secret_group: "{{ environment_name }}"
 
-    - fail:
+    - name: Fail if the monitor source token was not found in the vault
+      fail:
         msg: "Unable to get secret value for {{ _default_monitor_source_token_secret }} from the vault"
       when: "secret_value == ''"
 
@@ -53,7 +58,8 @@
         secret_name: "{{ _default_monitor_target_cr_user_secret }}"
         secret_group: "{{ environment_name }}"
 
-    - fail:
+    - name: Fail if the target container registry user was not found in the vault
+      fail:
         msg: "Unable to get secret value for {{ _default_monitor_target_cr_user_secret }} from the vault"
       when: "secret_value == ''"
 
@@ -70,7 +76,8 @@
         secret_name: "{{ _default_monitor_target_cr_password_secret }}"
         secret_group: "{{ environment_name }}"
 
-    - fail:
+    - name: Fail if the monitor target registry password was not found in the vault
+      fail:
         msg: "Unable to get secret value for {{ _default_monitor_target_cr_password_secret }} from the vault"
       when: "secret_value == ''"
 
