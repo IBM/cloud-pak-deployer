@@ -7,7 +7,8 @@ import sys
 # - project: zen-19
 #   audit_replicas: 2
 #   audit_output:
-#   - type: stdout
+#   - type: openshift-logging
+#     logging_name: loki-audit
 
 def preprocessor(attributes=None, fullConfig=None):
     g = GeneratorPreProcessor(attributes,fullConfig)
@@ -23,9 +24,11 @@ def preprocessor(attributes=None, fullConfig=None):
 
         for ao in ge['audit_output']:
             if "type" not in ao:
-                g.appendError(msg='Type must be specified for all audit_output entries')
-            elif ao['type'] != "stdout":
-                g.appendError(msg='Type of audit_output entry must be one of: stdout')
+                g.appendError(msg='Attribute type must be specified for all audit_output entries')
+            elif ao['type'] != "openshift-logging":
+                g.appendError(msg='Type of audit_output entry must be one of: openshift-logging')
+            if "logging_name" not in ao:
+                g.appendError(msg='Attribute logging_name must be specified for all audit_output entries')
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()
