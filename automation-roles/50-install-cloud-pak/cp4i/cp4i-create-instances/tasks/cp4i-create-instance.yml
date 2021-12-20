@@ -1,8 +1,36 @@
 ---
 
-- name: Wait for the {{current_cp4i_instance.package}} subscription
+- name: Get instance type details
+  set_fact:
+    instance_type: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='{{ current_cp4i_instance.type }}']
+
+- name: Fail if the instance type cannot be found
+  fail:
+    msg: Case instance type for instance {{ current_cp4i_instance..name }} not found. 
+  when: instance_type=={}
+
+- name: Set instance subscription details - online
+  block:
+    - set_fact:
+        inst_package: "{{ instance_type.package_name_online }}"
+    - set_fact:
+        inst_source: "{{ instance_type.catalog_source_online }}"
+  when: not _use_case_files
+
+- name: Set instance subscription details - CASE
+  block:
+    - set_fact:
+        inst_package: "{{ instance_type.package_name_case }}"
+    - set_fact:
+        inst_source: "{{ instance_type.catalog_source_case }}"
+  when: not _use_case_files
+
+- name: Wait for the {{inst_package}} subscription
   shell: |
-    subscription_name="{{current_cp4i_instance.package}}-{{current_cp4i_instance.channel}}-{{current_cp4i_instance.source}}-openshift-marketplace"
+    subscription_name="{{inst_package}}-{{current_cp4i_instance.channel}}-{{inst_source}}-openshift-marketplace"
     csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
     if [[ "$csv" == "null" ]]; then
       echo "null"
