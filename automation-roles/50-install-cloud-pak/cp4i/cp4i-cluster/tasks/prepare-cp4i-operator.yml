@@ -40,16 +40,9 @@
         pn_source: "{{platform_navigator_catalog_source_case}}"
   when: _use_case_files
 
-- debug:
-    msg: |
-      ///////////////////////////////////
-      {{pn_package}}
-      {{pn_source}}
-      ///////////////////////////////////
-
 - name: Wait for the Platform Navigator Operator subscription
   shell: |
-    subscription_name="{{current_cp4i_cluster.platform_navigator.package}}-{{current_cp4i_cluster.platform_navigator.channel}}-{{current_cp4i_cluster.platform_navigator.source}}-openshift-marketplace"
+    subscription_name="{{pn_package}}-{{current_cp4i_cluster.platform_navigator.channel}}-{{pn_source}}-openshift-marketplace"
     csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
     if [[ "$csv" == "null" ]]; then
       echo "null"
