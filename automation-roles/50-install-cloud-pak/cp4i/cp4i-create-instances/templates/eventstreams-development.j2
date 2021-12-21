@@ -1,0 +1,49 @@
+# TODO(SJ): TEMPLATE
+apiVersion: eventstreams.ibm.com/v1beta1
+kind: EventStreams
+metadata:
+  name: development
+  namespace: cp4i
+spec:
+  adminApi: {}
+  adminUI: {}
+  apicurioRegistry: {}
+  collector: {}
+  license:
+    accept: true
+    use: CloudPakForIntegrationNonProduction
+  requestIbmServices:
+    iam: true
+    monitoring: true
+  restProducer: {}
+  strimziOverrides:
+    kafka:
+      authorization:
+        type: runas
+      config:
+        inter.broker.protocol.version: '2.8'
+        interceptor.class.names: com.ibm.eventstreams.interceptors.metrics.ProducerMetricsInterceptor
+        log.cleaner.threads: 6
+        log.message.format.version: '2.8'
+        num.io.threads: 24
+        num.network.threads: 9
+        num.replica.fetchers: 3
+        offsets.topic.replication.factor: 3
+      listeners:
+        external:
+          authentication:
+            type: scram-sha-512
+          type: route
+        tls:
+          authentication:
+            type: tls
+      metrics: {}
+      replicas: 3
+      storage:
+        type: ephemeral
+    zookeeper:
+      metrics: {}
+      replicas: 3
+      storage:
+        type: ephemeral
+  version: 10.4.0
