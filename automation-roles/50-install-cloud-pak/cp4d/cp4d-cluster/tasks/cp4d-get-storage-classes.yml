@@ -45,11 +45,15 @@
 #    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
 #  when: selected_openshift_storage.storage_type == 'pwx'
 
-- name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
-  shell:
-    oc get sc {{ ocp_storage_class_file }}
 
-- name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
-  shell:
-    oc get sc {{ ocp_storage_class_block }}
-  when: ocp_storage_class_block != ocp_storage_class_file
+- name: Check if file & block storage classes exist in OpenShift (nfs/ocs only)
+  block:
+    - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
+      shell:
+        oc get sc {{ ocp_storage_class_file }}
+
+    - name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
+      shell:
+        oc get sc {{ ocp_storage_class_block }}
+      when: ocp_storage_class_block != ocp_storage_class_file
+  when: selected_openshift_storage.storage_type != 'pwx'

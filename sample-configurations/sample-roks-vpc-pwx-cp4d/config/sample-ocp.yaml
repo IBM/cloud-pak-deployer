@@ -1,26 +1,25 @@
 ---
+cos:
+- name: {{ env_id }}-cos
+  plan: standard
+  location: global
+
 openshift:
-- name: sample
-  ocp_version: 4.6
+- name: {{ env_id }}
+  ocp_version: 4.8
   worker_flavour: bx2.16x64
   number_of_workers: 3
   max_number_of_workers: 10
   resource_group_name: ibm
   infrastructure:
     type: vpc
-    vpc_name: sample
+    vpc_name: {{ env_id }}
     subnets: 
-    - sample-subnet-zone-1
-    - sample-subnet-zone-2
-    - sample-subnet-zone-3
+    - {{ env_id }}-subnet-zone-1
+    - {{ env_id }}-subnet-zone-2
+    - {{ env_id }}-subnet-zone-3
+    cos_name: {{ env_id }}-cos
   openshift_storage:
-  - storage_name: nfs-storage
-    storage_type: nfs
-    nfs_server_name: sample-nfs
-  # - storage_name: ocs-storage
-  #   storage_type: ocs
-  #   ocs_storage_label: ocs
-  #   ocs_storage_size: 500Gi
   - storage_name: pwx-storage
     storage_type: pwx 
     pwx_storage_label: pwx
