@@ -1,14 +1,13 @@
-# TODO(SJ): TEMPLATE
 apiVersion: datapower.ibm.com/v1beta3
 kind: DataPowerService
 metadata:
-  name: quickstart
-  namespace: cp4i
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
 spec:
   license:
     accept: true
     use: nonproduction
-    license: L-RJON-BYDR3Q
+    license: {{current_cp4i_instance.license}}
   replicas: 1
   resources:
     limits:
@@ -16,8 +15,8 @@ spec:
     requests:
       cpu: 1
       memory: 4Gi
-  version: 10.0-cd
+  version: "{{current_cp4i_instance.version}}"
   users:
     - name: admin
       accessLevel: privileged
-      passwordSecret: ''
+      passwordSecret: {{current_cp4i_instance.admin_password_secret}}

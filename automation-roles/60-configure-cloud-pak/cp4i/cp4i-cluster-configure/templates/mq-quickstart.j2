@@ -1,16 +1,15 @@
-# TODO(SJ): TEMPLATE
 apiVersion: mq.ibm.com/v1beta1
 kind: QueueManager
 metadata:
-  name: quickstart-cp4i
-  namespace: cp4i
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
 spec:
   license:
     accept: true
-    license: L-RJON-BZFQU2
+    license: {{current_cp4i_instance.license}}
     use: NonProduction
   queueManager:
-    name: QUICKSTART
+    name: {{current_cp4i_instance.queue_manager_name}}
     resources:
       limits:
         cpu: 500m
@@ -19,7 +18,7 @@ spec:
     storage:
       queueManager:
         type: ephemeral
-      defaultClass: rook-ceph-block
+      defaultClass: {{ocp_storage_class_file}}
   template:
     pod:
       containers:
@@ -27,6 +26,6 @@ spec:
             - name: MQSNOAUT
               value: 'yes'
           name: qmgr
-  version: 9.2.3.0-r1
+  version: "{{current_cp4i_instance.version}}"
   web:
     enabled: true

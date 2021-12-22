@@ -1,4 +1,3 @@
-# TODO(SJ): TEMPLATE
 apiVersion: eventendpointmanager.apiconnect.ibm.com/v1beta1
 kind: EventEndpointManager
 metadata:
@@ -6,16 +5,16 @@ metadata:
     app.kubernetes.io/instance: eventendpointmanager-minimum
     app.kubernetes.io/managed-by: ibm-apiconnect
     app.kubernetes.io/name: eventendpointmanager-minimum
-  name: eventendpointmanager-minimum
-  namespace: cp4i
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
 spec:
   endpointTypes:
     - Events
   license:
     accept: true
-    license: L-RJON-C2YLGB
+    license: {{current_cp4i_instance.license}}
     metric: VIRTUAL_PROCESSOR_CORE
     use: nonproduction
   profile: n1xc10.m48
-  version: 10.0.3.0-ifix1
-  storageClassName: rook-ceph-block
+  version: "{{current_cp4i_instance.version}}"
+  storageClassName: {{ocp_storage_class_block}}

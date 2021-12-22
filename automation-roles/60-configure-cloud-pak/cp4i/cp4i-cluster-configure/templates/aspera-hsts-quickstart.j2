@@ -1,4 +1,3 @@
-# TODO(SJ): TEMPLATE
 apiVersion: hsts.aspera.ibm.com/v1
 kind: IbmAsperaHsts
 metadata:
@@ -6,20 +5,20 @@ metadata:
     app.kubernetes.io/instance: ibm-aspera-hsts
     app.kubernetes.io/managed-by: ibm-aspera-hsts
     app.kubernetes.io/name: ibm-aspera-hsts
-  name: quickstart
-  namespace: cp4i
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
 spec:
   deployments:
     default:
       replicas: 1
   license:
     accept: true
-    key: ''
+    key: "{{current_cp4i_cluster.aspera_key}}"
     use: CloudPakForIntegrationNonProduction
   redis:
     persistence:
       enabled: false
-    version: 5.0.9
+    version: "{{current_cp4i_cluster.redis_version}}"
   services:
     httpProxy:
       type: ClusterIP
@@ -27,8 +26,8 @@ spec:
       type: LoadBalancer
   storages:
     - claimName: hsts-transfer-pvc
-      class: ''
+      class: {{ocp_storage_class_file}}
       deleteClaim: true
       mountPath: /data/
       size: 20Gi
-  version: 4.0.0
+  version: "{{current_cp4i_cluster.version}}"
