@@ -2,11 +2,8 @@
 - debug:
     msg: "Configure Cloud Pak for Integration"
 
-- debug:
-    msg: |
-        /////////////////////////
-        current_cp4i_cluster: {{ current_cp4i_cluster }}
-        _use_case_files {{ _use_case_files }}
-        ocp_storage_class_file {{ ocp_storage_class_file }}
-        ocp_storage_class_block {{ ocp_storage_class_block }}
-        /////////////////////////
+- name: Create instances of CP4I capabilities and runtimes
+  include_tasks: cp4i-create-instance.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
