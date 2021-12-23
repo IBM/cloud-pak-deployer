@@ -1,0 +1,31 @@
+apiVersion: mq.ibm.com/v1beta1
+kind: QueueManager
+metadata:
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  license:
+    accept: true
+    license: {{current_cp4i_instance.license}}
+    use: NonProduction
+  queueManager:
+    name: {{current_cp4i_instance.queue_manager_name}}
+    resources:
+      limits:
+        cpu: 500m
+      requests:
+        cpu: 500m
+    storage:
+      queueManager:
+        type: ephemeral
+      defaultClass: {{ocp_storage_class_file}}
+  template:
+    pod:
+      containers:
+        - env:
+            - name: MQSNOAUT
+              value: 'yes'
+          name: qmgr
+  version: "{{current_cp4i_instance.version}}"
+  web:
+    enabled: true

@@ -1,10 +1,9 @@
 ---
 
-# -----------------------------------------------
-# TODO(SJ): Create operator group
-# in case of installation in a specific namespace
+# -------------------------------------------------------------------------------
+# TODO(SJ): Create operator group in case of installation in a specific namespace
 # Ref: ''CP4I-install-CLI
-# -----------------------------------------------
+# -------------------------------------------------------------------------------
 # apiVersion: operators.coreos.com/v1
 # kind: OperatorGroup
 # metadata:
@@ -25,9 +24,25 @@
   shell: |
     oc apply -f {{ status_dir }}/cp4i/cp4i-operators-all-projects.yml
 
+- name: Set Platform Navigator subscription details - online
+  block:
+    - set_fact:
+        pn_package: "{{platform_navigator_package_name_online}}"
+    - set_fact:
+        pn_source: "{{platform_navigator_catalog_source_online}}"
+  when: not _use_case_files
+
+- name: Set Platform Navigator subscription details - CASE
+  block:
+    - set_fact:
+        pn_package: "{{platform_navigator_package_name_case}}"
+    - set_fact:
+        pn_source: "{{platform_navigator_catalog_source_case}}"
+  when: _use_case_files
+
 - name: Wait for the Platform Navigator Operator subscription
   shell: |
-    subscription_name="{{current_cp4i_cluster.platform_navigator.package}}-{{current_cp4i_cluster.platform_navigator.channel}}-{{current_cp4i_cluster.platform_navigator.source}}-openshift-marketplace"
+    subscription_name="{{pn_package}}-{{current_cp4i_cluster.platform_navigator.channel}}-{{pn_source}}-openshift-marketplace"
     csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
     if [[ "$csv" == "null" ]]; then
       echo "null"
