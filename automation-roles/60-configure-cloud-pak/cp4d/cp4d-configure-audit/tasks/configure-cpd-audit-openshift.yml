@@ -1,0 +1,46 @@
+---
+- name: Retrieve openshift_logging object for the current OpenShift cluster
+  set_fact:
+    _current_openshift_logging: "{{ all_config.openshift_logging | json_query(query_audit) | first | default({}) }}"
+  vars:
+    query_audit: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+
+- name: Show current openshift_logging object
+  debug:
+    var: _current_openshift_logging
+
+- name: Fail if openshift_logging entry was not found
+  fail:
+    msg: "No openshift_logging entry was found for OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}"
+  when: _current_openshift_logging=={}
+
+- name: Retrieve logging_output entry for the current audit configuration
+  set_fact:
+    _openshift_logging_output: "{{ _current_openshift_logging.logging_output | json_query(query) | first | default({}) }}"
+  vars:
+    query: "[?name=='{{ _current_audit_output.logging_name }}']"
+
+- name: Show current logging_output object
+  debug:
+    var: _openshift_logging_output
+
+- name: Fail if logging_output entry was not found
+  fail:
+    msg: "No openshift_logging.logging_output entry was found for logging name {{ _current_audit_output.logging_name }}"
+  when: _openshift_logging_output=={}
+
+- debug:
+    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-patch-input.j2') }}"
+
+- name: Patch ClusterLogForwarder inputs for audit logging
+  shell: |
+    oc patch -n openshift-logging clusterlogforwarder/instance --type=merge \
+      --patch {{ lookup('template','cpd-audit-clusterlogforwarder-patch-input.j2') }}
+
+- debug:
+    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-patch-pipeline.j2') }}"
+
+- name: Patch ClusterLogForwarder pipelines for audit logging
+  shell: |
+    oc patch -n openshift-logging clusterlogforwarder/instance --type=merge \
+      --patch {{ lookup('template','cpd-audit-clusterlogforwarder-patch-pipeline.j2') }}

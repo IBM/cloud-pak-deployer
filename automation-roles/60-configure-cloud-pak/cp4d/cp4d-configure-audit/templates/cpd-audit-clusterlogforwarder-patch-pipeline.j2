@@ -1,0 +1,21 @@
+'
+{
+    "spec": {
+        "pipelines": [
+            {
+                "name": "{{ _cp4d_audit_config.project }}-audit",
+                "inputRefs": [
+                        "{{ _cp4d_audit_config.project }}-audit"
+                ],
+                "outputRefs": [
+                        "{{ _current_audit_output.logging_name }}"
+                ]
+{% if _openshift_logging_output.type == 'loki' %}
+                 ,
+                "loki": {"tenantKey": "kubernetes.namespace_name"}
+{% endif %}
+                }
+        ]
+    }
+}
+'
