@@ -67,5 +67,12 @@
     loop_var: _current_logging_output
 
 # Create outputs
-- name: Create logging output 
+- name: Configure logging output 
   include_tasks: configure-logging-output.yml
+
+# Create cluster-wide inputs and pipelines
+- name: Configure cluster-wide logging
+  include_tasks: configure-cluster-wide-logging.yml
+  loop: "{{ _p_openshift_logging.cluster_wide_logging | default([]) }}"
+  loop_control:
+    loop_var: _current_cluster_wide_logging
