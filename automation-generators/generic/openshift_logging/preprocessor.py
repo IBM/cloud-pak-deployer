@@ -15,7 +15,7 @@ import sys
 #       ca: {{ env_id }}-loki-ca
 #   - name: loki-audit
 #     type: loki
-#     url: https://loki-application.sample.com
+#     url: https://loki-audit.sample.com
 #     certificates:
 #       cert: {{ env_id }}-loki-cert
 #       key: {{ env_id }}-loki-key

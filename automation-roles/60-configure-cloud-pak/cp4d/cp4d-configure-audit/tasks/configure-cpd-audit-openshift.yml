@@ -30,17 +30,19 @@
   when: _openshift_logging_output=={}
 
 - debug:
-    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-patch-input.j2') }}"
+    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-input.j2') }}"
 
-- name: Patch ClusterLogForwarder inputs for audit logging
+- name: Add input for auditing to ClusterLogForwarder
   shell: |
-    oc patch -n openshift-logging clusterlogforwarder/instance --type=merge \
-      --patch {{ lookup('template','cpd-audit-clusterlogforwarder-patch-input.j2') }}
+    oc get -n openshift-logging clusterlogforwarder/instance -o json | \
+      jq 'del(.spec.inputs[] | select(.name=="{{ _cp4d_audit_config.project }}-audit"))' | jq '.spec.inputs += [{{ lookup('template','cpd-audit-clusterlogforwarder-input.j2') | to_json }}]' | \
+    oc apply -f -
 
 - debug:
-    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-patch-pipeline.j2') }}"
+    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-pipeline.j2') }}"
 
-- name: Patch ClusterLogForwarder pipelines for audit logging
+- name: Add pipeline for auditing to ClusterLogForwarder
   shell: |
-    oc patch -n openshift-logging clusterlogforwarder/instance --type=merge \
-      --patch {{ lookup('template','cpd-audit-clusterlogforwarder-patch-pipeline.j2') }}
+    oc get -n openshift-logging clusterlogforwarder/instance -o json | \
+      jq 'del(.spec.pipelines[] | select(.name=="{{ _cp4d_audit_config.project }}-audit"))' | jq '.spec.pipelines += [{{ lookup('template','cpd-audit-clusterlogforwarder-pipeline.j2') | to_json }}]' | \
+    oc apply -f -

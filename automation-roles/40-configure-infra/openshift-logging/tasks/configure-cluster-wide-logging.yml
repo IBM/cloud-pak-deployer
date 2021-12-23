@@ -22,6 +22,3 @@
     oc get -n openshift-logging clusterlogforwarder/instance -o json | \
       jq 'del(.spec.pipelines[] | select(.name=="{{ _p_openshift_logging.openshift_cluster_name }}-{{ _current_cluster_wide_logging.input }}"))' | jq '.spec.pipelines += [{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') | to_json }}]' | \
     oc apply -f -
-
-- debug:
-    msg: "{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') }}"
