@@ -3,12 +3,6 @@
   debug:
     msg: "Deploying assets for Cloud Pak for Data cluster {{ current_cp4d_cluster.project }}"
 
-- name: Install cpdctl tool
-  include_tasks: install-cpdctl.yml
-
-- name: Configure cpdctl context for cluster {{ current_cp4d_cluster.project }}
-  include_tasks: configure-cpdctl.yml
-
 - name: List Cloud Pak for Data assets under directory {{ config_dir }}/assets/cp4d
   find:
     paths: "{{ config_dir }}/assets/cp4d"
@@ -16,6 +10,14 @@
     file_type: directory
     recurse: no
   register: _cp4d_assets
+
+- name: Install cpdctl tool
+  include_tasks: install-cpdctl.yml
+  when: ( _cp4d_assets.files | length ) != 0
+
+- name: Configure cpdctl context for cluster {{ current_cp4d_cluster.project }}
+  include_tasks: configure-cpdctl.yml
+  when: ( _cp4d_assets.files | length ) != 0
 
 - name: Run asset shell script or ansible task if it exists
   include_tasks: run-cp4d-asset.yml

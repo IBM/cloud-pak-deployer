@@ -29,17 +29,22 @@
 - name: Login to Cloud Pak for Data
   include_tasks: cluster-configure-prepare.yml
 
-#Configure SSL certificate from the OpenShift Cluster to Cloud Pak for Data
-- name: Configure CLoud Pak for Data SSL certificate
+# Configure SSL certificate from the OpenShift Cluster to Cloud Pak for Data
+- name: Configure Cloud Pak for Data SSL certificate
   include_role:
     name: cp4d-configure-ssl-certificate
 
-#LDAP configuration
+# Audit configuration
+- name: Configure Cloud Pak for Data audit
+  include_role:
+    name: cp4d-configure-audit
+
+# LDAP configuration
 - name: Configure Cloud Pak for Data LDAP configuration
   include_role:
     name: cp4d-configure-ldap
 
-#Cloud Pak for Data User Groups Configuration
+# Cloud Pak for Data User Groups Configuration
 - when: "all_config.cp4d_user_group_configuration is defined"
   block:
     - name: Show CP4D user group configuration
