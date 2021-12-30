@@ -1,0 +1,21 @@
+---
+- set_fact:
+    _cp4d_audit_config: {}
+
+- when: "all_config.cp4d_audit_config is defined"
+  block:
+    - name: Show Cloud Pak for Data audit configuration
+      debug:
+        var: all_config.cp4d_audit_config
+
+    - set_fact:
+        _cp4d_audit_config: "{{ all_config.cp4d_audit_config | json_query(query_audit) | first | default({}) }}"
+      vars:
+        query_audit: "[?project=='{{ current_cp4d_cluster.project }}']"
+
+    - name: Show CP4D audit configuration
+      debug:
+        var: _cp4d_audit_config
+
+- name: Configure Cloud Pak for Data audit
+  include_tasks: configure-cpd-audit.yml
