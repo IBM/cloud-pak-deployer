@@ -1,0 +1,21 @@
+<match records records.** syslog syslog.**>
+  # Export record
+  @type copy
+
+{% if _cp4d_audit_config.audit_output is defined %}
+{% for ao in _cp4d_audit_config.audit_output %}
+{% if ao.type == "openshift-logging" %}
+  # Forward to pod log
+    <store>
+      @type "stdout"
+    </store>
+{% endif %}
+{% endfor %}
+{% endif %}
+
+  # Required by copy to go at least one place
+    <store>
+      @type null
+    </store>
+
+</match>
