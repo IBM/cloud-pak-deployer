@@ -65,6 +65,11 @@
     path: "{{ status_dir }}/cp4d"
     state: directory
 
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
+    state: directory
+
 - name: Prepare OpenShift cluster for Cloud Pak for Data
   include_role:
     name: cp4d-prepare-openshift
@@ -120,19 +125,6 @@
   include_role:
     name: cp4d-cluster-show
 
-# - name: Check for cp4d service definitions, skip when empty
-#   debug:
-#     msg: "OpenShift Project {{ current_cp4d_cluster.project }} from OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }} on VPC {{ vpc.vpc_name }} has no cp4d_services definitions. No installation will be performed..."
-#   when: current_cp4d_cluster.cp4d_services|length == 0
-
-# TODO: Apply to CP4D 4.0
-# - name: Loop through each available service and uninstall service not included in cp4d_services for OpenShift project {{ current_cp4d_cluster.project }}
-#   include_role:
-#     name: cp4d-service-uninstall
-#   loop: "{{ all_cp4d_services }}"
-#   loop_control:
-#     loop_var: cp4d_service
-
 - name: Retrieve Cloud Pak Foundational Services 
   set_fact:
     _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
@@ -151,10 +143,9 @@
     _p_fs_project: "{{ foundational_services_project }}"
     _p_license_service: "{{ _cp_fs.license_service | default({}) }}"
 
-- name: Ensure the status log folder exists
-  file:
-    path: "{{status_dir}}/log"
-    state: directory
+- name: Delete obsolete cartridges
+  include_role:
+    name: cp4d-cartridge-remove
 
 - name: Install selected cartridges for the cluster
   include_role:
