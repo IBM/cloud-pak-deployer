@@ -35,9 +35,7 @@
     fail:
       msg: "No Terraform state found in secret {{ environment_name }}/{{ environment_name }}-terraform-tfstate"
     when: "secret_value | trim | length == 0"
-
-  
-
+    
   #Detach Block storage from worker nodes (Portworx), as this prevents terraform from deleting the portworx service  
   - debug:
       msg: "Detaching storage volumes for pwx"
@@ -51,7 +49,6 @@
     loop: "{{ all_config.openshift | default([]) }}"
     loop_control:
       loop_var: current_openshift_cluster
-
 
   - name: Write {{ status_dir }}/terraform/terraform.tfstate file
     copy:
