@@ -1,0 +1,36 @@
+---
+- name: Check if aws-access-key secret is in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-access-key"
+    secret_group: "{{ environment_name }}" 
+
+- name: Check that raws-access-key secret is present in the vault
+  fail:
+    msg: "Secret aws-access-key is mandatory and was not found in the vault"
+  when: secret_value==""
+
+- name: Check if aws-secret-access-key secret is in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-secret-access-key"
+    secret_group: "{{ environment_name }}" 
+
+- name: Check that aws-secret-access-key secret is present in the vault
+  fail:
+    msg: "Secret aws-secret-access-key is mandatory and was not found in the vault"
+  when: secret_value==""
+
+- name: Check if rosa-login-token secret is in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "rosa-login-token"
+    secret_group: "{{ environment_name }}" 
+
+- name: Check that rosa-login-token secret is present in the vault
+  fail:
+    msg: "Secret rosa-login-token is mandatory and was not found in the vault"
+  when: secret_value==""
