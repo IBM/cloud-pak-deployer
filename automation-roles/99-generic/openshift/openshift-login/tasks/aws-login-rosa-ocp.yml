@@ -53,7 +53,10 @@
     msg: "{{ _rosa_cluster_info }}"
 
 - name: Login to OpenShift ROKS cluster
-  command: "oc login -u cluster-admin -p {{ _rosa_cluster_admin_password }} {{ _rosa_cluster_info.api.url }}"
+  shell: |
+    oc login -u cluster-admin -p {{ _rosa_cluster_admin_password }} \
+      {{ _rosa_cluster_info.api.url }} \
+      --insecure-skip-tls-verify
   register: _oc_login_result
   retries: 20
   delay: 10
