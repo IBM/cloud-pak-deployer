@@ -1,84 +1,69 @@
 ---
 
-- name: Check if the OpenShift context {{ openshift_cluster_name }} already exists
-  shell:
-    oc config use-context {{ openshift_cluster_name }}
-  register: _oc_use_context
-  failed_when: false
+- name: Login to ROSA
+  include_role:
+    name: aws-login-rosa
 
-- name: Check if we can use OpenShift context
-  shell:
-    oc cluster-info
-  register: _oc_cluster_info
-  when: _oc_use_context.rc == 0
-  failed_when: false
+- name: Get aws-access-key secret from in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-access-key"
+    secret_group: "{{ environment_name }}" 
 
-- name: Log in to ROSA and OpenShift when not connected to OpenShift
-  block:
-    - name: Login to ROSA
-      include_role:
-        name: aws-login-rosa
+- set_fact:
+    _aws_access_key: "{{ secret_value }}"
 
-    - name: Get aws-access-key secret from in the vault
-      include_role: 
-        name: vault-get-secret
-      vars:
-        secret_name: "aws-access-key"
-        secret_group: "{{ environment_name }}" 
+- name: Get aws-secret-access-key secret from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-secret-access-key"
+    secret_group: "{{ environment_name }}" 
 
-    - set_fact:
-        _aws_access_key: "{{ secret_value }}"
+- set_fact:
+    _aws_secret_access_key: "{{ secret_value }}"
 
-    - name: Get aws-secret-access-key secret from the vault
-      include_role: 
-        name: vault-get-secret
-      vars:
-        secret_name: "aws-secret-access-key"
-        secret_group: "{{ environment_name }}" 
+- name: Get cluster-admin password from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ openshift_cluster_name }}-cluster-admin-password"
+    secret_group: "{{ environment_name }}" 
 
-    - set_fact:
-        _aws_secret_access_key: "{{ secret_value }}"
+- set_fact:
+    _rosa_cluster_admin_password: "{{ secret_value }}"
 
-    - name: Get cluster-admin password from the vault
-      include_role: 
-        name: vault-get-secret
-      vars:
-        secret_name: "{{ openshift_cluster }}-cluster-admin-password"
-        secret_group: "{{ environment_name }}" 
+- name: Check if ROSA cluster {{ openshift_cluster_name }} exists
+  shell: |
+    rosa describe cluster \
+      --cluster {{ openshift_cluster_name }} \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _rosa_describe_cluster
 
-    - set_fact:
-        _rosa_cluster_admin_password: "{{ secret_value }}"
+- set_fact:
+    _rosa_cluster_info: "{{ _rosa_describe_cluster.stdout | from_json }}"
 
-    - name: Check if ROSA cluster {{ openshift_cluster_name }} exists
-      shell: |
-        rosa describe cluster \
-          --cluster {{ openshift_cluster_name }} \
-          --region {{ _current_openshift_cluster.infrastructure.aws_region }}
-      environment:
-        AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-        AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-      register: _aws_describe_cluster
+- name: Show results from rosa describe cluster command
+  debug:
+    msg: "{{ _rosa_cluster_info }}"
 
-    - set_fact:
-        _rosa_cluter_info: "{{ _aws_describe_cluster.stdout | from_json }}"
+- name: Login to OpenShift ROKS cluster
+  command: "oc login -u cluster-admin -p {{ _rosa_cluster_admin_password }} {{ _rosa_cluster_info.api.url }}"
+  register: _oc_login_result
+  retries: 20
+  delay: 10
+  until: _oc_login_result.rc==0
 
-    - name: Show results from rosa describe cluster command
-      debug:
-        msg: "{{ _rosa_cluster_info }}"
+- name: Rename current context to {{ openshift_cluster_name }}
+  shell: |
+    oc config delete-context {{ openshift_cluster_name }} || true
+    oc config rename-context $(oc config current-context) {{ openshift_cluster_name }}
 
-    - name: Login to OpenShift ROKS cluster
-      command: "oc login -u cluster-admin -p {{ _rosa_cluster_admin_password }} {{ _aws_cluster_info.api.url }}"
-      register: _oc_login_result
-      retries: 20
-      delay: 10
-      until: _oc_login_result.rc==0
-
-    - name: Rename current context to {{ openshift_cluster_name }}
-      shell: |
-        oc config delete-context {{ openshift_cluster_name }} || true
-        oc config rename-context $(oc config current-context) {{ openshift_cluster_name }}
-
-    - name: Show OpenShift login result
-      debug:
-        msg: "{{ _oc_login_result }}"
-  when: _oc_use_context.rc != 0 or _oc_cluster_info.rc != 0
+- name: Show OpenShift login result
+  debug:
+    msg: "{{ _oc_login_result }}"
