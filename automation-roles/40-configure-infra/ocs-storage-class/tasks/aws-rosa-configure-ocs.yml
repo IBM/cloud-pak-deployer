@@ -83,3 +83,17 @@
   shell: |
     oc apply -f "{{ status_dir }}/openshift/aws-ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
+
+- name: Wait until StorageCluster custom resource is ready
+  shell: |
+    oc get storagecluster -n openshift-storage ocs-storagecluster -o yaml
+  register: _ocs_storage_cluster
+  failed_when: False
+  retries: 60
+  delay: 30
+  until: ((_ocs_storage_cluster.stdout | from_yaml).status.phase | default("") | lower) == "ready"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
