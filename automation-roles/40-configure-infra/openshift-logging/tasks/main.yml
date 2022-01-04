@@ -1,0 +1,19 @@
+---
+- set_fact:
+    _p_openshift_logging: {}
+
+- when: "all_config.openshift_logging is defined"
+  block:
+  - debug:
+      var: all_config.openshift_logging
+  - set_fact:
+      _p_openshift_logging: "{{ all_config.openshift_logging | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?openshift_cluster_name=='{{ current_openshift_cluster.name }}']
+  - name: Show OpenShift logging for current cluster
+    debug:
+      var: _p_openshift_logging
+
+- include_tasks: configure-openshift-logging.yml
+  when: _p_openshift_logging != {}
