@@ -1,5 +1,5 @@
 # OpenShift on vSphere with NFS and OCS storage classes and Cloud Pak for Data
-This is a sample configuration for OpenShift on vSphere (VMWare) with NFS and OCS storage and using the entitled registry. Only the OpenShift cluster and Cloud Pak for Data are managed by the deployer and deployment requires a vSphere admin user and password, the OpenShift pull secret a Cloud Pak entitlement key. 
+This is a sample configuration for OpenShift on vSphere (VMWare) with NFS and OCS storage and using the entitled registry. Only the OpenShift cluster and Cloud Pak for Data are managed by the deployer and deployment requires a vSphere admin user and password, the OpenShift pull secret and a Cloud Pak entitlement key. 
 
 ![Picture of the environment](./sample-vsphere-nfs-ocs-cp4d.png)
 
