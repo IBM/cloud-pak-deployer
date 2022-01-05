@@ -47,20 +47,21 @@
   register: _rosa_describe_cluster
   failed_when: False
     
-- name: Create ROSA cluster
+- name: Create ROSA cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
   shell: |
     rosa create cluster --cluster-name {{ _current_openshift_cluster.name }} \
       --version {{ _current_openshift_cluster.ocp_version }} \
       --multi-az \
       --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
       --compute-machine-type {{ _current_openshift_cluster.worker_flavour }} \
-      --compute-nodes {{ _current_openshift_cluster.number_of_workers }}
+      --compute-nodes {{ _current_openshift_cluster.number_of_workers }} \
+      --watch 2>&1 >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
   when: _rosa_describe_cluster.rc != 0
 
-- name: Wait until cluster {{ _current_openshift_cluster.name }} is ready
+- name: Get details for cluster {{ _current_openshift_cluster.name }}
   shell: |
     rosa describe cluster \
       --cluster {{ _current_openshift_cluster.name }} \
@@ -70,9 +71,10 @@
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
   register: _rosa_describe_cluster
-  until: ((_rosa_describe_cluster.stdout | from_json).state | default("") | lower) == 'ready'
-  delay: 60
-  retries: 120
+
+- name: Show cluster details for cluster {{ _current_openshift_cluster.name }}
+  debug:
+    var: _rosa_describe_cluster
 
 - name: Check if cluster-admin user already defined for cluster {{ _current_openshift_cluster.name }}
   include_role: 
