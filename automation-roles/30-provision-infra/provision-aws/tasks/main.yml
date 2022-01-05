@@ -76,12 +76,19 @@
   debug:
     var: _rosa_describe_cluster
 
-- name: Check if cluster-admin user already defined for cluster {{ _current_openshift_cluster.name }}
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "{{ _current_openshift_cluster.name }}-cluster-admin-password"
-    secret_group: "{{ environment_name }}" 
+- name: Check if cluster-admin user already exists for cluster {{ _current_openshift_cluster.name }}
+  shell: |
+    rosa describe admin \
+      --cluster {{ _current_openshift_cluster.name }} \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }}
+  register: _describe_cluster_admin
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+
+- name: Show output of describe admin
+  debug:
+    var: _describe_cluster_admin
 
 - block:
   - name: Create admin user for cluster {{ _current_openshift_cluster.name }}
@@ -114,4 +121,4 @@
       secret_payload: "{{ _cluster_admin_password }}"
       secret_group: "{{ environment_name }}"
 
-  when: secret_value == ""
+  when: _describe_cluster_admin is search("There is no admin")
