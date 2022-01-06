@@ -28,16 +28,16 @@
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ openshift_cluster_name }}-cluster-admin-password"
+    secret_name: "{{ _p_openshift_cluster_name }}-cluster-admin-password"
     secret_group: "{{ environment_name }}" 
 
 - set_fact:
     _rosa_cluster_admin_password: "{{ secret_value }}"
 
-- name: Check if ROSA cluster {{ openshift_cluster_name }} exists
+- name: Check if ROSA cluster {{ _p_openshift_cluster_name }} exists
   shell: |
     rosa describe cluster \
-      --cluster {{ openshift_cluster_name }} \
+      --cluster {{ _p_openshift_cluster_name }} \
       --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
       --output json
   environment:
@@ -62,10 +62,10 @@
   delay: 10
   until: _oc_login_result.rc==0
 
-- name: Rename current context to {{ openshift_cluster_name }}
+- name: Rename current context to {{ _p_openshift_cluster_name }}
   shell: |
-    oc config delete-context {{ openshift_cluster_name }} || true
-    oc config rename-context $(oc config current-context) {{ openshift_cluster_name }}
+    oc config delete-context {{ _p_openshift_cluster_name }} || true
+    oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
 
 - name: Show OpenShift login result
   debug:

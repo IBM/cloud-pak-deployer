@@ -18,7 +18,13 @@
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='{{ openshift_cluster_name }}']
+      [?name=='{{ _p_openshift_cluster_name }}']
+
+- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-client
+  vars:
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
 - include_tasks: ibmcloud-login-roks-ocp.yml
   when: cloud_platform == 'ibm-cloud'

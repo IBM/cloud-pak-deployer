@@ -10,17 +10,12 @@
 
 # If the cluster was found, delete the OcsCluster CR
 - block:
-  - name: Download and activate OpenShift client for version {{ current_openshift_cluster.ocp_version }}
-    include_role:
-      name: openshift-download-client
-    vars:
-      _p_ocp_version: "{{ current_openshift_cluster.ocp_version }}"
 
   - name: Login to the OpenShift cluster {{ current_openshift_cluster.name }}
     include_role:
       name: openshift-login
     vars:
-      openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+      _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
   - name: Check if OcsCluster custom resource exists
     command: |
