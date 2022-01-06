@@ -46,6 +46,11 @@
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
   register: _rosa_describe_cluster
   failed_when: False
+
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
+    state: directory
     
 - name: Create ROSA cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
   shell: |
