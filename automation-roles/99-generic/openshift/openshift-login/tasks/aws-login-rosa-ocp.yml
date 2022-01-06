@@ -52,13 +52,14 @@
   debug:
     msg: "{{ _rosa_cluster_info }}"
 
+# Number of retries is 120 because initial setting of cluster-admin password may take longer
 - name: Login to OpenShift ROSA cluster
   shell: |
     oc login -u cluster-admin -p {{ _rosa_cluster_admin_password }} \
       {{ _rosa_cluster_info.api.url }} \
       --insecure-skip-tls-verify
   register: _oc_login_result
-  retries: 20
+  retries: 60
   delay: 10
   until: _oc_login_result.rc==0
 
