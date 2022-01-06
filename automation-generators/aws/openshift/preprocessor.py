@@ -11,6 +11,7 @@ import sys
 #   infrastructure:
 #     type: rosa
 #     aws_region: eu-central-1
+#     multi_zone: True
 #   openshift_storage:
 #   - storage_name: ocs-storage
 #     storage_type: ocs
@@ -41,6 +42,9 @@ def preprocessor(attributes=None, fullConfig=None):
             g.appendError(msg='infrastructure.type must be rosa')
         if "aws_region" not in ge['infrastructure']:
             g.appendError(msg='aws_region must be specified for infrastructure')
+        if "multi_zone" in ge['infrastructure']:
+            if type(ge['infrastructure']['multi_zone']) != bool:
+                g.appendError(msg='multi_zone must be True or False if specified')
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:
