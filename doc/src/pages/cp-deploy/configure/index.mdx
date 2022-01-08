@@ -67,22 +67,9 @@ The Cloud Pak Deployer pipeline has been built using Ansible and it can be confi
 The most important configuration you will find in the Cloud Pak Deployer's inventory files is the vault configuration. All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault).
 
 ### `assets` directory
-Holds one directory per Cloud Pak for which assets must be deployed. For Cloud Pak for Data, the assets are assumed to be in subdirectories of the `assets/cp4d` directory.
-
-#### Cloud Pak for Data assets under `assets/cp4d`
-Each asset must be contained in a directory under `assets/cp4d`, which makes it easier to distribute as a unit. The specific directory must either have a script called `cp4d-asset.sh` or an Ansible task file called `cp4d-asset.yaml` and it will be executed without any parameters.
-
-The following runtime attributes will be set prior to running the shell script or the Ansible task:
-* `cpdctl` is configured for the current Cloud Pak for Data instance and the current context is set to the `admin` user of the instance. This means you can run all `cpdctl` commands without first having to login to Cloud Pak for Data.
-* The current working directory is set to the directory holding the `cp4d-asset.sh` script.
-* When running the `cp4d-asset.sh` shell script, the following environment variables are available:
-    - `CP4D_URL`: Cloud Pak for Data URL
-    - `CP4D_ADMIN_PASSWORD`: Cloud Pak for Data admin password
-    - `CP4D_OCP_PROJECT`: OpenShift project that holds the Cloud Pak for Data instance
-    - `KUBECONFIG`: OpenShift configuration file that allows you to run `oc` commands for the cluster
+Optional directory holding the assets you wish to deploy for the Cloud Pak. More information about Cloud Pak for Data assets which can be deployed can be found in object definition [cp4d_asset](/cpd-design/objects/cp4d_asset). The directory can be named differently as well, for example `cp4d-assets` or `customer-churn-demo`.
 
 ## Vault secrets
-
 User passwords, certificates and other "secret" information is kept in the vault, which can be either a flat file (not encrypted), HashiCorp Vault or the IBM Cloud Secrets Manager service. Some of the deployment configurations require that the vault is pre-populated with secrets which as needed during the deployment. For example, a vSphere deployment needs the vSphere user and password to authenticate to vSphere and Cloud Pak for Data SAML configuration requires the idP certificate.
 
 To set secrets, ensure that the environment variables for the configuration and status directories are set:
