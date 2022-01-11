@@ -11,6 +11,7 @@ def index():
 
 @app.route('v2/api/deploy',methods=["POST"])
 def deploy(config):
+    env = {}
     process = subprocess.Popen(['cp-deploy.sh', 'env', 'apply','-e env_id=pluto-01','-e ibm_cloud_region=eu-gb'], 
                            stdout=subprocess.PIPE,
                            universal_newlines=True,
