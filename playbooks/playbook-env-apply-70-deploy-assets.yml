@@ -13,9 +13,17 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-  - name: Deploy Cloud Pak Assets
+
+  - name: Configure Cloud Pak for Data Monitors
     include_role:
-      name: cp4d-deploy-assets
+      name: cp4d-monitors 
     loop: "{{ all_config.cp4d | default([]) }}"
     loop_control:
       loop_var: current_cp4d_cluster
+
+  - name: Deploy Cloud Pak Assets
+    include_role:
+      name: cp4d-assets
+    loop: "{{ all_config.cp4d_asset | default([]) }}"
+    loop_control:
+      loop_var: _current_cp4d_asset

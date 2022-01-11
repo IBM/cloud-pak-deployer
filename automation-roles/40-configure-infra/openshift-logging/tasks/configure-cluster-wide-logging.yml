@@ -17,8 +17,12 @@
 - debug:
     msg: "{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') }}"
 
+# Add pipeline, taking the following into account:
+# - If no .spec.pipeline[] is there yet, it will be defined (empty)
+# - If the pipeline with the same name already exists, it is first deleted
+# - The new pipeline is added
 - name: Add pipeline to ClusterLogForwarder
   shell: |
     oc get -n openshift-logging clusterlogforwarder/instance -o json | \
-      jq 'del(.spec.pipelines[] | select(.name=="{{ _p_openshift_logging.openshift_cluster_name }}-{{ _current_cluster_wide_logging.input }}"))' | jq '.spec.pipelines += [{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') | to_json }}]' | \
+      jq '.spec.pipelines += [] | del(.spec.pipelines[] | select(.name=="{{ _p_openshift_logging.openshift_cluster_name }}-{{ _current_cluster_wide_logging.input }}"))' | jq '.spec.pipelines += [{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') | to_json }}]' | \
     oc apply -f -

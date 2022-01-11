@@ -9,17 +9,11 @@
     query: >-
       [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
 
-- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
-  include_role:
-    name: openshift-download-client
-  vars:
-    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
-
-- name: Login to the OpenShift cluster
+- name: Login to the OpenShift cluster "{{ current_cp4d_cluster.openshift_cluster_name }}"
   include_role:
     name: openshift-login
   vars:
-    openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
 - name: Get IBM Entitled Registry key
   include_role: 
