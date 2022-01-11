@@ -41,6 +41,7 @@ command_usage() {
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
+  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo 
@@ -74,6 +75,7 @@ if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
+if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
 
 if [ -f /run/.containerenv ];then
   INSIDE_CONTAINER=true
@@ -410,7 +412,15 @@ while (( "$#" )); do
     fi
     export CP_CONFIG_ONLY=true
     shift 1
-    ;;    
+    ;;   
+  --check-only)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --cp-config-only is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CHECK_ONLY=true
+    shift 1
+    ;;  
   -vvv)
     export ANSIBLE_VERBOSE=true
     shift 1
@@ -673,6 +683,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
   run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
   run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
+  run_cmd+=" -e CHECK_ONLY=${CHECK_ONLY}"
 
   # Handle extra variables
   if [ ${#arrExtraKey[@]} -ne 0 ];then
