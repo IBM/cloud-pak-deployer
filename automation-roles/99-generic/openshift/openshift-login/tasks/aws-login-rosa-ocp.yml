@@ -1,0 +1,73 @@
+---
+
+- name: Login to ROSA
+  include_role:
+    name: aws-login-rosa
+
+- name: Get aws-access-key secret from in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-access-key"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _aws_access_key: "{{ secret_value }}"
+
+- name: Get aws-secret-access-key secret from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-secret-access-key"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _aws_secret_access_key: "{{ secret_value }}"
+
+- name: Get cluster-admin password from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _p_openshift_cluster_name }}-cluster-admin-password"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _rosa_cluster_admin_password: "{{ secret_value }}"
+
+- name: Check if ROSA cluster {{ _p_openshift_cluster_name }} exists
+  shell: |
+    rosa describe cluster \
+      --cluster {{ _p_openshift_cluster_name }} \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _rosa_describe_cluster
+
+- set_fact:
+    _rosa_cluster_info: "{{ _rosa_describe_cluster.stdout | from_json }}"
+
+- name: Show results from rosa describe cluster command
+  debug:
+    msg: "{{ _rosa_cluster_info }}"
+
+# Number of retries is 120 because initial setting of cluster-admin password may take longer
+- name: Login to OpenShift ROSA cluster
+  shell: |
+    oc login -u cluster-admin -p {{ _rosa_cluster_admin_password }} \
+      {{ _rosa_cluster_info.api.url }} \
+      --insecure-skip-tls-verify
+  register: _oc_login_result
+  retries: 60
+  delay: 10
+  until: _oc_login_result.rc==0
+
+- name: Rename current context to {{ _p_openshift_cluster_name }}
+  shell: |
+    oc config delete-context {{ _p_openshift_cluster_name }} || true
+    oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+
+- name: Show OpenShift login result
+  debug:
+    msg: "{{ _oc_login_result }}"
