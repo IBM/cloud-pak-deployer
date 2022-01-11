@@ -34,6 +34,13 @@
     loop_control:
       loop_var: current_openshift_cluster
 
-  - name: Destroy everything
-    include_role:
+  - include_role:
       name: destroy-terraform
+    when: cloud_platform == 'ibm-cloud'
+
+  - include_role:
+      name: destroy-aws
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: _current_openshift_cluster
+    when: cloud_platform == 'aws'
