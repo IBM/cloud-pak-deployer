@@ -502,7 +502,7 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [ "${ACTION}" != "webui" ]; then
+if [[ "${ACTION}" != "webui"  && "${ACTION}" != "kill" ]]; then
   if [ "${CONFIG_DIR}" == "" ]; then
     echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
     exit 1
