@@ -13,7 +13,7 @@ def index():
 def deploy():
     body = request.json()
     env = body.environment
-    process = subprocess.Popen(['../cp-deploy.sh', 'env', 'apply','-e env_id={}'.format(body.envId),'-e ibm_cloud_region={}'.format(body.region)], 
+    process = subprocess.Popen(['../cp-deploy.sh', 'env', 'apply','-e env_id={}'.format(body.envId),'-e ibm_cloud_region={}'.format(body.region), '--check-only'], 
                            stdout=subprocess.PIPE,
                            universal_newlines=True,
                            env={'IBM_CLOUD_API_KEY': env.ibmCloudAPIKey,
