@@ -18,8 +18,8 @@ def deploy():
                            universal_newlines=True,
                            env={'IBM_CLOUD_API_KEY': env.ibmCloudAPIKey,
                                 'CP_ENTITLEMENT_KEY': env.entilementKey,
-                                'STATUS_DIR':'',
-                                'CONFIG_DIR':''})
+                                'STATUS_DIR':'/data/status/sample',
+                                'CONFIG_DIR':'/data/config/sample'})
     
     return 'runing'
 
