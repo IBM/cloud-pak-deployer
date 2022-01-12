@@ -41,6 +41,7 @@ command_usage() {
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
+  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo 
@@ -74,6 +75,13 @@ if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
+if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
+
+if [ -f /run/.containerenv ];then
+  INSIDE_CONTAINER=true
+else
+  INSIDE_CONTAINER=false
+fi
 
 arrExtraKey=()
 arrExtraValue=()
@@ -98,6 +106,10 @@ vault)
   shift 1
   ;;
 build)
+  if ${INSIDE_CONTAINER};then
+    echo "build subcommand not allowed when running inside container"
+    exit 99
+  fi
   shift 1
   ;;
 h|help)
@@ -117,7 +129,22 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy|logs|command|cmd|kill)
+  apply|destroy)
+    shift 1
+    ;;
+  logs|kill)
+    if ${INSIDE_CONTAINER};then
+      echo "$ACTION action not allowed when running inside container"
+      exit 99
+    fi
+    shift 1
+    ;;
+  command|cmd)
+    if ${INSIDE_CONTAINER};then
+      echo "$ACTION action not allowed when running inside container"
+      exit 99
+    fi
+    export SUBCOMMAND="command"
     shift 1
     ;;
   *)
@@ -371,6 +398,10 @@ while (( "$#" )); do
     shift 1
     ;;
   --cpd-develop)
+    if ${INSIDE_CONTAINER};then
+      echo "$1 flag not allowed when running inside container"
+      exit 99
+    fi
     export CPD_DEVELOP=true
     shift 1
     ;;
@@ -381,7 +412,15 @@ while (( "$#" )); do
     fi
     export CP_CONFIG_ONLY=true
     shift 1
-    ;;    
+    ;;   
+  --check-only)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --cp-config-only is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CHECK_ONLY=true
+    shift 1
+    ;;  
   -vvv)
     export ANSIBLE_VERBOSE=true
     shift 1
@@ -409,20 +448,22 @@ done
 # container engine used to run the registry, either 'docker' or 'podman'
 CONTAINER_ENGINE=
 
-# Check if podman or docker command was found
-if command -v podman &> /dev/null;then
-  CONTAINER_ENGINE="podman"
-elif command -v docker &> /dev/null;then
-  CONTAINER_ENGINE="docker"
-else
-  echo "podman or docker command was not found."
-  exit 99
-fi
+if ! $INSIDE_CONTAINER;then
+  # Check if podman or docker command was found
+  if command -v podman &> /dev/null;then
+    CONTAINER_ENGINE="podman"
+  elif command -v docker &> /dev/null;then
+    CONTAINER_ENGINE="docker"
+  else
+    echo "podman or docker command was not found."
+    exit 99
+  fi
 
-# If running "build" subcommand, build the image
-if [ "$SUBCOMMAND" == "build" ];then
-  $CONTAINER_ENGINE build -t cloud-pak-deployer ${SCRIPT_DIR}
-  exit $?
+  # If running "build" subcommand, build the image
+  if [ "$SUBCOMMAND" == "build" ];then
+    $CONTAINER_ENGINE build -t cloud-pak-deployer ${SCRIPT_DIR}
+    exit $?
+  fi
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -455,12 +496,15 @@ if [[ "${SUBCOMMAND}" == "vault" ]];then
   fi
 fi
 
-
 # --------------------------------------------------------------------------------------------------------- #
 # Check existence of directories                                                                            #
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
+if [ "${CONFIG_DIR}" == "" ]; then
+  echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
+  exit 1
+fi
 if [ ! -d "${CONFIG_DIR}" ]; then
   echo "config directory ${CONFIG_DIR} not found."
   exit 1
@@ -492,15 +536,12 @@ fi
 # Set remaining parameters
 eval set -- "$PARAMS"
 
-# --------------------------------------------------------------------------------------------------------- #
-# For the remainder of the command, it is expected that the image exists                                    #
-# --------------------------------------------------------------------------------------------------------- #
-
 # Check if the cloud-pak-deployer image exists
-
-if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
-  echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
-  exit 99
+if ! $INSIDE_CONTAINER;then
+  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
+    echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
+    exit 99
+  fi
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -528,44 +569,48 @@ fi
 # Check if a container is currently running for this status directory
 CURRENT_CONTAINER_ID=""
 ACTIVE_CONTAINER_ID=""
-if [ -f ${STATUS_DIR}/pid/container.id ];then
-  CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
-  ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-  # If container ID was found, check if it is currently running
-  if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
-    if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
-      ACTIVE_CONTAINER_ID=""
+if ! $INSIDE_CONTAINER;then
+  if [ -f ${STATUS_DIR}/pid/container.id ];then
+    CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
+    ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
+    # If container ID was found, check if it is currently running
+    if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
+      if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+        ACTIVE_CONTAINER_ID=""
+      fi
     fi
   fi
 fi
 
 # If trying to apply or destroy for an active container, just display the logs
-if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
-  if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
-    echo "Showing the logs of the currently running container ${ACTIVE_CONTAINER_ID}"
-    sleep 0.5
-    run_env_logs
-    exit 0
-  fi
-# Display the logs if an active or inactive container was found
-elif [[ "${ACTION}" == "logs" ]];then
-  if [[ "${CURRENT_CONTAINER_ID}" == "" ]];then
-    echo "Error: No Cloud Pak Deployer process found for the current status directory."
-    exit 1
-  else
-    run_env_logs
-    exit 0
-  fi
-# Terminate if an active container was found
-elif [[ "${ACTION}" == "kill" ]];then
-  if [[ "${ACTIVE_CONTAINER_ID}" == "" ]];then
-    echo "Error: No active Cloud Pak Deployer process found for the current status directory."
-    exit 1
-  else
-    echo "Terminating container process ${ACTIVE_CONTAINER_ID}"
-    ${CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
-    exit 0
+if ! $INSIDE_CONTAINER;then
+  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+    if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
+      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
+      echo "Showing the logs of the currently running container ${ACTIVE_CONTAINER_ID}"
+      sleep 0.5
+      run_env_logs
+      exit 0
+    fi
+  # Display the logs if an active or inactive container was found
+  elif [[ "${ACTION}" == "logs" ]];then
+    if [[ "${CURRENT_CONTAINER_ID}" == "" ]];then
+      echo "Error: No Cloud Pak Deployer process found for the current status directory."
+      exit 1
+    else
+      run_env_logs
+      exit 0
+    fi
+  # Terminate if an active container was found
+  elif [[ "${ACTION}" == "kill" ]];then
+    if [[ "${ACTIVE_CONTAINER_ID}" == "" ]];then
+      echo "Error: No active Cloud Pak Deployer process found for the current status directory."
+      exit 1
+    else
+      echo "Terminating container process ${ACTIVE_CONTAINER_ID}"
+      ${CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
+      exit 0
+    fi
   fi
 fi
 
@@ -579,91 +624,97 @@ if [[ "${SUBCOMMAND}" == "environment" && "${ACTION}" == "apply" && ! -z ${CP_EN
   fi
 fi
 
-# Build command
-run_cmd="${CONTAINER_ENGINE} run"
+# Build command when not running inside container
+if ! $INSIDE_CONTAINER;then
+  run_cmd="${CONTAINER_ENGINE} run"
 
-# If running "environment" subcommand with apply or destroy, run as daemon
-if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
-  run_cmd+=" -d"
-fi
-
-run_cmd+=" --cap-add=IPC_LOCK"
-
-run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
-
-if [ ! -z $CONFIG_DIR ];then run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z";fi
-if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/automation_script:Z";fi
-
-run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
-run_cmd+=" -e ACTION=${ACTION}"
-run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
-run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
-run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
-
-if [ ! -z $VAULT_GROUP ];then
-  run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
-fi
-
-if [ ! -z $VAULT_SECRET ];then
-   run_cmd+=" -e VAULT_SECRET=${VAULT_SECRET} \
-            -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
-            -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
-  if [ ! -z $VAULT_SECRET_FILE ];then
-    run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:Z"
+  # If running "environment" subcommand with apply or destroy, run as daemon
+  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+    run_cmd+=" -d"
   fi
-fi
 
-if [ ! -z $VAULT_PASSWORD ];then
-  run_cmd+=" -e VAULT_PASSWORD=${VAULT_PASSWORD}"
-fi
+  run_cmd+=" --cap-add=IPC_LOCK"
 
-if [ ! -z $VAULT_CERT_CA_FILE ];then
-  run_cmd+=" -e VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
-  run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:Z"
-fi
+  run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
 
-if [ ! -z $VAULT_CERT_KEY_FILE ];then
-  run_cmd+=" -e VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
-  run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:Z"
-fi
+  if [ ! -z $CONFIG_DIR ];then run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z";fi
+  if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer:Z";fi
 
-if [ ! -z $VAULT_CERT_CERT_FILE ];then
-  run_cmd+=" -e VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
-  run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:Z"
-fi
+  run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
+  run_cmd+=" -e ACTION=${ACTION}"
+  run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
+  run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
+  run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
 
-run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
-run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
-run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
-run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
-run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
+  if [ ! -z $VAULT_GROUP ];then
+    run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
+  fi
 
-# Handle extra variables
-if [ ${#arrExtraKey[@]} -ne 0 ];then
-  for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
-    echo "Extra parameters ($i): ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
-    run_cmd+=" -e ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
-  done
-  run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
-fi
+  if [ ! -z $VAULT_SECRET ];then
+    run_cmd+=" -e VAULT_SECRET=${VAULT_SECRET} \
+              -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
+              -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
+    if [ ! -z $VAULT_SECRET_FILE ];then
+      run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:Z"
+    fi
+  fi
 
-if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "command" || "${ACTION}" == "cmd" ]];then
-  run_cmd+=" -ti --entrypoint /automation_script/docker-scripts/env-command.sh"
-fi
+  if [ ! -z $VAULT_PASSWORD ];then
+    run_cmd+=" -e VAULT_PASSWORD=${VAULT_PASSWORD}"
+  fi
 
-run_cmd+=" cloud-pak-deployer"
+  if [ ! -z $VAULT_CERT_CA_FILE ];then
+    run_cmd+=" -e VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
+    run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:Z"
+  fi
 
-# If running "environment" subcommand with apply/destroy, follow log
-if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
-  CURRENT_CONTAINER_ID=$(eval $run_cmd)
-  ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-  mkdir -p ${STATUS_DIR}/pid
-  echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
-  run_env_logs
-  PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
+  if [ ! -z $VAULT_CERT_KEY_FILE ];then
+    run_cmd+=" -e VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
+    run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:Z"
+  fi
+
+  if [ ! -z $VAULT_CERT_CERT_FILE ];then
+    run_cmd+=" -e VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
+    run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:Z"
+  fi
+
+  run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
+  run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
+  run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+  run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
+  run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
+  run_cmd+=" -e CHECK_ONLY=${CHECK_ONLY}"
+
+  # Handle extra variables
+  if [ ${#arrExtraKey[@]} -ne 0 ];then
+    for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
+      echo "Extra parameters ($i): ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+      run_cmd+=" -e ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+    done
+    run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
+  fi
+
+  if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "command" ]];then
+    run_cmd+=" -ti --entrypoint /cloud-pak-deployer/docker-scripts/env-command.sh"
+  else
+    run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
+  fi
+  run_cmd+=" cloud-pak-deployer"
+
+  # If running "environment" subcommand with apply/destroy, follow log
+  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+    CURRENT_CONTAINER_ID=$(eval $run_cmd)
+    ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
+    mkdir -p ${STATUS_DIR}/pid
+    echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+    run_env_logs
+    PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
+  else
+    eval $run_cmd
+    PODMAN_EXIT_CODE=$?
+  fi
+
+  exit $PODMAN_EXIT_CODE
 else
-  eval $run_cmd
-  PODMAN_EXIT_CODE=$?
+  . /cloud-pak-deployer/docker-scripts/run_automation.sh
 fi
-
-exit $PODMAN_EXIT_CODE
