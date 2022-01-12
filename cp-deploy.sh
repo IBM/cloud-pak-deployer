@@ -20,6 +20,7 @@ command_usage() {
   echo "    destroy                 Destroy an existing environment"
   echo "    logs                    Show (tail) the logs of the apply/destroy process"
   echo "    command,cmd             Opens a shell environment to run commands such as the OpenShift client (oc)"
+  echo "    webui                   Start the Cloud Pak Deployer Web UI"
   echo "    kill                    Kill the current apply/destroy process"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
@@ -129,7 +130,7 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy)
+  apply|destroy|webui)
     shift 1
     ;;
   logs|kill)
@@ -501,21 +502,23 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [ "${CONFIG_DIR}" == "" ]; then
-  echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
-  exit 1
-fi
-if [ ! -d "${CONFIG_DIR}" ]; then
-  echo "config directory ${CONFIG_DIR} not found."
-  exit 1
-fi
-if [ ! -d "${CONFIG_DIR}/config" ]; then
-  echo "config directory not found in directory ${CONFIG_DIR}."
-  exit 1
-fi
-if [ ! -d "${CONFIG_DIR}/inventory" ]; then
-  echo "inventory directory not found in directory ${CONFIG_DIR}."
-  exit 1
+if [ "${ACTION}" != "webui" ]; then
+  if [ "${CONFIG_DIR}" == "" ]; then
+    echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}" ]; then
+    echo "config directory ${CONFIG_DIR} not found."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}/config" ]; then
+    echo "config directory not found in directory ${CONFIG_DIR}."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}/inventory" ]; then
+    echo "inventory directory not found in directory ${CONFIG_DIR}."
+    exit 1
+  fi
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -584,7 +587,7 @@ fi
 
 # If trying to apply or destroy for an active container, just display the logs
 if ! $INSIDE_CONTAINER;then
-  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "webui" ]];then
     if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
       echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
       echo "Showing the logs of the currently running container ${ACTIVE_CONTAINER_ID}"
@@ -629,7 +632,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd="${CONTAINER_ENGINE} run"
 
   # If running "environment" subcommand with apply or destroy, run as daemon
-  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "webui" ]];then
     run_cmd+=" -d"
   fi
 
@@ -696,13 +699,16 @@ if ! $INSIDE_CONTAINER;then
 
   if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "command" ]];then
     run_cmd+=" -ti --entrypoint /cloud-pak-deployer/docker-scripts/env-command.sh"
+  elif [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "webui" ]];then
+    run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/container-webui.sh"
+    run_cmd+=" -p 32080:32080"
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
   run_cmd+=" cloud-pak-deployer"
 
   # If running "environment" subcommand with apply/destroy, follow log
-  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "webui" ]];then
     CURRENT_CONTAINER_ID=$(eval $run_cmd)
     ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
     mkdir -p ${STATUS_DIR}/pid
