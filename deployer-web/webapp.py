@@ -7,11 +7,10 @@ from shutil import copyfile
 
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
-source = os.path.dirname(__file__)
-parent = os.path.dirname(source)
-cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config')
-ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config')
-inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
+source = os.getcwd()
+cp4d_config_path = os.path.join(source,'sample-configurations/web-ui-base-config')
+ocp_config_path = os.path.join(source,'sample-configurations/web-ui-base-config')
+inventory_config_path = os.path.join(source,'sample-configurations/web-ui-base-config/inventory')
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder,'index.html')
