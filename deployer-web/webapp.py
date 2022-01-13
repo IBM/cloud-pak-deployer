@@ -10,7 +10,7 @@ source = os.path.dirname(__file__)
 parent = os.path.join(source, '../')
 script_path = os.path.join(parent, 'cp-deploy.sh')
 
-@app.route('/',defaults={'path':''})
+@app.route('/')
 def index():
     return send_from_directory(app.static_folder,'index.html')
 
