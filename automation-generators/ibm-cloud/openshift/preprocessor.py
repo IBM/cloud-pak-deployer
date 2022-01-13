@@ -6,7 +6,7 @@ import sys
 # openshift:
 # - name: sample
 #   ocp_version: 4.6
-#   worker_flavour: bx2.16x64
+#   compute_flavour: bx2.16x64
 #   compute_nodes: 3
 #   infrastructure:
 #     type: vpc
@@ -35,7 +35,7 @@ def preprocessor(attributes=None, fullConfig=None):
 
     g('name').isRequired()
     g('ocp_version').isRequired()
-    g('worker_flavour').isRequired()
+    g('compute_flavour').isRequired()
     g('compute_nodes').isRequired()
     
     g('infrastructure').isRequired()

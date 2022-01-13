@@ -8,7 +8,7 @@ import sys
 # openshift:
 # - name: sample
 #   ocp_version: 4.6
-#   worker_flavour: bx2.16x64
+#   compute_flavour: bx2.16x64
 #   compute_nodes: 3
 #   resource_group_name: ibm
 #   infrastructure:
