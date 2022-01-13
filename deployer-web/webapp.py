@@ -1,9 +1,13 @@
 from flask import Flask, send_from_directory,request
 import json
 import subprocess
+import os
 
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
+source = os.path.dirname(__file__)
+parent = os.path.join(source, '../')
+script_path = os.path.join(parent, 'cp-deploy.sh')
 
 @app.route('/',defaults={'path':''})
 def index():
@@ -17,7 +21,7 @@ def deploy():
     if body['cloud']=='IBMCloud':
       env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
                                 'CP_ENTITLEMENT_KEY': body['env']['entilementKey']}
-    process = subprocess.Popen(['../cp-deploy.sh', 'env', 'webui','-e env_id={}'.format(body['envId']),
+    process = subprocess.Popen([script_path, 'env', 'webui','-e env_id={}'.format(body['envId']),
                                 '-e ibm_cloud_region={}'.format(body['region']), 
                                 '--config-dir={}'.format(body['configDir']),'--status-dir={}'.format(body['statusDir']),
                                 '--cpd-develop'], 
