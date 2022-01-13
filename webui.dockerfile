@@ -44,7 +44,7 @@ RUN mkdir -p /cloud-pak-deployer && \
 
 COPY sample-configurations/web-ui-base-config/cloud-pak/cp4d.yaml /tmp/config/cp4d.yaml
 COPY sample-configurations/web-ui-base-config/inventory /tmp/config/inventory
-COPY sample-configurations/web-ui-base-config/cloud-pak/ocp /tmp/config/config
+COPY sample-configurations/web-ui-base-config/ocp /tmp/config/config
 
 COPY . /cloud-pak-deployer/
 
