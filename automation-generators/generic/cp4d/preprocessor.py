@@ -9,7 +9,7 @@ import sys
 # - name: sample
 #   ocp_version: 4.6
 #   worker_flavour: bx2.16x64
-#   number_of_workers: 3
+#   compute_nodes: 3
 #   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
