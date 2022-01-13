@@ -12,6 +12,14 @@ parent = os.path.dirname(source)
 cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
 ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
+confg_dir=os.getenv('CONFIG_DIR')
+target_config=confg_dir+'/config'
+target_inventory=confg_dir+'/inventory'
+if not os.path.exists(target_config):
+    os.mkdir(confg_dir)
+if not os.path.exists(target_inventory):
+    os.mkdir(target_inventory)
+
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder,'index.html')
@@ -36,15 +44,15 @@ def loadConfig():
     body = json.loads(request.get_data())
     env_id=body['envId']
     cloud=body['cloud']
-    confg_dir=os.getenv('CONFIG_DIR')
+
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
-    generated_cp4d_yaml_path = confg_dir+'/config/{}-cp4d.yaml'.format(env_id)
+    generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
     source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
-    generated_ocp_yaml_path = confg_dir+'/config/{}-ocp.yaml'.format(env_id)
+    generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
     source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
-    generated_inventory_yaml_path = confg_dir+'/inventory/{}.inv'.format(env_id)
+    generated_inventory_yaml_path = target_inventory+'/{}.inv'.format(env_id)
     copyfile(source_inventory_config_path,generated_inventory_yaml_path)
    
     result={}
