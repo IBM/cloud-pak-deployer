@@ -40,7 +40,7 @@ def loadConfig():
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = confg_dir+'/config/{}-cp4d.yaml'.format(env_id)
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
-    source_ocp_config_path = ocp_config_path+'/ocp/{}.yaml'.format(cloud)
+    source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = confg_dir+'/config/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
     source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
