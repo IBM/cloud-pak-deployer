@@ -1,5 +1,5 @@
 ---
-- name: Allow MachineConfig operator to reboot workers again
+- name: Allow MachineConfig operator to reboot compute nodes again
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
 
@@ -8,7 +8,7 @@
     oc get mcp worker -o jsonpath='{.status.machineCount}'
   register: _compute_nodes
 
-- name: Wait for {{ compute_nodes.stdout }} workers for cluster to become ready according to the MachineConfig operator
+- name: Wait for {{ compute_nodes.stdout }} compute nodes for cluster to become ready according to the MachineConfig operator
   shell: |
     oc get mcp worker -o jsonpath='{.status.readyMachineCount}'
   register: _ready_compute_nodes
