@@ -10,7 +10,7 @@
     ssh_private_key_value: "{{ secret_value }}"
 
 - fail:
-    msg: "SSH key {{ ssh_key_item.name }} not found in vault and not managed"
+    msg: "SSH key secret {{ ssh_key_item.name }}-ssh-key not found in vault and the ssh_key is not managed"
   when: 'not ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - name: Create temporary directory to hold SSH keys
@@ -70,3 +70,7 @@
 - name: Set SSH public key fact to be used in generator
   set_fact:
     "{{ ssh_key_item.name | replace('-','_') }}_ssh_pub_key": "{{ secret_value }}"
+
+- fail:
+    msg: "SSH public key secret {{ ssh_key_item.name }}-ssh-pub-key not found in vault and the ssh_key is not managed"
+  when: 'not ssh_key_item.managed | default(False) | bool and secret_value  == ""'
