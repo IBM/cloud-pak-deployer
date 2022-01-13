@@ -10,7 +10,6 @@ import sys
 #   ocp_version: 4.6
 #   worker_flavour: bx2.16x64
 #   number_of_workers: 3
-#   max_number_of_workers: 10
 #   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
