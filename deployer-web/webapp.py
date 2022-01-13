@@ -9,8 +9,8 @@ app = Flask(__name__,static_url_path='', static_folder='ww')
 
 source = os.getcwd()
 parent = os.path.dirname(source)
-cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config')
-ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config')
+cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
+ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
 @app.route('/')
 def index():
@@ -37,13 +37,13 @@ def loadConfig():
     env_id=body['envId']
     cloud=body['cloud']
     confg_dir=os.getenv('CONFIG_DIR')
-    source_cp4d_config_path = cp4d_config_path+'/cloud-pak/cp4d.yaml'
+    source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = confg_dir+'/config/{}-cp4d.yaml'.format(env_id)
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
-    source_ocp_config_path = cp4d_config_path+'/ocp/{}.yaml'.format(cloud)
+    source_ocp_config_path = ocp_config_path+'/ocp/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = confg_dir+'/config/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
-    source_inventory_config_path=cp4d_config_path+'/inventory/{}.inv'.format(cloud)
+    source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
     generated_inventory_yaml_path = confg_dir+'/inventory/{}.inv'.format(env_id)
     copyfile(source_inventory_config_path,generated_inventory_yaml_path)
    
