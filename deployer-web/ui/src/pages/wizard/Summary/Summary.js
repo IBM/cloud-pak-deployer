@@ -6,7 +6,7 @@ import './Summary.scss'
 const Summary = () => {
 
     const [loading, setLoading] = useState(false)
-    let summaryResult = {}
+    let summaryResult = useState(true)
     useEffect(() => {
         fetchDate()
     }, []);
