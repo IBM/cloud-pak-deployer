@@ -3,13 +3,15 @@ import json
 import subprocess
 import os
 import yaml
+from shutil import copyfile
 
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
 source = os.path.dirname(__file__)
-parent = os.path.join(source, '../')
-script_path = os.path.join(parent, 'cp-deploy.sh')
-
+parent = os.path.dirname(source)
+cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config')
+ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config')
+inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder,'index.html')
@@ -19,13 +21,11 @@ def index():
 def deploy():
     body = json.loads(request.get_data())
     env ={}
-    if body['cloud']=='IBMCloud':
+    if body['cloud']=='ibm-cloud':
       env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
                                 'CP_ENTITLEMENT_KEY': body['env']['entilementKey']}
-    process = subprocess.Popen([script_path, 'env', 'webui','-e env_id={}'.format(body['envId']),
-                                '-e ibm_cloud_region={}'.format(body['region']), 
-                                '--config-dir={}'.format(body['configDir']),'--status-dir={}'.format(body['statusDir']),
-                                '--cpd-develop'], 
+      process = subprocess.Popen(['cp-deploy.sh', 'env', 'apply','-e env_id={}'.
+                               format(body['envId']),'-e ibm_cloud_region={}'.format(body['region']), '--check-only'], 
                            stdout=subprocess.PIPE,
                            universal_newlines=True,
                            env=env)
@@ -35,10 +35,21 @@ def deploy():
 def loadConfig():
     body = json.loads(request.get_data())
     env_id=body['envId']
-    confg_path=body['configDir']
+    cloud=body['cloud']
+    confg_dir=os.getenv('CONFIG_DIR')
+    source_cp4d_config_path = cp4d_config_path+'/cloud-pak/cp4d.yaml'
+    generated_cp4d_yaml_path = confg_dir+'/config/{}-cp4d.yaml'.format(env_id)
+    copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
+    source_ocp_config_path = cp4d_config_path+'/ocp/{}.yaml'.format(cloud)
+    generated_ocp_yaml_path = confg_dir+'/config/{}-ocp.yaml'.format(env_id)
+    copyfile(source_ocp_config_path,generated_ocp_yaml_path)
+    source_inventory_config_path=cp4d_config_path+'/inventory/{}.inv'.format(cloud)
+    generated_inventory_yaml_path = confg_dir+'/inventory/{}.inv'.format(env_id)
+    copyfile(source_inventory_config_path,generated_inventory_yaml_path)
+   
     result={}
-    result["cp4d"]=open(confg_path+'/cp4d.yaml', "r").read()
-    result["envId"]=open(confg_path+'/config/{}.yaml'.format(env_id), "r").read()
+    result["cp4d"]=open(generated_cp4d_yaml_path,"r").read()
+    result["envId"]=open(generated_ocp_yaml_path, "r").read()
     return json.dumps(result)
             
         
