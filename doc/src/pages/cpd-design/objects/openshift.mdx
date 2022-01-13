@@ -18,7 +18,7 @@ For OpenShift, there are 3 flavours:
 
 Dependent on the cloud platform on which the OpenShift cluster will be provisioned, different installation methods apply. For IBM Cloud, Terraform is used, whereas for vSphere the OpenShift IPI installer is used. On AWS (ROSA), the `rosa` CLI is used to create and modify ROSA clusters. Different properties for the `openshift` objects are applicable for each cloud platform.
 
-Every OpenShift cluster consists of a few mandatory properties that control which version of OpenShift is installed, the number and type of master nodes and worker nodes and the underlying infrastructure. Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and storage definitions.
+Every OpenShift cluster consists of a few mandatory properties that control which version of OpenShift is installed, the number and type of control plane nodes and worker nodes and the underlying infrastructure. Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and storage definitions.
 
 ### OpenShift on IBM Cloud (ROKS)
 ```
@@ -88,8 +88,8 @@ openshift:
   domain_name: example.com
   vsphere_name: sample
   ocp_version: 4.8
-  number_of_masters: 3
-  master_vm_definition: master
+  control_plane_nodes: 3
+  control_plane_vm_definition: control-plane
   number_of_workers: 3
   worker_vm_definition: worker
   max_number_of_workers: 10  
@@ -118,8 +118,8 @@ openshift:
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
 | domain_name | Domain name of the cluster, this will also depict the route to the API and ingress endpoints | Yes       |  |
 | ocp_version | OpenShift version version, the value specified here will also be used for OpenShift Container Storage | Yes       | |
-| number_of_masters | Total number of masters, typically 3                        | Yes | Integer |
-| master_vm_definition | `vm_definition` object that will be used to define number of vCPUs and memory for the master nodes | Yes | Existing `vm_definition` |
+| control_plane_nodes | Total number of control plane nodes, typically 3      | Yes | Integer |
+| control_plane_vm_definition | `vm_definition` object that will be used to define number of vCPUs and memory for the control plane nodes | Yes | Existing `vm_definition` |
 | number_of_workers | Total number of workers                                     | Yes | Integer |
 | worker_vm_definition | `vm_definition` object that will be used to define number of vCPUs and memory for the worker nodes | Yes | Existing `vm_definition` |
 | max_number_of_workers | Maximum number of workers allowed. If total number of workers exceeds this value, the cluster will not be provisioned | Yes | Integer |
