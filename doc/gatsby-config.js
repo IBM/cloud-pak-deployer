@@ -26,7 +26,7 @@ module.exports = {
           baseUrl:
             'https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer',
           subDirectory: '',
-          branch: 'master',
+          branch: 'main',
         },
       },
     },
