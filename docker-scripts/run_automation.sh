@@ -89,6 +89,8 @@ env|environment)
       run_cmd+=" --extra-vars $p=${!p}"
     done
   fi
+  # Make sure that the logs of the Ansible playbook are written to a log file
+  run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
   eval $run_cmd
   ;;
 

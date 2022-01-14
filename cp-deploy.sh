@@ -61,7 +61,7 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID} | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
   else
     ${CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
   fi
@@ -557,12 +557,12 @@ if $CPD_DEVELOP;then
   sleep 0.5
 fi
 
-# Ensure status directory exists
+# Ensure status and underlying directories exists
 if [ -z $STATUS_DIR ];then
   export STATUS_DIR=$(mktemp -d)
   echo "Status directory not specified, setting to $STATUS_DIR" >&2
 fi
-mkdir -p $STATUS_DIR
+mkdir -p $STATUS_DIR/{log,pid}
 
 # Ensure vault secret file exists
 if [ ! -z $VAULT_SECRET_FILE ];then
@@ -711,7 +711,6 @@ if ! $INSIDE_CONTAINER;then
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "webui" ]];then
     CURRENT_CONTAINER_ID=$(eval $run_cmd)
     ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-    mkdir -p ${STATUS_DIR}/pid
     echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
     run_env_logs
     PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
