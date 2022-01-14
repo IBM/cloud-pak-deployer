@@ -1,0 +1,78 @@
+---
+- name: Generate yaml for openshift-logging namespace
+  template:
+    src: openshift-logging-namespace.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-logging-namespace.yaml"
+- name: Create openshift-logging namespace
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-logging-namespace.yaml
+
+- name: Generate yaml for cluster logging operator group
+  template:
+    src: openshift-logging-operatorgroup.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-logging-operatorgroup.yaml"
+- name: Create openshift-logging operatorgroup
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-logging-operatorgroup.yaml
+
+- name: Generate yaml for OpenShift logging subscription
+  template:
+    src: openshift-logging-subscription.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-logging-subscription.yaml"
+- name: Create openshift-logging operator
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-logging-subscription.yaml
+
+# Wait until subscription has been successfully created
+- name: Wait until OpenShift logging CSV has status Succeeded
+  shell: |
+    oc get csv -n openshift-logging \
+      -l operators.coreos.com/cluster-logging.openshift-logging \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _openshift_logging_csv_status
+  retries: 30
+  delay: 30
+  until: _openshift_logging_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+# Create ClusterLogging resource
+- name: Generate yaml for ClusterLogging instance
+  template:
+    src: openshift-clusterlogging-cr.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-clusterlogging-cr.yaml"
+- name: Create ClusterLogging instance
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-clusterlogging-cr.yaml
+
+# Create ClusterLogging resource
+- name: Generate yaml for ClusterLogForwarder instance
+  template:
+    src: openshift-clusterlogforwarder-cr.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-clusterlogforwarder-cr.yaml"
+- name: Create ClusterLogForwarder instance
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-clusterlogforwarder-cr.yaml || true
+
+# Create secrets for output(s)
+- name: Create logging output secrets
+  include_tasks: configure-logging-output-secrets.yml
+  loop: "{{ _p_openshift_logging.logging_output }}"
+  loop_control:
+    loop_var: _current_logging_output
+
+# Create outputs
+- name: Configure logging output 
+  include_tasks: configure-logging-output.yml
+
+# Create cluster-wide inputs and pipelines
+- name: Configure cluster-wide logging
+  include_tasks: configure-cluster-wide-logging.yml
+  loop: "{{ _p_openshift_logging.cluster_wide_logging | default([]) }}"
+  loop_control:
+    loop_var: _current_cluster_wide_logging

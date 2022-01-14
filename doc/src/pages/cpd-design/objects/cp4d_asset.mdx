@@ -1,0 +1,37 @@
+---
+title: Asset configuration for Cloud Pak for Data
+---
+
+# Cloud Pak for Data Asset configuration
+
+IBM Cloud Pak for Data has a centralized auditing component for base platform and services auditable events. Audit events include login and logout to the platform, creation and deletion of connections and many more. Services that support auditing are documented here: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=data-services-that-support-audit-logging
+
+The Cloud Pak Deployer simplifies the recording of audit log entries by means of the OpenShift logging framework, which can in turn be configured to forward entries to various log collectors such as Fluentd, Loki and ElasticSearch.
+
+## `cp4d_asset`
+A `cp4d_asset` entry defines one or more assets to deployed for a specific Cloud Pak for Data instance (OpenShift project). In the configuration, a directory relative to the configuration directory (`CONFIG_DIR`) is specified. For example, if the directory where the configuration is stored is `/cpd-config/sample` and you specify `assets` as the asset directory, all assets under `/cpd-config/sample/assets` are processed.
+
+You can create one or more subdirectories under the specified location, each holding an asset to be deployed. The deployer finds all `cp4d-asset.sh` scripts and `cp4d-asset.yaml` Ansible task files and runs them.
+
+The following runtime attributes will be set prior to running the shell script or the Ansible task:
+* If the Cloud Pak for Data instances has the Common Core Services (CCS) custom resource installed, `cpdctl` is configured for the current Cloud Pak for Data instance and the current context is set to the `admin` user of the instance. This means you can run all `cpdctl` commands without first having to login to Cloud Pak for Data.
+* The current working directory is set to the directory holding the `cp4d-asset.sh` script.
+* When running the `cp4d-asset.sh` shell script, the following environment variables are available:
+    - `CP4D_URL`: Cloud Pak for Data URL
+    - `CP4D_ADMIN_PASSWORD`: Cloud Pak for Data admin password
+    - `CP4D_OCP_PROJECT`: OpenShift project that holds the Cloud Pak for Data instance
+    - `KUBECONFIG`: OpenShift configuration file that allows you to run `oc` commands for the cluster
+
+```
+cp4d_asset:
+- name: sample-asset
+  project: zen-40
+  asset_location: cp4d_assets
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the asset to be deployed. You can specify as many assets as wanted | Yes       |  |
+| project  | Name of OpenShift project of the matching `cp4d` entry. The cp4d project must exist. | Yes       |  |
+| asset_location | Directory holding the asset(s). This is a directory relative to the config directory (CONFIG_DIR) that was passed to the deployer | Yes |  |

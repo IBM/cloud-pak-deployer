@@ -1,0 +1,56 @@
+---
+- name: Retrieve openshift_logging object for the current OpenShift cluster
+  set_fact:
+    _current_openshift_logging: "{{ all_config.openshift_logging | json_query(query_audit) | first | default({}) }}"
+  vars:
+    query_audit: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+
+- name: Show current openshift_logging object
+  debug:
+    var: _current_openshift_logging
+
+- name: Fail if openshift_logging entry was not found
+  fail:
+    msg: "No openshift_logging entry was found for OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}"
+  when: _current_openshift_logging=={}
+
+- name: Retrieve logging_output entry for the current audit configuration
+  set_fact:
+    _openshift_logging_output: "{{ _current_openshift_logging.logging_output | json_query(query) | first | default({}) }}"
+  vars:
+    query: "[?name=='{{ _current_audit_output.logging_name }}']"
+
+- name: Show current logging_output object
+  debug:
+    var: _openshift_logging_output
+
+- name: Fail if logging_output entry was not found
+  fail:
+    msg: "No openshift_logging.logging_output entry was found for logging name {{ _current_audit_output.logging_name }}"
+  when: _openshift_logging_output=={}
+
+- debug:
+    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-input.j2') }}"
+
+# Add input, taking the following into account:
+# - If no .spec.input[] is there yet, it will be defined (empty)
+# - If the input with the same name already exists, it is first deleted
+# - The new input is added
+- name: Add input for auditing to ClusterLogForwarder
+  shell: |
+    oc get -n openshift-logging clusterlogforwarder/instance -o json | \
+      jq '.spec.inputs += [] | del(.spec.inputs[] | select(.name=="{{ _cp4d_audit_config.project }}-audit"))' | jq '.spec.inputs += [{{ lookup('template','cpd-audit-clusterlogforwarder-input.j2') | to_json }}]' | \
+    oc apply -f -
+
+- debug:
+    msg: "{{ lookup('template','cpd-audit-clusterlogforwarder-pipeline.j2') }}"
+
+# Add pipeline, taking the following into account:
+# - If no .spec.pipeline[] is there yet, it will be defined (empty)
+# - If the pipeline with the same name already exists, it is first deleted
+# - The new pipeline is added
+- name: Add pipeline for auditing to ClusterLogForwarder
+  shell: |
+    oc get -n openshift-logging clusterlogforwarder/instance -o json | \
+      jq '.spec.pipelines += [] | del(.spec.pipelines[] | select(.name=="{{ _cp4d_audit_config.project }}-audit"))' | jq '.spec.pipelines += [{{ lookup('template','cpd-audit-clusterlogforwarder-pipeline.j2') | to_json }}]' | \
+    oc apply -f -

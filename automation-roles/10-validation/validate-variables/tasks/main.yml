@@ -10,12 +10,18 @@
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
 
-- name: Validate mandatory variables and secrets for ibm-cloud
-  include_tasks: ibmcloud-validate-variables.yml
+- include_tasks: ibmcloud-validate-variables.yml
   when:
   - cloud_platform == 'ibm-cloud'
 
-- name: Validate mandatory variables and secrets for vsphere
-  include_tasks: vsphere-validate-variables.yml
+- include_tasks: vsphere-validate-variables.yml
   when:
   - cloud_platform == 'vsphere'
+
+- include_tasks: existing-ocp-validate-variables.yml
+  when:
+  - cloud_platform == 'existing-ocp'
+
+- include_tasks: aws-validate-variables.yml
+  when:
+  - cloud_platform == 'aws'

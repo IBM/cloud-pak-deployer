@@ -1,15 +1,50 @@
 ---
-- name: Check if OcsCluster custom resource exists
-  command: |
-    oc get OcsCluster
-  failed_when: False
-  register: ocs_cluster_exists
+- name: Login to IBM Cloud
+  include_role:
+    name: login-ibmcloud
 
-- name: Show OcsCluster objects
-  debug:
-    var: ocs_cluster_exists
+- name: Validate if the OpenShift cluster {{ current_openshift_cluster.name }} exists
+  command: "ibmcloud oc cluster get -c {{ current_openshift_cluster.name }} --output json"
+  register: _ibmcloud_oc_cluster_result_json
+  failed_when: false
 
-- name: Delete all OcsCluster custom resources
-  command: |
-    oc delete OcsCluster --all
-  when: ocs_cluster_exists.rc == 0
+# If the cluster was found, delete the OcsCluster CR
+- block:
+
+  - name: Login to the OpenShift cluster {{ current_openshift_cluster.name }}
+    include_role:
+      name: openshift-login
+    vars:
+      _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
+  - name: Check if OcsCluster custom resource exists
+    command: |
+      oc get OcsCluster
+    failed_when: False
+    register: _ocs_cluster_exists
+
+  - name: Show OcsCluster objects
+    debug:
+      var: _ocs_cluster_exists
+
+  - name: Delete namespaces which use OCS storage classes
+    shell: |
+      for ns in $(oc get pvc -A \
+        -o jsonpath='{range .items[*]}{@.metadata.namespace}{" "}{@.spec.storageClassName}{"\n"}' | \
+          grep -v -E '^openshift' | \
+          grep 'ocs-storagecluster' | \
+          awk '{print $1}' | uniq);do
+        oc delete namespace $ns --grace-period=5 --timeout=10s
+      done
+    failed_when: False
+    register: _delete_ns_result
+
+  - name: Show output of namespace deletion
+    debug:
+      var: _delete_ns_result
+
+  - name: Delete all OcsCluster custom resources
+    command: |
+      oc delete OcsCluster --all --timeout=600s
+    when: _ocs_cluster_exists.rc == 0
+  when: _ibmcloud_oc_cluster_result_json.rc == 0
