@@ -145,7 +145,7 @@ environment)
       echo "$ACTION action not allowed when running inside container"
       exit 99
     fi
-    export SUBCOMMAND="command"
+    export ACTION="command"
     shift 1
     ;;
   *)

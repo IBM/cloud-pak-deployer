@@ -1,20 +1,20 @@
 ---
-- name: Allow MachineConfig operator to reboot workers again
+- name: Allow MachineConfig operator to reboot compute nodes again
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
 
-- name: Get number of workers
+- name: Get number of compute nodes
   shell: |
     oc get mcp worker -o jsonpath='{.status.machineCount}'
-  register: number_of_workers
+  register: _compute_nodes
 
-- name: Wait for {{ number_of_workers.stdout }} workers for cluster to become ready according to the MachineConfig operator
+- name: Wait for {{ compute_nodes.stdout }} compute nodes for cluster to become ready according to the MachineConfig operator
   shell: |
     oc get mcp worker -o jsonpath='{.status.readyMachineCount}'
-  register: ready_number_of_workers
+  register: _ready_compute_nodes
   retries: 60
   delay: 60
-  until: ready_number_of_workers.stdout == number_of_workers.stdout
+  until: _ready_compute_nodes.stdout == _compute_nodes.stdout
   vars:
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}

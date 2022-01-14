@@ -20,27 +20,27 @@ platform:
 
 controlPlane:
   hyperthreading: Enabled
-  name: master
-  replicas: {{ generator.attributes.number_of_masters }}
+  name: control-plane
+  replicas: {{ generator.attributes.control_plane_nodes }}
   platform:
     vsphere:
-      cpus: {{ _master_vm_config.vcpu }}
+      cpus: {{ _control_plane_vm_config.vcpu }}
       coresPerSocket: 2
-      memoryMB: {{ _master_vm_config.memory_mb }}
+      memoryMB: {{ _control_plane_vm_config.memory_mb }}
       osDisk:
-        diskSizeGB: {{ _master_vm_config.boot_disk_size_gb }}
+        diskSizeGB: {{ _control_plane_vm_config.boot_disk_size_gb }}
 
 compute:
 - hyperthreading: Enabled
-  name: worker
-  replicas: {{ generator.attributes.number_of_workers }}
+  name: compute
+  replicas: {{ generator.attributes.compute_nodes }}
   platform:
     vsphere:
-      cpus: {{ _worker_vm_config.vcpu }}
+      cpus: {{ _compute_vm_config.vcpu }}
       coresPerSocket: 2
-      memoryMB: {{ _worker_vm_config.memory_mb }}
+      memoryMB: {{ _compute_vm_config.memory_mb }}
       osDisk:
-        diskSizeGB: {{ _worker_vm_config.boot_disk_size_gb }}
+        diskSizeGB: {{ _compute_vm_config.boot_disk_size_gb }}
 
 pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
 sshKey: '{{ _ocp_ssh_pub_key }}'
