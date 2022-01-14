@@ -1,3 +1,4 @@
+from posixpath import split
 from flask import Flask, send_from_directory,request
 import json
 import subprocess
@@ -9,7 +10,8 @@ from shutil import copyfile
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
 source = os.getcwd()
-parent = os.path.dirname(source)
+parent = source
+#parent = os.path.dirname(source)
 cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
 ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
@@ -17,7 +19,7 @@ confg_dir=str(os.getenv('CONFIG_DIR'))
 target_config=confg_dir+'/config'
 target_inventory=confg_dir+'/inventory'
 if not os.path.exists(target_config):
-    os.mkdir(confg_dir)
+    os.mkdir(target_config)
 if not os.path.exists(target_inventory):
     os.mkdir(target_inventory)
 
@@ -40,6 +42,21 @@ def deploy():
                            env=env)
       process.stdout
     return 'runing'
+
+@app.route('/api/v1/storages/<cloud>',methods=["GET"])
+def getStorages(cloud):
+   ocp_config=""
+   with open(ocp_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
+    read_all = f.read()
+
+    read_all = read_all.replace('{{ env_id }}' , "env_id").replace('{{ ibm_cloud_region }}', 'ibm_cloud_region')
+
+    datas = yaml.load_all(read_all, Loader=yaml.FullLoader)
+    for data in datas:
+      if 'openshift' in data.keys():
+        ocp_config = data['openshift'][0]['openshift_storage']
+   return json.dumps(ocp_config)
+    
 
 @app.route('/api/v1/loadConifg',methods=["POST"])
 def loadConfig():
