@@ -38,6 +38,7 @@ def deploy():
                            stdout=subprocess.PIPE,
                            universal_newlines=True,
                            env=env)
+    process.stdout.decode('utf-8')
     return 'runing'
 
 @app.route('/api/v1/loadConifg',methods=["POST"])
