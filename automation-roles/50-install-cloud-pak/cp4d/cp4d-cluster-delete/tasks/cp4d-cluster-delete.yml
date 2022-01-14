@@ -1,0 +1,40 @@
+---
+- name: Deleting Cloud Pak for Data cluster {{ _previous_cp4d_cluster.project }}
+  debug:
+    var: _previous_cp4d_cluster
+
+- set_fact:
+    _previous_openshift_cluster: "{{ _previous_all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _previous_cp4d_cluster.openshift_cluster_name }}']
+
+- name: Found OpenShift in previous config
+  debug:
+    var: _previous_openshift_cluster
+
+- name: Login to the OpenShift cluster "{{ _previous_openshift_cluster.name }}"
+  include_role:
+    name: openshift-login
+  vars:
+    _p_openshift_cluster_name: "{{ _previous_openshift_cluster.name }}"
+
+- name: Delete all cartridge custom resources from Cloud Pak for Data project {{ _previous_cp4d_cluster.project }}
+  script: |
+    cp4d-delete-cartridges.sh \
+      {{ _previous_cp4d_cluster.project }}
+  register: _cp4d_delete_cartridges
+
+- name: Result of deleting cartridges
+  debug:
+    var: _cp4d_delete_cartridges
+
+- name: Delete Cloud Pak for Data control plane and project {{ _previous_cp4d_cluster.project }}
+  script: |
+    cp4d-delete-control-plane.sh \
+      {{ _previous_cp4d_cluster.project }}
+  register: _cp4d_delete_control_plane
+
+- name: Result of deleting control plane
+  debug:
+    var: _cp4d_delete_control_plane

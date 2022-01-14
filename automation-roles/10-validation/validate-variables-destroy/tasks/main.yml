@@ -10,10 +10,13 @@
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
 
-- name: Validate mandatory variables and secrets for ibm-cloud
-  include_tasks: ibmcloud-validate-variables.yml
+- include_tasks: ibmcloud-validate-variables.yml
   when:
   - cloud_platform == 'ibm-cloud'
+
+- include_tasks: aws-validate-variables.yml
+  when:
+  - cloud_platform == 'aws'
 
 - name: Fail if destroy was not confirmed
   fail:

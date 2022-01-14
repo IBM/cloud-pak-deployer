@@ -14,10 +14,14 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
-- name: Download OpenShift client "{{ _openshift_clients_base_url }}{{ _p_ocp_version }}/{{ _openshift_client_package }}"
+- name: Retrieve x.y version for download
+  set_fact:
+    _ocp_download_version: "{{ _p_ocp_version[:3] }}"
+
+- name: Download OpenShift client "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_client_package }}"
   get_url:
-    url: "{{ _openshift_clients_base_url }}{{ _p_ocp_version }}/{{ _openshift_client_package }}"
-    dest: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _p_ocp_version }}"
+    url: "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_client_package }}"
+    dest: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _ocp_download_version }}"
     owner: root
     mode: 0644
   register: download_result
@@ -27,7 +31,7 @@
 
 - name: Unpack OpenShift client
   unarchive:
-    src: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _p_ocp_version }}"
+    src: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _ocp_download_version }}"
     dest: "/usr/local/bin"
 
 - name: Get OpenShift client version

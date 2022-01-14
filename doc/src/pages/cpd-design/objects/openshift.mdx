@@ -5,13 +5,18 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 
 # OpenShift configuration
 
+The sections below cover the OpenShift configuration, followed by advanced configuration such as:
+* [Upstream DNS servers](#upstream-dns-servers)
+* [OpenShift logging](#openshift-logging)
+
 ## `openshift`
 For OpenShift, there are 3 flavours:
 * [OpenShift on IBM Cloud](#openshift-on-ibm-cloud)
 * [OpenShift on vSphere](#openshift-on-vsphere)
+* [OpenShift on AWS](#openshift-on-aws)
 * [Existing OpenShift](#existing-openshift)
 
-When running the Cloud Pak Deployer for IBM Cloud or vSphere, the OpenShift cluster will be provisioned and managed by Terraform or the OpenShift IPI installer. For existing OpenShift clusters, other parameters must be specified to identify the cluster on which the Cloud Pak(s) must be deployed.
+Dependent on the cloud platform on which the OpenShift cluster will be provisioned, different installation methods apply. For IBM Cloud, Terraform is used, whereas for vSphere the OpenShift IPI installer is used. On AWS (ROSA), the `rosa` CLI is used to create and modify ROSA clusters. Different properties for the `openshift` objects are applicable for each cloud platform.
 
 Every OpenShift cluster consists of a few mandatory properties that control which version of OpenShift is installed, the number and type of master nodes and worker nodes and the underlying infrastructure. Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and storage definitions.
 
@@ -131,6 +136,51 @@ openshift:
 | openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
 | openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On vSphere clusters, `thin` i usually available after OpenShift installation | Yes if `storage_type` is `ocs` |  |
 
+### OpenShift on AWS
+```
+openshift:
+- name: sample
+  ocp_version: 4.8.24
+  worker_flavour: m5.4xlarge
+  number_of_workers: 3
+  infrastructure:
+    type: rosa
+    aws_region: eu-central-1
+    multi_zone: True
+  upstream_dns: 
+  - name: sample-dns
+     zones:
+     - example.com
+     dns_servers:
+     - 172.31.2.73:53
+  openshift_storage:
+  - storage_name: ocs-storage
+    storage_type: ocs
+    ocs_storage_label: ocs
+    ocs_storage_size_gb: 500
+```
+
+#### Property explanation OpenShift clusters on IBM Cloud (ROKS)
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name of the OpenShift cluster                                        | Yes       |  |
+| ocp_version | OpenShift version version, specified as `x.y.z`.                  | Yes       | |
+| worker_flavour | Flavour of the AWS servers used for the workers. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory | Yes | |
+| infrastructure | Infrastructure properties                                      | Yes | |
+| infrastructure.type | Type of OpenShift cluster on AWS. Currently only `rosa` is allowed. | Yes | `rosa` |
+| infrastructure.aws_region | Region of AWS where cluster is deployed.            | Yes | |
+| infrastructure.multi_zone | Determines whether the ROSA cluster is deployed across multiple availability zones. Default is True. | No  | True, False
+| number_of_workers | Total number of workers                                     | Yes | Integer |
+| upstream_dns | Defines alternative upstream DNS servers(s) for OpenShift         | No | |
+| upstream_dns.name | Name of the upstream DNS server                              | Yes | |
+| upstream_dns_zones | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes | |
+| upstream_dns.dns_servers | List of DNS servers which must be used to resolve host names within the specified zones | Yes | |
+| openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
+| openshift_storage.storage_type | Type of storage class to create in the OpenShift cluster | Yes | ocs |
+| openshift_storage.ocs_storage_label | Label to be used for the dedicated OCS nodes in the cluster | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi) | Yes if `storage_type` is `ocs` |  |
+| openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On ROSA clusters, `gp2` i usually available after OpenShift installation | No |  |
+
 ### Existing OpenShift
 When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts assume that the cluster is already operational and that any storage classes have been pre-created. The deployer accesses the cluster through a vault secret with the kubeconfig information; the name of the secret is `<name>-kubeconfig`.
 ```
@@ -190,3 +240,52 @@ If you want to remove the upstream DNS that was previously configured, you can c
 ```
 
 See https://docs.openshift.com/container-platform/4.8/networking/dns-operator.html for more information about the operator that is configured by specifying upstream DNS servers.
+
+### OpenShift logging
+Defines how OpenShift forwards the logs to external log collectors. Currently, the following log collector types are supported:
+* loki
+
+The `logging_output` element is mandatory and defines the external log collector(s) used by the inputs that have been defined. Besides the cluster wide logging inputs, audit logs can also be sent to the external log collector(s) for Cloud Pak for Data using the `cp4d_audit_config` object.
+
+```
+openshift_logging:
+- openshift_cluster_name: sample
+  cluster_wide_logging:
+  - input: application
+    logging_name: loki-application
+  - input: infrastructure
+    logging_name: loki-application
+  - input: audit
+    logging_name: loki-audit
+  logging_output:
+  - name: loki-application
+    type: loki
+    url: https://loki-application.sample.com
+    certificates:
+      cert: {{ env_id }}-loki-cert
+      key: {{ env_id }}-loki-key
+      ca: {{ env_id }}-loki-ca
+  - name: loki-audit
+    type: loki
+    url: https://loki-audit.sample.com
+    certificates:
+      cert: {{ env_id }}-loki-cert
+      key: {{ env_id }}-loki-key
+      ca: {{ env_id }}-loki-ca
+```
+
+#### Property explanation
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| openshift_cluster_name | Name of the OpenShift cluster to configure the logging for | Yes       |  |
+| cluster_wide_logging | Defines which classes of log records will be sent to the log collectors  | No        | |
+| cluster_wide_logging.input | Specifies OpenShift log records class to forwawrd  | Yes | application, infrastructure, audit |
+| cluster_wide_logging.logging_name | Specifies the `logging_output` to send the records to | Yes | |
+| logging_output | Defines the log collectors                                     | Yes | |
+| logging_output.name | Name of the log collector, this name is referenced by the cluster wide loggers or Cloud Pak for Data audit config | Yes | |
+| logging_output.type | Type of the log collector, currently only `loki` is possible | Yes | loki |
+| logging_output.url  | URL of the log collector; this URL must be reachable from within the cluster | Yes | |
+| logging_output.certificates | Defines the vault secrets that hold the certificate elements | Yes | |
+| logging_output.certificates.cert | Public certificate to connect to the URL      | Yes | |
+| logging_output.certificates.key  | Private key to connect to the URL             | Yes | |
+| logging_output.certificates.ca   | Certificate Authority bundle to connect to the URL | Yes | |

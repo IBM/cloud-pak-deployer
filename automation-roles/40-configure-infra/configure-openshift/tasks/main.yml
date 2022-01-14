@@ -8,23 +8,21 @@
   debug:
     msg: "Handling OpenShift cluster {{ current_openshift_cluster.name }}"
 
-- name: Download and activate OpenShift client for version {{ current_openshift_cluster.ocp_version }}
-  include_role:
-    name: openshift-download-client
-  vars:
-    _p_ocp_version: "{{ current_openshift_cluster.ocp_version }}"
-
 - name: Login to the OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-login
   vars:
-    openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
 - name: Configure upstream DNS for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: configure-openshift-dns
   vars:
     _p_upstream_dns: "{{ current_openshift_cluster.upstream_dns | default([]) }}"
+
+- name: Configure logging for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: openshift-logging
 
 - name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:

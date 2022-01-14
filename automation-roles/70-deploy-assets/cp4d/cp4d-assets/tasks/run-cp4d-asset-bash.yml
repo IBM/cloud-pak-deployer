@@ -1,0 +1,16 @@
+---
+- name: Ensure script {{ _cp4d_asset_dir.path }}/cp4d-asset.sh is executable
+  file:
+    path: "{{ _cp4d_asset_dir.path }}/cp4d-asset.sh"
+    mode: u+rx,g+rx
+
+- name: Run {{ _cp4d_asset_dir.path }}/cp4d-asset.sh script if existing
+  shell: |
+    {{ _cp4d_asset_dir.path }}/cp4d-asset.sh >> {{ status_dir }}/log/{{ _current_cp4d_asset.name }}.log
+  args:
+    chdir: "{{ _cp4d_asset_dir.path }}"
+    executable: /bin/bash
+  environment:
+    CP4D_URL: "https://{{ _cp4d_url.stdout }}"
+    CP4D_ADMIN_PASSWORD: "{{ _cp4d_login_password }}"
+    CP4D_OCP_PROJECT: "{{ current_cp4d_cluster.project }}"
