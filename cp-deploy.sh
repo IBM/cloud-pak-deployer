@@ -61,7 +61,7 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID} | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
   else
     ${CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
   fi
