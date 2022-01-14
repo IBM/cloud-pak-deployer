@@ -33,12 +33,11 @@ def deploy():
     if body['cloud']=='ibm-cloud':
       env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
                                 'CP_ENTITLEMENT_KEY': body['env']['entilementKey']}
-      process = subprocess.run([parent+'/cp-deploy.sh', 'env', 'apply','-e env_id={}'.
+      result = subprocess.run([parent+'/cp-deploy.sh', 'env', 'apply','-e env_id={}'.
                                format(body['envId']),'-e ibm_cloud_region={}'.format(body['region']), '--check-only'], 
-                           stdout=subprocess.PIPE,
-                           universal_newlines=True,
+                           capture_output=True,
                            env=env)
-      process.stdout
+      print(result)
     return 'runing'
 
 @app.route('/api/v1/loadConifg',methods=["POST"])
