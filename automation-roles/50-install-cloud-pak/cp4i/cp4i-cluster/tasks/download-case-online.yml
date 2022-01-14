@@ -1,0 +1,19 @@
+---
+
+- name: Get the CASE details for cartridge {{ current_cp4i_cartridge.name }}
+  set_fact:
+    current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4i_cartridge.name }}']
+
+- fail:
+    msg: Case file details for cartridge {{ current_cp4i_cartridge.name }} not found
+  when: current_case_inventory=={}
+
+- name: Save case file {{ case_inventory.search_string }}-{{ current_cp4i_cartridge.case_version }}
+  shell: |
+    cloudctl case save \
+      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4i_cartridge.case_version }}.tgz \
+      --outputdir {{ case_dir }} 
+

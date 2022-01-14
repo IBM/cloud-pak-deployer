@@ -1,0 +1,33 @@
+apiVersion: hsts.aspera.ibm.com/v1
+kind: IbmAsperaHsts
+metadata:
+  labels:
+    app.kubernetes.io/instance: ibm-aspera-hsts
+    app.kubernetes.io/managed-by: ibm-aspera-hsts
+    app.kubernetes.io/name: ibm-aspera-hsts
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  deployments:
+    default:
+      replicas: 1
+  license:
+    accept: true
+    key: "{{current_cp4i_cluster.aspera_key}}"
+    use: CloudPakForIntegrationNonProduction
+  redis:
+    persistence:
+      enabled: false
+    version: "{{current_cp4i_cluster.redis_version}}"
+  services:
+    httpProxy:
+      type: ClusterIP
+    tcpProxy:
+      type: LoadBalancer
+  storages:
+    - claimName: hsts-transfer-pvc
+      class: {{ocp_storage_class_file}}
+      deleteClaim: true
+      mountPath: /data/
+      size: 20Gi
+  version: "{{current_cp4i_cluster.version}}"
