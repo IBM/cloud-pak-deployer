@@ -14,30 +14,29 @@ const Infrastructure = ({changeValue}) => {
     //will be used in the future
     const [AWSSecurityKey, setAWSSecurityKey] = useState('')
 
-
-    const setCloudPlatformValue = (index) => {        
+    const setCloudPlatformValue = (index) => {       
        setCloudPlatform(index);
       //  if (index == 0) {
       //     changeValue({cloudPlatform:'ibm-cloud'});
       //  } 
        switch(index) {
-          case 0:
+          case '0':
             changeValue({cloudPlatform:'ibm-cloud'});
             break;
-          case 1:
+          case '1':
             changeValue({cloudPlatform:'aws'});
             break;
-          case 2:
-              changeValue({cloudPlatform:'vsphere'});
-              break;
+          case '2':
+            changeValue({cloudPlatform:'vsphere'});
+            break;
           default:
             changeValue({cloudPlatform:'ibm-cloud'});
-          }         
+        }     
     }
 
     const setIBMAPIKeyValue = (e) => {
-      setIBMAPIKey(e.target.value);
-      changeValue({IBMAPIKey:e.target.value});
+        setIBMAPIKey(e.target.value);
+        changeValue({IBMAPIKey:e.target.value});         
     }
 
     const setEnvIDValue = (e) => {
@@ -56,12 +55,11 @@ const Infrastructure = ({changeValue}) => {
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"
          defaultSelected='0'       
-         onChange={(index)=>{
-           setCloudPlatformValue(index)}
+         onChange={(index)=>{setCloudPlatformValue(index)}
          }
          >
          <RadioButton labelText="IBM Cloud" value="0" id="0" />
-         <RadioButton labelText="AWS" value="1" id="1" disabled />
+         <RadioButton labelText="AWS" value="1" id="1" disabled  />
          <RadioButton labelText="vSphere" value="2" id="2" disabled />
          <RadioButton labelText="Openshift" value="3" id="3" disabled />
       </RadioButtonGroup>
@@ -70,15 +68,15 @@ const Infrastructure = ({changeValue}) => {
         <>
           <div>
             <div className="infra-items">IBM Cloud API Key</div>
-            <TextInput onChange={setIBMAPIKeyValue} placeholder="IBM Cloud API Key"/>
+            <TextInput onChange={setIBMAPIKeyValue} placeholder="IBM Cloud API Key" id="0" labelText="" />
           </div>
           <div>
             <div className="infra-items">Entilement Key</div>
-            <TextInput onChange={setEntilementKeyValue} placeholder="Entilement Key"/>
+            <TextInput onChange={setEntilementKeyValue} placeholder="Entilement Key" id="1" labelText="" />
           </div>
           <div>
             <div className="infra-items">Enviroment ID</div>
-            <TextInput onChange={setEnvIDValue} placeholder="Enviroment ID"/>
+            <TextInput onChange={setEnvIDValue} placeholder="Enviroment ID" id="2" labelText="" />
           </div>          
         </> 
           : null}
@@ -87,7 +85,7 @@ const Infrastructure = ({changeValue}) => {
         <>
           <div>
             <div className="infra-items">AWS Access Key</div>
-            <TextInput placeholder="AWS Access Key"/></div></> : null}    
+            <TextInput placeholder="AWS Access Key" id="3" labelText="" /></div></> : null}    
         </>
     );
   };

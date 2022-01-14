@@ -1,60 +1,81 @@
 import axios from "axios";
-import { Accordion, AccordionItem, InlineLoading, TextArea } from "carbon-components-react";
+import { Accordion, AccordionItem, InlineLoading, TextArea, InlineNotification } from "carbon-components-react";
 import { useEffect, useState } from "react";
 import './Summary.scss'
 
-const Summary = () => {
+const Summary = ({envId, cloud}) => {
 
     const [loading, setLoading] = useState(false)
-    let summaryResult = useState(true)
+    const [showErr, setShowErr] = useState(false)
+    const [summaryInfo, setSummaryInfo] = useState({})    
+
     useEffect(() => {
-        fetchDate()
+        fetchData()
     }, []);
 
-    const fetchDate = () => {
+    const fetchData = () => {
         setLoading(true)
         let body = {
-            "envId":"ibm-cloud",
-            "configDir":"/tmp/config",
+            "envId": envId,
+            "cloud": cloud,
         }
-        axios.post('/api/v1/loadConifg', body, {headers: {"Content-Type": "application/json"}}).then(res =>{
-            console.log(res)
-            summaryResult = res.data
-            console.log(summaryResult)
+        axios.post('/api/v1/loadConifg', body, {headers: {"Content-Type": "application/json"}}).then(res =>{           
+            setSummaryInfo(res.data)
             setLoading(false)
         }, err => {
-            setLoading(false)
+            setShowErr(true)
+            console.log(err)
         });
     }
 
-    return (
-        <>
-            
-            <div className="summary-title">Summary</div>  
+    const onCloseButtonClick = () => {
+        setShowErr(false)
+    }
+
+    const errorProps = () => ({
+        kind: 'error',
+        lowContrast: true,
+        role: 'error',
+        title: 'Unable to load deployment configuration from server.',
+        hideCloseButton: false,
+        //onClose:'onClose',
+        onCloseButtonClick: onCloseButtonClick,
+    });    
+
+    return (      
+        <>     
+        <div className="summary-title">Summary</div> 
+            {showErr &&           
+                <InlineNotification className="summary-error"
+                    {...errorProps()}        
+                />           
+            }
             <Accordion>
-                <AccordionItem title="CPD configuration">
+                <AccordionItem title="Openshift Configuration">
                 {
                     loading ? <InlineLoading />:
                     <TextArea
-                    hideLabel={true}
-                    placeholder={summaryResult.cp4d}
-                    className="TEST_CLASS"
+                        rows={30}
+                        className="summary-config-item"
+                        hideLabel={true}
+                        placeholder={summaryInfo.envId}   
+                        labelText=""                    
                     />
                 }
                 </AccordionItem>
-                <AccordionItem title="IBM Cloud Pak configuration">
+                <AccordionItem title="IBM Cloud Pak Configuration">
                 {
                     loading ? <InlineLoading />:
                     <TextArea
-                    hideLabel={true}
-                    placeholder={summaryResult.envId}
-                    className="TEST_CLASS"
+                        rows={30}
+                        className="summary-config-item"
+                        hideLabel={true}
+                        placeholder={summaryInfo.cp4d}  
+                        labelText=""                       
                     />
-                }
+                }               
                 </AccordionItem>              
-            </Accordion> 
-
-            
+            </Accordion>             
         </>        
     )
 }
