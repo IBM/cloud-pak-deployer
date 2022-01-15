@@ -5,6 +5,7 @@ import subprocess
 import os
 import yaml
 from shutil import copyfile
+from pathlib import Path
 
 
 app = Flask(__name__,static_url_path='', static_folder='ww')
@@ -18,10 +19,8 @@ inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-c
 confg_dir=str(os.getenv('CONFIG_DIR'))
 target_config=confg_dir+'/config'
 target_inventory=confg_dir+'/inventory'
-if not os.path.exists(target_config):
-    os.mkdir(target_config)
-if not os.path.exists(target_inventory):
-    os.mkdir(target_inventory)
+Path( target_config ).mkdir( parents=True, exist_ok=True )
+Path( target_inventory ).mkdir( parents=True, exist_ok=True )
 
 @app.route('/')
 def index():
@@ -43,6 +42,28 @@ def deploy():
       process.stdout
     return 'runing'
 
+@app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
+def getCartridges(cloudpak):
+    cartridges_list=[]
+    with open(cp4d_config_path+'/{}.yaml'.format(cloudpak),encoding='UTF-8') as f:
+        read_all = f.read()
+        read_all = read_all.replace('{{ env_id }}' , "env_id")
+        docs =yaml.load_all(read_all, Loader=yaml.FullLoader)
+        for doc in docs:
+            if cloudpak in doc.keys():
+               cartridges_list = doc[cloudpak][0]['cartridges']
+               break
+    return json.dumps(cartridges_list)
+
+@app.route('/api/v1/logs',methods=["GET"])
+def getLogs():
+    result={}
+    result["logs"]='waiting'
+    log_path=str(os.getenv('STATUS_DIR'))+'/log/cloud-pak-deployer.log'
+    if os.path.exists(log_path):
+        result["logs"]=open(log_path,"r").read()
+    return json.dumps(result)
+
 @app.route('/api/v1/storages/<cloud>',methods=["GET"])
 def getStorages(cloud):
    ocp_config=""
@@ -55,6 +76,7 @@ def getStorages(cloud):
     for data in datas:
       if 'openshift' in data.keys():
         ocp_config = data['openshift'][0]['openshift_storage']
+        break
    return json.dumps(ocp_config)
     
 
