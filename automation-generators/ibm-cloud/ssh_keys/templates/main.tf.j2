@@ -1,4 +1,19 @@
+{% if (generator.attributes.managed | default(True)) %}
+
 resource "ibm_is_ssh_key" "{{generator.attributes.name | replace("-", "_") }}" {
   name       = "{{generator.attributes.name}}"
   public_key = "{{sshkey_value}}"
+}
+
+{% endif %}
+
+# Extra data element so we can always refer to it from other objects
+
+data "ibm_is_ssh_key" "{{generator.attributes.name | replace("-", "_") }}" {
+  name       = "{{generator.attributes.name}}"
+{% if (generator.attributes.managed | default(True)) %}
+    depends_on = [
+        ibm_is_ssh_key.{{generator.attributes.name | replace("-", "_") }}
+    ]
+{% endif %}
 }
