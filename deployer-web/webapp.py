@@ -1,4 +1,3 @@
-from posixpath import split
 from flask import Flask, send_from_directory,request
 import json
 import subprocess
@@ -16,9 +15,12 @@ parent = os.path.dirname(source)
 cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
 ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
-confg_dir=str(os.getenv('CONFIG_DIR'))
-target_config=confg_dir+'/config'
-target_inventory=confg_dir+'/inventory'
+config_dir=str(os.getenv('CONFIG_DIR'))
+status_dir=str(os.getenv('STATUS_DIR'))
+target_config=config_dir+'/config'
+target_inventory=config_dir+'/inventory'
+
+Path( status_dir+'/log' ).mkdir( parents=True, exist_ok=True )
 Path( target_config ).mkdir( parents=True, exist_ok=True )
 Path( target_inventory ).mkdir( parents=True, exist_ok=True )
 
@@ -33,13 +35,15 @@ def deploy():
     env ={}
     if body['cloud']=='ibm-cloud':
       env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
-                                'CP_ENTITLEMENT_KEY': body['env']['entilementKey']}
-      process = subprocess.run([parent+'/cp-deploy.sh', 'env', 'apply','-e env_id={}'.
-                               format(body['envId']),'-e ibm_cloud_region={}'.format(body['region']), '--check-only'], 
-                           stdout=subprocess.PIPE,
-                           universal_newlines=True,
-                           env=env)
-      process.stdout
+             'CP_ENTITLEMENT_KEY': body['env']['entilementKey'],
+             'CONFIG_DIR':config_dir,
+             'STATUS_DIR':status_dir}
+
+      process = subprocess.Popen([parent+'/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
+                        format(body['envId']), '-e', 'ibm_cloud_region={}'.format(body['region']), '--check-only'], 
+                    stdout=subprocess.PIPE,
+                    universal_newlines=True,
+                    env=env)
     return 'runing'
 
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
@@ -59,7 +63,7 @@ def getCartridges(cloudpak):
 def getLogs():
     result={}
     result["logs"]='waiting'
-    log_path=str(os.getenv('STATUS_DIR'))+'/log/cloud-pak-deployer.log'
+    log_path=status_dir+'/log/cloud-pak-deployer.log'
     print(log_path)
     if os.path.exists(log_path):
         result["logs"]=open(log_path,"r").read()
@@ -79,17 +83,35 @@ def getStorages(cloud):
         ocp_config = data['openshift'][0]['openshift_storage']
         break
    return json.dumps(ocp_config)
-    
 
-@app.route('/api/v1/loadConifg',methods=["POST"])
+def update_cartridges(path,cartridges, cloudpak):
+    content=""
+    with open(path, 'r') as f1:
+        content = f1.read()
+        content = content.replace('{{ env_id }}' , "env_id")
+        docs=yaml.safe_load_all(content)
+        for doc in docs:
+            if cloudpak in doc.keys():
+                doc[cloudpak][0]['cartridges']=cartridges
+                content=yaml.safe_dump(doc)
+                content = content.replace('env_id','{{ env_id }}')
+                content = '---\n'+content
+                break
+    with open(path, 'w') as f1:
+        f1.write(content)
+
+
+@app.route('/api/v1/loadConfig',methods=["POST"])
 def loadConfig():
     body = json.loads(request.get_data())
     env_id=body['envId']
     cloud=body['cloud']
+    cartridges=body['cartridges']
 
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
+    update_cartridges(generated_cp4d_yaml_path,cartridges,'cp4d')
     source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
