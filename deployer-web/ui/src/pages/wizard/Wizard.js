@@ -2,114 +2,137 @@ import React from 'react';
 import Infrastructure from './Infrastructure/Infrastructure';
 import Storage from './Storage/Storage';
 import './Wizard.scss'
-import { useState } from 'react';
-import { ProgressIndicator, ProgressStep, Button, InlineNotification } from 'carbon-components-react';
+import { useState, useEffect } from 'react';
+import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, TextArea} from 'carbon-components-react';
 import Summary from './Summary/Summary';
 import axios from 'axios';
 import CloudPak from './CP4D/CloudPak';
 
 const Wizard = () => {
 
-  let [currentIndex, setCurrentIndex] = useState(0);
-  let [showLog, setShowLog] = useState(false);
-  let [showErr, setShowErr] = useState(false)
+  //wizard index
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  const [cloudPlatform, setCloudPlatform] = useState('ibm-cloud');
-  const [IBMAPIKey, setIBMAPIKey] = useState('')
-  const [envId, setEnvId] = useState('')
-  const [entilementKey, setEntilementKey] = useState('')
-  
-  
-  const setIndex = (index) =>{
-    console.log(index)
-    setCurrentIndex(index)
-  }
+  //DeployStart hidden wizard
+  const [isDeployStart, setDeployStart] = useState(false);
+  const [isDeployErr, setDeployErr] = useState(false);
+  const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
 
+  //Step 1
+  const [cloudPlatform, setCloudPlatform] = useState('ibm-cloud')
+  //--ibm cloud
+  const [IBMCloudSettings, setIBMCloudSettings] = useState({
+    IBMAPIKey: '',
+    envId: '',
+    entilementKey: '',
+  })
+  //--AWS
+  const [AWSSecurityKey, setAWSSecurityKey] = useState('')
+  //Step 2
+  const [storagesOptions, setStoragesOptions] = useState([])
+
+  const [deployLog, setDeployLog] = useState('')
+
+  
   const clickPrevious = ()=> {
     if (currentIndex >= 1)
-       setCurrentIndex(currentIndex-1)
+       setCurrentIndex(currentIndex - 1)
   }
 
   const clickNext = ()=> {
     if (currentIndex <= 2)
-      setCurrentIndex(currentIndex+1)
+      setCurrentIndex(currentIndex + 1)
   }
-  
-  const createDeployment = () => {
 
+  const createDeployment = async () => {
+    setLoadingDeployStatus(true)
     const body = {
       "env":{
-          "ibmCloudAPIKey":IBMAPIKey,
-          "entilementKey":entilementKey,
+          "ibmCloudAPIKey":IBMCloudSettings.IBMAPIKey,
+          "entilementKey":IBMCloudSettings.entilementKey,
       },
       "cloud": cloudPlatform,
-      "envId": envId,
+      "envId": IBMCloudSettings.envId,
       "region":"us-east",
       "configDir":"/tmp/config",
       "statusDir":"/tmp/status"
     }
-
-    axios.post('/api/v1/deploy', body).then(res =>{
-        //console.log(res)
-        setShowLog(true)
-        setCurrentIndex(-1)
-    }, err => {
-        setShowErr(true)
-        setShowLog(true)
-        setCurrentIndex(-1)
-    });
     
+    setCurrentIndex(-1)
+    await axios.post('/api/v1/deploy', body).then(res =>{
+        //console.log(res)  
+        setDeployStart(true)  
+        fetchLog()
+        refreshLog()    
+    }, err => {
+        console.log(err)
+        setDeployStart(true)
+        setDeployErr(true)
+    });
+    setLoadingDeployStatus(false)    
   }
 
-  const changeValue = ({cloudPlatform, IBMAPIKey, envId, entilementKey}) => {
-    if (cloudPlatform)
+  
+  const updateInfraValue = ({cloudPlatform, IBMAPIKey, envId, entilementKey}) => {
+    if (cloudPlatform) {
       setCloudPlatform(cloudPlatform)
-    if (IBMAPIKey)
-      setIBMAPIKey(IBMAPIKey)
-    if (envId)
-      setEnvId(envId)
-    if (entilementKey)
-      setEntilementKey(entilementKey)
+    }      
+    if (IBMAPIKey){      
+      setIBMCloudSettings({...IBMCloudSettings, IBMAPIKey:IBMAPIKey})
+    }     
+    if (envId) {
+      setIBMCloudSettings({...IBMCloudSettings, envId})
+    }      
+    if (entilementKey) {
+      setIBMCloudSettings({...IBMCloudSettings, entilementKey})
+    }
   }
-
-  const onCloseButtonClick = () => {
-
-  } 
-
-  //const 
 
   const errorProps = () => ({
     kind: 'error',
     lowContrast: true,
     role: 'error',
-    title: 'Get Error to start IBM Cloud Pak deployment. ',
-    hideCloseButton: true,
-    //onClose:'onClose',
-    //onCloseButtonClick: onCloseButtonClick,
+    title: 'Get error to start IBM Cloud Pak deployment. ',
+    hideCloseButton: false,
   }); 
   
   const successProps = () => ({
     kind: 'success',
     lowContrast: true,
     role: 'success',
-    title: 'IBM Cloud Pak deployment was submitted. ',
-    hideCloseButton: true,
-    //onClose:'onClose',
-    //onCloseButtonClick: onCloseButtonClick,
+    title: 'IBM Cloud Pak deployment was submitted successfully. ',
+    hideCloseButton: false,
   });
+
+  const fetchLog = async() => {
+    if (isDeployErr)
+      return 
+    await axios.get('/api/v1/logs').then(res =>{
+        console.log("test") 
+        setDeployLog(res.data.logs)            
+    }, err => {
+        console.log(err)        
+    });
+  }
+
+  const refreshLog = ()=>{
+    const interval = setInterval(() => {
+      fetchLog()
+    }, 2000);
+  }
 
   return (
     <>
-    <div className="wizard-container">
+     <div className="wizard-container">
       <div className="wizard-container__page">
         <div className='wizard-container__page-header'>
           <div className='wizard-container__page-header-title'>         
             <h2>Deploy Wizard</h2>
             <div className='wizard-container__page-header-subtitle'>IBM Cloud Pak</div>                      
           </div>
-          { showLog ? null: 
+          { isDeployStart ? null: 
           <div>
-            <Button className="wizard-container__page-header-button" onClick={clickPrevious}>Previous</Button>
+            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
             {currentIndex === 3 ?
               <Button className="wizard-container__page-header-button" onClick={createDeployment}>Create</Button>
               :
@@ -117,18 +140,31 @@ const Wizard = () => {
             }            
           </div>
           }          
-        </div>        
+        </div> 
+        {loadingDeployStatus && <Loading /> }            
         {
-          showLog ? 
-              showErr ?
-              <InlineNotification className="summary-error"
+          isDeployStart ? 
+            isDeployErr ?
+              <InlineNotification className="deploy-error"
                     {...errorProps()}        
                 />  
                 :
-              <InlineNotification className="summary-error"
+                <>
+                <InlineNotification className="deploy-error"
                 {...successProps()}        
-            />  
+              /> 
 
+              <h4>Logs:</h4>
+              <div>
+                <TextArea
+                        rows={20}
+                        className="wizard-logs"
+                        hideLabel={true}
+                        placeholder={deployLog}   
+                        labelText=""                    
+                    />
+              </div>
+              </>
           :
           <ProgressIndicator className="wizard-container__page-progress"
           vertical={false}
@@ -142,32 +178,31 @@ const Wizard = () => {
           />
 
           <ProgressStep
-            onClick={() => setIndex(1)}
+            onClick={() => setCurrentIndex(1)}
             current={currentIndex === 1}
             label={'Storage'}
             description="Step 2"
           />
 
           <ProgressStep
-            onClick={() => setIndex(2)}
+            onClick={() => setCurrentIndex(2)}
             current={currentIndex === 2}
             label={'Cloud Pak'}
             description="Step 3"
           />
 
           <ProgressStep
-            onClick={() => setIndex(3)}
+            onClick={() => setCurrentIndex(3)}
             current={currentIndex === 3}
             label={'Summary'}
             description="Step 4"
           />    
-          </ProgressIndicator> 
-          
+          </ProgressIndicator>           
         }          
-          {currentIndex === 0 ? <Infrastructure changeValue={changeValue}></Infrastructure> : null}
-          {currentIndex === 1 ? <Storage></Storage> : null}    
+          {currentIndex === 0 ? <Infrastructure {...IBMCloudSettings} cloudPlatform={cloudPlatform} updateInfraValue={updateInfraValue} ></Infrastructure> : null}
+          {currentIndex === 1 ? <Storage cloudPlatform={cloudPlatform} storagesOptions={storagesOptions} setStoragesOptions={setStoragesOptions}></Storage> : null}    
           {currentIndex === 2 ? <CloudPak></CloudPak> : null}    
-          {currentIndex === 3 ? <Summary envId={envId} cloud={cloudPlatform}></Summary> : null}          
+          {currentIndex === 3 ? <Summary envId={IBMCloudSettings.envId} cloudPlatform={cloudPlatform}></Summary> : null}          
     
       </div> 
     </div>

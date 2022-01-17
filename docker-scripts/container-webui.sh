@@ -12,14 +12,14 @@ cd /cloud-pak-deployer/deployer-web
 pip3 install -r requirements.txt > /tmp/pip_install.log
 
 # If CONFIG_DIR was not set, set it to the default
-if [ -z CONFIG_DIR ];then
+if [ "${CONFIG_DIR}" == "" ];then
     export CONFIG_DIR="/Data/config/sample"
     echo "Default config directory set to $CONFIG_DIR"
     mkdir -p $CONFIG_DIR
 fi
 
 # If STATUS_DIR was not set, set it to the default
-if [ -z STATUS_DIR ];then
+if [ "${STATUS_DIR}" == "" ];then
     export STATUS_DIR="/Data/status/sample"
     echo "Default status directory set to $STATUS_DIR"
     mkdir -p $STATUS_DIR
