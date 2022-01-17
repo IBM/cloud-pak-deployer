@@ -71,7 +71,6 @@ const Wizard = () => {
     });
     setLoadingDeployStatus(false)    
   }
-
   
   const updateInfraValue = ({cloudPlatform, IBMAPIKey, envId, entilementKey}) => {
     if (cloudPlatform) {
@@ -115,11 +114,18 @@ const Wizard = () => {
     });
   }
 
+  let scheduledJob;
   const refreshLog = ()=>{
-    const interval = setInterval(() => {
+    scheduledJob = setInterval(() => {
       fetchLog()
     }, 2000);
   }
+
+  useEffect(() => {    
+    return () => {
+      clearInterval(scheduledJob)
+    }
+  }, [])
 
   return (
     <>
@@ -134,7 +140,7 @@ const Wizard = () => {
           <div>
             <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
             {currentIndex === 3 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment}>Create</Button>
+              <Button className="wizard-container__page-header-button" onClick={createDeployment}>Deploy</Button>
               :
               <Button className="wizard-container__page-header-button" onClick={clickNext}>Next</Button>
             }            

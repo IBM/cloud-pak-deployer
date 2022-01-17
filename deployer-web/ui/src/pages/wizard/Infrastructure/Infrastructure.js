@@ -42,8 +42,8 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
               <TextInput.PasswordInput onChange={setIBMAPIKeyValue} placeholder="IBM Cloud API Key" id="0" labelText="" value={IBMAPIKey} />
             </div>
             <div>
-              <div className="infra-items">Entilement Key</div>
-              <TextInput.PasswordInput onChange={setEntilementKeyValue} placeholder="Entilement Key" id="1" labelText="" value={entilementKey}/>
+              <div className="infra-items">Entitlement key</div>
+              <TextInput.PasswordInput onChange={setEntilementKeyValue} placeholder="Entitlement key" id="1" labelText="" value={entilementKey}/>
             </div>
             <div>
               <div className="infra-items">Enviroment ID</div>

@@ -7,25 +7,28 @@ const Summary = ({envId, cloudPlatform}) => {
 
     const [summaryLoading, setSummaryLoading] = useState(true)
     const [showErr, setShowErr] = useState(false)
-    const [summaryInfo, setSummaryInfo] = useState({})    
+    const [summaryInfo, setSummaryInfo] = useState({})      
 
     useEffect(() => {
-        fetchSummaryData()
-    }, []);
+        const fetchSummaryData = async () => {
+            const cp4dStr = localStorage.getItem("cp4d");
+            const cp4dJson = JSON.parse(cp4dStr);  
+            let body = {
+                "envId": envId,
+                "cloud": cloudPlatform,
+                "cartridges": cp4dJson,
+            }
 
-    const fetchSummaryData = async () => {
-        let body = {
-            "envId": envId,
-            "cloud": cloudPlatform,
-        }
-        await axios.post('/api/v1/loadConifg', body, {headers: {"Content-Type": "application/json"}}).then(res =>{       
-            setSummaryInfo(res.data)
-            setSummaryLoading(false)
-        }, err => {
-            setShowErr(true)
-            console.log(err)
-        });        
-    }
+            await axios.post('/api/v1/loadConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{       
+                setSummaryInfo(res.data)
+                setSummaryLoading(false)
+            }, err => {
+                setShowErr(true)
+                console.log(err)
+            });        
+        }        
+        fetchSummaryData()
+    }, [envId, cloudPlatform]);
 
     const errorProps = () => ({
         kind: 'error',

@@ -1,4 +1,4 @@
-import { AccordionItem, Accordion, Checkbox, FormGroup, Loading, InlineNotification } from 'carbon-components-react';
+import {  Checkbox, Loading, InlineNotification } from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
@@ -13,8 +13,22 @@ const CloudPak = () => {
     const [indeterminateParentCheckBox, setIndeterminateParentCheckBox] = useState(false)
 
     useEffect(() => {
+       const fetchCloudPakData =async () => {
+          await axios.get('api/v1/cartridges/cp4d').then(res =>{            
+              setCPDData(res.data)
+              updateParentCheckBox(res.data)            
+          }, err => {
+              setLoadCPDErr(true)
+              console.log(err)
+          });
+        setLoadingCPD(false)
+    } 
        fetchCloudPakData()
     }, [])
+
+    useEffect(() => {
+      localStorage.setItem("cp4d", JSON.stringify(CPDData));
+    }, [CPDData])
 
     const errorProps = () => ({
       kind: 'error',
@@ -22,22 +36,11 @@ const CloudPak = () => {
       role: 'error',
       title: 'Unable to get IBM Cloud Pak Configuration from server.',
       hideCloseButton: false,
-    });  
+    });     
 
-    const fetchCloudPakData =async () => {
-        await axios.get('api/v1/cartridges/cp4d').then(res =>{            
-            //console.log(res.data)
-            setCPDData(res.data)
-            updateCheckBox(res.data)
-            
-        }, err => {
-            setLoadCPDErr(true)
-            console.log(err)
-        });
-        setLoadingCPD(false)
-    } 
-
-    const updateCheckBox = (data)=> {     
+    const updateParentCheckBox = (data)=> {  
+      setCheckParentCheckBox(false)  
+      setIndeterminateParentCheckBox(false) 
       let totalItems = data.filter(item => item.description != null )      
       let selectedItem = data.filter(item => item.state === "installed")      
       if (totalItems.length === selectedItem.length) {
@@ -50,6 +53,46 @@ const CloudPak = () => {
       }       
     }
 
+    const changeChildCheckBox = (e) => {
+      setCPDData((CPDdata)=>{
+        const newCPData = CPDdata.map((item)=>{
+            if (item.name === e.target.id){
+              if (e.target.checked)
+                item.state = "installed"
+              else
+                item.state = "removed"
+            } 
+            return item             
+        })  
+        updateParentCheckBox(newCPData)        
+        return newCPData
+      })
+          
+    }
+
+    const changeParentCheckBox =(e) => {      
+      setCPDData((CPDdata)=>{
+        const newCPData = CPDdata.map((item)=>{
+            if (item.description){
+              if (e.target.checked)
+                item.state = "installed"
+              else
+                item.state = "removed"
+            } 
+            return item             
+        })
+        return newCPData
+      })
+      if (e.target.checked) {
+        setIndeterminateParentCheckBox(false)
+        setCheckParentCheckBox(true)
+      } 
+      else {
+        setIndeterminateParentCheckBox(false)
+        setCheckParentCheckBox(false)
+      }      
+    }
+
     return (
         <>     
           <div className='cpd-container'>
@@ -60,12 +103,14 @@ const CloudPak = () => {
                 {...errorProps()}        
             /> } 
 
-            <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" disabled checked={checkParentCheckBox} indeterminate={indeterminateParentCheckBox}/>
-              { CPDData.map((item, index)=>{
-                if (item.description)
+            <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeParentCheckBox} checked={checkParentCheckBox} indeterminate={indeterminateParentCheckBox}/>
+              { CPDData.map((item)=>{
+                if (item.description) {
                   return (
-                    <Checkbox className='child' labelText={item.description} id={item.name} key={index} checked={item.state === "installed"} disabled/>                
-                  )          
+                    <Checkbox className='child' onClick={changeChildCheckBox} labelText={item.description} id={item.name} key={item.name} checked={item.state === "installed"} />                
+                  )  
+                }
+                return null        
               }) }             
         </>
     )
