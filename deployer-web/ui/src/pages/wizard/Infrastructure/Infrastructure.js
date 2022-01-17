@@ -1,52 +1,22 @@
 import { RadioButton, RadioButtonGroup, TextInput } from "carbon-components-react";
-import { useEffect } from "react";
-import { useState } from "react";
 import './Infrastructure.scss'
 
+const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, updateInfraValue}) => {
 
-const Infrastructure = ({changeValue}) => {
-
-    const [cloudPlatform, setCloudPlatform] = useState(0);
-    const [IBMAPIKey, setIBMAPIKey] = useState('')
-    const [envId, setEnvId] = useState('')  
-    const [entilementKey, setEntilementKey] = useState('')  
-
-    //will be used in the future
-    const [AWSSecurityKey, setAWSSecurityKey] = useState('')
-
-    const setCloudPlatformValue = (index) => {       
-       setCloudPlatform(index);
-      //  if (index == 0) {
-      //     changeValue({cloudPlatform:'ibm-cloud'});
-      //  } 
-       switch(index) {
-          case '0':
-            changeValue({cloudPlatform:'ibm-cloud'});
-            break;
-          case '1':
-            changeValue({cloudPlatform:'aws'});
-            break;
-          case '2':
-            changeValue({cloudPlatform:'vsphere'});
-            break;
-          default:
-            changeValue({cloudPlatform:'ibm-cloud'});
-        }     
+    const setCloudPlatformValue = (value) => {     
+      updateInfraValue({cloudPlatform: value});
     }
 
     const setIBMAPIKeyValue = (e) => {
-        setIBMAPIKey(e.target.value);
-        changeValue({IBMAPIKey:e.target.value});         
+      updateInfraValue({IBMAPIKey:e.target.value});         
     }
 
     const setEnvIDValue = (e) => {
-      setEnvId(e.target.value);
-      changeValue({envId:e.target.value});
+      updateInfraValue({envId:e.target.value});
     }
 
     const setEntilementKeyValue = (e) => {
-      setIBMAPIKey(e.target.value);
-      changeValue({entilementKey:e.target.value});
+      updateInfraValue({entilementKey:e.target.value});
     }
 
     return (
@@ -54,39 +24,45 @@ const Infrastructure = ({changeValue}) => {
       <div className="infra-title">Cloud Platform</div>  
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"
-         defaultSelected='0'       
-         onChange={(index)=>{setCloudPlatformValue(index)}
+         defaultSelected={cloudPlatform}     
+         onChange={(value)=>{setCloudPlatformValue(value)}
          }
          >
-         <RadioButton labelText="IBM Cloud" value="0" id="0" />
-         <RadioButton labelText="AWS" value="1" id="1" disabled  />
-         <RadioButton labelText="vSphere" value="2" id="2" disabled />
-         <RadioButton labelText="Openshift" value="3" id="3" disabled />
+         <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="0" />
+         <RadioButton labelText="AWS" value="aws" id="1" disabled  />
+         <RadioButton labelText="vSphere" value="vsphere" id="2" disabled />
+         <RadioButton labelText="Openshift" value="openshift" id="3" disabled />
       </RadioButtonGroup>
 
-      {cloudPlatform == 0 ? 
+      {cloudPlatform === 'ibm-cloud' ? 
         <>
-          <div>
-            <div className="infra-items">IBM Cloud API Key</div>
-            <TextInput onChange={setIBMAPIKeyValue} placeholder="IBM Cloud API Key" id="0" labelText="" />
-          </div>
-          <div>
-            <div className="infra-items">Entilement Key</div>
-            <TextInput onChange={setEntilementKeyValue} placeholder="Entilement Key" id="1" labelText="" />
-          </div>
-          <div>
-            <div className="infra-items">Enviroment ID</div>
-            <TextInput onChange={setEnvIDValue} placeholder="Enviroment ID" id="2" labelText="" />
-          </div>          
+          <div className="infra-container">
+            <div>
+              <div className="infra-items">IBM Cloud API Key</div>
+              <TextInput.PasswordInput onChange={setIBMAPIKeyValue} placeholder="IBM Cloud API Key" id="0" labelText="" value={IBMAPIKey} />
+            </div>
+            <div>
+              <div className="infra-items">Entilement Key</div>
+              <TextInput.PasswordInput onChange={setEntilementKeyValue} placeholder="Entilement Key" id="1" labelText="" value={entilementKey}/>
+            </div>
+            <div>
+              <div className="infra-items">Enviroment ID</div>
+              <TextInput onChange={setEnvIDValue} placeholder="Enviroment ID" id="2" labelText="" value={envId} />
+            </div>  
+          </div>        
         </> 
           : null}
 
-      {cloudPlatform == 1 ?
+      {cloudPlatform === 'aws' ?
         <>
-          <div>
-            <div className="infra-items">AWS Access Key</div>
-            <TextInput placeholder="AWS Access Key" id="3" labelText="" /></div></> : null}    
-        </>
+          <div className="infra-container">
+            <div>
+              <div className="infra-items">AWS Access Key</div>
+              <TextInput.PasswordInput placeholder="AWS Access Key" id="3" labelText="" />
+            </div>
+          </div>
+        </> : null}    
+      </>
     );
   };
 

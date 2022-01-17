@@ -1,35 +1,30 @@
 import axios from "axios";
-import { Accordion, AccordionItem, InlineLoading, TextArea, InlineNotification } from "carbon-components-react";
+import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet } from "carbon-components-react";
 import { useEffect, useState } from "react";
 import './Summary.scss'
 
-const Summary = ({envId, cloud}) => {
+const Summary = ({envId, cloudPlatform}) => {
 
-    const [loading, setLoading] = useState(false)
+    const [summaryLoading, setSummaryLoading] = useState(true)
     const [showErr, setShowErr] = useState(false)
     const [summaryInfo, setSummaryInfo] = useState({})    
 
     useEffect(() => {
-        fetchData()
+        fetchSummaryData()
     }, []);
 
-    const fetchData = () => {
-        setLoading(true)
+    const fetchSummaryData = async () => {
         let body = {
             "envId": envId,
-            "cloud": cloud,
+            "cloud": cloudPlatform,
         }
-        axios.post('/api/v1/loadConifg', body, {headers: {"Content-Type": "application/json"}}).then(res =>{           
+        await axios.post('/api/v1/loadConifg', body, {headers: {"Content-Type": "application/json"}}).then(res =>{       
             setSummaryInfo(res.data)
-            setLoading(false)
+            setSummaryLoading(false)
         }, err => {
             setShowErr(true)
             console.log(err)
-        });
-    }
-
-    const onCloseButtonClick = () => {
-        setShowErr(false)
+        });        
     }
 
     const errorProps = () => ({
@@ -38,8 +33,6 @@ const Summary = ({envId, cloud}) => {
         role: 'error',
         title: 'Unable to load deployment configuration from server.',
         hideCloseButton: false,
-        //onClose:'onClose',
-        onCloseButtonClick: onCloseButtonClick,
     });    
 
     return (      
@@ -50,32 +43,52 @@ const Summary = ({envId, cloud}) => {
                     {...errorProps()}        
                 />           
             }
-            <Accordion>
+            {/* <Accordion>
                 <AccordionItem title="Openshift Configuration">
                 {
-                    loading ? <InlineLoading />:
+                    summaryLoading ? <InlineLoading />:
                     <TextArea
                         rows={30}
                         className="summary-config-item"
                         hideLabel={true}
                         placeholder={summaryInfo.envId}   
-                        labelText=""                    
+                        labelText=""   
+                        disabled                 
                     />
                 }
                 </AccordionItem>
                 <AccordionItem title="IBM Cloud Pak Configuration">
                 {
-                    loading ? <InlineLoading />:
+                    summaryLoading ? <InlineLoading />:
                     <TextArea
                         rows={30}
                         className="summary-config-item"
                         hideLabel={true}
-                        placeholder={summaryInfo.cp4d}  
-                        labelText=""                       
+                        placeholder={summaryInfo.envId}   
+                        labelText=""   
+                        disabled                 
                     />
-                }               
+                }            
                 </AccordionItem>              
-            </Accordion>             
+            </Accordion>  */}
+            <Tabs type="container">
+                <Tab id="openshift" label="Openshift Configuration">
+                {
+                    summaryLoading ? <InlineLoading />:
+                    <CodeSnippet type="multi" feedback="Copied to clipboard">
+                    {summaryInfo.envId}  
+                    </CodeSnippet>
+                }    
+                </Tab>
+                <Tab id="cp4d" label="IBM Cloud Pak Configuration">
+                {
+                    summaryLoading ? <InlineLoading />:
+                    <CodeSnippet type="multi" feedback="Copied to clipboard">
+                        {summaryInfo.cp4d}  
+                    </CodeSnippet>
+                 }                 
+                </Tab>     
+          </Tabs>           
         </>        
     )
 }

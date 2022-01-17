@@ -13,8 +13,8 @@ import {
 function App() {
   return (
     <>
-    <CPDeployerHeader />   
-    <Wizard />   
+      <CPDeployerHeader />   
+      <Wizard />   
     </>
   );
 }
