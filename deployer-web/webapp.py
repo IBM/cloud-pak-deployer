@@ -92,7 +92,7 @@ def loadConfig():
     body = json.loads(request.get_data())
     env_id=body['envId']
     cloud=body['cloud']
-    cartridges=body['cartridges']
+    #cartridges=body['cartridges']
 
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
