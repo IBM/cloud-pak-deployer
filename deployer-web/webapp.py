@@ -1,4 +1,3 @@
-from posixpath import split
 from flask import Flask, send_from_directory,request
 import json
 import subprocess
@@ -83,22 +82,34 @@ def getStorages(cloud):
         break
    return json.dumps(ocp_config)
 
-def update_cartridges(path,cartridges):
-    
-    return
+def update_cartridges(path,cartridges, cloudpak):
+    content=""
+    with open(path, 'r') as f1:
+        content = f1.read()
+        content = content.replace('{{ env_id }}' , "env_id")
+        docs=yaml.safe_load_all(content)
+        for doc in docs:
+            if cloudpak in doc.keys():
+                doc[cloudpak][0]['cartridges']=cartridges
+                content=yaml.safe_dump(doc)
+                content = content.replace('env_id','{{ env_id }}')
+                content = '---\n'+content
+                break
+    with open(path, 'w') as f1:
+        f1.write(content)
+
 
 @app.route('/api/v1/loadConfig',methods=["POST"])
 def loadConfig():
     body = json.loads(request.get_data())
     env_id=body['envId']
     cloud=body['cloud']
-    #cartridges=body['cartridges']
+    cartridges=body['cartridges']
 
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
-    
-    
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
+    update_cartridges(generated_cp4d_yaml_path,cartridges,'cp4d')
     source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
