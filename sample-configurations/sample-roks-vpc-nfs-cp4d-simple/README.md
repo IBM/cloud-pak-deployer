@@ -2,7 +2,7 @@
 This is a sample configuration for ROKS on IBM Cloud, provisioned in a VPC with NFS storage. Optionally, you can also configure OpenShift Container Storage on 3 dedicated nodes within the ROKS cluster. All infrastructure, OpenShift and Cloud Pak for Data are managed by the deployer and deployment requires nothing but an IBM Cloud API key and a Cloud Pak entitlement key.
 
 <InlineNotification kind="warning">
-This configuration is not highly available and has several single points of failure (SPoF). The NFS server is a single server and its storage is not replicated. If the NFS server is faulty, the applications (Cloud Pak) on the cluster will no longer work and have to be restored or reinstalled. Even when using OpenShift Container Storage (deployed on 3 nodes), there is a still a SPoF because all OCS workers are deployed in the same subnet and availability zone.
+This configuration is not highly available and has several single points of failure (SPoF). The NFS server is a single server and its storage is not replicated. If the NFS server is faulty, the applications (Cloud Pak) on the cluster will no longer work and have to be restored or reinstalled. Even when using OpenShift Container Storage (deployed on 3 nodes), there is a still a SPoF because all OCS storage nodes are deployed in the same subnet and availability zone.
 </InlineNotification>
 
 ![Picture of the environment](./sample-roks-vpc-nfs-cp4d-simple.png)
@@ -24,7 +24,7 @@ A bastion is provisioned to serve as a jump host from the internet. It prevents 
 The NFS server provides the back-end storage for the `managed-nfs-storage` storage class in OpenShift. Due to throughput limitations and the fact that NFS cannot serve true block storage, not all cartridges support this storage type. Please check the cartridge in question before you install to determine if NFS is supported. By default a 1 TB volume is with a throughput of 10k IOPS is added to the NFS server.
 
 ## OpenShift
-An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the NFS server that is provisioned in the VPC. Optionallym OpenShift Container Storage (OpenShift Data Foundation) is deployed on 3 dedicated storage/worker nodes. As part of the OCS provisioning, 2 storage classes are created: `ocs-storagecluster-cephfs` for file storage and `ocs-storagecluster-ceph-rbd` for block storage.
+An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the NFS server that is provisioned in the VPC. Optionallym OpenShift Container Storage (OpenShift Data Foundation) is deployed on 3 dedicated storage/compute nodes. As part of the OCS provisioning, 2 storage classes are created: `ocs-storagecluster-cephfs` for file storage and `ocs-storagecluster-ceph-rbd` for block storage.
 
 ## Cloud Pak for Data
 Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the IBM entitled registry and referencing the NFS storage class in OpenShift.

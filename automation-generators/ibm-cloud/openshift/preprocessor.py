@@ -6,9 +6,8 @@ import sys
 # openshift:
 # - name: sample
 #   ocp_version: 4.6
-#   worker_flavour: bx2.16x64
-#   number_of_workers: 3
-#   max_number_of_workers: 10
+#   compute_flavour: bx2.16x64
+#   compute_nodes: 3
 #   infrastructure:
 #     type: vpc
 #     vpc_name: sample
@@ -36,9 +35,8 @@ def preprocessor(attributes=None, fullConfig=None):
 
     g('name').isRequired()
     g('ocp_version').isRequired()
-    g('worker_flavour').isRequired()
-    g('number_of_workers').isRequired()
-    g('max_number_of_workers').isOptional()
+    g('compute_flavour').isRequired()
+    g('compute_nodes').isRequired()
     
     g('infrastructure').isRequired()
     g('infrastructure.type').mustBeOneOf(['vpc'])
@@ -57,9 +55,9 @@ def preprocessor(attributes=None, fullConfig=None):
         if len(ge['infrastructure']['subnets']) != 1 and len(ge['infrastructure']['subnets']) != 3:
             g.appendError(msg='Number of subnets specified is ' + str(len(ge['infrastructure']['subnets'])) + ' must be 1 or 3')
 
-        # Number of workers must be a factor of the number of subnets
-        if (ge['number_of_workers'] % len(ge['infrastructure']['subnets'])) != 0:
-            g.appendError(msg='number_of_workers must be a factor of the number of subnets')
+        # Number of compute nodes must be a factor of the number of subnets
+        if (ge['compute_nodes'] % len(ge['infrastructure']['subnets'])) != 0:
+            g.appendError(msg='compute_nodes must be a factor of the number of subnets')
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:

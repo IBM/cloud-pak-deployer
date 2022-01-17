@@ -8,9 +8,8 @@ import sys
 # openshift:
 # - name: sample
 #   ocp_version: 4.6
-#   worker_flavour: bx2.16x64
-#   number_of_workers: 3
-#   max_number_of_workers: 10
+#   compute_flavour: bx2.16x64
+#   compute_nodes: 3
 #   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
@@ -243,8 +242,11 @@ def preprocessor(attributes=None, fullConfig=None):
                 if c['name'] == "cp-foundation":
                     cpFoundationFound=True
                     check_cp_foundation(c)
-                if  (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel ust be specified for all cartridges, except for cp-foundation')
+                if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
+                    g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
+                if "state" in c:
+                    if c['state'] not in ['installed','removed']:
+                        g.appendError(msg='Cartridge state must be "installed" or "removed"')
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
         if cpFoundationFound==False:
             g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
