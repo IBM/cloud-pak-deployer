@@ -60,6 +60,7 @@ def getLogs():
     result={}
     result["logs"]='waiting'
     log_path=str(os.getenv('STATUS_DIR'))+'/log/cloud-pak-deployer.log'
+    print(log_path)
     if os.path.exists(log_path):
         result["logs"]=open(log_path,"r").read()
     return json.dumps(result)
