@@ -78,7 +78,9 @@ if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
 if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
 
-if [ -f /run/.containerenv ];then
+# Check if the command is running inside a container. This means that the command should not start docker or podman
+# but run the Ansible automation directly.
+if [ -f /run/.containerenv ] || [ -f /.dockerenv ];then
   INSIDE_CONTAINER=true
 else
   INSIDE_CONTAINER=false
@@ -521,6 +523,18 @@ if [[ "${ACTION}" != "webui"  && "${ACTION}" != "kill" ]]; then
   fi
 fi
 
+# Validate if the status directory exists
+if [[ "${ACTION}" != "webui" ]]; then
+  if [ "${STATUS_DIR}" == "" ]; then
+    echo "Status directory must be specified using the STATUS_DIR environment variable or the --status-dir parameter."
+    exit 1
+  fi
+  if [ ! -d "${STATUS_DIR}" ]; then
+    echo "Status directory ${STATUS_DIR} not found."
+    exit 1
+  fi
+fi
+
 # --------------------------------------------------------------------------------------------------------- #
 # Check existence of certificate files if specified                                                         #
 # --------------------------------------------------------------------------------------------------------- #
@@ -557,29 +571,19 @@ if $CPD_DEVELOP;then
   sleep 0.5
 fi
 
-# Ensure status and underlying directories exists
-if [ -z $STATUS_DIR ];then
-  export STATUS_DIR=$(mktemp -d)
-  echo "Status directory not specified, setting to $STATUS_DIR" >&2
-fi
-mkdir -p $STATUS_DIR/{log,pid}
-
-# Ensure vault secret file exists
-if [ ! -z $VAULT_SECRET_FILE ];then
-  touch ${VAULT_SECRET_FILE}
-fi
-
 # Check if a container is currently running for this status directory
 CURRENT_CONTAINER_ID=""
 ACTIVE_CONTAINER_ID=""
 if ! $INSIDE_CONTAINER;then
-  if [ -f ${STATUS_DIR}/pid/container.id ];then
-    CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
-    ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-    # If container ID was found, check if it is currently running
-    if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
-      if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
-        ACTIVE_CONTAINER_ID=""
+  if [ "${STATUS_DIR}" != "" ];then
+    if [ -f ${STATUS_DIR}/pid/container.id ];then
+      CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
+      ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
+      # If container ID was found, check if it is currently running
+      if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
+        if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+          ACTIVE_CONTAINER_ID=""
+        fi
       fi
     fi
   fi
@@ -638,9 +642,14 @@ if ! $INSIDE_CONTAINER;then
 
   run_cmd+=" --cap-add=IPC_LOCK"
 
-  run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
+  if [ "${STATUS_DIR}" != "" ];then
+    run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
+  fi
 
-  if [ ! -z $CONFIG_DIR ];then run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z";fi
+  if [ "${CONFIG_DIR}" != "" ];then
+    run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z"
+  fi
+
   if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer:Z";fi
 
   run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
@@ -711,7 +720,9 @@ if ! $INSIDE_CONTAINER;then
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "webui" ]];then
     CURRENT_CONTAINER_ID=$(eval $run_cmd)
     ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-    echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+    if [ "${STATUS_DIR}" != "" ];then
+      echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+    fi
     run_env_logs
     PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
   else
