@@ -4,24 +4,26 @@ import { useEffect, useState } from "react";
 import './Storage.scss'
 
 
-const Storage = ({cloudPlatform, storagesOptions, setStoragesOptions}) => {
+const Storage = ({cloudPlatform, updateStorageClass}) => {
 
     const [loadingStorage, setLoadingStorage] = useState(true)
     const [loadStorageErr, setLoadStorageErr] = useState(false)
 
+    const [storagesOptions, setStoragesOptions] = useState([])
+
     useEffect(() => {
+      const fetchStorageData =async () => {
+        await axios.get('/api/v1/storages/' + cloudPlatform).then(res =>{                 
+            setStoragesOptions(res.data)
+            setLoadingStorage(false)
+        }, err => {
+            setLoadStorageErr(true)          
+        });
+        setLoadingStorage(false)
+      }
       fetchStorageData()
-    }, [cloudPlatform])
+    }, [cloudPlatform])    
     
-    const fetchStorageData =async () => {
-      await axios.get('/api/v1/storages/' + cloudPlatform).then(res =>{                 
-          setStoragesOptions(res.data)
-          setLoadingStorage(false)
-      }, err => {
-          setLoadStorageErr(true)          
-      });
-      setLoadingStorage(false)
-    }
 
     const errorProps = () => ({
       kind: 'error',
@@ -45,7 +47,8 @@ const Storage = ({cloudPlatform, storagesOptions, setStoragesOptions}) => {
               id="default"
               label="Please select the storage class"
               items={storagesOptions}
-              itemToString={(item) => (item ? item.storage_name : '')}              
+              itemToString={(item) => (item ? item.storage_name : '')}  
+              onChange={(e)=>updateStorageClass(e, storagesOptions)}            
             />
           </div>
         </>        

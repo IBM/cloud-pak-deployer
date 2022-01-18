@@ -3,7 +3,7 @@ import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet } from "carbo
 import { useEffect, useState } from "react";
 import './Summary.scss'
 
-const Summary = ({envId, cloudPlatform}) => {
+const Summary = ({envId, cloudPlatform, storage, region}) => {
 
     const [summaryLoading, setSummaryLoading] = useState(true)
     const [showErr, setShowErr] = useState(false)
@@ -17,8 +17,10 @@ const Summary = ({envId, cloudPlatform}) => {
                 "envId": envId,
                 "cloud": cloudPlatform,
                 "cartridges": cp4dJson,
+                "region": region,
+                "storages": storage,
             }
-
+            //console.log("summary", body)
             await axios.post('/api/v1/loadConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{       
                 setSummaryInfo(res.data)
                 setSummaryLoading(false)

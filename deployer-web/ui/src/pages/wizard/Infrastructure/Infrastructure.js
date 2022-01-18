@@ -41,6 +41,11 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
       updateInfraValue({entilementKey:e.target.value});
     }
 
+    const setIBMCloudRegion =(e)=>{
+      updateInfraValue({region:e.target.value});
+      setIBMRegion(e.target.value)
+    }
+
     const errorProps = () => ({
       kind: 'error',
       lowContrast: true,
@@ -86,7 +91,7 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
             </div>  
             <div>
               <div className="infra-items">IBM Cloud Region</div>
-              <TextInput placeholder={IBMRegion} id="3" labelText="" value={IBMRegion} disabled/>
+              <TextInput onChange={setIBMCloudRegion} placeholder={IBMRegion} id="3" labelText="" value={IBMRegion} />
             </div> 
           </div>        
         </> 
@@ -97,7 +102,7 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
           <div className="infra-container">
             <div>
               <div className="infra-items">AWS Access Key</div>
-              <TextInput.PasswordInput placeholder="AWS Access Key" id="3" labelText="" />
+              <TextInput.PasswordInput placeholder="AWS Access Key" id="4" labelText="" />
             </div>
           </div>
         </> : null}    

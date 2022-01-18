@@ -25,11 +25,12 @@ const Wizard = () => {
     IBMAPIKey: '',
     envId: '',
     entilementKey: '',
+    region: '',
   })
   //--AWS
   const [AWSSecurityKey, setAWSSecurityKey] = useState('')
   //Step 2
-  const [storagesOptions, setStoragesOptions] = useState([])
+  const [storage, setStorage] = useState([])
 
   const [deployLog, setDeployLog] = useState('')
 
@@ -54,10 +55,11 @@ const Wizard = () => {
       },
       "cloud": cloudPlatform,
       "envId": IBMCloudSettings.envId,
-      "region":"us-east",
+      "region":IBMCloudSettings.region,
       "configDir":"/tmp/config",
       "statusDir":"/tmp/status"
     }
+    //console.log("deploy", body)
     
     setCurrentIndex(-1)
     await axios.post('/api/v1/deploy', body).then(res =>{
@@ -73,7 +75,7 @@ const Wizard = () => {
     setLoadingDeployStatus(false)    
   }
   
-  const updateInfraValue = ({cloudPlatform, IBMAPIKey, envId, entilementKey}) => {
+  const updateInfraValue = ({cloudPlatform, IBMAPIKey, envId, entilementKey, region}) => {
     if (cloudPlatform) {
       setCloudPlatform(cloudPlatform)
     }      
@@ -86,6 +88,16 @@ const Wizard = () => {
     if (entilementKey) {
       setIBMCloudSettings({...IBMCloudSettings, entilementKey})
     }
+    if (region) {
+      setIBMCloudSettings({...IBMCloudSettings, region})
+    }
+  }
+
+  const updateStorageClass = (e, storagesOptions) => {
+    const selectedStorage = storagesOptions.filter((item)=>(
+      item.storage_name === e.selectedItem.storage_name
+    ))
+    setStorage(selectedStorage)    
   }
 
   const errorProps = () => ({
@@ -207,9 +219,9 @@ const Wizard = () => {
           </ProgressIndicator>           
         }          
           {currentIndex === 0 ? <Infrastructure {...IBMCloudSettings} cloudPlatform={cloudPlatform} updateInfraValue={updateInfraValue} ></Infrastructure> : null}
-          {currentIndex === 1 ? <Storage cloudPlatform={cloudPlatform} storagesOptions={storagesOptions} setStoragesOptions={setStoragesOptions}></Storage> : null}    
+          {currentIndex === 1 ? <Storage cloudPlatform={cloudPlatform} updateStorageClass={updateStorageClass} ></Storage> : null}    
           {currentIndex === 2 ? <CloudPak></CloudPak> : null}    
-          {currentIndex === 3 ? <Summary envId={IBMCloudSettings.envId} cloudPlatform={cloudPlatform}></Summary> : null}          
+          {currentIndex === 3 ? <Summary envId={IBMCloudSettings.envId} cloudPlatform={cloudPlatform} storage={storage} region={IBMCloudSettings.region}></Summary> : null}          
     
       </div> 
     </div>
