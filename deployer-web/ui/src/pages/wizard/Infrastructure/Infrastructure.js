@@ -1,7 +1,29 @@
-import { RadioButton, RadioButtonGroup, TextInput } from "carbon-components-react";
+import axios from "axios";
+import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput } from "carbon-components-react";
+import { useEffect, useState } from "react";
 import './Infrastructure.scss'
 
 const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, updateInfraValue}) => {
+
+    const [loadingIBMRegion, setLoadingIBMRegion] = useState(false)
+    const [loadIBMRegionErr, setLoadIBMRegionErr] = useState(false)
+    const [IBMRegion, setIBMRegion] = useState('')
+
+    useEffect(() => {
+      const getIBMRegion = async() => {
+        await axios.get('/api/v1/region/ibm-cloud').then(res =>{ 
+          setIBMRegion(res.data.region)         
+        }, err => {
+          setLoadIBMRegionErr(true)
+          console.log(err)
+        });
+        setLoadingIBMRegion(false)  
+      }
+      if (cloudPlatform === 'ibm-cloud') {
+        setLoadingIBMRegion(true)
+        getIBMRegion()
+      }      
+    }, [cloudPlatform])
 
     const setCloudPlatformValue = (value) => {     
       updateInfraValue({cloudPlatform: value});
@@ -19,9 +41,20 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
       updateInfraValue({entilementKey:e.target.value});
     }
 
+    const errorProps = () => ({
+      kind: 'error',
+      lowContrast: true,
+      role: 'error',
+      title: 'Unable to get IBM Cloud Region from server.',
+      hideCloseButton: false,
+    });  
+
     return (
       <> 
       <div className="infra-title">Cloud Platform</div>  
+      { loadIBMRegionErr && <InlineNotification className="cpd-error"
+                {...errorProps()}        
+            /> } 
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"
          defaultSelected={cloudPlatform}     
@@ -36,6 +69,8 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
 
       {cloudPlatform === 'ibm-cloud' ? 
         <>
+          {loadingIBMRegion && <Loading /> } 
+         
           <div className="infra-container">
             <div>
               <div className="infra-items">IBM Cloud API Key</div>
@@ -49,6 +84,10 @@ const Infrastructure = ({cloudPlatform, IBMAPIKey, envId,  entilementKey, update
               <div className="infra-items">Enviroment ID</div>
               <TextInput onChange={setEnvIDValue} placeholder="Enviroment ID" id="2" labelText="" value={envId} />
             </div>  
+            <div>
+              <div className="infra-items">IBM Cloud Region</div>
+              <TextInput placeholder={IBMRegion} id="3" labelText="" value={IBMRegion} disabled/>
+            </div> 
           </div>        
         </> 
           : null}
