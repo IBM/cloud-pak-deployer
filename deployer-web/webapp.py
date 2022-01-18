@@ -152,7 +152,7 @@ def loadConfig():
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
-    update_cartridges(generated_cp4d_yaml_path,cartridges,storages[0]['storage_type'],'cp4d')
+    update_cartridges(generated_cp4d_yaml_path,cartridges,storages[0]['storage_name'],'cp4d')
 
     source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
