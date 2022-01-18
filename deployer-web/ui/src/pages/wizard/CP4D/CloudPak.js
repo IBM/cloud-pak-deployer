@@ -14,7 +14,7 @@ const CloudPak = () => {
 
     useEffect(() => {
        const fetchCloudPakData =async () => {
-          await axios.get('api/v1/cartridges/cp4d').then(res =>{            
+          await axios.get('/api/v1/cartridges/cp4d').then(res =>{            
               setCPDData(res.data)
               updateParentCheckBox(res.data)            
           }, err => {
@@ -66,8 +66,7 @@ const CloudPak = () => {
         })  
         updateParentCheckBox(newCPData)        
         return newCPData
-      })
-          
+      })          
     }
 
     const changeParentCheckBox =(e) => {      
