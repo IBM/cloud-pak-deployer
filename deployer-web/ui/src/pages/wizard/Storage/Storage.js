@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import './Storage.scss'
 
 
-const Storage = ({cloudPlatform, updateStorageClass}) => {
+const Storage = ({cloudPlatform, updateStorageClass, storage}) => {
 
     const [loadingStorage, setLoadingStorage] = useState(true)
     const [loadStorageErr, setLoadStorageErr] = useState(false)
@@ -32,7 +32,6 @@ const Storage = ({cloudPlatform, updateStorageClass}) => {
       title: 'Unable to get storage class from server.',
       hideCloseButton: false,
     });  
-
     return (
         <> 
           {loadingStorage && <Loading /> }         
@@ -47,8 +46,9 @@ const Storage = ({cloudPlatform, updateStorageClass}) => {
               id="default"
               label="Please select the storage class"
               items={storagesOptions}
-              itemToString={(item) => (item ? item.storage_name : '')}  
-              onChange={(e)=>updateStorageClass(e, storagesOptions)}            
+              itemToString={(item) => (item.storage_name )}  
+              onChange={(e)=>updateStorageClass(e, storagesOptions)}     
+              selectedItem={storage.length === 1 ? storage[0] : storagesOptions[0]}     
             />
           </div>
         </>        

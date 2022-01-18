@@ -219,7 +219,7 @@ const Wizard = () => {
           </ProgressIndicator>           
         }          
           {currentIndex === 0 ? <Infrastructure {...IBMCloudSettings} cloudPlatform={cloudPlatform} updateInfraValue={updateInfraValue} ></Infrastructure> : null}
-          {currentIndex === 1 ? <Storage cloudPlatform={cloudPlatform} updateStorageClass={updateStorageClass} ></Storage> : null}    
+          {currentIndex === 1 ? <Storage cloudPlatform={cloudPlatform} updateStorageClass={updateStorageClass} storage={storage}></Storage> : null}    
           {currentIndex === 2 ? <CloudPak></CloudPak> : null}    
           {currentIndex === 3 ? <Summary envId={IBMCloudSettings.envId} cloudPlatform={cloudPlatform} storage={storage} region={IBMCloudSettings.region}></Summary> : null}          
     
