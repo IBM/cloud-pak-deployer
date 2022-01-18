@@ -80,6 +80,34 @@ def getRegion(cloud):
              break
    return json.dumps(ressult)
 
+def update_region(path, region):
+    lines=[]
+    with open(path, 'r') as f1:
+       lines = f1.readlines()
+       for line in lines:
+         if 'ibm_cloud_region' in line:
+             line = f'ibm_cloud_region={region}'
+             break
+    with open(path, 'w') as w:
+         w.writelines(lines)    
+
+def update_storage(path, storage):
+    content = ""
+    with open(path, 'r') as f1:
+        read_all = f1.read()
+
+        read_all = read_all.replace('{{ env_id }}' , "env_id").replace('{{ ibm_cloud_region }}', 'ibm_cloud_region')
+
+        datas = yaml.safe_load_all(read_all)
+        for data in datas:
+            content=content+"---\n"
+            if 'openshift' in data.keys():
+                   data['openshift'][0]['openshift_storage']=storage
+            content=content+yaml.safe_dump(data)
+        content = content.replace('{{ env_id }}' , "env_id").replace('{{ ibm_cloud_region }}', 'ibm_cloud_region')
+    with open(path, 'w') as f:
+        f.write(content)
+
 @app.route('/api/v1/storages/<cloud>',methods=["GET"])
 def getStorages(cloud):
    ocp_config=""
@@ -95,7 +123,7 @@ def getStorages(cloud):
         break
    return json.dumps(ocp_config)
 
-def update_cartridges(path,cartridges, cloudpak):
+def update_cartridges(path,cartridges, storage, cloudpak):
     content=""
     with open(path, 'r') as f1:
         content = f1.read()
@@ -104,6 +132,7 @@ def update_cartridges(path,cartridges, cloudpak):
         for doc in docs:
             if cloudpak in doc.keys():
                 doc[cloudpak][0]['cartridges']=cartridges
+                doc[cloudpak][0]['openshift_storage_name']=storage
                 content=yaml.safe_dump(doc)
                 content = content.replace('env_id','{{ env_id }}')
                 content = '---\n'+content
@@ -118,18 +147,23 @@ def loadConfig():
     env_id=body['envId']
     cloud=body['cloud']
     cartridges=body['cartridges']
+    storages=body['storages']
 
     source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
     generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
     copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
-    update_cartridges(generated_cp4d_yaml_path,cartridges,'cp4d')
+    update_cartridges(generated_cp4d_yaml_path,cartridges,storages[0]['storage_type'],'cp4d')
+
     source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
+    update_storage(generated_ocp_yaml_path,storages[0])
+    
     source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
     generated_inventory_yaml_path = target_inventory+'/{}.inv'.format(env_id)
     copyfile(source_inventory_config_path,generated_inventory_yaml_path)
-   
+    update_region(generated_inventory_yaml_path,storages[0]['storage_type'])
+
     result={}
     result["cp4d"]=open(generated_cp4d_yaml_path,"r").read()
     result["envId"]=open(generated_ocp_yaml_path, "r").read()
