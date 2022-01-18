@@ -69,6 +69,17 @@ def getLogs():
         result["logs"]=open(log_path,"r").read()
     return json.dumps(result)
 
+@app.route('/api/v1/region/<cloud>',methods=["GET"])
+def getRegion(cloud):
+   ressult={}
+   with open(inventory_config_path+'/{}.inv'.format(cloud),'r') as f:
+       lines = f.readlines()
+       for line in lines:
+         if 'ibm_cloud_region' in line:
+             ressult['region'] = line.split('=')[1].replace('\n','')
+             break
+   return json.dumps(ressult)
+
 @app.route('/api/v1/storages/<cloud>',methods=["GET"])
 def getStorages(cloud):
    ocp_config=""
