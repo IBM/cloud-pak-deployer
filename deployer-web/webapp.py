@@ -157,7 +157,7 @@ def loadConfig():
     source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
     copyfile(source_ocp_config_path,generated_ocp_yaml_path)
-    update_storage(generated_ocp_yaml_path,storages[0])
+    update_storage(generated_ocp_yaml_path,storages)
     
     source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
     generated_inventory_yaml_path = target_inventory+'/{}.inv'.format(env_id)
