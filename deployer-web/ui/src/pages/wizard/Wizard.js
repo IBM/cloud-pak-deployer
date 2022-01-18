@@ -2,7 +2,7 @@ import React from 'react';
 import Infrastructure from './Infrastructure/Infrastructure';
 import Storage from './Storage/Storage';
 import './Wizard.scss'
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, TextArea} from 'carbon-components-react';
 import Summary from './Summary/Summary';
 import axios from 'axios';
@@ -33,7 +33,8 @@ const Wizard = () => {
 
   const [deployLog, setDeployLog] = useState('')
 
-  
+  const logsRef = useRef(null);
+
   const clickPrevious = ()=> {
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
@@ -107,7 +108,6 @@ const Wizard = () => {
     if (isDeployErr)
       return 
     await axios.get('/api/v1/logs').then(res =>{
-        console.log("test") 
         setDeployLog(res.data.logs)            
     }, err => {
         console.log(err)        
@@ -118,6 +118,7 @@ const Wizard = () => {
   const refreshLog = ()=>{
     scheduledJob = setInterval(() => {
       fetchLog()
+      logsRef.current.scrollTo({left:0, top: logsRef.current.scrollHeight, behavior: 'smooth'})
     }, 2000);
   }
 
@@ -162,7 +163,7 @@ const Wizard = () => {
 
               <h4>Logs:</h4>
               <div>
-                <TextArea
+                <TextArea ref={logsRef}
                         rows={20}
                         className="wizard-logs"
                         hideLabel={true}
