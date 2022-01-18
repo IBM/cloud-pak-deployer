@@ -736,5 +736,14 @@ if ! $INSIDE_CONTAINER;then
 
   exit $PODMAN_EXIT_CODE
 else
+  # Export extra variables
+  if [ ${#arrExtraKey[@]} -ne 0 ];then
+    for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
+      echo "Extra parameters ($i): ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+      export ${arrExtraKey[$i]}="${arrExtraValue[$i]}"
+    done
+    export EXTRA_PARMS="${arrExtraKey[*]}"
+    echo $EXTRA_PARMS
+  fi
   . /cloud-pak-deployer/docker-scripts/run_automation.sh
 fi
