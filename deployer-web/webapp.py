@@ -1,4 +1,5 @@
 from flask import Flask, send_from_directory,request
+import sys
 import json
 import subprocess
 import os
@@ -32,6 +33,7 @@ def index():
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
     body = json.loads(request.get_data())
+    print(body, file=sys.stderr)
     env ={}
     if body['cloud']=='ibm-cloud':
       env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
@@ -39,11 +41,20 @@ def deploy():
              'CONFIG_DIR':config_dir,
              'STATUS_DIR':status_dir}
 
+      log = open('/tmp/cp-deploy.log', 'a')
       process = subprocess.Popen([parent+'/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
-                        format(body['envId']), '-e', 'ibm_cloud_region={}'.format(body['region']), '--check-only'], 
-                    stdout=subprocess.PIPE,
+                        format(body['envId']), '-e', 'ibm_cloud_region={}'.format(body['region'])], 
+                    stdout=log,
+                    stderr=log,
                     universal_newlines=True,
                     env=env)
+
+    #   process = subprocess.Popen([parent+'/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
+    #                     format(body['envId']), '-e', 'ibm_cloud_region={}'.format(body['region']), '--check-only'], 
+    #                 stdout=subprocess.PIPE,
+    #                 universal_newlines=True,
+    #                 env=env)
+
     return 'runing'
 
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
@@ -51,7 +62,6 @@ def getCartridges(cloudpak):
     cartridges_list=[]
     with open(cp4d_config_path+'/{}.yaml'.format(cloudpak),encoding='UTF-8') as f:
         read_all = f.read()
-        read_all = read_all.replace('{{ env_id }}' , "env_id")
         docs =yaml.load_all(read_all, Loader=yaml.FullLoader)
         for doc in docs:
             if cloudpak in doc.keys():
@@ -96,15 +106,12 @@ def update_storage(path, storage):
     with open(path, 'r') as f1:
         read_all = f1.read()
 
-        read_all = read_all.replace('{{ env_id }}' , "env_id").replace('{{ ibm_cloud_region }}', 'ibm_cloud_region')
-
         datas = yaml.safe_load_all(read_all)
         for data in datas:
             content=content+"---\n"
             if 'openshift' in data.keys():
                    data['openshift'][0]['openshift_storage']=storage
             content=content+yaml.safe_dump(data)
-        content = content.replace('{{ env_id }}' , "env_id").replace('{{ ibm_cloud_region }}', 'ibm_cloud_region')
     with open(path, 'w') as f:
         f.write(content)
 
@@ -113,8 +120,6 @@ def getStorages(cloud):
    ocp_config=""
    with open(ocp_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
     read_all = f.read()
-
-    read_all = read_all.replace('{{ env_id }}' , "env_id").replace('{{ ibm_cloud_region }}', 'ibm_cloud_region')
 
     datas = yaml.load_all(read_all, Loader=yaml.FullLoader)
     for data in datas:
@@ -127,14 +132,12 @@ def update_cartridges(path,cartridges, storage, cloudpak):
     content=""
     with open(path, 'r') as f1:
         content = f1.read()
-        content = content.replace('{{ env_id }}' , "env_id")
         docs=yaml.safe_load_all(content)
         for doc in docs:
             if cloudpak in doc.keys():
                 doc[cloudpak][0]['cartridges']=cartridges
                 doc[cloudpak][0]['openshift_storage_name']=storage
                 content=yaml.safe_dump(doc)
-                content = content.replace('env_id','{{ env_id }}')
                 content = '---\n'+content
                 break
     with open(path, 'w') as f1:
