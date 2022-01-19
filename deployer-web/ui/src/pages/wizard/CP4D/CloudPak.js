@@ -14,7 +14,8 @@ const CloudPak = ({CPDData, setCPDData}) => {
       const fetchCloudPakData =async () => {
         setLoadingCPD(true)
         await axios.get('/api/v1/cartridges/cp4d').then(res =>{            
-            setCPDData(res.data)                         
+            setCPDData(res.data) 
+            updateParentCheckBox(res.data)                        
         }, err => {
             setLoadCPDErr(true)
             console.log(err)
@@ -22,8 +23,10 @@ const CloudPak = ({CPDData, setCPDData}) => {
       }    
       if (CPDData.length === 0) {
          fetchCloudPakData()              
-      }
-      updateParentCheckBox(CPDData) 
+      } 
+      else {
+        updateParentCheckBox(CPDData) 
+      }      
       setLoadingCPD(false)         
     }, [])
 
@@ -41,6 +44,8 @@ const CloudPak = ({CPDData, setCPDData}) => {
       let totalItems = data.filter(item => item.description != null )      
       let selectedItem = data.filter(item => item.state === "installed")      
       if (totalItems.length === selectedItem.length) {
+        console.log(totalItems.length )
+        console.log(selectedItem.length)
         setCheckParentCheckBox(true)
       }        
       else {
