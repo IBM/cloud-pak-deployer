@@ -1,4 +1,4 @@
-from flask import Flask, send_from_directory,request
+from flask import Flask, send_from_directory,request,make_response
 import sys
 import json
 import subprocess
@@ -11,8 +11,8 @@ from pathlib import Path
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
 source = os.getcwd()
-#parent = source
-parent = os.path.dirname(source)
+parent = source
+#parent = os.path.dirname(source)
 cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
 ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
@@ -147,6 +147,8 @@ def update_cartridges(path,cartridges, storage, cloudpak):
 @app.route('/api/v1/loadConfig',methods=["POST"])
 def loadConfig():
     body = json.loads(request.get_data())
+    if not body['envId'] or not  body['cloud'] or not body['cartridges'] or not body['storages']:
+       return make_response('Bad Request', 400)
     env_id=body['envId']
     cloud=body['cloud']
     cartridges=body['cartridges']
