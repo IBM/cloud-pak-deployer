@@ -4,26 +4,34 @@ import { useEffect, useState } from "react";
 import './Storage.scss'
 
 
-const Storage = ({cloudPlatform, updateStorageClass, storage}) => {
+const Storage = ({cloudPlatform, setStorage, storage, storagesOptions, setStoragesOptions}) => {
 
     const [loadingStorage, setLoadingStorage] = useState(true)
     const [loadStorageErr, setLoadStorageErr] = useState(false)
 
-    const [storagesOptions, setStoragesOptions] = useState([])
-
     useEffect(() => {
       const fetchStorageData =async () => {
-        await axios.get('/api/v1/storages/' + cloudPlatform).then(res =>{                 
-            setStoragesOptions(res.data)
-            setLoadingStorage(false)
-        }, err => {
-            setLoadStorageErr(true)          
-        });
+        if (storagesOptions.length === 0) {
+            await axios.get('/api/v1/storages/' + cloudPlatform).then(res =>{                 
+              setStoragesOptions(res.data)
+              setStorage([res.data[0]])
+              setLoadingStorage(false)
+          }, err => {
+              setLoadStorageErr(true)          
+          });          
+        }
         setLoadingStorage(false)
+        //updateStorageClass()
       }
       fetchStorageData()
-    }, [cloudPlatform])    
+    }, [])    
     
+    const updateStorageClass = (e, storagesOptions) => {
+      const selectedStorage = storagesOptions.filter((item)=>(
+        item.storage_name === e.selectedItem.storage_name
+      ))
+      setStorage(selectedStorage)    
+    }
 
     const errorProps = () => ({
       kind: 'error',

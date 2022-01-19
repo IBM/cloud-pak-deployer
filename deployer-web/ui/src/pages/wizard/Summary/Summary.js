@@ -3,20 +3,18 @@ import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet } from "carbo
 import { useEffect, useState } from "react";
 import './Summary.scss'
 
-const Summary = ({envId, cloudPlatform, storage, region}) => {
+const Summary = ({envId, cloudPlatform, storage, region, CPDData}) => {
 
     const [summaryLoading, setSummaryLoading] = useState(true)
     const [showErr, setShowErr] = useState(false)
     const [summaryInfo, setSummaryInfo] = useState({})      
 
     useEffect(() => {
-        const fetchSummaryData = async () => {
-            const cp4dStr = localStorage.getItem("cp4d");
-            const cp4dJson = JSON.parse(cp4dStr);  
+        const fetchSummaryData = async () => {            
             let body = {
                 "envId": envId,
                 "cloud": cloudPlatform,
-                "cartridges": cp4dJson,
+                "cartridges": CPDData,
                 "region": region,
                 "storages": storage,
             }
@@ -30,7 +28,7 @@ const Summary = ({envId, cloudPlatform, storage, region}) => {
             });        
         }        
         fetchSummaryData()
-    }, [envId, cloudPlatform]);
+    }, []);
 
     const errorProps = () => ({
         kind: 'error',

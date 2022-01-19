@@ -1,34 +1,31 @@
-import {  Checkbox, Loading, InlineNotification } from 'carbon-components-react';
+import { Checkbox, Loading, InlineNotification } from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
 
-const CloudPak = () => {
-
-    const [loadingCPD, setLoadingCPD] = useState(true)
+const CloudPak = ({CPDData, setCPDData}) => {
+    const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
-    const [CPDData, setCPDData] = useState([])
 
     const [checkParentCheckBox, setCheckParentCheckBox] = useState(false)
     const [indeterminateParentCheckBox, setIndeterminateParentCheckBox] = useState(false)
 
     useEffect(() => {
-       const fetchCloudPakData =async () => {
-          await axios.get('/api/v1/cartridges/cp4d').then(res =>{            
-              setCPDData(res.data)
-              updateParentCheckBox(res.data)            
-          }, err => {
-              setLoadCPDErr(true)
-              console.log(err)
-          });
-        setLoadingCPD(false)
-    } 
-       fetchCloudPakData()
+      const fetchCloudPakData =async () => {
+        setLoadingCPD(true)
+        await axios.get('/api/v1/cartridges/cp4d').then(res =>{            
+            setCPDData(res.data)                         
+        }, err => {
+            setLoadCPDErr(true)
+            console.log(err)
+        });        
+      }    
+      if (CPDData.length === 0) {
+         fetchCloudPakData()              
+      }
+      updateParentCheckBox(CPDData) 
+      setLoadingCPD(false)         
     }, [])
-
-    useEffect(() => {
-      localStorage.setItem("cp4d", JSON.stringify(CPDData));
-    }, [CPDData])
 
     const errorProps = () => ({
       kind: 'error',
@@ -54,8 +51,8 @@ const CloudPak = () => {
     }
 
     const changeChildCheckBox = (e) => {
-      setCPDData((CPDdata)=>{
-        const newCPData = CPDdata.map((item)=>{
+      setCPDData((data)=>{
+        const newCPData = data.map((item)=>{
             if (item.name === e.target.id){
               if (e.target.checked)
                 item.state = "installed"
@@ -97,11 +94,10 @@ const CloudPak = () => {
           <div className='cpd-container'>
           </div>  
 
-          {loadingCPD && <Loading /> }  
+          { loadingCPD && <Loading /> }  
           { loadCPDErr && <InlineNotification className="cpd-error"
                 {...errorProps()}        
-            /> } 
-
+            /> }             
             <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeParentCheckBox} checked={checkParentCheckBox} indeterminate={indeterminateParentCheckBox}/>
               { CPDData.map((item)=>{
                 if (item.description) {
