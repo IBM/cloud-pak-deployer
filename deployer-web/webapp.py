@@ -11,8 +11,8 @@ from pathlib import Path
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
 source = os.getcwd()
-parent = source
-#parent = os.path.dirname(source)
+#parent = source
+parent = os.path.dirname(source)
 cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
 ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
