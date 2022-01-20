@@ -52,7 +52,8 @@
 
   # If there are no changes, terraform plan will return with exit code 2 (as per -detailed-exitcode)
   # Subsequent steps are skipped if no changes were planned
-  - debug:
+  - name: Determine if any changes will be made in the terraform apply
+    debug:
       msg: "No changes were detected in the planning phase, apply will be skipped and tfstate secret will not be updated"
     when: "terraform_plan_result.rc == 0"
 
@@ -63,18 +64,17 @@
   - set_fact:
       destroy_result: "{{ plan_log['content'] | b64decode | regex_search('([0-9]+) to destroy', '\\1') }}"
 
-  - debug:
-      var: destroy_result
-
   - set_fact:
       number_to_destroy: "{{ destroy_result | first }}"
     when: destroy_result != ''
 
-  - debug:
+  - name: Show number of artifacts to destroy
+    debug:
       var: number_to_destroy
     when: number_to_destroy is defined
 
-  - fail:
+  - name: Fail if terraform plans to destroy artifacts and this was not confirmed at the command line
+    fail:
       msg: "Terraform will destroy artifacts and this was not confirmed"
     when:
       - number_to_destroy is defined
@@ -102,7 +102,8 @@
     when: 
     - terraform_plan_result.rc != 0
 
-  - fail:
+  - name: Fail if there were errors during the terraform apply
+    fail:
       msg: Error occurred during Terraform apply, state has been preserved. Failing now. Check the apply log for details.
     when: 
     - terraform_plan_result.rc == 2

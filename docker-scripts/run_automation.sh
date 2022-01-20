@@ -53,7 +53,9 @@ env|environment)
   # Assemble command
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
-    if [ "$CP_CONFIG_ONLY" == "true" ];then
+    if [ "$CHECK_ONLY" == "true" ];then
+      run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
+    elif [ "$CP_CONFIG_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
     else
       run_cmd+=" playbooks/playbook-env-apply.yml"
@@ -65,6 +67,7 @@ env|environment)
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
+  run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
 
   if [ ! -z $VAULT_PASSWORD ];then

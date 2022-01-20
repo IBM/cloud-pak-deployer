@@ -1,0 +1,118 @@
+---
+- name: Show monitors
+  debug:
+    msg: "{{ _monitors }}"
+
+- name: Enable Cloud Pak for Data ServiceMonitor
+  include_tasks: enable-cp4d-service-monitor.yml
+
+- set_fact:
+    _default_monitor_source_repo: "{{ _monitors.default_monitor_source_repo | default('') }}"
+    _default_monitor_source_token_secret: "{{ _monitors.default_monitor_source_token_secret | default('') }}"
+    _default_monitor_source_token: ""
+    _default_monitor_source_secret: ""
+    _default_monitor_target_cr: "{{ _monitors.default_monitor_target_cr | default('image-registry.openshift-image-registry.svc:5000/' + current_cp4d_cluster.project) }}"
+    _default_monitor_target_cr_user_secret: "{{ _monitors.default_monitor_target_cr_user_secret | default('') }}"
+    _default_monitor_target_cr_user: ""
+    _default_monitor_target_cr_password_secret: "{{ _monitors.default_monitor_target_cr_password_secret | default('') }}"
+    _default_monitor_target_cr_password: ""
+    _default_monitor_target_cr_secret: ""
+
+#Retrieve default monitor source git access token and create secret
+- when: "_default_monitor_source_token_secret != ''"
+  block:
+    - name: Get the default monitor source repo access token {{ _default_monitor_source_token_secret }} from the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "{{ _default_monitor_source_token_secret }}"
+        secret_group: "{{ environment_name }}"
+
+    - name: Fail if the monitor source token was not found in the vault
+      fail:
+        msg: "Unable to get secret value for {{ _default_monitor_source_token_secret }} from the vault"
+      when: "secret_value == ''"
+
+    - set_fact:
+        _default_monitor_source_token: "{{ secret_value }}"
+
+    - name: Create default repo secret yaml
+      template:
+        src: source-secret-repository-default.j2
+        dest: "{{ _cloud_pak_service_monitor_dir.path }}/source-repo-secret-default.yaml"           
+
+    - set_fact:
+        _default_monitor_source_secret: "{{ _monitors.name}}-default-repo-auth"
+
+    - name: Create secret {{ _monitors.name}}-default-repo-auth
+      shell: |
+        oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/source-repo-secret-default.yaml
+
+#Retrieve default monitor target cr user
+- when: "_default_monitor_target_cr_user_secret != ''"
+  block:
+    - name: Get the default monitor target cr {{ _default_monitor_target_cr_user_secret }} from the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "{{ _default_monitor_target_cr_user_secret }}"
+        secret_group: "{{ environment_name }}"
+
+    - name: Fail if the target container registry user was not found in the vault
+      fail:
+        msg: "Unable to get secret value for {{ _default_monitor_target_cr_user_secret }} from the vault"
+      when: "secret_value == ''"
+
+    - set_fact:
+        _default_monitor_target_cr_user: "{{ secret_value }}"
+
+#Retrieve default monitor target cr password
+- when: "_default_monitor_target_cr_password_secret != ''"
+  block:
+    - name: Get the default monitor target cr {{ _default_monitor_target_cr_password_secret }} from the vault
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "{{ _default_monitor_target_cr_password_secret }}"
+        secret_group: "{{ environment_name }}"
+
+    - name: Fail if the monitor target registry password was not found in the vault
+      fail:
+        msg: "Unable to get secret value for {{ _default_monitor_target_cr_password_secret }} from the vault"
+      when: "secret_value == ''"
+
+    - set_fact:
+        _default_monitor_target_cr_password: "{{ secret_value }}"
+
+    - set_fact:
+        _default_monitor_target_cr_auth: "{{ _default_monitor_target_cr_user }}:{{ _default_monitor_target_cr_password }}"
+
+    - name: Create default cr docker registry auth
+      template:
+        src: docker-cr-auth-default.j2
+        dest: "{{ _cloud_pak_service_monitor_dir.path }}/default_cr_auth.json"
+
+    - set_fact:
+        _default_cr_auth_b64: "{{ lookup('file','{{ _cloud_pak_service_monitor_dir.path }}/default_cr_auth.json') | b64encode }}"
+
+    - name: Create default cr secret yaml
+      template:
+        src: docker-cr-secret-default.j2
+        dest: "{{ _cloud_pak_service_monitor_dir.path }}/docker-cr-secret-default.yaml"        
+
+    - name: Create secret {{ _monitors.name}}-default-cr-auth
+      shell: |
+        oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/docker-cr-secret-default.yaml
+
+    - set_fact:
+        _default_monitor_target_cr_secret: "{{ _monitors.name}}-default-cr-auth"
+
+    - name: Add the secret {{ _monitors.name}}-default-cr-auth for pull by the sa zen-editor-sa
+      shell: "oc -n {{ current_cp4d_cluster.project }} secrets link --for=pull zen-editor-sa {{ _monitors.name}}-default-cr-auth"
+
+- name: "Loop through each monitors entry"
+  include_tasks: cp4d-monitor.yml
+  loop: "{{ _monitors.monitors | default([]) }}"
+  loop_control:
+    loop_var: _monitor
+

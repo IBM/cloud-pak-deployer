@@ -5,15 +5,10 @@
 
 
 - block:
-  - debug:
+  - name: Show generator
+    debug:
       var: generator
 
-  - fail:
-      msg: "Number of subnets for ROKS cluster must either be 1 or 3."
-    when: 
-    - (generator.attributes.infrastructure.subnets | length) != 1
-    - (generator.attributes.infrastructure.subnets | length) != 3
-      
   - name: 'generate instance of "{{generator.name}}" in {{PATH_TO_TERRAFORM_WORK_DIR}}'
     template:
       src: '../templates/main.tf.j2'

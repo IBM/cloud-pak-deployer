@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show analytics engine instance
+  debug:
     var: analyticsengine_instance
 
 - name: "Check if the analyticsengine instance {{ analyticsengine_instance.name }} is already running"
@@ -9,7 +10,8 @@
 - set_fact:
     analyticsengine_instance_lookup_result_json: "{{ analyticsengine_instance_lookup_result.stdout | from_json }}"
 
-- debug:
+- name: Determine if AnalyticsEngine instance already exists
+  debug:
     msg: "AnalyticsEngine instance {{ analyticsengine_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_analytics_instance"
   when: "not analyticsengine_instance_lookup_result_json.total_count == 0"
 
@@ -42,10 +44,12 @@
     - set_fact:
         create_analyticsengine_instance_result_json: "{{ create_analyticsengine_instance_result.stdout | from_json }}"
 
-    - debug:
+    - name: Show analytics engine storage instance result
+      debug:
         msg: "{{ create_analyticsengine_storage_instance_result_json}}"
 
-    - debug:
+    - name: Show analytics engine instance result
+      debug:
         msg: "{{ create_analyticsengine_instance_result_json}}"
 
     - set_fact:

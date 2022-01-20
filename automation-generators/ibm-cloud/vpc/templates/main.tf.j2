@@ -1,3 +1,5 @@
+{% if (generator.attributes.managed | default(True)) %}
+
 resource "ibm_is_vpc" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.name}}"
     resource_group = data.ibm_resource_group.thisresourcegroup.id
@@ -35,3 +37,17 @@ resource "ibm_is_security_group_rule" "{{generator.attributes.name | replace("-"
 }
 
 {% endfor %}
+
+{% endif %}
+
+# Extra data element so we can always refer to it from other objects
+
+data "ibm_is_vpc" "{{generator.attributes.name | replace("-", "_") }}" {
+    name = "{{generator.attributes.name}}"
+{% if (generator.attributes.managed | default(True)) %}
+    depends_on = [
+        ibm_is_vpc.{{generator.attributes.name | replace("-", "_") }}
+    ]
+{% endif %}
+}
+

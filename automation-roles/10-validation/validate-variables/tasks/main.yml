@@ -6,28 +6,26 @@
       - vault_authentication_type is defined
       - cloud_platform is defined
 
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - ibmcloud_api_key is defined
-  when: cloud_platform == 'ibm-cloud'
-
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - azure_location is defined
-  when: cloud_platform == 'azure'
-
-- debug:
-    msg: "{{ vars }}"
-
-- debug:
-    msg: "{{ cloud_platform }}"
-
-- set_fact:
-    vault_api_key: "{{ ibmcloud_api_key }}"
-  when: cloud_platform == 'ibm-cloud'
-
 - name: Validate cloud_platform is supported
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
+
+- include_tasks: ibmcloud-validate-variables.yml
+  when:
+    - cloud_platform == 'ibm-cloud'
+
+- include_tasks: vsphere-validate-variables.yml
+  when:
+    - cloud_platform == 'vsphere'
+
+- include_tasks: existing-ocp-validate-variables.yml
+  when:
+    - cloud_platform == 'existing-ocp'
+
+- include_tasks: aws-validate-variables.yml
+  when:
+    - cloud_platform == 'aws'
+
+- include_tasks: azure-validate-variables.yml
+  when:
+    - cloud_platform == 'azure'

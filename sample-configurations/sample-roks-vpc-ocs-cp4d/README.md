@@ -15,7 +15,7 @@ The sample configuration is made up of 3 availability zones, each with its own a
 All zones have a single subnet which spans the entire IP address block.
 
 ## OpenShift
-An OpenShift cluster with the specified version (4.6) is provisioned inside the VPC and across subnets 1, 2 and 3 and with OpenShift Container Storage (OpenShift Data Foundation) on 3 dedicated storage/worker nodes. As part of the OCS provisioning, 2 storage classes are created: `ocs-storagecluster-cephfs` for file storage and `ocs-storagecluster-ceph-rbd` for block storage.
+An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC and across subnets 1, 2 and 3 and with OpenShift Container Storage (OpenShift Data Foundation) on 3 dedicated storage/compute nodes. As part of the OCS provisioning, 2 storage classes are created: `ocs-storagecluster-cephfs` for file storage and `ocs-storagecluster-ceph-rbd` for block storage.
 
 ## Cloud Pak for Data
 Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the IBM entitled registry and referencing the OCS storage class in OpenShift.

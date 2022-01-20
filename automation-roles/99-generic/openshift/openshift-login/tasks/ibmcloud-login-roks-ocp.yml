@@ -1,35 +1,59 @@
 ---
 
-- name: Login to IBM Cloud
-  include_role:
-    name: login-ibmcloud
+- name: Check if the OpenShift context {{ _p_openshift_cluster_name }} already exists
+  shell:
+    oc config use-context {{ _p_openshift_cluster_name }}
+  register: _oc_use_context
+  failed_when: false
 
-- name: Validate if the OpenShift cluster {{ openshift_cluster_name }} exists
-  command: "ibmcloud oc cluster get -c {{ openshift_cluster_name }} --output json"
-  register: ibmcloud_oc_cluster_result_json
+- name: Check if we can use OpenShift context
+  shell:
+    oc cluster-info
+  register: _oc_cluster_info
+  when: _oc_use_context.rc == 0
+  failed_when: false
 
-- set_fact:
-    ibmcloud_oc_cluster: "{{ ibmcloud_oc_cluster_result_json.stdout | from_json }}"
+- name: Log in to IBM Cloud and OpenShift when not connected to OpenShift
+  block:
+    - name: Login to IBM Cloud
+      include_role:
+        name: login-ibmcloud
 
-- debug:
-    msg: "{{ ibmcloud_oc_cluster }}"
+    - name: Validate if the OpenShift cluster {{ _p_openshift_cluster_name }} exists
+      command: "ibmcloud oc cluster get -c {{ _p_openshift_cluster_name }} --output json"
+      register: ibmcloud_oc_cluster_result_json
 
-- set_fact:
-    roks_publicEndpoint: "{{ ibmcloud_oc_cluster.serviceEndpoints.publicServiceEndpointURL | 
-      default(ibmcloud_oc_cluster.publicServiceEndpointURL) }}"
+    - set_fact:
+        ibmcloud_oc_cluster: "{{ ibmcloud_oc_cluster_result_json.stdout | from_json }}"
 
-- debug:
-    msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
+    - name: Show results from ibmcloud oc cluster command
+      debug:
+        msg: "{{ ibmcloud_oc_cluster }}"
 
-- name: Set terminal context for OpenShift cluster {{ openshift_cluster_name }}
-  command: "ibmcloud oc cluster config -c {{ openshift_cluster_name }}  --admin"
+    - set_fact:
+        roks_publicEndpoint: "{{ ibmcloud_oc_cluster.serviceEndpoints.publicServiceEndpointURL | 
+          default(ibmcloud_oc_cluster.publicServiceEndpointURL) }}"
 
-- name: Login to OpenShift ROKS cluster
-  command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}"
-  register: oc_login_result
-  retries: 60
-  delay: 10
-  until: oc_login_result.rc==0
+    - name: Show ROKS public endpoint
+      debug:
+        msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
 
-- debug:
-    msg: "{{ oc_login_result }}"
+    - name: Set terminal context for OpenShift cluster {{ _p_openshift_cluster_name }}
+      command: "ibmcloud oc cluster config -c {{ _p_openshift_cluster_name }}  --admin"
+
+    - name: Login to OpenShift ROKS cluster
+      command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}"
+      register: oc_login_result
+      retries: 60
+      delay: 10
+      until: oc_login_result.rc==0
+
+    - name: Rename current context to {{ _p_openshift_cluster_name }}
+      shell: |
+        oc config delete-context {{ _p_openshift_cluster_name }} || true
+        oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+
+    - name: Show OpenShift login result
+      debug:
+        msg: "{{ oc_login_result }}"
+  when: _oc_use_context.rc != 0 or _oc_cluster_info.rc != 0

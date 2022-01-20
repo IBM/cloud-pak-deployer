@@ -3,13 +3,19 @@ title: Run on IBM Cloud
 tabs:
   [
     "Run on IBM Cloud",
-    "Run on Microsoft Azure (ARO)",
     "Run on vSphere",
+    "Run on AWS",
+    "Run on Microsoft Azure (ARO)",
     "Run on existing OpenShift",
   ]
 ---
 
 # Running the Cloud Pak Deployer on IBM Cloud
+
+## Topology
+
+A typical setup of the ROKS cluster on IBM Cloud VPC is pictured below:
+![ROKS configuration](sample-roks-vpc-ocs-cp4d.png)
 
 ## Create an IBM Cloud API Key
 
@@ -66,6 +72,14 @@ export CONFIG_DIR=/data/config/sample
   configuration directories).
 </InlineNotification>
 
+## Optional: validate the configuration
+
+If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
+
+```
+./cp-deploy.sh env apply -e env_id=pluto-01 --check-only
+```
+
 ## Run the Cloud Pak Deployer
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
@@ -74,7 +88,7 @@ To run the container using a local configuration input directory and a data dire
 ./cp-deploy.sh env apply -e env_id=pluto-01 -e ibm_cloud_region=eu-gb
 ```
 
-For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. Also, the default `ibm_cloud_region` as configured in the inventory file (under the `inventory` directory) is overridden by `eu-gb`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
 
 When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
 
@@ -92,9 +106,26 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ./cp-deploy.sh env kill
 ```
 
+## On failure
+
+If the Cloud Pak Deployer fails, for example because certain infrastructure components are temporarily not available, fix the cause if needed and then just re-run it with the same `CONFIG_DIR` and `STATUS_DIR` as well extra variables. The provisioning process has been designed to be idempotent and it will not redo actions that have already completed successfully.
+
 ## Finishing up
 
-Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified. The `admin` password can be retrieved from the vault as follows:
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
+
+To retrieve the Cloud Pak URL(s):
+
+```
+cat $STATUS_DIR/cloud-paks/*
+```
+
+This will show the Cloud Pak URLs:
+
+```output
+Cloud Pak for Data URL for cluster pluto-01 and project zen-40:
+https://cpd-zen-40.fke16h-a939e0e6a37f1ce85dbfddbb7ab97418-0000.eu-de.containers.appdomain.cloud
+```
 
 List the secrets in the vault:
 
@@ -121,6 +152,6 @@ You can then retrieve the Cloud Pak for Data admin password like this:
 
 ```output
 PLAY [Secrets] *****************************************************************
-included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
+included: /cloud-pak-deployer/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```

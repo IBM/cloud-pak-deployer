@@ -8,6 +8,7 @@
   vars:
     ansible_callback_diy_runner_on_skipped_msg: ""
     ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
     - name: Provision infrastructure using Terraform
@@ -22,6 +23,14 @@
       loop_control:
         loop_var: _current_openshift_cluster
       when: cloud_platform == 'vsphere'
+
+    - name: Provision OpenShift on AWS
+      include_role:
+        name: provision-aws
+      loop: "{{ all_config.openshift | default([]) }}"
+      loop_control:
+        loop_var: _current_openshift_cluster
+      when: cloud_platform == 'aws'
 
     - name: Provision Azure ARO using Terraform
       include_role:

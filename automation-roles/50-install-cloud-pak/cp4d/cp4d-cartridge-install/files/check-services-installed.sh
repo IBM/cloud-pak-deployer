@@ -27,10 +27,19 @@ log() {
 
 log "----"
 log "Info: Cartridges to be checked: $(echo $cartridges | jq -r .)"
-log "Info: Defined cartridges (cartridge_cr): $(echo $cartridge_cr | jq -r .)"
+# log "Info: Defined cartridges (cartridge_cr): $(echo $cartridge_cr | jq -r .)"
 
 for c in $(echo $cartridges | jq -r '.[].name');do
-  log "Checking cartridge $c" 
+  log "Checking cartridge $c"
+
+  # Check state of cartridge
+  cartridge_state=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .state')
+  log "Cartridge state: $cartridge_state"
+  if [[ "$cartridge_state" == "removed" ]];then
+    log "Cartridge $c has been defined as removed"
+    continue
+  fi
+  
   cr_cr=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
   cr_name=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
   cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
@@ -40,6 +49,12 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   # Check if cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
     log "Warning: Cartridge $c does not have a definition in object cartridges_cr, it will not be counted."
+    continue
+  fi
+
+  # Check if cartridge has been defined
+  if [[ "$cr_status_attribute" == "null" ]] || [[ "$cr_status_attribute" == "" ]];then
+    log "Warning: Cartridge $c does not have a completion status attribute in cartridges_cr, it will not be counted."
     continue
   fi
 

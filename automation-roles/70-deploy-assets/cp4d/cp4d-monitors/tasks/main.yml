@@ -1,0 +1,29 @@
+---
+- name: Deploying monitors for Cloud Pak for Data
+  debug:
+    msg: "Deploying Monitors for CP4D cluster {{ current_cp4d_cluster.project }}"
+
+- when: all_config.cp4d_monitors is defined
+  block:
+    - name: "Get all cp4d_monitors current CP4D cluster {{ current_cp4d_cluster.project }} and OpenShift cluster name {{ current_cp4d_cluster.openshift_cluster_name }}"
+      set_fact:
+        _cp4d_monitors: "{{ all_config.cp4d_monitors | json_query(monitors_current_cluster) | default([]) }}"
+      vars:
+        monitors_current_cluster: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+
+    - name: Make a temporary work folder available
+      tempfile:
+        path: "{{status_dir}}/cp4d"
+        state: directory
+      register: _cloud_pak_service_monitor_dir
+
+    - name: "Loop through each cp4d_monitor of CP4D cluster {{ current_cp4d_cluster.project }}"
+      include_tasks: cp4d-monitors.yml
+      loop: "{{ _cp4d_monitors | default([]) }}"
+      loop_control:
+        loop_var: _monitors
+
+    - name: Delete temporary directory 
+      file:
+        state: absent
+        path: "{{ _cloud_pak_service_monitor_dir.path }}"

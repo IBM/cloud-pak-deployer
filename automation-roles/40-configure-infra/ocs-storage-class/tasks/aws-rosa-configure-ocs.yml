@@ -1,0 +1,99 @@
+---
+- name: Get current storage class
+  debug:
+    var: current_openshift_storage
+
+- name: List machinepools for cluster {{ _current_openshift_cluster.name }} to check for existence
+  shell: |
+    rosa list machinepool --cluster {{ _current_openshift_cluster.name }} \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _rosa_list_machinepool
+  failed_when: false
+
+- name: Show output of list machinepool
+  debug:
+    var: _rosa_list_machinepool
+
+- name: Get details for machinepool {{ current_openshift_storage.storage_name }}
+  set_fact:
+    _ocs_machine_pool: "{{ _rosa_list_machinepool.stdout | from_json | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?id=='{{ current_openshift_storage.storage_name }}']
+
+- name: Create machinepool if it doesn't exist yet
+  block:
+
+    - name: Create machinepool {{ current_openshift_storage.storage_name }}
+      shell: |
+        rosa create machinepool --name {{ current_openshift_storage.storage_name }} \
+          --cluster {{ _current_openshift_cluster.name }} \
+          --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+          --instance-type m5.4xlarge \
+          --replicas 3 \
+          --taints 'node.ocs.openshift.io/storage=true:NoSchedule' \
+          --labels 'node-role.kubernetes.io/storage=,cluster.ocs.openshift.io/openshift-storage='
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+      register: _rosa_create_machinepool
+
+    - name: Show output of create machinepool
+      debug:
+        var: _rosa_create_machinepool
+
+  when: _ocs_machine_pool == {}
+
+- name: Wait for 3 machines to be added to the cluster and become available
+  shell: |
+    oc get machines -n openshift-machine-api \
+      -l  machine.openshift.io/cluster-api-machine-role=ocs-storage --no-headers |
+    grep -i "running" | \
+    wc -l
+  register: _available_machines
+  retries: 120
+  delay: 60
+  until: _available_machines.stdout == "3"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Install OCS operator
+  include_tasks: install-ocs-operator.yml
+
+- name: Check if StorageCluster ocs-storagecluster already exists
+  command: |
+    oc get StorageCluster -n openshift-storage ocs-storagecluster
+  failed_when: False
+  register: _ocs_cluster_exists
+
+- name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
+  template:
+    src: aws-ocs-storagecluster.j2
+    dest: "{{ status_dir }}/openshift/aws-ocs-storagecluster.yaml"
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Create OCS StorageCluster
+  shell: |
+    oc apply -f "{{ status_dir }}/openshift/aws-ocs-storagecluster.yaml"
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Wait until StorageCluster custom resource is ready
+  shell: |
+    oc get storagecluster -n openshift-storage ocs-storagecluster -o yaml
+  register: _ocs_storage_cluster
+  failed_when: False
+  retries: 60
+  delay: 30
+  until: ((_ocs_storage_cluster.stdout | from_yaml).status.phase | default("") | lower) == "ready"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

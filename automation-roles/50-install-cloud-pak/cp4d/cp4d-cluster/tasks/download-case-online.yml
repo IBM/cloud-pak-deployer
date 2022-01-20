@@ -3,30 +3,31 @@
 # Find the latest version
 # curl -s -X GET https://api.github.com/repos/IBM/cloud-pak/contents/repo/case/ibm-cp-datacore | jq -r '.[] | select(.name|test("^[0-9].*")) | .name'
 
-- name: Get the CASE details for cartridge {{ current_cp4d_cartridge.name }}
-  set_fact:
-    current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?name=='{{ current_cp4d_cartridge.name }}']
+# Create CR if cartridge state is installed
+- block:
+  - name: Get the CASE details for cartridge {{ current_cp4d_cartridge.name }}
+    set_fact:
+      _current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?name=='{{ current_cp4d_cartridge.name }}']
 
-- fail:
-    msg: Case file details for cartridge {{ current_cp4d_cartridge.name }} not found
-  when: current_case_inventory=={}
+  - name: Fail if the case file details for the cartridge cannot be found
+    fail:
+      msg: Case file details for cartridge {{ current_cp4d_cartridge.name }} not found
+    when: _current_case_inventory=={}
 
-- name: Save Cloud Pak for Data operator case file {{ case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}
-  shell: |
-    cloudctl case save \
-      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}.tgz \
-      --outputdir {{ case_dir }} \
-      --no-dependency
-  when:  
-  - current_cp4d_cartridge.name == "lite"
+  - set_fact:
+      _dependency: ""
 
-- name: Save case file {{ case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}
-  shell: |
-    cloudctl case save \
-      --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}.tgz \
-      --outputdir {{ case_dir }} 
-  when:  
-  - current_cp4d_cartridge.name != "lite"
+  - set_fact:
+      _dependency: "--no-dependency"
+    when:  
+    - current_cp4d_cartridge.name == "lite"
+
+  - name: Save case file {{ _current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}
+    shell: |
+      cloudctl case save \
+        --case {{ case_github_url }}/{{ _current_case_inventory.search_string }}-{{ current_cp4d_cartridge.case_version }}.tgz \
+        --outputdir {{ case_dir }} {{ _dependency }}
+  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'

@@ -1,5 +1,6 @@
 ---
-- debug:
+- name: Show current CP4D connection
+  debug:
     msg: "{{ cp4d_connection }}"
 
 - name: Validate if the connection to the'{{ cp4d_connection.name }}' is available
@@ -30,7 +31,8 @@
   vars:
     query: "[?entity.name=='{{ cp4d_database_connection_type }}'].metadata.asset_id"        
 
-- fail:
+- name: Fail if an invalid database type was speciied for a Cloud Pak for Data connection
+  fail:
     msg: "cp4d_connection.database_type set to {{ cp4d_database_connection_type }}, which is not a recognized database type in Cloud Pak for Data"
   when: "cp4d_datasource_type_asset_id|length == 0"
 
@@ -64,7 +66,8 @@
 #Create a new Resource
 - when: "cp4d_connection_existing_result_json.resources|length == 0"
   block:
-    - debug:
+    - name: Create new data source connection
+      debug:
         msg: "Create {{ cp4d_database_name }} as a new resource"
 
     - name: Create Datasource connection json file
@@ -79,12 +82,14 @@
     - set_fact:
         create_db_connection_result_json: "{{ create_db_connection_result.stdout | from_json }}"
 
-    - fail:
+    - name: Fail if a database source could not be created
+      fail:
         msg: "Error creating database source {{ cp4d_connection.name }}: {{ create_db_connection_result_json }}"
       when: create_db_connection_result_json.errors is defined
 
-- fail:
-    msg: "Found more than 1 occurance of resource {{ cp4d_database_name }}. Unable to determine which resource to validate. "
+- name: Fail if more than 1 occurrence of the database was found
+  fail:
+    msg: "Found more than 1 occurence of resource {{ cp4d_database_name }}. Unable to determine which resource to validate. "
   when: "cp4d_connection_existing_result_json.resources|length > 1"
 
 #Update Existing Resource
@@ -108,12 +113,14 @@
 
     - when: "connection_patch_changes_json|length == 0"
       block:
-        - debug:
+        - name: No changes made to connection
+          debug:
             msg: "No changes to Resource {{ cp4d_connection.name }} made, no patch required"
 
     - when: "connection_patch_changes_json|length > 0"
       block:
-        - debug:
+        - name: Updating existing connection
+          debug:
             msg: "Update {{ cp4d_connection.name }} resource"
 
         - name: Delete existing {{ cp4d_database_name }}
@@ -132,7 +139,8 @@
         - set_fact:
             create_db_connection_result_json: "{{ create_db_connection_result.stdout | from_json }}"
 
-        - fail:
+        - name: Fail if the database source for the connection could not be updated
+          fail:
             msg: "Error updating database source {{ cp4d_connection.name }}: {{ create_db_connection_result_json }}"
           when: create_db_connection_result_json.errors is defined
 

@@ -34,7 +34,10 @@ For IBM Cloud, the following object types are supported:
 - [address_prefix](#ibm-cloud-address_prefix)
 - [subnet](#ibm-cloud-subnet)
 - [vsi](#ibm-cloud-vsi)
+- [transit_gateway](#ibm-cloud-transit_gateway)
 - [nfs_server](#ibm-cloud-nfs_server)
+- [serviceid](#serviceid)
+- [cos](#cos)
 
 ### IBM Cloud `provider`
 
@@ -117,6 +120,12 @@ vpc:
 
 #### Property explanation
 
+| Property      | Description                                                                                                                                                              | Mandatory | Allowed values            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ------------------------- |
+| name          | Name of the Virtual Private Cloud                                                                                                                                        | Yes       |                           |
+| managed       | Controls whether the VPC is managed. The default is `True`. Only set to `False` if the VPC is not managed but only referenced by other objects such as transit gateways. | No        | True (default), False     |
+| allow_inbound | Security rules which are allowed for inbound traffic                                                                                                                     | No        | Existing `security_rule`s |
+
 | Property      | Description                                          | Mandatory | Allowed values            |
 | ------------- | ---------------------------------------------------- | --------- | ------------------------- |
 | name          | Name of the Virtual Private Cloud                    | Yes       |                           |
@@ -152,7 +161,7 @@ Defines the zones used within the VPC, along with the subnet the addresses will 
 
 ### IBM Cloud `subnet`
 
-Defines the subnet that Virtual Server Intances and ROKS workers will be attached to.
+Defines the subnet that Virtual Server Instances and ROKS compute nodes will be attached to.
 
 ```
 subnet:
@@ -205,6 +214,28 @@ vsi:
 | infrastructure.public_ip            | Must a public IP address be attached to this VSI?         | No                        | False (default), True                       |
 | infrastructure.vpc_name             | Virtual Private Cloud this VSI belongs to                 | Yes, inferred from subnet |                                             |
 | infrastructure.zone                 | Zone the VSI will be plaed into                           | Yes, inferred from subnet |                                             |
+
+### IBM Cloud `transit_gateway`
+
+Connects one or more VPCs to each other.
+
+```
+transit_gateway:
+- name: sample-tgw
+  location: eu-de
+  connections:
+  - vpc: other-vpc
+  - vpc: sample
+```
+
+#### Property explanation
+
+| Property       | Description                                                                                                                                                                                                                            | Mandatory | Allowed values |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | -------------- |
+| name           | Name of the transit gateway                                                                                                                                                                                                            | Yes       |                |
+| location       | IBM Cloud location of the transit gateway                                                                                                                                                                                              | Yes       |                |
+| connections    | Defines which VPCs must be included in the transit gateway                                                                                                                                                                             | Yes       |                |
+| connection.vpc | Defines the VPC to include. Every VPC must exist in the configuration, even if not managed by this configuration. When referencing an existing VPC, make sure that there is a `vpc` object of that name with `managed` set to `False`. | Yes       | Existing `vpc` |
 
 ### IBM Cloud `nfs_server`
 
@@ -315,6 +346,62 @@ azure_aro:
 | worker.vm.disk_size_gb         | Disk size in GBs of the worker nodes virtual machine                              | Yes       | minimum value is 128                                                                                                                                         |
 | worker.vm.count                | Number of worker nodes virtual machines                                           | Yes       | minimum value is 3                                                                                                                                           |
 
+### `serviceid`
+
+Defines a iam_service_id that can be granted several role based accesss right via attaching iam_policies to it.
+
+```
+serviceid:
+- name: sample-serviceid
+  description: to access ibmcloud services from external
+  servicekeys:
+  - name: primarykey
+```
+
+#### Property explanation
+
+| Property         | Description                                                               | Mandatory | Allowed values |
+| ---------------- | ------------------------------------------------------------------------- | --------- | -------------- |
+| name             | Name of the serviceid                                                     | Yes       |                |
+| description      | short description of the serviceid                                        | No        |                |
+| servicekeys      | collection of servicekeys that should be created for the parent serviceid | No        |                |
+| servicekeys.name | Name of the servicekey                                                    | Yes       |                |
+
+### `cos`
+
+Defines a Cloud Object Storage instance and allows to create buckets.
+
+```
+cos:
+- name: mwdev-cos
+  plan: standard
+  location: global
+  serviceids:
+  - name: mwdev-cos-serviceid
+    roles: ["Manager", "Viewer", "Administrator"]
+  buckets:
+  - name: bucketone6c9d6840
+    cross_region_location: eu
+```
+
+#### Property explanation
+
+| Property                        | Description                                                                                           | Mandatory                                    | Allowed values                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| name                            | Name of the serviceid                                                                                 | Yes                                          |                                                                                                      |
+| plan                            | short description of the serviceid                                                                    | Yes                                          |                                                                                                      |
+| location                        | collection of servicekeys that should be created for the parent serviceid                             | Yes                                          |                                                                                                      |
+| serviceids                      | Collection of references to defined seriveids                                                         | No                                           |                                                                                                      |
+| serviceids.name                 | Name of the serviceid                                                                                 | Yes                                          |                                                                                                      |
+| serviceids.roles                | An array of strings to define which role should be granted to the serviceid                           | Yes                                          |                                                                                                      |
+| buckets                         | Collection of buckets that should be created inside the cos instance                                  | No                                           |                                                                                                      |
+| buckets[].name                  | Collection of buckets that should be created inside the cos instance                                  | No                                           |                                                                                                      |
+| buckets[].storage_class         | No                                                                                                    | standard (default), vault, cold, flex, smart |
+| buckets[].endpoint_type         | No                                                                                                    | public (default), private                    |
+| buckets[].cross_region_location | If you use this parameter, do not set single_site_location or region_location at the same time.       | Yes (one of)                                 | us, eu, ap                                                                                           |
+| buckets[].region_location       | If you set this parameter, do not set single_site_location or cross_region_location at the same time. | Yes (one of)                                 | au-syd, eu-de, eu-gb, jp-tok, us-east, us-south, ca-tor, jp-osa, br-sao                              |
+| buckets[].single_site_location  | If you set this parameter, do not set region_location or cross_region_location at the same time.      | Yes (one of)                                 | ams03, che01, hkg02, mel01, mex01, mil01, mon01, osl01, par01, sjc04, sao01, seo01, sng01, and tor01 |
+
 ## vSphere
 
 For vSphere, the following object types are supported:
@@ -354,15 +441,15 @@ vsphere:
 
 ### vSphere `vm_definition`
 
-Defines the virtual machine properties to be used for the masters and workers.
+Defines the virtual machine properties to be used for the control-plane nodes and compute nodes.
 
 ```
 vm_definition:
-- name: master
+- name: control-plane
   vcpu: 8
   memory_mb: 32768
   boot_disk_size_gb: 100
-- name: worker
+- name: compute
   vcpu: 16
   memory_mb: 65536
   boot_disk_size_gb: 200

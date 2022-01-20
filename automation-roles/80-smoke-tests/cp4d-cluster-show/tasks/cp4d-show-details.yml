@@ -15,7 +15,18 @@
       -o jsonpath="{.items[0].spec.host}"
   register: cp4d_url
 
-- debug:
+- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Store Cloud Pak for Data URL into log file
+  copy:
+    content: "Cloud Pak for Data URL for cluster {{ current_cp4d_cluster.openshift_cluster_name }} and project {{ current_cp4d_cluster.project }}: \nhttps://{{ cp4d_url.stdout }}\n"
+    dest: "{{ status_dir }}/cloud-paks/cp4d-{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}.url"
+
+- name: Show Cloud Pak for Data URL and admin password
+  debug:
     msg: 
     - "CP4D URL: https://{{ cp4d_url.stdout }}"
     - "CP4D admin password: {{ secret_value }}"

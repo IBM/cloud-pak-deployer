@@ -1,0 +1,28 @@
+---
+- name: Retrieve logging_output entry for the current cluster-wide configuration
+  set_fact:
+    _openshift_logging_output: "{{ _p_openshift_logging.logging_output | json_query(query) | first | default({}) }}"
+  vars:
+    query: "[?name=='{{ _current_cluster_wide_logging.logging_name }}']"
+
+- name: Show current logging_output object
+  debug:
+    var: _openshift_logging_output
+
+- name: Fail if logging_output entry was not found
+  fail:
+    msg: "No openshift_logging.logging_output entry was found for logging name {{ _current_cluster_wide_logging.logging_name }}"
+  when: _openshift_logging_output=={}
+
+- debug:
+    msg: "{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') }}"
+
+# Add pipeline, taking the following into account:
+# - If no .spec.pipeline[] is there yet, it will be defined (empty)
+# - If the pipeline with the same name already exists, it is first deleted
+# - The new pipeline is added
+- name: Add pipeline to ClusterLogForwarder
+  shell: |
+    oc get -n openshift-logging clusterlogforwarder/instance -o json | \
+      jq '.spec.pipelines += [] | del(.spec.pipelines[] | select(.name=="{{ _p_openshift_logging.openshift_cluster_name }}-{{ _current_cluster_wide_logging.input }}"))' | jq '.spec.pipelines += [{{ lookup('template','cluster-wide-clusterlogforwarder-pipeline.j2') | to_json }}]' | \
+    oc apply -f -
