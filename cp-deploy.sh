@@ -20,6 +20,7 @@ command_usage() {
   echo "    destroy                 Destroy an existing environment"
   echo "    logs                    Show (tail) the logs of the apply/destroy process"
   echo "    command,cmd             Opens a shell environment to run commands such as the OpenShift client (oc)"
+  echo "    wizard                  Start the Cloud Pak Deployer Wizard Web UI"
   echo "    kill                    Kill the current apply/destroy process"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
@@ -77,7 +78,9 @@ if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
 if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
 
-if [ -f /run/.containerenv ];then
+# Check if the command is running inside a container. This means that the command should not start docker or podman
+# but run the Ansible automation directly.
+if [ -f /run/.containerenv ] || [ -f /.dockerenv ];then
   INSIDE_CONTAINER=true
 else
   INSIDE_CONTAINER=false
@@ -130,6 +133,10 @@ environment)
     command_usage 0
     ;;
   apply|destroy)
+    shift 1
+    ;;
+  wizard|webui)
+    export ACTION="wizard"
     shift 1
     ;;
   logs|kill)
@@ -501,21 +508,35 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [ "${CONFIG_DIR}" == "" ]; then
-  echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
-  exit 1
+if [[ "${ACTION}" != "wizard"  && "${ACTION}" != "kill" ]]; then
+  if [ "${CONFIG_DIR}" == "" ]; then
+    echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}" ]; then
+    echo "config directory ${CONFIG_DIR} not found."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}/config" ]; then
+    echo "config directory not found in directory ${CONFIG_DIR}."
+    exit 1
+  fi
+  if [ ! -d "${CONFIG_DIR}/inventory" ]; then
+    echo "inventory directory not found in directory ${CONFIG_DIR}."
+    exit 1
+  fi
 fi
-if [ ! -d "${CONFIG_DIR}" ]; then
-  echo "config directory ${CONFIG_DIR} not found."
-  exit 1
-fi
-if [ ! -d "${CONFIG_DIR}/config" ]; then
-  echo "config directory not found in directory ${CONFIG_DIR}."
-  exit 1
-fi
-if [ ! -d "${CONFIG_DIR}/inventory" ]; then
-  echo "inventory directory not found in directory ${CONFIG_DIR}."
-  exit 1
+
+# Validate if the status directory exists
+if [[ "${ACTION}" != "wizard" ]]; then
+  if [ "${STATUS_DIR}" == "" ]; then
+    echo "Status directory must be specified using the STATUS_DIR environment variable or the --status-dir parameter."
+    exit 1
+  fi
+  if [ ! -d "${STATUS_DIR}" ]; then
+    echo "Status directory ${STATUS_DIR} not found."
+    exit 1
+  fi
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -554,29 +575,19 @@ if $CPD_DEVELOP;then
   sleep 0.5
 fi
 
-# Ensure status directory exists
-if [ -z $STATUS_DIR ];then
-  export STATUS_DIR=$(mktemp -d)
-  echo "Status directory not specified, setting to $STATUS_DIR" >&2
-fi
-mkdir -p $STATUS_DIR
-
-# Ensure vault secret file exists
-if [ ! -z $VAULT_SECRET_FILE ];then
-  touch ${VAULT_SECRET_FILE}
-fi
-
 # Check if a container is currently running for this status directory
 CURRENT_CONTAINER_ID=""
 ACTIVE_CONTAINER_ID=""
 if ! $INSIDE_CONTAINER;then
-  if [ -f ${STATUS_DIR}/pid/container.id ];then
-    CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
-    ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-    # If container ID was found, check if it is currently running
-    if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
-      if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
-        ACTIVE_CONTAINER_ID=""
+  if [ "${STATUS_DIR}" != "" ];then
+    if [ -f ${STATUS_DIR}/pid/container.id ];then
+      CURRENT_CONTAINER_ID=$(cat ${STATUS_DIR}/pid/container.id)
+      ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
+      # If container ID was found, check if it is currently running
+      if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
+        if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+          ACTIVE_CONTAINER_ID=""
+        fi
       fi
     fi
   fi
@@ -584,7 +595,7 @@ fi
 
 # If trying to apply or destroy for an active container, just display the logs
 if ! $INSIDE_CONTAINER;then
-  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" ]];then
     if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
       echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
       echo "Showing the logs of the currently running container ${ACTIVE_CONTAINER_ID}"
@@ -629,15 +640,20 @@ if ! $INSIDE_CONTAINER;then
   run_cmd="${CONTAINER_ENGINE} run"
 
   # If running "environment" subcommand with apply or destroy, run as daemon
-  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" ]];then
     run_cmd+=" -d"
   fi
 
   run_cmd+=" --cap-add=IPC_LOCK"
 
-  run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
+  if [ "${STATUS_DIR}" != "" ];then
+    run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
+  fi
 
-  if [ ! -z $CONFIG_DIR ];then run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z";fi
+  if [ "${CONFIG_DIR}" != "" ];then
+    run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z"
+  fi
+
   if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer:Z";fi
 
   run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
@@ -696,17 +712,21 @@ if ! $INSIDE_CONTAINER;then
 
   if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "command" ]];then
     run_cmd+=" -ti --entrypoint /cloud-pak-deployer/docker-scripts/env-command.sh"
+  elif [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "wizard" ]];then
+    run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/container-webui.sh"
+    run_cmd+=" -p 32080:32080"
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
   run_cmd+=" cloud-pak-deployer"
 
   # If running "environment" subcommand with apply/destroy, follow log
-  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" ]];then
+  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" ]];then
     CURRENT_CONTAINER_ID=$(eval $run_cmd)
     ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
-    mkdir -p ${STATUS_DIR}/pid
-    echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+    if [ "${STATUS_DIR}" != "" ];then
+      echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
+    fi
     run_env_logs
     PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
   else
@@ -716,5 +736,14 @@ if ! $INSIDE_CONTAINER;then
 
   exit $PODMAN_EXIT_CODE
 else
+  # Export extra variables
+  if [ ${#arrExtraKey[@]} -ne 0 ];then
+    for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
+      echo "Extra parameters ($i): ${arrExtraKey[$i]}=${arrExtraValue[$i]}"
+      export ${arrExtraKey[$i]}="${arrExtraValue[$i]}"
+    done
+    export EXTRA_PARMS="${arrExtraKey[*]}"
+    echo $EXTRA_PARMS
+  fi
   . /cloud-pak-deployer/docker-scripts/run_automation.sh
 fi
