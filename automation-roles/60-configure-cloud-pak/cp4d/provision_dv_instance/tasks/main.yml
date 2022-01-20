@@ -12,15 +12,17 @@
       debug:
         msg: "Catridge DV has no instances specified, skipping provisioning Data Virtualization instance"
 
-- when: "not dv_cartridge.instances | length == 1"
+- when: 
+    - dv_cartridge.instances is defined
+    - (dv_cartridge.instances | length) != 1
   block:
     - name: "Incorrect number of Data Virtualization instances, expect 1"
       debug:
         msg: "Catridge DV can only has 1 instance, found {{ dv_cartridge.instances | length }}. Skip provisioning Data Virtualization"
 
 - when: 
-    - "dv_cartridge.instances is defined"
-    - "dv_cartridge.instances | length == 1"
+    - dv_cartridge.instances is defined
+    - (dv_cartridge.instances | length) == 1
   block:
 
     - set_fact:
