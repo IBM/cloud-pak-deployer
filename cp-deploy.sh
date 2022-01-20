@@ -527,14 +527,10 @@ if [[ "${ACTION}" != "wizard"  && "${ACTION}" != "kill" ]]; then
   fi
 fi
 
-# Validate if the status directory exists
+# Validate if the status has been set
 if [[ "${ACTION}" != "wizard" ]]; then
   if [ "${STATUS_DIR}" == "" ]; then
     echo "Status directory must be specified using the STATUS_DIR environment variable or the --status-dir parameter."
-    exit 1
-  fi
-  if [ ! -d "${STATUS_DIR}" ]; then
-    echo "Status directory ${STATUS_DIR} not found."
     exit 1
   fi
 fi
@@ -573,6 +569,11 @@ fi
 if $CPD_DEVELOP;then
   echo "Warning: CPD_DEVELOP was specified. Current directory $(pwd) will be used for automation script !!!"
   sleep 0.5
+fi
+
+# Ensure status directory exists
+if [ "$STATUS_DIR" != "" ];then
+  mkdir -p $STATUS_DIR
 fi
 
 # Check if a container is currently running for this status directory
