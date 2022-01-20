@@ -31,7 +31,8 @@
       secret_name: "{{ environment_name }}-terraform-tfstate"
       secret_group: "{{ environment_name }}"
 
-  - fail:
+  - name: Check that terraform state has been found in the vault
+    fail:
       msg: "No Terraform state found in secret {{ environment_name }}/{{ environment_name }}-terraform-tfstate"
     when: "secret_value | trim | length == 0"
 
@@ -54,7 +55,8 @@
 
   # If there are no changes, terraform plan will return with exit code 2 (as per -detailed-exitcode)
   # Subsequent steps are skipped if no changes were planned
-  - debug:
+  - name: Determine if destroy must be skipped if no changes were detected
+    debug:
       msg: "No changes were detected in the planning phase, destroy will be skipped and tfstate secret will not be updated"
     when: "terraform_plan_result.rc == 0"
 
@@ -65,14 +67,16 @@
   - set_fact:
       destroy_result: "{{ plan_log['content'] | b64decode | regex_search('([0-9]+) to destroy', '\\1') }}"
 
-  - debug:
+  - name: Show destroy results
+    debug:
       var: destroy_result
 
   - set_fact:
       number_to_destroy: "{{ destroy_result | first }}"
     when: destroy_result != ''
 
-  - debug:
+  - name: Show number of artifacts to destroy
+    debug:
       var: number_to_destroy
     when: number_to_destroy is defined
 
@@ -104,7 +108,8 @@
     when: 
     - terraform_plan_result.rc != 0
 
-  - fail:
+  - name: Fail if there were errors in the terraform destroy process
+    fail:
       msg: Error occurred during Terraform destroy, state has been preserved. Failing now. Check the destroy log for details.
     when: 
     - terraform_plan_result.rc == 2

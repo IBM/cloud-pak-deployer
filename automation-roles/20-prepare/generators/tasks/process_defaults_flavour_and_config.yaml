@@ -7,43 +7,29 @@
 # <artifact_list> contains the collection of artifacts
 #   inside the <artifact_key>
 # <this_item_config> is one of these elements
-- name: check this items config
+- name: Check the config of this item
   debug:
     var: artifact_item
-- name: process default, flavour and config for merge
+
+- name: Process default, flavour and config for merge
   set_fact: 
     this_item_default_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', 'default') | list )                + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
     this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.get('flavour') ) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
   # this_item_flavour_config: "{{ ( ( defaults_merged.get(artifact_key) | selectattr('flavour', 'equalto', this_item_config.flavour) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
 
 
-- name: DEFAULT!!!
+- name: Show default configuration
   debug:
     var: this_item_default_config
 
-- name: merge flavour_config over default_config
+- name: Merge flavour_config over default_config
   set_fact:
     this_item_merged_config: "{{ this_item_default_config | combine( this_item_flavour_config, recursive=True) }}"
 
-- name: merge artifact_config over already merged_config
+- name: Merge artifact_config over already merged_config
   set_fact:
     this_item_merged_config: "{{ this_item_merged_config | combine( artifact_item, recursive=True) }}"
 
-- name: store this_item_merged_config in all_config
+- name: Store this_item_merged_config in all_config
   set_fact: 
     all_config: "{{ all_config | combine({this_item_artifact_key: (all_config.get(this_item_artifact_key)+[this_item_merged_config] ) }) }}"
-
-# - name: COMPLETE!!!
-#   debug:
-#     var: all_config
-
-
-# - name: DEFAULT!!!
-#   debug:
-#     var: this_item_default_config
-# - name: FLAVOUR!!!
-#   debug:
-#     var: this_item_flavour_config
-# - name: MERGED!!!
-#   debug:
-#     var: this_item_merged_config

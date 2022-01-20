@@ -1,0 +1,59 @@
+---
+- name: Deploying assets for Cloud Pak for Data cluster {{ current_cp4d_cluster.project }}
+  debug:
+    msg: "Handling deploy assets for CP4D cluster {{ _current_cp4d_asset.project }}"
+
+- set_fact:
+    _current_cp4d_cluster: "{{ all_config.cp4d | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?project=='{{ _current_cp4d_asset.project }}']
+
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _current_cp4d_cluster.openshift_cluster_name }}']
+
+- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-client
+  vars:
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: openshift-login
+  vars: 
+    _p_openshift_cluster_name: "{{ _current_cp4d_cluster.openshift_cluster_name }}"
+
+- name: Check if CCS is installed in OpenShift project {{ _current_cp4d_cluster.project }}
+  shell: |
+    oc get ccs ccs-cr -n {{ _current_cp4d_cluster.project }}
+  failed_when: False
+  register: _get_ccs
+
+- name: Install and configure cpdctl if CCS is installed in OpenShift project {{ _current_cp4d_cluster.project }}
+  block:
+    - name: Install cpdctl tool
+      include_tasks: install-cpdctl.yml
+
+    - name: Configure cpdctl context for cluster {{ _current_cp4d_cluster.project }}
+      include_tasks: configure-cpdctl.yml
+
+  when: _get_ccs.rc == 0
+
+- name: List Cloud Pak for Data assets under directory {{ config_dir }}/{{ _current_cp4d_asset.asset_location }}
+  find:
+    paths: "{{ config_dir }}/{{ _current_cp4d_asset.asset_location }}"
+    patterns: "*"
+    file_type: directory
+    recurse: no
+  register: _cp4d_assets
+
+- name: Run asset shell script
+  include_tasks: run-cp4d-asset.yml
+  loop: "{{ _cp4d_assets.files }}"
+  loop_control:
+    loop_var: _cp4d_asset_dir
+  

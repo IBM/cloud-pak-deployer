@@ -1,9 +1,22 @@
 ---
 title: Run on vSphere
-tabs: ['Run on IBM Cloud', 'Run on vSphere', 'Run on existing OpenShift']
+tabs: ['Run on IBM Cloud', 'Run on vSphere', 'Run on AWS', 'Run on existing OpenShift']
 ---
 
 # Running the Cloud Pak Deployer on vSphere
+
+## Topology
+A typical setup of the vSphere cluster with OpenShift is pictured below:
+![vSphere configuration](sample-vsphere-nfs-ocs-cp4d.png)
+
+When deploying OpenShift and the Cloud Pak(s) on VMWare vSphere, there is a dependency on a DHCP server for issuing IP addresses to the newly configured cluster nodes. Also, once the OpenShift cluster has been installed, valid fully qualified host names are required to connect to the OpenShift API server at port `6443` and applications running behind the ingress server at port `443`. The Cloud Pak deployer cannot set up a DHCP server or a DNS server and to be able to connect to OpenShift or to reach the Cloud Pak after installation, name entries must be set up.
+
+### DNS configuration
+Ensure that the DNS server has the following entries:
+* `api.openshift_name.domain_name` --> Point to the `api_vip` address configured in the `openshift` object
+* `*.apps.openshift_name.domain_name` --> Point to the `ingress_vip` address configured in the `openshift` object
+
+If you do not configure the DNS entries upfront, the deployer will still run and it will "spoof" the required entries in the container's `/etc/hosts` file. However to be able to connect to OpenShift and access the Cloud Pak, the DNS entries are required.
 
 ## Obtain the vSphere user and password
 In order for the Cloud Pak Deployer to create the infrastructure and deploy the IBM Cloud Pak, it must have provisioning access to vSphere and it needs the vSphere user and password. The user must have permissions to create VM folders and virtual machines.
@@ -65,6 +78,12 @@ You need to store the vSphere user and password in the vault so that the deploye
     --vault-secret-file ~/.ssh/id_rsa.pub
 ```
 
+## Optional: validate the configuration
+If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
+```
+./cp-deploy.sh env apply -e env_id=pluto-01 --check-only
+```
+
 ## Run the Cloud Pak Deployer
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 ```
@@ -91,6 +110,9 @@ During the provisioning and configuration process, the deployer needs access to 
 
 *.apps.<cluster + domain name> must be mapped to the `ingress_vip` address
 api.<cluster + domain name> must be mapped to the `api_vip` address
+
+## On failure
+If the Cloud Pak Deployer fails, for example because certain infrastructure components are temporarily not available, fix the cause if needed and then just re-run it with the same `CONFIG_DIR` and `STATUS_DIR` as well extra variables. The provisioning process has been designed to be idempotent and it will not redo actions that have already completed successfully.
 
 ## Finishing up
 Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
@@ -129,6 +151,6 @@ You can then retrieve the Cloud Pak for Data admin password like this:
 
 ```output
 PLAY [Secrets] *****************************************************************
-included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
+included: /cloud-pak-deployer/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```

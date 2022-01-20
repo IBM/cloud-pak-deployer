@@ -1,11 +1,14 @@
 ---
+cos:
+- name: {{ env_id }}-cos
+  plan: standard
+  location: global
+
 openshift:
 - name: {{ env_id }}
   ocp_version: 4.8
-  worker_flavour: bx2.16x64
-  number_of_workers: 3
-  max_number_of_workers: 10
-  resource_group_name: ibm
+  compute_flavour: bx2.16x64
+  compute_nodes: 3
   infrastructure:
     type: vpc
     vpc_name: {{ env_id }}
@@ -13,6 +16,7 @@ openshift:
     - {{ env_id }}-subnet-zone-1
     - {{ env_id }}-subnet-zone-2
     - {{ env_id }}-subnet-zone-3
+    cos_name: {{ env_id }}-cos
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs

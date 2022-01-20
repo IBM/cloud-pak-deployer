@@ -4,13 +4,13 @@
     _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='{{ openshift_cluster_name }}']
+      [?name=='{{ _p_openshift_cluster_name }}']
 
 - name: Retrieve kubeadmin password from vault
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ openshift_cluster_name }}-kubeadmin-password"
+    secret_name: "{{ _p_openshift_cluster_name }}-kubeadmin-password"
     secret_group: "{{ environment_name }}"
 
 - set_fact:
@@ -36,5 +36,6 @@
   delay: 10
   until: oc_login_result.rc==0
 
-- debug:
+- name: Show OpenShift login result
+  debug:
     msg: "{{ oc_login_result }}"

@@ -3,17 +3,19 @@
 - name: Retrieve case file for {{ case_inventory.name }} in the {{ case_dir }} directory
   find:
     paths: "{{ case_dir }}"
-    patterns: "^{{ case_inventory.search_string }}-[0-9][.][0-9][.][0-9][.]tgz"
+    patterns: "^{{ case_inventory.search_string }}-.*[.]tgz"
     use_regex: yes
   register: case_files
 
-- debug:
+- name: Show case file definitions
+  debug:
     var: case_files
 
 - set_fact:
     case_file: "{{ case_files.files | first | default({}) }}"
 
-- debug:
+- name: Show current case file
+  debug:
     var: case_file
 
 - name: Install CatalogSource for case file {{ case_file.path }} using private registry

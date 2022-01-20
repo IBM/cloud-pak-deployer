@@ -1,12 +1,12 @@
 ---
-- name: Get first worker node
+- name: Get first compute node
   shell: |
     oc get no --no-headers -l node-role.kubernetes.io/worker -o custom-columns='name:.metadata.name' | head -1
-  register: ocp_workers
+  register: _ocp_compute_nodes
 
 - name: Retrieve /etc/kubernetes/kubelet.conf
   shell: |
-    oc debug no/{{ ocp_workers.stdout }} -- cat /host/etc/kubernetes/kubelet.conf > {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-kubelet.conf
+    oc debug no/{{ _ocp_compute_nodes.stdout }} -- cat /host/etc/kubernetes/kubelet.conf > {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-kubelet.conf
   register: debug_node_result
   retries: 3
   delay: 10

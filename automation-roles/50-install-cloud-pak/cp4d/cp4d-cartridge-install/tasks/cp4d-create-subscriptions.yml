@@ -1,47 +1,43 @@
 ---
-- debug:
-    msg: "Preparing custom resources for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ current_cp4d_cluster.project }}"
+# Prepare for operator if cartridge state is installed
+- block:
+  - name: Prepare operator subscriptions
+    debug:
+      msg: "Preparing operator subscriptions for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ current_cp4d_cluster.project }}"
 
-#Validate whether the subscription creation requires custom execution
-- name: Validate custom path for cartridge {{ current_cp4d_cartridge.name }}
-  set_fact:
-    cartridge_details: "{{ case_inventories | json_query(jmes_query) }}"
-  vars:
-    jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}'] | [0]"
+  # Validate whether the subscription creation requires custom execution
+  - name: Get subscription installation details for cartridge
+    set_fact:
+      _cartridge_details: "{{ case_inventories | json_query(jmes_query) | first }}"
+    vars:
+      jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}']"
 
-# Regular install of Subscription
-- when: not cartridge_details.type is defined
-  block:
-    # Create operator subscription
+  # Custom preprpcessing of Subscription
+  - name: "Run operator pre-processing script {{ _cartridge_details.operator_preprocessing_script }}"
+    include_tasks: "{{ _cartridge_details.operator_preprocessing_script }}"
+    when: (_cartridge_details.operator_preprocessing_script | default('')) != ''
+
+  # Create of Subscription if not lite or cp-foundation
+  - block:
     - name: Prepare yaml file for operator subscription {{ current_cp4d_cartridge.name }}
       template:
         src: "{{ current_cp4d_cartridge.name }}-sub.j2"
         dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-sub.yml"
-      when: 
-      - current_cp4d_cartridge.name != "lite"
-      - current_cp4d_cartridge.name != "cp-foundation"
 
     - name: Create subscription for cartridge {{ current_cp4d_cartridge.name }}
       command: |
         oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-sub.yml"
-      when: 
-      - current_cp4d_cartridge.name != "lite"
-      - current_cp4d_cartridge.name != "cp-foundation"
 
     - name: Find label for cartridge {{ current_cp4d_cartridge.name }}
       set_fact:
         cartridge_csv_label: "{{ cartridge_csv | json_query(jmes_query) }}"
       vars:
         jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}'].cartridge_label | [0]"
-      when: 
-      - current_cp4d_cartridge.name != "lite"
-      - current_cp4d_cartridge.name != "cp-foundation"
 
-    - fail:
+    - name: Fail if the label for the cartridge cannot be found
+      fail:
         msg: "Label for cartridge {{ current_cp4d_cartridge.name }} not found, cannot check if CSV is successfully installed"
       when: 
-      - current_cp4d_cartridge.name != "lite"
-      - current_cp4d_cartridge.name != "cp-foundation"
       - cartridge_csv_label == ""
 
     # Wait until subscription for cartridge has been successfully created
@@ -56,29 +52,13 @@
       retries: 30
       delay: 30
       until: csv_status.stdout != "0"
-      when: 
-      - current_cp4d_cartridge.name != "lite"
-      - current_cp4d_cartridge.name != "cp-foundation"
       vars:
         ansible_callback_diy_runner_retry_msg: >-
           {%- set result = ansible_callback_diy.result.output -%}
           {%- set retries_left = result.retries - result.attempts -%}
           Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    when: 
+    - current_cp4d_cartridge.name != "lite"
+    - current_cp4d_cartridge.name != "cp-foundation"
 
-# Custom install of Subscription
-- when: 
-  - cartridge_details.type is defined
-  - cartridge_details.type == 'custom'
-  block:
-
-    - fail:
-        msg: "Cartridge {{ current_cp4d_cartridge.name }} was labeled custom, but no install_operator_script was specified"
-      when: 
-      - not cartridge_details.install_operator_script is defined
-
-    - name: "Get the custom playbook for cartridge {{ current_cp4d_cartridge.name }}"
-      set_fact:
-        custom_cartridge_operator_playbook: "{{ cartridge_details.install_operator_script }}"
-    
-    - name: "Run the custom playbook {{ custom_cartridge_operator_playbook }}"
-      include_tasks: "{{ custom_cartridge_operator_playbook }}"
+  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'
