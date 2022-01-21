@@ -210,22 +210,38 @@ locals {
                                 null)
 }
 
-resource "kubernetes_secret" "etcd_{{generator.attributes.name | replace("-", "_") }}" {
-  depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
-  count = local.enable && local.create_external_etcd ? 1 : 0
+#resource "kubernetes_secret" "etcd_{{generator.attributes.name | replace("-", "_") }}" {
+#  depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
+#  count = local.enable && local.create_external_etcd ? 1 : 0
+#
+#  metadata {
+#    name = local.etcd_secret_name
+#    namespace = "kube-system"
+#  }
+#
+#  data = {
+#    "ca.pem" = base64decode(local.etcd_user_connectionstring.certbase64)
+#    username = local.etcd_username
+#    password = local.etcd_password
+#  }
+#  
+#}
 
-  metadata {
-    name = local.etcd_secret_name
-    namespace = "kube-system"
-  }
+resource "null_resource" "etc_pwx_secret_{{generator.attributes.name | replace("-", "_") }}" {
+  provisioner "local-exec" {
+    environment = {
+      IBMCLOUD_API_KEY  = var.ibmcloud_api_key
+      CLUSTER_ID        = local.cluster_id
+      CA_PEM            = local.etcd_user_connectionstring.certbase64
+      USERNAME          = base64encode(local.etcd_username)
+      PASSWORD          = base64encode(local.etcd_password)
+    }
 
-  data = {
-    "ca.pem" = base64decode(local.etcd_user_connectionstring.certbase64)
-    username = local.etcd_username
-    password = local.etcd_password
+    interpreter = ["/bin/bash", "-c"]
+    command     = file("./scripts/create_etc_pwx_secret.sh")
   }
-  
 }
+
 
 ##################################
 # Install Portworx on the cluster
@@ -233,7 +249,7 @@ resource "kubernetes_secret" "etcd_{{generator.attributes.name | replace("-", "_
 resource "ibm_resource_instance" "portworx_{{generator.attributes.name | replace("-", "_") }}" {
   depends_on = [
     null_resource.volume_attachment_{{generator.attributes.name | replace("-", "_") }},
-    kubernetes_secret.etcd_{{generator.attributes.name | replace("-", "_") }}
+    null_resource.etc_pwx_secret_{{generator.attributes.name | replace("-", "_") }}
   ]
 
 
@@ -257,7 +273,7 @@ resource "ibm_resource_instance" "portworx_{{generator.attributes.name | replace
       "etcd:https://${local.etcd_user_connectionstring.hosts[0].hostname}:${local.etcd_user_connectionstring.hosts[0].port}"
       : null
     )
-    etcd_secret      = local.create_external_etcd ? local.etcd_secret_name : null
+    etcd_secret      = "px-etcd-certs"
     internal_kvdb    = local.create_external_etcd ? "external" : "internal"
     portworx_version = "Portworx: 2.7.2 , Stork: 2.6.2"
     secret_type      = "k8s"
