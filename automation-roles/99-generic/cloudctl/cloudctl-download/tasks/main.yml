@@ -1,0 +1,33 @@
+---
+- name: Create downloads directory
+  file:
+    path: "{{ status_dir }}/downloads"
+    state: directory
+
+
+- name: Download cloudctl tool
+  shell: |
+    CLOUDCTL_VER=$(curl -s https://api.github.com/repos/IBM/cloud-pak-cli/releases/latest | \
+      jq -r .tag_name ) && \
+    wget -nv https://github.com/IBM/cloud-pak-cli/releases/download/${CLOUDCTL_VER}/cloudctl-linux-amd64.tar.gz \
+      -P {{ status_dir }}/downloads/
+  args:
+    warn: False
+
+- name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz
+  unarchive:
+    src: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
+    dest: "/usr/local/bin"
+
+- name: Rename to cloudctl
+  shell: |
+    mv -f /usr/local/bin/cloudctl-linux-amd64 /usr/local/bin/cloudctl
+
+- name: Get cloudctl version
+  shell: |
+    cloudctl version
+  register: _cloudctl_version
+
+- name: Show cloudctl version
+  debug:
+    var: _cloudctl_version.stdout

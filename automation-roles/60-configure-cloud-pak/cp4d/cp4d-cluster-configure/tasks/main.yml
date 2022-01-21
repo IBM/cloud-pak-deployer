@@ -20,6 +20,9 @@
   vars:
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
+- name: Get storage class(es) applicable to Cloud Pak for Data instance {{ current_cp4d_cluster.project }}
+  include_tasks: cp4d-get-storage-classes.yml
+
 - name: Login to Cloud Pak for Data
   include_tasks: cluster-configure-prepare.yml
 
@@ -69,7 +72,7 @@
   block:
     # Cartridge: DB2
     - set_fact:
-        db2_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+        _db2_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
       vars:
         cartridge_name: "db2"
         query_cartridge: "[?name=='{{ cartridge_name }}']"    
@@ -77,11 +80,13 @@
     - name: Provision DB2 instances
       include_role:
         name: provision_db2_instance
-      when: db2_service_enabled == '1'
+      when: 
+      - _db2_instance != {} 
+      - ( _db2_instance.state | default("installed") ) == "installed"
 
     # Cartridge: CA
     - set_fact:
-        ca_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+        _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
       vars:
         cartridge_name: "ca"
         query_cartridge: "[?name=='{{ cartridge_name }}']"    
@@ -89,11 +94,13 @@
     - name: Provision Cognos instances
       include_role:
         name: provision_cognos_instance
-      when: ca_service_enabled == '1'
+      when: 
+      - _ca_instance != {} 
+      - ( _ca_instance.state | default("installed") ) == "installed"
 
     # Cartridge: DV
     - set_fact:
-        dv_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+        _dv_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
       vars:
         cartridge_name: "dv"
         query_cartridge: "[?name=='{{ cartridge_name }}']"    
@@ -101,11 +108,13 @@
     - name: Provision Data Virtualization instances
       include_role:
         name: provision_dv_instance
-      when: dv_service_enabled == '1'
+      when: 
+      - _dv_instance != {} 
+      - ( _dv_instance.state | default("installed") ) == "installed"
 
     # Cartridge: AnalyticsEngine
     - set_fact:
-        ae_service_enabled: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | length }}"
+        _ae_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
       vars:
         cartridge_name: "analyticsengine"
         query_cartridge: "[?name=='{{ cartridge_name }}']"    
@@ -113,7 +122,9 @@
     - name: Provision Analytics Engine instances
       include_role:
         name: provision_analyticsengine_instance
-      when: ae_service_enabled == '1'
+      when: 
+      - _ae_instance != {} 
+      - ( _ae_instance.state | default("installed") ) == "installed"
 
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"

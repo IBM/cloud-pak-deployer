@@ -53,13 +53,13 @@
 ### Start - Merge defaults ###
 - name: Parse the yaml defaults and provide it as a fact defaults_merged
   block:
-    - name: 'get stats of {{path_to_config_dir}}/defaults'
-      stat:
-        path: "{{path_to_config_dir}}/defaults"
-      register: stats_of_defaults_dir
-    - name: 'Lookup *.yaml files in {{ stats_of_defaults_dir.stat.path }}'
+    # - name: 'get stats of {{path_to_config_dir}}/defaults'
+    #   stat:
+    #     path: "{{path_to_config_dir}}/defaults"
+    #   register: stats_of_defaults_dir
+    - name: 'Lookup *.yaml files in {{path_to_config_dir}}/defaults'
       find:
-        paths: '{{ stats_of_defaults_dir.stat.path }}'
+        paths: '{{path_to_config_dir}}/defaults'
         file_type: file
         patterns: '*.yaml'
       register: found_defaults_files
@@ -158,11 +158,31 @@
       file:
         path: '{{status_dir}}/terraform'
         state: absent
+    
+    - name: Delete terraform scripts work folder if it already exists (used by portworx only)
+      file:
+         path: '{{status_dir}}/terraform/scripts'
+         state: absent
+
+    - name: Delete terraform cleanup folder if it already exists (used by portworx only)
+      file:
+         path: '{{status_dir}}/terraform/cleanup'
+         state: absent
 
     - name: Create terraform work folder if it does not exist
       file:
         path: '{{status_dir}}/terraform'
         state: directory
+
+    - name: Create terraform scripts folder if it does not exist (used by portworx only)
+      file:
+        path: '{{status_dir}}/terraform/scripts'
+        state: directory
+
+    - name: Create terraform cleanup folder if it does not exist (used by portworx only)
+      file:
+        path: '{{status_dir}}/terraform/cleanup'
+        state: directory        
   when: cloud_platform == 'ibm-cloud'
 
 - name: Delete vSphere IPI work folder if it already exists
