@@ -304,47 +304,47 @@ azure_aro:
   vnet:
     name: vnet
     address_space: 10.0.0.0/22
-  master:
+  control_plane:
     subnet:
-      name: master-subnet
+      name: control-plane-subnet
       address_prefixes: 10.0.0.0/23
     vm:
       size: Standard_D8s_v3
-  worker:
+  compute:
     subnet:
-      name: worker-subnet
+      name: compute-subnet
       address_prefixes: 10.0.2.0/23
     vm:
       size: Standard_D16s_v3
-      disk_size_gb: 650
+      disk_size_gb: 128
       count: 3
 ```
 
 #### Properties explanation
 
-| Property                       | Description                                                                       | Mandatory | Allowed values                                                                                                                                               |
-| ------------------------------ | --------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| name                           | Name of the `azure_aro` definition object, will be referenced by `openshift`      | Yes       |                                                                                                                                                              |
-| resource_group                 | Resource group attributes                                                         | Yes       |                                                                                                                                                              |
-| resource_group.name            | Name of the resource group (will be provisioned)                                  | Yes       | unique value, it must not exist                                                                                                                              |
-| resource_group.location        | Azure location                                                                    | Yes       | to pick a different location, run: `az account list-locations -o table`                                                                                      |
-| vnet                           | Virtual network attributes                                                        | Yes       |                                                                                                                                                              |
-| vnet.name                      | Name of the virtual network                                                       | Yes       |                                                                                                                                                              |
-| vnet.address_space             | Address space of the virtual network                                              | Yes       |                                                                                                                                                              |
-| master                         | Master nodes attributes                                                           | Yes       |                                                                                                                                                              |
-| master.subnet                  | Master nodes subnet attributes                                                    | Yes       |                                                                                                                                                              |
-| master.subnet.name             | Name of the master nodes subnet                                                   | Yes       |                                                                                                                                                              |
-| master.subnet.address_prefixes | Address prefixes of the master nodes subnet (divided by a `,` comma, if relevant) | Yes       |                                                                                                                                                              |
-| master.vm                      | Master nodes virtual machine attributes                                           | Yes       |                                                                                                                                                              |
-| master.vm.size                 | Virtual machine size (aka flavour) of the master nodes                            | Yes       | `Standard_D8s_v3`, `Standard_D16s_v3`, `Standard_D32s_v3`                                                                                                    |
-| worker                         | Worker nodes attributes                                                           | Yes       |                                                                                                                                                              |
-| worker.subnet                  | Worker nodes subnet attributes                                                    | Yes       |                                                                                                                                                              |
-| worker.subnet.name             | Name of the worker nodes subnet                                                   | Yes       |                                                                                                                                                              |
-| worker.subnet.address_prefixes | Address prefixes of the worker nodes subnet (divided by a `,` comma, if relevant) | Yes       |                                                                                                                                                              |
-| worker.vm                      | Worker nodes virtual machine attributes                                           | Yes       |                                                                                                                                                              |
-| worker.vm.size                 | Virtual machine size (aka flavour) of the worker nodes                            | Yes       | See the full list of [supported virtual machine sizes](https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes) |
-| worker.vm.disk_size_gb         | Disk size in GBs of the worker nodes virtual machine                              | Yes       | minimum value is 128                                                                                                                                         |
-| worker.vm.count                | Number of worker nodes virtual machines                                           | Yes       | minimum value is 3                                                                                                                                           |
+| Property                              | Description                                                                              | Mandatory | Allowed values                                                                                                                                               |
+| ------------------------------------- | ---------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| name                                  | Name of the `azure_aro` definition object, will be referenced by `openshift`             | Yes       |                                                                                                                                                              |
+| resource_group                        | Resource group attributes                                                                | Yes       |                                                                                                                                                              |
+| resource_group.name                   | Name of the resource group (will be provisioned)                                         | Yes       | unique value, it must not exist                                                                                                                              |
+| resource_group.location               | Azure location                                                                           | Yes       | to pick a different location, run: `az account list-locations -o table`                                                                                      |
+| vnet                                  | Virtual network attributes                                                               | Yes       |                                                                                                                                                              |
+| vnet.name                             | Name of the virtual network                                                              | Yes       |                                                                                                                                                              |
+| vnet.address_space                    | Address space of the virtual network                                                     | Yes       |                                                                                                                                                              |
+| control_plane                         | Control plane (master) nodes attributes                                                  | Yes       |                                                                                                                                                              |
+| control_plane.subnet                  | Control plane nodes subnet attributes                                                    | Yes       |                                                                                                                                                              |
+| control_plane.subnet.name             | Name of the control plane nodes subnet                                                   | Yes       |                                                                                                                                                              |
+| control_plane.subnet.address_prefixes | Address prefixes of the control plane nodes subnet (divided by a `,` comma, if relevant) | Yes       |                                                                                                                                                              |
+| control_plane.vm                      | Control plane nodes virtual machine attributes                                           | Yes       |                                                                                                                                                              |
+| control_plane.vm.size                 | Virtual machine size (aka flavour) of the control plane nodes                            | Yes       | `Standard_D8s_v3`, `Standard_D16s_v3`, `Standard_D32s_v3`                                                                                                    |
+| compute                               | Compute (worker) nodes attributes                                                        | Yes       |                                                                                                                                                              |
+| compute.subnet                        | Compute nodes subnet attributes                                                          | Yes       |                                                                                                                                                              |
+| compute.subnet.name                   | Name of the compute nodes subnet                                                         | Yes       |                                                                                                                                                              |
+| compute.subnet.address_prefixes       | Address prefixes of the compute nodes subnet (divided by a `,` comma, if relevant)       | Yes       |                                                                                                                                                              |
+| compute.vm                            | Compute nodes virtual machine attributes                                                 | Yes       |                                                                                                                                                              |
+| compute.vm.size                       | Virtual machine size (aka flavour) of the compute nodes                                  | Yes       | See the full list of [supported virtual machine sizes](https://docs.microsoft.com/en-us/azure/openshift/support-policies-v4#supported-virtual-machine-sizes) |
+| compute.vm.disk_size_gb               | Disk size in GBs of the compute nodes virtual machine                                    | Yes       | minimum value is 128                                                                                                                                         |
+| compute.vm.count                      | Number of compute nodes virtual machines                                                 | Yes       | minimum value is 3                                                                                                                                           |
 
 ### `serviceid`
 
