@@ -8,10 +8,6 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: Download ROSA command line tool 
-  include_role:
-    name: aws-download-rosa
-
 - name: Login to ROSA
   include_role:
     name: aws-login-rosa
@@ -56,7 +52,7 @@
   shell: |
     rosa delete cluster --cluster {{ _current_openshift_cluster.name }} \
       --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --yes --watch 2>&1 >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log
+      --yes --watch >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"

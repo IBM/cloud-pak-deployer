@@ -49,7 +49,7 @@
   - name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform plan -destroy -no-color -detailed-exitcode 2>&1 >> {{status_dir}}/terraform/plan.log"
+      cmd: bash -c "terraform plan -destroy -no-color -detailed-exitcode >> {{status_dir}}/terraform/plan.log 2>&1"
     register: terraform_plan_result
     failed_when: "terraform_plan_result.rc == 1"
 
@@ -90,7 +90,7 @@
   - name: "Run terraform destroy in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/destroy.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform destroy -auto-approve -no-color 2>&1 >> destroy.log"
+      cmd: bash -c "terraform destroy -auto-approve -no-color >> destroy.log 2>&1"
     environment:
       TF_LOG: "info"
       TF_LOG_PATH: "{{ status_dir }}/terraform/tf_destroy.log"
