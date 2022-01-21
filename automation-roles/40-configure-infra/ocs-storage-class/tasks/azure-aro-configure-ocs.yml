@@ -25,6 +25,15 @@
 - debug:
     var: _image_details
 
+- set_fact:
+    _azure_aro_config: "{{ all_config.azure_aro | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.azure_aro_name }}']
+
+- debug:
+    var: _azure_aro_config
+
 - name: Generate MachineSet file {{status_dir}}/openshift/azure-aro-ocs-machineset.yaml
   template:
     src: "azure-aro-ocs-machineset.j2"
