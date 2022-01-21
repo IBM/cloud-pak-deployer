@@ -1,0 +1,87 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - cloud_platform is defined
+      - azure_resource_group_name is defined
+      - azure_cluster_name is defined
+
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Destroy Microsoft Azure Infrastructure
+  block:
+    - name: Azure Resource group to be destroyed
+      debug:
+        var: azure_resource_group_name
+
+    - name: Retrieve Service Principal id
+      include_role:
+        name: vault-get-secret
+      vars:
+        secret_name: "aro-sp-id"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        _service_principal_id: "{{ secret_value }}"
+
+    - name: Retrieve Service Principal secret
+      include_role:
+        name: vault-get-secret
+      vars:
+        secret_name: "aro-sp-secret"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        _service_principal_secret: "{{ secret_value }}"
+
+    - name: Retrieve Tenant id
+      include_role:
+        name: vault-get-secret
+      vars:
+        secret_name: "aro-tenant-id"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        _tenant_id: "{{ secret_value }}"
+
+    - name: Validate mandatory vault values are not empty
+      assert:
+        that:
+          - _service_principal_id != ""
+          - _service_principal_secret != ""
+          - _tenant_id != ""
+
+    - name: "Login and destroy {{ azure_resource_group_name }} resource group"
+      shell: |
+        az login --service-principal -u {{ _service_principal_id }} -p {{ _service_principal_secret }} --tenant {{ _tenant_id }}
+        az group delete --name {{ azure_resource_group_name }} -y
+      register: _destroy_resource_group
+      failed_when: "_destroy_resource_group.rc != 0"
+
+    - name: Delete "{{ azure_cluster_name }}-kubeadmin-password" secret from the vault
+      include_role:
+        name: vault-delete-secret
+      vars:
+        secret_name: "{{ azure_cluster_name }}-kubeadmin-password"
+        secret_group: "{{ environment_name }}"
+
+    - name: "Find all directories in {{status_dir}} except config, defaults, inventory, and vault"
+      find:
+        path: "{{ status_dir }}"
+        file_type: directory
+        excludes:
+          - "config"
+          - "defaults"
+          - "inventory"
+          - "vault"
+      register: found_dirs
+
+    - name: "Delete all directories in {{status_dir}} except config, defaults, inventory and vault"
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ found_dirs['files'] }}"
+
+  when: "cloud_platform == 'azure'"
