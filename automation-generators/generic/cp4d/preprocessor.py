@@ -8,9 +8,8 @@ import sys
 # openshift:
 # - name: sample
 #   ocp_version: 4.6
-#   worker_flavour: bx2.16x64
-#   number_of_workers: 3
-#   max_number_of_workers: 10
+#   compute_flavour: bx2.16x64
+#   compute_nodes: 3
 #   resource_group_name: ibm
 #   infrastructure:
 #     type: vpc
@@ -36,144 +35,182 @@ import sys
 #  openshift_cluster_name: sample
 #  cp4d_version: 4.0
 #  openshift_storage_name: nfs-storage
+#  use_case_files: True
+#  change_node_settings: True
+
 #  cartridges:
 #  - name: cp-foundation
 #    license_service:
 #      state: disabled
 #      threads_per_core: 2
+#    case_version: 1.10.1
 #  - name: lite
-#    version: not_used
 #    subscription_channel: v2.0
+#    case_version: 2.0.8
 #  - name: wsl
-#    version: 4.0.1
+#    version: 4.0.4
 #    subscription_channel: v2.0
+#    case_version: 2.0.4
 #  - name: wml
-#    version: not_used
+#    version: 4.0.4
 #    subscription_channel: v1.1
+#    case_version: 4.0.5
 #    size: small
-#  - name: wkc
-#    version: 4.0.1
-#    subscription_channel: v1.0
-#    size: small
-# - name: ca
-#   version: 4.0.1
-#   subscription_channel: v4.0
-#   size: small
-#   instances:
-#   - name: ca-instance
-#     metastore_ref: ca-metastore
-# - name: db2
-#   subscription_channel: v1.0
-#   size: small
-#   version: not_used  
-#   instances:
-#   - name: ca-metastore
-#     metadata_size_gb: 20
-#     data_size_gb: 20
-#     backup_size_gb: 20  
-#     transactionlog_size_gb: 20
-# - name: analyticsengine 
-#   version: 4.0.1
-#   subscription_channel: stable-v1
-#   size: small 
-# - name: bigsql
-#   version: 7.2.1
-#   subscription_channel: v7.2
-# - name: cde
-#   version: 4.0.1
-#   subscription_channel: v1.0
-# - name: datagate
-#   version: 2.0.1
-#   subscription_channel: v2.0
-# - name: db2wh
-#   subscription_channel: v1.0
-#   version: not_used
-# - name: dmc
-#   version: 4.0.1
-#   subscription_channel: v1.0
-# - name: dods
-#   version: 4.0.1
-#   subscription_channel: v4.0
-#   size: small
-# - name: dv
-#   version: 1.7.1
-#   subscription_channel: v1.7
-#   size: small
-# - name: mdm
-#   version: not_used
-#   subscription_channel: v1.1
-#   size: small
-#   wkc_enabled: true
-# - name: openpages
-#   version: 8.203.1
-#   subscription_channel: v1.0
-# - name: planning-analytics
-#   version: 4.0.1
-#   subscription_channel: v1.0
-# - name: rstudio
-#   version: not_used
-#   subscription_channel: v1.0
-#   size: small
-# - name: spss
-#   version: not_used
-#   subscription_channel: v1.0
-# - name: watson-openscale
-#   version: 4.0.1
-#   subscription_channel: v1
-#   size: small
-# - name: wkc
-#   version: 4.0.1
-#   subscription_channel: v1.0
-#   size: small
-# - name: wml
-#   version: not_used
-#   subscription_channel: v1.1
-#   size: small
-# - name: wml-accelerator
-#   version: 2.3.1
-#   subscription_channel: WML-Accelerator-2.3
-#   replicas: 1
-#   size: small
-# - name: wsl
-#   version: 4.0.1
-#   subscription_channel: v2.0
-# - name: db2u
-#   version: 4.0.3
-#   subscription_channel: v1.1
-# - name: db2aaservice
-#   version: 4.0.1
-#   subscription_channel: v1.0
-#   size: small
-# - name: iis
-#   version: 4.0.1
-#   size: small
-#   subscription_channel: not_used
-# - name: datastage
-#   version: 4.0.1
-#   subscription_channel: v1.0
-#   dependencies:
-#   - name: db2u
-#   - name: iis
-#   - name: db2uaaservice   
-# - name: productmaster
-#   version: 1.0.0
-#   subscription_channel: alpha
-#   size: small  
-# - name: voice-gateway
-#   version: not_used
-#   subscription_channel: v1.0
-#   replicas: 1  
-# - name: watson-assistant
-#   version: 4.0.0
-#   subscription_channel: v4.0
-# - name: watson-discovery
-#   version: 4.0.0
-#   subscription_channel: v4.0
-# - name: watson-speech
-#   version: 4.0.0
-#   subscription_channel: v4.0
-#   stt_size: xsmall
-#   tts_size: xsmall
+
+#
+# All tested cartridges. To install, uncomment the entry, make sure that the "-"" and properties
+# are aligned with the other "cartridges" entries.
+#
+
+  # - name: analyticsengine 
+  #   version: 4.0.4
+  #   subscription_channel: stable-v1
+  #   case_version: 4.0.4
+  #   size: small 
+  # - name: bigsql
+  #   version: 7.2.3
+  #   subscription_channel: v7.2
+  #   case_version: 7.2.3
+  # - name: ca
+  #   version: 4.0.4
+  #   subscription_channel: v4.0
+  #   case_version: 4.0.6
+  #   size: small
+  #   instances:
+  #   - name: ca-instance
+  #     metastore_ref: ca-metastore
+  # - name: cde
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 2.0.4
+  # - name: datagate
+  #   version: 2.0.4
+  #   subscription_channel: v2.0
+  #   case_version: 4.0.4
+  # - name: datastage
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.5
+  # - name: db2
+  #   version: 4.0.6
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.6
+  #   size: small
+  #   instances:
+  #   - name: ca-metastore
+  #     metadata_size_gb: 20
+  #     data_size_gb: 20
+  #     backup_size_gb: 20  
+  #     transactionlog_size_gb: 20
+  # - name: db2u
+  #   version: 4.0.6
+  #   subscription_channel: v1.1
+  #   case_version: 4.0.6
+  # - name: db2wh
+  #   version: 4.0.6
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.6
+  # - name: dmc
+  #   version: 4.0.3
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.3
+  # - name: dods
+  #   version: 4.0.4
+  #   subscription_channel: v4.0
+  #   case_version: 4.0.4
+  #   size: small
+  # - name: dp
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.4
+  #   size: small
+  # - name: dv
+  #   version: 1.7.3
+  #   subscription_channel: v1.7
+  #   case_version: 1.7.3
+  #   size: small 
+  #   dependencies:
+  #   - name: db2u
+  #   instances:
+  #   - name: data-virtualization
+  # - name: hadoop
+  #   version: 4.0.4
+  #   size: small
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.4
+  # - name: mdm
+  #   version: 1.1.167
+  #   subscription_channel: v1.1
+  #   case_version: 1.0.166
+  #   size: small
+  #   wkc_enabled: true
+  # - name: openpages
+  #   version: 8.204.1
+  #   subscription_channel: v1.0
+  #   case_version: 2.1.1+20211213.164652.82041218
+  # - name: planning-analytics
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.40403
+  # - name: rstudio
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 1.0.4
+  #   size: small
+  # - name: spss
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 1.0.4
+  # - name: voice-gateway
+  #   version: 1.0.7
+  #   subscription_channel: v1.0
+  #   case_version: 1.0.4
+  #   replicas: 1  
+  # - name: watson-assistant
+  #   version: 4.0.4
+  #   subscription_channel: v4.0
+  #   case_version: 4.0.4
+  #   size: small
+  # - name: watson-discovery
+  #   version: 4.0.4
+  #   subscription_channel: v4.0
+  #   case_version: 4.0.4
+  # - name: watson-ks
+  #   version: 4.0.4
+  #   subscription_channel: v4.0
+  #   case_version: 4.0.4
+  #   size: small
+  # - name: watson-openscale
+  #   version: 4.0.4
+  #   subscription_channel: v1
+  #   case_version: 2.4.0
+  #   size: small
+  # - name: watson-speech
+  #   version: 4.0.4
+  #   subscription_channel: v4.0
+  #   case_version: 4.0.4
+  #   stt_size: xsmall
+  #   tts_size: xsmall
+  # - name: wkc
+  #   version: 4.0.4
+  #   subscription_channel: v1.0
+  #   case_version: 4.0.4
+  #   size: small
+  # - name: wml
+  #   version: 4.0.4
+  #   subscription_channel: v1.1
+  #   case_version: 4.0.5
+  #   size: small
+  # - name: wml-accelerator
+  #   version: 2.3.4
+  #   subscription_channel: v1.0
+  #   case_version: 2.3.4
+  #   replicas: 1
+  #   size: small
+  # - name: wsl
+  #   version: 4.0.4
+  #   subscription_channel: v2.0
+  #   case_version: 2.0.4
 
 
 def preprocessor(attributes=None, fullConfig=None):
@@ -185,6 +222,8 @@ def preprocessor(attributes=None, fullConfig=None):
     g('cp4d_version').isRequired()
     g('openshift_storage_name').isRequired()
     g('cartridges').isRequired()
+    g('use_case_files').isOptional()
+    g('change_node_settings').isOptional()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:

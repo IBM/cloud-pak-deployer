@@ -6,8 +6,8 @@ import sys
 # openshift:
 # - name: sample
 #   ocp_version: 4.8.24
-#   worker_flavour: m5.4xlarge
-#   number_of_workers: 3
+#   compute_flavour: m5.4xlarge
+#   compute_nodes: 3
 #   infrastructure:
 #     type: rosa
 #     aws_region: eu-central-1
@@ -23,8 +23,8 @@ def preprocessor(attributes=None, fullConfig=None):
 
     g('name').isRequired()
     g('ocp_version').isRequired()
-    g('worker_flavour').isRequired()
-    g('number_of_workers').isRequired()
+    g('compute_flavour').isRequired()
+    g('compute_nodes').isRequired()
     
     g('infrastructure').isRequired()
 

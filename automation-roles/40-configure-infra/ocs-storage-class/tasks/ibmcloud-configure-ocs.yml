@@ -40,33 +40,33 @@
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-- name: Get the worker nodes for the OCS storage class
+- name: Get the nodes for the OCS storage class
   command: |
     ibmcloud oc workers --cluster {{ current_openshift_cluster.name }} \
       --worker-pool {{ current_openshift_cluster.name }}-{{ current_openshift_storage.ocs_storage_label }} \
       --output json
-  register: ocs_workers
+  register: _ocs_nodes
 
 # TODO: Remove debug
-- name: Show OCS workers
+- name: Show OCS nodes
   debug:
-    var: ocs_workers
+    var: _ocs_nodes
 
-- name: Get worker IPs
+- name: Get OCS node IPs
   set_fact:
-    worker_ips: "{{ ocs_workers.stdout | from_json | json_query(get_ips) | list }}"
+    _ocs_node_ips: "{{ _ocs_nodes.stdout | from_json | json_query(get_ips) | list }}"
   vars:
     get_ips: "[*].networkInterfaces[0].ipAddress"
 
 - name: Label the OCS nodes as infra
   command: |
     oc label nodes {{ item }} node-role.kubernetes.io/infra="" --overwrite
-  loop: "{{ worker_ips }}"
+  loop: "{{ _ocs_node_ips }}"
 
 - name: Taint the OCS nodes so they will only run OCS workload
   command: |
     oc adm taint nodes {{ item }} node.ocs.openshift.io/storage="true":NoSchedule --overwrite
-  loop: "{{ worker_ips }}"
+  loop: "{{ _ocs_node_ips }}"
 
 - name: Check if OcsCluster {{ current_openshift_storage.ocs_storage_label }} already exists
   command: |
