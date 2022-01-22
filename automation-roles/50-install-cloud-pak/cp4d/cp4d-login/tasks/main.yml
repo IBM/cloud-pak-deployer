@@ -1,0 +1,38 @@
+---
+- name: Get route to Cloud Pak for Data from OpenShift project
+  shell: |
+    oc --namespace {{ _p_cp4d_project }} get route -l component=ibm-nginx \
+      -o jsonpath="{.items[0].spec.host}"
+  register: cp4d_url
+
+- name: Login to Cloud Pak for Data
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/authorize'
+    method: POST
+    body_format: json
+    body: '{"username":"{{ _p_cp4d_user }}","password":"{{ _p_cp4d_password }}"}'
+    force: yes
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_login_result
+  retries: 3
+  delay: 5
+  failed_when: False
+  until: _cp4d_login_result.status == 200
+
+- set_fact:
+    _cp4d_login_successful: True
+  when: _cp4d_login_result.status == 200
+
+- set_fact:
+    _cp4d_login_successful: False
+  when: _cp4d_login_result.status != 200
+
+- fail:
+    msg: |
+      "Failed to login to Cloud Pak for Data instance {{ _p_cp4d_project }}."
+      "{{ _cp4d_login_result }}"
+  when:
+  - _cp4d_login_result.status != 200
+  - (_p_fail_on_error | default(True))
