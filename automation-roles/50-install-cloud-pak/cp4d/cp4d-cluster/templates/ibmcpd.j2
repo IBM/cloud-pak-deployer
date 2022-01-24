@@ -7,14 +7,19 @@ spec:
   license:
     accept: true
     license: Enterprise
-  {% if selected_openshift_storage.storage_type == "ocs" %}
+{% if selected_openshift_storage.storage_type == "ocs" %}
+{% if cloud_platform == 'azure' %}
+  storageClass: {{ ocp_storage_class_file }}
+  zenCoreMetadbStorageClass: {{ ocp_storage_class_block }}
+{% else %} 
   storageVendor: ocs
-  {% endif %}  
-  {% if selected_openshift_storage.storage_type == "pwx" %}
+{% endif %}  
+{% endif %}  
+{% if selected_openshift_storage.storage_type == "pwx" %}
   storageVendor: portworx
   storageClass: portworx-shared-gp3
-  {% endif %}
-  {% if selected_openshift_storage.storage_type == "nfs" %}
+{% endif %}
+{% if selected_openshift_storage.storage_type == "nfs" %}
   storageClass: {{ocp_storage_class_file}}
-  {% endif %}
+{% endif %}
 
