@@ -39,6 +39,11 @@
     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
   when: selected_openshift_storage.storage_type == 'ocs'
 
+- set_fact:
+    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default("") }}"
+    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default ("")  }}"
+  when: selected_openshift_storage.storage_type != 'ocs' and selected_openshift_storage.storage_type != 'nfs'
+
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
     oc get sc {{ ocp_storage_class_file }}
