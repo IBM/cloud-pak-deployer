@@ -9,7 +9,79 @@
     debug:
       var: generator
 
+  - fail:
+      msg: "Number of subnets for ROKS cluster must either be 1 or 3."
+    when: 
+    - (generator.attributes.infrastructure.subnets | length) != 1
+    - (generator.attributes.infrastructure.subnets | length) != 3
+
+  #TODO Make Portworx files conditional on pwx storage type
+
+  - name: Create kubeconfig directory for Portworx
+    file:
+      path: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/kubeconfig'
+      state: directory
+
+  # - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+  #   template:
+  #     src: '../templates/cpd-storage-classes.tf.j2'
+  #     dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/cpd-storage-classes.tf'
+
+  #- name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+  #  template:
+  #    src: '../templates/outputs.tf.j2'
+  #    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/outputs.tf'
+
+  #- name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+  #  template:
+  #    src: '../templates/variables.tf.j2'
+  #    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/variables.tf'
+
+  #- name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+  #  template:
+  #    src: '../templates/versions.tf.j2'
+  #    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/versions.tf'
+
+  - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+    template:
+      src: '../templates/cleanup/remove_attached.sh.j2'
+      dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/cleanup/remove_attached.sh'
+
+  - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+    template:
+      src: '../templates/scripts/get_zone_from_subnet.sh.j2'
+      dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/get_zone_from_subnet.sh'
+
+  - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+    template:
+      src: '../templates/scripts/create_etc_pwx_secret.sh.j2'
+      dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/create_etc_pwx_secret.sh'
+
+  # - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+  #   template:
+  #     src: '../templates/scripts/portworx_wait_until_ready.sh.j2'
+  #     dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/portworx_wait_until_ready.sh'
+
+  # - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+  #   template:
+  #     src: '../templates/scripts/px-sc.sh.j2'
+  #     dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/px-sc.sh'
+
+  - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+    template:
+      src: '../templates/scripts/volume_attachment_destroy.sh.j2'
+      dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/volume_attachment_destroy.sh'
+
+  - name: 'generate Portworx templates in {{PATH_TO_TERRAFORM_WORK_DIR}}'
+    template:
+      src: '../templates/scripts/volume_attachment.sh.j2'
+      dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/volume_attachment.sh'
+  #End Portworx files
+
   - name: 'generate instance of "{{generator.name}}" in {{PATH_TO_TERRAFORM_WORK_DIR}}'
     template:
       src: '../templates/main.tf.j2'
       dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/{{generator.name}}_{{generator.attributes.name}}.tf'
+
+
+  
