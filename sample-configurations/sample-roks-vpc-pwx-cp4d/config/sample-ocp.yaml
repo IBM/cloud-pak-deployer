@@ -1,0 +1,29 @@
+---
+cos:
+- name: {{ env_id }}-cos
+  plan: standard
+  location: global
+
+openshift:
+- name: {{ env_id }}
+  ocp_version: 4.8
+  worker_flavour: bx2.16x64
+  number_of_workers: 3
+  max_number_of_workers: 10
+  resource_group_name: ibm
+  infrastructure:
+    type: vpc
+    vpc_name: {{ env_id }}
+    subnets: 
+    - {{ env_id }}-subnet-zone-1
+    - {{ env_id }}-subnet-zone-2
+    - {{ env_id }}-subnet-zone-3
+    cos_name: {{ env_id }}-cos
+  openshift_storage:
+  - storage_name: pwx-storage
+    storage_type: pwx 
+    pwx_storage_label: pwx
+    pwx_etcd_location: {{ ibm_cloud_region }}
+    pwx_storage_size: 200 #In GBs
+    pwx_storage_iops: 10  #Must be a number, it will not be used unless a storage_profile is set to a custom profile
+    pwx_storage_profile: "10iops-tier"
