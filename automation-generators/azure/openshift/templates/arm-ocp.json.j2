@@ -1,0 +1,192 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "clusterName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the cluster"
+      }
+    },
+    "clusterDomain": {
+      "type": "string",
+      "metadata": {
+        "description": "Unique identifier of the domain"
+      }
+    },
+    "clusterNetworkPodCidr": {
+      "type": "string",
+      "metadata": {
+        "description": "CIDR of pod network"
+      }
+    },
+    "clusterNetworkServiceCidr": {
+      "type": "string",
+      "metadata": {
+        "description": "CIDR of service network"
+      }
+    },
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "Location"
+      }
+    },
+    "pullSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Red Hat pull secret"
+      }
+    },
+    "masterVmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Master nodes VM size"
+      }
+    },
+    "masterSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Id of the Virtual Network Subnet dedicated for master nodes"
+      }
+    },
+    "workerSubnetId": {
+      "type": "string",
+      "metadata": {
+        "description": "Id of the Virtual Network Subnet dedicated for worker nodes"
+      }
+    },
+    "workerVmSize": {
+      "type": "string",
+      "metadata": {
+        "description": "Size of worker VMs"
+      }
+    },
+    "workerVmDiskSizeGb": {
+      "type": "int",
+      "metadata": {
+        "description": "Disk size in GB of worker VMs"
+      }
+    },
+    "workerVmCount": {
+      "type": "int",
+      "metadata": {
+        "description": "Count of worker VMs"
+      }
+    },
+    "servicePrincipalId": {
+      "type": "string",
+      "metadata": {
+        "description": "Service principal client ID"
+      }
+    },
+    "servicePrincipalSecret": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Service principal client secret"
+      }
+    },
+    "vNetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the Virtual Network"
+      }
+    },
+    "aroRPObjectId": {
+      "type": "string",
+      "metadata": {
+        "description": "Azure Red Hat OpenShift Resource Provider Object ID"
+      }
+    },
+    "aadObjectId": {
+      "type": "string",
+      "defaultValue": "70bd131a-d193-470b-903e-aca2adb81f16",
+      "metadata": {
+        "description": "The Object ID of an Azure Active Directory client application"
+      }
+    }
+  },
+  "functions": [],
+  "variables": {
+    "contributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Network/virtualNetworks/providers/roleAssignments",
+      "apiVersion": "2018-09-01-preview",
+      "name": "[concat(parameters('vNetName'), '/Microsoft.Authorization/', guid(resourceGroup().id, deployment().name, parameters('aadObjectId')))]",
+      "properties": {
+        "roleDefinitionId": "[variables('contributorRole')]",
+        "principalId": "[parameters('aadObjectId')]"
+      }
+    },
+    {
+      "type": "Microsoft.Network/virtualNetworks/providers/roleAssignments",
+      "apiVersion": "2018-09-01-preview",
+      "name": "[concat(parameters('vNetName'), '/Microsoft.Authorization/', guid(resourceGroup().id, deployment().name, parameters('aroRPObjectId')))]",
+      "properties": {
+        "roleDefinitionId": "[variables('contributorRole')]",
+        "principalId": "[parameters('aroRPObjectId')]"
+      }
+    },
+    {
+      "type": "Microsoft.RedHatOpenShift/openShiftClusters",
+      "apiVersion": "2020-04-30",
+      "name": "[parameters('clusterName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "apiserverProfile": {
+          "visibility": "Public"
+        },
+        "clusterProfile": {
+          "domain": "[parameters('clusterDomain')]",
+          "pullSecret": "[parameters('pullSecret')]",
+          "resourceGroupId": "[concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/aro-', parameters('clusterDomain'))]"
+        },
+        "consoleProfile": {},
+        "ingressProfiles": [
+          {
+            "name": "default",
+            "visibility": "Public"
+          }
+        ],
+        "masterProfile": {
+          "subnetId": "[parameters('masterSubnetId')]",
+          "vmSize": "[parameters('masterVmSize')]"
+        },
+        "networkProfile": {
+          "podCidr": "[parameters('clusterNetworkPodCidr')]",
+          "serviceCidr": "[parameters('clusterNetworkServiceCidr')]"
+        },
+        "servicePrincipalProfile": {
+          "clientId": "[parameters('servicePrincipalId')]",
+          "clientSecret": "[parameters('servicePrincipalSecret')]"
+        },
+        "workerProfiles": [
+          {
+            "count": "[parameters('workerVmCount')]",
+            "diskSizeGB": "[parameters('workerVmDiskSizeGb')]",
+            "name": "worker",
+            "subnetId": "[parameters('workerSubnetId')]",
+            "vmSize": "[parameters('workerVmSize')]"
+          }
+        ]
+      }
+    }
+  ],
+
+  "outputs": {
+    "credentials": {
+      "type": "object",
+      "value": "[listCredentials(resourceId('Microsoft.RedHatOpenShift/OpenShiftClusters', parameters('clusterName')), '2020-04-30')]"
+    },
+    "apiURL": {
+      "type": "string",
+      "value": "[concat('https://api.', parameters('clusterDomain'), '.', parameters('location'), '.aroapp.io:6443')]"
+    },
+    "consoleURL": {
+      "type": "string",
+      "value": "[concat('https://console-openshift-console.apps.', parameters('clusterDomain'), '.', parameters('location'), '.aroapp.io/dashboards')]"
+    }
+  }
+}

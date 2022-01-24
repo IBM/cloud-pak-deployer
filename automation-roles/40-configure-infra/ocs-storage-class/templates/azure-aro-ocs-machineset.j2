@@ -1,0 +1,66 @@
+{% for _zone in [1,2,3] %}
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
+    machine.openshift.io/cluster-api-machine-role: worker
+    machine.openshift.io/cluster-api-machine-type: worker
+  name: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}{{ _zone }}
+  namespace: openshift-machine-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
+      machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}{{ _zone }}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}{{ _zone }}
+    spec:
+      metadata:
+        creationTimestamp: null
+        labels:
+          cluster.ocs.openshift.io/openshift-storage: ""
+      providerSpec:
+        value:
+          apiVersion: azureproviderconfig.openshift.io/v1beta1
+          credentialsSecret:
+            name: azure-cloud-credentials
+            namespace: openshift-machine-api
+          image:
+            offer: {{ _image_details.offer }}
+            publisher: azureopenshift
+            resourceID: ''
+            sku: {{ _image_details.sku }}
+            version: {{ _image_details.version }}
+          internalLoadBalancer: ""
+          kind: AzureMachineProviderSpec
+          location: {{ azure_location }}
+          metadata:
+            creationTimestamp: null
+          natRule: null
+          networkResourceGroup: {{ _azure_aro_config.resource_group.name }}
+          osDisk:
+            diskSizeGB: 128
+            managedDisk:
+              storageAccountType: Premium_LRS
+            osType: Linux
+          publicIP: false
+          publicLoadBalancer: {{ _infrastructure_id }}
+          resourceGroup: aro-{{ env_id }} 
+          sshPrivateKey: ""
+          sshPublicKey: ""
+          subnet: {{ _azure_aro_config.compute.subnet.name }}  
+          userDataSecret:
+            name: worker-user-data 
+          vmSize: Standard_D16s_v3
+          vnet: {{ _azure_aro_config.vnet.name }}
+          zone: "{{ _zone }}" 
+---
+{% endfor %}
