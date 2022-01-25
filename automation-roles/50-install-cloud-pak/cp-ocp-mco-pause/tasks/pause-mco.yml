@@ -1,15 +1,19 @@
 ---
+# Check if the MachineConfigPool worker exists. Sometimes after provisioning of a cluster this may take a few minutes
 - name: Check MachineConfig operator does not exist
   shell: |
     oc get mcp worker
   failed_when: false
   register: _mcp_worker
+  until: _mcp_worker.rc==0
+  delay: 10
+  retries: 60
 
 - name: Fail if MachineConfig operator does not exist
   fail:
     msg: "MachineConfigPool worker does not exist, cannot change required node settings for cloud platform {{ cloud_platform }}"
   when: _mcp_worker.rc != 0
 
-- name: Pause the MachineConfig operator to disable rebooting of workers
+- name: Pause the MachineConfig operator to disable rebooting of compute nodes
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker

@@ -27,6 +27,10 @@
       path_to_config_dir: "{{ config_dir }}"
       path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
 
+  - name: Download CLIs
+    include_role:
+      name: download-cli
+
   - name: Destroy OpenShift cluster contents where needed
     include_role:
       name: destroy-openshift-config
@@ -34,6 +38,13 @@
     loop_control:
       loop_var: current_openshift_cluster
 
-  - name: Destroy everything
-    include_role:
+  - include_role:
       name: destroy-terraform
+    when: cloud_platform == 'ibm-cloud'
+
+  - include_role:
+      name: destroy-aws
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: _current_openshift_cluster
+    when: cloud_platform == 'aws'

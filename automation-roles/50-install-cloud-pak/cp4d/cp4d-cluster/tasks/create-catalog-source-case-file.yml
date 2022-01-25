@@ -3,65 +3,32 @@
 - name: Retrieve case file for {{ case_inventory.name }} in the {{ case_dir }} directory
   find:
     paths: "{{ case_dir }}"
-    patterns: "^{{ case_inventory.search_string }}-[0-9][.][0-9][.][0-9][.]tgz"
+    patterns: "^{{ case_inventory.search_string }}-[0-9]+[.][0-9]+[.][0-9]+[.]tgz"
     use_regex: yes
   register: case_files
 
-- name: Show case file definitions
+- name: Show case file definitions that were found using the pattern
   debug:
     var: case_files
 
 - set_fact:
     case_file: "{{ case_files.files | first | default({}) }}"
 
-- name: Install CatalogSource for case file {{ case_file.path }} using private registry
-  block:
-  - name: Install CatalogSource for foundational services from case file {{ case_file.path }} using private registry
-    shell: |
-      cloudctl case launch --case {{ case_file.path }} \
-        --inventory {{ case_inventory.inventory }} \
-        --namespace openshift-marketplace \
-        --action install-catalog \
-        --args "--registry {{ private_registry_url_namespace }} --inputDir {{ case_dir }} \
-        --recursive"
-    when: 
-    - case_inventory.search_string == "ibm-cp-common-services"
-  - name: Install CatalogSource from case file {{ case_file.path }} using private registry
-    shell: |
-      cloudctl case launch --case {{ case_file.path }} \
-        --inventory {{ case_inventory.inventory }} \
-        --namespace openshift-marketplace \
-        --action install-catalog \
-        --args "--inputDir {{ case_dir }} \
-        --recursive"
-    when: 
-    - case_inventory.search_string != "ibm-cp-common-services"        
-  when: 
-    - (current_cp4d_cluster.image_registry_name | default("")) != ""
-    - case_file != {}
+- name: Show current case file
+  debug:
+    var: case_file
 
-- name: Install CatalogSource for case file {{ case_file.path }} using entitled registry
-  block:
-  - name: Install CatalogSource for foundational services from case file {{ case_file.path }} using entitled registry
+# Install catalog if case file for cartridge was found
+- block:
+  - name: Compose cloudctl install-catalog command for case file {{ case_file.path }}
+    set_fact:
+      _install_catalog_command: "{{ lookup('template','install-catalog-command.j2') }}"
+
+  - name: Show install-catalog command that will be used
+    debug:
+      var: _install_catalog_command
+
+  - name: Run cloudctl install-catalog for case file {{ case_file.path }}
     shell: |
-      cloudctl case launch --case {{ case_file.path }} \
-        --inventory {{ case_inventory.inventory }} \
-        --namespace openshift-marketplace \
-        --action install-catalog \
-        --args "--registry icr.io --inputDir {{ case_dir }} \
-        --recursive"
-    when: 
-    - case_inventory.search_string == "ibm-cp-common-services"
-  - name: Install CatalogSource using case file {{ case_file.path }} using entitled registry
-    shell: |
-      cloudctl case launch --case {{ case_file.path }} \
-        --inventory {{ case_inventory.inventory }} \
-        --namespace openshift-marketplace \
-        --action install-catalog \
-        --args "--inputDir {{ case_dir }} \
-        --recursive"
-    when: 
-    - case_inventory.search_string != "ibm-cp-common-services"
-  when: 
-    - (current_cp4d_cluster.image_registry_name | default("")) == ""
-    - case_file != {}
+      {{ _install_catalog_command }}
+  when: case_file != {}

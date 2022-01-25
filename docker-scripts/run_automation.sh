@@ -53,7 +53,9 @@ env|environment)
   # Assemble command
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
-    if [ "$CP_CONFIG_ONLY" == "true" ];then
+    if [ "$CHECK_ONLY" == "true" ];then
+      run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
+    elif [ "$CP_CONFIG_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
     else
       run_cmd+=" playbooks/playbook-env-apply.yml"
@@ -87,6 +89,10 @@ env|environment)
       run_cmd+=" --extra-vars $p=${!p}"
     done
   fi
+  # Make sure that the logs of the Ansible playbook are written to a log file
+  mkdir -p ${STATUS_DIR}/log
+  run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
+  echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   eval $run_cmd
   ;;
 
@@ -123,6 +129,7 @@ vault)
       run_cmd+=" --extra-vars $p=${!p}"
     done
   fi
+  echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   eval $run_cmd
   ;;
 *) 
