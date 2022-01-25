@@ -29,6 +29,12 @@
   debug:
     var: selected_openshift_storage
 
+- fail: msg="Valid values for storage type are 'nfs', 'ocs' and 'custom'"
+  when: 
+    - selected_openshift_storage.storage_type != 'nfs'
+    - selected_openshift_storage.storage_type != 'ocs'
+    - selected_openshift_storage.storage_type != 'custom'
+
 - set_fact:
     ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('managed-nfs-storage') }}"
     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('managed-nfs-storage') }}"
@@ -39,10 +45,16 @@
     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
   when: selected_openshift_storage.storage_type == 'ocs'
 
+
+- fail: msg="ocp_storage_class_file and ocp_storage_class_block are required when storage_type is set to 'custom'"
+  when:
+    - selected_openshift_storage.ocp_storage_class_file is undefined
+    - selected_openshift_storage.ocp_storage_class_block is undefined
+
 - set_fact:
-    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default("") }}"
-    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default ("")  }}"
-  when: selected_openshift_storage.storage_type != 'ocs' and selected_openshift_storage.storage_type != 'nfs'
+    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file }}"
+    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block }}"
+  when: selected_openshift_storage.storage_type == 'custom'
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
