@@ -14,7 +14,7 @@ cp4d:
   cp4d_version: 4.0
   use_case_files: False
   change_node_settings: True
-  image_registry_name: cpd401
+  image_registry_name: cpd404
   openshift_storage_name: nfs-storage
   
   cartridges:
@@ -37,3 +37,21 @@ cp4d:
 | image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
 | openshift_storage_name |References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | Yes, inferred | |
 | cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](/cpd-design/objects/cartridges#cp4d.cartridges) for more details | Yes | |
+
+### `image_registry`
+Defines a private registry that will be used for pulling the Cloud Pak container images from. Additionally, if the Cloud Pak entitlement key was specified at run time of the deployer, the images defined by the case files will be mirrored to this private registry.
+```
+image_registry:
+- name: cpd404
+  registry_host_name: de.icr.io
+  registry_namespace: cpd404
+  registry_insecure: false
+```
+
+#### Properties
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| name     | Name by which the image registry is identified.                      | Yes       |  |
+| registry_host_name | Host name of the registry server/service                   | Yes       |  |
+| registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory only when using the IBM Cloud Container Registry (ICR)    | No       | |
+| registry_insecure | Defines whether insecure registry access with a self-signed certificate is allowed.iamge | No       | True, False (default) |
