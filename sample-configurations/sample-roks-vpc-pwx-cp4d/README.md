@@ -1,5 +1,5 @@
-# IBM Cloud ROKS on VPC with NFS storage class and Cloud Pak for Data
-This is a sample configuration for ROKS on IBM Cloud, provisioned in a VPC. All infrastructure, OpenShift and Cloud Pak for Data are managed by the deployer and deployment requires nothing but an IBM Cloud API key and a Cloud Pak entitlement key.
+# IBM Cloud ROKS on VPC with Portworx storage classes and Cloud Pak for Data
+This is a sample configuration for ROKS on IBM Cloud, provisioned in a VPC with the Portworx storage from an IBM Cloud service. All infrastructure, OpenShift and Cloud Pak for Data are managed by the deployer and deployment requires nothing but an IBM Cloud API key and a Cloud Pak entitlement key.
 
 ![Picture of the environment](./sample-roks-vpc-nfs-cp4d.png)
 
@@ -14,16 +14,20 @@ The sample configuration is made up of 3 availability zones, each with its own a
 ### Subnets
 4 subnets are created. Zones 1 and 2 have a single subnet which span the entire IP address block. Zone 3 is split up into 2 subnets, one for OpenShift workers (zone-3) and one for shared virtual servers such as the bastion and the NFS server.
 
-### Virtual Server Instances
-A bastion is provisioned to serve as a jump host from the internet. It prevents the NFS server from having to have a public IP address. The NFS server can only be reached by using the bastion as the jump host and with the SSH private key that is provisioned too.
+## IBM Cloud Databases for Etcd
+An Etcd managed service is created.  Portworx requires a key-value store for its metadata.
 
-The NFS server provides the back-end storage for the `managed-nfs-storage` storage class in OpenShift. Due to throughput limitations and the fact that NFS cannot serve true block storage, not all cartridges support this storage type. Please check the cartridge in question before you install to determine if NFS is supported. By default a 1 TB volume is with a throughput of 10k IOPS is added to the NFS server.
+## Block Storage
+Block storage is created and attached to each OpenShift worker node.  This storage is used by Portworx to create highly available software defined storage for the OpenShift cluster.
+
+## IBM Cloud Portworx Service
+The IBM Cloud Portworx service is created.  This installs Portworx pods to all worker nodes of the OpenShift cluster.  Portworx default storage classes are also created.  CP4D adds additional storage classes with custom properties, optimized to meet the storage requirements of specific cartridges.
 
 ## OpenShift
-An OpenShift cluster with the specified version (4.6) is provisioned inside the VPC and across subnets 1, 2 and 3. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the NFS server that is provisioned in the VPC.
+An OpenShift cluster with the specified version (4.6) is provisioned inside the VPC and across subnets 1, 2 and 3.
 
 ## Cloud Pak for Data
-Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the IBM entitled registry and referencing the NFS storage class in OpenShift.
+Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the IBM entitled registry and referencing the Portworx storage class in OpenShift.
 
 ### Cartridges
 The sample configuration holds a list of cartridges which will be installed. You can control whether cartridges will be installed by commenting or uncommenting the appropriate blocks. Please ensure that the cartridge elements are aligned (hyphens must be aligned with hyphens and properties with properties).
