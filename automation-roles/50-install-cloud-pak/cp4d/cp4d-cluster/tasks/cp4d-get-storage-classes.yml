@@ -39,21 +39,19 @@
     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
   when: selected_openshift_storage.storage_type == 'ocs'
 
-#pwx storage classes vary according to cartridge, so are set in the relevant CR templates
-#- set_fact:
-#    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
-#    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
-#  when: selected_openshift_storage.storage_type == 'pwx'
+
+# Portworx storage classes vary according to cartridge, so are set in the relevant CR templates
+- set_fact:
+   ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
+   ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('portworx-gp3-sc') }}"
+  when: selected_openshift_storage.storage_type == 'pwx'
 
 
-- name: Check if file & block storage classes exist in OpenShift (nfs/ocs only)
-  block:
-    - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
-      shell:
-        oc get sc {{ ocp_storage_class_file }}
+- name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
+  shell:
+    oc get sc {{ ocp_storage_class_file }}
 
-    - name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
-      shell:
-        oc get sc {{ ocp_storage_class_block }}
-      when: ocp_storage_class_block != ocp_storage_class_file
-  when: selected_openshift_storage.storage_type != 'pwx'
+- name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
+  shell:
+    oc get sc {{ ocp_storage_class_block }}
+  when: ocp_storage_class_block != ocp_storage_class_file
