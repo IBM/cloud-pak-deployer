@@ -1,0 +1,75 @@
+---
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Retrieve Service Principal id
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-sp-id"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _service_principal_id: "{{ secret_value }}"
+
+- name: Retrieve Service Principal secret
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-sp-secret"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _service_principal_secret: "{{ secret_value }}"
+
+- name: Retrieve Tenant id
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-tenant-id"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _tenant_id: "{{ secret_value }}"
+
+- set_fact:
+    _azure_aro_config: "{{ all_config.azure_aro | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.azure_aro_name }}']
+
+- name: Destroy info
+  debug:
+    msg: Cluster "{{current_openshift_cluster.name}}" and any other resources in the resource group "{{_azure_aro_config.resource_group.name}}" will be destroyed
+
+- name: "Login and destroy {{ _azure_aro_config.resource_group.name }} resource group"
+  shell: |
+    az login --service-principal -u {{ _service_principal_id }} -p {{ _service_principal_secret }} --tenant {{ _tenant_id }}
+    az group delete --name {{ _azure_aro_config.resource_group.name }} -y
+  register: _destroy_resource_group
+  failed_when: "_destroy_resource_group.rc != 0"
+
+- name: Delete "{{ current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+
+- name: "Find all directories in {{status_dir}} except config, defaults, inventory, and vault"
+  find:
+    path: "{{ status_dir }}"
+    file_type: directory
+    excludes:
+      - "config"
+      - "defaults"
+      - "inventory"
+      - "vault"
+  register: found_dirs
+
+- name: "Delete all directories in {{status_dir}} except config, defaults, inventory and vault"
+  file:
+    path: "{{ item.path }}"
+    state: absent
+  with_items: "{{ found_dirs['files'] }}"

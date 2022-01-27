@@ -1,0 +1,87 @@
+# {{ ansible_managed }}
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "=2.73.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+
+resource "azurerm_resource_group" "rg" {
+  name     = "{{ _azure_aro_config.resource_group.name }}"
+  location = "{{ _azure_aro_config.resource_group.location }}"
+}
+
+
+resource "azurerm_virtual_network" "vnet" {
+  name                = "{{ _azure_aro_config.vnet.name }}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  address_space       = ["{{ _azure_aro_config.vnet.address_space }}"]
+}
+
+resource "azurerm_subnet" "m-subnet" {
+  name                 = "{{ _azure_aro_config.control_plane.subnet.name }}"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["{{ _azure_aro_config.control_plane.subnet.address_prefixes }}"]
+
+  service_endpoints = ["Microsoft.ContainerRegistry"]
+
+  # Setting this to true will Disable the policy
+  enforce_private_link_service_network_policies = "true"
+}
+
+resource "azurerm_subnet" "w-subnet" {
+  name                 = "{{ _azure_aro_config.compute.subnet.name }}"
+  resource_group_name  = azurerm_resource_group.rg.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefixes     = ["{{ _azure_aro_config.compute.subnet.address_prefixes }}"]
+
+  service_endpoints = ["Microsoft.ContainerRegistry"]
+}
+
+resource "azurerm_resource_group_template_deployment" "aro-cluster" {
+  name                = "{{ generator.attributes.name }}"
+  resource_group_name = azurerm_resource_group.rg.name
+  deployment_mode     = "Incremental"
+
+  template_content = file("${path.module}/arm-ocp.json")
+
+  parameters_content = jsonencode(
+    {
+      clusterName               = { value = "{{ generator.attributes.name }}" }
+      clusterDomain             = { value = "{{ generator.attributes.subdomain_name }}" }
+      clusterNetworkPodCidr     = { value = "{{ generator.attributes.network.pod_cidr }}" }
+      clusterNetworkServiceCidr = { value = "{{ generator.attributes.network.service_cidr }}" }
+      location                  = { value = "{{ _azure_aro_config.resource_group.location }}" }
+      pullSecret                = { value = "{{ lookup("file","/tmp/ocp_pullsecret.json") | replace("\"", "\\\"") }}" }
+      masterVmSize              = { value = "{{ _azure_aro_config.control_plane.vm.size }}" }
+      masterSubnetId            = { value = azurerm_subnet.m-subnet.id }
+      workerSubnetId            = { value = azurerm_subnet.w-subnet.id }
+      workerVmSize              = { value = "{{ _azure_aro_config.compute.vm.size }}" }
+      workerVmDiskSizeGb        = { value = {{ _azure_aro_config.compute.vm.disk_size_gb }} }
+      workerVmCount             = { value = {{ _azure_aro_config.compute.vm.count }} }
+      servicePrincipalId        = { value = "{{ _service_principal_id }}" }
+      servicePrincipalSecret    = { value = "{{ _service_principal_secret }}" }
+      vNetName                  = { value = azurerm_virtual_network.vnet.name }
+      aadObjectId               = { value = "{{ _service_principal_object_id }}" }
+      aroRPObjectId             = { value = "{{ _aro_rp_object_id }}" }
+
+  })
+
+
+  depends_on = [
+    azurerm_subnet.m-subnet,
+    azurerm_subnet.w-subnet
+  ]
+}
+
+output "aro-cluster-output" {
+  value = jsondecode(azurerm_resource_group_template_deployment.aro-cluster.output_content)
+}
