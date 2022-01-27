@@ -102,6 +102,10 @@ def preprocessor(attributes=None, fullConfig=None):
                     g.appendError(msg='pwx_storage_label must be specified when storage_type is pwx')
                 if "pwx_storage_size_gb" not in os:
                     g.appendError(msg='pwx_storage_size_gb must be specified when storage_type is pwx')
+                if "portworx_version" not in os:
+                    g.appendError(msg='portworx_version must be specified when storage_type is pwx')
+                if "stork_version" not in os:
+                    g.appendError(msg='stork_version must be specified when storage_type is pwx')
                 if len(ge['infrastructure']['subnets']) != 3:
                     g.appendError(msg='Storage type PWX was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement PWX.')
     result = {
