@@ -163,23 +163,6 @@ resource "null_resource" "volume_attachment_{{generator.attributes.name | replac
     command     = file("./scripts/volume_attachment.sh")
   }
 
-  # this breaks beyond terraform 0.12 because destroy provisioners are not allowed to reference other resources
-  # check with ibm terraform providers team for a volume_attachment resource
-  # provisioner "local-exec" {
-  #   when = destroy
-  #   environment = {
-  #     IBMCLOUD_API_KEY  = local.ibmcloud_api_key
-  #     TOKEN             = data.ibm_iam_auth_token.{{generator.attributes.name | replace("-", "_") }}.iam_access_token
-  #     REGION            = local.region
-  #     RESOURCE_GROUP_ID = data.ibm_resource_group.thisresourcegroup.id
-  #     CLUSTER_ID        = local.cluster_id
-  #     WORKER_ID         = length(data.ibm_container_vpc_cluster_worker.this) > 0 ? data.ibm_container_vpc_cluster_worker.this[count.index].id : 0
-  #     VOLUME_ID         = length(ibm_is_volume.this) > 0 ? ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
-  #   }
-  
-  #   interpreter = ["/bin/bash", "-c"]
-  #   command     = file("./scripts/volume_attachment_destroy.sh")
-  # }
 }
 
 #############################################
@@ -210,22 +193,6 @@ locals {
                                 null)
 }
 
-#resource "kubernetes_secret" "etcd_{{generator.attributes.name | replace("-", "_") }}" {
-#  depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
-#  count = local.enable && local.create_external_etcd ? 1 : 0
-#
-#  metadata {
-#    name = local.etcd_secret_name
-#    namespace = "kube-system"
-#  }
-#
-#  data = {
-#    "ca.pem" = base64decode(local.etcd_user_connectionstring.certbase64)
-#    username = local.etcd_username
-#    password = local.etcd_password
-#  }
-#  
-#}
 
 resource "null_resource" "etc_pwx_secret_{{generator.attributes.name | replace("-", "_") }}" {
   provisioner "local-exec" {
@@ -278,14 +245,6 @@ resource "ibm_resource_instance" "portworx_{{generator.attributes.name | replace
     portworx_version = "Portworx: 2.7.2 , Stork: 2.6.2"
     secret_type      = "k8s"
   }
-
-//  provisioner "local-exec" {
-//    environment = {
-//      KUBECONFIG = local.kube_config_path
-//    }
-//    interpreter = ["/bin/bash", "-c"]
-//    command     = file("./scripts/portworx_wait_until_ready.sh")
-//  }
 
 
 }
