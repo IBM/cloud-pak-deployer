@@ -64,6 +64,14 @@ openshift:
   - storage_type: ocs
     ocs_storage_label: ocs
     ocs_storage_size_gb: 500
+  - storage_name: pwx-storage
+    storage_type: pwx 
+    pwx_etcd_location: {{ ibm_cloud_region }}
+    pwx_storage_size_gb: 200 
+    pwx_storage_iops: 10 
+    pwx_storage_profile: "10iops-tier"
+    stork_version: 2.6.2
+    portworx_version: 2.7.2
 ```
 
 #### Property explanation OpenShift clusters on IBM Cloud (ROKS)
@@ -84,10 +92,17 @@ openshift:
 | upstream_dns_zones                    | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes                            |                        |
 | upstream_dns.dns_servers              | List of DNS servers which must be used to resolve host names within the specified zones                    | Yes                            |                        |
 | openshift_storage.storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                                          | Yes                            |                        |
-| openshift_storage.storage_type        | Type of storage class to create in the OpenShift cluster                                                   | Yes                            | nfs or ocs             |
+| openshift_storage.storage_type        | Type of storage class to create in the OpenShift cluster                                                   | Yes                            | nfs, ocs or pwx        |
 | openshift_storage.nfs_server_name     | Name of the NFS server within the VPC                                                                      | Yes if `storage_type` is `nfs` | Existing `nfs_server`  |
 | openshift_storage.ocs_storage_label   | Label to be used for the dedicated OCS nodes in the cluster                                                | Yes if `storage_type` is `ocs` |                        |
-| openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                                                                  | Yes if `storage_type` is `ocs` |                        |
+| openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                  | Yes if `storage_type` is `ocs` |                        |
+| openshift_storage.pwx_etcd_location   | IBM Cloud location where the etcd service will be deployed. This is typically the same region as the ROKS cluster | Yes if `storage_type` is `pwx` | |
+| openshift_storage.pwx_storage_size_gb | Size of the Portworx storage that will be provisioned    | Yes if `storage_type` is `pwx` | |
+| openshift_storage.pwx_storage_iops    | IOPS for the storage volumes that will be provisioned    | Yes if `storage_type` is `pwx` | |
+| openshift_storage.pwx_storage_profile | IOPS storage tier the storage volumes that will be provisioned    | Yes if `storage_type` is `pwx` | |
+| openshift_storage.stork_version       | Version of the Portworx storage orchestration layer for Kubernetes | Yes if `storage_type` is `pwx` | |
+| openshift_storage.portworx_version    | Version of the Portworx storage provider                 | Yes if `storage_type` is `pwx` | |
+
 
 <InlineNotification kind="warning">
   When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift
