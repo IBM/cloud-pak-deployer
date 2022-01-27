@@ -63,6 +63,7 @@ env|environment)
   elif [ "$ACTION" == "destroy" ];then
     run_cmd+=" playbooks/playbook-env-destroy.yml"
   fi
+  run_cmd+=" --extra-vars cpd_action=${ACTION}"
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"

@@ -9,6 +9,10 @@
     query: >-
       [?project=='{{ _current_cp4d_asset.project }}']
 
+- fail:
+    msg: "CP4D object {{ _current_cp4d_asset.project }} was not found for asset."
+  when: _current_cp4d_cluster=={}
+
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
@@ -43,17 +47,24 @@
 
   when: _get_ccs.rc == 0
 
-- name: List Cloud Pak for Data assets under directory {{ config_dir }}/{{ _current_cp4d_asset.asset_location }}
-  find:
-    paths: "{{ config_dir }}/{{ _current_cp4d_asset.asset_location }}"
-    patterns: "*"
-    file_type: directory
-    recurse: no
-  register: _cp4d_assets
+- stat:
+    path: "{{ config_dir }}/{{_current_cp4d_asset.asset_location }}/cp4d-asset.sh"
+  register: _cp4d_asset_shell
 
-- name: Run asset shell script
-  include_tasks: run-cp4d-asset.yml
-  loop: "{{ _cp4d_assets.files }}"
-  loop_control:
-    loop_var: _cp4d_asset_dir
-  
+- name: Show cp4d-asset.sh file stats
+  debug:
+    var: _cp4d_asset_shell
+
+- include_tasks: run-cp4d-asset-bash.yml
+  when: _cp4d_asset_shell.stat.exists
+
+- stat:
+    path: "{{ config_dir }}/{{ _current_cp4d_asset.asset_location }}/cp4d-asset.yaml"
+  register: _cp4d_asset_task
+
+- name: Show cp4d-asset.yaml file stats
+  debug:
+    var: _cp4d_asset_task
+
+- include_tasks: run-cp4d-asset-task.yml
+  when: _cp4d_asset_task.stat.exists
