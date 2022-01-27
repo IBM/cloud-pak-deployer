@@ -9,6 +9,10 @@
     query: >-
       [?project=='{{ _current_cp4d_asset.project }}']
 
+- fail:
+    msg: "CP4D object {{ _current_cp4d_asset.project }} was not found for asset."
+  when: _current_cp4d_cluster=={}
+
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
