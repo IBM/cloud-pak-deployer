@@ -1,0 +1,26 @@
+---
+- name: Download all assets for air-gapped install
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
+
+  tasks:
+  - name: Retrieve IP address of portable registry
+    set_fact:
+      _portable_registry_ip_address: "{{ lookup('file', status_dir + '/registry/portable-registry-ip.out') }}"
+
+  - name: Show IP address of portable registry
+    debug:
+      var: _portable_registry_ip_address
+
+  - name: Wait until registry is available on IP address {{ _portable_registry_ip_address }} and port 5000
+    wait_for:
+      host: "{{ _portable_registry_ip_address }}"
+      port: 5000
+      timeout: 30

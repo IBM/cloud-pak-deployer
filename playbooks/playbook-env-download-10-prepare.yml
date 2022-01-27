@@ -1,0 +1,68 @@
+---
+- name: Prepare for air-gapped download
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
+
+  tasks:
+  - name: Download cloudctl client
+    include_role:
+      name: cloudctl-download
+
+  - name: Download case file for the registry server
+    shell: |
+      cloudctl case save \
+        --repo https://github.com/IBM/cloud-pak/raw/master/repo/case \
+        --case ibm-cp-datacore \
+        --version 2.0.8 \
+        --outputdir {{ status_dir }}/downloads \
+        --no-dependency
+
+  - name: Validate if an existing portable registry password exists in the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "portable-registry-admin-password"
+      secret_group: "{{ environment_name }}"
+
+  - name: Save admin password retrieved from vault
+    set_fact:
+      _portable_registry_admin_password: "{{ secret_value }}"
+
+  # Generate portable registry admin password if non-existing
+  - block:
+    - name: Generate new password for portable registry admin user
+      set_fact:
+        _new_portable_registry_admin_password: "{{ lookup('password', '/dev/null length=25 chars=ascii_letters') }}"
+
+    - name: Store the portable registry admin password into the vault as portable-registry-admin-password
+      include_role:
+        name: vault-create-secret
+      vars:
+        secret_name: "portable-registry-admin-password"
+        secret_description: "Portable registry password"
+        secret_payload: "{{ _new_portable_registry_admin_password }}"
+        secret_group: "{{ environment_name }}"
+
+    - set_fact:
+        _portable_registry_admin_password: "{{ _new_portable_registry_admin_password }}"
+
+    when: _portable_registry_admin_password == ""
+
+  - name: Initialize the registry
+    shell: |
+      cloudctl case launch --case {{ status_dir }}/downloads/ibm-cp-datacore-2.0.8.tgz \
+        --inventory cpdPlatformOperator --action init-registry \
+        --args '--registry localhost --user admin --pass "{{ _portable_registry_admin_password }}" --dir {{ status_dir }}/registry'
+    args:
+      creates: "{{ status_dir }}/registry"
+
+  - name: Show portable registry password
+    debug:
+      msg: "Portable registry admin password: {{ _portable_registry_admin_password }}"
