@@ -68,7 +68,7 @@ data "ibm_container_cluster_config" "{{generator.attributes.name | replace("-", 
 //locals used only in openshift.tf
 locals {
   kube_config_path = data.ibm_container_cluster_config.{{generator.attributes.name | replace("-", "_") }}.config_file_path
-  worker_nodes     = {{generator.attributes.compute_nodes}}
+  compute_nodes     = {{generator.attributes.compute_nodes}}
   enable           = true
 
   // Storage parameters
@@ -98,7 +98,7 @@ data "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_"
 }
 
 data "ibm_container_vpc_cluster_worker" "{{generator.attributes.name | replace("-", "_") }}" {
-  count = local.enable ? local.worker_nodes : 0
+  count = local.enable ? local.compute_nodes : 0
   cluster_name_id   = local.cluster_id
   resource_group_id = data.ibm_resource_group.thisresourcegroup.id
   worker_id         = length(data.ibm_container_vpc_cluster.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster.{{generator.attributes.name | replace("-", "_") }}[0].workers[count.index] : 0
@@ -109,17 +109,17 @@ data "ibm_iam_auth_token" "{{generator.attributes.name | replace("-", "_") }}" {
 # ibm_is_subnet is currently bugged. On a run, it can error with an expi.workers[count.index]red or bad token. A subsequent rerun fixes this, 
 # but this script should run the first time without any problems.
 data "ibm_is_subnet" "{{generator.attributes.name | replace("-", "_") }}" {
-  count = local.enable ? local.worker_nodes : 0
+  count = local.enable ? local.compute_nodes : 0
   identifier = length(data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}[count.index].network_interfaces[0].subnet_id : 0
 }
 
-# Create a block storage volume per worker.
+# Create a block storage volume per compute node.
 resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}" {
   depends_on = [
     data.ibm_is_subnet.{{generator.attributes.name | replace("-", "_") }}
   ]
 
-  count = local.enable && local.install_storage ? local.worker_nodes : 0 
+  count = local.enable && local.install_storage ? local.compute_nodes : 0 
   
   capacity = local.storage_capacity
   iops = local.storage_profile == "custom" ? local.storage_iops : null
@@ -129,19 +129,13 @@ resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}" {
   zone = length(data.ibm_is_subnet.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_is_subnet.{{generator.attributes.name | replace("-", "_") }}[count.index].zone : ""
 }
 
-# locals {
-#   worker_volume_map = zipmap(data.ibm_container_vpc_cluster_worker.this.*.id, ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}.*.id)
-# }
-
-# Attach block storage to worker
+# Attach block storage to compute nodes
 resource "null_resource" "volume_attachment_{{generator.attributes.name | replace("-", "_") }}" {
-  # count = length(data.ibm_container_vpc_cluster_worker.worker)
-  count = local.enable && local.install_storage ? local.worker_nodes : 0 
+  count = local.enable && local.install_storage ? local.compute_nodes : 0 
 
   depends_on = [
     ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}
   ]
-  # for_each = local.worker_volume_map
   
   triggers = {
     volume = length(ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}) > 0 ? ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
@@ -155,7 +149,7 @@ resource "null_resource" "volume_attachment_{{generator.attributes.name | replac
       REGION            = local.region
       RESOURCE_GROUP_ID = data.ibm_resource_group.thisresourcegroup.id
       CLUSTER_ID        = local.cluster_id
-      WORKER_ID         = length(data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
+      COMPUTE_ID        = length(data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
       VOLUME_ID         = length(ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}) > 0 ? ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0      
     }
 

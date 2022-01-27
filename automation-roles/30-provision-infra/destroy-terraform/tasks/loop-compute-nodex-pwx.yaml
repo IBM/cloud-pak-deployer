@@ -1,0 +1,23 @@
+# Retrieve all the compute nodes, and call a task to delete the pwx storage attachments (if present)
+- name: Verify cluster exists    
+  command: |
+    ibmcloud oc cluster get --cluster {{ current_openshift_cluster.name }} \
+      --output json
+  register: _clustercheck
+  failed_when: false
+
+- name: Get compute nodes and loop for pwx block storage
+  block:
+    - name: Get compute nodes for cluster {{ current_openshift_cluster.name }}
+      command: |
+        ibmcloud oc workers --cluster {{ current_openshift_cluster.name }} \
+          --worker-pool default --output json
+      register: _compute_nodes
+      
+    - name: Loop compute nodes     
+      include_tasks: delete-storage-attachment-pwx.yaml
+      loop: "{{ _compute_nodes.stdout | from_json }}"
+      loop_control:
+        loop_var: _current_compute_node
+  when: _clustercheck.rc==0
+  
