@@ -640,32 +640,40 @@ fi
 # If action is download, first run the preparation
 if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   run_prepare="${CONTAINER_ENGINE} run"
-  run_prepare+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
-  run_prepare+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z"
+  run_prepare+=" -v ${STATUS_DIR}:${STATUS_DIR}:z "
+  run_prepare+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:z"
   run_prepare+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
   run_prepare+=" -e STATUS_DIR=${STATUS_DIR}"
   run_prepare+=" -e CONFIG_DIR=${CONFIG_DIR}"
 
-  if $CPD_DEVELOP;then run_prepare+=" -v ${PWD}:/cloud-pak-deployer:Z";fi
+  if $CPD_DEVELOP;then run_prepare+=" -v ${PWD}:/cloud-pak-deployer:z";fi
   run_prepare+=" --entrypoint /cloud-pak-deployer/docker-scripts/env-download-prepare.sh"
   run_prepare+=" cloud-pak-deployer"
   eval $run_prepare
+
+  # Prepare the image registry if needed
+  if [ ! -d $STATUS_DIR/imageregistry ];then
+    cloudctl case launch --case $STATUS_DIR/downloads/ibm-cp-datacore-2.0.10.tgz \
+      --inventory cpdPlatformOperator --action init-registry \
+      --args "--registry portable-registry --user admin --pass $(cat $STATUS_DIR/downloads/portable-registry-admin-password.out) --dir $STATUS_DIR/imageregistry"
+  fi
 
   # Now that registry has been prepared, start the registry, only if not already started
   if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
     ${CONTAINER_ENGINE} rm docker-registry 2>/dev/null
     ${STATUS_DIR}/downloads/cloudctl case launch \
-      --case ${STATUS_DIR}/downloads/ibm-cp-datacore-2.0.8.tgz \
+      --case ${STATUS_DIR}/downloads/ibm-cp-datacore-2.0.10.tgz \
       --inventory cpdPlatformOperator \
       --action start-registry \
-      --args "--port 5000 --dir ${STATUS_DIR}/registry --image docker.io/library/registry:2"
+      --args "--port 15000 --dir ${STATUS_DIR}/imageregistry --image docker.io/library/registry:2"
   else
     echo "Portable registry is already active. The running registry will be used."
   fi
 
   # Retrieve the IP address of the container registry
-  podman inspect -f '{{ .NetworkSettings.IPAddress }}' docker-registry > ${STATUS_DIR}/registry/portable-registry-ip.out
-  echo "Portable registry IP address is $(cat ${STATUS_DIR}/registry/portable-registry-ip.out)"
+  podman inspect -f '{{ .NetworkSettings.IPAddress }}' docker-registry > ${STATUS_DIR}/imageregistry/portable-registry-ip.out
+  chmod o+r ${STATUS_DIR}/imageregistry/portable-registry-ip.out
+  echo "Portable registry IP address is $(cat ${STATUS_DIR}/imageregistry/portable-registry-ip.out)"
 fi
 
 # Build command when not running inside container
@@ -680,14 +688,14 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" --cap-add=IPC_LOCK"
 
   if [ "${STATUS_DIR}" != "" ];then
-    run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:Z "
+    run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:z "
   fi
 
   if [ "${CONFIG_DIR}" != "" ];then
-    run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:Z"
+    run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:z"
   fi
 
-  if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer:Z";fi
+  if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer:z";fi
 
   run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
   run_cmd+=" -e ACTION=${ACTION}"
@@ -704,7 +712,7 @@ if ! $INSIDE_CONTAINER;then
               -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
               -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
     if [ ! -z $VAULT_SECRET_FILE ];then
-      run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:Z"
+      run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:z"
     fi
   fi
 
@@ -714,17 +722,17 @@ if ! $INSIDE_CONTAINER;then
 
   if [ ! -z $VAULT_CERT_CA_FILE ];then
     run_cmd+=" -e VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
-    run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:Z"
+    run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:z"
   fi
 
   if [ ! -z $VAULT_CERT_KEY_FILE ];then
     run_cmd+=" -e VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
-    run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:Z"
+    run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:z"
   fi
 
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
     run_cmd+=" -e VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
-    run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:Z"
+    run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:z"
   fi
 
   run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"

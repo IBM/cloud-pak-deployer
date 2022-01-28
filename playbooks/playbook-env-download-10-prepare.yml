@@ -20,7 +20,7 @@
       cloudctl case save \
         --repo https://github.com/IBM/cloud-pak/raw/master/repo/case \
         --case ibm-cp-datacore \
-        --version 2.0.8 \
+        --version 2.0.10 \
         --outputdir {{ status_dir }}/downloads \
         --no-dependency
 
@@ -39,7 +39,7 @@
   - block:
     - name: Generate new password for portable registry admin user
       set_fact:
-        _new_portable_registry_admin_password: "{{ lookup('password', '/dev/null length=25 chars=ascii_letters') }}"
+        _new_portable_registry_admin_password: "{{ lookup('password', '/dev/null length=12 chars=ascii_letters') }}"
 
     - name: Store the portable registry admin password into the vault as portable-registry-admin-password
       include_role:
@@ -55,14 +55,11 @@
 
     when: _portable_registry_admin_password == ""
 
-  - name: Initialize the registry
-    shell: |
-      cloudctl case launch --case {{ status_dir }}/downloads/ibm-cp-datacore-2.0.8.tgz \
-        --inventory cpdPlatformOperator --action init-registry \
-        --args '--registry localhost --user admin --pass "{{ _portable_registry_admin_password }}" --dir {{ status_dir }}/registry'
-    args:
-      creates: "{{ status_dir }}/registry"
-
   - name: Show portable registry password
     debug:
       msg: "Portable registry admin password: {{ _portable_registry_admin_password }}"
+
+  - name: Write registry password to file
+    copy:
+      content: "{{ _portable_registry_admin_password }}"
+      dest: "{{ status_dir }}/downloads/portable-registry-admin-password.out"
