@@ -651,13 +651,6 @@ if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   run_prepare+=" cloud-pak-deployer"
   eval $run_prepare
 
-  # Prepare the image registry if needed
-  if [ ! -d $STATUS_DIR/imageregistry ];then
-    cloudctl case launch --case $STATUS_DIR/downloads/ibm-cp-datacore-2.0.10.tgz \
-      --inventory cpdPlatformOperator --action init-registry \
-      --args "--registry portable-registry --user admin --pass $(cat $STATUS_DIR/downloads/portable-registry-admin-password.out) --dir $STATUS_DIR/imageregistry"
-  fi
-
   # Now that registry has been prepared, start the registry, only if not already started
   if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
     ${CONTAINER_ENGINE} rm docker-registry 2>/dev/null

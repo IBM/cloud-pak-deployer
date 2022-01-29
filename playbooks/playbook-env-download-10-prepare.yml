@@ -55,6 +55,14 @@
 
     when: _portable_registry_admin_password == ""
 
+  - name: Prepare registry
+    shell: |
+      cloudctl case launch --case {{ status_dir }}/downloads/ibm-cp-datacore-2.0.10.tgz \
+        --inventory cpdPlatformOperator --action init-registry \
+        --args "--registry portable-registry --user admin --pass {{ _portable_registry_admin_password }} --dir {{ status_dir }}/imageregistry"
+    args:
+      creates: "{{ status_dir }}/imageregistry"
+
   - name: Show portable registry password
     debug:
       msg: "Portable registry admin password: {{ _portable_registry_admin_password }}"
