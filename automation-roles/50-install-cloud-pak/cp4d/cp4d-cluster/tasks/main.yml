@@ -3,6 +3,9 @@
   debug:
     msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
 
+- include_role:
+    name: cp4d-variables
+
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
@@ -77,7 +80,10 @@
   when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool)
 
 - name: Prepare case files for Cloud Pak for Data when using private registry or when explicitly using case files
-  include_tasks: prepare-cp4d-case-files-40.yml
+  include_role: 
+    name: cp4d-case-save
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
   when: _use_case_files
 
 - name: Mirror images for Cloud Pak for Data to private registry {{ current_cp4d_cluster.image_registry_name }}
