@@ -95,14 +95,18 @@
 - name: Wait for OcsCluster {{ current_openshift_storage.ocs_storage_label }} to be deployed
   command: |
     oc get OcsCluster {{ current_openshift_storage.ocs_storage_label }} -o yaml
-  register: ocscluster_status
+  register: _ocscluster_status
   failed_when: False
   retries: 60
   delay: 30
-  until: ((ocscluster_status.stdout | from_yaml).status.storageClusterStatus | default("")) == "Ready"
+  until: ((_ocscluster_status.stdout | from_yaml).status.storageClusterStatus | default("")) == "Ready"
   vars:
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
+- name: Fail if OcsCluster was not created
+  fail:
+    msg: "OcsCluster custom resource was not created correctly, check the CR on your cluster."
+  when: ((_ocscluster_status.stdout | from_yaml).status.storageClusterStatus | default("")) != "Ready"
