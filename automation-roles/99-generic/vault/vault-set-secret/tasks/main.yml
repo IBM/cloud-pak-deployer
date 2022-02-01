@@ -22,9 +22,6 @@
     secret_value_to_set: "{{ secret_payload | b64encode}}"
   when: (secret_file is not defined) or (secret_file == '')
 
-- set_fact:
-  _vault_set_secret_attempt: 0
-
 - name: Set Secret Vault Hashicorp
   block:
     - name: Validate mandatory variables are defined for Hashicorp Vault
@@ -101,18 +98,12 @@
 
   when: vault_type == 'hashicorp-vault'
   rescue:
-    - fail:
-        msg: Hashicorp set secret failed after connect re-attempt
-      when: _vault_set_secret_attempt > 0
-
-    - set_fact:
-          _vault_set_secret_attempt: 1
-
     #Re-connect to vault
-    - include_role: vault-connect
+    - include_role:
+        name: vault-connect
     
     #Re-attempt the set-secret
-    - include_task: main.yml
+    - include_tasks: main.yml
 
 
 - name: Set secret Vault IBM Cloud
@@ -130,18 +121,12 @@
         ibm_vault_secret_payload: "{{ secret_value_to_set }}"
   when: "vault_type == 'ibmcloud-vault'"
   rescue:
-    - fail:
-        msg: IBMCloud set secret failed after connect re-attempt
-      when: _vault_set_secret_attempt > 0
-
-    - set_fact:
-          _vault_set_secret_attempt: 1
-
     #Re-connect to vault
-    - include_role: vault-connect
+    - include_role:
+        name: vault-connect
     
     #Re-attempt the set-secret
-    - include_task: main.yml  
+    - include_tasks: main.yml  
 
 - name: Set secret in Vault file
   block:
