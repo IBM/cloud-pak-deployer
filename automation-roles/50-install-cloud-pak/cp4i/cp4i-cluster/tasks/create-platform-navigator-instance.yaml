@@ -1,0 +1,59 @@
+---
+
+# --------------------- WAIT FOR SUBSCRIPTION -----------------------
+
+- name: Set Platform Navigator subscription details - online
+  block:
+    - set_fact:
+        pn_package: "{{platform_navigator_package_name_online}}"
+    - set_fact:
+        pn_source: "{{platform_navigator_catalog_source_online}}"
+  when: not _use_case_files
+
+- name: Set Platform Navigator subscription details - CASE
+  block:
+    - set_fact:
+        pn_package: "{{platform_navigator_package_name_case}}"
+    - set_fact:
+        pn_source: "{{platform_navigator_catalog_source_case}}"
+  when: _use_case_files
+
+- name: Wait for the Platform Navigator Operator subscription
+  shell: |
+    subscription_name="{{pn_package}}-{{_pn_instance_def.channel}}-{{pn_source}}-openshift-marketplace"
+    csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
+    if [[ "$csv" == "null" ]]; then
+      echo "null"
+    else
+      oc get csv -n openshift-operators ${csv} -o json 2>/dev/null | jq -r .status.phase
+    fi
+  register: pn_phase
+  retries: 100
+  delay: 20
+  until: pn_phase.stdout == "Succeeded"
+
+# --------------------- CREATE INSTANCE -----------------------------
+
+- name: Verify if platform navigator already exists
+  shell: |
+    oc get PlatformNavigator {{_pn_instance_def.name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{_pn_instance_def.name}}' | wc -l
+  register: pn_exists
+
+- name: Prepare yaml file for creating instance
+  template:
+    src: cp4i-platform-navigator.j2
+    dest: "{{ status_dir }}/cp4i/cp4i-platform-navigator.yml"
+  when: pn_exists.stdout == "0"
+
+- name: Create instance from {{ status_dir }}/cp4di/cp4i-platform-navigator.yml
+  shell: |
+    oc apply -f {{ status_dir }}/cp4i/cp4i-platform-navigator.yml
+  when: pn_exists.stdout == "0"
+
+- name: Wait for the Platform Navigator to become ready
+  shell: |
+    oc get PlatformNavigator -n {{current_cp4i_cluster.project}} {{_pn_instance_def.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
+  register: pn_status
+  retries: 300
+  delay: 30
+  until: pn_status.stdout == "True"

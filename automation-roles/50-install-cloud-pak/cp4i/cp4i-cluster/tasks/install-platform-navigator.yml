@@ -1,44 +1,20 @@
 ---
 
-# Check if navigator appears on the list of instances
-
-- name: Verify if platform navigator is defined
+- name: Find Platform Navigator instance definition
   set_fact:
     _pn_instance_def: "{{ current_cp4i_cluster.instances | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?type=='platform-navigator']
 
-- debug:
-    msg: |
-      ////////////////////////////////////////////
-      PLATFORM NAVIGATOR
-      ////////////////////////////////////////////
-      {{ _pn_instance_def }}
+- set_fact:
+    _pn_defined: True
 
+- set_fact:
+    _pn_defined: False
+  when: (_pn_instance_def.name | default("")) == ""
 
-
-# - name: Verify if platform navigator already exists
-#   shell: |
-#     oc get PlatformNavigator {{current_cp4i_cluster.platform_navigator.instance_name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{current_cp4i_cluster.platform_navigator.instance_name}}' | wc -l
-#   register: pn_exists
-
-# - name: Prepare yaml file for creating instance
-#   template:
-#     src: cp4i-platform-navigator.j2
-#     dest: "{{ status_dir }}/cp4i/cp4i-platform-navigator.yml"
-#   when: pn_exists.stdout == "0"
-
-# - name: Create instance from {{ status_dir }}/cp4di/cp4i-platform-navigator.yml
-#   shell: |
-#     oc apply -f {{ status_dir }}/cp4i/cp4i-platform-navigator.yml
-#   when: pn_exists.stdout == "0"
-
-# - name: Wait for the Platform Navigator to become ready
-#   shell: |
-#     oc get PlatformNavigator -n {{current_cp4i_cluster.project}} {{current_cp4i_cluster.platform_navigator.instance_name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
-#   register: pn_status
-#   retries: 300
-#   delay: 30
-#   until: pn_status.stdout == "True"
+- name: Create Platfrom Navigator instance
+  include: create-platform-navigator-instance.yaml
+  when: _pn_defined
 
