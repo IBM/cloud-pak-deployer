@@ -1,22 +1,19 @@
 ---
 
-# Current loop variable: current_cp4i_cartridge
-# New variable: current_cp4i_instance
+- name: Get the details for instance type {{ current_cp4i_instance.type }}
+  set_fact:
+    _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='{{ current_cp4i_instance.type }}']
 
-# - name: Get the CASE details for cartridge {{ current_cp4i_cartridge.name }}
-#   set_fact:
-#     current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
-#   vars:
-#     query: >-
-#       [?name=='{{ current_cp4i_cartridge.name }}']
+- fail:
+    msg: The definition of instance type {{ current_cp4i_instance.type }} not found
+  when: _instance_type_details=={}
 
-# - fail:
-#     msg: Case file details for cartridge {{ current_cp4i_cartridge.name }} not found
-#   when: current_case_inventory=={}
-
-# - name: Save case file {{ case_inventory.search_string }}-{{ current_cp4i_cartridge.case_version }}
-#   shell: |
-#     cloudctl case save \
-#       --case {{ case_github_url }}/{{ current_case_inventory.search_string }}-{{ current_cp4i_cartridge.case_version }}.tgz \
-#       --outputdir {{ case_dir }} 
+- name: Save case file {{ _instance_type_details.package_name }}-{{ current_cp4i_instance.case_version }}
+  shell: |
+    cloudctl case save \
+      --case {{ case_github_url }}/{{ _instance_type_details.package_name }}-{{ current_cp4i_instance.case_version }}.tgz \
+      --outputdir {{ _case_dir }} 
 
