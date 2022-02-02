@@ -57,3 +57,12 @@ image_registry:
 | registry_port | Port that the image registry listens on. Default is the https port (443) | No | |
 | registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory only when using the IBM Cloud Container Registry (ICR)    | No       | |
 | registry_insecure | Defines whether insecure registry access with a self-signed certificate is allowed.iamge | No       | True, False (default) |
+
+When mirroring images, the deployer connects to the registry using the host name and port. If the port is omitted, the standard https protocol (443) is used. If a `registry_namespace` is specified, for example when using the IBM Container Registry on IBM Cloud, it will be appended to the registry URL.
+
+The user and password to connect to the registry will be retrieved from the vault, using secret `image-registry-<your_image_registry_name>` and must be stored in the format `registry_user:registry_password`. For example, if you want to connect to the image registry `cpd404` with user `admin` and password `very_s3cret`, you would create a secret as follows:
+```
+./cp-deploy.sh vault set \
+  -vs image-registry-cpd404 \
+  -vsv "admin:very_s3cret"
+```
