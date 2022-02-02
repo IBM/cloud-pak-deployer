@@ -1,0 +1,27 @@
+- debug:
+    msg: "{{ _current_compute_node.id }}"
+
+# Retrieve attachment Ids for the current compute node
+- name: Retrieve attachment ids
+  command: |
+    ibmcloud ks storage attachment ls --cluster {{ current_openshift_cluster.name }} --worker {{ _current_compute_node.id }} --output json
+  register: _compute_storage
+
+- debug:
+    var: _compute_storage
+
+# Locate a specific attachment Id, where the storage volume name contains 'pwx' (it was created with this name previously)
+- name: Retrieve pwx attachment id
+  set_fact:
+    _compute_node_attachment_id: "{{ _compute_storage.stdout | from_json | json_query(pwx_block_query)}}"
+  vars:
+    pwx_block_query: "volume_attachments[?contains(volume.name,'pwx')].id"
+
+- debug:
+    var: _compute_node_attachment_id
+
+# If a block storage volume with name including 'pwx' existed, use its attachment Id to detach the storage from the compute node
+- name: Detach Block volume
+  command: |
+    ibmcloud ks storage attachment rm --cluster {{ current_openshift_cluster.name }} --worker {{ _current_compute_node.id }} --attachment {{ _compute_node_attachment_id[0] }}
+  when: "_compute_node_attachment_id | length >0"

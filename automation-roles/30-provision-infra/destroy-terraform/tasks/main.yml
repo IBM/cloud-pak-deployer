@@ -36,7 +36,7 @@
       msg: "No Terraform state found in secret {{ environment_name }}/{{ environment_name }}-terraform-tfstate"
     when: "secret_value | trim | length == 0"
     
-  #Detach Block storage from worker nodes (Portworx), as this prevents terraform from deleting the portworx service  
+  # Detach Block storage from compute nodes (Portworx), as this prevents terraform from deleting the portworx service  
   - debug:
       msg: "Detaching storage volumes for pwx"
 
@@ -45,7 +45,7 @@
       name: login-ibmcloud
 
   - name: Loop clusters          
-    include_tasks: loop_workers_pwx.yaml
+    include_tasks: loop-compute-nodes-pwx.yaml
     loop: "{{ all_config.openshift | default([]) }}"
     loop_control:
       loop_var: current_openshift_cluster
