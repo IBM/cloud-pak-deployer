@@ -1,0 +1,22 @@
+---
+- name: Get number of compute nodes in machine set {{ machine_set_name }}
+  shell: |
+    oc get machineset -n openshift-machine-api \
+      {{ machine_set_name }} \
+      -o jsonpath='{.status.replicas}'
+  register: _machineset_replicas
+
+- name: Wait for {{ _machineset_replicas.stdout }} machines to be added to the cluster and become available
+  shell: |
+    oc get machineset -n openshift-machine-api \
+      {{ machine_set_name }}  \
+      -o jsonpath='{.status.availableReplicas}'
+  register: _available_replicas
+  retries: 120
+  delay: 60
+  until: _available_replicas.stdout == _machineset_replicas.stdout
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
