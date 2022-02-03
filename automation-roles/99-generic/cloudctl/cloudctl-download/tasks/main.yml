@@ -4,15 +4,36 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
+- name: Check if cloudctl was already downloaded
+  stat:
+    path: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
+  register: _cloudctl_download
 
-- name: Download cloudctl tool
-  shell: |
-    CLOUDCTL_VER=$(curl -s https://api.github.com/repos/IBM/cloud-pak-cli/releases/latest | \
-      jq -r .tag_name ) && \
-    wget -nv https://github.com/IBM/cloud-pak-cli/releases/download/${CLOUDCTL_VER}/cloudctl-linux-amd64.tar.gz \
-      -P {{ status_dir }}/downloads/
-  args:
-    warn: False
+- block:
+
+  - name: Get current version number of clouctl
+    uri:
+      url: https://api.github.com/repos/IBM/cloud-pak-cli/releases/latest
+      return_content: yes
+      method: GET
+      status_code: 200
+    register: _cloudctl_version
+
+  - debug:
+      var: _cloudctl_version
+
+  - name: Download cloudctl tool
+    get_url:
+      url: "https://github.com/IBM/cloud-pak-cli/releases/download/{{ _cloudctl_version.json.tag_name }}/cloudctl-linux-amd64.tar.gz"
+      dest: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
+      owner: root
+      mode: 0644
+    register: _download_result
+    until: _download_result is succeeded
+    retries: 5
+    delay: 30
+
+  when: not _cloudctl_download.stat.exists
 
 - name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz
   unarchive:
