@@ -573,7 +573,7 @@ fi
 
 # Ensure status directory exists
 if [ "$STATUS_DIR" != "" ];then
-  mkdir -p $STATUS_DIR
+  mkdir -p $STATUS_DIR/{log,pid}
 fi
 
 # Check if a container is currently running for this status directory
