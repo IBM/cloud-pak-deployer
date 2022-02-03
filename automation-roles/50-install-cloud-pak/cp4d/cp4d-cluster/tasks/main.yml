@@ -79,7 +79,7 @@
     _use_case_files: True
   when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool)
 
-- name: Prepare case files for Cloud Pak for Data when using private registry or when explicitly using case files
+- name: Save case files for Cloud Pak for Data when using private registry or when explicitly using case files
   include_role: 
     name: cp4d-case-save
   vars:
@@ -87,7 +87,14 @@
   when: _use_case_files
 
 - name: Mirror images for Cloud Pak for Data to private registry {{ current_cp4d_cluster.image_registry_name }}
-  include_tasks: mirror-images-cp4d-40.yml
+  include_role: 
+    name: cp-mirror-images
+  vars:
+    _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
+    _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
+    _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+    _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
+    _p_case_dir: "{{ status_dir }}/cp4d/case"
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - ibm_cp_entitlement_key != ""
