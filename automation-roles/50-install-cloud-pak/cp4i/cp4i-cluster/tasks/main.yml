@@ -75,6 +75,20 @@
    _use_case_files: True
   when: (current_cp4i_cluster.image_registry_name | default("")) != "" or (current_cp4i_cluster.use_case_files | default(False) | bool)
 
+- set_fact:
+    _use_top_level_operator: False
+
+- set_fact:
+    _use_top_level_operator: True
+  when: (current_cp4i_cluster.use_top_level_operator | default(False) | bool) 
+
+- set_fact:
+    _operators_in_all_namespaces: False
+
+- set_fact:
+    _operators_in_all_namespaces: False
+  when: (current_cp4i_cluster.operators_in_all_namespaces | default(False) | bool)
+
 - name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
   include_tasks: prepare-cp4i-case-files.yml
   when: _use_case_files
