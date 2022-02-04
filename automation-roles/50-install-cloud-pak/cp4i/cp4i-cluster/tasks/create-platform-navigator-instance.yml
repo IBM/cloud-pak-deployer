@@ -1,26 +1,34 @@
 ---
 
-# --------------------- WAIT FOR SUBSCRIPTION -----------------------
+# --------------------- FIND INSTANCE TYPE DEFINITION  --------------
 
-- name: Set Platform Navigator subscription details - online
-  block:
-    - set_fact:
-        pn_package: "{{platform_navigator_package_name_online}}"
-    - set_fact:
-        pn_source: "{{platform_navigator_catalog_source_online}}"
+- name: Get the details for Platform Navigator instance type
+  set_fact:
+    _pn_type_def: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='platform-navigator']
+
+- fail:
+    msg: The Platform Navigator instance type details not found
+  when: _pn_type_def=={}
+
+# --------------------- DETERMINE SUBSCRIPTION NAME -----------------
+
+- set_fact:
+    _subscription_name: "{{ _pn_type_def.package_name }}"
+  when: _use_case_files
+
+- set_fact:
+    _subscription_name: "{{ _pn_type_def.package_name }}-{{_pn_instance_def.channel}}-{{online_catalog_source_name}}-openshift-marketplace"
   when: not _use_case_files
 
-- name: Set Platform Navigator subscription details - CASE
-  block:
-    - set_fact:
-        pn_package: "{{platform_navigator_package_name_case}}"
-    - set_fact:
-        pn_source: "{{platform_navigator_catalog_source_case}}"
-  when: _use_case_files
+
+# --------------------- WAIT FOR SUBSCRIPTION -----------------------
 
 - name: Wait for the Platform Navigator Operator subscription
   shell: |
-    subscription_name="{{pn_package}}-{{_pn_instance_def.channel}}-{{pn_source}}-openshift-marketplace"
+    subscription_name="{{_subscription_name}}"
     csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
     if [[ "$csv" == "null" ]]; then
       echo "null"
