@@ -63,32 +63,36 @@
         cmd: "terraform init"
 
     - name: "Run terraform plan in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/plan.log"
-      shell:
-        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
-        cmd: bash -c "terraform plan -no-color -detailed-exitcode 2>&1 >> plan.log"
+      shell: |
+        set -o pipefail
+        terraform plan -destroy -no-color -detailed-exitcode 2>&1 \
+          | tee {{status_dir}}/terraform/plan.log
+      args:
+        chdir: "{{status_dir}}/terraform"
       environment:
         ARM_CLIENT_ID: "{{ _service_principal_id }}"
         ARM_CLIENT_SECRET: "{{ _service_principal_secret }}"
         ARM_SUBSCRIPTION_ID: "{{ _subscription_id }}"
         ARM_TENANT_ID: "{{ _tenant_id }}"
-      register: terraform_plan_result
-      failed_when: "terraform_plan_result.rc == 1"
-      # terraform_plan_result.rc == 0 -> success, no changes
-      # terraform_plan_result.rc == 1 -> error
-      # terraform_plan_result.rc == 2 -> success, changes present
+      register: _terraform_plan_result
+      failed_when: "_terraform_plan_result.rc == 1"
+      # _terraform_plan_result.rc == 0 -> success, no changes
+      # _terraform_plan_result.rc == 1 -> error
+      # _terraform_plan_result.rc == 2 -> success, changes present
 
     - debug:
-        var: terraform_plan_result
+        var: _terraform_plan_result
 
     - fail:
         msg: Error occurred during Terraform plan. Failing now. Check the plan.log file for details.
       when:
-        - terraform_plan_result.rc == 1
+        - _terraform_plan_result.rc == 1
 
     - name: "Run terraform apply in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/apply.log"
-      shell:
-        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
-        cmd: bash -c "terraform apply -auto-approve -no-color 2>&1 >> apply.log"
+      shell: |
+        set -o pipefail
+        terraform apply -auto-approve -no-color 2>&1 \
+          | tee {{status_dir}}/terraform/apply.log
       environment:
         TF_LOG: "info"
         TF_LOG_PATH: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/tf_apply.log"
@@ -96,19 +100,19 @@
         ARM_CLIENT_SECRET: "{{ _service_principal_secret }}"
         ARM_SUBSCRIPTION_ID: "{{ _subscription_id }}"
         ARM_TENANT_ID: "{{ _tenant_id }}"
-      register: terraform_apply_result
+      register: _terraform_apply_result
       ignore_errors: yes
-      when: terraform_plan_result.rc == 2
+      when: _terraform_plan_result.rc == 2
 
     - debug:
-        var: terraform_apply_result
+        var: _terraform_apply_result
 
     - fail:
         msg: Error occurred during Terraform apply procedure. Failing now. Check the apply.log file for details.
-      when: terraform_apply_result.rc != 0
+      when: _terraform_apply_result.rc != 0
 
     - name: Parse output log (kubeadmin password and API endpoints) and store into the vault
       include_tasks: parse-output-store-vault.yml
-      when: terraform_apply_result.rc == 0
+      when: _terraform_apply_result.rc == 0
 
   when: _aro_start_provisioning
