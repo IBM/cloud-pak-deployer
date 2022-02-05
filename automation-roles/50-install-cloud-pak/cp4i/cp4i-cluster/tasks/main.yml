@@ -99,6 +99,17 @@
   - (current_cp4i_cluster.image_registry_name | default("")) != ""
   - ibm_cp_entitlement_key != ""
 
+# -------------------- OPENSHIFT OBJECTS ----------------------------
+
+- name: Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.storage_class_name }}
+  include_tasks: cp4i-get-storage-classes.yml
+
+- name: Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration
+  include_tasks: openshift-prepare-project.yml
+
+- name: Create entitlement key secret
+  include_tasks: create-entitlement-key-secret.yml
+
 # -------------------- CREATING CATALOG SOURCES ---------------------
 
 - name: Create catalog sources for entitled registry when not using CASE files
@@ -112,48 +123,37 @@
     loop_var: current_cp4i_instance
   when: _use_case_files
 
-# -------------------- OPENSHIFT OBJECTS ----------------------------
-
-- name: Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.storage_class_name }}
-  include_tasks: cp4i-get-storage-classes.yml
-
-- name: Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration
-  include_tasks: openshift-prepare-project.yml
-
-- name: Create entitlement key secret
-  include_tasks: create-entitlement-key-secret.yml
-
 # -------------------- INSTALLING OPERATORS -------------------------
 
-- name: Install CP4I operators using CASE based catalog sources
-  include_tasks: install-cp4i-operators-case-based.yml
-  when: _use_case_files
+# - name: Install CP4I operators using CASE based catalog sources
+#   include_tasks: install-cp4i-operators-case-based.yml
+#   when: _use_case_files
 
-- name: Install CP4I operators using online provided catalog source
-  block:
+# - name: Install CP4I operators using online provided catalog source
+#   block:
 
-    - name: Install CP4I operators using top level operator
-      include_tasks: install-cp4i-operators-top-level.yml
-      when: _use_top_level_operator
+#     - name: Install CP4I operators using top level operator
+#       include_tasks: install-cp4i-operators-top-level.yml
+#       when: _use_top_level_operator
 
-    - name: Install CP4I operators for each defined instance type
-      include_tasks: install-cp4i-operators-per-inst-type.yml
-      when: not _use_top_level_operator
+#     - name: Install CP4I operators for each defined instance type
+#       include_tasks: install-cp4i-operators-per-inst-type.yml
+#       when: not _use_top_level_operator
 
-  when: not _use_case_files 
+#   when: not _use_case_files 
 
 # -------------------- PLATFORM NAVIGATOR ---------------------------
 
-- name: Install Cloud Pak for Integration Platform Navigator
-  include_tasks: install-platform-navigator.yml
+# - name: Install Cloud Pak for Integration Platform Navigator
+#   include_tasks: install-platform-navigator.yml
 
 # -------------------- INTEGRATION INSTANCES ------------------------
 
-- name: Create instances of CP4I capabilities and runtimes
-  include_tasks: create-instance.yml
-  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-  loop_control:
-    loop_var: current_cp4i_instance
+# - name: Create instances of CP4I capabilities and runtimes
+#   include_tasks: create-instance.yml
+#   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+#   loop_control:
+#     loop_var: current_cp4i_instance
 
 # -------------------- FINALIZING -----------------------------------
 
@@ -164,9 +164,9 @@
 - name: Configure CP4I admin password and store in vault
   include_tasks: configure-cpi-admin-password.yml
 
-- name: Output Cloud pak for Integration URL and admin password
-  include_role:
-    name: cp4i-cluster-show
+# - name: Output Cloud pak for Integration URL and admin password
+#   include_role:
+#     name: cp4i-cluster-show
 
 - name: Ensure the status log folder exists
   file:
