@@ -1,0 +1,97 @@
+# network_acl:
+# - name: {{ env_id }}-acl
+#   vpc_name: {{ env_id }}
+#   rules:
+#   - name: inbound-ssh
+#     action: allow               # Can be allow or deny
+#     source: "0.0.0.0/0"
+#     destination: "0.0.0.0/0"
+#     direction: inbound
+#     tcp:
+#       source_port_min: 1        # optional
+#       source_port_max: 65535    # optional
+#       dest_port_min: 22         # optional
+#       dest_port_max: 22         # optional
+#   - name: output-udp
+#     action: deny                # Can be allow or deny
+#     source: "0.0.0.0/0"
+#     destination: "0.0.0.0/0"
+#     direction: outbound
+#     udp:
+#       source_port_min: 1        # optional
+#       source_port_max: 65535    # optional
+#       dest_port_min: 1000       # optional
+#       dest_port_max: 2000       # optional
+#   - name: output-icmp
+#     action: allow               # Can be allow or deny
+#     source: "0.0.0.0/0"
+#     destination: "0.0.0.0/0"
+#     direction: outbound
+#     icmp:
+#       code: 1
+
+
+resource "ibm_is_network_acl" "{{generator.attributes.name | replace("-", "_") }}" {
+  name           = "{{generator.attributes.name}}"
+  vpc            = data.ibm_is_vpc.{{generator.attributes.vpc_name | replace("-", "_") }}.id
+  resource_group = data.ibm_resource_group.thisresourcegroup.id
+}
+
+{% for rule in generator.attributes.rules %}
+resource "ibm_is_network_acl_rule" "{{generator.attributes.name | replace("-", "_") }}_{{ rule.name | replace("-", "_") }}" {
+    network_acl  = ibm_is_network_acl.{{generator.attributes.name | replace("-", "_") }}.id
+    name         = "{{ rule.name }}"
+    action       = "{{ rule.action }}"
+    source       = "{{ rule.source }}"
+    destination  = "{{ rule.destination }}"
+    direction    = "{{ rule.direction }}"
+
+
+{% if rule.icmp is defined %}
+// Rule for ICMP
+    icmp {
+      code      = "{{ rule.icmp.code }}"
+      type      = "{{ rule.icmp.type }}"
+    }
+{% endif %}
+
+
+{% if rule.tcp is defined %}
+// Rule for TCP
+    tcp {
+{% if rule.tcp.source_port_min is defined %}
+      source_port_min  = "{{ rule.tcp.source_port_min }}"
+{% endif %}
+{% if rule.tcp.source_port_max is defined %}
+      source_port_max  = "{{ rule.tcp.source_port_max }}"
+{% endif %}
+{% if rule.tcp.dest_port_min is defined %}
+      port_min         = "{{ rule.tcp.dest_port_min }}"
+{% endif %}
+{% if rule.tcp.dest_port_max is defined %}
+      port_max         = "{{ rule.tcp.dest_port_min }}"
+{% endif %}
+    }
+{% endif %}
+
+{% if rule.udp is defined %}
+// Rule for UDP
+    udp {
+{% if rule.udp.source_port_min is defined %}
+      source_port_min  = "{{ rule.udp.source_port_min }}"
+{% endif %}
+{% if rule.udp.source_port_max is defined %}
+      source_port_max  = "{{ rule.udp.source_port_max }}"
+{% endif %}
+{% if rule.udp.dest_port_min is defined %}
+      port_min         = "{{ rule.udp.dest_port_min }}"
+{% endif %}
+{% if rule.udp.dest_port_max is defined %}
+      port_max         = "{{ rule.udp.dest_port_min }}"
+{% endif %}
+    }
+{% endif %}
+
+}
+  
+{% endfor %}
