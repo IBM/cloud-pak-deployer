@@ -84,7 +84,7 @@
 
 - set_fact:
     _use_top_level_operator: True
-  when: (current_cp4i_cluster.use_top_level_operator | default(False) | bool) 
+  when: (current_cp4i_cluster.use_top_level_operator | default(False) | bool) and not (current_cp4i_cluster.use_case_files | default(False) | bool) 
 
 - set_fact:
     _operators_in_all_namespaces: False
@@ -137,6 +137,7 @@
   
 - name: Install operators for each needed instance type
   include_tasks: install-operator.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
   loop_control:
     loop_var: current_cp4i_instance
   when: not _use_top_level_operator
