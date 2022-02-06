@@ -95,15 +95,15 @@
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
-- name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
-  include_tasks: prepare-cp4i-case-files.yml
-  when: _use_case_files
+# - name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
+#   include_tasks: prepare-cp4i-case-files.yml
+#   when: _use_case_files
 
-- name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
-  include_tasks: mirror-images-cp4i.yml
-  when: 
-  - (current_cp4i_cluster.image_registry_name | default("")) != ""
-  - ibm_cp_entitlement_key != ""
+# - name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
+#   include_tasks: mirror-images-cp4i.yml
+#   when: 
+#   - (current_cp4i_cluster.image_registry_name | default("")) != ""
+#   - ibm_cp_entitlement_key != ""
 
 # ------------ OPENSHIFT OBJECTS ------------------------------------
 
@@ -118,35 +118,32 @@
 
 # ------------ CREATING CATALOG SOURCES -----------------------------
 
-- name: Create catalog sources for entitled registry when not using CASE files
-  include_tasks: create-catalog-sources-entitled.yml
-  when: not _use_case_files
+# - name: Create catalog sources for entitled registry when not using CASE files
+#   include_tasks: create-catalog-sources-entitled.yml
+#   when: not _use_case_files
 
-- name: Create catalog sources when using CASE files
-  include_tasks: create-catalog-source-case-file.yml
-  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-  loop_control:
-    loop_var: current_cp4i_instance
-  when: _use_case_files
+# - name: Create catalog sources when using CASE files
+#   include_tasks: create-catalog-source-case-file.yml
+#   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+#   loop_control:
+#     loop_var: current_cp4i_instance
+#   when: _use_case_files
 
 # ------------ INSTALLING OPERATORS ---------------------------------
 
-- name: Install CP4I operators using CASE based catalog sources
-  include_tasks: install-cp4i-operators-case-based.yml
-  when: _use_case_files
+- name: Prepare operator group if installing in specific namespace
+  include_tasks: prepare-operator-group.yml
+  when: not _operators_in_all_namespaces
+  
+- name: Install operators for each needed instance type
+  include_tasks: install-operator.yml
+  loop_control:
+    loop_var: current_cp4i_instance
+  when: not _use_top_level_operator
 
-- name: Install CP4I operators using online provided catalog source
-  block:
-
-    - name: Install CP4I operators using top level operator
-      include_tasks: install-cp4i-operators-top-level.yml
-      when: _use_top_level_operator
-
-    - name: Install CP4I operators for each defined instance type
-      include_tasks: install-cp4i-operators-per-inst-type.yml
-      when: not _use_top_level_operator
-
-  when: not _use_case_files 
+- name: Install all CP4I operators using top level operator
+  include_tasks: install-operators-top-level.yml
+  when: _use_top_level_operator
 
 # ------------ PLATFORM NAVIGATOR -----------------------------------
 

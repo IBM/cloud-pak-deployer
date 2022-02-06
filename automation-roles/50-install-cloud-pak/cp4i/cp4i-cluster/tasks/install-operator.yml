@@ -1,0 +1,28 @@
+---
+
+# ------------ FIND INSTANCE TYPE DEFINITION ----------------------
+
+- name: Get instance type details
+  set_fact:
+    _inst_type_def: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='{{ current_cp4i_instance.type }}']
+
+- name: Fail if the instance type cannot be found
+  fail:
+    msg: "Case instance type for instance {{ current_cp4i_instance.name }} not found."
+  when: _inst_type_def=={}
+
+# ------------ SUBSCRIPTION VARIABLES -------------------------------
+
+
+  # prepare Subscription template
+    # if case installation use case source
+    # if online installation use online source
+    # if all namespaces set namespace to openshift-operators
+    # if specific namespace 
+      # set namespace to project
+
+# ------------ PREPARE AND APPLY YAML -------------------------------
+
