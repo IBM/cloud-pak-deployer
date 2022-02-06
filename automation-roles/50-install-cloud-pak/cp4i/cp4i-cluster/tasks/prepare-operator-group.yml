@@ -1,13 +1,10 @@
 ---
 
-    # Create OperatorGroup
-    # Ref: ''CP4I-install-CLI
-    # ---------------------------------------------------------------
-    # apiVersion: operators.coreos.com/v1
-    # kind: OperatorGroup
-    # metadata:
-    #   name: ibm-integration-operatorgroup
-    #   namespace: cp4i
-    # spec:
-    #   targetNamespaces:
-    #   - cp4i  
+- name: Prepare yaml file for creating operator group
+  template:
+    src: operator-group.j2
+    dest: "{{ status_dir }}/cp4i/operator-group.yml"
+
+- name: "Create operator group using {{ status_dir }}/cp4i/operator-group.yml"
+  shell: |
+    oc apply -f {{ status_dir }}/cp4i/operator-group.yml
