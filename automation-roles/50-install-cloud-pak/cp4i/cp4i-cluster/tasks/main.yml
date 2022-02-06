@@ -95,15 +95,15 @@
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
-# - name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
-#   include_tasks: prepare-cp4i-case-files.yml
-#   when: _use_case_files
+- name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
+  include_tasks: prepare-cp4i-case-files.yml
+  when: _use_case_files
 
-# - name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
-#   include_tasks: mirror-images-cp4i.yml
-#   when: 
-#   - (current_cp4i_cluster.image_registry_name | default("")) != ""
-#   - ibm_cp_entitlement_key != ""
+- name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
+  include_tasks: mirror-images-cp4i.yml
+  when: 
+  - (current_cp4i_cluster.image_registry_name | default("")) != ""
+  - ibm_cp_entitlement_key != ""
 
 # ------------ OPENSHIFT OBJECTS ------------------------------------
 
@@ -118,16 +118,16 @@
 
 # ------------ CREATING CATALOG SOURCES -----------------------------
 
-# - name: Create catalog sources for entitled registry when not using CASE files
-#   include_tasks: create-catalog-sources-entitled.yml
-#   when: not _use_case_files
+- name: Create catalog sources for entitled registry when not using CASE files
+  include_tasks: create-catalog-sources-entitled.yml
+  when: not _use_case_files
 
-# - name: Create catalog sources when using CASE files
-#   include_tasks: create-catalog-source-case-file.yml
-#   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-#   loop_control:
-#     loop_var: current_cp4i_instance
-#   when: _use_case_files
+- name: Create catalog sources when using CASE files
+  include_tasks: create-catalog-source-case-file.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
+  when: _use_case_files
 
 # ------------ INSTALLING OPERATORS ---------------------------------
 
@@ -148,16 +148,16 @@
 
 # ------------ PLATFORM NAVIGATOR -----------------------------------
 
-# - name: Install Cloud Pak for Integration Platform Navigator
-#   include_tasks: install-platform-navigator.yml
+- name: Install Cloud Pak for Integration Platform Navigator
+  include_tasks: install-platform-navigator.yml
 
 # ------------ INTEGRATION INSTANCES --------------------------------
 
-# - name: Create instances of CP4I capabilities and runtimes
-#   include_tasks: create-instance.yml
-#   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-#   loop_control:
-#     loop_var: current_cp4i_instance
+- name: Create instances of CP4I capabilities and runtimes
+  include_tasks: create-instance.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
 
 # ------------ FINALIZING -------------------------------------------
 
@@ -168,9 +168,9 @@
 - name: Configure CP4I admin password and store in vault
   include_tasks: configure-cpi-admin-password.yml
 
-# - name: Output Cloud pak for Integration URL and admin password
-#   include_role:
-#     name: cp4i-cluster-show
+- name: Output Cloud pak for Integration URL and admin password
+  include_role:
+    name: cp4i-cluster-show
 
 - name: Ensure the status log folder exists
   file:
