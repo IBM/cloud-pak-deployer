@@ -1,42 +1,36 @@
 ---
 
-# Installation of CP4I operators using online catalog sources and 
-# top level operator
+# ------------ SUBSCRIPTION VARIABLES -------------------------------
 
-# -------------------- DEFINED PROJECT ------------------------------
+- set_fact:
+    _subscr_name: "ibm-cp-integration"
 
-- name: "Install CP4I operators in namespace {{ current_cp4i_cluster.project }}"
-  block:
+- set_fact:
+    _subscr_namespace: "openshift-operators"
+  when: _operators_in_all_namespaces
 
-    - debug:
-        msg: "Installing CP4I operators in specific namespace"
-        
-    # Create OperatorGroup
-    # Ref: ''CP4I-install-CLI
-    # ---------------------------------------------------------------
-    # apiVersion: operators.coreos.com/v1
-    # kind: OperatorGroup
-    # metadata:
-    #   name: ibm-integration-operatorgroup
-    #   namespace: cp4i
-    # spec:
-    #   targetNamespaces:
-    #   - cp4i  
-
+- set_fact:
+    _subscr_namespace: "{{ current_cp4i_cluster.project }}"
   when: not _operators_in_all_namespaces
 
-# -------------------- ALL NAMESPACES -------------------------------
+- set_fact:
+    _subscr_channel: "{{ current_cp4i_cluster.top_level_operator_channel }}"
 
-- name: Install operators in all namespaces
-  block:
+- set_fact:
+    _subscr_source: "{{ top_level_operator_catalog_case }}"
+  when: _use_case_files
 
-    - name: Prepare yaml file for installing operators
-      template:
-        src: cp4i-operators-all-projects.j2
-        dest: "{{ status_dir }}/cp4i/cp4i-operators-all-projects.yml"
+- set_fact:
+    _subscr_source: "{{ top_level_operator_catalog_online }}"
+  when: not _use_case_files
 
-    - name: Install operators from {{ status_dir }}/cp4di/cp4i-operators-all-projects.yml
-      shell: |
-        oc apply -f {{ status_dir }}/cp4i/cp4i-operators-all-projects.yml
+# ------------ PREPARE AND APPLY YAML -------------------------------
 
-  when: _operators_in_all_namespaces
+- name: Prepare yaml file for creating subscription
+  template:
+    src: subscription.j2
+    dest: "{{ status_dir }}/cp4i/{{ _subscr_name }}.yml"
+
+- name: Create subscription {{ status_dir }}/cp4i/{{ _subscr_name }}.yml
+  shell: |
+    oc apply -f {{ status_dir }}/cp4i/{{ _subscr_name }}.yml

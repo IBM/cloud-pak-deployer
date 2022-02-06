@@ -16,13 +16,36 @@
 
 # ------------ SUBSCRIPTION VARIABLES -------------------------------
 
+- set_fact:
+    _subscr_name: "{{ _inst_type_def.package_name }}"
 
-  # prepare Subscription template
-    # if case installation use case source
-    # if online installation use online source
-    # if all namespaces set namespace to openshift-operators
-    # if specific namespace 
-      # set namespace to project
+- set_fact:
+    _subscr_namespace: "openshift-operators"
+  when: _operators_in_all_namespaces
+
+- set_fact:
+    _subscr_namespace: "{{ current_cp4i_cluster.project }}"
+  when: not _operators_in_all_namespaces
+
+- set_fact:
+    _subscr_channel: "{{ current_cp4i_instance.channel }}"
+
+- set_fact:
+    _subscr_source: "{{ _inst_type_def.source_catalog_case }}"
+  when: _use_case_files
+
+- set_fact:
+    _subscr_source: "{{ _inst_type_def.source_catalog_online }}"
+  when: not _use_case_files
 
 # ------------ PREPARE AND APPLY YAML -------------------------------
+
+- name: Prepare yaml file for creating subscription
+  template:
+    src: subscription.j2
+    dest: "{{ status_dir }}/cp4i/{{ _subscr_name }}.yml"
+
+- name: Create subscription {{ status_dir }}/cp4i/{{ _subscr_name }}.yml
+  shell: |
+    oc apply -f {{ status_dir }}/cp4i/{{ _subscr_name }}.yml
 
