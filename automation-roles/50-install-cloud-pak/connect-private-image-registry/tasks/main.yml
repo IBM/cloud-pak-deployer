@@ -2,12 +2,7 @@
 - name: Validate mandatory variables are defined
   assert:
     that:
-      - cloud_platform is defined
       - (current_cp4d_cluster.image_registry_name | default("")) != ""
-
-- name: Validate cloud_platform is implemented
-  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
-  when: "cloud_platform not in implemented_cloud_platform_types"
 
 - name: Retrieve image registry details
   set_fact:
@@ -26,9 +21,8 @@
   debug:
     var: current_image_registry
 
-- name: Connect to IBM Container Registry and store credentials if needed
-  block:
-    - include_tasks: ibmcloud-cr-connect.yml
+# Connect to IBM Container registry if on IBM Cloud
+- include_tasks: ibmcloud-cr-connect.yml
   when: cloud_platform == 'ibm-cloud'
 
 - name: Get private registry authentication details
