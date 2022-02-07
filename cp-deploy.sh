@@ -644,7 +644,6 @@ if ! $INSIDE_CONTAINER;then
       echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
       echo "Cannot save current state until the process has completed"
       exit 1
-    fi
   # Display the logs if an active or inactive container was found
   elif [[ "${ACTION}" == "logs" ]];then
     if [[ "${CURRENT_CONTAINER_ID}" == "" ]];then
@@ -682,7 +681,7 @@ if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   eval $run_prepare
 fi
 
-if [[ "${ACTION}" == "download" || ${CPD_AIRGAP} ]] && ! $CHECK_ONLY;then
+if [[ "${ACTION}" == "download" || ${CPD_AIRGAP} == "true" ]] && ! $CHECK_ONLY;then
   # Start the registry, only if not already started
   if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
     ${CONTAINER_ENGINE} rm docker-registry 2>/dev/null
