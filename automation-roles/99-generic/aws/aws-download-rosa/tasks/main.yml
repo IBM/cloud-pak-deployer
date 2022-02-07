@@ -13,6 +13,11 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
+- name: Check if ROSA client was already downloaded
+  stat:
+    path: "{{ status_dir }}/downloads/{{ _rosa_client_package }}"
+  register: _rosa_download
+
 - name: Download ROSA client "{{ _rosa_base_url }}/{{ _rosa_client_package }}"
   get_url:
     url: "{{ _rosa_base_url }}/{{ _rosa_client_package }}"
@@ -23,6 +28,7 @@
   until: _download_result is succeeded
   retries: 5
   delay: 30
+  when: not _rosa_download.stat.exists
 
 - name: Unpack ROSA client
   unarchive:

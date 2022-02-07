@@ -4,6 +4,11 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
+- name: Check if terraform was already downloaded
+  stat:
+    path: "{{ status_dir }}/downloads/terraform_linux_amd64.zip"
+  register: _terraform_download
+
 - name: Download Terraform
   shell: |
     TER_VER=$(curl -s https://api.github.com/repos/hashicorp/terraform/releases/latest | \
@@ -12,6 +17,7 @@
       -O {{ status_dir }}/downloads/terraform_linux_amd64.zip
   args:
     warn: False
+  when: not _terraform_download.stat.exists
 
 - name: Unpack Terraform from {{ status_dir }}/downloads/terraform_linux_amd64.zip
   unarchive:
