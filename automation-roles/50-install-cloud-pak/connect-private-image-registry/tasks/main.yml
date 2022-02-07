@@ -43,3 +43,13 @@
     private_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
     private_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
 
+- name: Check that the deployer can connect to the private image registry
+  uri:
+    url: "https://{{ private_registry_url }}/v2"
+    method: GET
+    force_basic_auth: yes
+    user: "{{ private_registry_auth.split(':')[0] }}"
+    password: "{{ private_registry_auth.split(':')[1] }}"
+    follow_redirects: all
+    validate_certs: no
+    status_code: 200
