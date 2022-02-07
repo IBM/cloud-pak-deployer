@@ -16,13 +16,14 @@ command_usage() {
   echo
   echo "ACTION:"
   echo "  environment:"
-  echo "    download                Download all assets for air-gapped installation"
   echo "    apply                   Create a new or modify an existing environment"
   echo "    destroy                 Destroy an existing environment"
   echo "    logs                    Show (tail) the logs of the apply/destroy process"
   echo "    command,cmd             Opens a shell environment to run commands such as the OpenShift client (oc)"
   echo "    wizard                  Start the Cloud Pak Deployer Wizard Web UI"
   echo "    kill                    Kill the current apply/destroy process"
+  echo "    download                Download all assets for air-gapped installation"
+  echo "    save                    Complete air-gapped download preparation"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
@@ -44,6 +45,7 @@ command_usage() {
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
+  echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
   echo 
@@ -78,6 +80,7 @@ if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
 if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
+if [ "${CPD_AIRGAP}" == "" ];then CPD_AIRGAP=false;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
@@ -140,7 +143,7 @@ environment)
     export ACTION="wizard"
     shift 1
     ;;
-  logs|kill|download)
+  logs|kill|download|save)
     if ${INSIDE_CONTAINER};then
       echo "$ACTION action not allowed when running inside container"
       exit 99
@@ -429,6 +432,18 @@ while (( "$#" )); do
     export CHECK_ONLY=true
     shift 1
     ;;  
+  --air-gapped)
+    if ${INSIDE_CONTAINER};then
+      echo "$1 flag not allowed when running inside container"
+      exit 99
+    fi
+    if [[ "${SUBCOMMAND}" != "environment" && "${ACTION}" != "apply" && "${ACTION}" != "destroy"  ]];then
+      echo "Error: --air-gapped is only valid for environment subcommand with apply/destroy."
+      command_usage 2
+    fi
+    export CPD_AIRGAP=true
+    shift 1
+    ;;   
   -vvv)
     export ANSIBLE_VERBOSE=true
     shift 1
@@ -554,14 +569,6 @@ fi
 # Set remaining parameters
 eval set -- "$PARAMS"
 
-# Check if the cloud-pak-deployer image exists
-if ! $INSIDE_CONTAINER;then
-  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
-    echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
-    exit 99
-  fi
-fi
-
 # --------------------------------------------------------------------------------------------------------- #
 # Run the Cloud Pak Deployer                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
@@ -575,6 +582,34 @@ fi
 # Ensure status directory exists
 if [ "$STATUS_DIR" != "" ];then
   mkdir -p $STATUS_DIR/{log,pid}
+fi
+
+# Make sure that Docker registry v2 and Deployer images exists
+if [ ${CPD_AIRGAP} ];then
+  if ! ${CONTAINER_ENGINE} inspect docker.io/library/registry:2 > /dev/null;then
+    if -f ${STATUS_DIR}/downloads/docker-registry.tar;then
+      ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/docker-registry.tar
+    else
+      echo "Container image for Docker registry v2 not found, expected ${STATUS_DIR}/downloads/docker-registry.tar"
+      exit 99
+    fi
+  fi
+  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:latest > /dev/null;then
+    if -f ${STATUS_DIR}/downloads/cloud-pak-deployer.tar;then
+      ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer.tar
+    else
+      echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer.tar"
+      exit 99
+    fi
+  fi
+fi
+
+# Check if the cloud-pak-deployer image exists
+if ! $INSIDE_CONTAINER;then
+  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
+    echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
+    exit 99
+  fi
 fi
 
 # Check if a container is currently running for this status directory
@@ -604,6 +639,11 @@ if ! $INSIDE_CONTAINER;then
       sleep 0.5
       run_env_logs
       exit 0
+    fi
+  elif [[ "${ACTION}" == "save" && "${ACTIVE_CONTAINER_ID}" != "" ]];then
+      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
+      echo "Cannot save current state until the process has completed"
+      exit 1
     fi
   # Display the logs if an active or inactive container was found
   elif [[ "${ACTION}" == "logs" ]];then
@@ -636,12 +676,14 @@ if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   run_prepare+=" -e STATUS_DIR=${STATUS_DIR}"
   run_prepare+=" -e CONFIG_DIR=${CONFIG_DIR}"
 
-  if $CPD_DEVELOP;then run_prepare+=" -v ${PWD}:/cloud-pak-deployer:z";fi
+  if ${CPD_DEVELOP};then run_prepare+=" -v ${PWD}:/cloud-pak-deployer:z";fi
   run_prepare+=" --entrypoint /cloud-pak-deployer/docker-scripts/env-download-prepare.sh"
   run_prepare+=" cloud-pak-deployer"
   eval $run_prepare
+fi
 
-  # Now that registry has been prepared, start the registry, only if not already started
+if [[ "${ACTION}" == "download" || ${CPD_AIRGAP} ]] && ! $CHECK_ONLY;then
+  # Start the registry, only if not already started
   if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
     ${CONTAINER_ENGINE} rm docker-registry 2>/dev/null
     ${STATUS_DIR}/downloads/cloudctl case launch \
@@ -657,6 +699,20 @@ if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   podman inspect -f '{{ .NetworkSettings.IPAddress }}' docker-registry > ${STATUS_DIR}/imageregistry/portable-registry-ip.out
   chmod o+r ${STATUS_DIR}/imageregistry/portable-registry-ip.out
   echo "Portable registry IP address is $(cat ${STATUS_DIR}/imageregistry/portable-registry-ip.out)"
+fi
+
+# If save action, save images of Docker registry and Deployer
+if [[ "${ACTION}" == "save" ]] && ! $CHECK_ONLY;then
+  echo "Stopping portable registry"
+  ${STATUS_DIR}/downloads/cloudctl case launch \
+      --case ${STATUS_DIR}/downloads/ibm-cp-datacore-2.0.10.tgz \
+      --inventory cpdPlatformOperator \
+      --action stop-registry
+  echo "Saving Docker registry image into ${STATUS_DIR}/downloads/docker-registry.tar"
+  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/docker-registry.tar docker.io/library/registry:2
+  echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer.tar"
+  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer.tar cloud-pak-deployer:latest
+  echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
 fi
 
 # Build command when not running inside container
@@ -725,6 +781,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
   run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
   run_cmd+=" -e CHECK_ONLY=${CHECK_ONLY}"
+  run_cmd+=" -e CPD_AIRGAP=${CPD_AIRGAP}"
 
   # Handle extra variables
   if [ ${#arrExtraKey[@]} -ne 0 ];then

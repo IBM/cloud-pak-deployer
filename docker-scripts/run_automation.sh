@@ -68,6 +68,7 @@ env|environment)
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
+  run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
