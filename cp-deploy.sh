@@ -627,16 +627,6 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# If CP_ENTITLEMENT_KEY was specified, create secret automatically
-if [[ "${SUBCOMMAND}" == "environment" && "${ACTION}" == "apply" && ! -z ${CP_ENTITLEMENT_KEY} ]];then
-  echo "CP_ENTITLEMENT_KEY environment variables set, creating secret first."
-  ${SCRIPT_DIR}/cp-deploy.sh vault set --config-dir ${CONFIG_DIR} --status-dir ${STATUS_DIR} \
-    --vault-secret ibm_cp_entitlement_key --vault-secret-value ${CP_ENTITLEMENT_KEY}
-  if [ $? -ne 0 ];then
-    exit 1
-  fi
-fi
-
 # If action is download, first run the preparation
 if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   run_prepare="${CONTAINER_ENGINE} run"
@@ -692,9 +682,10 @@ if ! $INSIDE_CONTAINER;then
 
   run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
   run_cmd+=" -e ACTION=${ACTION}"
+  run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
   run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
   run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
-  run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
+  run_cmd+=" -e CP_ENTITLEMENT_KEY=${CP_ENTITLEMENT_KEY}"
 
   if [ ! -z $VAULT_GROUP ];then
     run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"

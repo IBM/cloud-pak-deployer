@@ -11,21 +11,6 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-  - name: Get IBM Entitled Registry key
-    include_role: 
-      name: vault-get-secret
-    vars:
-      secret_name: "ibm_cp_entitlement_key"
-      secret_group: "{{ environment_name }}"
-
-  - set_fact:
-      ibm_cp_entitlement_key: "{{ secret_value }}"
-
-  - name: Fail if the entitlement key was not found in the vault
-    fail:
-      msg: "Entitlement key must be stored in vault secret ibm_cp_entitlement_key."
-    when: ibm_cp_entitlement_key == ""
-
   - name: Retrieve IP address of portable registry
     set_fact:
       _portable_registry_ip_address: "{{ lookup('file', status_dir + '/imageregistry/portable-registry-ip.out') }}"
@@ -40,20 +25,24 @@
       port: 5000
       timeout: 30
 
-  - name: Connect to Vault
+  - name: Prepare deployer environment
     include_role:
-      name: vault-connect
+      name: prepare-deployer
 
-  - name: "Include 'generators'-role and pass variables to it"
-    include_role:
-      name: generators
+  - name: Get IBM Entitled Registry key
+    include_role: 
+      name: vault-get-secret
     vars:
-      path_to_config_dir: "{{ config_dir }}"
-      path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
+      secret_name: "ibm_cp_entitlement_key"
+      secret_group: "{{ environment_name }}"
 
-  - name: Download CLIs
-    include_role:
-      name: download-cli
+  - set_fact:
+      ibm_cp_entitlement_key: "{{ secret_value }}"
+
+  - name: Fail if the entitlement key was not found in the vault
+    fail:
+      msg: "Entitlement key must be stored in vault secret ibm_cp_entitlement_key."
+    when: ibm_cp_entitlement_key == ""
 
   - name: Remove case directory in case it exists
     file:

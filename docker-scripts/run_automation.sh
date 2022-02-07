@@ -4,11 +4,6 @@ SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 error=0
 
 # Check mandatory parameters
-if [ ! -v IBM_CLOUD_API_KEY ];then
-  echo "Error: environment variable IBM_CLOUD_API_KEY has not been set and is required"
-  error=1
-fi
-
 if [ ! -v CONFIG_DIR ];then
   echo "Error: environment CONFIG_DIR must be specified"
   error=1
@@ -69,6 +64,7 @@ env|environment)
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
+  run_cmd+=" --extra-vars cp_entitlement_key=${CP_ENTITLEMENT_KEY}"
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
