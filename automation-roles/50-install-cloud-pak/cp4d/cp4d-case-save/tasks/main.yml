@@ -10,8 +10,12 @@
     path: "{{ _case_dir }}"
     state: directory
 
+- name: Show current Cloud Pak for Data cluster
+  debug:
+    var: _p_current_cp4d_cluster
+
 - name: Download operator case files to {{ status_dir }}/cp4d/case
   include: download-case-online.yml
-  loop: "{{ _current_cp4d_cluster.cartridges | default([]) }}"
+  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge
