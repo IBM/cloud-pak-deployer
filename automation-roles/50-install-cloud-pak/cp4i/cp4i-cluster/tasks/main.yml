@@ -1,4 +1,7 @@
 ---
+
+# ------------ PREPARATION ------------------------------------------
+
 - debug:
     msg: "Handling CP4I cluster {{ current_cp4i_cluster.project }}"
 
@@ -67,13 +70,30 @@
   include_role:
     name: cp4i-prepare-openshift
 
+# ------------ SETTING PROCESSING FACTS -----------------------------
+
 - set_fact:
     _use_case_files: False
 
-# TODO(SJ): Uncomment the following when using CASE files is implemented
-#- set_fact:
-#    _use_case_files: True
-#  when: (current_cp4i_cluster.image_registry_name | default("")) != "" or (current_cp4i_cluster.use_case_files | default(False) | bool)
+- set_fact:
+   _use_case_files: True
+  when: (current_cp4i_cluster.image_registry_name | default("")) != "" or (current_cp4i_cluster.use_case_files | default(False) | bool)
+
+- set_fact:
+    _use_top_level_operator: False
+
+- set_fact:
+    _use_top_level_operator: True
+  when: (current_cp4i_cluster.use_top_level_operator | default(False) | bool) and not (current_cp4i_cluster.use_case_files | default(False) | bool) 
+
+- set_fact:
+    _operators_in_all_namespaces: False
+
+- set_fact:
+    _operators_in_all_namespaces: True
+  when: (current_cp4i_cluster.operators_in_all_namespaces | default(False) | bool)
+
+# ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
 - name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
   include_tasks: prepare-cp4i-case-files.yml
@@ -85,16 +105,7 @@
   - (current_cp4i_cluster.image_registry_name | default("")) != ""
   - ibm_cp_entitlement_key != ""
 
-- name: Create catalog sources for entitled registry when not using case files
-  include: create-catalog-sources-entitled.yml
-  when: not _use_case_files
-
-- name: Create catalog sources from case files in {{ case_dir }} directory when using case files
-  include: create-catalog-source-case-file.yml
-  loop: "{{ case_inventories }}"
-  loop_control:
-    loop_var: case_inventory
-  when: _use_case_files
+# ------------ OPENSHIFT OBJECTS ------------------------------------
 
 - name: Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.storage_class_name }}
   include_tasks: cp4i-get-storage-classes.yml
@@ -102,14 +113,53 @@
 - name: Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration
   include_tasks: openshift-prepare-project.yml
 
-- name: Prepare Cloud Pak for Integration operator
-  include_tasks: prepare-cp4i-operator.yml
-
 - name: Create entitlement key secret
   include_tasks: create-entitlement-key-secret.yml
 
+# ------------ CREATING CATALOG SOURCES -----------------------------
+
+- name: Create catalog sources for entitled registry when not using CASE files
+  include_tasks: create-catalog-sources-entitled.yml
+  when: not _use_case_files
+
+- name: Create catalog sources when using CASE files
+  include_tasks: create-catalog-source-case-file.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
+  when: _use_case_files
+
+# ------------ INSTALLING OPERATORS ---------------------------------
+
+- name: Prepare operator group if installing in specific namespace
+  include_tasks: prepare-operator-group.yml
+  when: not _operators_in_all_namespaces
+  
+- name: Install operators for each needed instance type
+  include_tasks: install-operator.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
+  when: not _use_top_level_operator
+
+- name: Install all CP4I operators using top level operator
+  include_tasks: install-operators-top-level.yml
+  when: _use_top_level_operator
+
+# ------------ PLATFORM NAVIGATOR -----------------------------------
+
 - name: Install Cloud Pak for Integration Platform Navigator
   include_tasks: install-platform-navigator.yml
+
+# ------------ INTEGRATION INSTANCES --------------------------------
+
+- name: Create instances of CP4I capabilities and runtimes
+  include_tasks: create-instance.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
+
+# ------------ FINALIZING -------------------------------------------
 
 - name: Add Cloud Pak for Integration route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml

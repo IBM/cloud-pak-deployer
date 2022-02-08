@@ -1,27 +1,21 @@
 ---
 
-- name: Check if {{ config_dir }}/case directory exists
+- set_fact:
+    _case_dir: "{{ status_dir }}/case"
+
+- name: Check if directory for CASE files exists
   stat:
-    path: "{{ config_dir }}/case"
-  register: case_dir_exists
+    path: "{{ _case_dir }}"
+  register: _case_dir_exists
 
-- set_fact:
-    case_dir: "{{ config_dir }}/case"
-  when: case_dir_exists.stat.exists
-
-- name: Create directory for case files
+- name: Create directory for CASE files if it does not exist
   file:
-    path: "{{ status_dir }}/cp4i/case"
+    path: "{{ _case_dir }}"
     state: directory
-  when: not case_dir_exists.stat.exists
+  when: not _case_dir_exists.stat.exists
 
-- set_fact:
-    case_dir: "{{ status_dir }}/cp4i/case"
-  when: not case_dir_exists.stat.exists
-
-- name: Download operator case files to {{ status_dir }}/cp4i/case
-  include: download-case-online.yml
-  loop: "{{ current_cp4i_cluster.cartridges | default([]) }}"
+- name: Loop through instances and download CASE files for defined types
+  include_tasks: download-case-file.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
   loop_control:
-    loop_var: current_cp4i_cartridge
-  when: not case_dir_exists.stat.exists
+    loop_var: current_cp4i_instance
