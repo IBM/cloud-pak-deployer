@@ -33,9 +33,6 @@ echo "Starting Automation script..."
 echo ""
 cd ${SCRIPT_DIR}/..
 
-VERBOSE_ARG=""
-if $ANSIBLE_VERBOSE;then VERBOSE_ARG="-vvv";fi
-
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
@@ -43,7 +40,9 @@ case "$SUBCOMMAND" in
 env|environment)
   # Set Ansible config file to use
   ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
-  if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+  if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
+  fi
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   # Assemble command
   run_cmd="ansible-playbook -i ${INV_DIR}"
@@ -82,7 +81,7 @@ env|environment)
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
     run_cmd+=" --extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
   fi
-  run_cmd+=" ${VERBOSE_ARG}"
+  run_cmd+=" ${ANSIBLE_VERBOSE}"
   if [ -v EXTRA_PARMS ];then
     for p in ${EXTRA_PARMS};do
       echo "Extra param $p=${!p}"
@@ -93,12 +92,16 @@ env|environment)
   mkdir -p ${STATUS_DIR}/log
   run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
+  echo "RUN COMMAND: $run_cmd"
   eval $run_cmd
   ;;
 
 vault)
   ANSIBLE_CONFIG_FILE=$PWD/ansible-vault.cfg
-  if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+  if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
+  fi
+
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   run_cmd="ansible-playbook -i ${INV_DIR}"
   run_cmd+=" playbooks/playbook-vault.yml"
@@ -122,7 +125,7 @@ vault)
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
     run_cmd+=" --extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
   fi
-  run_cmd+=" ${VERBOSE_ARG}"
+  run_cmd+=" ${ANSIBLE_VERBOSE}"
   if [ -v EXTRA_PARMS ];then
     for p in ${EXTRA_PARMS};do
       echo "Extra param $p=${!p}"

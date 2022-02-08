@@ -47,7 +47,7 @@ command_usage() {
   echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
-  echo "  -vvv                          Show verbose ansible output (\$ANSIBLE_VERBOSE)"
+  echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
   echo 
   echo "Options for environment subcommand:"
   echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
@@ -74,7 +74,6 @@ run_env_logs() {
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
-if [ "${ANSIBLE_VERBOSE}" == "" ];then ANSIBLE_VERBOSE=false;fi
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
@@ -444,8 +443,8 @@ while (( "$#" )); do
     export CPD_AIRGAP=true
     shift 1
     ;;   
-  -vvv)
-    export ANSIBLE_VERBOSE=true
+  -vv*)
+    export ANSIBLE_VERBOSE=$(echo -${1:2})
     shift 1
     ;;
   -v)
