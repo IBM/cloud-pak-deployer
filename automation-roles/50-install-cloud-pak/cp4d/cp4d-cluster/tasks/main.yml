@@ -86,7 +86,7 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
   when: _use_case_files
 
-- name: Mirror images for Cloud Pak for Data to private registry {{ current_cp4d_cluster.image_registry_name }}
+- name: Mirror images for Cloud Pak for Data from entitled to private registry {{ current_cp4d_cluster.image_registry_name }}
   include_role: 
     name: cp-mirror-images
   vars:
@@ -98,6 +98,23 @@
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - ibm_cp_entitlement_key != ""
+  - not (cpd_airgap | bool)
+
+- name: Mirror images for Cloud Pak for Data from portable to private registry {{ current_cp4d_cluster.image_registry_name }}
+  include_role: 
+    name: cp-mirror-images
+  vars:
+    _p_source_registry_hostname: "{{ lookup('file', status_dir + '/imageregistry/portable-registry-ip.out') }}"
+    _p_source_registry_port: "5000"
+    _p_source_registry_credentials_secret: "portable-registry-credentials"
+    _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
+    _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
+    _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+    _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
+    _p_case_dir: "{{ status_dir }}/cp4d/case"
+  when: 
+  - (current_cp4d_cluster.image_registry_name | default("")) != ""
+  - cpd_airgap | bool
 
 - name: Create catalog sources for entitled registry when not using case files
   include: create-catalog-sources-entitled.yml

@@ -72,34 +72,15 @@
     _target_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
     _target_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
 
-- name: Generate "{{ status_dir }}/cloud-pak/auth.json"
+- name: Generate "{{ status_dir }}/cloud-paks/auth.json"
   template:
     src: auth.json.j2
-    dest: "{{ status_dir }}/cloud-pak/auth.json"
+    dest: "{{ status_dir }}/cloud-paks/auth.json"
 
-- name: Mirror images from entitled registry using {{ config_dir }}/case. Check status in {{ status_dir }}/log/cloud-pak-mirror-images.log
-  shell: |
-    set -o pipefail
-    {{ role_path }}/scripts/cloud-pak-mirror-images.sh image mirror --dir {{ _p_case_dir }} \
-        --to-registry "{{ _target_registry_url_namespace }}" \
-        --auth {{ status_dir }}/cloud-pak/auth.json | \
-        tee -a {{ status_dir }}/log/cloud-pak-mirror-images.log
-  register: _mirror_images_result
-  retries: 10
-  delay: 5
-  until: _mirror_images_result.rc==0
+# Mirror images from entitled registry to private registry
+- include_task: mirror-images-from-entitled.yml
   when: not _p_source_registry_hostname is defined
 
-- name: Mirror images from registry {{ _source_registry_url }} using {{ config_dir }}/case. Check status in {{ status_dir }}/log/cloud-pak-mirror-images.log
-  shell: |
-    set -o pipefail
-    {{ role_path }}/scripts/cloud-pak-mirror-images.sh image mirror --dir {{ _p_case_dir }} \
-        --from-registry "{{ _source_registry_url }}" \
-        --to-registry "{{ _target_registry_url_namespace }}" \
-        --auth {{ status_dir }}/cloud-pak/auth.json | \
-        tee -a {{ status_dir }}/log/cloud-pak-mirror-images.log
-  register: _mirror_images_result
-  retries: 10
-  delay: 5
-  until: _mirror_images_result.rc==0
+# Mirror images from portable or private registry to private registry
+- include_task: mirror-images-from-private.yml
   when: _p_source_registry_hostname is defined
