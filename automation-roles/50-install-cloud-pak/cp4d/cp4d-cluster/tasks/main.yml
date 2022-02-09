@@ -18,31 +18,6 @@
   vars:
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
-- name: Get IBM Entitled Registry key
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "ibm_cp_entitlement_key"
-    secret_group: "{{ environment_name }}"
-
-- set_fact:
-    ibm_cp_entitlement_key: "{{ secret_value }}"
-
-- name: Fail if the entitlement key was not found in the vault and no private registry was specified
-  fail:
-    msg: "No image registry name specified for CP4D but cannot pull from entitled registry because of missing entitlement key in vault"
-  when: ibm_cp_entitlement_key == "" and (current_cp4d_cluster.image_registry_name | default("")) == ""
-
-- set_fact:
-    entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
-  when: ibm_cp_entitlement_key != ""
-
-- name: Connect to private image registry
-  include_role: 
-    name: connect-private-image-registry
-  when:
-  - (current_cp4d_cluster.image_registry_name | default("")) != ""
-
 - name: Remove Cloud Pak for Data directory for generated files
   file:
     path: "{{ status_dir }}/cp4d"
