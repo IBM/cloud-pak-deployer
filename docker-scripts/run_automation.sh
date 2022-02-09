@@ -92,7 +92,6 @@ env|environment)
   mkdir -p ${STATUS_DIR}/log
   run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
-  echo "RUN COMMAND: $run_cmd"
   eval $run_cmd
   ;;
 
