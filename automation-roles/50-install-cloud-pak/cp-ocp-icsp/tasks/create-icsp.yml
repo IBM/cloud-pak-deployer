@@ -1,17 +1,38 @@
 ---
-- name: Create ImageContentSourcePolicy for Cloud Pak with private registry
-  block:
-    - name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
-      shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
-      register: oc_icsp_exists
+- name: Check if ImageContentSourcePolicy {{ icsp_name }} exists
+  shell: "oc get ImageContentSourcePolicy | grep -i '^{{ icsp_name }}' | wc -l"
+  register: _icsp_exists
 
-    - name: Create ImageContentSourcePolicy {{ icsp_name }} for the Cloud Pak
-      block:
-        - name: Create ImageContentSourcePolicy yaml
-          template:
-            src: cloud-pak-icsp.j2
-            dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp.yaml"
-        - name: Create ImageContentSourcePolicy {{ iscp_name }}
-          shell: "oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp.yaml"  
-      when: 
-      - oc_icsp_exists.stdout == "0"
+- name: Create ImageContentSourcePolicy {{ icsp_name }} for the Cloud Pak
+  block:
+    - name: Create ImageContentSourcePolicy yaml
+      template:
+        src: cloud-pak-icsp.j2
+        dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp.yaml"
+    - name: Create ImageContentSourcePolicy {{ iscp_name }}
+      shell: "oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp.yaml"  
+  when: 
+  - _icsp_exists.stdout == "0"
+
+- name: Patch OpenShift image object if insecure registry was specified
+  block:
+  - name: Check if insecureRegistries already in image specification
+    shell: |
+      oc get image.config.openshift.io/cluster -o json | jq -r '.spec.registrySources // ""'
+    register: _insecure_registries
+  - name: Add insecureRegistries specification
+    shell: |
+      oc patch image.config.openshift.io/cluster --type=merge --patch '{"spec": {"registrySources": {"insecureRegistries": []}}}'
+    when: not "insecureRegistries" in _insecure_registries.stdout
+
+  - name: Check if {{ private_registry_url }} already in insecure registries
+    shell: |
+      oc get image.config.openshift.io/cluster -o json | jq -r '.spec.registrySources.insecureRegistries // ""'
+    register: _private_registry_entries
+
+  - name: Add insecure registry entry
+    shell: |
+      oc patch image.config.openshift.io/cluster --type=json \
+      --patch '[{"op": "add", "path": "/spec/registrySources/insecureRegistries/-", "value": "{{ private_registry_url }}" }]'
+    when: not private_registry_url in _private_registry_entries.stdout
+  when: (current_image_registry.registry_insecure | default(False) | bool)
