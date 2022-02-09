@@ -37,15 +37,6 @@
     entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
   when: ibm_cp_entitlement_key != ""
 
-- set_fact:
-    use_entitled_registry: False
-
-- name: Use entitled registry if entitlement key available and no image registry name specified
-  set_fact:
-    use_entitled_registry: True
-  when:
-  - (current_cp4d_cluster.image_registry_name | default("")) == ""
-
 - name: Connect to private image registry
   include_role: 
     name: connect-private-image-registry
