@@ -1,0 +1,73 @@
+---
+- name: "Start {{generator.name}} generator"
+  debug:
+    msg: "from {{generator.name}} in {{generator.path}} attributes: {{generator.attributes}}"
+
+- set_fact:
+    _azure_aro_config: "{{ all_config.azure_aro | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ generator.attributes.azure_aro_name }}']
+
+- name: Retrieve Service Principal id
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-sp-id"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _service_principal_id: "{{ secret_value }}"
+
+- name: Retrieve Service Principal secret
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-sp-secret"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _service_principal_secret: "{{ secret_value }}"
+
+- name: Retrieve Service Principal object id
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-sp-object-id"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _service_principal_object_id: "{{ secret_value }}"
+
+- name: Retrieve ARO Resource Provider object id
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "aro-rp-object-id"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _aro_rp_object_id: "{{ secret_value }}"
+
+- name: Retrieve pull secret from vault
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-pullsecret"
+    secret_group: "{{ environment_name }}"
+    secret_file: /tmp/ocp_pullsecret.json
+
+- name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
+  file:
+    path: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}"
+    state: directory
+
+- name: Generate instance of "{{generator.name}}" in {{ PATH_TO_OUTPUT_DIR }}
+  template:
+    src: "../templates/main.tf.j2"
+    dest: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/main.tf"
+
+- name: Put the ARM template into to cluster folder
+  template:
+    src: "../templates/arm-ocp.json.j2"
+    dest: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/arm-ocp.json"

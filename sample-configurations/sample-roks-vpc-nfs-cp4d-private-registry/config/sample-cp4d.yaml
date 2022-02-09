@@ -1,16 +1,18 @@
 ---
 image_registry:
-- name: cpd404
+- name: cpd405
   registry_host_name: de.icr.io
-  registry_namespace: cpd404
+  registry_namespace: cpd405
   registry_insecure: false
 
 cp4d:
+
 - project: zen-40
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.0
-  image_registry_name: cpd404
+  image_registry_name: cpd405
   openshift_storage_name: nfs-storage
+  use_case_files: True
   cartridges:
   - name: cp-foundation
     license_service:
@@ -19,178 +21,231 @@ cp4d:
     case_version: 1.10.1
   - name: lite
     subscription_channel: v2.0
-    case_version: 2.0.8
-  - name: wsl
-    version: 4.0.4
+    case_version: 2.0.10
+
+#
+# All tested cartridges. To install, change the "state" property to "installed". To uninstall, change the state
+# to "removed" or comment out the entire cartridge. Make sure that the "-" and properties are aligned with the lite
+# cartridge; the "-" is at position 3 and the property starts at position 5.
+#
+# If a cartridge has dependencies and you want to install it, you must ensure that the dependent cartridge is also
+# installed.
+#
+
+  - name: analyticsengine 
+    version: 4.0.5
+    subscription_channel: stable-v1
+    case_version: 4.0.5
+    size: small 
+    state: removed
+
+  - name: bigsql
+    version: 7.2.5
+    subscription_channel: v7.2
+    case_version: 7.2.5
+    state: removed
+
+  - name: ca
+    version: 4.0.5
+    subscription_channel: v4.0
+    case_version: 4.0.7
+    size: small
+    instances:
+    - name: ca-instance
+      metastore_ref: ca-metastore
+    state: removed
+
+  - name: cde
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 2.0.5
+    state: removed
+
+  - name: datagate
+    version: 2.0.5
     subscription_channel: v2.0
-    case_version: 2.0.4
-  - name: wml
-    version: 4.0.4
+    case_version: 4.0.5
+    state: removed
+
+  - name: datastage
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 4.0.6
+    state: removed
+
+  - name: db2
+    version: 4.0.7
+    subscription_channel: v1.0
+    case_version: 4.0.7
+    size: small
+    instances:
+    - name: ca-metastore
+      metadata_size_gb: 20
+      data_size_gb: 20
+      backup_size_gb: 20  
+      transactionlog_size_gb: 20
+    state: removed
+
+  - name: db2u
+    version: 4.0.7
     subscription_channel: v1.1
+    case_version: 4.0.7
+    state: removed
+
+  - name: db2wh
+    version: 4.0.7
+    subscription_channel: v1.0
+    case_version: 4.0.7
+    state: removed
+
+  - name: dmc
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 4.0.5
+    state: removed
+
+  - name: dods
+    version: 4.0.5
+    subscription_channel: v4.0
     case_version: 4.0.5
     size: small
+    state: removed
 
-#
-# All tested cartridges. To install, uncomment the entry, make sure that the "-"" and properties
-# are aligned with the other "cartridges" entries.
-#
+  - name: dp
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 4.0.5
+    size: small
+    state: removed
 
-  # - name: analyticsengine 
-  #   version: 4.0.4
-  #   subscription_channel: stable-v1
-  #   case_version: 4.0.4
-  #   size: small 
-  # - name: bigsql
-  #   version: 7.2.3
-  #   subscription_channel: v7.2
-  #   case_version: 7.2.3
-  # - name: ca
-  #   version: 4.0.4
-  #   subscription_channel: v4.0
-  #   case_version: 4.0.6
-  #   size: small
-  #   instances:
-  #   - name: ca-instance
-  #     metastore_ref: ca-metastore
-  # - name: cde
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 2.0.4
-  # - name: datagate
-  #   version: 2.0.4
-  #   subscription_channel: v2.0
-  #   case_version: 4.0.4
-  # - name: datastage
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.5
-  # - name: db2
-  #   version: 4.0.6
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.6
-  #   size: small
-  #   instances:
-  #   - name: ca-metastore
-  #     metadata_size_gb: 20
-  #     data_size_gb: 20
-  #     backup_size_gb: 20  
-  #     transactionlog_size_gb: 20
-  # - name: db2u
-  #   version: 4.0.6
-  #   subscription_channel: v1.1
-  #   case_version: 4.0.6
-  # - name: db2wh
-  #   version: 4.0.6
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.6
-  # - name: dmc
-  #   version: 3.1.6
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.3
-  # - name: dods
-  #   version: 4.0.4
-  #   subscription_channel: v4.0
-  #   case_version: 4.0.4
-  #   size: small
-  # - name: dp
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.4
-  #   size: small
-  # - name: dv
-  #   version: 1.7.3
-  #   subscription_channel: v1.7
-  #   case_version: 1.7.3
-  #   size: small 
-  #   dependencies:
-  #   - name: db2u
-  #   instances:
-  #   - name: data-virtualization
-  # - name: hadoop
-  #   version: 4.0.4
-  #   size: small
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.4
-  # - name: mdm
-  #   version: 1.1.167
-  #   subscription_channel: v1.1
-  #   case_version: 1.0.166
-  #   size: small
-  #   wkc_enabled: true
-  # - name: openpages
-  #   version: 8.204.1
-  #   subscription_channel: v1.0
-  #   case_version: 2.1.1+20211213.164652.82041218
-  # - name: planning-analytics
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.40403
-  # - name: rstudio
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 1.0.4
-  #   size: small
-  # - name: spss
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 1.0.4
-  # - name: voice-gateway
-  #   version: 1.0.7
-  #   subscription_channel: v1.0
-  #   case_version: 1.0.4
-  #   replicas: 1  
-  # - name: watson-assistant
-  #   version: 4.0.4
-  #   subscription_channel: v4.0
-  #   case_version: 4.0.4
-  #   size: small
-  # - name: watson-discovery
-  #   version: 4.0.4
-  #   subscription_channel: v4.0
-  #   case_version: 4.0.4
-  # - name: watson-ks
-  #   version: 4.0.4
-  #   subscription_channel: v4.0
-  #   case_version: 4.0.4
-  #   size: small
-  # - name: watson-openscale
-  #   version: 4.0.4
-  #   subscription_channel: v1
-  #   case_version: 2.4.0
-  #   size: small
-  # - name: watson-speech
-  #   version: 4.0.4
-  #   subscription_channel: v4.0
-  #   case_version: 4.0.4
-  #   stt_size: xsmall
-  #   tts_size: xsmall
-  # - name: wkc
-  #   version: 4.0.4
-  #   subscription_channel: v1.0
-  #   case_version: 4.0.4
-  #   size: small
-  # - name: wml
-  #   version: 4.0.4
-  #   subscription_channel: v1.1
-  #   case_version: 4.0.5
-  #   size: small
-  # - name: wml-accelerator
-  #   version: 2.3.4
-  #   subscription_channel: v1.0
-  #   case_version: 2.3.4
-  #   replicas: 1
-  #   size: small
-  # - name: wsl
-  #   version: 4.0.4
-  #   subscription_channel: v2.0
-  #   case_version: 2.0.4
+  - name: dv
+    version: 1.7.5
+    subscription_channel: v1.7
+    case_version: 1.7.5
+    size: small 
+    dependencies:
+    - name: db2u
+    instances:
+    - name: data-virtualization
+    state: removed
+
+  - name: hadoop
+    version: 4.0.5
+    size: small
+    subscription_channel: v1.0
+    case_version: 4.0.6
+    state: removed
+
+  - name: mdm
+    version: 1.1.175
+    subscription_channel: v1.1
+    case_version: 1.0.177
+    size: small
+    wkc_enabled: true
+    state: removed
+
+  - name: openpages
+    version: 8.204.2
+    subscription_channel: v1.0
+    case_version: 2.1.2+20220118.140731.82040128
+    state: removed
+
+  - name: planning-analytics
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 4.0.50425
+    state: removed
+
+  - name: rstudio
+    version: 4.0.4
+    subscription_channel: v1.0
+    case_version: 1.0.4
+    size: small
+    state: removed
+
+  - name: spss
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 1.0.5
+    state: removed
+
+  - name: voice-gateway
+    version: 1.0.7
+    subscription_channel: v1.0
+    case_version: 1.0.4
+    replicas: 1
+    state: removed
+
+  - name: watson-assistant
+    version: 4.0.5
+    subscription_channel: v4.0
+    case_version: 4.0.5
+    size: small
+    state: removed
+
+  - name: watson-discovery
+    version: 4.0.5
+    subscription_channel: v4.0
+    case_version: 4.0.5
+    state: removed
+
+  - name: watson-ks
+    version: 4.0.5
+    subscription_channel: v4.0
+    case_version: 4.0.5
+    size: small
+    state: removed
+
+  - name: watson-openscale
+    version: 4.0.5
+    subscription_channel: v1
+    case_version: 2.5.0
+    size: small
+    state: removed
+
+  - name: watson-speech
+    version: 4.0.5
+    subscription_channel: v4.0
+    case_version: 4.0.5
+    stt_size: xsmall
+    tts_size: xsmall
+    state: removed
+
+  - name: wkc
+    version: 4.0.5
+    subscription_channel: v1.0
+    case_version: 4.0.5
+    size: small
+    state: removed
+
+  - name: wml
+    version: 4.0.5
+    subscription_channel: v1.1
+    case_version: 4.0.6
+    size: small
+    state: installed
+
+  - name: wml-accelerator
+    version: 2.3.5
+    subscription_channel: v1.0
+    case_version: 2.3.5
+    replicas: 1
+    size: small
+    state: removed
+
+  - name: wsl
+    version: 4.0.5
+    subscription_channel: v2.0
+    case_version: 2.0.5
+    state: installed
 
 #
 # Cartridges where extra work is needed (will not install automatically)
 # 
   # Product Master requires set up of the Db2 instance secret before install
-  # - name: productmaster
-  #   version: 1.0.2
-  #   subscription_channel: v1.0
-  #   size: small  
-  #   case_version: 1.0.2
+  - name: productmaster
+    version: 1.0.3
+    subscription_channel: v1.0
+    size: small  
+    case_version: 1.0.3
+    state: removed

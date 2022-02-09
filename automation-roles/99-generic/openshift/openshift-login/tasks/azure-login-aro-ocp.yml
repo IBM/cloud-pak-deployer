@@ -1,0 +1,29 @@
+---
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _p_openshift_cluster_name }}']
+
+- name: Retrieve kubeadmin password from vault
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _p_openshift_cluster_name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _kubeadmin_password: "{{ secret_value }}"
+
+- name: Login to OpenShift cluster
+  shell: |
+    oc login https://api.{{ _openshift_config.subdomain_name }}.{{ azure_location }}.aroapp.io:6443 \
+      -u kubeadmin -p {{ _kubeadmin_password }} \
+      --insecure-skip-tls-verify=true
+  register: oc_login_result
+  retries: 60
+  delay: 10
+  until: oc_login_result.rc==0
+
+- debug:
+    msg: "{{ oc_login_result }}"

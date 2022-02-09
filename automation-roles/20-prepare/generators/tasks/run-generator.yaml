@@ -23,3 +23,14 @@
       config: "{{ all_config }}"
     PATH_TO_OUTPUT_DIR: "{{status_dir}}/vsphere-ipi"
   when: cloud_platform == 'vsphere'
+
+- name: Run generators for Microsoft Azure
+  include_tasks: "{{_generator_dir}}/{{ GENERATOR_NAME }}/main.yaml"
+  vars:
+    generator:
+      name: "{{ GENERATOR_NAME }}"
+      path: "{{ _generator_dir }}/{{ GENERATOR_NAME }}"
+      attributes: "{{ GENERATOR_ATTRIBUTES }}"
+      config: "{{ all_config }}"
+    PATH_TO_OUTPUT_DIR: "{{status_dir}}/azure-aro"
+  when: cloud_platform == 'azure'

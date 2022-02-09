@@ -35,6 +35,20 @@
     fail:
       msg: "No Terraform state found in secret {{ environment_name }}/{{ environment_name }}-terraform-tfstate"
     when: "secret_value | trim | length == 0"
+    
+  # Detach Block storage from compute nodes (Portworx), as this prevents terraform from deleting the portworx service  
+  - debug:
+      msg: "Detaching storage volumes for pwx"
+
+  - name: Login to IBM Cloud
+    include_role:
+      name: login-ibmcloud
+
+  - name: Loop clusters          
+    include_tasks: loop-compute-nodes-pwx.yaml
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: current_openshift_cluster
 
   - name: Write {{ status_dir }}/terraform/terraform.tfstate file
     copy:
@@ -49,7 +63,7 @@
   - name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform plan -destroy -no-color -detailed-exitcode 2>&1 >> {{status_dir}}/terraform/plan.log"
+      cmd: bash -c "terraform plan -destroy -no-color -detailed-exitcode >> {{status_dir}}/terraform/plan.log 2>&1"
     register: terraform_plan_result
     failed_when: "terraform_plan_result.rc == 1"
 
@@ -90,7 +104,7 @@
   - name: "Run terraform destroy in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/destroy.log"
     shell: 
       chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform destroy -auto-approve -no-color 2>&1 >> destroy.log"
+      cmd: bash -c "terraform destroy -auto-approve -no-color >> destroy.log 2>&1"
     environment:
       TF_LOG: "info"
       TF_LOG_PATH: "{{ status_dir }}/terraform/tf_destroy.log"
@@ -100,7 +114,7 @@
 
   - name: Store the terraform tfstate file as secret {{ environment_name }}-terraform-tfstate in group {{ environment_name }}
     include_role:
-      name: vault-create-secret
+      name: vault-set-secret
     vars:
       secret_name: "{{ environment_name }}-terraform-tfstate"
       secret_group: "{{ environment_name }}"

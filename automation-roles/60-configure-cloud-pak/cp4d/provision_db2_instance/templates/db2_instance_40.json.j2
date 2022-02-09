@@ -28,6 +28,9 @@
          "set-kernel-params":true,
          "chart":"{{ db2_chart }}",
          "user":"bluadmin",
+{% if selected_openshift_storage.storage_type == 'pwx' %}
+         "database-configuration": {"registry": {"DB2_4K_DEVICE_SUPPORT": "ON"}},
+{% endif %}
          "database-name":"BLUDB",
          "display-name":"{{ db2_instance.name }}",
          "name":"Db2",
@@ -43,7 +46,11 @@
          "dedicated":false,
          "node-label-value":"database-db2oltp",
          "hadr":null,
+{% if selected_openshift_storage.storage_type != 'pwx' %}
          "support-4k":false,
+{% else %}
+         "support-4k":true,
+{% endif %}
          "support-hostpath-in-chart":false,
          "selected-storage-option":[
             {
@@ -113,7 +120,7 @@
                      "state-type-check":"INIT_READINESS"
                   }
                ],
-               "stage-name":"Preparing the worker nodes",
+               "stage-name":"Preparing the compute nodes",
                "stage-number":1
             },
             {
@@ -156,22 +163,41 @@
          "mln-count":1,
          "database-page-size":16384,
          "storage-class":[
+{% if selected_openshift_storage.storage_type != 'pwx' %}
             {
                "label":"metaStorage",
-               "name":"{{ db2_storage_class }}"
+               "name":"{{ ocp_storage_class_file }}"
             },
             {
                "label":"dataStorage",
-               "name":"{{ db2_storage_class }}"
+               "name":"{{ ocp_storage_class_block }}"
             },
             {
                "label":"backupStorage",
-               "name":"{{ db2_storage_class }}"
+               "name":"{{ ocp_storage_class_file }}"
             },
             {
                "label":"transactionLogsStorage",
-               "name":"{{ db2_storage_class }}"
+               "name":"{{ ocp_storage_class_block }}"
             }
+{% else %}
+            {
+               "label":"metaStorage",
+               "name":"portworx-db2-rwx-sc"
+            },
+            {
+               "label":"dataStorage",
+               "name":"portworx-db2-rwo-sc"
+            },
+            {
+               "label":"backupStorage",
+               "name":"portworx-db2-rwx-sc"
+            },
+            {
+               "label":"transactionLogsStorage",
+               "name":"portworx-db2-rwo-sc"
+            }
+{% endif %}
          ],
          "size":[
             {

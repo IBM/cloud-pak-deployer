@@ -11,36 +11,47 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
+    - name: Validate variables
+      include_role:
+        name: validate-variables-destroy
 
-  - name: Validate variables
-    include_role:
-      name: validate-variables-destroy
+    - name: Connect to Vault
+      include_role:
+        name: vault-connect
 
-  - name: Connect to Vault
-    include_role:
-      name: vault-connect
+    - name: "Include 'generators'-role and pass variables to it"
+      include_role:
+        name: generators
+      vars:
+        path_to_config_dir: "{{ config_dir }}"
+        path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
 
-  - name: "Include 'generators'-role and pass variables to it"
-    include_role:
-      name: generators
-    vars:
-      path_to_config_dir: "{{ config_dir }}"
-      path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
+    - name: Download CLIs
+      include_role:
+        name: download-cli
+      
+    - name: Destroy OpenShift cluster contents where needed
+      include_role:
+        name: destroy-openshift-config
+      loop: "{{ all_config.openshift | default([]) }}"
+      loop_control:
+        loop_var: current_openshift_cluster
 
-  - name: Destroy OpenShift cluster contents where needed
-    include_role:
-      name: destroy-openshift-config
-    loop: "{{ all_config.openshift | default([]) }}"
-    loop_control:
-      loop_var: current_openshift_cluster
+    - include_role:
+        name: destroy-terraform
+      when: cloud_platform == 'ibm-cloud'
 
-  - include_role:
-      name: destroy-terraform
-    when: cloud_platform == 'ibm-cloud'
+    - include_role:
+        name: destroy-aws
+      loop: "{{ all_config.openshift | default([]) }}"
+      loop_control:
+        loop_var: _current_openshift_cluster
+      when: cloud_platform == 'aws'
 
-  - include_role:
-      name: destroy-aws
-    loop: "{{ all_config.openshift | default([]) }}"
-    loop_control:
-      loop_var: _current_openshift_cluster
-    when: cloud_platform == 'aws'
+    - name: Destroy infrastructure - Microsoft Azure
+      include_role:
+        name: destroy-aro
+      loop: "{{ all_config.openshift | default([]) }}"
+      loop_control:
+        loop_var: current_openshift_cluster
+      when: cloud_platform == 'azure'

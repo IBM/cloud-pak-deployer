@@ -33,16 +33,17 @@ For more advanced configuration topics such as using a private registry, setting
 
 ## Directory structure
 
-Every configuration has 3 mandatory subdirectories.
+Every configuration has a fixed directory structure, consisting of mandatory and optional subdirectories.
 ![Directory structure](./directory-structure.png)
 
+Mandatory subdirectories:
 * `config`: Keeps one or more YAML files with your OpenShift and Cloud Pak configuration
-* `defaults`: Keeps the defaults which will be merged with your configuration
 * `inventory`: Holds global settings for the configuration such as environment name and type of vault you want to use
 
 You can choose to keep only a single file per subdirectory, or for more complex configurations, you can create multiple yaml files. The generator automatically merges all files in the config and defaults directory.
 
-Additionally, there is 1 optional subdirectory:
+Additionally, there are 2 optional subdirectories:
+* `defaults`: Directory that keeps the defaults which will be merged with your configuration
 * `assets`: Keeps directories of assets which must be deployed onto the Cloud Pak
 
 ### `config` directory
@@ -51,22 +52,22 @@ Create one or more `.yaml` files holding the configuration you want to provision
 In the example configurations we have split up the configuration into 3 files:
 * `sample-cp4d.yaml`: Specifies the Cloud Pak for Data instance and its cartridges, as well as specific version numbers to be installed.
 * `sample-infra.yaml`: Specifies the operational implementation of the installation such as the VPCs, subnets, NFS servers, VSIs
-* `sample-ocp.yaml`: Defines OpenShift specifics like worker flavour, worker count, subnets to deploy the OpenShift cluster, storage classes, etc.
+* `sample-ocp.yaml`: Defines OpenShift specifics like compute node flavour, compute node count, subnets to deploy the OpenShift cluster, storage classes, etc.
 
 You can find a full list of all supported object types here:
 [Configuration objects](/cpd-design/objects/objects)
-
-### `defaults` directory
-Holds the defaults for all object types. If a certain object property has not been specified in the `config` directory, it will be retrieved from the `defaults` directory using the flavour specified in the configured object. If no flavour has been selected, the `default` flavour will be chosen.
-
-You should not need to edit the files under this directory in most circumstances.
 
 ### `inventory` directory
 The Cloud Pak Deployer pipeline has been built using Ansible and it can be configured using "inventory" files. Inventory files hold the global parameters which are available throughout the Ansible playbooks. 
 
 The most important configuration you will find in the Cloud Pak Deployer's inventory files is the vault configuration. All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault).
 
-### `assets` directory
+### `defaults` directory (optional)
+Holds the defaults for all object types. If a certain object property has not been specified in the `config` directory, it will be retrieved from the `defaults` directory using the flavour specified in the configured object. If no flavour has been selected, the `default` flavour will be chosen.
+
+You should not need to edit the files under this directory in most circumstances.
+
+### `assets` directory (optional)
 Optional directory holding the assets you wish to deploy for the Cloud Pak. More information about Cloud Pak for Data assets which can be deployed can be found in object definition [cp4d_asset](/cpd-design/objects/cp4d_asset). The directory can be named differently as well, for example `cp4d-assets` or `customer-churn-demo`.
 
 ## Vault secrets
