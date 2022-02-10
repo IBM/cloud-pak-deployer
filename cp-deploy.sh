@@ -594,19 +594,20 @@ fi
 
 # Make sure that Docker registry v2 and Deployer images exists
 if [ ${CPD_AIRGAP} ];then
-  if ! ${CONTAINER_ENGINE} inspect docker.io/library/registry:2 > /dev/null;then
-    if -f ${STATUS_DIR}/downloads/docker-registry.tar;then
+  if ! ${CONTAINER_ENGINE} inspect docker.io/library/registry:2 > /dev/null 2>&1;then
+    if [ -f ${STATUS_DIR}/downloads/docker-registry.tar ];then
       ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/docker-registry.tar
     else
       echo "Container image for Docker registry v2 not found, expected ${STATUS_DIR}/downloads/docker-registry.tar"
       exit 99
     fi
   fi
-  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:latest > /dev/null;then
-    if -f ${STATUS_DIR}/downloads/cloud-pak-deployer.tar;then
-      ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer.tar
+  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer-airgap:latest > /dev/null 2>&1;then
+    if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar ];then
+      ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
+      ${CONTAINER_ENGINE} tag cloud-pak-deployer-airgap:latest cloud-pak-deployer:latest
     else
-      echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer.tar"
+      echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
       exit 99
     fi
   fi
@@ -649,7 +650,7 @@ if ! $INSIDE_CONTAINER;then
       exit 0
     fi
   elif [[ "${ACTION}" == "save" && "${ACTIVE_CONTAINER_ID}" != "" ]];then
-      echo "Cloud Pak Deployer is already running for status directory ${STATUS_DIR}"
+      echo "Cloud Pak Deployer is still running for status directory ${STATUS_DIR}"
       echo "Cannot save current state until the process has completed"
       exit 1
   # Display the logs if an active or inactive container was found
@@ -717,11 +718,16 @@ if [[ "${ACTION}" == "save" ]] && ! $CHECK_ONLY;then
       --case ${CP_DATACORE_ARCHIVE} \
       --inventory cpdPlatformOperator \
       --action stop-registry
+  echo "Destroying old archives for registry and deployer"
+  rm -f ${STATUS_DIR}/downloads/docker-registry.tar ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
   echo "Saving Docker registry image into ${STATUS_DIR}/downloads/docker-registry.tar"
   ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/docker-registry.tar docker.io/library/registry:2
-  echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer.tar"
-  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer.tar cloud-pak-deployer:latest
+  echo "Committing last-run deployer container into image cloud-pak-deployer-airgap:latest"
+  ${CONTAINER_ENGINE} commit $CURRENT_CONTAINER_ID cloud-pak-deployer-airgap:latest
+  echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
+  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer-airgap:latest
   echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
+  exit 0
 fi
 
 # Build command when not running inside container
