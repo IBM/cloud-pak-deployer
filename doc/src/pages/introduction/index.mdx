@@ -13,10 +13,16 @@ Not all Cloud Pak implementations require governance using the previously descri
 
 Cloud Pak Deployer has been designed with the following key principles in mind:
 
+![Deployment](cpd-deployment.png)
+
+Every deployment starts with a set of configuration files which define the infrastructure, OpenShift cluster and Cloud Pak to be installed. The Cloud Pak Deployer reads the configuration from the specified directory, and secrets which are kept in a vault, and does whatever it needs to do to reach the desired end state. During the deployment, new secrets may be created and these are also stored in the vault. In its simplest form, the vault is a flat file in the specified status directory, but you can also choose to keep the secrets in HashiCorp Vault or the Vault service on IBM Cloud.
+
 ![Key principles](cpd-principles.png "Cloud Pak Deployer principles").
 
+As long as you keep the configuration directory and the vault available, you can make changes to the config and re-run the deployer to reach the new desired end state. For example, if you choose to add another cartridge to your Cloud Pak for Data deployment, just change the `state` of that cartridge and re-run the deployer.
+
 ## Opinionated
-Red Hat OpenShfit and IBM Cloud Paks offer a wide variety of dpeloyment and configuration options. It is the intention of the Cloud Pak Deployer to simplify the deployment by focusing on proven deployemnt patterns. As an example: for a non-highly available deployment of the Cloud Pak, we use an NFS storage class; for a production deployment, we use OpenShift Container Storage (aka OpenShift Data Foundation).
+Red Hat OpenShift and IBM Cloud Paks offer a wide variety of dpeloyment and configuration options. It is the intention of the Cloud Pak Deployer to simplify the deployment by focusing on proven deployemnt patterns. As an example: for a non-highly available deployment of the Cloud Pak, we use an NFS storage class; for a production deployment, we use OpenShift Container Storage (aka OpenShift Data Foundation).
 
 Choosing from proven deployment patterns improves the probability for a straightforward installation without surprises.
 
