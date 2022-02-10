@@ -593,7 +593,7 @@ if [ "$STATUS_DIR" != "" ];then
 fi
 
 # Make sure that Docker registry v2 and Deployer images exists
-if [ ${CPD_AIRGAP} ];then
+if [ "${CPD_AIRGAP}" == "true" ];then
   if ! ${CONTAINER_ENGINE} inspect docker.io/library/registry:2 > /dev/null 2>&1;then
     if [ -f ${STATUS_DIR}/downloads/docker-registry.tar ];then
       ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/docker-registry.tar
