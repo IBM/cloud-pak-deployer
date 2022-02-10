@@ -50,7 +50,7 @@ When doing a Cloud Pak installation when the OpenShift cluster has limited conne
 
 ### On the server connected to the internet
 * Build the Cloud Pak Deployer image using `cp-deploy.sh build`
-* Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified
+* Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified. Make sure you select `existing-ocp` for the `cloud_platform` property in the configuration's inventory
 * Create a status directory that will hold the vault and all other downloaded assets
 * Run the deployer with the `env download` subcommand and action to download all clients, start the portable registry and then mirror images from the entitled registry to the portable registry
 * When finished successfully, re-run the deployer with `env save` subcommand and action to stop the portable registry and save the registry and deployer container images to the status directory
@@ -58,5 +58,4 @@ When doing a Cloud Pak installation when the OpenShift cluster has limited conne
 
 ### On the bastion server that is connected to the OpenShift cluster
 * Restore the deployer, config and status directories to the bastion server
-* Run the deployer with `vault set` subcommand and action and the `--air-gapped` flag to create the "kubeconfig" secret to connect to the OpenShift cluster
-* Run the deployer with `env apply` subcommand and action and the `--air-gapped` flag to deploy the Cloud Pak
+* Use the instructions in [Existing OpenShift](/cp-deploy/run/run-on-existing-openshift), including the creation of the `kubeconfig` secret to start the deployer. Run the `cp-deploy.sh` command with the `--air-gapped` flag to indicate images have to be mirrored from the portable registry to the private registry and the appropriate OpenShift configuration is done
