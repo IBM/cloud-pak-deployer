@@ -18,11 +18,6 @@
   vars:
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
-- name: Remove Cloud Pak for Data directory for generated files
-  file:
-    path: "{{ status_dir }}/cp4d"
-    state: absent
-
 - name: Create Cloud Pak for Data directory for generated files
   file:
     path: "{{ status_dir }}/cp4d"
@@ -45,12 +40,20 @@
     _use_case_files: True
   when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool)
 
+- name: Remove case directory in case it exists and not air-gapped
+  file:
+    path: "{{ status_dir }}/cp4d/case"
+    state: absent
+  when: not (cpd_airgap | bool)
+
 - name: Save case files for Cloud Pak for Data when using private registry or when explicitly using case files
   include_role: 
     name: cp4d-case-save
   vars:
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-  when: _use_case_files
+  when: 
+  - _use_case_files
+  - not (cpd_airgap | bool)
 
 - name: Mirror images for Cloud Pak for Data from entitled to private registry {{ current_cp4d_cluster.image_registry_name }}
   include_role: 
