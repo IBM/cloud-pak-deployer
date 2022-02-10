@@ -20,7 +20,6 @@
       cloudctl case save \
         --repo https://github.com/IBM/cloud-pak/raw/master/repo/case \
         --case ibm-cp-datacore \
-        --version 2.0.10 \
         --outputdir {{ status_dir }}/downloads \
         --no-dependency
 
@@ -55,9 +54,20 @@
 
     when: _portable_registry_credentials == ""
 
-  - name: Prepare registry
+  - name: Retrieve case file for ibm-cp-datacore-* in the {{ status_dir }}/downloads directory
+    find:
+      paths: "{{ status_dir }}/downloads"
+      patterns: "^ibm-cp-datacore-[0-9]+[.][0-9]+[.][0-9]+[.]tgz"
+      use_regex: yes
+    register: _cp_datacore_case_files
+
+  - name: Determine name of case file
+    set_fact:
+      _cp_datacore_case_file: "{{ _cp_datacore_case_files.files | last }}"
+
+  - name: Prepare registry using case file {{ _cp_datacore_case_file.path }}
     shell: |
-      cloudctl case launch --case {{ status_dir }}/downloads/ibm-cp-datacore-2.0.10.tgz \
+      cloudctl case launch --case {{ _cp_datacore_case_file.path }} \
         --inventory cpdPlatformOperator --action init-registry \
         --args "--registry portable-registry --user $(echo '{{ _portable_registry_credentials }}' | cut -d: -f 1) --pass $(echo '{{ _portable_registry_credentials }}' | cut -d: -f 2) --dir {{ status_dir }}/imageregistry"
     args:

@@ -70,6 +70,15 @@ run_env_logs() {
   fi
 }
 
+# Find the name of the latest ibm-cp-datacore archive file in the downloads directory
+get_cp_datacore_archive() {
+  CP_DATACORE_ARCHIVE=$(find $STATUS_DIR/downloads -regex '.*ibm-cp-datacore-[0-9]+[.][0-9]+[.][0-9]+.*.tgz' | tail -n 1)
+  if [ "$CP_DATACORE_ARCHIVE" == "" ];then
+    echo "Could not find ibm-cp-datacore archive in $STATUS_DIR/downloads directory. This file is needed for the portable registry."
+    exit 1
+  fi
+}
+
 # --------------------------------------------------------------------------------------------------------- #
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
@@ -683,9 +692,10 @@ fi
 if [[ "${ACTION}" == "download" || ${CPD_AIRGAP} == "true" ]] && ! $CHECK_ONLY;then
   # Start the registry, only if not already started
   if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
+    get_cp_datacore_archive
     ${CONTAINER_ENGINE} rm docker-registry 2>/dev/null
     ${STATUS_DIR}/downloads/cloudctl case launch \
-      --case ${STATUS_DIR}/downloads/ibm-cp-datacore-2.0.10.tgz \
+      --case ${CP_DATACORE_ARCHIVE} \
       --inventory cpdPlatformOperator \
       --action start-registry \
       --args "--port 15000 --dir ${STATUS_DIR}/imageregistry --image docker.io/library/registry:2"
@@ -701,9 +711,10 @@ fi
 
 # If save action, save images of Docker registry and Deployer
 if [[ "${ACTION}" == "save" ]] && ! $CHECK_ONLY;then
+  get_cp_datacore_archive
   echo "Stopping portable registry"
   ${STATUS_DIR}/downloads/cloudctl case launch \
-      --case ${STATUS_DIR}/downloads/ibm-cp-datacore-2.0.10.tgz \
+      --case ${CP_DATACORE_ARCHIVE} \
       --inventory cpdPlatformOperator \
       --action stop-registry
   echo "Saving Docker registry image into ${STATUS_DIR}/downloads/docker-registry.tar"
