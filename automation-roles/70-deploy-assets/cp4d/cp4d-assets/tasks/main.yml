@@ -31,6 +31,12 @@
   vars: 
     _p_openshift_cluster_name: "{{ _current_cp4d_cluster.openshift_cluster_name }}"
 
+- name: Get Route to Cloud Pak for Data
+  shell: |
+    oc --namespace {{ _current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+        -o jsonpath="{.items[0].spec.host}"
+  register: _cp4d_url
+
 - name: Check if CCS is installed in OpenShift project {{ _current_cp4d_cluster.project }}
   shell: |
     oc get ccs ccs-cr -n {{ _current_cp4d_cluster.project }}
