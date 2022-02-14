@@ -44,6 +44,7 @@ env|environment)
     ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
   fi
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
+  export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
   # Assemble command
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
@@ -102,6 +103,7 @@ vault)
   fi
 
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
+  export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
   run_cmd="ansible-playbook -i ${INV_DIR}"
   run_cmd+=" playbooks/playbook-vault.yml"
   run_cmd+=" --extra-vars ACTION=${ACTION}"
