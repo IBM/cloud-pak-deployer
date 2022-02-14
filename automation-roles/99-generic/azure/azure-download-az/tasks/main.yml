@@ -8,6 +8,11 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+- name: Check if az cli was already downloaded
+  stat:
+    path: "/usr/local/bin/az"
+  register: _az_download
+
 - name: Install az cli by using dnf
   become: true
   shell: |
@@ -19,6 +24,7 @@
     gpgcheck=1
     gpgkey=https://packages.microsoft.com/keys/microsoft.asc" | tee /etc/yum.repos.d/azure-cli.repo
     dnf install {{ _az_install_package }} -y
+  when: not _az.stat.exists
 
 - name: Get az cli version
   shell: |

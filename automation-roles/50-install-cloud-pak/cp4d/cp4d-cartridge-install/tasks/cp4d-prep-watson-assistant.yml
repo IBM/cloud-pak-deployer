@@ -40,13 +40,13 @@
         _p_registry_url: "{{ private_registry_url }}"
         _p_registry_pull_secret: "{{ secret_value }}"
 
-  when: not (use_entitled_registry | bool)
+  when: (current_cp4d_cluster.image_registry_name | default("")) != ""
 
 - name: Set Watson Assistant pull secret for the entitled registry
   set_fact:
-    _p_registry_url: "{{ entitled_registry }}" 
-    _p_registry_pull_secret: "cp:{{ ibm_cp_entitlement_key }}"
-  when: (use_entitled_registry | bool)
+    _p_registry_url: "{{ _v_entitled_registry }}" 
+    _p_registry_pull_secret: "{{ _v_entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
+  when: (current_cp4d_cluster.image_registry_name | default("")) == ""
 
 - name: Generate dockerconfig for pull secret
   template:
