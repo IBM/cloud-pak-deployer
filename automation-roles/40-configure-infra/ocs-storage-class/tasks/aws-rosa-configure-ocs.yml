@@ -3,10 +3,10 @@
   debug:
     var: current_openshift_storage
 
-- name: List machinepools for cluster {{ _current_openshift_cluster.name }} to check for existence
+- name: List machinepools for cluster {{ current_openshift_cluster.name }} to check for existence
   shell: |
-    rosa list machinepool --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+    rosa list machinepool --cluster {{ current_openshift_cluster.name }} \
+      --region {{ current_openshift_cluster.infrastructure.aws_region }} \
       --output json
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
@@ -31,8 +31,8 @@
     - name: Create machinepool {{ current_openshift_storage.storage_name }}
       shell: |
         rosa create machinepool --name {{ current_openshift_storage.storage_name }} \
-          --cluster {{ _current_openshift_cluster.name }} \
-          --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+          --cluster {{ current_openshift_cluster.name }} \
+          --region {{ current_openshift_cluster.infrastructure.aws_region }} \
           --instance-type m5.4xlarge \
           --replicas 3 \
           --taints 'node.ocs.openshift.io/storage=true:NoSchedule' \
