@@ -7,15 +7,17 @@ spec:
   license:
     accept: true
     license: Enterprise
-{% if selected_openshift_storage.storage_type == "pwx" %}
   persistence:
+{% if selected_openshift_storage.storage_type == "pwx" %}
     storage_vendor: portworx
     storage_class: portworx-shared-gp3 
-{% else %} 
-  persistence:
+{% elif selected_openshift_storage.storage_type == "ocs" %}
+    storage_vendor: ocs
     storage_class: {{ ocp_storage_class_block }}
   shared_persistence:
     storage_class: {{ ocp_storage_class_file }}
+{% else %} 
+    storage_class: {{ ocp_storage_class_block }}
 {% endif %}
   wkc:
     enabled: {{ current_cp4d_cartridge.wkc_enabled }}
