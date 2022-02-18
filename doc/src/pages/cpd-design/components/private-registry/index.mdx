@@ -31,6 +31,24 @@ When the `image_registry` object is referenced by the Cloud Pak object (such as 
 * ImageContentSourcePolicy: This is a mapping between the original location of the image, for example `quay.io/opencloudio/zen-metastoredb@sha256:582cac2366dda8520730184dec2c430e51009a854ed9ccea07db9c3390e13b29` is mapped to `registry.coc.uk.ibm.com:15000/opencloudio/zen-metastoredb@sha256:582cac2366dda8520730184dec2c430e51009a854ed9ccea07db9c3390e13b29`.
 * Image registry settings: OpenShift keeps image registry settings in custom resource `image.config.openshift.io/cluster`. If a private registry with a self-signed certificate is configured, certificate authority's PEM secret must be created as a configmap in the `openshift-config` project. The deployer uses the vault secret referenced in `registry_trusted_ca_secret` to create or update the configmap so that OpenShift can connect to the registry in a secure manner. Alternatively, you add the `registry_insecure: true` property to pull images without checking the certificate.
 
+For example, to create the vault secret for the CA bundle is:
+```
+./cp-deploy.sh vault set \
+  -vs cpd405-ca-bundle
+  -vsf /tmp/ca.crt
+```
+
+Where `ca.crt` looks something like this:
+```
+-----BEGIN CERTIFICATE-----
+MIIFszCCA5ugAwIBAgIUT02v9OdgdvjgQVslCuL0wwCVaE8wDQYJKoZIhvcNAQEL
+BQAwaTELMAkGA1UEBhMCVVMxETAPBgNVBAgMCE5ldyBZb3JrMQ8wDQYDVQQHDAZB
+cm1vbmsxFjAUBgNVBAoMDUlCTSBDbG91ZCBQYWsxHjAcBgNVBAMMFUlCTSBDbG91
+...
+mcutkgtbkq31XYZj0CiM451Qp8KnTx0=
+-----END CERTIFICATE-
+```
+
 An example of configuring a private registry for a `cp4d` object is below:
 ```
 cp4d:
