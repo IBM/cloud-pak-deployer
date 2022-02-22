@@ -61,6 +61,31 @@
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
   when: _rosa_describe_cluster.rc != 0
 
+- name: Create OIDC objects if STS was specified
+  block:
+  - name: Create operator roles for cluster {{ _current_openshift_cluster.name }}
+    shell: |
+      rosa create operator-roles --mode auto --cluster {{ _current_openshift_cluster.name }} -y
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  - name: Create OIDC provider for cluster {{ _current_openshift_cluster.name }}
+    shell: |
+      rosa create oidc-provider --mode auto --cluster {{ _current_openshift_cluster.name }} -y
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  when:
+  - {{ _current_openshift_cluster.infrastructure.use_sts | default(False) | bool }}
+
+- name: Waiting for cluster creation to complete
+  shell: |
+    rosa logs install --cluster={{ _current_openshift_cluster.name }} --watch
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  when: _rosa_describe_cluster.rc != 0
+
 - name: Get details for cluster {{ _current_openshift_cluster.name }}
   shell: |
     rosa describe cluster \
