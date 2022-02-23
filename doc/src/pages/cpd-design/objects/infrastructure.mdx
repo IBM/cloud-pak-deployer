@@ -33,6 +33,8 @@ For IBM Cloud, the following object types are supported:
 - [ssh_keys](#ibm-cloud-ssh_keys)
 - [address_prefix](#ibm-cloud-address_prefix)
 - [subnet](#ibm-cloud-subnet)
+- [network_acl](#ibm-cloud-network_acl)
+- [security_group](#ibm-cloud-security_group)
 - [vsi](#ibm-cloud-vsi)
 - [transit_gateway](#ibm-cloud-transit_gateway)
 - [nfs_server](#ibm-cloud-nfs_server)
@@ -170,6 +172,7 @@ subnet:
   ipv4_cidr_block: 10.27.0.0/26
   zone: eu-de-1
   vpc: sample
+  network_acl: sample-acl
 ```
 
 #### Property explanation
@@ -181,6 +184,73 @@ subnet:
 | ipv4_cidr_block | Address range that IPs in this subnet will fall into | Yes                     | Range of subrange of zone |
 | zone            | Zone of the address prefix definition                | Yes, inferred           |                           |
 | vpc             | Virtual Private Cloud this subnet prefix belongs to  | Yes, inferred from zone |                           |
+| network_acl     | Reference to the network access control list protecting this subnet | No       |                           |
+
+### IBM Cloud `network_acl`
+
+Defines the network access control list to be associated with subnets to allow or deny traffic from or to external connections. The rules are processed in sequence per direction. Rules that appear higher in the list will be processed first.
+
+```
+network_acl:
+- name: {{ env_id }}-acl
+  vpc_name: {{ env_id }}
+  rules:
+  - name: inbound-ssh
+    action: allow               # Can be allow or deny
+    source: "0.0.0.0/0"
+    destination: "0.0.0.0/0"
+    direction: inbound
+    tcp:
+      source_port_min: 1        # optional
+      source_port_max: 65535    # optional
+      dest_port_min: 22         # optional
+      dest_port_max: 22         # optional
+  - name: output-udp
+    action: deny                # Can be allow or deny
+    source: "0.0.0.0/0"
+    destination: "0.0.0.0/0"
+    direction: outbound
+    udp:
+      source_port_min: 1        # optional
+      source_port_max: 65535    # optional
+      dest_port_min: 1000       # optional
+      dest_port_max: 2000       # optional
+  - name: output-icmp
+    action: allow               # Can be allow or deny
+    source: "0.0.0.0/0"
+    destination: "0.0.0.0/0"
+    direction: outbound
+    icmp:
+      code: 1
+      type: 1
+```
+
+#### Property explanation
+
+| Property        | Description                                          | Mandatory               | Allowed values            |
+| --------------- | ---------------------------------------------------- | ----------------------- | ------------------------- |
+| name            | Name of the network access control liet              | Yes                     |                           |
+| vpc_name        | Virtual Private Cloud this network ACL belongs to    | Yes                     |                           |
+| rules           | Rules to be applied, every rule is an entry in the list | Yes                  |                           |
+| rules.name      | Unique name of the rule                              | Yes                     |                           |
+| rules.action    | Defines whether the traffic is allowed or denied     | Yes                     | allow, deny               |
+| rules.source    | Source address range that defines the rule           | Yes                     |                           |
+| rules.destination | Destination address range that defines the rule    | Yes                     |                           |
+| rules.direction | Inbound or outbound direction of the traffic         | Yes                     | inbound, outbound         |
+| rules.tcp       | Rule for TCP traffic                                 | No                      |                           |
+| rules.tcp.source_port_min | Low value of the source port range         | No, default=1           | 1-65535                   |
+| rules.tcp.source_port_max | High value of the source port range        | No, default=65535       | 1-65535                   |
+| rules.tcp.dest_port_min   | Low value of the destination port range    | No, default=1           | 1-65535                   |
+| rules.tcp.source_port_max | High value of the destination port range   | No, default=65535       | 1-65535                   |
+| rules.udp       | Rule for UDP traffic                                 | No                      |                           |
+| rules.udp.source_port_min | Low value of the source port range         | No, default=1           | 1-65535                   |
+| rules.udp.source_port_max | High value of the source port range        | No, default=65535       | 1-65535                   |
+| rules.udp.dest_port_min   | Low value of the destination port range    | No, default=1           | 1-65535                   |
+| rules.udp.source_port_max | High value of the destination port range   | No, default=65535       | 1-65535                   |
+| rules.icmp      | Rule for ICMP traffic                                | No                      |                           |
+| rules.icmp.code | ICMP traffic code                                    | No, default=all         | 0-255                     |
+| rules.icmp.type | ICMP traffic type                                    | No, default=all         | 0-254                     |
+
 
 ### IBM Cloud `vsi`
 

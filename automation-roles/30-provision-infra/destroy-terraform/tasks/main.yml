@@ -61,73 +61,80 @@
       cmd: 'terraform init'
 
   - name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
-    shell: 
-      chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform plan -destroy -no-color -detailed-exitcode >> {{status_dir}}/terraform/plan.log 2>&1"
-    register: terraform_plan_result
-    failed_when: "terraform_plan_result.rc == 1"
+    shell: |
+      set -o pipefail
+      terraform plan -destroy -no-color -detailed-exitcode 2>&1 \
+        | tee {{status_dir}}/terraform/plan.log
+    args:
+      chdir: "{{status_dir}}/terraform"
+    register: _terraform_plan_result
+    failed_when: "_terraform_plan_result.rc == 1"
 
   # If there are no changes, terraform plan will return with exit code 2 (as per -detailed-exitcode)
   # Subsequent steps are skipped if no changes were planned
   - name: Determine if destroy must be skipped if no changes were detected
     debug:
       msg: "No changes were detected in the planning phase, destroy will be skipped and tfstate secret will not be updated"
-    when: "terraform_plan_result.rc == 0"
-
-  - slurp:
-      src: "{{status_dir}}/terraform/plan.log"
-    register: plan_log
+    when: "_terraform_plan_result.rc == 0"
 
   - set_fact:
-      destroy_result: "{{ plan_log['content'] | b64decode | regex_search('([0-9]+) to destroy', '\\1') }}"
+      _plan_log: "{{ lookup('file', status_dir + '/terraform/plan.log') }}"
+
+  - set_fact:
+      _destroy_result: "{{ _plan_log | regex_search('([0-9]+) to destroy', '\\1') }}"
 
   - name: Show destroy results
     debug:
-      var: destroy_result
+      var: _destroy_result
 
   - set_fact:
-      number_to_destroy: "{{ destroy_result | first }}"
-    when: destroy_result != ''
+      _number_to_destroy: "{{ _destroy_result | first }}"
+    when: _destroy_result != ''
 
   - name: Show number of artifacts to destroy
     debug:
-      var: number_to_destroy
-    when: number_to_destroy is defined
+      var: _number_to_destroy
+    when: _number_to_destroy is defined
 
   - fail:
       msg: "Terraform will destroy artifacts and this was not confirmed"
     when:
-      - number_to_destroy is defined
-      - number_to_destroy != '0'
+      - _number_to_destroy is defined
+      - _number_to_destroy != '0'
       - confirm_destroy | bool != True
 
   - name: "Run terraform destroy in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/destroy.log"
-    shell: 
-      chdir: '{{status_dir}}/terraform'
-      cmd: bash -c "terraform destroy -auto-approve -no-color >> destroy.log 2>&1"
+    shell: |
+      set -o pipefail
+      terraform destroy -auto-approve -no-color 2>&1 \
+        | tee {{status_dir}}/terraform/destroy.log
+    args:
+      chdir: "{{status_dir}}/terraform"
     environment:
       TF_LOG: "info"
       TF_LOG_PATH: "{{ status_dir }}/terraform/tf_destroy.log"
-    register: terraform_destroy
+    register: _terraform_destroy_result
     ignore_errors: yes
-    when: terraform_plan_result.rc != 0
+    when: _terraform_plan_result.rc != 0
 
   - name: Store the terraform tfstate file as secret {{ environment_name }}-terraform-tfstate in group {{ environment_name }}
     include_role:
-      name: vault-create-secret
+      name: vault-set-secret
     vars:
       secret_name: "{{ environment_name }}-terraform-tfstate"
       secret_group: "{{ environment_name }}"
       secret_file: "{{ status_dir }}/terraform/terraform.tfstate"
     when: 
-    - terraform_plan_result.rc != 0
+    - _terraform_plan_result.rc != 0
 
   - name: Fail if there were errors in the terraform destroy process
     fail:
-      msg: Error occurred during Terraform destroy, state has been preserved. Failing now. Check the destroy log for details.
+      msg: 
+      - Error occurred during Terraform destroy, state has been preserved. Failing now. Check the destroy log for details.
+      - "{{ _terraform_destroy_result }}"
     when: 
-    - terraform_plan_result.rc == 2
-    - terraform_destroy.rc!=0
+    - _terraform_plan_result.rc == 2
+    - _terraform_destroy_result.rc!=0
 
   when: "cloud_platform == 'ibm-cloud'"
 

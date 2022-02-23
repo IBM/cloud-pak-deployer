@@ -4,11 +4,6 @@ SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 error=0
 
 # Check mandatory parameters
-if [ ! -v IBM_CLOUD_API_KEY ];then
-  echo "Error: environment variable IBM_CLOUD_API_KEY has not been set and is required"
-  error=1
-fi
-
 if [ ! -v CONFIG_DIR ];then
   echo "Error: environment CONFIG_DIR must be specified"
   error=1
@@ -38,9 +33,6 @@ echo "Starting Automation script..."
 echo ""
 cd ${SCRIPT_DIR}/..
 
-VERBOSE_ARG=""
-if $ANSIBLE_VERBOSE;then VERBOSE_ARG="-vvv";fi
-
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
@@ -48,8 +40,11 @@ case "$SUBCOMMAND" in
 env|environment)
   # Set Ansible config file to use
   ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
-  if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+  if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
+  fi
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
+  export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
   # Assemble command
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
@@ -62,14 +57,18 @@ env|environment)
     fi
   elif [ "$ACTION" == "destroy" ];then
     run_cmd+=" playbooks/playbook-env-destroy.yml"
+  elif [ "$ACTION" == "download" ];then
+    run_cmd+=" playbooks/playbook-env-download-20-execute.yml"
   fi
   run_cmd+=" --extra-vars cpd_action=${ACTION}"
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
+  run_cmd+=" --extra-vars cp_entitlement_key=${CP_ENTITLEMENT_KEY}"
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
+  run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
@@ -83,7 +82,7 @@ env|environment)
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
     run_cmd+=" --extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
   fi
-  run_cmd+=" ${VERBOSE_ARG}"
+  run_cmd+=" ${ANSIBLE_VERBOSE}"
   if [ -v EXTRA_PARMS ];then
     for p in ${EXTRA_PARMS};do
       echo "Extra param $p=${!p}"
@@ -99,8 +98,12 @@ env|environment)
 
 vault)
   ANSIBLE_CONFIG_FILE=$PWD/ansible-vault.cfg
-  if $ANSIBLE_STANDARD_OUTPUT;then ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg;fi
+  if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
+  fi
+
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
+  export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
   run_cmd="ansible-playbook -i ${INV_DIR}"
   run_cmd+=" playbooks/playbook-vault.yml"
   run_cmd+=" --extra-vars ACTION=${ACTION}"
@@ -123,7 +126,7 @@ vault)
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
     run_cmd+=" --extra-vars VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
   fi
-  run_cmd+=" ${VERBOSE_ARG}"
+  run_cmd+=" ${ANSIBLE_VERBOSE}"
   if [ -v EXTRA_PARMS ];then
     for p in ${EXTRA_PARMS};do
       echo "Extra param $p=${!p}"

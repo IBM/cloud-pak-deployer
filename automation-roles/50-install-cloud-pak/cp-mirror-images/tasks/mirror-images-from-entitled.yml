@@ -1,0 +1,12 @@
+---
+- name: Mirror images from entitled registry using {{ config_dir }}/case. Check status in {{ status_dir }}/log/cloud-pak-mirror-images.log
+  shell: |
+    set -o pipefail
+    {{ role_path }}/scripts/cloud-pak-mirror-images.sh image mirror --dir {{ _p_case_dir }} \
+        --to-registry "{{ _target_registry_url_namespace }}" \
+        --auth {{ status_dir }}/cloud-paks/auth.json | \
+        tee -a {{ status_dir }}/log/cloud-pak-mirror-images.log
+  register: _mirror_images_result
+  retries: 10
+  delay: 5
+  until: _mirror_images_result.rc==0

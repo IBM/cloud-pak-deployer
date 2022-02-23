@@ -178,6 +178,7 @@ openshift:
     type: rosa
     aws_region: eu-central-1
     multi_zone: True
+    use_sts: False
   upstream_dns:
   - name: sample-dns
      zones:
@@ -191,7 +192,7 @@ openshift:
     ocs_storage_size_gb: 500
 ```
 
-#### Property explanation OpenShift clusters on IBM Cloud (ROKS)
+#### Property explanation OpenShift clusters on AWS (ROSA)
 
 | Property                                    | Description                                                                                                                    | Mandatory                      | Allowed values |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | -------------- |
@@ -202,6 +203,9 @@ openshift:
 | infrastructure.type                         | Type of OpenShift cluster on AWS. Currently only `rosa` is allowed.                                                            | Yes                            | `rosa`         |
 | infrastructure.aws_region                   | Region of AWS where cluster is deployed.                                                                                       | Yes                            |                |
 | infrastructure.multi_zone                   | Determines whether the ROSA cluster is deployed across multiple availability zones. Default is True.                           | No                             | True, False    |
+| infrastructure.use_sts                      | Determines whether AWS Security Token Service must be used. Default is False.                                     | No                             | True, False    |
+| infrastructure.machine_cdr                  | Machine CIDR if existing VPC and subnets are used, for example 10.243.0.0/16. Do not specify if subnets are not specified.    | No                             | CIDR       |
+| infrastructure.subnet_ids                   | Existing public and private subnet IDs in the VPC to be used for the ROSA cluster.  Must be specified in combination with machine_cidr. | No               | Existing subnet IDs  |
 | compute_nodes                               | Total number of compute nodes                                                                                                  | Yes                            | Integer        |
 | upstream_dns                                | Defines alternative upstream DNS servers(s) for OpenShift                                                                      | No                             |                |
 | upstream_dns.name                           | Name of the upstream DNS server                                                                                                | Yes                            |                |
@@ -212,6 +216,20 @@ openshift:
 | openshift_storage.ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                    | Yes if `storage_type` is `ocs` |                |
 | openshift_storage.ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                      | Yes if `storage_type` is `ocs` |                |
 | openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On ROSA clusters, `gp2` i usually available after OpenShift installation | No                             |                |
+
+When deploying the ROSA cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
+```
+    machine_cidr: 10.243.0.0/24
+    subnets:
+    - subnet-0e63f662bb1842e8a
+    - subnet-0673351cd49877269
+    - subnet-00b007a7c2677cdbc
+    - subnet-02b676f92c83f4422
+    - subnet-0f1b03a02973508ed
+    - subnet-027ca7cc695ce8515
+```
+
+In the above case, all referenced subnets have an address space of `/27` so that 6 subnets fit within the `/24` address space.
 
 ### OpenShift on Microsoft Azure (ARO)
 

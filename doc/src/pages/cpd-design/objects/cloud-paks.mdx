@@ -43,8 +43,8 @@ Defines a private registry that will be used for pulling the Cloud Pak container
 ```
 image_registry:
 - name: cpd404
-  registry_host_name: de.icr.io
-  registry_port: 443
+  registry_host_name: cpd404.example.com
+  registry_port: 5000
   registry_namespace: cpd404
   registry_insecure: false
   registry_trusted_ca_secret: cpd404-ca-bundle
@@ -56,9 +56,9 @@ image_registry:
 | name     | Name by which the image registry is identified.                      | Yes       |  |
 | registry_host_name | Host name of the registry server/service.                  | Yes       |  |
 | registry_port | Port that the image registry listens on. Default is the https port (443) | No | |
-| registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory when using the IBM Cloud Container Registry (ICR)    | No       | |
+| registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory only when using the IBM Cloud Container Registry (ICR)    | No       | |
 | registry_insecure | Defines whether insecure registry access with a self-signed certificate is allowed | No       | True, False (default) |
-| registry_trusted_ca_secret | Defines the CA bundle to use when connecting to the registry, if not signed with a public CA. | No | |
+| registry_trusted_ca_secret | Defines the vault secret which holds the certificate authority bundle that must be used when connecting to this private registry. This parameter cannot be specified if `registry_insecure` is also specified. | No       |  |
 
 When mirroring images, the deployer connects to the registry using the host name and port. If the port is omitted, the standard https protocol (443) is used. If a `registry_namespace` is specified, for example when using the IBM Container Registry on IBM Cloud, it will be appended to the registry URL.
 
@@ -67,4 +67,28 @@ The user and password to connect to the registry will be retrieved from the vaul
 ./cp-deploy.sh vault set \
   -vs image-registry-cpd404 \
   -vsv "admin:very_s3cret"
+```
+
+If you need to connect to a private registry which is not signed by a public certificate authority, you have two choices:
+* Store the PEM certificate that that holds the CA bundle in a vault secret and specify that secret for the `registry_trusted_ca_secret` property. This is the recommended method for private registries.
+* Specify `registry_insecure: false` (not recommended): This means that the registry (and port) will be marked as insecure and OpenShift will pull images from it, even if its certificate is self-signed.
+
+For example, if you have a file `/tmp/ca.crt` with the PEM certificate for the certificate authority, you can do the following:
+```
+./cp-deploy.sh vault set \
+  -vs cpd404-ca-bundle \
+  -vsf /tmp/ca.crt
+```
+
+This will create a vault secret which the deployer will use to populate a `configmap` in the `openshift-config` project, which in turn is referenced by the `image.config.openshift.io/cluster` custom resource. For the above configuration, configmap `cpd404-ca-bundle` would be created and teh `image.config.openshift.io/cluster` would look something like this:
+```
+apiVersion: config.openshift.io/v1
+kind: Image
+metadata:
+...
+...
+  name: cluster
+spec:
+  additionalTrustedCA:
+    name: cpd404-ca-bundle
 ```
