@@ -150,7 +150,7 @@ import sys
   #   case_version: 2.1.1+20211213.164652.82041218
   # - name: planning-analytics
   #   version: 4.0.4
-  #   subscription_channel: v1.0
+  #   subscription_channel: v4.0
   #   case_version: 4.0.40403
   # - name: rstudio
   #   version: 4.0.4
