@@ -1,0 +1,10 @@
+---
+- name: Validate if project {{ _p_openshift_monitoring.grafana_project }} exists
+  shell: |
+    oc get projects -q | grep ^{{ _p_openshift_monitoring.grafana_project }}$ | wc -l
+  register: _grafana_project_exists
+
+- name: Delete Project {{ _p_openshift_monitoring.grafana_project }}
+  shell: |
+    oc delete project {{ _p_openshift_monitoring.grafana_project }}
+  when: _grafana_project_exists.stdout == "1"

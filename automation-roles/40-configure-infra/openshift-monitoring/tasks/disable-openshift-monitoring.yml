@@ -1,0 +1,13 @@
+---
+- name: Validate the Cluster Monitor is configured
+  shell: |
+    oc get cm -n openshift-monitoring --no-headers | grep cluster-monitoring-config | wc -l
+  register: _cluster_monitor_config_exists
+    
+- when: _cluster_monitor_config_exists.stdout == "0"
+  block:
+
+    - name: Delete the cluster-monitoring-config configmap
+      shell: |
+        oc delete cm -n openshift-monitoring cluster-monitoring-config
+      register: _cluster_monitor_config_exists

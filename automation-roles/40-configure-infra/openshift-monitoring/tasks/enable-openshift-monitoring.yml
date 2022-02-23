@@ -9,8 +9,9 @@
   block:
 
     - set_fact:
-        _monitor_persist_sc: "{{ _monitors.openshift_monitoring_persist_storage_class | default ('') }}"
-        _monitor_persist_size_gb: "{{ _monitors.openshift_persist_storage_size_in_gb | default ('100') }}"
+        _oc_monitoring_persist_sc: "{{ _p_openshift_monitoring.pvc_storage_class | default ('') }}"
+        _oc_monitoring_persist_size_gb: "{{ _p_openshift_monitoring.pvc_storage_size_gb | default ('100') }}"
+        _oc_remote_rewrite_url: "{{ _p_openshift_monitoring.remote_rewrite_url | default ('') }}"
 
     - name: Create cluster monitor configuration file
       template:
@@ -33,7 +34,7 @@
       shell: oc wait -n openshift-user-workload-monitoring --for=condition=Ready pod --all --timeout=240s
       register: _openshift_user_workload_pod_enable_persist
 
-    - when: _monitor_persist_sc != ""
+    - when: _oc_monitoring_persist_sc != ""
       block:
         - name: Create user workload cluster monitor configuration file
           template:

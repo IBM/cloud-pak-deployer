@@ -1,0 +1,17 @@
+---
+- include_tasks: enable-openshift-monitoring.yml
+  when: _p_openshift_monitoring.user_workload == 'enabled'
+  
+- include_tasks: disable-openshift-monitoring.yml
+  when: _p_openshift_monitoring.user_workload == 'disabled'
+
+- include_tasks: enable-grafana-operator.yml
+  when:
+    - _p_openshift_monitoring.user_workload == 'enabled'
+    - _p_openshift_monitoring.grafana_operator is defined
+    - _p_openshift_monitoring.grafana_operator == 'enabled'
+
+- include_tasks: disable-grafana-operator.yml
+  when:
+    - _p_openshift_monitoring.grafana_operator is defined
+    - _p_openshift_monitoring.grafana_operator == 'disabled'
