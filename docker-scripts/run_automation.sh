@@ -94,6 +94,7 @@ env|environment)
   mkdir -p ${STATUS_DIR}/log
   run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
+  set -o pipefail
   eval $run_cmd
   ;;
 
