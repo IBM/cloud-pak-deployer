@@ -36,7 +36,8 @@
   shell: |
     rosa describe cluster \
       --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }}
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --output json
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
@@ -57,3 +58,25 @@
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
   when: _rosa_describe_cluster.rc == 0
+
+- name: Delete operator roles for ROSA cluster {{ _current_openshift_cluster.name }} when STS was used
+  shell: |
+    rosa delete operator roles -c {{ (_rosa_describe_cluster.stdout | from_json).id }} --mode auto --yes \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  when: 
+  - _rosa_describe_cluster.rc == 0
+  - _current_openshift_cluster.infrastructure.use_sts | default(False) | bool
+
+- name: Delete OIDC provider for ROSA cluster {{ _current_openshift_cluster.name }} when STS was used
+  shell: |
+    rosa delete oidc-provider -c {{ (_rosa_describe_cluster.stdout | from_json).id }} --mode auto --yes \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  when: 
+  - _rosa_describe_cluster.rc == 0
+  - _current_openshift_cluster.infrastructure.use_sts | default(False) | bool

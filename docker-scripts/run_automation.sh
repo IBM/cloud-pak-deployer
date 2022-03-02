@@ -49,6 +49,7 @@ env|environment)
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
+      run_cmd+=" --extra-vars cpd_check_only=True"
       run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
     elif [ "$CP_CONFIG_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
@@ -93,6 +94,7 @@ env|environment)
   mkdir -p ${STATUS_DIR}/log
   run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
+  set -o pipefail
   eval $run_cmd
   ;;
 

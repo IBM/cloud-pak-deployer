@@ -150,7 +150,7 @@ import sys
   #   case_version: 2.1.1+20211213.164652.82041218
   # - name: planning-analytics
   #   version: 4.0.4
-  #   subscription_channel: v1.0
+  #   subscription_channel: v4.0
   #   case_version: 4.0.40403
   # - name: rstudio
   #   version: 4.0.4
@@ -284,9 +284,22 @@ def preprocessor(attributes=None, fullConfig=None):
                     check_cp_foundation(c)
                 if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
                     g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
-                if "state" in c:
-                    if c['state'] not in ['installed','removed']:
-                        g.appendError(msg='Cartridge state must be "installed" or "removed"')
+            if "state" in c:
+                if c['state'] not in ['installed','removed']:
+                    g.appendError(msg='Cartridge state must be "installed" or "removed"')
+            if "state" not in c or c['state']=='installed':
+                # Check if there are dependencies and the depencies will be installed too
+                if "dependencies" in c:
+                    for dep in c['dependencies']:
+                        if 'name' not in dep:
+                            g.appendError(msg='If dependencies are specifed, a name is required for every dependency')
+                        else:
+                            dep_found=False
+                            for dc in ge['cartridges']:
+                                if dc['name']==dep['name'] and ('state' not in dc or dc['state']=='installed'):
+                                    dep_found=True
+                            if not dep_found:
+                                g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
         if cpFoundationFound==False:
             g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
