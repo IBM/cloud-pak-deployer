@@ -14,18 +14,18 @@
     - name: Generate yaml for grafana operator group
       template:
         src: grafana-operatorgroup.j2
-        dest: "{{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-operatorgroup.yaml"
+        dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-operatorgroup.yaml"
     - name: Create grafana operatorgroup
       shell: |
-        oc apply -f {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-operatorgroup.yaml
+        oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-operatorgroup.yaml
 
     - name: Generate yaml for grafana subscription
       template:
         src: grafana-subscription.j2
-        dest: "{{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-subscription.yaml"
+        dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-subscription.yaml"
     - name: Create grafana operator
       shell: |
-        oc apply -f {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-subscription.yaml
+        oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-subscription.yaml
 
     # Wait until subscription has been successfully created
     - name: Wait until Grafana CSV has status Succeeded
@@ -49,23 +49,23 @@
     - name: Generate yaml for Grafana instance
       template:
         src: grafana-cr.j2
-        dest: "{{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-cr.yaml"
+        dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-cr.yaml"
     - name: Create Grafana instance
       shell: |
-        oc apply -f {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-cr.yaml
+        oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-cr.yaml
 
     # Get the prometheus-k8s-htpasswd
     - name: Get the prometheus-k8s-htpasswd
       shell: |
         oc get secret -n openshift-monitoring prometheus-k8s-htpasswd \
-        -o jsonpath='{.data.auth}' | base64 -d > {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-htpasswd
+        -o jsonpath='{.data.auth}' | base64 -d > {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-htpasswd
     - name: Add the grafana-user to htpasswd
       shell: |
-        echo >> {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-htpasswd && \
-        htpasswd -s -b {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-htpasswd grafana-user pAssW0rd
+        echo >> {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-htpasswd && \
+        htpasswd -s -b {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-htpasswd grafana-user pAssW0rd
     - name: Patch the prometheus-k8s-htpasswd
       shell: |
-        oc patch secret -n openshift-monitoring prometheus-k8s-htpasswd -p "{\"data\":{\"auth\":\"$(base64 -w0 {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-htpasswd)\"}}"
+        oc patch secret -n openshift-monitoring prometheus-k8s-htpasswd -p "{\"data\":{\"auth\":\"$(base64 -w0 {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-htpasswd)\"}}"
     - name: Restart the prometheus pods
       shell: |
         oc delete pod -n openshift-monitoring -l app=prometheus
@@ -74,14 +74,14 @@
         oc wait -n openshift-monitoring --for=condition=Ready pod -l app=prometheus --timeout=240s
     - name: Delete the prometheus-k8s-htpasswd
       file:
-        path: "{{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-htpasswd"
+        path: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-htpasswd"
         state: absent
       
     # Create Grafana datasource
     - name: Generate yaml for Grafana datasource instance
       template:
         src: grafana-datasource-cr.j2
-        dest: "{{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-datasource-cr.yaml"
+        dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-datasource-cr.yaml"
     - name: Create Grafana DataSource instance
       shell: |
-        oc apply -f {{ status_dir }}/openshift/{{ _current_openshift_cluster.name }}-grafana-datasource-cr.yaml
+        oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-grafana-datasource-cr.yaml
