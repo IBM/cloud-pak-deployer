@@ -23,9 +23,14 @@
         oc get ServiceMonitor -n {{ current_cp4d_cluster.project }} --no-headers | grep zen-watchdog | wc -l
       register: _cp4d_servicemonitor_exists
 
+    - name: Make a temporary work folder available
+      tempfile:
+        path: "{{status_dir}}/cp4d"
+        state: directory
+      register: _cloud_pak_service_monitor_dir
+
     - when: _cp4d_servicemonitor_exists.stdout == "0"
       block:
-
         - name: Create Cloud Pak for Data ServiceMonitor for project {{ current_cp4d_cluster.project }}
           template:
             src: cp4d-service-monitor.j2
@@ -40,12 +45,6 @@
         _cp4d_monitors: "{{ all_config.cp4d_monitors | json_query(monitors_current_cluster) | default([]) }}"
       vars:
         monitors_current_cluster: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
-
-    - name: Make a temporary work folder available
-      tempfile:
-        path: "{{status_dir}}/cp4d"
-        state: directory
-      register: _cloud_pak_service_monitor_dir
 
     - name: "Loop through each cp4d_monitor of CP4D cluster {{ current_cp4d_cluster.project }}"
       include_tasks: cp4d-monitors.yml
