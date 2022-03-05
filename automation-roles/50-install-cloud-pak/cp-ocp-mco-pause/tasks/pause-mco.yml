@@ -10,11 +10,12 @@
   register: _mcp_worker
   until: _mcp_worker.rc==0
   delay: 10
-  retries: 60
+  retries: 30
+  when: cloud_platform != 'ibm-cloud'
 
 - set_fact:
     _mco_exists: False
-  when: _mcp_worker.rc != 0
+  when: (cloud_platform == 'ibm-cloud') or (_mcp_worker.rc | default(0) != 0)
 
 - name: Fail if MachineConfigPool worker does not exist and not existing OpenShift or IBM Cloud
   fail:
