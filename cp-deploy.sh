@@ -764,7 +764,7 @@ if ! $INSIDE_CONTAINER;then
 
   if [ ! -z $VAULT_SECRET ];then
     run_cmd+=" -e VAULT_SECRET=${VAULT_SECRET} \
-              -e VAULT_SECRET_VALUE=${VAULT_SECRET_VALUE} \
+              -e VAULT_SECRET_VALUE=\"${VAULT_SECRET_VALUE}\" \
               -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
     if [ ! -z $VAULT_SECRET_FILE ];then
       run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:z"

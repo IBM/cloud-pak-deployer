@@ -114,7 +114,7 @@ vault)
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
   run_cmd+=" --extra-vars secret_group_param=${VAULT_GROUP}"
   run_cmd+=" --extra-vars secret_name=${VAULT_SECRET}"
-  run_cmd+=" --extra-vars secret_payload=${VAULT_SECRET_VALUE}"
+  run_cmd+=" --extra-vars \"secret_payload=\\\"${VAULT_SECRET_VALUE}\\\"\""
   run_cmd+=" --extra-vars secret_file=${VAULT_SECRET_FILE}"
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
