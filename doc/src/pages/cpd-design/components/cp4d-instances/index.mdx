@@ -1,3 +1,40 @@
 ---
 title: Cloud Pak for Data instances
 ---
+
+# Cloud Pak for Data instances
+
+Some Cloud Pak for Data cartridges provide the capability as an instance (also sometimes referred to as a runtime). Examples of these are Cognos Analytics, Db2 OLTP, Db2 Warehouse, Analytics Engine and Data Virtualization. The deployer supports creation and deletion of cartridge instances based on the input configuration.
+
+```
+cp4d:
+- project: zen-40
+  openshift_cluster_name: {{ env_id }}
+...
+  - name: ca
+    version: 4.0.6
+    subscription_channel: v4.0
+    case_version: 4.0.8
+    size: small
+    instances:
+    - name: ca-instance
+      metastore_ref: ca-metastore
+    state: installed
+
+  - name: db2
+    version: 4.0.8
+    subscription_channel: v1.0
+    case_version: 4.0.8
+    size: small
+    instances:
+    - name: ca-metastore
+      metadata_size_gb: 20
+      data_size_gb: 20
+      backup_size_gb: 20  
+      transactionlog_size_gb: 20
+    state: installed
+```
+
+In the above example, the Cognos Analytics and Db2 OLTP cartridges are installed by the deployer. Subsequently a Db2 instance is created to hold Cognos Analytics metastore. Finally, a new instance for Cognos Analytics is created, referencing the Db2 instance for the metastore.
+
+Even though the Db2 instance is defined below the Cognos Analytics instance, the deployer will create the instances in the correct order.
