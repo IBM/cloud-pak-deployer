@@ -53,22 +53,70 @@ export CONFIG_DIR=/data/config/sample
   Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
 </InlineNotification>
 
-### Log in to OpenShift and store `kubeconfig` secret
+### Store the OpenShift login command or configuration
 
-Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. Rather than the many variations of OpenShift authentication that could be applicable, the deployer expects a `kubeconfig` file with the cluster's credentials to be stored as a secret in the vault.
+Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. There are 2 methods for passing the login credentials of your OpenShift cluster(s) as vault secrets:
+- oc login command
+- kubeconfig file
 
+Regardless of which authentication option you choose, the deployer will retrieve this secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret of your choice.
+
+#### Option 1: store the `oc login` command
+This is the most straightforward option. For most OpenShift installations, you can retrieve the `oc login` command from the console. Go to the console and click on your user at the top right of the page to get the login command. Typically this command looks something like this: `oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3`
+
+**Optional**: If your cluster's API service certificate is not signed by a known certificate authority, you may have to add the `--insecure-skip-tls-verify` flag to the `oc login` command. If you have the OpenShift client `oc` on the server running the deployer, you can test that you can login to the cluster.
+```
+oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify
+```
+
+Output:
+```output
+Login successful.
+
+You have access to 65 projects, the list has been suppressed. You can list all projects with 'oc projects'
+
+Using project "default".
+```
+
+Store the login command in secret `<cluster name>-oc-login`
+```
+./cp-deploy.sh vault set \
+  -vs pluto-01-oc-login \
+  -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
+```
+
+<InlineNotification kind="info">
+  Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
+</InlineNotification>
+
+#### Option 2: store the kubeconfig file
+If you already have a "kubeconfig" file that holds the credentials of your cluster, you can use this, otherwise:
 - Log in to OpenShift as a cluster administrator using your method of choice
-- Locate the Kubernetes config file. If you have logged in with the OpenShift client, thie is typically `~/.kube/config`
-- Now, store the Kubernetes config file as a vault secret
-- If the cluster is air-gapped, make sure you add the `--air-gapped` flag
+- Locate the Kubernetes config file. If you have logged in with the OpenShift client, this is typically `~/.kube/config`
 
+If you did not just login to the cluster, the current context of the kubeconfig file may not point to your cluster. The deployer will check that the server the current context points to matches the `cluster_name` and `domain_name` of the configured `openshift` object. To check the current context, run the following command:
+```
+oc config current-context
+```
+
+Now, store the Kubernetes config file as a vault secret.
 ```
 ./cp-deploy.sh vault set \
     --vault-secret kubeconfig \
     --vault-secret-file ~/.kube/config
 ```
 
-The deployer will retrieve this secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret with a valid Kubernetes config file.
+If the deployer manages multiple OpenShift clusters, you can specify a kubeconfig file for each of the clusters by prefixing the `kubeconfig` with the name of the `openshift` object, for example:
+```
+./cp-deploy.sh vault set \
+    --vault-secret pluto-01-kubeconfig \
+    --vault-secret-file /data/pluto-01/kubeconfig
+
+./cp-deploy.sh vault set \
+    --vault-secret venus-02-kubeconfig \
+    --vault-secret-file /data/venus-02/kubeconfig
+```
+When connecting to the OpenShift cluster, a cluster-specific kubeconfig vault secret will take precedence over the generic `kubeconfig` secret.
 
 ## Optional: validate the configuration
 
@@ -93,7 +141,7 @@ If the cluster is air-gapped, make sure you add the `--air-gapped` flag
 If you have chosen to use dynamic properties (extra variables), you can specify these on the command line, see below. Extra variables are covered in [advanced configuration](/advanced/advanced-configuration).
 
 ```
-./cp-deploy.sh env apply -e env_id=acme-01
+./cp-deploy.sh env apply -e env_id=pluto-01
 ```
 
 In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
@@ -106,7 +154,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](/cpd-design/timings).
+Preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](/cpd-design/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -131,8 +179,8 @@ cat $STATUS_DIR/cloud-paks/*
 This will show the Cloud Pak URLs:
 
 ```output
-Cloud Pak for Data URL for cluster acme-01 and project zen-40:
-https://cpd-zen-40.apps.acme-01.example.com
+Cloud Pak for Data URL for cluster pluto-01 and project zen-40:
+https://cpd-zen-40.apps.pluto-01.example.com
 ```
 
 List the secrets in the vault:
@@ -146,7 +194,7 @@ This will show something similar to the following:
 ```output
 Secret list for group sample:
 - ibm_cp_entitlement_key
-- kubeconfig
+- pluto-01-oc-login
 - cp4d_admin_zen_sample_sample
 ```
 
