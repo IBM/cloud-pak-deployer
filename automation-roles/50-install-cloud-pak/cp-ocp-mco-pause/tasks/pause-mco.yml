@@ -11,7 +11,22 @@
   until: _mcp_worker.rc==0
   delay: 10
   retries: 30
-  when: cloud_platform != 'ibm-cloud'
+  when: 
+  - cloud_platform != 'ibm-cloud'
+  - cloud_platform != 'existing-ocp'
+
+# Check if the MachineConfigPool worker exists for existing OpenShift, only 2 retries
+- name: Check if MachineConfigPool exists for existing OpenShift
+  shell: |
+    oc get mcp worker
+  failed_when: false
+  register: _mcp_worker
+  until: _mcp_worker.rc==0
+  delay: 10
+  retries: 2
+  when: 
+  - cloud_platform == 'existing-ocp'
+
 
 - set_fact:
     _mco_exists: False
