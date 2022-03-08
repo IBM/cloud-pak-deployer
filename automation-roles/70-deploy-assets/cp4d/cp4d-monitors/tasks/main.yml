@@ -13,6 +13,13 @@
       [?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
   when: "all_config.openshift_monitoring is defined"          
 
+- when:
+    - all_config.cp4d_monitors is defined
+    - _p_openshift_monitoring == {} or (_p_openshift_monitoring != {} and not _p_openshift_monitoring.user_workload == "enabled")
+  fail: 
+    msg: "Deploying CP4D monitors is only allowed when OpenShift User Workload monitoring is set to 'enabled'.\ 
+          Confirm the 'openshift_monitoring' in the configuration"
+
 - when: 
     - all_config.cp4d_monitors is defined
     - _p_openshift_monitoring != {}
