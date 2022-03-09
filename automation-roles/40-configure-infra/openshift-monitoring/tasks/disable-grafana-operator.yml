@@ -8,15 +8,15 @@
   block:
     - name: Delete the Grafana CR
       shell: |
-        oc delete -n {{ _p_openshift_monitoring.grafana_project }} grafana grafana
+        oc delete -n {{ _p_openshift_monitoring.grafana_project }} grafana grafana --ignore-not-found
 
     - name: Delete the Grafana datasource CR
       shell: |
-        oc delete -n {{ _p_openshift_monitoring.grafana_project }} GrafanaDataSource grafanadatasource
+        oc delete -n {{ _p_openshift_monitoring.grafana_project }} GrafanaDataSource grafanadatasource --ignore-not-found
 
     - name: Delete the Grafana Operator
       shell: |
-        oc delete -n {{ _p_openshift_monitoring.grafana_project }} operatorgroup grafana-operator
+        oc delete -n {{ _p_openshift_monitoring.grafana_project }} operatorgroup grafana-operator --ignore-not-found
 
     - name: Get the Grafana CSV definition
       shell: |
@@ -26,10 +26,11 @@
     - name: Delete the Grafana csv
       shell: |
         oc delete csv -n {{ _p_openshift_monitoring.grafana_project }} {{ _grafana_csv_definition.stdout }}
+      when: _grafana_csv_definition.stdout != ""
 
     - name: Delete Project {{ _p_openshift_monitoring.grafana_project }}
       shell: |
-        oc delete project {{ _p_openshift_monitoring.grafana_project }}
+        oc delete project {{ _p_openshift_monitoring.grafana_project }} --ignore-not-found
 
     - name: Wait 20 for project delete command to complete
       pause:

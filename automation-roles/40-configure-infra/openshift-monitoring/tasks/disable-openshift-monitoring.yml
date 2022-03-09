@@ -1,23 +1,8 @@
 ---
-
-- name: Validate the User Workload configuration
+- name: Delete the user-workload-monitoring-config configmap
   shell: |
-    oc get cm -n openshift-user-workload-monitoring --no-headers | grep user-workload-monitoring-config | wc -l
-  register: _user_workload_monitor_config_exists
+    oc delete cm -n openshift-user-workload-monitoring user-workload-monitoring-config --ignore-not-found
 
-- when: _user_workload_monitor_config_exists.stdout == "1"
-  block:
-    - name: Delete the user-workload-monitoring-config configmap
-      shell: |
-        oc delete cm -n openshift-user-workload-monitoring cuser-workload-monitoring-config
-
-- name: Validate the Cluster Monitor is configured
+- name: Delete the cluster-monitoring-config configmap
   shell: |
-    oc get cm -n openshift-monitoring --no-headers | grep cluster-monitoring-config | wc -l
-  register: _cluster_monitor_config_exists
-    
-- when: _cluster_monitor_config_exists.stdout == "1"
-  block:
-    - name: Delete the cluster-monitoring-config configmap
-      shell: |
-        oc delete cm -n openshift-monitoring cluster-monitoring-config
+    oc delete cm -n openshift-monitoring cluster-monitoring-config --ignore-not-found
