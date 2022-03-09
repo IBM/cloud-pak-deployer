@@ -1,0 +1,41 @@
+---
+- name: Validate if project {{ _p_openshift_monitoring.grafana_project }} exists
+  shell: |
+    oc get projects | grep ^{{ _p_openshift_monitoring.grafana_project }}[[:space:]] | wc -l
+  register: _grafana_project_exists
+
+- when: _grafana_project_exists.stdout == "1"
+  block:
+    - name: Delete the Grafana CR
+      shell: |
+        oc delete -n {{ _p_openshift_monitoring.grafana_project }} grafana grafana --ignore-not-found
+
+    - name: Delete the Grafana datasource CR
+      shell: |
+        oc delete -n {{ _p_openshift_monitoring.grafana_project }} GrafanaDataSource grafanadatasource --ignore-not-found
+
+    - name: Delete the Grafana Operator
+      shell: |
+        oc delete -n {{ _p_openshift_monitoring.grafana_project }} operatorgroup grafana-operator --ignore-not-found
+
+    - name: Get the Grafana CSV definition
+      shell: |
+        oc get csv -n {{ _p_openshift_monitoring.grafana_project }} --no-headers | cut -d' ' -f1
+      register: _grafana_csv_definition
+
+    - name: Delete the Grafana csv
+      shell: |
+        oc delete csv -n {{ _p_openshift_monitoring.grafana_project }} {{ _grafana_csv_definition.stdout }}
+      when: _grafana_csv_definition.stdout != ""
+
+    - name: Delete Project {{ _p_openshift_monitoring.grafana_project }}
+      shell: |
+        oc delete project {{ _p_openshift_monitoring.grafana_project }} --ignore-not-found
+
+    - name: Wait 20 for project delete command to complete
+      pause:
+        seconds: 20
+
+        
+
+
