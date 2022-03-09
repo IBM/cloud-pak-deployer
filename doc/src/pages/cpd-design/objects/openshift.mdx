@@ -22,7 +22,7 @@ The sections below cover the OpenShift configuration, followed by advanced confi
 
 ## `openshift`
 
-For OpenShift, there are 3 flavours:
+For OpenShift, there are 5 flavours:
 
 - [OpenShift on IBM Cloud](#openshift-on-ibm-cloud)
 - [OpenShift on vSphere](#openshift-on-vsphere)
@@ -30,12 +30,10 @@ For OpenShift, there are 3 flavours:
 - [OpenShift on Microsoft Azure (ARO)](<#openshift-on-microsoft-azure-(aro)>)
 - [Existing OpenShift](#existing-openshift)
 
-Dependent on the cloud platform on which the OpenShift cluster will be provisioned, different installation methods apply. For IBM Cloud, Terraform is used, whereas for vSphere the OpenShift IPI installer is used. On AWS (ROSA), the `rosa` CLI is used to create and modify ROSA clusters. Different properties for the `openshift` objects are applicable for each cloud platform.
-
-Every OpenShift cluster consists of a few mandatory properties that control which version of OpenShift is installed, the number and type of control plane and compute nodes and the underlying infrastructure. Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and storage definitions.
+Every OpenShift cluster consists of a few mandatory properties that control which version of OpenShift is installed, the number and type of control plane and compute nodes and the underlying infrastructure, dependent on the cloud platform on which it is provisioned. Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and storage definitions.
 
 ### OpenShift on IBM Cloud (ROKS)
-
+VPC-based OpenShift cluster on IBM Cloud, using the Red Hat OpenShift Kubernetes Services (ROKS).
 ```
 openshift:
 - name: sample
@@ -43,7 +41,6 @@ openshift:
   ocp_version: 4.8
   compute_flavour: bx2.16x64
   compute_nodes: 3
-  resource_group_name: ibm
   infrastructure:
     type: vpc
     vpc_name: sample
@@ -331,15 +328,15 @@ openshift:
 
 ### Upstream DNS servers
 
-When deploying OpenShift in a private network, one may want to reach servers by their host name instead of IP addresses. OpenShift provides a DNS operator which deploys and manages CoreDNS which takes care of name resolution for pods running inside the container platform, also known as DNS forwarding.
+When deploying OpenShift in a private network, one may want to reach additional private network services by their host name. Examples could be a database server, Hadoop cluster or an LDAP server.  OpenShift provides a DNS operator which deploys and manages CoreDNS which takes care of name resolution for pods running inside the container platform, also known as DNS forwarding.
 
 ```
   upstream_dns:
   - name: sample-dns
-     zones:
-     - example.com
-     dns_servers:
-     - 172.31.2.73:53
+    zones:
+    - example.com
+    dns_servers:
+    - 172.31.2.73:53
 ```
 
 The zones which have been defined for each of the upstream_dns configurations control which DNS server(s) will be used for name resolution. For example, if `example.com` is given as the zone and an upstream DNS server of `172.31.2.73:53`, any host name matching `*.example.com` will be resolved using DNS server `172.31.2.73` and port `53`.
@@ -351,6 +348,13 @@ If you want to remove the upstream DNS that was previously configured, you can c
 ```
 
 See https://docs.openshift.com/container-platform/4.8/networking/dns-operator.html for more information about the operator that is configured by specifying upstream DNS servers.
+
+#### Property explanation
+| Property      | Description                                                       | Mandatory | Allowed values      |
+| ------------- | ----------------------------------------------------------------- | --------- | ------------------- |
+| name          | Name of the upstream DNS entry                                    | Yes       |                     |
+| zones         | Specification of one or more zone for which the DNS server is applicable | Yes    |                 |
+| dns_servers   | One or more DNS servers (host:port) that will resolve host names in the specified zone | Yes    |                 |
 
 ### OpenShift logging
 

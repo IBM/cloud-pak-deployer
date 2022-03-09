@@ -9,7 +9,7 @@ In some situations you may want to use a single configuration for deployment in 
 
 Example:
 ```
-./cp-deploy.sh env apply -e env_id=acme-01 -e ibm_cloud_region=eu_gb
+./cp-deploy.sh env apply -e env_id=pluto-01 -e ibm_cloud_region=eu_gb
 ```
 
 This passes the `env_id` and `ibm_cloud_region` variables to the Cloud Pak Deployer, which can then populate variables in the configuration. In the sample configurations, the `env_id` is used to specify the name of the VPC, ROKS cluster and others and the `ibm_cloud_region` overrides region specified in the inventory file.
@@ -33,13 +33,13 @@ When running with the above `cp-deploy.sh` command, the snippet would be generat
 ```
 ...
 vpc:
-- name: "acme-01"
+- name: "pluto-01"
   allow_inbound: ['ssh']
 
 address_prefix:
 ### Prefixes for the client environment
-- name: "acme-01-zone-1"
-  vpc: "acme-01"
+- name: "pluto-01-zone-1"
+  vpc: "pluto-01"
   zone: eu-de-1
   cidr: 10.231.0.0/26
 ...
@@ -49,13 +49,13 @@ The `ibm_cloud_region` variable is specified in the inventory file. This is anot
 
 You can even include more complex constructs for dynamic configuration, with `if` statements, `for` loops and others.
 
-An example where the OpenShift OCS storage classes would only be generated for a specific environment (acme-prod) would be:
+An example where the OpenShift OCS storage classes would only be generated for a specific environment (pluto-prod) would be:
 ```
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
     nfs_server_name: "{{ env_id }}-nfs"
-{% if env_id == 'acme-prod' %}
+{% if env_id == 'pluto-prod' %}
   - storage_name: ocs-storage
     storage_type: ocs
     ocs_storage_label: ocs
