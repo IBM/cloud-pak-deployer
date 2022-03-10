@@ -2,7 +2,7 @@ from generatorPreProcessor import GeneratorPreProcessor
 import sys
 
 # Validating:
----
+# ---
 # openshift:
 # - name: {{ env_id }}
 #   ocp_version: 4.8
