@@ -26,6 +26,14 @@ log() {
 }
 
 log "----------"
+# Check if the connection to the OpenShift cluster is still valid
+log "Info: Checking access to project $project"
+oc get project $project
+if [ $? -ne 0 ];then
+  log "Error: Could not access project $project"
+  exit 99
+fi
+
 # First-time processing only
 if [ ! -f /tmp/check-services-installed.id ];then
   log "Info: Cartridges to be checked: $(echo $cartridges | jq -r .)"
