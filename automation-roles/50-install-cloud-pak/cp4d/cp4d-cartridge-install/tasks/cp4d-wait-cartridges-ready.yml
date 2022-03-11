@@ -6,8 +6,8 @@
       {{ current_cp4d_cluster.project }} \
       {{ wait_for_cartridges | default([]) | to_json | b64encode }} \
       {{ cartridge_cr | to_json | b64encode }}
-  register: wait_cartridges_result
-  until: wait_cartridges_result.stdout.find('All cartridges successfully completed') != -1
+  register: _wait_cartridges_result
+  until: _wait_cartridges_result.rc!=0 or _wait_cartridges_result.stdout.find('All cartridges successfully completed') != -1
   retries: 120
   delay: 120
   vars:
@@ -15,3 +15,8 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Fail if there was an error waiting for cartridges to be installed
+  fail:
+    msg: "{{ _wait_cartridges_result }}"
+  when: _wait_cartridges_result.rc!=0
