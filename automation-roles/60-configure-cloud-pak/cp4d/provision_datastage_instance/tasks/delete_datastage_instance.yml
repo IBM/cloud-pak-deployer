@@ -1,0 +1,20 @@
+---
+- set_fact:
+    _ds_instance_name: "{{ _ds_instance.metadata.name }}"
+
+- set_fact:
+    _ds_cartridge_listed: "{{ _ds_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+  vars:
+    _query_instance: "[?name=='{{ _ds_instance_name }}']" 
+
+- when:
+    - _ds_cartridge_listed == {}
+    - not _ds_instance_name == "ds-px-default"
+  block:
+
+      - debug:
+          msg: "DataStage instance {{ _ds_instance_name }} is not available in the Cloud Pak Deployer configuration file. Destroying instance..."
+
+      - name: "Destroy PxRuntime {{ _ds_instance_name }}"
+        shell: |
+          oc delete PxRuntime -n {{ current_cp4d_cluster.project }} {{ _ds_instance_name }}
