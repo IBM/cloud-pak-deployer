@@ -219,8 +219,9 @@ def preprocessor(attributes=None, fullConfig=None):
 
     g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
+    openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('cp4d_version').isRequired()
-    g('openshift_storage_name').isRequired()
+    g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional()
     g('change_node_settings').isOptional()
@@ -244,8 +245,7 @@ def preprocessor(attributes=None, fullConfig=None):
 
             if 'openshift_cluster_name' in ge:
                 if ge['openshift_cluster_name'] not in openshift_names:
-                    g.appendError(msg="Wasn't able to find a cluster with name:"+ge['openshift_cluster_name']+' ')
-
+                    g.appendError(msg="Was not able to find an OpenShift cluster with name: "+ge['openshift_cluster_name'])
                 else:
                     # we made sure the cluster referenced by openshift_cluster_name exists
                     # now check if it has a openshift_storage with the name cp4d.openshift_storage_name
