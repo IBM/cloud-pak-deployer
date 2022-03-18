@@ -40,6 +40,11 @@
     - include_tasks: get-secret-file.yml
   when: "vault_type == 'file-vault'"
 
+- name: Set secret variable if specified
+  set_fact:
+    "{{ _p_secret_variable }}": "{{ secret_value }}"
+  when: _p_secret_variable is defined
+
 - include_tasks: show-secret.yml
   when: 
   - secret_file | default("") == ''

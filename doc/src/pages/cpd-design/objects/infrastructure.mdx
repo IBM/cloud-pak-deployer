@@ -17,12 +17,11 @@ tabs:
 
 Infrastructure definitions depend on the cloud provider that is used for the provisioning.
 
-There are 4 cloud providers for the objects:
+There are 3 cloud providers for the infrastructure objects:
 
 - [IBM Cloud](#ibm-cloud)
 - [Microsoft Azure](#microsoft-azure)
 - [vSphere](#vsphere)
-- [Existing OpenShift](#existing-openshift)
 
 ## IBM Cloud
 
@@ -355,6 +354,42 @@ nfs_server:
 | storage.profile                     | Storage profile that will be used                                                            | Yes                       | 3iops-tier, 5iops-tier, 10iops-tier         |
 | storage.size                        | Size of the storage in GiB                                                                   | Yes                       |                                             |
 
+### IBM Cloud `cos`
+
+Defines a IBM Cloud Cloud Object Storage instance and allows to create buckets.
+
+```
+cos:
+- name: {{ env_id }}-cos
+  plan: standard
+  location: global
+  serviceids:
+  - name: {{ env_id }}-cos-serviceid
+    roles: ["Manager", "Viewer", "Administrator"]
+  buckets:
+  - name: bucketone6c9d6840
+    cross_region_location: eu
+```
+
+#### Property explanation
+
+| Property                        | Description                                                                                           | Mandatory                                    | Allowed values                                                                                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| name                            | Name of the serviceid                                                                                 | Yes                                          |                                                                                                      |
+| plan                            | short description of the serviceid                                                                    | Yes                                          |                                                                                                      |
+| location                        | collection of servicekeys that should be created for the parent serviceid                             | Yes                                          |                                                                                                      |
+| serviceids                      | Collection of references to defined seriveids                                                         | No                                           |                                                                                                      |
+| serviceids.name                 | Name of the serviceid                                                                                 | Yes                                          |                                                                                                      |
+| serviceids.roles                | An array of strings to define which role should be granted to the serviceid                           | Yes                                          |                                                                                                      |
+| buckets                         | Collection of buckets that should be created inside the cos instance                                  | No                                           |                                                                                                      |
+| buckets[].name                  | Collection of buckets that should be created inside the cos instance                                  | No                                           |                                                                                                      |
+| buckets[].storage_class         | No                                                                                                    | standard (default), vault, cold, flex, smart |
+| buckets[].endpoint_type         | No                                                                                                    | public (default), private                    |
+| buckets[].cross_region_location | If you use this parameter, do not set single_site_location or region_location at the same time.       | Yes (one of)                                 | us, eu, ap                                                                                           |
+| buckets[].region_location       | If you set this parameter, do not set single_site_location or cross_region_location at the same time. | Yes (one of)                                 | au-syd, eu-de, eu-gb, jp-tok, us-east, us-south, ca-tor, jp-osa, br-sao                              |
+| buckets[].single_site_location  | If you set this parameter, do not set region_location or cross_region_location at the same time.      | Yes (one of)                                 | ams03, che01, hkg02, mel01, mex01, mil01, mon01, osl01, par01, sjc04, sao01, seo01, sng01, and tor01 |
+
+
 ## Microsoft Azure
 
 For Microsoft Azure, the following object type is supported:
@@ -436,41 +471,6 @@ serviceid:
 | description      | short description of the serviceid                                        | No        |                |
 | servicekeys      | collection of servicekeys that should be created for the parent serviceid | No        |                |
 | servicekeys.name | Name of the servicekey                                                    | Yes       |                |
-
-### `cos`
-
-Defines a Cloud Object Storage instance and allows to create buckets.
-
-```
-cos:
-- name: mwdev-cos
-  plan: standard
-  location: global
-  serviceids:
-  - name: mwdev-cos-serviceid
-    roles: ["Manager", "Viewer", "Administrator"]
-  buckets:
-  - name: bucketone6c9d6840
-    cross_region_location: eu
-```
-
-#### Property explanation
-
-| Property                        | Description                                                                                           | Mandatory                                    | Allowed values                                                                                       |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| name                            | Name of the serviceid                                                                                 | Yes                                          |                                                                                                      |
-| plan                            | short description of the serviceid                                                                    | Yes                                          |                                                                                                      |
-| location                        | collection of servicekeys that should be created for the parent serviceid                             | Yes                                          |                                                                                                      |
-| serviceids                      | Collection of references to defined seriveids                                                         | No                                           |                                                                                                      |
-| serviceids.name                 | Name of the serviceid                                                                                 | Yes                                          |                                                                                                      |
-| serviceids.roles                | An array of strings to define which role should be granted to the serviceid                           | Yes                                          |                                                                                                      |
-| buckets                         | Collection of buckets that should be created inside the cos instance                                  | No                                           |                                                                                                      |
-| buckets[].name                  | Collection of buckets that should be created inside the cos instance                                  | No                                           |                                                                                                      |
-| buckets[].storage_class         | No                                                                                                    | standard (default), vault, cold, flex, smart |
-| buckets[].endpoint_type         | No                                                                                                    | public (default), private                    |
-| buckets[].cross_region_location | If you use this parameter, do not set single_site_location or region_location at the same time.       | Yes (one of)                                 | us, eu, ap                                                                                           |
-| buckets[].region_location       | If you set this parameter, do not set single_site_location or cross_region_location at the same time. | Yes (one of)                                 | au-syd, eu-de, eu-gb, jp-tok, us-east, us-south, ca-tor, jp-osa, br-sao                              |
-| buckets[].single_site_location  | If you set this parameter, do not set region_location or cross_region_location at the same time.      | Yes (one of)                                 | ams03, che01, hkg02, mel01, mex01, mil01, mon01, osl01, par01, sjc04, sao01, seo01, sng01, and tor01 |
 
 ## vSphere
 
@@ -554,5 +554,3 @@ nfs_server:
 | infrastructure                | Infrastructure attributes                                                   | Yes       |                |
 | infrastructure.host_ip        | Host or IP address of the NFS server                                        | Yes       |                |
 | infrastructure.storage_folder | Folder that holds the data, this will be mounted from the NFS storage class | Yes       |                |
-
-## Existing OpenShift
