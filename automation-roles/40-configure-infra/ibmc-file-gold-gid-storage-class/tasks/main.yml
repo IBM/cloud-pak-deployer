@@ -1,0 +1,42 @@
+---
+
+# https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=requirements-cloud-file-storage-roks
+# https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=nsr-configuring-id-mapping-nfs-4#db2wh-cfg-nfs-filegold
+
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Create temporary file for the service account yaml
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: sa_tempfile
+
+- name: Create norootsquash service account yaml file {{ sa_tempfile.path }}
+  template:
+    src: norootsquash-serviceaccount.j2
+    dest: "{{ sa_tempfile.path }}"
+
+- name: Create norootsquash service account
+  command: |
+    oc apply -f "{{ sa_tempfile.path }}"
+
+- name: Add privileged permission to norootsquash service account
+  command: |
+    oc adm policy add-scc-to-user privileged system:serviceaccount:kube-system:norootsquash
+
+- name: Create temporary file for the norootsquash deamonset
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: ds_tempfile
+
+- name: Create norootsquash deamonset yaml file {{ ds_tempfile.path }}
+  template:
+    src: norootsquash-deamonset.j2
+    dest: "{{ ds_tempfile.path }}"
+
+- name: Create norootsquash service deamonset
+  command: |
+    oc apply -f "{{ ds_tempfile.path }}"

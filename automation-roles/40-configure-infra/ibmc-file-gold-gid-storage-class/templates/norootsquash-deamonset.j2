@@ -1,0 +1,56 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: norootsquash
+  namespace: kube-system
+  labels:
+    tier: management
+    app: norootsquash
+spec:
+  selector:
+    matchLabels:
+      name: norootsquash
+  template:
+    metadata:
+      labels:
+        name: norootsquash
+    spec:
+      serviceAccountName: norootsquash
+      initContainers:
+        - resources:
+            requests:
+              cpu: 0.1
+          securityContext:
+            privileged: true
+          image: alpine:3.6
+          name: unrootsquash
+          command: ["chroot", "/host", "sh", "-c"]
+          args:
+            - >
+              if ! grep "^Domain = {{ nfs_domain_name }}" /etc/idmapd.conf; then
+                sed -i 's/.*Domain =.*/Domain = {{ nfs_domain_name }}/g' /etc/idmapd.conf;
+                nfsidmap -c;
+                rpc.idmapd
+                echo "Done setting {{ nfs_domain_name }} nfs domain"
+              fi;
+          volumeMounts:
+            - name: host
+              mountPath: /host
+      containers:
+        - resources:
+            requests:
+              cpu: 0.1
+          image: alpine:3.6
+          name: sleep
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              while true; do
+                sleep 100000;
+              done
+      volumes:
+        - hostPath:
+            path: /
+            type: Directory
+          name: host

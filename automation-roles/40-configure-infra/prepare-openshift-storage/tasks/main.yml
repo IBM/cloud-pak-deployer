@@ -24,4 +24,14 @@
     name: ocs-storage-class
   when: current_openshift_storage.storage_type == 'ocs'
   
+- name: Configure Portworx storage class
+  include_role: 
+    name: pwx-storage-class
+  when: current_openshift_storage.storage_type == 'pwx'
 
+- name: Configure ibmc-file-gold-gid storage class
+  include_role: 
+    name: ibmc-file-gold-gid-storage-class
+  when: 
+    - current_openshift_storage.storage_type == 'custom'
+    - current_openshift_storage.ocp_storage_class_file == 'ibmc-file-gold-gid'
