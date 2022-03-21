@@ -1,0 +1,46 @@
+---
+title: OpenShift
+---
+
+# OpenShift cluster(s)
+
+You can configure one or more OpenShift clusters that will be layed down on the specified infrastructure, or which already exist.
+
+Dependent on the cloud platform on which the OpenShift cluster will be provisioned, different installation methods apply. For IBM Cloud, Terraform is used, whereas for vSphere the IPI installer is used. On AWS (ROSA), the `rosa` CLI is used to create and modify ROSA clusters. Each of the different platforms have slightly different properties for the `openshift` objects.
+
+For a reference of the various `openshift` objects refer to [OpenShift object](/cpd-design/objects/openshift). Example of a ROKS `openshift` definition based on OpenShift 4.8, 3 compute nodes and OCS storage is below.
+```
+openshift:
+- name: sample
+  managed: True
+  ocp_version: 4.8
+  compute_flavour: bx2.16x64
+  compute_nodes: 3
+  infrastructure:
+    type: vpc
+    vpc_name: sample
+    subnets:
+    - sample-subnet-zone-1
+    - sample-subnet-zone-2
+    - sample-subnet-zone-3
+  openshift_storage:
+  - storage_type: ocs
+    ocs_storage_label: ocs
+    ocs_storage_size_gb: 500
+```
+
+## Storage
+An OpenShift cluster also defines the type(s) of storage that it will provide. When the OpenShift cluster is provisioned by the deployer, the necessary infrastructure and storage class(es) are also configured. In case an existing OpenShift cluster is referenced by the configuration, the storage classes are expected to exist already.
+
+The table below indicates which storage classes are supported per cloud infrastructure.
+
+| Cloud Provider | NFS Storage | OCS Storage | Portworx Storage | Custom  |
+| -------------- | ----------- | ----------- | ---------------- | ------- |
+| ibm-cloud      | Yes         | Yes         | Yes              | No      |
+| vsphere        | Yes (1)     | Yes         | No               | No      |
+| aws            | No          | Yes         | No               | No      |
+| azure          | No          | Yes         | No               | No      |
+| existing-ocp   | Yes         | Yes         | No               | Yes (2) |
+
+(1) An existing NFS server can be specified so that the deployer configures the `managed-nfs-storage` storage class. The deployer will not provision or change the NFS server itself.
+(2) If you specify a `custom` storage type, you must specify the storage class to be used for block (RWO) and file (RWX) storage.

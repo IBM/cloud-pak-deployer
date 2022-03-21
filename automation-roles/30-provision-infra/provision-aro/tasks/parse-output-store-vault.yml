@@ -1,0 +1,47 @@
+---
+- slurp:
+    src: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/apply.log"
+  register: apply_log
+
+- set_fact:
+    _aro_kubeadmin_password: "{{ apply_log['content'] | b64decode | regex_search('\"kubeadminPassword\" = \"([0-9a-zA-Z-]+)\"', '\\1') | first }}"
+    # _aro_kubeadmin_username: "{{ apply_log['content'] | b64decode | regex_search('\"kubeadminUsername\" = \"([0-9a-zA-Z-]+)\"', '\\1') | first }}"
+    _aro_console_url: "{{ apply_log['content'] | b64decode | regex_search('consoleURL(.*)\\s*(.*)\\s*\"value\" = \"(.*)\"', '\\3') | first }}"
+    _aro_api_url: "{{ apply_log['content'] | b64decode | regex_search('apiURL(.*)\\s*(.*)\\s*\"value\" = \"(.*)\"', '\\3') | first }}"
+
+- name: "Store {{ _current_openshift_cluster.name }} ARO cluster kubeadmin password into the vault"
+  include_role:
+    name: vault-set-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+    secret_payload: "{{ _aro_kubeadmin_password }}"
+
+- name: "Store info about the console and API URLs of the cluster in the {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/aro-cluster-urls.txt file"
+  shell: |
+    echo "Console URL: {{_aro_console_url}}" > {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/aro-cluster-urls.txt
+    echo "API URL: {{_aro_api_url}}" >> {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/aro-cluster-urls.txt
+
+# - name: "Store {{ _current_openshift_cluster.name }} ARO cluster kubeadmin username into the vault"
+#   include_role:
+#     name: vault-set-secret
+#   vars:
+#     secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-username"
+#     secret_group: "{{ environment_name }}"
+#     secret_payload: "{{ _aro_kubeadmin_username }}"
+
+# - name: "Store {{ _current_openshift_cluster.name }} ARO cluster console URL into the vault"
+#   include_role:
+#     name: vault-set-secret
+#   vars:
+#     secret_name: "{{ _current_openshift_cluster.name }}-console-url"
+#     secret_group: "{{ environment_name }}"
+#     secret_payload: "{{ _aro_console_url }}"
+
+# - name: "Store {{ _current_openshift_cluster.name }} ARO cluster API URL into the vault"
+#   include_role:
+#     name: vault-set-secret
+#   vars:
+#     secret_name: "{{ _current_openshift_cluster.name }}-api-url"
+#     secret_group: "{{ environment_name }}"
+#     secret_payload: "{{ _aro_api_url }}"

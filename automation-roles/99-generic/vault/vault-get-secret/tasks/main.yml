@@ -1,136 +1,51 @@
 ---
+- name: Validate mandatory variables are defined for Get Secret
+  assert:
+    that:
+      - secret_name is defined
+      - secret_group is defined
+
 - name: Get Secret from Vault Hashicorp
   block:
-    - name: Validate mandatory variables are defined for Hashicorp Vault
-      assert:
-        that:
-          - vault_secret_path is defined
-          - vault_secret_field is defined
-          - secret_name is defined
-          - secret_group is defined
+    
+    - include_tasks: get-secret-hashicorp.yml  
 
-    - set_fact:
-        _secret_field: "{{ vault_secret_field }}"
-
-    - set_fact:
-        _secret_field: "{{ secret_name.split(',')[1] }}"
-      when: secret_name is search(",")
-
-    - set_fact:
-        _secret_name: "{{ secret_name.split(',')[0] }}"
-
-    - set_fact:
-        _hashicorp_secret_name_path: "{{ _secret_name }}"
-      when: _secret_name is search("/")
-
-    - set_fact:
-        _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ secret_group}}/{{ _secret_name }}"
-      when: 
-      - (vault_secret_path_append_group | default(True) | bool)
-      - not _secret_name is search("/")
-
-    - set_fact:
-        _hashicorp_secret_name_path: "{{ vault_secret_path }}/{{ _secret_name }}"
-      when: 
-      - not (vault_secret_path_append_group | default(True) | bool)
-      - not _secret_name is search("/")
-
-    - name: Get Secret Hashicorp vault (API Key), path {{ _hashicorp_secret_name_path }}
-      include_tasks: get-secret-hashicorp-api-key.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-        hashicorp_secret_field: "{{ _secret_field }}"
-      when: 
-      - vault_authentication_type == 'api-key'
-      - (secret_file | default("") == "")
-
-    - name: Get Secret Hashicorp vault (API Key), path {{ _hashicorp_secret_name_path }}
-      include_tasks: get-secret-hashicorp-api-key.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-        hashicorp_secret_field: "{{ _secret_field }}"
-        hashicorp_secret_file: "{{ secret_file }}"
-      when: 
-      - vault_authentication_type == 'api-key'
-      - (secret_file | default("") != "")
-
-    - name: Get Secret Hashicorp vault (Certificate), path {{ _hashicorp_secret_name_path }}
-      include_tasks: get-secret-hashicorp-certificate.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-        hashicorp_secret_field: "{{ _secret_field }}"
-      when: 
-      - vault_authentication_type == 'certificate'
-      - (secret_file | default("") == "")
-
-    - name: Get Secret Hashicorp vault (Certificate), path {{ _hashicorp_secret_name_path }}
-      include_tasks: get-secret-hashicorp-certificate.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-        hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-        hashicorp_secret_field: "{{ _secret_field }}"
-        hashicorp_secret_file: "{{ secret_file }}"
-      when: 
-      - vault_authentication_type == 'certificate'
-      - (secret_file | default("") != "")
   when: "vault_type == 'hashicorp-vault'"
-
-- name: Get Secret from Vault IBM Cloud
+  rescue:
+    #Re-connect to vault
+    - include_role:
+        name: vault-connect
+    
+    #Re-attempt the get-secret
+    - include_tasks: main.yml  
+ 
+- name: Get Secret from IBM Cloud vault
   block:
-    - name: Validate mandatory variables are defined for Vault IBM Cloud
-      assert:
-        that:
-          - secret_name is defined
-          - secret_group is defined
-
-    - name: Fail if a secret field was specified for a vault other than Hashicorp
-      fail:
-        msg: "Secret name {{ secret_name }} can only have a secret field specification for Hashicorp Vault"
-      when: secret_name is search(",")
-
-    - name: Get secret from Vault IBMCloud
-      include_tasks: get-secret-ibmcloud.yml
+    - include_tasks: get-secret-ibmcloud.yml
       vars:
         ibmcloud_vault_address: "{{ vault_url }}"
         ibm_cloud_secret_name: "{{ secret_name }}"
 
-    - name: Write secret to file {{ secret_file }} if one was specified
-      shell: echo "{{ secret_value }}" > "{{ secret_file }}"
-      when: 
-      - secret_file | default("") != ''
-
   when: "vault_type == 'ibmcloud-vault'"
+  rescue:
+    #Re-connect to vault
+    - include_role:
+        name: vault-connect
+    
+    #Re-attempt the get-secret
+    - include_tasks: main.yml  
 
 - name: Get Secret from Vault file
   block:
-    - name: Validate mandatory variables are defined for Vault file
-      assert:
-        that:
-          - secret_name is defined
-
-    - name: Fail if a secret field was specified for a vault other than Hashicorp
-      fail:
-        msg: "Secret name {{ secret_name }} can only have a secret field specification for Hashicorp Vault"
-      when: secret_name is search(",")
-
-    - name: Get secret in Vault file
-      include_tasks: get-secret-file.yml
-
+    - include_tasks: get-secret-file.yml
   when: "vault_type == 'file-vault'"
 
-- name: Show secret {{ secret_group }}/{{ secret_name }}
-  debug:
-    var: secret_value
+- name: Set secret variable if specified
+  set_fact:
+    "{{ _p_secret_variable }}": "{{ secret_value }}"
+  when: _p_secret_variable is defined
+
+- include_tasks: show-secret.yml
   when: 
   - secret_file | default("") == ''
   - show_secret | default(False) | bool
-  vars:
-    ansible_callback_diy_runner_on_ok_msg: |+2
-      {{ secret_name }}: {{ ansible_callback_diy.result.output.secret_value }}
-
-# - name: Set secret value variable "{{ secret_name | replace('-', '_') | replace('/', '_') }}"
-#   set_fact:
-#     "{{ secret_name | replace('-', '_') }}": "{{ secret_value }}"

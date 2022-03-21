@@ -3,6 +3,7 @@ apiVersion: assistant.watson.ibm.com/v1
 kind: TemporaryPatch
 metadata:
   name: wa-fix-clu-certs
+  namespace: {{ current_cp4d_cluster.project }}
 spec:
   apiVersion: assistant.watson.ibm.com/v1
   kind: WatsonAssistantClu
@@ -107,6 +108,7 @@ apiVersion: assistant.watson.ibm.com/v1
 kind: TemporaryPatch
 metadata:
   name: wa-fix-analytics-certs
+  namespace: {{ current_cp4d_cluster.project }}
 spec:
   apiVersion: assistant.watson.ibm.com/v1
   kind: WatsonAssistantAnalytics
@@ -127,6 +129,7 @@ apiVersion: assistant.watson.ibm.com/v1
 kind: TemporaryPatch
 metadata:
   name: wa-fix-integrations-certs
+  namespace: {{ current_cp4d_cluster.project }}
 spec:
   apiVersion: assistant.watson.ibm.com/v1
   kind: WatsonAssistantIntegrations
@@ -147,6 +150,7 @@ apiVersion: assistant.watson.ibm.com/v1
 kind: TemporaryPatch
 metadata:
   name: wa-fix-recommends-certs
+  namespace: {{ current_cp4d_cluster.project }}
 spec:
   apiVersion: assistant.watson.ibm.com/v1
   kind: WatsonAssistantRecommends
@@ -167,6 +171,7 @@ apiVersion: assistant.watson.ibm.com/v1
 kind: TemporaryPatch
 metadata:
   name: wa-fix-ui-certs
+  namespace: {{ current_cp4d_cluster.project }}
 spec:
   apiVersion: assistant.watson.ibm.com/v1
   kind: WatsonAssistantUi
@@ -187,6 +192,7 @@ apiVersion: assistant.watson.ibm.com/v1
 kind: TemporaryPatch
 metadata:
   name: wa-fix-wa-certs
+  namespace: {{ current_cp4d_cluster.project }}
 spec:
   apiVersion: assistant.watson.ibm.com/v1
   kind: WatsonAssistant
@@ -221,6 +227,7 @@ metadata:
     oppy.ibm.com/log-filters: ""
     oppy.ibm.com/log-thread-id: "false"
     oppy.ibm.com/log-json: "false"
+    oppy.ibm.com/temporary-patches: '{"wa-fix-wa-certs": {"timestamp": "2021-10-13T18:45:57.959534", "api_version": "assistant.watson.ibm.com/v1"}}'
   labels:
     app.kubernetes.io/managed-by: "Ansible"
     app.kubernetes.io/name: "watson-assistant"
@@ -231,9 +238,20 @@ spec:
     onlineQuiesce: false
   cluster:
     dockerRegistryPrefix: ""
+
+{% if current_cp4d_cartridge.version < "4.0.5" %}
     imagePullSecrets:
     - wa-pull-secret
+{% else %}
+    imagePullSecrets: []
+{% endif %}
+
+{% if selected_openshift_storage.storage_type == "pwx" %}
+    storageClassName: portworx-watson-assistant-sc
+{% else %}  
     storageClassName: {{ ocp_storage_class_block }}
+{% endif %}
+
     type: private
     name: prod # Do not change this value 
   cpd:
@@ -249,7 +267,11 @@ spec:
         storageSize: 55Gi
       kafka:
         storageSize: 55Gi
-      storageClassName: {{ ocp_storage_class_block }}
+{% if selected_openshift_storage.storage_type == "pwx" %}
+        storageClassName: portworx-watson-assistant-sc
+{% else %}
+        storageClassName: {{ ocp_storage_class_block }}
+{% endif %}
       zookeeper:
         storageSize: 55Gi
     elasticSearch:
@@ -269,10 +291,18 @@ spec:
         storageSize: 1Gi
     modelTrain:
       postgres:
+{% if selected_openshift_storage.storage_type == "pwx" %}
+        storageClassName: portworx-watson-assistant-sc
+{% else %}
         storageClassName: {{ ocp_storage_class_block }}
+{% endif %}
         storageSize: 55Gi
       rabbitmq:
+{% if selected_openshift_storage.storage_type == "pwx" %}
+        storageClassName: portworx-watson-assistant-sc
+{% else %}
         storageClassName: {{ ocp_storage_class_block }}
+{% endif %}
         storageSize: 55Gi
     postgres:
       backupStorageClassName: ""

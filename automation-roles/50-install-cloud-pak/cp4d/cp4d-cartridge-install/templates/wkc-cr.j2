@@ -1,4 +1,5 @@
 ---
+apiVersion: security.openshift.io/v1
 kind: SecurityContextConstraints
 metadata:
   annotations:
@@ -33,13 +34,39 @@ allowHostPorts: false
 allowPrivilegeEscalation: true
 allowPrivilegedContainer: false
 allowedCapabilities: null
-apiVersion: security.openshift.io/v1
 defaultAddCapabilities: null
 fsGroup:
   type: RunAsAny
 users:
 - system:serviceaccount:{{ current_cp4d_cluster.project }}:wkc-iis-sa
-
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: system:openshift:scc:wkc-iis-scc
+rules:
+- apiGroups:
+  - security.openshift.io
+  resourceNames:
+  - wkc-iis-scc
+  resources:
+  - securitycontextconstraints
+  verbs:
+  - use
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: wkc-iis-scc-rb
+  namespace: {{ current_cp4d_cluster.project }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:wkc-iis-scc
+subjects:
+- kind: ServiceAccount
+  name: wkc-iis-sa
+  namespace: {{ current_cp4d_cluster.project }}
 ---
 apiVersion: wkc.cpd.ibm.com/v1beta1
 kind: WKC
@@ -50,7 +77,11 @@ spec:
   license:
     accept: true
     license: Enterprise
+{% if selected_openshift_storage.storage_type == "pwx" %}
+  storageClass: portworx-shared-gp3
+{% else %}
   storageClass: {{ ocp_storage_class_file }}
+{% endif %}
   # install_wkc_core_only: true     # To install the core version of the service, remove the comment tagging from the beginning of the line.
   # wkc_db2u_set_kernel_params: True     
 {% if current_cp4d_cartridge.version is defined %}

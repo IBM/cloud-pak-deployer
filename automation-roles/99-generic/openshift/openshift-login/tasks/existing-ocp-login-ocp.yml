@@ -1,20 +1,49 @@
 ---
-- name: Get KUBECONFIG
+- name: Get oc login command OpenShift cluster {{ _p_openshift_cluster_name }}
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "kubeconfig"
+    secret_name: "{{ _p_openshift_cluster_name }}-oc-login"
     secret_group: "{{ environment_name }}"
+    _p_secret_variable: _oc_login
 
-- name: Fail if the kubeconfig secret was not found or if it is empty
-  fail:
-    msg: Secret kubeconfig needed to connect to OpenShift was not found or is empty
+- block:
+  - name: Login to OpenShift cluster if oc login command was found
+    shell: |
+      {{ _oc_login }}
+  - name: Rename current context to {{ _p_openshift_cluster_name }}
+    shell: |
+      oc config delete-context {{ _p_openshift_cluster_name }} || true
+      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+  when: _oc_login != ''
+
+- name: Get {{ _p_openshift_cluster_name }}-kubeconfig secret for OpenShift cluster
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _p_openshift_cluster_name }}-kubeconfig"
+    secret_group: "{{ environment_name }}"
+    secret_file: "{{ status_dir }}/openshift/kubeconfig"
   when: secret_value == ''
 
-- name: Write KUBECONFIG to output file {{ status_dir }}/openshift/kubeconfig
+- name: Get generic kubeconfig secret if {{ _p_openshift_cluster_name }}-kubeconfig does not exist
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "kubeconfig"
     secret_group: "{{ environment_name }}"
     secret_file: "{{ status_dir }}/openshift/kubeconfig"
+  when: secret_value == ''
+
+- name: Fail if none of the OpenShift connection secrets were found
+  fail:
+    msg: >
+      One of the secrets
+      {{ _p_openshift_cluster_name }}-oc-login, {{ _p_openshift_cluster_name }}-kubeconfig or kubeconfig
+      is required to connect to OpenShift: 
+  when: 
+  - _oc_login == ''
+  - secret_value == ''
+
+- include_tasks: existing-ocp-check-kubeconfig.yml
+  when: _oc_login == ''

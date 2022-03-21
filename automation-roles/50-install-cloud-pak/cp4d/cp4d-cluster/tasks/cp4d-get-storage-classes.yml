@@ -29,6 +29,13 @@
   debug:
     var: selected_openshift_storage
 
+- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx' and 'custom'"
+  when: 
+    - selected_openshift_storage.storage_type != 'nfs'
+    - selected_openshift_storage.storage_type != 'ocs'
+    - selected_openshift_storage.storage_type != 'pwx'
+    - selected_openshift_storage.storage_type != 'custom'
+
 - set_fact:
     ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('managed-nfs-storage') }}"
     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('managed-nfs-storage') }}"
@@ -38,6 +45,23 @@
     ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
   when: selected_openshift_storage.storage_type == 'ocs'
+
+- fail: msg="ocp_storage_class_file and ocp_storage_class_block are required when storage_type is set to 'custom'"
+  when:
+    - selected_openshift_storage.ocp_storage_class_file is undefined
+    - selected_openshift_storage.ocp_storage_class_block is undefined
+    - selected_openshift_storage.storage_type == 'custom'
+  
+- set_fact:
+    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file }}"
+    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block }}"
+  when: selected_openshift_storage.storage_type == 'custom'
+
+# Portworx storage classes vary according to cartridge, so are set in the relevant CR templates
+- set_fact:
+   ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
+   ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('portworx-gp3-sc') }}"
+  when: selected_openshift_storage.storage_type == 'pwx'
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:

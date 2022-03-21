@@ -1,0 +1,34 @@
+---
+- name: Create terraform work folders for Portworx
+  file:
+    path: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/{{ item }}'
+    state: directory
+  loop:
+  - scripts
+  - cleanup
+  - kubeconfig
+
+- name: Generate Portworx cleanup scripts
+  template:
+    src: '../templates/cleanup/remove_attached.sh.j2'
+    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/cleanup/remove_attached.sh'
+
+- name: Generate Portworx get_zone script
+  template:
+    src: '../templates/scripts/get_zone_from_subnet.sh.j2'
+    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/get_zone_from_subnet.sh'
+
+- name: Generate Portworx create etc secret script
+  template:
+    src: '../templates/scripts/create_etc_pwx_secret.sh.j2'
+    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/create_etc_pwx_secret.sh'
+
+- name: Generate Portworx destroy attachment script
+  template:
+    src: '../templates/scripts/volume_attachment_destroy.sh.j2'
+    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/volume_attachment_destroy.sh'
+
+- name: Generate Portworx volume attachment script
+  template:
+    src: '../templates/scripts/volume_attachment.sh.j2'
+    dest: '{{ PATH_TO_TERRAFORM_WORK_DIR }}/scripts/volume_attachment.sh'

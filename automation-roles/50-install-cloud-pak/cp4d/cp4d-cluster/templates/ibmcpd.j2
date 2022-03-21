@@ -7,5 +7,12 @@ spec:
   license:
     accept: true
     license: Enterprise
+
+{% if selected_openshift_storage.storage_type == "ocs" %}
+  storageVendor: ocs 
+{% elif selected_openshift_storage.storage_type == "pwx" %}
+  storageVendor: portworx
+  storageClass: portworx-shared-gp3
+{% else %}
   storageClass: {{ ocp_storage_class_file }}
-  zenCoreMetadbStorageClass: {{ ocp_storage_class_block }}
+{% endif %}

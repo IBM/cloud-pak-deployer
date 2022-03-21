@@ -15,16 +15,16 @@
 
 - name: Retrieve OpenShift object from configuration
   set_fact:
-    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+    _openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?name=='{{ _p_openshift_cluster_name }}']
 
-- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
+- name: Download and activate OpenShift client for version {{ _openshift_cluster.ocp_version }}
   include_role:
     name: openshift-download-client
   vars:
-    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+    _p_ocp_version: "{{ _openshift_cluster.ocp_version }}"
 
 - include_tasks: ibmcloud-login-roks-ocp.yml
   when: cloud_platform == 'ibm-cloud'
@@ -34,6 +34,10 @@
 
 - include_tasks: vsphere-login-ocp.yml
   when: cloud_platform == 'vsphere'
+
+- name: Login to OpenShift ARO on Azure
+  include_tasks: azure-login-aro-ocp.yml
+  when: cloud_platform == 'azure'
 
 - include_tasks: aws-login-rosa-ocp.yml
   when: cloud_platform == 'aws'

@@ -1,0 +1,35 @@
+---
+title: Cloud Pak for Data LDAP configuration
+---
+
+# Cloud Pak for Data LDAP
+
+Cloud Pak for Data can connect to an LDAP user registry for identity and access managment (IAM). When configured, for a Cloud Pak for Data instance, a user must authenticate with the user name and password stored in the LDAP server.
+
+If SAML is also configured for the Cloud Pak for Data instance, authentication (identity) is managed by the SAML server but access management (groups, roles) can still be served by LDAP.
+
+Example LDAP configuration:
+```
+# Each Cloud Pak for Data Deployment deployed in an OpenShift Project of an OpenShift cluster can have its own LDAP configuration
+cp4d_ldap_config:
+- project: zen-sample
+  openshift_cluster_name: sample
+  ldap_host: ldaps://ldap-host
+  ldap_port: 636
+  ldap_user_search_base: ou=users,dc=ibm,dc=com
+  ldap_user_search_field: uid
+  ldap_domain_search_user: uid=ibm_roks_bind_user,ou=users,dc=ibm,dc=com
+  ldap_domain_search_password_vault: ldap_bind_password
+  auto_signup: "false"
+  ldap_group_search_base: ou=groups,dc=ibm,dc=com
+  ldap_group_search_field: cn
+  ldap_mapping_first_name: cn
+  ldap_mapping_last_name: sn
+  ldap_mapping_email: mail
+  ldap_mapping_group_membership: memberOf
+  ldap_mapping_group_member: member
+```
+
+The above configuration uses the LDAPS protocol to connect to port `636` on the `ldap-host` server. This server can be a private server if an upstream DNS server is also defined for the OpenShift cluster that runs Cloud Pak for Data. Common Name `uid=ibm_roks_bind_user,ou=users,dc=ibm,dc=com` is used as the bind user for the LDAP server and its password is retrieved from vault secret `ldap_bind_password`.
+
+For more information on configuring LDAP for Cloud Pak for Data, check the [LDAP configuration](/cpd-design/objects/cp4d_ldap_configuration) page.

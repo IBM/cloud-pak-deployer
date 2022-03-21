@@ -11,6 +11,7 @@ class GeneratorPreProcessor:
         self.fullConfig = fullConfig
         self.fullConfigDict = benedict(fullConfig)
         self.errors = []
+
     def __call__(self,pathToCheck):
 
         self.recentCheck = {
@@ -20,6 +21,7 @@ class GeneratorPreProcessor:
         }
         # check, that it actually exists
         return self
+
     def __eq__(self,other):
         # in normal conditions 'other' will be True/typeof bool
         # self.recentCheck.pathToCheck = pathToCheck
@@ -31,11 +33,13 @@ class GeneratorPreProcessor:
                 return False
             else:
                 return self.attributesDict[self.recentCheck.get('pathToCheck')]
+
     def isRequired(self):
         if((self.recentCheck.get('pathToCheck') in self.attributesDict)==False):
             self.recentCheck['canceled'] = True
             self.appendError(msg="Attribute {path} is not defined".format(path=self.recentCheck.get('pathToCheck')))
         return self
+
     def isOptional(self):
         if((self.recentCheck.get('pathToCheck') in self.attributesDict)==False):
             self.recentCheck['canceled'] = True
@@ -144,6 +148,32 @@ class GeneratorPreProcessor:
                 #print(listOfMatches)
                 self.appendError(msg="Can't expand, result of given path ("+ matchPatternCombined +") not unique, found:" + ','.join(listOfMatches))
         return self
+
+    # matchPattern (string): should look like 'vpc[*].name'
+    def expandWithSub(self, matchObject, remoteIdentifier, remoteValue, listName, listIdentifier):
+        if((self.recentCheck.get('pathToCheck') in self.attributesDict)==False):
+            itemFound=False
+            if matchObject in self.fullConfigDict:
+                objectFound=True
+                for o in self.fullConfigDict[matchObject]:
+                    if remoteIdentifier in o and o[remoteIdentifier]==remoteValue:
+                        objectFound=True
+                        if listName in o:
+                            if len(o[listName]) == 1:
+                                if listIdentifier in o[listName][0]:
+                                    self.attributesDict[ self.recentCheck.get('pathToCheck') ]=o[listName][0][listIdentifier]
+                                else:
+                                    self.appendError(msg="Cannot expand, list identifier {}.{}.{} not found. Found: {}".format(matchObject,listName,listIdentifier,o[listName]))
+                            else:
+                                self.appendError(msg="More than 1 entry found in list {}.{}".format(matchObject,listName))
+                        else:
+                            self.appendError(msg="No attribute {} found in matching object {}".format(listName,o))
+                if not objectFound:
+                    self.appendError(msg="No matching item found for object {} with {}={} ".format(matchObject,remoteIdentifier,remoteValue))
+            else:
+                self.appendError(msg="No object of type {} found".format(matchObject))
+        return self
+
     def do(self):
         return self
     def appendError(self, type='error', path=None, msg=None):
