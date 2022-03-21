@@ -1,0 +1,31 @@
+---
+- debug:
+    msg: "{{ _datastage_instance_authorization }}"
+
+- set_fact:
+    _datastage_instance: "{{ _datastage_instance_authorization.instance }}"
+    _datastage_instance_role: "{{ _datastage_instance_authorization.role }}"
+    _cp4d_user_group_name: "{{ _datastage_instance_authorization.cp4d_user_group }}"
+
+- name: Adding execute permission to {{ role_path }}/files/assign_datastage_authorization.sh"
+  file: dest={{ role_path }}/files/assign_datastage_authorization.sh mode=a+x
+
+- name: "Assign DataStage role {{ _datastage_instance_role }} to CP4D User Group {{ _cp4d_user_group_name }} for instance {{ _datastage_instance }}. Log file for result {{status_dir}}/log/cp4d_datastage_instance_authorization.log"
+  shell: |
+    runcpddatastageauthorization () { \
+         {{ role_path }}/files/assign_datastage_authorization.sh \
+         https://{{ cp4d_url.stdout }} \
+         "{{ _cp4d_login_result.json.token }}" \
+         "{{ _datastage_instance }}" \
+         "{{ _cp4d_user_group_name }}" \
+         "{{ _datastage_instance_role }}" |& \
+         tee -a {{status_dir}}/log/cp4d_datastage_instance_authorization.log; \
+         return "${PIPESTATUS[0]}"; }; \
+    runcpddatastageauthorization  
+  register: _cpd_datastage_authorization_result
+
+- debug:
+    msg: "{{ _cpd_datastage_authorization_result }}"
+
+- debug: 
+    msg: "Assign DataStage role {{ _datastage_instance_role }} to CP4D User Group {{ _cp4d_user_group_name }} for instance {{ _datastage_instance }} completed successfully..."
