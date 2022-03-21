@@ -15,6 +15,15 @@
       - debug:
           msg: "DataStage instance {{ _ds_instance_name }} is not available in the Cloud Pak Deployer configuration file. Destroying instance..."
 
+      - name: "Get PxRuntime Id for {{ _ds_instance_name }}"
+        shell: |
+          oc get PxRuntime -n {{ current_cp4d_cluster.project }} {{ _ds_instance_name }} -o=json | jq -r '.spec.zenServiceInstanceId' 
+        register: _px_runtime_id
+      
+      - fail:
+          msg: "Unable to acquire Service Instance Id of PxRuntime {{ _ds_instance_name }}"
+        when: _px_runtime_id == ''
+      
       - name: "Destroy PxRuntime {{ _ds_instance_name }}"
         shell: |
           oc delete PxRuntime -n {{ current_cp4d_cluster.project }} {{ _ds_instance_name }}
@@ -23,25 +32,24 @@
         pause:
           seconds: 30
 
-
-#TODO get ds_instance_id and check
-
-      - name: Validate if PxRuntime {{ _ds_instance_name }} is still in status DEPROVISIONED
+      - name: "Validate if PxRuntime {{ _ds_instance_name }} with Id {{ _px_runtime_id.stdout }} is still in status DEPROVISIONED"
         shell: |
           curl -s -k \
             -H 'Authorization: Bearer {{ _cp4d_login_result.json.token }}' \
             -H 'Content-Type: application/json' \
-            -X GET https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _ds_instance_id }}/?include_service_status=true
+            -X GET https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _px_runtime_id.stdout }}/?include_service_status=true
         register: _validate_for_delete_pxruntime
 
       - when: _validate_for_delete_pxruntime.stdout.find('"provision_status":"DEPROVISIONED"') != -1
-        name: Remove the PxRuntime from CP4D
+        name: Remove the PxRuntime from CP4D {{ _ds_instance_name }} with Id {{ _px_runtime_id.stdout }}
         shell: |
           curl -s -k \
             -H 'Authorization: Bearer {{ _cp4d_login_result.json.token }}' \
             -H 'Content-Type: application/json' \
-            -X DELETE https://{{ cp4d_url.stdout }}/zen-data-ui/v3/service_instances/{{ _ds_instance_id }}
+            -X DELETE https://{{ cp4d_url.stdout }}/zen-data-ui/v3/service_instances/{{_px_runtime_id.stdout }}
         register: _delete_pxruntime
+
+
 
 
       
