@@ -101,6 +101,9 @@ def preprocessor(attributes=None, fullConfig=None):
                 if "ocs_storage_size_gb" not in os:
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
                     g.appendError(msg='Storage type OCS was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement OCS.')
+                if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
+                    g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+
             if "storage_type" in os and os['storage_type']=='pwx':
                 if "pwx_storage_label" not in os:
                     g.appendError(msg='pwx_storage_label must be specified when storage_type is pwx')

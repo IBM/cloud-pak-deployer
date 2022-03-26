@@ -78,6 +78,9 @@ def preprocessor(attributes=None, fullConfig=None):
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
             if "storage_type" in os and os['storage_type'] not in ['nfs','ocs']:
                 g.appendError(msg='storage_type must be nfs or ocs')
+            if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
+                g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()
