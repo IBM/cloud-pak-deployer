@@ -99,6 +99,9 @@ def preprocessor(attributes=None, fullConfig=None):
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
                 if "ocs_storage_size_gb" not in os:
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
+                if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
+                    g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
