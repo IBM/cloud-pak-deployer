@@ -4,16 +4,24 @@ from packaging import version
 # Validating:
 # ---
 # openshift:
-# - name: {{ env_id }}
-#   ocp_version: 4.8
-#   cluster_name: {{ env_id }}
-#   domain_name: example.com
+# - name: fk-cpd
+#   domain_name: coc.ibm.com
+#   cluster_name: fk-cpd
+#   vsphere_name: fk-cpd
+#   ocp_version: "4.10"
+#   control_plane_nodes: 3
+#   control_plane_vm_definition: control-plane
+#   compute_nodes: 3
+#   compute_vm_definition: compute
+#   api_vip: 10.99.92.51
+#   ingress_vip: 10.99.92.52
 #   openshift_storage:
-#   - storage_name: nfs-storage
-#     storage_type: nfs
-# Optional parameters if you want to override the storage class used
-#     ocp_storage_class_file: nfs-client 
-#     ocp_storage_class_block: nfs-client
+#   - storage_name: ocs-storage
+#     storage_type: ocs
+#     ocs_version: 4.9
+#     ocs_storage_label: ocs
+#     ocs_storage_size_gb: 512
+#     ocs_dynamic_storage_class: thin
 
 def preprocessor(attributes=None, fullConfig=None):
     g = GeneratorPreProcessor(attributes,fullConfig)
@@ -23,6 +31,17 @@ def preprocessor(attributes=None, fullConfig=None):
     
     g('cluster_name').isRequired()
     g('domain_name').isRequired()
+
+    g('vsphere_name').expandWith('vsphere[*]',remoteIdentifier='name')
+
+    g('control_plane_nodes').isRequired()
+    g('control_plane_vm_definition').isRequired()
+    g('compute_nodes').isRequired()
+    g('compute_vm_definition').isRequired()
+
+    g('api_vip').isRequired()
+    g('ingress_vip').isRequired()
+
 
     g('openshift_storage').isRequired()
 
@@ -57,13 +76,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs','custom']:
-                g.appendError(msg='storage_type must be nfs, ocsor custom')
-            if "storage_type" in os and os['storage_type']=='custom':
-                if "ocp_storage_class_file" not in os:
-                    g.appendError(msg='ocp_storage_class_file must be specified when storage_type is custom')
-                if "ocp_storage_class_block" not in os:
-                    g.appendError(msg='ocp_storage_class_block must be specified when storage_type is custom')
+            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs']:
+                g.appendError(msg='storage_type must be nfs or ocs')
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()

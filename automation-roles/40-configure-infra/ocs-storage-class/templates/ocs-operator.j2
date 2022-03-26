@@ -19,7 +19,7 @@ spec:
 {% if cloud_platform == 'azure' %}
   channel: stable-{{ _azure_current_ocp_version }} 
 {% else %}
-  channel: stable-{{ (current_openshift_cluster.ocp_version | string)[:3] }}
+  channel: stable-{{ current_openshift_cluster.ocp_version | string | regex_search('([0-9].[0-9]+)','\\1') | first }}
 {% endif %}
   installPlanApproval: Automatic
   name: ocs-operator

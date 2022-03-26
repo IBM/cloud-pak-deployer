@@ -77,7 +77,7 @@ openshift:
 | ------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------- |
 | name                                  | Name of the OpenShift cluster                                                                              | Yes                            |                        |
 | managed                               | Is the ROKS cluster managed by this deployer? See note below.                                              | No                             | True, False            |
-| ocp_version                           | ROKS Kubernetes version                                                                                    | Yes                            |                        |
+| ocp_version                           | ROKS Kubernetes version. If you want to install `4.10`, specify `"4.10"`  | Yes                            |                        |
 | compute_flavour                       | Type of compute node to be used                                                                            | Yes                            | [link]                 |
 | compute_nodes                         | Total number of compute nodes. This must be a factor of the number of subnets                              | Yes                            | Integer                |
 | resource_group_name                   | IBM Cloud resource group for the ROKS cluster                                                              | Yes, inferred                  |                        |
@@ -145,7 +145,7 @@ openshift:
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------ |
 | name                                        | Name of the OpenShift cluster                                                                                                      | Yes                            |                          |
 | domain_name                                 | Domain name of the cluster, this will also depict the route to the API and ingress endpoints                                       | Yes                            |                          |
-| ocp_version                                 | OpenShift version version, the value specified here will also be used for OpenShift Container Storage                              | Yes                            |                          |
+| ocp_version                                 | OpenShift version.  If you want to install `4.10`, specify `"4.10"`  | Yes                            |                          |
 | control_plane_nodes                         | Total number of control plane nodes, typically 3                                                                                   | Yes                            | Integer                  |
 | control_plane_vm_definition                 | `vm_definition` object that will be used to define number of vCPUs and memory for the control plane nodes                          | Yes                            | Existing `vm_definition` |
 | compute_nodes                               | Total number of compute nodes                                                                                                      | Yes                            | Integer                  |
@@ -194,7 +194,7 @@ openshift:
 | Property                                    | Description                                                                                                                    | Mandatory                      | Allowed values |
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | -------------- |
 | name                                        | Name of the OpenShift cluster                                                                                                  | Yes                            |                |
-| ocp_version                                 | OpenShift version version, specified as `x.y.z`.                                                                               | Yes                            |                |
+| ocp_version                                 | OpenShift version version, specified as `x.y.z` | Yes  |                |
 | compute_flavour                             | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory          | Yes                            |                |
 | infrastructure                              | Infrastructure properties                                                                                                      | Yes                            |                |
 | infrastructure.type                         | Type of OpenShift cluster on AWS. Currently only `rosa` is allowed.                                                            | Yes                            | `rosa`         |
@@ -258,13 +258,9 @@ openshift:
 #### Property explanation for OpenShift cluster on Microsoft Azure (ARO)
 
 <InlineNotification kind="warning">
-  You are not allowed to specify the OCP version of the ARO cluster. The latest
-  current version is provisioned automatically instead no matter what value is
-  specified in the "ocp_version" parameter. The "ocp_version" parameter is
-  mandatory for backward compatibility of other layers of the provisioning. For
-  instance, the value is used by the process which downloads and installs the
-  `oc` client. Please, specify the value according to what OCP version will be
-  provisioned.
+  You are not allowed to specify the OCP version of the ARO cluster. The latest current version is provisioned automatically instead no matter what value is
+  specified in the "ocp_version" parameter. The "ocp_version" parameter is mandatory for compatibility with other layers of the provisioning, such as the OpenShift client. For
+  instance, the value is used by the process which downloads and installs the `oc` client. Please, specify the value according to what OCP version will be provisioned.
 </InlineNotification>
 
 | Property                                    | Description                                                                                                                                                                                                                                | Mandatory                      | Allowed values                      |
@@ -272,7 +268,7 @@ openshift:
 | name                                        | Name of the OpenShift cluster                                                                                                                                                                                                              | Yes                            |                                     |
 | azure_aro_name                              | Name of the `azure_aro` infrastructure object                                                                                                                                                                                              | Yes                            |                                     |
 | subdomain_name                              | A random unique alphabetic string that is used as a part of the full domain address, i.e. for the `westeurope` location the console URL will be: `https://console-openshift-console.apps.<subdomain_name>.westeurope.aroapp.io/dashboards` | Yes                            |                                     |
-| ocp_version                                 | The version of the `oc` client which will be installed during the provisioning to operate the cluster.                                                                                                                                     | Yes                            |                                     |
+| ocp_version                                 | The version of the `oc` client which will be installed during the provisioning to operate the cluster.  If you want to install `4.10`, specify `"4.10"` | Yes                            |                                     |
 | network                                     | Cluster network attributes                                                                                                                                                                                                                 | Yes                            |                                     |
 | network.pod_cidr                            | CIDR of pod network                                                                                                                                                                                                                        | Yes                            | Must be a minimum of /18 or larger. |
 | network.service_cidr                        | CIDR of service network                                                                                                                                                                                                                    | Yes                            | Must be a minimum of /18 or larger. |
@@ -310,7 +306,7 @@ openshift:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the OpenShift cluster                                        | Yes       |  |
-| ocp_version | OpenShift version of the cluster, used to download the client     | Yes        | |
+| ocp_version | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes        | |
 | cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
 | domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
 | upstream_dns | Defines alternative upstream DNS servers(s) for OpenShift         | No | |
