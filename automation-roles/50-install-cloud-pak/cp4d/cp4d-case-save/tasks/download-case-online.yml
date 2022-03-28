@@ -28,6 +28,8 @@
   - name: Save case file {{ _current_case_inventory.search_string }}-{{ _current_cp4d_cartridge.case_version }}
     shell: |
       cloudctl case save \
-        --case {{ case_github_url }}/{{ _current_case_inventory.search_string }}-{{ _current_cp4d_cartridge.case_version }}.tgz \
+        --repo {{ case_github_url }} \
+        --case {{ _current_case_inventory.search_string }} \
+        --version {{ _current_cp4d_cartridge.case_version }} \
         --outputdir {{ _case_dir }} {{ _dependency }}
   when: (_current_cp4d_cartridge.state | default('installed')) == 'installed'
