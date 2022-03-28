@@ -1,7 +1,11 @@
 ---
+- name: Connect to IBM Container Registry and store credentials if needed
+  debug:
+    msg: Connect to IBM Container Registry and store credentials if needed
+
 - tempfile:
     state: directory
-  register: icr_temp_dir
+  register: _icr_temp_dir
 
 - name: Fail if the registry namespace has not been specified
   fail:
@@ -86,12 +90,12 @@
       when: "ibmcloud_iam_service_api_keys_result.stdout == '1'"
 
     - name: Create IAM service-api-key ICR-{{ current_image_registry.registry_namespace }}-key for IBM Container Registry namespace {{ current_image_registry.registry_namespace }}
-      command: "ibmcloud iam service-api-key-create ICR-{{ current_image_registry.registry_namespace }}-key ICR-{{ current_image_registry.registry_namespace }}-id --file {{ icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt --description 'API key for service ID ICR-{{ current_image_registry.registry_namespace }}-id'"
+      command: "ibmcloud iam service-api-key-create ICR-{{ current_image_registry.registry_namespace }}-key ICR-{{ current_image_registry.registry_namespace }}-id --file {{ _icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt --description 'API key for service ID ICR-{{ current_image_registry.registry_namespace }}-id'"
       register: create_service_api_key_result
 
-    - name: Read the generated file {{ icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt
+    - name: Read the generated file {{ _icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt
       include_vars:
-        file: "{{ icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt"
+        file: "{{ _icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt"
         name: ibmcloud_cr_key
 
     - name: Store the ICR key into the vault
@@ -106,6 +110,6 @@
     - name: Delete the generated ICR API key file
       file:
         state: absent
-        path: "{{ icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt"
+        path: "{{ _icr_temp_dir.path }}/ICR-{{ current_image_registry.registry_namespace }}-key.txt"
 
   when: "has_secret == false"

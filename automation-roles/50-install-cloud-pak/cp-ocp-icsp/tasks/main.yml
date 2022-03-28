@@ -1,8 +1,8 @@
 ---
 - name: Create ImageContentSourcePolicy
   include_tasks: create-icsp.yml
-  when: cloud_platform != 'ibm-cloud'
+  when: _mco_exists
 
-- name: Apply ImageContentSourcePolicy settings for IBM Cloud ROKS
-  include_tasks: ibmcloud-apply-icsp.yml
-  when: cloud_platform == 'ibm-cloud'
+- name: Apply ImageContentSourcePolicy settings if the Machine Config Operator does not exist
+  include_tasks: non-mco-apply-icsp.yml
+  when: not _mco_exists

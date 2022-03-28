@@ -1,3 +1,98 @@
 ---
-title: Private registry
+title: Private registry and air-gapped installations
 ---
+
+# Private registry and air-gapped installations
+
+In many cases, especially when the OpenShift cluster is in an environment with limited internet connectivity, you may want OpenShift to pull Cloud Pak images from a private image registry (also sometimes referred to as a container registry). There may also be other reasons for choosing a private registry over the entitled registry.
+
+The deployer is capable of mirroring images from the entitled registry to the private registry you want to use for the Cloud Pak. When doing a fully air-gapped installation, a portable image registry can be created on a server that is connected to the internet and then shipped close to the OpenShift cluster for installation of the Cloud Paks.
+
+<InlineNotification kind="info">
+The deployer only supports using a private registry for the Cloud Pak images, not for OpenShift itself. Air-gapped installation of OpenShift is currently not in scope for the deployer.
+</InlineNotification>
+
+Below we first outline the use of a private registry for the Cloud Pak installation, then we will continue with air-gapped installation.
+
+## Using the IBM Container Registry as a private registry
+If you want to use a private registry when running the deployer for a ROKS cluster on IBM Cloud, the IBM Container Registry service is available. The deployer will automatically create the specified namespace in the ICR and set up the credentials accordingly. An example of using the ICR as a private registry:
+
+```
+image_registry:
+- name: cpd405
+  registry_host_name: de.icr.io
+  registry_namespace: cpd405
+```
+
+The registry host name must end with `icr.io` and the registry namespace is mandatory.
+
+## Using a private registry for the Cloud Pak installation (non-IBM Cloud)
+In the deployer configuration, include an [image_registry](/cpd-design/objects/cloud-paks#image_registry) object with the host name of the private registry and some optional properties such as port number, CA certificate and whether insecure access to the registry is allowed.
+
+Example:
+```
+image_registry:
+- name: cpd405
+  registry_host_name: registry.coc.uk.ibm.com
+  registry_port: 15000
+  registry_trusted_ca_secret: cpd405-ca-bundle
+```
+
+When the `image_registry` object is referenced by the Cloud Pak object (such as `cp4d`), the deployer makes the necessary changes in OpenShift so that images are pulled from the private registry:
+* Global pull secret: The image registry's credentials are retrieved from the vault (the secret name must be `image-registry-<name>` and an entry for the registry is added to the global pull secret (secret `pull-secret` in project `openshift-config`).
+* ImageContentSourcePolicy: This is a mapping between the original location of the image, for example `quay.io/opencloudio/zen-metastoredb@sha256:582cac2366dda8520730184dec2c430e51009a854ed9ccea07db9c3390e13b29` is mapped to `registry.coc.uk.ibm.com:15000/opencloudio/zen-metastoredb@sha256:582cac2366dda8520730184dec2c430e51009a854ed9ccea07db9c3390e13b29`.
+* Image registry settings: OpenShift keeps image registry settings in custom resource `image.config.openshift.io/cluster`. If a private registry with a self-signed certificate is configured, certificate authority's PEM secret must be created as a configmap in the `openshift-config` project. The deployer uses the vault secret referenced in `registry_trusted_ca_secret` to create or update the configmap so that OpenShift can connect to the registry in a secure manner. Alternatively, you add the `registry_insecure: true` property to pull images without checking the certificate.
+
+To create the vault secret for the image registry credentials:
+```
+./cp-deploy.sh vault set \
+  -vs image-registry-cpd405
+  -vsv "admin:very_s3cret"
+```
+
+To create the vault secret for the CA bundle:
+```
+./cp-deploy.sh vault set \
+  -vs cpd405-ca-bundle
+  -vsf /tmp/ca.crt
+```
+
+Where `ca.crt` looks something like this:
+```
+-----BEGIN CERTIFICATE-----
+MIIFszCCA5ugAwIBAgIUT02v9OdgdvjgQVslCuL0wwCVaE8wDQYJKoZIhvcNAQEL
+BQAwaTELMAkGA1UEBhMCVVMxETAPBgNVBAgMCE5ldyBZb3JrMQ8wDQYDVQQHDAZB
+cm1vbmsxFjAUBgNVBAoMDUlCTSBDbG91ZCBQYWsxHjAcBgNVBAMMFUlCTSBDbG91
+...
+mcutkgtbkq31XYZj0CiM451Qp8KnTx0=
+-----END CERTIFICATE-
+```
+
+An example of configuring a private registry for a `cp4d` object is below:
+```
+cp4d:
+- project: zen-40
+  openshift_cluster_name: {{ env_id }}
+  cp4d_version: 4.0
+  openshift_storage_name: ocs-storage
+  image_registry_name: cpd405
+```
+
+The Cloud Pak for Data installation refers to the `cpd405` `image_registry` object.
+
+If the `ibm_cp_entitlement_key` secret is in the vault at the time of running the deployer, the required images will be mirrored from the entitled registry to the private registry. If all images are already available in the private registry, just remove the `ibm_cp_entitlement_key` secret from the vault so that the deployer will not try to mirror the images.
+
+## Using a portable image registry for air-gapped installations
+When doing a Cloud Pak installation when the OpenShift cluster has limited connectivity to the outside world, you can use the deployer to populate a portable image registry on a server that is connected to the internet. The steps are outlined below.
+
+### On the server connected to the internet
+* Build the Cloud Pak Deployer image using `cp-deploy.sh build`
+* Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified. Make sure you select `existing-ocp` for the `cloud_platform` property in the configuration's inventory
+* Create a status directory that will hold the vault and all other downloaded assets
+* Run the deployer with the `env download` subcommand and action to download all clients, start the portable registry and then mirror images from the entitled registry to the portable registry
+* When finished successfully, re-run the deployer with `env save` subcommand and action to stop the portable registry and save the registry and deployer container images to the status directory
+* Ship the deployer, config and status directories. The status directory now holds all assets required for the air-gapped installation. The size of the status directory can be substantial (100+ GB) so you may want to use multi-volume tar files if you are using network transfer
+
+### On the bastion server that is connected to the OpenShift cluster
+* Restore the deployer, config and status directories to the bastion server
+* Use the instructions in [Existing OpenShift](/cp-deploy/run/run-on-existing-openshift), including the creation of the `kubeconfig` secret to start the deployer. Run the `cp-deploy.sh` command with the `--air-gapped` flag to indicate images have to be mirrored from the portable registry to the private registry and the appropriate OpenShift configuration is done

@@ -1,5 +1,5 @@
 from generatorPreProcessor import GeneratorPreProcessor
-import sys
+from packaging import version
 
 # Validating:
 # ---
@@ -12,6 +12,15 @@ import sys
 #     type: rosa
 #     aws_region: eu-central-1
 #     multi_zone: True
+#     use_sts: False
+    # machine-cidr: 10.243.0.24
+    # subnet_idss:
+    # - subnet-0e63f662bb1842e8a
+    # - subnet-0673351cd49877269
+    # - subnet-00b007a7c2677cdbc
+    # - subnet-02b676f92c83f4422
+    # - subnet-0f1b03a02973508ed
+    # - subnet-027ca7cc695ce8515
 #   openshift_storage:
 #   - storage_name: ocs-storage
 #     storage_type: ocs
@@ -35,6 +44,10 @@ def preprocessor(attributes=None, fullConfig=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
+        # OpenShift version must be 4.6 or higher
+        if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
+            g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
+
         # Check infrastructure attributes
         if "type" not in ge['infrastructure']:
             g.appendError(msg='type must be specified for infrastructure')
@@ -45,6 +58,17 @@ def preprocessor(attributes=None, fullConfig=None):
         if "multi_zone" in ge['infrastructure']:
             if type(ge['infrastructure']['multi_zone']) != bool:
                 g.appendError(msg='multi_zone must be True or False if specified')
+        if "use_sts" in ge['infrastructure']:
+            if type(ge['infrastructure']['use_sts']) != bool:
+                g.appendError(msg='use_sts must be True or False if specified')
+        if "machine_cidr" in ge['infrastructure']:
+            if "subnet_ids" not in ge['infrastructure']:
+                g.appendError(msg='If machine_cidr is specified, you must also specify the subnet_ids attribute')
+        if "subnet_ids" in ge['infrastructure']:
+            if len(ge['infrastructure']['subnet_ids']) != 2 and len(ge['infrastructure']['subnet_ids']) != 6:
+                g.appendError(msg='You can specify either 2 subnet IDs or 6 subnet IDs if there are existing subnets in the VPC')
+            if "machine_cidr" not in ge['infrastructure']:
+                g.appendError(msg='If subnet IDs are specified, you must also specify the machine_cidr attribute')
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:
@@ -75,6 +99,9 @@ def preprocessor(attributes=None, fullConfig=None):
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
                 if "ocs_storage_size_gb" not in os:
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
+                if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
+                    g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

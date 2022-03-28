@@ -1,0 +1,31 @@
+---
+
+- name: Create private registry configuration (ImageContentSourcePolicy) on ROKS using DaemonSet
+  block:
+    - name: Check if ConfigMap cloud-pak-icsp-registries exists
+      shell: "oc get configmap -n kube-system | grep -i '^cloud-pak-icsp-registries' | wc -l"
+      register: oc_icsp_cm_exists
+    - name: Create private registries configuration
+      template:
+        src: cloud-pak-icsp-registries-conf.j2
+        dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp-registries.conf"
+    - name: Create ConfigMap cloud-pak-icsp-registries
+      shell: |
+        if ! oc get configmap -n kube-system cloud-pak-icsp-registries;then
+          oc create configmap -n kube-system cloud-pak-icsp-registries \
+            --from-file={{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp-registries.conf
+        fi
+    - name: Set data for config map
+      shell: |
+        oc set data configmap/cloud-pak-icsp-registries -n kube-system \
+          --from-file={{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp-registries.conf
+    - name: Generate DaemonSet to set the private registry configuration for all nodes
+      template:
+        src: cloud-pak-icsp-registries-conf-ds.j2
+        dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp-registries-conf-ds.yaml"
+    - name: Create or replace DaemonSet cloud-pak-icsp-registries-conf-ds
+      shell: |
+        if oc get ds -n kube-system cloud-pak-icsp-registries-conf-ds;then
+          oc delete ds -n kube-system cloud-pak-icsp-registries-conf-ds
+        fi
+        oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-icsp-registries-conf-ds.yaml

@@ -3,9 +3,6 @@
   debug:
     msg: "{{ _monitors }}"
 
-- name: Enable Cloud Pak for Data ServiceMonitor
-  include_tasks: enable-cp4d-service-monitor.yml
-
 - set_fact:
     _default_monitor_source_repo: "{{ _monitors.default_monitor_source_repo | default('') }}"
     _default_monitor_source_token_secret: "{{ _monitors.default_monitor_source_token_secret | default('') }}"
@@ -110,9 +107,18 @@
     - name: Add the secret {{ _monitors.name}}-default-cr-auth for pull by the sa zen-editor-sa
       shell: "oc -n {{ current_cp4d_cluster.project }} secrets link --for=pull zen-editor-sa {{ _monitors.name}}-default-cr-auth"
 
+
+- name: "Patch cronjob watchdog-alert-monitoring-cronjob to run every 2 minutes"
+  shell: |
+    oc patch -n {{ current_cp4d_cluster.project }} cronjob/watchdog-alert-monitoring-cronjob -p '{"spec":{"schedule":"*/2 * * * *"}}'
+
 - name: "Loop through each monitors entry"
   include_tasks: cp4d-monitor.yml
   loop: "{{ _monitors.monitors | default([]) }}"
   loop_control:
     loop_var: _monitor
+
+- name: "Patch cronjob watchdog-alert-monitoring-cronjob back to run every 10 minutes"
+  shell: |
+    oc patch -n {{ current_cp4d_cluster.project }} cronjob/watchdog-alert-monitoring-cronjob -p '{"spec":{"schedule":"*/10 * * * *"}}'
 

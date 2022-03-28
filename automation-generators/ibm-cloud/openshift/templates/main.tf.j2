@@ -15,6 +15,11 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
     worker_count = "{{ ((generator.attributes.compute_nodes) / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
+    timeouts {
+      create = "3h"
+      delete = "2h"
+    }
+
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
 {% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
     zones {

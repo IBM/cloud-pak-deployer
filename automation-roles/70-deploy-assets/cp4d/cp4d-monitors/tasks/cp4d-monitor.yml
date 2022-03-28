@@ -178,7 +178,29 @@
         oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml
       register: _create_monitor_cm
 
+    - name: Wait for {{ _monitor_name }}-cronjob to become available
+      shell: |
+        oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep {{ _monitor_name }}-cronjob | wc -l
+      register: _wait_for_monitor_cronjob
+      retries: 8
+      delay: 20
+      until:
+        - _wait_for_monitor_cronjob.rc==0
+        - _wait_for_monitor_cronjob.stdout=='1'
 
+    - name: Check for the user-home-mount volumeMount for {{ _monitor_name }}-cronjob
+      shell: |
+        oc set volume -n {{ current_cp4d_cluster.project }} cronjobs/{{ _monitor_name }}-cronjob | grep "mounted at /user-home" | wc -l
+      register: _user_home_mount_present
+
+    - name: Create the user-home-mount for {{ _monitor_name }}-cronjob
+      shell: |
+        oc patch cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob \
+        --type=json \
+        --patch '[{"op": "add","path": "/spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-","value": {"name": "user-home-mount","mountPath": "/user-home"}}]'
+      register: _patch_result
+      when: _user_home_mount_present.stdout=='0'
+      
 
 
 

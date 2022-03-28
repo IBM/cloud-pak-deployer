@@ -13,15 +13,35 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
-# Install ibmcloud and plugins
-- name: Download and install ibmcloud CLI
+- name: Check if ibmcloud download was already done
+  stat:
+    path: "{{ status_dir }}/downloads/ibmcloud-linux.sh"
+  register: _ibmcloud_download
+
+- name: Download ibmcloud tool
+  get_url:
+    url: "{{ _v_ibm_cloud_cli }}"
+    dest: "{{ status_dir }}/downloads/ibmcloud-linux.sh"
+    owner: root
+    mode: 0700
+  register: _download_result
+  until: _download_result is succeeded
+  retries: 5
+  delay: 30
+  when: not _ibmcloud_download.stat.exists
+
+- name: Check if ibmcloud command already exists
+  stat:
+    path: /usr/local/bin/ibmcloud
+  register: _ibmcloud_command
+
+- name: Run ibmcloud installer
   shell: |
-    curl -fsSL {{ _ibm_cloud_cli }} | sh && \
+    {{ status_dir }}/downloads/ibmcloud-linux.sh && \
     ibmcloud plugin install kubernetes-service -f && \
     ibmcloud plugin install container-registry -f
-  args:
-    warn: False
-
+  when: not _ibmcloud_command.stat.exists
+  
 - name: Get ibmcloud CLI version
   shell: |
     ibmcloud version

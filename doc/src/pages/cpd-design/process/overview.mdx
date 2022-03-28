@@ -2,7 +2,6 @@
 title: Deployment process
 tabs: ['Overview', 'Validate', 'Prepare', 'Provision-infra', 'Configure-infra', 'Install-cloud-pak', 'Configure-cloud-pak', 'Deploy-assets', 'Smoke-tests']
 ---
-
 # Deployment process overview
 
 ![Deployment process overview](provisioning-process.png)
@@ -22,34 +21,41 @@ In this stage, the following activities are executed:
 * Expand the configuration with defaults from the `defaults` directory
 * Run the "linter" to check the object attributes in the configuration and their relations
 * Generate the Terraform scripts to provision the infrastructure (IBM Cloud only)
+* Download all CLIs needed for the selected cloud platform and cloud pak(s), if not air-gapped
 
 ## [30 - Provision infra](/cpd-design/process/provision-infra)
 In this stage, the following activities are executed:
-* Run Terraform to create or change the infrastructure components (IBM Cloud only)
+* Run Terraform to create or change the infrastructure components for IBM cloud
+* Run the OpenShift installer-provisioned infrastructure (IPI) installer for AWS (ROSA), Azure (ARO) or vSphere
 
 ## [40 - Configure infra](/cpd-design/process/configure-infra)
 In this stage, the following activities are executed:
-* Configure the VPC bastion server(s) (IBM Cloud only)
-* Configure the VPC NFS server(s) (IBM Cloud only)
-* Configure the OpenShift storage classes, both NFS and OCS (IBM Cloud only)
+* Configure the VPC bastion and NFS server(s) for IBM Cloud
+* Configure the OpenShift storage classes or test validate the existing storege classes if an existing OpenShift cluster is used
+* Configure OpenShift logging
 
 ## [50 - Install Cloud Pak](/cpd-design/process/install-cloud-pak)
 In this stage, the following activities are executed:
-* Create the IBM Container Registry namespace if specified (IBM Cloud only)
-* Connect to the specified image registry if specified
+* Create the IBM Container Registry namespace for IBM Cloud
+* Connect to the specified image registry and create ImageContentSourcePolicy
 * Prepare OpenShift cluster for Cloud Pak for Data installation
-* Mirror images to the private registry, if specified
+* Mirror images to the private registry
 * Install Cloud Pak for Data control plane
+* Configure Foundational Services license service
 * Install specified Cloud Pak for Data cartridges
-* Configure LDAP authentication for Cloud Pak for Data, if specified
 
 ## [60 - Configure Cloud Pak](/cpd-design/process/configure-cloud-pak)
 In this stage, the following activities are executed:
-* Configure instance for the cartridges, if specified (Db2, Cognos Analytics, Data Virtualization, ...)
+* Add OpenShift signed certificate to Cloud Pak for Data web server when on IBM Cloud
+* Configure LDAP for Cloud Pak for Data
+* Configure SAML authentication for Cloud Pak for Data
+* Configure auditing for Cloud Pak for Data
+* Configure instance for the cartridges (Analytics engine, Db2, Cognos Analytics, Data Virtualization, ...)
 * Configure instance authorization using the LDAP group mapping
 
 ## [70 - Deploy Assets](/cpd-design/process/deploy-assets)
-Nothing has been implemented yet for this stage.
+* Configure Cloud Pak for Data monitors
+* Install Cloud Pak for Data assets
 
 ## [80 - Smoke Tests](/cpd-design/process/smoke-tests)
 In this stage, the following activities are executed:
