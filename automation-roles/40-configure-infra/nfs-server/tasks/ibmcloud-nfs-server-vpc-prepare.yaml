@@ -2,9 +2,7 @@
 
 - set_fact:
     bastion_host: "{{ current_nfs_server['infrastructure']['bastion_host'] }}"
-    # nfs_server_ip: "{{ current_nfs_server['infrastructure']['primary_ipv4_address'] }}"
     nfs_server_ssh_key: "{{ current_nfs_server['infrastructure']['keys'][0] }}"
-    # TODO: Search through the available SSH keys and retrieve the one that has both a private and public key in the vault
 
 - name: Retrieve Terraform tfstate from the vault
   include_role: 
@@ -61,22 +59,6 @@
     content: "{{ secret_value }}\n"
     dest: "{{ ssh_key_dir.path }}/id_rsa"
     mode: 0600
-
-# TODO: Temporary!!!
-- name: Retrieve SSH public key from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "{{ nfs_server_ssh_key }}-ssh-pub-key"
-    secret_group: "{{ environment_name }}"
-
-- name: Store SSH public key in file
-  copy:
-    content: "{{ secret_value }}"
-    dest: "{{ ssh_key_dir.path }}/id_rsa.pub"
-    mode: 0600
-# TODO: Temporary!!!
-
 
 - name: Create dynamic Ansible group vpc_bastion_server
   add_host:
