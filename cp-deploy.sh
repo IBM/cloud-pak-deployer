@@ -688,7 +688,7 @@ if ! $INSIDE_CONTAINER;then
 fi
 
 # If action is download, first run the preparation
-if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
+if [ "${ACTION}" == "download" ] && ! ${CHECK_ONLY};then
   run_prepare="${CONTAINER_ENGINE} run"
   run_prepare+=" -v ${STATUS_DIR}:${STATUS_DIR}:z "
   run_prepare+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:z"
@@ -704,7 +704,7 @@ if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   eval $run_prepare
 fi
 
-if [ ! ${CHECK_ONLY} ];then
+if ! ${CHECK_ONLY};then
   START_PORTABLE_REGISTRY=false
   # Start portable registry if action download and portable registry or mirror not skipped
   if [[ "${ACTION}" == "download" && "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && "${CPD_SKIP_MIRROR}" == "false" ]];then
@@ -743,7 +743,7 @@ if [ ! ${CHECK_ONLY} ];then
 fi
 
 # If save action, save images of Docker registry and Deployer
-if [[ "${ACTION}" == "save" ]] && ! $CHECK_ONLY;then
+if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
   echo "Destroying old archives for registry and deployer"
   rm -f ${STATUS_DIR}/downloads/docker-registry.tar ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
   if [[ "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && -d ${STATUS_DIR}/imageregistry ]];then
