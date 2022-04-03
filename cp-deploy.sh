@@ -704,8 +704,24 @@ if [ "${ACTION}" == "download" ] && ! $CHECK_ONLY;then
   eval $run_prepare
 fi
 
-if [[ "${ACTION}" == "download" || "${CPD_AIRGAP}" == "true" ]] && ! $CHECK_ONLY;then
-  if [[ "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && "${CPD_SKIP_MIRROR}" == "false" ]];then
+if [ ! ${CHECK_ONLY} ];then
+  START_PORTABLE_REGISTRY=false
+  # Start portable registry if action download and portable registry or mirror not skipped
+  if [[ "${ACTION}" == "download" && "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && "${CPD_SKIP_MIRROR}" == "false" ]];then
+    START_PORTABLE_REGISTRY=true
+  fi
+  # Start portable registry if action apply and portable registry or mirror not skipped and imageregistry directory exists
+  if [[ "${ACTION}" == "apply" && "${CPD_AIRGAP}" == "true" && "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && "${CPD_SKIP_MIRROR}" == "false" ]];then
+    if [ -d ${STATUS_DIR}/imageregistry ];then
+      START_PORTABLE_REGISTRY=true
+    else
+      echo "Directory ${STATUS_DIR}/imageregistry was not found, skipping mirroring of images"
+      CPD_SKIP_PORTABLE_REGISTRY=true
+      CPD_SKIP_MIRROR=true
+    fi
+  fi
+  # Start portable registry if needed
+  if [ "${START_PORTABLE_REGISTRY}" == "true" ];then
     # Start the registry, only if not already started
     if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
       get_cp_datacore_archive
@@ -728,16 +744,18 @@ fi
 
 # If save action, save images of Docker registry and Deployer
 if [[ "${ACTION}" == "save" ]] && ! $CHECK_ONLY;then
-  get_cp_datacore_archive
-  echo "Stopping portable registry"
-  ${STATUS_DIR}/downloads/cloudctl case launch \
+  echo "Destroying old archives for registry and deployer"
+  rm -f ${STATUS_DIR}/downloads/docker-registry.tar ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
+  if [[ "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && -d ${STATUS_DIR}/imageregistry ]];then
+    get_cp_datacore_archive
+    echo "Stopping portable registry"
+    ${STATUS_DIR}/downloads/cloudctl case launch \
       --case ${CP_DATACORE_ARCHIVE} \
       --inventory cpdPlatformOperator \
       --action stop-registry
-  echo "Destroying old archives for registry and deployer"
-  rm -f ${STATUS_DIR}/downloads/docker-registry.tar ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
-  echo "Saving Docker registry image into ${STATUS_DIR}/downloads/docker-registry.tar"
-  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/docker-registry.tar docker.io/library/registry:2
+    echo "Saving Docker registry image into ${STATUS_DIR}/downloads/docker-registry.tar"
+    ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/docker-registry.tar docker.io/library/registry:2
+  fi
   echo "Committing last-run deployer container into image cloud-pak-deployer-airgap:latest"
   ${CONTAINER_ENGINE} commit $CURRENT_CONTAINER_ID cloud-pak-deployer-airgap:latest
   echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
