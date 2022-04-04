@@ -22,6 +22,7 @@ from packaging import version
 #     ocs_storage_label: ocs
 #     ocs_storage_size_gb: 512
 #     ocs_dynamic_storage_class: thin
+#     storage_vm_definition: storage
 
 def preprocessor(attributes=None, fullConfig=None):
     g = GeneratorPreProcessor(attributes,fullConfig)
@@ -78,6 +79,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
             if "storage_type" in os and os['storage_type'] not in ['nfs','ocs']:
                 g.appendError(msg='storage_type must be nfs or ocs')
+            if "storage_type" in os and os['storage_type'] == 'ocs' and "storage_vm_definition" not in os:
+                g.appendError(msg='storage_vm_definition must be specified for openshift_storage elements of storage_type ocs')
             if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
                 g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
 

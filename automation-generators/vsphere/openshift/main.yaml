@@ -25,25 +25,26 @@
     query: >-
       [?name=='{{ generator.attributes.compute_vm_definition }}']
 
+- name: Fail if the vm_definition object was not found
+  fail:
+    msg: "vm_definition {{ generator.attributes.compute_vm_definition }} was not found"
+  when: _compute_vm_config == {}
+
 - name: Retrieve vSphere user
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "vsphere-user"
     secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _vsphere_user: "{{ secret_value }}"
+    _p_secret_variable: _vsphere_user
 
 - name: Retrieve vSphere password
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "vsphere-password"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _vsphere_password: "{{ secret_value }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _vsphere_password
 
 - name: Retrieve pull secret from vault
   include_role: 
@@ -58,10 +59,8 @@
     name: vault-get-secret
   vars:
     secret_name: "ocp-ssh-pub-key"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _ocp_ssh_pub_key: "{{ secret_value }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ocp_ssh_pub_key
 
 - name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
   file:
