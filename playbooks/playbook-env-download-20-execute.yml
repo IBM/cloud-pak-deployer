@@ -11,38 +11,10 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-  - name: Retrieve IP address of portable registry
-    set_fact:
-      _portable_registry_ip_address: "{{ lookup('file', status_dir + '/imageregistry/portable-registry-ip.out') }}"
-
-  - name: Show IP address of portable registry
-    debug:
-      var: _portable_registry_ip_address
-
-  - name: Wait until registry is available on IP address {{ _portable_registry_ip_address }} and port 5000
-    wait_for:
-      host: "{{ _portable_registry_ip_address }}"
-      port: 5000
-      timeout: 30
 
   - name: Prepare deployer environment
     include_role:
       name: prepare-deployer
-
-  - name: Get IBM Entitled Registry key
-    include_role: 
-      name: vault-get-secret
-    vars:
-      secret_name: "ibm_cp_entitlement_key"
-      secret_group: "{{ environment_name }}"
-
-  - set_fact:
-      ibm_cp_entitlement_key: "{{ secret_value }}"
-
-  - name: Fail if the entitlement key was not found in the vault
-    fail:
-      msg: "Entitlement key must be stored in vault secret ibm_cp_entitlement_key."
-    when: ibm_cp_entitlement_key == ""
 
   - name: Remove case directory in case it exists
     file:
@@ -56,11 +28,81 @@
     loop_control:
       loop_var: _p_current_cp4d_cluster
 
-  - name: Mirror images to portable image registry
-    include_role:
-      name: cp-mirror-images
-    vars:
-      _p_target_registry_hostname: "{{ _portable_registry_ip_address }}"
-      _p_target_registry_port: 5000
-      _p_target_registry_credentials_secret: portable-registry-credentials
-      _p_case_dir: "{{ status_dir }}/cp4d/case"
+  # Wait until portable registry is available if not skipped
+  - block:
+    - name: Retrieve IP address of portable registry
+      set_fact:
+        _portable_registry_ip_address: "{{ lookup('file', status_dir + '/imageregistry/portable-registry-ip.out') }}"
+
+    - name: Fail if IP address of portable registry was not found
+      fail:
+        msg: "Portable registry does not appear to be active, IP address is not available"
+      when: _portable_registry_ip_address==""
+
+    - name: Show IP address of portable registry
+      debug:
+        var: _portable_registry_ip_address
+
+    - name: Wait until registry is available on IP address {{ _portable_registry_ip_address }} and port 5000
+      wait_for:
+        host: "{{ _portable_registry_ip_address }}"
+        port: 5000
+        timeout: 30
+    when:
+    - not (cpd_skip_portable_registry | bool)
+
+  # Mirror images to portable or private registry
+  - block:
+    - name: Get IBM Entitled Registry key
+      include_role: 
+        name: vault-get-secret
+      vars:
+        secret_name: "ibm_cp_entitlement_key"
+        secret_group: "{{ environment_name }}"
+        _p_secret_variable: ibm_cp_entitlement_key
+
+    - name: Fail if the entitlement key was not found in the vault
+      fail:
+        msg: "Entitlement key must be stored in vault secret ibm_cp_entitlement_key."
+      when: ibm_cp_entitlement_key == ""
+
+    # Mirror to portable image registry
+    - name: Mirror images to portable image registry
+      include_role:
+        name: cp-mirror-images
+      vars:
+        _p_target_registry_hostname: "{{ _portable_registry_ip_address }}"
+        _p_target_registry_port: 5000
+        _p_target_registry_credentials_secret: portable-registry-credentials
+        _p_case_dir: "{{ status_dir }}/cp4d/case"
+      when:
+      - not (cpd_skip_portable_registry | bool)
+
+    # Mirror to private registry
+    - block:
+
+      - name: Retrieve private image registry details
+        set_fact:
+          _image_registry: "{{ all_config.image_registry | first | default({}) }}"
+
+      - name: Fail if no private image registry found
+        fail:
+          msg: "No private image registry was found"
+        when: _image_registry=={}
+
+      - name: Mirror images from entitled to private registry
+        include_role: 
+          name: cp-mirror-images
+        vars:
+          _p_target_registry_hostname: "{{ _image_registry.registry_host_name }}"
+          _p_target_registry_port: "{{ _image_registry.registry_port | default('') }}"
+          _p_target_registry_namespace: "{{ _image_registry.registry_namespace | default('') }}"
+          _p_target_registry_credentials_secret: "image-registry-{{ _image_registry.name }}"
+          _p_case_dir: "{{ status_dir }}/cp4d/case"
+      when:
+      - (cpd_skip_portable_registry | bool)
+    
+    when:
+    - not (cpd_skip_mirror | bool)
+
+
