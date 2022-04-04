@@ -24,6 +24,7 @@ run_cmd="ansible-playbook -i ${INV_DIR}"
 run_cmd+=" playbooks/playbook-env-download-10-prepare.yml"
 run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
 run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
+run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
 run_cmd+=" ${ANSIBLE_VERBOSE}"
 
 echo "$run_cmd" >> /tmp/deployer_run_cmd.log

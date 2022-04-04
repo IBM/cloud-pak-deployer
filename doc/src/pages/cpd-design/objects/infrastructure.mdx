@@ -314,45 +314,39 @@ Defines a Virtual Server Instance within the VPC that will be used as an NFS ser
 nfs_server:
 - name: sample-nfs
   infrastructure:
-    keys:
-      - "vsi-access"
-    image: ibm-redhat-8-3-minimal-amd64-3
     type: vpc
-    subnet: sample-subnet-zone-1
-    primary_ipv4_address: 10.27.0.5
-    zone: eu-de-1
     vpc_name: sample
+    subnet: sample-subnet-zone-1
+    zone: eu-de-1
+    primary_ipv4_address: 10.27.0.5
+    image: ibm-redhat-8-3-minimal-amd64-3
+    profile: cx2-2x4
     bastion_host: sample-bastion
-    volume_selector: 1000G
-    mount_path: /data
     storage_folder: /data/nfs
-  storage:
-  - name: sample-nfs-data
-    profile: 10iops-tier
-    size: 1000
+    storage_profile: 10iops-tier
+    keys:
+      - "sample-nfs-provision"
 ```
 
 #### Property explanation
 
-| Property                            | Description                                                                                  | Mandatory                 | Allowed values                              |
-| ----------------------------------- | -------------------------------------------------------------------------------------------- | ------------------------- | ------------------------------------------- |
-| name                                | Name of the Virtual Server Instance                                                          | Yes                       |                                             |
-| infrastructure                      | Infrastructure attributes                                                                    | Yes                       |                                             |
-| infrastructure.allow_ip_spoofing    | Decide if IP spoofing is allowed for the interface or not                                    | No                        | False (default), True                       |
-| infrastructure.keys                 | List of SSH keys to attach to the NFS server VSI                                             | Yes                       | Existing `ssh_key`                          |
-| infrastructure.image                | Operating system image to be used                                                            | Yes                       | Existing image in IBM Cloud                 |
-| infrastructure.subnet               | Subnet the VSI will be connected to                                                          | Yes                       | Existing `subnet`                           |
-| infrastructure.primary_ipv4_address | IP v4 address that will be assigned to the VSI                                               | No                        | If specified, address in the `subnet` range |
-| infrastructure.vpc_name             | Virtual Private Cloud this VSI belongs to                                                    | Yes, inferred from subnet |                                             |
-| infrastructure.zone                 | Zone the VSI will be plaed into                                                              | Yes, inferred from subnet |                                             |
-| infrastructure.bastion_host         | If the NFS Server VSI can only be reached via a bastion host, specify the VSI of the bastion | No                        |                                             |
-| infrastructure.volume_selector      | Value by which the empty volume will be selected for formatting                              | Yes                       |                                             |
-| infrastructure.mount_path           | Path on the NFS server that will be mounted for the data                                     | Yes                       |                                             |
-| infrastructure.storage_folder       | Folder that holds the data, this will be mounted from the NFS storage class                  | Yes                       |                                             |
-| storage                             | Defines storage attributes                                                                   | Yes                       |                                             |
-| storage.name                        | Name of the storage that will be configured on the IBM Cloud                                 | Yes                       |                                             |
-| storage.profile                     | Storage profile that will be used                                                            | Yes                       | 3iops-tier, 5iops-tier, 10iops-tier         |
-| storage.size                        | Size of the storage in GiB                                                                   | Yes                       |                                             |
+| Property                            | Description                                                                 | Mandatory                 | Allowed values                              |
+|-------------------------------------|-----------------------------------------------------------------------------|---------------------------|---------------------------------------------|
+| name                                | Name of the Virtual Server Instance                                         | Yes                       |                                             |
+| infrastructure                      | Infrastructure attributes                                                   | Yes                       |                                             |
+| infrastructure.image                | Operating system image to be used                                           | Yes                       | Existing image in IBM Cloud                 |
+| infrastructure.profile              | Server profile to be used, for example cx2-2x4                              | Yes                       | Existing profile in IBM Cloud               |
+| infrastructure.type                 | Type of infrastructure for NFS servers to                                   | Yes     | vpc                                         |
+| infrastructure.vpc_name             | Virtual Private Cloud this VSI belongs to                                   | Yes, inferred from subnet |                                             |
+| infrastructure.subnet               | Subnet the VSI will be connected to                                         | Yes                       | Existing `subnet`                           |
+| infrastructure.zone                 | Zone the VSI will be plaed into                                             | Yes, inferred from subnet |                                             |
+| infrastructure.primary_ipv4_address | IP v4 address that will be assigned to the VSI                              | No                        | If specified, address in the `subnet` range |
+| infrastructure.bastion_host         | Specify the VSI of the bastion to reach this NFS server                     | No                        |                                             |
+| infrastructure.storage_profile      | Storage profile that will be used                                           | Yes                       | 3iops-tier, 5iops-tier, 10iops-tier         |
+| infrastructure.volume_size_gb       | Size of the NFS server data volume                                          | Yes                       |                                             |
+| infrastructure.storage_folder       | Folder that holds the data, this will be mounted from the NFS storage class | Yes                       |                                             |
+| infrastructure.keys                 | List of SSH keys to attach to the NFS server VSI                            | Yes                       | Existing `ssh_key`                          |
+| infrastructure.allow_ip_spoofing    | Decide if IP spoofing is allowed for the interface or not                   | No                        | False (default), True                       |
 
 ### IBM Cloud `cos`
 
@@ -493,7 +487,6 @@ vsphere:
   cluster: Cluster1
   network: "VM Network"
   folder: /Datacenter1/vm/sample
-  resource_pool: gold
 ```
 
 #### Property explanation
@@ -503,11 +496,10 @@ vsphere:
 | name          | Name of the vSphere definition, will be referenced by `openshift`           | Yes       |                |
 | vcenter       | Host or IP address of the vSphere Center                                    | Yes       |                |
 | datacenter    | vSphere Data Center to be used for the virtual machines                     | Yes       |                |
-| datastore     | vSphere Data Store to be used for the virtual machines                      | Yes       |                |
+| datastore     | vSphere Datastore to be used for the virtual machines                       | Yes       |                |
 | cluster       | vSphere cluster to be used for the virtual machines                         | Yes       |                |
 | network       | vSphere network to be used for the virtual machines                         | Yes       |                |
 | folder        | Fully qualified folder name into which the OpenShift cluster will be placed | Yes       |                |
-| resource_pool | vSphere resource pool to be assigned to the virtual machines                | Yes       |                |
 
 ### vSphere `vm_definition`
 
@@ -523,6 +515,9 @@ vm_definition:
   vcpu: 16
   memory_mb: 65536
   boot_disk_size_gb: 200
+  # Optional overrides for vsphere properties
+  # datastore: Datastore1
+  # network: "VM Network"
 ```
 
 #### Property explanation
@@ -533,6 +528,8 @@ vm_definition:
 | vcpu              | Number of virtual CPUs to be assigned to the VMs             | Yes       |                |
 | memory_mb         | Amount of memory in MiB of the virtual machines              | Yes       |                |
 | boot_disk_size_gb | Size of the virtual machine boot disk in GiB                 | Yes       |                |
+| datastore         | vSphere Datastore to be used for the virtual machines, overrides `vsphere.datastore` |  No       |  |
+| network           | vSphere network to be used for the virtual machines, overrides `vsphere.network`      | No       |  |
 
 ### vSphere `nfs_server`
 

@@ -1,5 +1,5 @@
 from generatorPreProcessor import GeneratorPreProcessor
-import sys
+from packaging import version
 
 # Validating:
 # ---
@@ -51,6 +51,10 @@ def preprocessor(attributes=None, fullConfig=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
+        # OpenShift version must be 4.6 or higher
+        if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
+            g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
+
         # Number of subnets must be 1 or 3
         if len(ge['infrastructure']['subnets']) != 1 and len(ge['infrastructure']['subnets']) != 3:
             g.appendError(msg='Number of subnets specified is ' + str(len(ge['infrastructure']['subnets'])) + ' must be 1 or 3')
@@ -97,6 +101,9 @@ def preprocessor(attributes=None, fullConfig=None):
                 if "ocs_storage_size_gb" not in os:
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
                     g.appendError(msg='Storage type OCS was specified but there are not 3 subnets for the cluster. You must have 3 subnets for the OpenShift cluster to implement OCS.')
+                if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
+                    g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+
             if "storage_type" in os and os['storage_type']=='pwx':
                 if "pwx_storage_label" not in os:
                     g.appendError(msg='pwx_storage_label must be specified when storage_type is pwx')

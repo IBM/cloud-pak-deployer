@@ -6,7 +6,7 @@
 
 - name: Retrieve /etc/crio/crio.conf
   shell: |
-    oc debug no/{{ _ocp_compute_nodes.stdout }} -- cat /host/etc/crio/crio.conf > {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf
+    oc debug no/{{ _ocp_compute_nodes.stdout }} -- cat /host/etc/crio/crio.conf > {{ status_dir }}/openshift/cp4d-crio.conf
   register: debug_node_result
   retries: 3
   delay: 10
@@ -14,14 +14,14 @@
 
 - name: Set pids_limit
   community.general.ini_file:
-    path: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf"
+    path: "{{ status_dir }}/openshift/cp4d-crio.conf"
     section: "crio.runtime"
     option: pids_limit
     value: "12288"
 
 # - name: Set default_ulimits
 #   community.general.ini_file:
-#     path: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf"
+#     path: "{{ status_dir }}/openshift/cp4d-crio.conf"
 #     section: "crio.runtime"
 #     option: default_ulimits
 #     value: '[ "nofile=66560:66560" ]'

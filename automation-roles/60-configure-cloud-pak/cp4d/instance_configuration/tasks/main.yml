@@ -1,7 +1,7 @@
 ---
 - name: Show CP4D instance
   debug:
-    var: cp4d_instance
+    var: _cp4d_instance
 
 - name: Get Route to Cloud Pak for Data
   shell: |
@@ -11,5 +11,13 @@
 
 - name: Set the Cognos Analytics instance authorization
   include_tasks: ca_instance_authorization.yml
-  loop: "{{ cp4d_instance.manage_access }}"
-  when: cp4d_instance.name == 'ca'
+  loop: "{{ _cp4d_instance.manage_access }}"
+  when: _cp4d_instance.name == 'ca'
+
+- name: Set the DataStage instance authorization
+  include_tasks: datastage_instance_authorization.yml
+  loop: "{{ _cp4d_instance.manage_access }}"
+  loop_control:
+    loop_var: _datastage_instance_authorization  
+  when: _cp4d_instance.name == 'datastage'
+

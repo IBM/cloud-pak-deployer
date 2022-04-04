@@ -1,5 +1,5 @@
 from generatorPreProcessor import GeneratorPreProcessor
-import sys
+from packaging import version
 
 # Validating:
 # ---
@@ -30,6 +30,10 @@ def preprocessor(attributes=None, fullConfig=None):
     if len(g.getErrors()) == 0:
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
+
+        # OpenShift version must be 4.6 or higher
+        if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
+            g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:

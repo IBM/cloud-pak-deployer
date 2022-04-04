@@ -41,6 +41,12 @@
   include_role:
     name: cp4d-configure-ldap
 
+# Cloud Pak for Data Custom role configuration
+- name: Handle Cloud Pak for Data custom roles configuration
+  include_role:
+    name: cp4d-roles
+  when: "all_config.cp4d_role is defined"  
+
 # Cloud Pak for Data User Groups Configuration
 - when: "all_config.cp4d_user_group_configuration is defined"
   block:
@@ -126,6 +132,21 @@
       - _ae_instance != {} 
       - ( _ae_instance.state | default("installed") ) == "installed"
 
+    # Cartridge: DataStage
+    - set_fact:
+        _datastage_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+      vars:
+        cartridge_name: "datastage"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+    - name: Provision DataStage instances
+      include_role:
+        name: provision_datastage_instance
+      when: 
+      - _datastage_instance != {} 
+      - ( _datastage_instance.state | default("installed") ) == "installed"
+
+
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"
   block:
@@ -143,7 +164,7 @@
         name: instance_configuration
       loop: "{{ cp4d_instance_config.cartridges | default([]) }}"
       loop_control:
-        loop_var: cp4d_instance
+        loop_var: _cp4d_instance
 
 # Handle cp4d connections
 - name: Handle Cloud Pak for Data Connections

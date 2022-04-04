@@ -6,7 +6,7 @@
 - name: Create cloud-pak-node-fix.sh script to change node settings
   template:
     src: cloud-pak-node-fix.j2
-    dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-node-fix.sh"
+    dest: "{{ status_dir }}/openshift/cloud-pak-node-fix.sh"
 - name: Create secret for DaemonSet cloud-pak-node-fix-ds
   shell: |
     if ! oc get secret -n kube-system cloud-pak-node-fix;then
@@ -15,14 +15,14 @@
 - name: Set data for secret cloud-pak-node-fix
   shell: |
     oc set data secret/cloud-pak-node-fix -n kube-system \
-      --from-file=cloud-pak-node-fix.sh="{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-node-fix.sh"
+      --from-file=cloud-pak-node-fix.sh="{{ status_dir }}/openshift/cloud-pak-node-fix.sh"
 - name: Create DaemonSet to change node settings via crontab
   template:
     src: cloud-pak-node-fix-ds.j2
-    dest: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-node-fix-ds.yaml"
+    dest: "{{ status_dir }}/openshift/cloud-pak-node-fix-ds.yaml"
 - name: Create DaemonSet cloud-pak-node-fix-ds
   shell: |
     if oc get ds -n kube-system cloud-pak-crontab-ds;then
       oc delete ds -n kube-system cloud-pak-crontab-ds
     fi
-    oc apply -f {{ cloud_pak_prepare_ocp_temp_dir.path }}/cloud-pak-node-fix-ds.yaml
+    oc apply -f {{ status_dir }}/openshift/cloud-pak-node-fix-ds.yaml
