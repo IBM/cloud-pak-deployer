@@ -2,6 +2,29 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Getting started
+
+1. Open your terminal and then type
+```
+$ git clone git@github.ibm.com:CloudPakDeployer/cloud-pak-deployer.git
+```
+This clones the repo
+
+2. cd into the ui folder and type
+```
+cd cloud-pak-deployer/deployer-web/ui/
+```
+
+3. Install the required dependencies
+```
+$ npm install
+```
+
+4. To run the React project.
+```
+$ npm start
+```
+
 ## Available Scripts
 
 In the project directory, you can run:
