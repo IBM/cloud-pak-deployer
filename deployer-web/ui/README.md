@@ -12,7 +12,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 2. cd into the ui folder and type
     ```
-    cd cloud-pak-deployer/deployer-web/ui/
+    $ cd cloud-pak-deployer/deployer-web/ui/
     ```
 
 3. Install the required dependencies
