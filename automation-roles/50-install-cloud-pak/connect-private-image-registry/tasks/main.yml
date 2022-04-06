@@ -43,14 +43,9 @@
     private_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
     private_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
 
-- name: Check that the deployer can connect to the private image registry
-  uri:
-    url: "https://{{ private_registry_url }}/v2"
-    method: GET
-    force_basic_auth: yes
-    user: "{{ private_registry_auth.split(':')[0] }}"
-    password: "{{ private_registry_auth.split(':')[1] }}"
-    follow_redirects: all
-    validate_certs: no
-    status_code: 200
-  when: cloud_platform != 'ibm-cloud'
+- name: Try to login to the specified registry at {{ private_registry_url }}
+  shell: |
+    skopeo login {{ private_registry_url }} \
+      --username "{{ private_registry_auth.split(':')[0] }}" \
+      --password "{{ private_registry_auth.split(':')[1] }}" \
+      --tls-verify=false
