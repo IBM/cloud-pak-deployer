@@ -2,8 +2,14 @@
   debug:
     msg: "Installing cartridges for CP4D cluster {{ current_cp4d_cluster.project }}"
 
-- name: Prepare OpenShift operator subscriptions for each of the selected cp4d cartridges
-  include_tasks: cp4d-create-subscriptions.yml
+- name: Create OpenShift operator subscriptions for each of the selected cp4d cartridges
+  include_tasks: cp4d-subscriptions-create.yml
+  loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge
+
+- name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
+  include_tasks: cp4d-subscriptions-wait.yml
   loop: "{{ current_cp4d_cluster.cartridges | default([]) }}"
   loop_control:
     loop_var: current_cp4d_cartridge
