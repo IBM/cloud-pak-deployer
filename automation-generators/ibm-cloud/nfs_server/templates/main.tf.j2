@@ -11,6 +11,9 @@ resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_dat
     profile        = "{{ generator.attributes.infrastructure.storage_profile }}"
     zone           = "{{ generator.attributes.infrastructure.zone }}"
     capacity       = {{ generator.attributes.infrastructure.volume_size_gb}}
+    lifecycle {
+      ignore_changes = [ resource_group ]
+    }
 }
 
 resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" {
@@ -42,6 +45,9 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
     volumes = [
         ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_data.id
     ]
+    lifecycle {
+      ignore_changes = [ resource_group ]
+    }
 }
 
 
