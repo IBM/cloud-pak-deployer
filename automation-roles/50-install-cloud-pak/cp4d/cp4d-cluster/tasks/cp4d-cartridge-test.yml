@@ -1,14 +1,43 @@
 ---
-- name: CPD TEST CARTRIDGES - Show cartridges to be installed
-  debug:
-    var: current_cp4d_cluster.cartridges
 
-- name: CPD TEST CARTRIDGES - Delete obsolete cartridges
-  include_role:
-    name: cp4d-cartridge-remove
+- block:
+  - name: CPD TEST CARTRIDGES - START {{ _test_cp4d_cartridge.name }}
+    shell:
+      python3 {{ role_path }}/scripts/next-cartridge.py "{{ all_config | to_yaml | b64encode }}" {{ _test_cp4d_cartridge.name }}
+    register: _next_cartridge_return_value
 
-- name: CPD TEST CARTRIDGES - Install selected cartridge {{ current_cp4d_cartridge.name }} for the cluster 
-  include_role:
-    name: cp4d-cartridge-install
-  vars:
-    _v_cartrige_install_wait_retries: 45
+  - set_fact:
+      all_config: "{{ (_next_cartridge_return_value.stdout | from_json)['updated_config'] }}"
+
+  - debug:
+      var: all_config
+
+  - set_fact:
+      _test_current_cp4d_cluster: "{{ all_config.cp4d | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?project=='{{ _test_cp4d_cluster.project }}']
+
+  - name: CPD TEST CARTRIDGES - Show cluster and cartridges to be installed
+    debug:
+      var: _test_current_cp4d_cluster
+
+  - name: CPD TEST CARTRIDGES - Remove obsolete cartridges
+    include_role:
+      name: cp4d-cartridge-remove
+    vars:
+      _p_current_cp4d_cluster: "{{ _test_current_cp4d_cluster }}"
+
+  - name: CPD TEST CARTRIDGES - Install selected cartridge {{ _test_cp4d_cartridge.name }} for the cluster 
+    include_role:
+      name: cp4d-cartridge-install
+    vars:
+      _v_cartrige_install_wait_retries: 45
+      _p_current_cp4d_cluster: "{{ _test_current_cp4d_cluster }}"
+      
+  - name: CPD TEST CARTRIDGES - FINISH {{ _test_cp4d_cartridge.name }}
+    debug:
+      msg: "Finished testing cartridge"
+  when:
+  - _test_cp4d_cartridge.name != 'lite'
+  - _test_cp4d_cartridge.name != 'cp-foundation'
