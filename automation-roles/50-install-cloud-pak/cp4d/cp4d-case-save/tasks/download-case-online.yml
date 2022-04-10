@@ -32,4 +32,8 @@
         --case {{ _current_case_inventory.search_string }} \
         --version {{ _current_cp4d_cartridge.case_version }} \
         --outputdir {{ _case_dir }} {{ _dependency }}
+    register: _case_save
+    retries: 5
+    delay: 5
+    until: _case_save.rc==0
   when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

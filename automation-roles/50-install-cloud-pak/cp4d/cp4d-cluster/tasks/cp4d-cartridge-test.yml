@@ -1,0 +1,14 @@
+---
+- name: CPD TEST CARTRIDGES - Show cartridges to be installed
+  debug:
+    var: current_cp4d_cluster.cartridges
+
+- name: CPD TEST CARTRIDGES - Delete obsolete cartridges
+  include_role:
+    name: cp4d-cartridge-remove
+
+- name: CPD TEST CARTRIDGES - Install selected cartridge {{ current_cp4d_cartridge.name }} for the cluster 
+  include_role:
+    name: cp4d-cartridge-install
+  vars:
+    _v_cartrige_install_wait_retries: 45
