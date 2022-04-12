@@ -144,3 +144,15 @@ Use this method when the private registry used by the OpenShift cluster cannot b
 #### On the bastion server that is connected to the OpenShift cluster
 * Restore the deployer, config and status directories to the bastion server
 * Use the instructions in [Existing OpenShift](/cp-deploy/run/run-on-existing-openshift) to start the deployer. Run the `cp-deploy.sh` command with the `--air-gapped` flag to indicate images have to be mirrored from the portable registry to the private registry and the appropriate OpenShift configuration is done
+
+### Inventory properties for debug and DaemonSet images
+Specifically when running the deployer on IBM Cloud ROKS, certain OpenShift settings must be applied using DaemonSets in the `kube-system` namespace. Additionally, the deployer uses the `oc debug node` commands to retrieve `kubelet` and `crio` configuration files from the compute nodes.
+
+The default container images used by the DaemonSets and `oc debug node` commands are based on Red Hat's Universal Base Image and will be pulled from Red Hat registries. This is typically not possible in air-gapped installations, hence different images must be used. It is your responsibility to copy suitable (preferably UBI) images to an image registry that is connected to the OpenShift cluster. Also, if a pull secret is needed to pull the image(s) from the registry, you must create the associated secret in the `kube-system` OpenShift project.
+
+To configure alternative container images for the deployer to use, set the following properties in the `.inv` file kept in your configuration's `inventory` directory. If you do not set these values, the deployer assumes that the default images are used for DaemonSet and `oc debug node`.
+
+| Property             | Description                                            | Example                        |
+| -------------------- | ------------------------------------------------------ | ------------------------------ |
+| cpd_oc_debug_image   | Container image to be used for the `oc debug` command. | `registry.redhat.io/rhel8/support-tools:latest` |
+| cpd_ds_image         | Container image to be used for the DaemonSets that configure Kubelet, etc. | `registry.access.redhat.com/ubi8/ubi:latest` |
