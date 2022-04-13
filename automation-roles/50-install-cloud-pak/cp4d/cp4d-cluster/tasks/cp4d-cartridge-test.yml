@@ -28,13 +28,36 @@
     vars:
       _p_current_cp4d_cluster: "{{ _test_current_cp4d_cluster }}"
 
+  - name: CPD TEST CARTRIDGES - Log start of cartridge {{ _test_cp4d_cartridge.name }} installation
+    lineinfile:
+      path: "{{ status_dir }}/log/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-installation-test.log"
+      line: "START - {{ lookup('pipe','date') }} - {{ current_cp4d_cluster.openshift_cluster_name }} - {{ current_cp4d_cluster.project }} - {{ _test_cp4d_cartridge.name }}"
+      state: present
+      create: True
+
   - name: CPD TEST CARTRIDGES - Install selected cartridge {{ _test_cp4d_cartridge.name }} for the cluster 
     include_role:
       name: cp4d-cartridge-install
     vars:
       _v_cartrige_install_wait_retries: 45
       _p_current_cp4d_cluster: "{{ _test_current_cp4d_cluster }}"
-      
+
+  - name: CPD TEST CARTRIDGES - Log successful completion of cartridge {{ _test_cp4d_cartridge.name }} installation
+    lineinfile:
+      path: "{{ status_dir }}/log/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-installation-test.log"
+      line: "SUCCESS - {{ lookup('pipe','date') }} - {{ current_cp4d_cluster.openshift_cluster_name }} - {{ current_cp4d_cluster.project }} - {{ _test_cp4d_cartridge.name }}"
+      state: present
+      create: True
+    when: _cp4d_cartridges_installed_successfully
+
+  - name: CPD TEST CARTRIDGES - Log failed completion of cartridge {{ _test_cp4d_cartridge.name }} installation
+    lineinfile:
+      path: "{{ status_dir }}/log/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-installation-test.log"
+      line: "FAILED - {{ lookup('pipe','date') }} - {{ current_cp4d_cluster.openshift_cluster_name }} - {{ current_cp4d_cluster.project }} - {{ _test_cp4d_cartridge.name }}"
+      state: present
+      create: True
+    when: not _cp4d_cartridges_installed_successfully
+
   - name: CPD TEST CARTRIDGES - FINISH {{ _test_cp4d_cartridge.name }}
     debug:
       msg: "Finished testing cartridge"
