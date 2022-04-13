@@ -22,7 +22,7 @@
 
   - set_fact:
       _cp4d_cartridges_installed_successfully: False
-    when: _wait_cartridges_result.rc!=0 or _wait_cartridges_result.stdout.find('cartridge installation successfully completed') != -1
+    when: _wait_cartridges_result.rc!=0
 
   - name: Fail if there was an error waiting for the cartridge(s) to be installed
     fail:
@@ -31,7 +31,4 @@
     - not _cp4d_cartridges_installed_successfully
     - not (cpd_test_cartridges | default(False) | bool)
 
-  when:
-  - current_cp4d_cartridge.name != 'lite'
-  - current_cp4d_cartridge.name != 'cp-foundation'
-  - (current_cp4d_cartridge.state | default('installed')) == 'installed'
+  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'
