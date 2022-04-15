@@ -82,15 +82,19 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
   cr_status_completed=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
 
-  # Check if cartridge has been defined
+  # Check if current cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
-    current_cartridge_installed=true
+    if [[ "$c" == "$current_cartridge_name" ]];then
+      current_cartridge_installed=true
+    fi
     continue
   fi
 
-  # Check if cartridge has been defined
+  # Check if cartridge status attribute has been defined
   if [[ "$cr_status_attribute" == "null" ]] || [[ "$cr_status_attribute" == "" ]];then
-    current_cartridge_installed=true
+    if [[ "$c" == "$current_cartridge_name" ]];then
+      current_cartridge_installed=true
+    fi
     continue
   fi
 
@@ -119,7 +123,7 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     ((number_pending=number_pending+1))
   else
     # If current cartridge is completed, return completion status
-    if [ "$cr_cartridge_name" == "$current_cartridge_name" ];then
+    if [[ "$c" == "$current_cartridge_name" ]];then
       current_cartridge_installed=true
     fi
   fi
