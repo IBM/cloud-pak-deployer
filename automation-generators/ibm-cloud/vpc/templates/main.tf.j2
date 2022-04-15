@@ -8,6 +8,9 @@ resource "ibm_is_vpc" "{{generator.attributes.name | replace("-", "_") }}" {
     default_network_acl_name = "{{generator.attributes.name }}-acl-default"
     default_security_group_name = "{{generator.attributes.name }}-sg-default"
     default_routing_table_name = "{{generator.attributes.name }}-rt-default"
+    lifecycle {
+      ignore_changes = [ resource_group ]
+    }
 }
 
 {% for rule in generator.attributes.allow_inbound %}

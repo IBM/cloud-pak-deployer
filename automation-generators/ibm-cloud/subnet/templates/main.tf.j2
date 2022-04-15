@@ -8,8 +8,9 @@ resource "ibm_is_subnet" "{{generator.attributes.name | replace("-", "_") }}" {
 {% if generator.attributes.network_acl_name is defined %}
     network_acl = ibm_is_network_acl.{{generator.attributes.network_acl_name | replace("-", "_")}}.id
 {% endif %}
-## TODO: Add resource group again
-#    resource_group = data.ibm_resource_group.thisresourcegroup.id
-## END TODO
+   resource_group = data.ibm_resource_group.thisresourcegroup.id
+   lifecycle {
+     ignore_changes = [ resource_group ]
+   }
 }
 
