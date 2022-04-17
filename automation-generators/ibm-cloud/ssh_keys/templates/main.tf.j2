@@ -4,6 +4,9 @@ resource "ibm_is_ssh_key" "{{generator.attributes.name | replace("-", "_") }}" {
   name       = "{{generator.attributes.name}}"
   public_key = join(" ", [ split(" ","{{sshkey_value}}")[0], split(" ","{{sshkey_value}}")[1] ])
   resource_group = data.ibm_resource_group.thisresourcegroup.id
+  lifecycle {
+    ignore_changes = [ public_key, resource_group ]
+  }
 }
 
 {% endif %}

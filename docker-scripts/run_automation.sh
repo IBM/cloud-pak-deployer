@@ -49,7 +49,6 @@ env|environment)
   run_cmd="ansible-playbook -i ${INV_DIR}"
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
-      run_cmd+=" --extra-vars cpd_check_only=True"
       run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
     elif [ "$CP_CONFIG_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
@@ -69,7 +68,10 @@ env|environment)
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
+  run_cmd+=" --extra-vars cpd_check_only=${CHECK_ONLY}"
   run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
+  run_cmd+=" --extra-vars cpd_skip_mirror=${CPD_SKIP_MIRROR}"
+  run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"

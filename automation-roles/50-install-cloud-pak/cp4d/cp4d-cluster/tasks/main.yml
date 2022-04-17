@@ -80,6 +80,7 @@
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - not (cpd_airgap | bool)
+  - not (cpd_skip_mirror | bool)
 
 # Mirror from portable registry if airgapped
 - name: Mirror images for Cloud Pak for Data from portable to private registry {{ current_cp4d_cluster.image_registry_name }}
@@ -97,7 +98,8 @@
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - cpd_airgap | bool
-
+  - not (cpd_skip_mirror | bool)
+  
 - name: Create catalog sources for entitled registry when not using case files
   include_tasks: create-catalog-sources-entitled.yml
   when: not _use_case_files

@@ -1,11 +1,13 @@
 ---
 - set_fact:
     _ds_instance_name: "{{ _ds_instance.metadata.name }}"
+    _ds_cartridge_listed: {}
 
 - set_fact:
     _ds_cartridge_listed: "{{ _ds_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
   vars:
     _query_instance: "[?name=='{{ _ds_instance_name }}']" 
+  when: _ds_cartridge.instances is defined
 
 - when:
     - _ds_cartridge_listed == {}
