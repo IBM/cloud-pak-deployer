@@ -81,6 +81,7 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   cr_name=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
   cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
   cr_status_completed=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
+  cr_operator_label=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_operator_label')
 
   # Check if current cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
@@ -121,6 +122,10 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   log "Info: Status of $cr_cr object $cr_name is $cr_status"
   if [ "$cr_status" != "$cr_status_completed" ];then
     ((number_pending=number_pending+1))
+    # If the CR installation has failed, extract the logs
+    if [[ "$cr_operator_label" != "" ]] && [[ "${cr_status,,}" == "fail"* ]];then
+      oc logs -n ibm-common-services -l $cr_operator_label > $status_dir/$project-$c-operator.log
+    fi
   else
     # If current cartridge is completed, return completion status
     if [[ "$c" == "$current_cartridge_name" ]];then
