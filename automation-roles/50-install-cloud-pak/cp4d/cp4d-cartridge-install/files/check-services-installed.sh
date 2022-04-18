@@ -124,7 +124,8 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     ((number_pending=number_pending+1))
     # If the CR installation has failed, extract the logs
     if [[ "$cr_operator_label" != "" ]] && [[ "${cr_status,,}" == "fail"* ]];then
-      oc logs -n ibm-common-services -l $cr_operator_label > $status_dir/$project-$c-operator.log
+      oc get po -n $project > $status_dir/log/$project-$c-pods.log
+      oc logs -n ibm-common-services -l app.kubernetes.io/name=$cr_operator_label > $status_dir/log/$project-$c-operator.log
     fi
   else
     # If current cartridge is completed, return completion status
