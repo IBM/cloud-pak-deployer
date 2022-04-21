@@ -6,7 +6,7 @@
 
 - name: Retrieve /etc/crio/crio.conf
   shell: |
-    oc debug no/{{ _ocp_compute_nodes.stdout }} -- cat /host/etc/crio/crio.conf > {{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf
+    {{ lookup('template','oc-debug-crio.j2') }}
   register: debug_node_result
   retries: 3
   delay: 10
@@ -14,22 +14,22 @@
 
 - name: Set pids_limit
   community.general.ini_file:
-    path: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf"
+    path: "{{ status_dir }}/openshift/cp4d-crio.conf"
     section: "crio.runtime"
     option: pids_limit
     value: "12288"
 
 # - name: Set default_ulimits
 #   community.general.ini_file:
-#     path: "{{ cloud_pak_prepare_ocp_temp_dir.path }}/cp4d-crio.conf"
+#     path: "{{ status_dir }}/openshift/cp4d-crio.conf"
 #     section: "crio.runtime"
 #     option: default_ulimits
 #     value: '[ "nofile=66560:66560" ]'
 
 - name: Create CRI-O Machine Config
   include_tasks: create-crio-config.yml
-  when: cloud_platform != 'ibm-cloud'
+  when: _mco_exists
 
-- name: Apply CRI-O configuration for IBM Cloud ROKS
-  include_tasks: ibmcloud-apply-crio-config.yml
-  when: cloud_platform == 'ibm-cloud'
+- name: Apply CRI-O configuration if the Machine Config Operator does not exist
+  include_tasks: non-mco-apply-crio-config.yml
+  when: not _mco_exists

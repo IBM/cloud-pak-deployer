@@ -27,15 +27,15 @@ spec:
           apiVersion: vsphereprovider.openshift.io/v1beta1
           credentialsSecret:
             name: vsphere-cloud-credentials
-          diskGiB: 120
+          diskGiB: {{ _vm_definition.boot_disk_size_gb }}
           kind: VSphereMachineProviderSpec
-          memoryMiB: 65536
+          memoryMiB: {{ _vm_definition.memory_mb }}
           metadata:
             creationTimestamp: null
           network:
             devices:
-            - networkName: {{ _vsphere_config.network }}
-          numCPUs: 16
+            - networkName: {{ _vm_definition.network | default(_vsphere_config.network) }}
+          numCPUs: {{ _vm_definition.vcpu }}
           numCoresPerSocket: 2
           snapshot: ""
           template: {{ _infrastructure_id }}-rhcos
@@ -43,7 +43,6 @@ spec:
             name: worker-user-data
           workspace:
             datacenter: {{ _vsphere_config.datacenter }}
-            datastore: {{ _vsphere_config.datastore }}
+            datastore: {{ _vm_definition.datastore | default(_vsphere_config.datastore) }}
             folder: {{ _vsphere_config.folder }}
-            resourcePool: {{ _vsphere_config.resource_pool }}
             server: {{ _vsphere_config.vcenter }}

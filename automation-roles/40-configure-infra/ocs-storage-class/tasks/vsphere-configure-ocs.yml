@@ -13,6 +13,16 @@
   debug:
     var: _vsphere_config
 
+- set_fact:
+    _vm_definition: "{{ all_config.vm_definition | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_storage.storage_vm_definition }}']
+
+- name: Show VM Definition
+  debug:
+    var: _vm_definition
+
 - name: Retrieve infrastructure ID
   shell: |
     oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
@@ -21,20 +31,14 @@
 - set_fact:
     _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"
 
-- name: Create temporary file for the MachineSet object
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: _machineset_tempfile
-
-- name: Generate MachineSet file {{ ocscluster_tempfile.path }}
+- name: Generate MachineSet file {{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
   template:
     src: vsphere-ocs-machineset.j2
-    dest: "{{ _machineset_tempfile.path }}"
+    dest: "{{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml"
 
 - name: Create or update machine set
   shell:
-    oc apply -f {{ _machineset_tempfile.path }}
+    oc apply -f {{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
 
 - name: Get number of storage nodes in machine set
   shell: |

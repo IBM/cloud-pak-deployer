@@ -219,8 +219,9 @@ def preprocessor(attributes=None, fullConfig=None):
 
     g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
+    openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('cp4d_version').isRequired()
-    g('openshift_storage_name').isRequired()
+    g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional()
     g('change_node_settings').isOptional()
@@ -244,8 +245,7 @@ def preprocessor(attributes=None, fullConfig=None):
 
             if 'openshift_cluster_name' in ge:
                 if ge['openshift_cluster_name'] not in openshift_names:
-                    g.appendError(msg="Wasn't able to find a cluster with name:"+ge['openshift_cluster_name']+' ')
-
+                    g.appendError(msg="Was not able to find an OpenShift cluster with name: "+ge['openshift_cluster_name'])
                 else:
                     # we made sure the cluster referenced by openshift_cluster_name exists
                     # now check if it has a openshift_storage with the name cp4d.openshift_storage_name
@@ -284,9 +284,22 @@ def preprocessor(attributes=None, fullConfig=None):
                     check_cp_foundation(c)
                 if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
                     g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
-                if "state" in c:
-                    if c['state'] not in ['installed','removed']:
-                        g.appendError(msg='Cartridge state must be "installed" or "removed"')
+            if "state" in c:
+                if c['state'] not in ['installed','removed']:
+                    g.appendError(msg='Cartridge state must be "installed" or "removed"')
+            if "state" not in c or c['state']=='installed':
+                # Check if there are dependencies and the depencies will be installed too
+                if "dependencies" in c:
+                    for dep in c['dependencies']:
+                        if 'name' not in dep:
+                            g.appendError(msg='If dependencies are specifed, a name is required for every dependency')
+                        else:
+                            dep_found=False
+                            for dc in ge['cartridges']:
+                                if dc['name']==dep['name'] and ('state' not in dc or dc['state']=='installed'):
+                                    dep_found=True
+                            if not dep_found:
+                                g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
         if cpFoundationFound==False:
             g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')

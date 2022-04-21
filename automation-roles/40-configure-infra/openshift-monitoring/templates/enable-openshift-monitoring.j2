@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-monitoring-config
+  namespace: openshift-monitoring
+data:
+  config.yaml: |
+    enableUserWorkload: true
+{% if ((_oc_remote_rewrite_url|length > 0) or (_oc_monitoring_persist_sc|length > 0))  %}    
+    prometheusK8s: 
+{%- endif %}    
+{% if _oc_remote_rewrite_url|length > 0 %}
+      remoteWrite:
+      - url: {{ _oc_remote_rewrite_url }}
+{% endif %}
+{% if _oc_monitoring_persist_sc|length > 0 %}
+      volumeClaimTemplate:
+        spec:
+          storageClassName: {{ _oc_monitoring_persist_sc }}
+          volumeMode: Filesystem
+          resources:
+            requests:
+              storage: {{ _oc_monitoring_persist_size_gb }}Gi
+{%- endif %}

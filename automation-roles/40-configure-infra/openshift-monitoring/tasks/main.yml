@@ -1,0 +1,21 @@
+---
+- set_fact:
+    _p_openshift_monitoring: {}
+
+- when: "all_config.openshift_monitoring is defined"
+  block:
+    - debug:
+        var: all_config.openshift_monitoring
+
+    - set_fact:
+        _p_openshift_monitoring: "{{ all_config.openshift_monitoring | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?openshift_cluster_name=='{{ current_openshift_cluster.name }}']
+          
+    - name: Show OpenShift monitoring for current cluster
+      debug:
+        var: _p_openshift_monitoring
+
+- include_tasks: configure-openshift-monitoring.yml
+  when: _p_openshift_monitoring != {}

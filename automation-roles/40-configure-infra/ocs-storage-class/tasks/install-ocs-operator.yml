@@ -5,20 +5,14 @@
       oc create ns openshift-storage
     fi
 
-- name: Create temporary file for the OCS operator
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: _ocs_operator_tempfile
-
 - name: Generate OCS operator file {{ _ocs_operator_tempfile.path }}
   template:
     src: ocs-operator.j2
-    dest: "{{ _ocs_operator_tempfile.path }}"
+    dest: "{{status_dir}}/openshift/{{ current_openshift_cluster.name }}-ocs-operator.yaml"
 
 - name: Create OCS operator
   shell: |
-    oc apply -f {{ _ocs_operator_tempfile.path }}
+    oc apply -f {{status_dir}}/openshift/{{ current_openshift_cluster.name }}-ocs-operator.yaml
 
 - name: Wait until OCS Operator CSV has status Succeeded
   shell: |

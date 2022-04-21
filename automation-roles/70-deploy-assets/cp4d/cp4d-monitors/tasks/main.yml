@@ -3,19 +3,55 @@
   debug:
     msg: "Deploying Monitors for CP4D cluster {{ current_cp4d_cluster.project }}"
 
-- when: all_config.cp4d_monitors is defined
+- set_fact:
+    _p_openshift_monitoring: {}
+
+- set_fact:
+    _p_openshift_monitoring: "{{ all_config.openshift_monitoring | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
+  when: "all_config.openshift_monitoring is defined"          
+
+- when:
+    - all_config.cp4d_monitors is defined
+    - _p_openshift_monitoring == {} or (_p_openshift_monitoring != {} and not _p_openshift_monitoring.user_workload == "enabled")
+  fail: 
+    msg: "Deploying CP4D monitors is only allowed when OpenShift User Workload monitoring is set to 'enabled'.\ 
+          Confirm the 'openshift_monitoring' in the configuration"
+
+- when: 
+    - all_config.cp4d_monitors is defined
+    - _p_openshift_monitoring != {}
+    - _p_openshift_monitoring.user_workload == "enabled"
   block:
-    - name: "Get all cp4d_monitors current CP4D cluster {{ current_cp4d_cluster.project }} and OpenShift cluster name {{ current_cp4d_cluster.openshift_cluster_name }}"
-      set_fact:
-        _cp4d_monitors: "{{ all_config.cp4d_monitors | json_query(monitors_current_cluster) | default([]) }}"
-      vars:
-        monitors_current_cluster: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+    - name: Validate Cloud Pak for Data ServiceMonitor is configured
+      shell: |
+        oc get ServiceMonitor -n {{ current_cp4d_cluster.project }} --no-headers | grep zen-watchdog | wc -l
+      register: _cp4d_servicemonitor_exists
 
     - name: Make a temporary work folder available
       tempfile:
         path: "{{status_dir}}/cp4d"
         state: directory
       register: _cloud_pak_service_monitor_dir
+
+    - when: _cp4d_servicemonitor_exists.stdout == "0"
+      block:
+        - name: Create Cloud Pak for Data ServiceMonitor for project {{ current_cp4d_cluster.project }}
+          template:
+            src: cp4d-service-monitor.j2
+            dest: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d-service-monitor-config.yaml"
+        
+        - name: Create Cloud Pak for Data ServiceMonitor
+          shell: |
+            oc create -f "{{ _cloud_pak_service_monitor_dir.path }}/cp4d-service-monitor-config.yaml"
+
+    - name: "Get all cp4d_monitors current CP4D cluster {{ current_cp4d_cluster.project }} and OpenShift cluster name {{ current_cp4d_cluster.openshift_cluster_name }}"
+      set_fact:
+        _cp4d_monitors: "{{ all_config.cp4d_monitors | json_query(monitors_current_cluster) | default([]) }}"
+      vars:
+        monitors_current_cluster: "[? cp4d_instance=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
 
     - name: "Loop through each cp4d_monitor of CP4D cluster {{ current_cp4d_cluster.project }}"
       include_tasks: cp4d-monitors.yml

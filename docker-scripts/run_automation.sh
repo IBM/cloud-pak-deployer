@@ -68,7 +68,10 @@ env|environment)
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
+  run_cmd+=" --extra-vars cpd_check_only=${CHECK_ONLY}"
   run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
+  run_cmd+=" --extra-vars cpd_skip_mirror=${CPD_SKIP_MIRROR}"
+  run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
@@ -93,6 +96,7 @@ env|environment)
   mkdir -p ${STATUS_DIR}/log
   run_cmd+=" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
+  set -o pipefail
   eval $run_cmd
   ;;
 
@@ -112,7 +116,7 @@ vault)
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
   run_cmd+=" --extra-vars secret_group_param=${VAULT_GROUP}"
   run_cmd+=" --extra-vars secret_name=${VAULT_SECRET}"
-  run_cmd+=" --extra-vars secret_payload=${VAULT_SECRET_VALUE}"
+  run_cmd+=" --extra-vars \"secret_payload=\\\"${VAULT_SECRET_VALUE}\\\"\""
   run_cmd+=" --extra-vars secret_file=${VAULT_SECRET_FILE}"
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"

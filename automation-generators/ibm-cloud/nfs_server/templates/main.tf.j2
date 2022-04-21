@@ -5,28 +5,29 @@ data "ibm_is_image" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.infrastructure.image}}"
 }
 
-{% for storage in generator.attributes.storage %}
-resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}" {
-    name           = "{{generator.attributes.name}}-disk-{{storage.name}}"
+resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_data" {
+    name           = "{{ generator.attributes.name }}-data"
     resource_group = data.ibm_resource_group.thisresourcegroup.id
-    profile        = "{{storage.profile}}"
-    zone           = "{{generator.attributes.infrastructure.zone }}"
-    capacity       = {{storage.size}}
+    profile        = "{{ generator.attributes.infrastructure.storage_profile }}"
+    zone           = "{{ generator.attributes.infrastructure.zone }}"
+    capacity       = {{ generator.attributes.infrastructure.volume_size_gb}}
+    lifecycle {
+      ignore_changes = [ resource_group ]
+    }
 }
-{% endfor %}
 
 resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" {
     name = "{{generator.attributes.name }}"
     resource_group =  data.ibm_resource_group.thisresourcegroup.id
-    profile = "{{generator.attributes.infrastructure.profile}}"
+    profile = "{{ generator.attributes.infrastructure.profile }}"
     keys = [
         {% for item in generator.attributes.infrastructure.get('keys',[]) %}
             data.ibm_is_ssh_key.{{item | replace("-", "_") }}.id
         {% endfor %}
     ]
-    zone = "{{generator.attributes.infrastructure.zone }}"
-    vpc = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
-    image = data.ibm_is_image.{{generator.attributes.name | replace("-", "_") }}.id
+    zone = "{{ generator.attributes.infrastructure.zone }}"
+    vpc = ibm_is_vpc.{{ generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
+    image = data.ibm_is_image.{{ generator.attributes.name | replace("-", "_") }}.id
     
     boot_volume {
         name = "{{generator.attributes.name }}-disk-boot"
@@ -42,16 +43,14 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
 
 
     volumes = [
-        {% for storage in generator.attributes.storage %}
-        ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}.id{{ "," if not loop.last else "" }}
-        {% endfor %}
+        ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_data.id
     ]
+    lifecycle {
+      ignore_changes = [ resource_group ]
+    }
 }
 
 
-
-{# nice to have for debugging #}
-
-/* generator.attributes:
+/* FOR DEBUGGING: generator.attributes:
 {{generator.attributes | to_nice_json}}
 */

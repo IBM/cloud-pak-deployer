@@ -1,8 +1,8 @@
 ---
 - name: Create KubeletConfig
   include_tasks: create-kubelet-config.yml
-  when: cloud_platform != 'ibm-cloud'
+  when: _mco_exists
 
-- name: Apply KubeletConfig for IBM Cloud ROKS
-  include_tasks: ibmcloud-apply-kubelet-config.yml
-  when: cloud_platform == 'ibm-cloud'
+- name: Apply KubeletConfig if the Machine Config Operator does not exist
+  include_tasks: non-mco-apply-kubelet-config.yml
+  when: not _mco_exists
