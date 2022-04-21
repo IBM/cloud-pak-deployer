@@ -33,10 +33,9 @@
 
   # ---------- WAIT FOR SUBSCRIPTION ----------------------
 
-  - name: Wait for the {{inst_package}} subscription
+  - name: Wait for the {{ _subscription_name }} subscription
     shell: |
-      subscription_name="{{ _subscription_name }}"
-      csv=$(oc get subscription -n openshift-operators ${subscription_name} -o json | jq -r .status.currentCSV)
+      csv=$(oc get subscription -n openshift-operators {{ _subscription_name }} -o json | jq -r .status.currentCSV)
       if [[ "$csv" == "null" ]]; then
         echo "null"
       else
