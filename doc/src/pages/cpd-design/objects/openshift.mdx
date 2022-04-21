@@ -73,40 +73,43 @@ openshift:
 
 #### Property explanation OpenShift clusters on IBM Cloud (ROKS)
 
-| Property                              | Description                                                                                                | Mandatory                      | Allowed values         |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------------- |
-| name                                  | Name of the OpenShift cluster                                                                              | Yes                            |                        |
-| managed                               | Is the ROKS cluster managed by this deployer? See note below.                                              | No                             | True, False            |
-| ocp_version                           | ROKS Kubernetes version. If you want to install `4.10`, specify `"4.10"`  | Yes                            |                        |
-| compute_flavour                       | Type of compute node to be used                                                                            | Yes                            | [link]                 |
-| compute_nodes                         | Total number of compute nodes. This must be a factor of the number of subnets                              | Yes                            | Integer                |
-| resource_group_name                   | IBM Cloud resource group for the ROKS cluster                                                              | Yes, inferred                  |                        |
-| infrastructure.type                   | Type of infrastructure to provision ROKS cluster on                                                        | No                             | vpc (default), classic |
-| infrastructure.vpc_name               | Name of the VPC if type is `vpc`                                                                           | Yes, inferrred                 | Existing VPC           |
-| infrastructure.subnets                | List of subnets within the VPC to use. Either 1 or 3 subnets must be specified                             | Yes                            | Existing subnet        |
-| upstream_dns                          | Defines alternative upstream DNS servers(s) for OpenShift                                                  | No                             |                        |
-| upstream_dns.name                     | Name of the upstream DNS server                                                                            | Yes                            |                        |
-| upstream_dns_zones                    | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes                            |                        |
-| upstream_dns.dns_servers              | List of DNS servers which must be used to resolve host names within the specified zones                    | Yes                            |                        |
-| openshift_storage.storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                                          | Yes                            |                        |
-| openshift_storage.storage_type        | Type of storage class to create in the OpenShift cluster                                                   | Yes                            | nfs, ocs or pwx        |
-| openshift_storage.nfs_server_name     | Name of the NFS server within the VPC                                                                      | Yes if `storage_type` is `nfs` | Existing `nfs_server`  |
-| openshift_storage.ocs_storage_label   | Label to be used for the dedicated OCS nodes in the cluster                                                | Yes if `storage_type` is `ocs` |                        |
-| openshift_storage.ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                  | Yes if `storage_type` is `ocs` |                        |
-| openshift_storage.pwx_etcd_location   | IBM Cloud location where the etcd service will be deployed. This is typically the same region as the ROKS cluster | Yes if `storage_type` is `pwx` | |
-| openshift_storage.pwx_storage_size_gb | Size of the Portworx storage that will be provisioned    | Yes if `storage_type` is `pwx` | |
-| openshift_storage.pwx_storage_iops    | IOPS for the storage volumes that will be provisioned    | Yes if `storage_type` is `pwx` | |
-| openshift_storage.pwx_storage_profile | IOPS storage tier the storage volumes that will be provisioned    | Yes if `storage_type` is `pwx` | |
-| openshift_storage.stork_version       | Version of the Portworx storage orchestration layer for Kubernetes | Yes if `storage_type` is `pwx` | |
-| openshift_storage.portworx_version    | Version of the Portworx storage provider                 | Yes if `storage_type` is `pwx` | |
-
-
-<InlineNotification kind="warning">
-  When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift
-  Container Storage/OCS), the minimum version of OpenShift is 4.7.
-</InlineNotification>
+| Property                | Description                                                                               | Mandatory      | Allowed values         |
+|-------------------------|-------------------------------------------------------------------------------------------|----------------|------------------------|
+| name                    | Name of the OpenShift cluster                                                             | Yes            |                        |
+| managed                 | Is the ROKS cluster managed by this deployer? See note below.                             | No             | True, False            |
+| ocp_version             | ROKS Kubernetes version. If you want to install `4.10`, specify `"4.10"`                  | Yes            |                        |
+| compute_flavour         | Type of compute node to be used                                                           | Yes            | [link]                 |
+| compute_nodes           | Total number of compute nodes. This must be a factor of the number of subnets             | Yes            | Integer                |
+| resource_group_name     | IBM Cloud resource group for the ROKS cluster                                             | Yes, inferred  |                        |
+| infrastructure.type     | Type of infrastructure to provision ROKS cluster on                                       | No             | vpc (default), classic |
+| infrastructure.vpc_name | Name of the VPC if type is `vpc`                                                          | Yes, inferrred | Existing VPC           |
+| infrastructure.subnets  | List of subnets within the VPC to use. Either 1 or 3 subnets must be specified            | Yes            | Existing subnet        |
+| openshift_logging[]     | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)     | No             |                        |
+| upstream_dns[]          | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                | No             |                        |
+| openshift_storage[]     | List of storage definitions to be defined on OpenShift, see below for further explanation | No             |                        |
 
 The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
+
+##### openshift_storage[] - OpenShift storage definitions
+| Property            | Description                                                                                     | Mandatory                      | Allowed values        |
+|---------------------|-------------------------------------------------------------------------------------------------|--------------------------------|-----------------------|
+| openshift_storage[] | List of storage definitions to be defined on OpenShift                                          | No                             |                       |
+| storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                               | Yes                            |                       |
+| storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | nfs, ocs or pwx       |
+| nfs_server_name     | Name of the NFS server within the VPC                                                           | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
+| ocs_storage_label   | Label to be used for the dedicated OCS nodes in the cluster                                     | Yes if `storage_type` is `ocs` |                       |
+| ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                                                       | Yes if `storage_type` is `ocs` |                       |
+| pwx_etcd_location   | Location where the etcd service will be deployed, typically the same region as the ROKS cluster | Yes if `storage_type` is `pwx` |                       |
+| pwx_storage_size_gb | Size of the Portworx storage that will be provisioned                                           | Yes if `storage_type` is `pwx` |                       |
+| pwx_storage_iops    | IOPS for the storage volumes that will be provisioned                                           | Yes if `storage_type` is `pwx` |                       |
+| pwx_storage_profile | IOPS storage tier the storage volumes that will be provisioned                                  | Yes if `storage_type` is `pwx` |                       |
+| stork_version       | Version of the Portworx storage orchestration layer for Kubernetes                              | Yes if `storage_type` is `pwx` |                       |
+| portworx_version    | Version of the Portworx storage provider                                                        | Yes if `storage_type` is `pwx` |                       |
+
+<InlineNotification kind="warning">
+  When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
+</InlineNotification>
+
 
 ### OpenShift on vSphere
 
@@ -140,31 +143,36 @@ openshift:
 
 ```
 
-#### Property explanation OpenShift clusters on IBM Cloud (ROKS)
+#### Property explanation OpenShift clusters on vSphere
 
-| Property                                    | Description                                                                                                                        | Mandatory                      | Allowed values           |
-| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ------------------------ |
-| name                                        | Name of the OpenShift cluster                                                                                                      | Yes                            |                          |
-| domain_name                                 | Domain name of the cluster, this will also depict the route to the API and ingress endpoints                                       | Yes                            |                          |
-| ocp_version                                 | OpenShift version.  If you want to install `4.10`, specify `"4.10"`  | Yes                            |                          |
-| control_plane_nodes                         | Total number of control plane nodes, typically 3                                                                                   | Yes                            | Integer                  |
-| control_plane_vm_definition                 | `vm_definition` object that will be used to define number of vCPUs and memory for the control plane nodes                          | Yes                            | Existing `vm_definition` |
-| compute_nodes                               | Total number of compute nodes                                                                                                      | Yes                            | Integer                  |
-| compute_vm_definition                       | `vm_definition` object that will be used to define number of vCPUs and memory for the compute nodes                                | Yes                            | Existing `vm_definition` |
-| api_vip                                     | Virtual IP address that the installer will provision for the API server                                                            | Yes                            |                          |
-| ingress_vip                                 | Virtual IP address that the installer will provision for the ingress server                                                        | Yes                            |                          |
-| upstream_dns                                | Defines alternative upstream DNS servers(s) for OpenShift                                                                          | No                             |                          |
-| upstream_dns.name                           | Name of the upstream DNS server                                                                                                    | Yes                            |                          |
-| upstream_dns_zones                          | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s)                         | Yes                            |                          |
-| upstream_dns.dns_servers                    | List of DNS servers which must be used to resolve host names within the specified zones                                            | Yes                            |                          |
-| openshift_storage.storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                                  | Yes                            |                          |
-| openshift_storage.storage_type              | Type of storage class to create in the OpenShift cluster                                                                           | Yes                            | nfs or ocs               |
-| openshift_storage.nfs_server_name           | Name of the NFS server within the VPC                                                                                              | Yes if `storage_type` is `nfs` | Existing `nfs_server`    |
-| openshift_storage.ocs_version   | Version of the OCS operator. If not specified, this will default to the `ocp_version`  | No |                        |
-| openshift_storage.ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                        | Yes if `storage_type` is `ocs` |                          |
-| openshift_storage.ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                          | Yes if `storage_type` is `ocs` |                          |
-| openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On vSphere clusters, `thin` is usually available after OpenShift installation | Yes if `storage_type` is `ocs` |                          |
-| openshift_storage.storage_vm_definition     | VM Definition that defines the virtual machine attributes for the OCS nodes | Yes if `storage_type` is `ocs` | |
+| Property                    | Description                                                                                               | Mandatory | Allowed values           |
+|-----------------------------|-----------------------------------------------------------------------------------------------------------|-----------|--------------------------|
+| name                        | Name of the OpenShift cluster                                                                             | Yes       |                          |
+| domain_name                 | Domain name of the cluster, this will also depict the route to the API and ingress endpoints              | Yes       |                          |
+| ocp_version                 | OpenShift version.  If you want to install `4.10`, specify `"4.10"`                                       | Yes       |                          |
+| control_plane_nodes         | Total number of control plane nodes, typically 3                                                          | Yes       | Integer                  |
+| control_plane_vm_definition | `vm_definition` object that will be used to define number of vCPUs and memory for the control plane nodes | Yes       | Existing `vm_definition` |
+| compute_nodes               | Total number of compute nodes                                                                             | Yes       | Integer                  |
+| compute_vm_definition       | `vm_definition` object that will be used to define number of vCPUs and memory for the compute nodes       | Yes       | Existing `vm_definition` |
+| api_vip                     | Virtual IP address that the installer will provision for the API server                                   | Yes       |                          |
+| ingress_vip                 | Virtual IP address that the installer will provision for the ingress server                               | Yes       |                          |
+| openshift_logging[]         | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                     | No        |                          |
+| upstream_dns[]              | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                | No        |                          |
+| openshift_storage[]         | List of storage definitions to be defined on OpenShift, see below for further explanation                 | No        |                          |
+
+
+##### openshift_storage[] - OpenShift storage definitions
+| Property                  | Description                                                                                                                         | Mandatory                      | Allowed values        |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-----------------------|
+| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                              | No                             |                       |
+| storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                                   | Yes                            |                       |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                            | Yes                            | nfs or ocs            |
+| nfs_server_name           | Name of the NFS server within the VPC                                                                                               | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
+| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                               | No                             |                       |
+| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                         | Yes if `storage_type` is `ocs` |                       |
+| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                           | Yes if `storage_type` is `ocs` |                       |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On vSphere clusters, `thin` is usually available after OpenShift installation | Yes if `storage_type` is `ocs` |                       |
+| storage_vm_definition     | VM Definition that defines the virtual machine attributes for the OCS nodes                                                         | Yes if `storage_type` is `ocs` |                       |
 
 ### OpenShift on AWS
 
@@ -194,29 +202,23 @@ openshift:
 
 #### Property explanation OpenShift clusters on AWS (ROSA)
 
-| Property                                    | Description                                                                                                                    | Mandatory                      | Allowed values |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | -------------- |
-| name                                        | Name of the OpenShift cluster                                                                                                  | Yes                            |                |
-| ocp_version                                 | OpenShift version version, specified as `x.y.z` | Yes  |                |
-| compute_flavour                             | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory          | Yes                            |                |
-| infrastructure                              | Infrastructure properties                                                                                                      | Yes                            |                |
-| infrastructure.type                         | Type of OpenShift cluster on AWS. Currently only `rosa` is allowed.                                                            | Yes                            | `rosa`         |
-| infrastructure.aws_region                   | Region of AWS where cluster is deployed.                                                                                       | Yes                            |                |
-| infrastructure.multi_zone                   | Determines whether the ROSA cluster is deployed across multiple availability zones. Default is True.                           | No                             | True, False    |
-| infrastructure.use_sts                      | Determines whether AWS Security Token Service must be used. Default is False.                                     | No                             | True, False    |
-| infrastructure.machine_cdr                  | Machine CIDR if existing VPC and subnets are used, for example 10.243.0.0/16. Do not specify if subnets are not specified.    | No                             | CIDR       |
-| infrastructure.subnet_ids                   | Existing public and private subnet IDs in the VPC to be used for the ROSA cluster.  Must be specified in combination with machine_cidr. | No               | Existing subnet IDs  |
-| compute_nodes                               | Total number of compute nodes                                                                                                  | Yes                            | Integer        |
-| upstream_dns                                | Defines alternative upstream DNS servers(s) for OpenShift                                                                      | No                             |                |
-| upstream_dns.name                           | Name of the upstream DNS server                                                                                                | Yes                            |                |
-| upstream_dns_zones                          | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s)                     | Yes                            |                |
-| upstream_dns.dns_servers                    | List of DNS servers which must be used to resolve host names within the specified zones                                        | Yes                            |                |
-| openshift_storage.storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                              | Yes                            |                |
-| openshift_storage.storage_type              | Type of storage class to create in the OpenShift cluster                                                                       | Yes                            | ocs            |
-| openshift_storage.ocs_version   | Version of the OCS operator. If not specified, this will default to the `ocp_version`  | No |                        |
-| openshift_storage.ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                    | Yes if `storage_type` is `ocs` |                |
-| openshift_storage.ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                      | Yes if `storage_type` is `ocs` |                |
-| openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On ROSA clusters, `gp2` i usually available after OpenShift installation | No                             |                |
+| Property                   | Description                                                                                                                             | Mandatory | Allowed values      |
+|----------------------------|-----------------------------------------------------------------------------------------------------------------------------------------|-----------|---------------------|
+| name                       | Name of the OpenShift cluster                                                                                                           | Yes       |                     |
+| ocp_version                | OpenShift version version, specified as `x.y.z`                                                                                         | Yes       |                     |
+| compute_flavour            | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory                   | Yes       |                     |
+| infrastructure             | Infrastructure properties                                                                                                               | Yes       |                     |
+| infrastructure.type        | Type of OpenShift cluster on AWS. Currently only `rosa` is allowed.                                                                     | Yes       | `rosa`              |
+| infrastructure.aws_region  | Region of AWS where cluster is deployed.                                                                                                | Yes       |                     |
+| infrastructure.multi_zone  | Determines whether the ROSA cluster is deployed across multiple availability zones. Default is True.                                    | No        | True, False         |
+| infrastructure.use_sts     | Determines whether AWS Security Token Service must be used. Default is False.                                                           | No        | True, False         |
+| infrastructure.machine_cdr | Machine CIDR if existing VPC and subnets are used, for example 10.243.0.0/16. Do not specify if subnets are not specified.              | No        | CIDR                |
+| infrastructure.subnet_ids  | Existing public and private subnet IDs in the VPC to be used for the ROSA cluster.  Must be specified in combination with machine_cidr. | No        | Existing subnet IDs |
+| compute_nodes              | Total number of compute nodes                                                                                                           | Yes       | Integer             |
+| upstream_dns[]             | Upstream DNS servers(s), see (#upstream-dns-servers)                                                                                    | No        |                     |
+| openshift_logging[]        | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                   | No        |                     |
+| upstream_dns[]             | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                              | No        |                     |
+| openshift_storage[]        | List of storage definitions to be defined on OpenShift, see below for further explanation                                               | No        |                     |
 
 When deploying the ROSA cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
 ```
@@ -232,11 +234,19 @@ When deploying the ROSA cluster within an existing VPC, you must specify the `ma
 
 In the above case, all referenced subnets have an address space of `/27` so that 6 subnets fit within the `/24` address space.
 
-### OpenShift on Microsoft Azure (ARO)
+##### openshift_storage[] - OpenShift storage definitions
+| Property                  | Description                                                                                                                    | Mandatory                      | Allowed values |
+|---------------------------|--------------------------------------------------------------------------------------------------------------------------------|--------------------------------|----------------|
+| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                         | No                             |                |
+| storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                              | Yes                            |                |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                       | Yes                            | ocs            |
+| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                          | No                             |                |
+| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                    | Yes if `storage_type` is `ocs` |                |
+| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                      | Yes if `storage_type` is `ocs` |                |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On ROSA clusters, `gp2` i usually available after OpenShift installation | No                             |                |
 
-<InlineNotification kind="warning">
-  WIP: "openshift_storage" of type "nfs" is still yet to be designed/developed
-</InlineNotification>
+
+### OpenShift on Microsoft Azure (ARO)
 
 ```
 openshift:
@@ -253,10 +263,6 @@ openshift:
     ocs_storage_label: ocs
     ocs_storage_size_gb: 512
     ocs_dynamic_storage_class: managed-premium
-  # - storage_name: nfs-storage
-  #   storage_type: nfs
-  #   nfs_server_name: sample-nfs
-
 ```
 
 #### Property explanation for OpenShift cluster on Microsoft Azure (ARO)
@@ -267,22 +273,29 @@ openshift:
   instance, the value is used by the process which downloads and installs the `oc` client. Please, specify the value according to what OCP version will be provisioned.
 </InlineNotification>
 
-| Property                                    | Description                                                                                                                                                                                                                                | Mandatory                      | Allowed values                      |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------ | ----------------------------------- |
-| name                                        | Name of the OpenShift cluster                                                                                                                                                                                                              | Yes                            |                                     |
-| azure_aro_name                              | Name of the `azure_aro` infrastructure object                                                                                                                                                                                              | Yes                            |                                     |
-| subdomain_name                              | A random unique alphabetic string that is used as a part of the full domain address, i.e. for the `westeurope` location the console URL will be: `https://console-openshift-console.apps.<subdomain_name>.westeurope.aroapp.io/dashboards` | Yes                            |                                     |
-| ocp_version                                 | The version of the `oc` client which will be installed during the provisioning to operate the cluster.  If you want to install `4.10`, specify `"4.10"` | Yes                            |                                     |
-| network                                     | Cluster network attributes                                                                                                                                                                                                                 | Yes                            |                                     |
-| network.pod_cidr                            | CIDR of pod network                                                                                                                                                                                                                        | Yes                            | Must be a minimum of /18 or larger. |
-| network.service_cidr                        | CIDR of service network                                                                                                                                                                                                                    | Yes                            | Must be a minimum of /18 or larger. |
-| openshift_storage                           | OpenShift storage attributes                                                                                                                                                                                                               | Yes                            |                                     |
-| openshift_storage.storage_name              | Name of the storage                                                                                                                                                                                                                        | Yes                            |                                     |
-| openshift_storage.storage_type              | Type of storage class to create in the OpenShift cluster                                                                                                                                                                                   | Yes                            | `ocs` or `nfs`                      |
-| openshift_storage.ocs_version   | Version of the OCS operator. If not specified, this will default to the `ocp_version`  | No |                        |
-| openshift_storage.ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id                                                                                               | Yes if `storage_type` is `ocs` |                                     |
-| openshift_storage.ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                                                                                                                  | Yes if `storage_type` is `ocs` |                                     |
-| openshift_storage.ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select `managed-premium`                                                                                                                                          | Yes if `storage_type` is `ocs` | `managed-premium`                   |
+| Property             | Description                                                                                                                                                                                                                                | Mandatory | Allowed values                      |
+|----------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|-------------------------------------|
+| name                 | Name of the OpenShift cluster                                                                                                                                                                                                              | Yes       |                                     |
+| azure_aro_name       | Name of the `azure_aro` infrastructure object                                                                                                                                                                                              | Yes       |                                     |
+| subdomain_name       | A random unique alphabetic string that is used as a part of the full domain address, i.e. for the `westeurope` location the console URL will be: `https://console-openshift-console.apps.<subdomain_name>.westeurope.aroapp.io/dashboards` | Yes       |                                     |
+| ocp_version          | The version of the `oc` client which will be installed during the provisioning to operate the cluster.  If you want to install `4.10`, specify `"4.10"`                                                                                    | Yes       |                                     |
+| network              | Cluster network attributes                                                                                                                                                                                                                 | Yes       |                                     |
+| network.pod_cidr     | CIDR of pod network                                                                                                                                                                                                                        | Yes       | Must be a minimum of /18 or larger. |
+| network.service_cidr | CIDR of service network                                                                                                                                                                                                                    | Yes       | Must be a minimum of /18 or larger. |
+| openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                                                                                                                      | No        |                                     |
+| upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                                                                                                                 | No        |                                     |
+| openshift_storage[]  | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                                                                                                  | No        |                                     |
+
+##### openshift_storage[] - OpenShift storage definitions
+| Property                  | Description                                                                                                                                  | Mandatory                      | Allowed values    |
+|---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-------------------|
+| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                                       | No                             |                   |
+| storage_name              | Name of the storage                                                                                                                          | Yes                            |                   |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `ocs` or `nfs`    |
+| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
+| ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `ocs` |                   |
+| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `ocs` |                   |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select `managed-premium`                                            | Yes if `storage_type` is `ocs` | `managed-premium` |
 
 ### Existing OpenShift
 
@@ -308,20 +321,23 @@ openshift:
 ```
 
 #### Property explanation for existing OpenShift clusters
-| Property | Description                                                          | Mandatory | Allowed values |
-| -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| name     | Name of the OpenShift cluster                                        | Yes       |  |
-| ocp_version | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes        | |
-| cluster_name | Name of the cluster (part of the FQDN)                           | Yes | |
-| domain_name | Domain name of the cluster (part of the FQDN)                     | Yes | |
-| upstream_dns | Defines alternative upstream DNS servers(s) for OpenShift         | No | |
-| upstream_dns.name | Name of the upstream DNS server                              | Yes | |
-| upstream_dns_zones | List of zones (domain names) of which host name resolution must be resolved to the specified DNS server(s) | Yes | |
-| upstream_dns.dns_servers | List of DNS servers which must be used to resolve host names within the specified zones | Yes | |
-| openshift_storage.storage_name | Name of the storage definition, to be referenced by the Cloud Pak | Yes |  |
-| storage_classes.storage_type | Type of storage class to use in the OpenShift cluster | Yes | nfs, ocs, custom* |
-| openshift_storage.ocp_storage_class_file | OpenShift storage class to use for file storage, defaults to `managed-nfs-storage` | Yes if `storage_type` is `custom` | |
-| openshift_storage.ocp_storage_class_block | OpenShift storage class to use for block storage, defaults to `managed-nfs-storage` | Yes if `storage_type` is `custom` | |
+| Property            | Description                                                                                                     | Mandatory | Allowed values |
+|---------------------|-----------------------------------------------------------------------------------------------------------------|-----------|----------------|
+| name                | Name of the OpenShift cluster                                                                                   | Yes       |                |
+| ocp_version         | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes       |                |
+| cluster_name        | Name of the cluster (part of the FQDN)                                                                          | Yes       |                |
+| domain_name         | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                |
+| openshift_logging[] | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                           | No        |                |
+| upstream_dns[]      | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                      | No        |                |
+| openshift_storage[] | List of storage definitions to be defined on OpenShift, see below for further explanation                       | No        |                |
+
+##### openshift_storage[] - OpenShift storage definitions
+| Property                | Description                                                                         | Mandatory                         | Allowed values    |
+|-------------------------|-------------------------------------------------------------------------------------|-----------------------------------|-------------------|
+| storage_name            | Name of the storage definition, to be referenced by the Cloud Pak                   | Yes                               |                   |
+| storage_type            | Type of storage class to use in the OpenShift cluster                               | Yes                               | nfs, ocs, custom* |
+| ocp_storage_class_file  | OpenShift storage class to use for file storage, defaults to `managed-nfs-storage`  | Yes if `storage_type` is `custom` |                   |
+| ocp_storage_class_block | OpenShift storage class to use for block storage, defaults to `managed-nfs-storage` | Yes if `storage_type` is `custom` |                   |
 
 **The custom storage_type can be used in case you want to use a non-standard storage class(es). In this case the storage class(es) must be already configured on the OCP cluster and set in the respective ocp_storage_class_file and ocp_storage_class_block variables**
 
@@ -351,11 +367,12 @@ If you want to remove the upstream DNS that was previously configured, you can c
 See https://docs.openshift.com/container-platform/4.8/networking/dns-operator.html for more information about the operator that is configured by specifying upstream DNS servers.
 
 #### Property explanation
-| Property      | Description                                                       | Mandatory | Allowed values      |
-| ------------- | ----------------------------------------------------------------- | --------- | ------------------- |
-| name          | Name of the upstream DNS entry                                    | Yes       |                     |
-| zones         | Specification of one or more zone for which the DNS server is applicable | Yes    |                 |
-| dns_servers   | One or more DNS servers (host:port) that will resolve host names in the specified zone | Yes    |                 |
+| Property       | Description                                                                            | Mandatory | Allowed values |
+|----------------|----------------------------------------------------------------------------------------|-----------|----------------|
+| upstream_dns[] | List of alternative upstream DNS servers(s) for OpenShift                              | No        |                |
+| name           | Name of the upstream DNS entry                                                         | Yes       |                |
+| zones          | Specification of one or more zone for which the DNS server is applicable               | Yes       |                |
+| dns_servers    | One or more DNS servers (host:port) that will resolve host names in the specified zone | Yes       |                |
 
 ### OpenShift logging
 
@@ -394,7 +411,7 @@ openshift_logging:
 
 #### Property explanation
 | Property                          | Description                                                                                                       | Mandatory | Allowed values                     |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --------- | ---------------------------------- |
+|-----------------------------------|-------------------------------------------------------------------------------------------------------------------|-----------|------------------------------------|
 | openshift_cluster_name            | Name of the OpenShift cluster to configure the logging for                                                        | Yes       |                                    |
 | cluster_wide_logging              | Defines which classes of log records will be sent to the log collectors                                           | No        |                                    |
 | cluster_wide_logging.input        | Specifies OpenShift log records class to forwawrd                                                                 | Yes       | application, infrastructure, audit |
