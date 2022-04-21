@@ -5,6 +5,9 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 
 # Cloud Pak configuration
 
+- [Cloud Pak for Data](#cp4d)
+- [Cloud Pak for Integration](#cp4i)
+
 ### `cp4d`
 Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
 ```
@@ -92,3 +95,229 @@ spec:
   additionalTrustedCA:
     name: cpd404-ca-bundle
 ```
+
+## `cp4i`
+Defines the Cloud Pak for Integration installation to be configured on the OpenShift cluster(s).
+
+```
+cp4i:
+
+- project: cp4i
+  openshift_cluster_name: {{ env_id }}
+  openshift_storage_name: nfs-rook-ceph
+  cp4i_version: 2021.4.1
+  use_case_files: True
+  use_top_level_operator: False
+  top_level_operator_channel: v1.5
+  top_level_operator_case_version: 2.5.0
+  operators_in_all_namespaces: True
+ 
+  instances:
+
+  - name: integration-navigator
+    type: platform-navigator
+    license: L-RJON-C7QG3S
+    channel: v5.2
+    case_version: 1.5.0
+```
+
+
+#### OpenShift projects
+
+The immediate content of the cp4i object is actually a list of OpenShift projects (namespaces). There can be more than one project and instances can be created in separate projects.
+
+```yaml
+cp4i:
+- project: cp4i
+  ...
+
+- project: cp4i-ace
+  ...
+
+- project: cp4i-apic
+  ...
+
+```
+
+#### Operator channels, CASE versions, license IDs
+
+Before you run the Cloud Pak Deployer be sure that the correct operator channels are defined for the selected instance types. Some products require a license ID, please check the documentation of each product for the correct license. If you decide to use CASE files instead of the IBM Operator Catalog (more on that below) make sure that you selected the correct CASE versions - please refer: https://github.com/IBM/cloud-pak/tree/master/repo/case 
+
+
+### Main properties
+
+The following properties are defined on the project level:
+
+| Property                        | Description |
+|---------------------------------|-------------|
+| project                         | The name of the OpenShift project that will be created and used for the installation of the defined instances. |
+| openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. |
+| openshift_storage_name          | Reference to the storage definition that exists in the *openshift* object (please see above). The definition must include the class name of the file storage type and the class name of the block storage type. |
+| cp4i_version                    | The version of the Cloud Pak for Integration (e.g. 2021.4.1) |
+| use_case_files                  | (Optional) Boolean value, *True* or *False*. If not specified, the default value is *False*. The property defines if the CASE files are used for installation. If it is True then the operator catalogs are created from the CASE files. If it is False, the *IBM Operator Catalog* from the entitled registry is used. |
+| use_top_level_operator          | (Optional) Boolean value, *True* or *False*. If not specified, the default value is *False*. If it is *True* then the CP4I top-level operator that installs all other operators is used. Otherwise, only the operators for the selected instance types are installed. |
+| top_level_operator_channel      | Needed if the *use_top_level_operator* is *True* otherwise, it is ignored. Specifies the channel of the top-level operator. |
+| top_level_operator_case_version | Needed if the *use_top_level_operator* is *True* otherwise, it is ignored. Specifies the CASE package version of the top-level operator. |
+| operators_in_all_namespaces     | (Optional) Boolean value, *True* or *False*. If not specified, the default value is *False*. It defines whether the operators are visible in all namespaces or just in the specific namespace where they are needed.  |
+| instances                       | List of the instances that are going to be created (please see below). |
+
+>Note: Despite the properties *use_case_files*, *use_top_level_operator* and *operators_in_all_namespaces* are defined as optional, they are actually crucial for the way of execution of the installation process. If any of them is omitted, it is assumed that the default *False* value is used. If none of them exists, it means that all are *False*. In this case, it means that the *IBM Operator Catalog* is used and only the needed operators for specified instance types are installed in the specific namespace. 
+
+### Properties of the individual instances
+
+The *instance* property contains one or more instances definitions. Each instance must have a unique name. There can be more the one instance of the same type.
+
+#### Naming convention for instance types
+
+For each instance definition, an **instance type** must be specified. We selected the type names that are as much as possible similar to the naming convention used in the Platform Navigator use interface. The following table shows all existing types:
+
+
+| Instance type              | Description/Product name |
+|----------------------------|-------------|
+| platform-navigator         | Platform Navigator |
+| api-management             | IBM API Connect  |
+| automation-assets          | Automation assets a.k.a Asset repo |
+| enterprise-gateway         | IBM Data Power |
+| event-endpoint-management  | Event endpoint manager - managing asynchronous APIs |
+| event-streams              | IBM Event Streams - Kafka |
+| high-speed-transfer-server | Aspera HSTS |
+| integration-dashboard      | IBM App Connect Integration Dashboard |
+| integration-design         | IBM App Connect Designer |
+| integration-tracing        | Operations Dashboard |
+| messaging                  | IBM MQ |
+
+
+#### Platform navigator
+
+The Platform Navigator is defined as one of the instance types. There is typically only one instance of it. The exception would be an installation in two or more completely separate namespaces (see the CP4I documentation). Special attention is paid to the installation of the Navigator. The Cloud Pak Deployer will install the Navigator instance first, before any other instance, and it will wait until the instance is ready (this could take up to 45 minutes).  
+
+When the installation is completed, you will find the **admin** user password in the **status/cloud-paks/cp4i-<cluster_name>-cp4i-PN-access.txt** file. Of course, you can obtain the password also from the **platform-auth-idp-credentials** secret in **ibm-common-services** namespace. 
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **platform-navigator** | |
+| license                    | License ID           | L-RJON-C7QG3S |
+| channel                    | Subscription channel | v5.2          |
+| case_version               | CASE version         | 1.5.0         |
+
+
+#### API management (IBM API Connect)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **api-management** | |
+| license                    | License ID             | L-RJON-C7BJ42 |
+| version                    | Version of API Connect | 10.0.4.0      |
+| channel                    | Subscription channel   | v2.4          |
+| case_version               | CASE version           | 3.0.5         |
+
+
+#### Automation assets (Asset repo)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **automation-assets** | |
+| license                    | License ID             | L-PNAA-C68928 |
+| version                    | Version of Asset repo  | 2021.4.1-2 |
+| channel                    | Subscription channel   | v1.4 |
+| case_version               | CASE version           | 1.4.2 |
+
+
+#### Enterprise gateway (IBM Data Power)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **enterprise-gateway** | |
+| admin_password_secret      | The name of the secret where admin password is stored. The default name is used if you leave it empty. |  |
+| license                    | License ID             | L-RJON-BYDR3Q |
+| version                    | Version of Data Power | 10.0-cd |
+| channel                    | Subscription channel   | v1.5 |
+| case_version               | CASE version           | 1.5.0 |
+
+
+#### Event endpoint management
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **event-endpoint-management** | |
+| license                    | License ID             | L-RJON-C7BJ42 |
+| version                    | Version of Event endpoint manager | 10.0.4.0 |
+| channel                    | Subscription channel   | v2.4 |
+| case_version               | CASE version           | 3.0.5 |
+
+
+#### Event streams
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **event-streams** | |
+| version                    | Version of Event streams | 10.5.0 |
+| channel                    | Subscription channel   | v2.5 |
+| case_version               | CASE version           | 1.5.2 |
+
+
+#### High speed transfer server (Aspera HSTS)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **high-speed-transfer-server** | |
+| aspera_key                 | A license key for the Aspera software | |
+| redis_version              | Version of the Redis database | 5.0.9 |
+| version                    | Version of Aspera HSTS | 4.0.0 |
+| channel                    | Subscription channel   | v1.4 |
+| case_version               | CASE version           | 1.4.0 |
+
+
+#### Integration dashboard (IBM App Connect Dashboard)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **integration-dashboard** | |
+| license                    | License ID             | L-APEH-C79J9U |
+| version                    | Version of IBM App Connect | 12.0 |
+| channel                    | Subscription channel   | v3.1 |
+| case_version               | CASE version           | 3.1.0 |
+
+
+#### Integration design (IBM App Connect Designer)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **integration-design** | |
+| license                    | License ID             | L-KSBM-C87FU2 |
+| version                    | Version of IBM App Connect | 12.0 |
+| channel                    | Subscription channel   | v3.1 |
+| case_version               | CASE version           | 3.1.0 |
+
+
+#### Integration tracing (Operation dashborad)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **integration-tracing** | |
+| version                    | Version of Integration tracing | 2021.4.1-2 |
+| channel                    | Subscription channel   | v2.5 |
+| case_version               | CASE version           | 2.5.2 |
+
+
+#### Messaging (IBM MQ)
+
+| Property                   | Description | Sample value for 2021.4.1 |
+|----------------------------|-------------|----------------------------|
+| name                       | Unique name within the cluster using only lowercase alphanumerics and "-" | |
+| type                       | It must be **messaging** | |
+| queue_manager_name         | The name of the initial queue. Default is *QUICKSTART* | |
+| license                    | License ID             | L-RJON-C7QG3S |
+| version                    | Version of IBM MQ | 9.2.4.0-r1 |
+| channel                    | Subscription channel   | v1.7 |
+| case_version               | CASE version           | 1.7.0 |
