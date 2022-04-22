@@ -1,0 +1,20 @@
+---
+
+- name: Find Platform Navigator instance definition
+  set_fact:
+    _pn_instance_def: "{{ current_cp4i_cluster.instances | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='platform-navigator']
+
+- set_fact:
+    _pn_defined: True
+
+- set_fact:
+    _pn_defined: False
+  when: (_pn_instance_def.name | default("")) == ""
+
+- name: Create Platfrom Navigator instance
+  include_tasks: create-platform-navigator-instance.yml
+  when: _pn_defined
+

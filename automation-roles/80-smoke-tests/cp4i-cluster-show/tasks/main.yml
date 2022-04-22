@@ -1,0 +1,34 @@
+---
+
+# TODO(SJ): (Optional) show cluster details
+# ---------------------------------------------------
+# Make this role independent so that it is possible
+# to use it outside of the deployment flow.
+# Make sure that OpenShift CLI exists and that we are
+# logged to the cluster.
+# Ref: similar implementation for CP4D 
+
+
+# !!!!!! OBTAIN HERE THE PLATFORM NAVIGATOR INSTANCE FROM THE CONFIGURATION FILE
+
+- name: Extract admin password from OpenShift secret
+  shell: |
+    oc get secrets -n ibm-common-services platform-auth-idp-credentials -ojsonpath='{.data.admin_password}' | base64 -d && echo ""
+  register: admin_pwd
+
+# - name: Get route to the Platform Navigator
+#   shell: |
+#     oc get PlatformNavigator {{current_cp4i_cluster.platform_navigator.instance_name}} --namespace={{current_cp4i_cluster.project}} -o json | jq -r .status.metadata.UIEndpoint
+#   register: pn_url
+
+- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Store CP4I Platform Navigator into log file
+  copy:
+    content: "admin password: {{ admin_pwd.stdout }}"
+    dest: "{{ status_dir }}/cloud-paks/cp4i-{{ current_cp4i_cluster.openshift_cluster_name }}-{{ current_cp4i_cluster.project }}-PN-access.txt"
+
+#      Platform Navigator URL: "{{ pn_url.stdout }}"

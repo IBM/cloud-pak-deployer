@@ -22,9 +22,16 @@
       secret_payload: "{{ all_config }}"
       secret_group: "{{ environment_name }}"
 
-  - name: Cloud Pak smoke tests
+  - name: Cloud Pak for Data smoke tests
     include_role:
       name: cp4d-cluster-smoke-tests
     loop: "{{ all_config.cp4d | default([]) }}"
     loop_control:
       loop_var: current_cp4d_cluster
+
+  - name: Cloud Pak for Integration smoke tests
+    include_role:
+      name: cp4i-cluster-smoke-tests
+    loop: "{{ all_config.cp4i | default([]) }}"
+    loop_control:
+      loop_var: current_cp4i_cluster

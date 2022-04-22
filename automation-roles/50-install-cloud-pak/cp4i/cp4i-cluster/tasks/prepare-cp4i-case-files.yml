@@ -1,0 +1,21 @@
+---
+
+- set_fact:
+    _case_dir: "{{ status_dir }}/case"
+
+- name: Check if directory for CASE files exists
+  stat:
+    path: "{{ _case_dir }}"
+  register: _case_dir_exists
+
+- name: Create directory for CASE files if it does not exist
+  file:
+    path: "{{ _case_dir }}"
+    state: directory
+  when: not _case_dir_exists.stat.exists
+
+- name: Loop through instances and download CASE files for defined types
+  include_tasks: download-case-file.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance

@@ -1,0 +1,22 @@
+apiVersion: datapower.ibm.com/v1beta3
+kind: DataPowerService
+metadata:
+  name: {{current_cp4i_instance.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  license:
+    accept: true
+    use: nonproduction
+    license: {{current_cp4i_instance.license}}
+  replicas: 1
+  resources:
+    limits:
+      memory: 4Gi
+    requests:
+      cpu: 1
+      memory: 4Gi
+  version: "{{current_cp4i_instance.version}}"
+  users:
+    - name: admin
+      accessLevel: privileged
+      passwordSecret: {{current_cp4i_instance.admin_password_secret}}
