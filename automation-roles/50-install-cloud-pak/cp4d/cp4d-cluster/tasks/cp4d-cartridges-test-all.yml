@@ -1,0 +1,13 @@
+---
+- set_fact:
+    _test_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
+- debug:
+    var: _test_cp4d_cluster
+
+- name: CPD TEST CARTRIDGES installation of cartridge {{ _test_cp4d_cartridge.name }}
+  include_tasks: cp4d-cartridge-test.yml
+  loop: "{{ _test_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: _test_cp4d_cartridge
+

@@ -152,10 +152,10 @@
     _p_fs_project: "{{ foundational_services_project }}"
     _p_license_service: "{{ _cp_fs.license_service | default({}) }}"
 
-- name: Delete obsolete cartridges
-  include_role:
-    name: cp4d-cartridge-remove
+# Install selected cartridges
+- include_tasks: cp4d-cartridges.yml
+  when: not (cpd_test_cartridges | default(False) | bool) 
 
-- name: Install selected cartridges for the cluster
-  include_role:
-    name: cp4d-cartridge-install
+# Install all cartridges one by one
+- include_tasks: cp4d-cartridges-test-all.yml
+  when: (cpd_test_cartridges | default(False) | bool) 

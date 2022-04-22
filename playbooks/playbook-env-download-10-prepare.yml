@@ -22,6 +22,10 @@
         --case ibm-cp-datacore \
         --outputdir {{ status_dir }}/downloads \
         --no-dependency
+    register: _case_save
+    retries: 5
+    delay: 5
+    until: _case_save.rc==0
 
   - name: Retrieve case file for ibm-cp-datacore-* in the {{ status_dir }}/downloads directory
     find:
