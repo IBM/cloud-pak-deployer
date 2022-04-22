@@ -1,22 +1,34 @@
 ---
-- name: Wait until all cartridges have been installed, check logs in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-cartridges.log
-  script: |
-    check-services-installed.sh \
-      {{ status_dir }} \
-      {{ current_cp4d_cluster.project }} \
-      {{ wait_for_cartridges | default([]) | to_json | b64encode }} \
-      {{ cartridge_cr | to_json | b64encode }}
-  register: _wait_cartridges_result
-  until: _wait_cartridges_result.rc!=0 or _wait_cartridges_result.stdout.find('All cartridges successfully completed') != -1
-  retries: 120
-  delay: 120
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+- block:
+  - name: Wait until cartridge {{ current_cp4d_cartridge.name }} has been installed, check logs in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.log
+    script: |
+      check-services-installed.sh \
+        {{ status_dir }} \
+        {{ _p_current_cp4d_cluster.project }} \
+        {{ wait_for_cartridges | default([]) | to_json | b64encode }} \
+        {{ cartridge_cr | to_json | b64encode }} \
+        {{ current_cp4d_cartridge.name }}
+        
+    register: _wait_cartridges_result
+    until: _wait_cartridges_result.rc!=0 or _wait_cartridges_result.stdout.find('cartridge installation successfully completed') != -1
+    retries: "{{ _v_cartrige_install_wait_retries }}"
+    failed_when: False
+    delay: 120
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-- name: Fail if there was an error waiting for cartridges to be installed
-  fail:
-    msg: "{{ _wait_cartridges_result }}"
-  when: _wait_cartridges_result.rc!=0
+  - set_fact:
+      _cp4d_cartridges_installed_successfully: False
+    when: _wait_cartridges_result.rc!=0 or _wait_cartridges_result.stdout.find('cartridge installation successfully completed') == -1
+
+  - name: Fail if there was an error waiting for the cartridge(s) to be installed
+    fail:
+      msg: "{{ _wait_cartridges_result }}"
+    when: 
+    - not _cp4d_cartridges_installed_successfully
+    - not (cpd_test_cartridges | default(False) | bool)
+
+  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'

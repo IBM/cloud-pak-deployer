@@ -72,6 +72,7 @@ env|environment)
   run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
   run_cmd+=" --extra-vars cpd_skip_mirror=${CPD_SKIP_MIRROR}"
   run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
+  run_cmd+=" --extra-vars cpd_test_cartridges=${CPD_TEST_CARTRIDGES}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"

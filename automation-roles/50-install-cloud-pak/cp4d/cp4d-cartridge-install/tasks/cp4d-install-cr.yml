@@ -3,7 +3,7 @@
 - block:
   - name: Create custom resources for CP4D cartridge
     debug:
-      msg: "Creating custom resources for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ current_cp4d_cluster.project }}"
+      msg: "Creating custom resources for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
 
   # Validate whether the CR creation requires custom execution
   - name: Get CR installation details for cartridge
@@ -50,11 +50,11 @@
       - name: Prepare yaml file for custom resource {{ cr_cr }} for cartridge {{ current_cp4d_cartridge.name }}
         template:
           src: "{{ current_cp4d_cartridge.name }}-cr.j2"
-          dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+          dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
 
       - name: Create CR for cartridge {{ current_cp4d_cartridge.name }}
         command: |
-          oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+          oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
         
     when: 
     - cr_file_exists_result.stat.exists

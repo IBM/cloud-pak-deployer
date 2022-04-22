@@ -41,7 +41,6 @@ command_usage() {
   echo "  --vault-cert-key-file         File with login certificate key (\$VAULT_CERT_KEYFILE)"
   echo "  --vault-cert-cert-file        File with login certificate (\$VAULT_CERT_CERT_FILE)"
   echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
-  echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
@@ -50,6 +49,10 @@ command_usage() {
   echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
+  echo
+  echo "Cloud Pak Deployer development options:"
+  echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
+  echo "  --cpd-test-cartridges         Test installation of all cartridges one by one (\$CPD_TEST_CARTRIDGES)"
   echo 
   echo "Options for environment subcommand:"
   echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
@@ -84,7 +87,6 @@ get_cp_datacore_archive() {
 # --------------------------------------------------------------------------------------------------------- #
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
-if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
@@ -93,6 +95,8 @@ if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
 if [ "${CPD_AIRGAP}" == "" ];then CPD_AIRGAP=false;fi
 if [ "${CPD_SKIP_MIRROR}" == "" ];then CPD_SKIP_MIRROR=false;fi
 if [ "${CPD_SKIP_PORTABLE_REGISTRY}" == "" ];then CPD_SKIP_PORTABLE_REGISTRY=false;fi
+if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
+if [ "${CPD_TEST_CARTRIDGES}" == "" ];then CPD_TEST_CARTRIDGES=false;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
@@ -426,6 +430,14 @@ while (( "$#" )); do
       exit 99
     fi
     export CPD_DEVELOP=true
+    shift 1
+    ;;
+  --cpd-test-cartridges)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --cpd-test-cartridges is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CPD_TEST_CARTRIDGES=true
     shift 1
     ;;
   --cp-config-only)
@@ -833,6 +845,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_AIRGAP=${CPD_AIRGAP}"
   run_cmd+=" -e CPD_SKIP_MIRROR=${CPD_SKIP_MIRROR}"
   run_cmd+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
+  run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
 
   # Handle extra variables
   if [ ${#arrExtraKey[@]} -ne 0 ];then
