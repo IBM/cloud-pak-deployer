@@ -16,6 +16,8 @@
 
 - name: Download operator case files to {{ status_dir }}/cp4d/case
   include_tasks: download-case-online.yml
-  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
+  when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- name: Download operator case files to {{ status_dir }}/cp4d/case using OLM utils
+  include_tasks: download-case-olm-utils.yml
+  when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)

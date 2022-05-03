@@ -1,0 +1,39 @@
+---
+
+# Find the latest version
+# curl -s -X GET https://api.github.com/repos/IBM/cloud-pak/contents/repo/case/ibm-cp-datacore | jq -r '.[] | select(.name|test("^[0-9].*")) | .name'
+
+# Create CR if cartridge state is installed
+- block:
+  - name: Get the CASE details for cartridge {{ _current_cp4d_cartridge.name }}
+    set_fact:
+      _current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?name=='{{ _current_cp4d_cartridge.name }}']
+
+  - name: Fail if the case file details for the cartridge cannot be found
+    fail:
+      msg: Case file details for cartridge {{ _current_cp4d_cartridge.name }} not found
+    when: _current_case_inventory=={}
+
+  - set_fact:
+      _dependency: ""
+
+  - set_fact:
+      _dependency: "--no-dependency"
+    when:  
+    - _current_cp4d_cartridge.name == "lite"
+
+  - name: Save case file {{ _current_case_inventory.search_string }}-{{ _current_cp4d_cartridge.case_version }}
+    shell: |
+      cloudctl case save \
+        --repo {{ case_github_url }} \
+        --case {{ _current_case_inventory.search_string }} \
+        --version {{ _current_cp4d_cartridge.case_version }} \
+        --outputdir {{ _case_dir }} {{ _dependency }}
+    register: _case_save
+    retries: 5
+    delay: 5
+    until: _case_save.rc==0
+  when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

@@ -39,12 +39,12 @@ import sys
 #  change_node_settings: True
 
 #  cartridges:
-#  - name: cp-foundation
+#  - name: cpfs
 #    license_service:
 #      state: disabled
 #      threads_per_core: 2
 #    case_version: 1.10.1
-#  - name: lite
+#  - name: cpd_platform
 #    subscription_channel: v2.0
 #    case_version: 2.0.8
 #  - name: wsl
@@ -277,13 +277,13 @@ def preprocessor(attributes=None, fullConfig=None):
             if "name" not in c:
                 g.appendError(msg='name must be specified for all cartridges elements')
             else:
-                if c['name'] == "lite":
+                if c['name'] == "cpd_platform":
                     liteFound=True
-                if c['name'] == "cp-foundation":
+                if c['name'] == "cpfs":
                     cpFoundationFound=True
                     check_cp_foundation(c)
-                if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
+                if (c['name'] != "cpfs") and ("subscription_channel" not in c):
+                    g.appendError(msg='subscription_channel must be specified for all cartridges, except for cpfs')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')
@@ -302,9 +302,9 @@ def preprocessor(attributes=None, fullConfig=None):
                                 g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
         if cpFoundationFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
+            g.appendError(msg='You need to specify a cartridge with name "cpfs"')
         if liteFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "lite"')
+            g.appendError(msg='You need to specify a cartridge with name "cpd_platform"')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
