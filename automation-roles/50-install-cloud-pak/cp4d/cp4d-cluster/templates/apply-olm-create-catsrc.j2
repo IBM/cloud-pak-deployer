@@ -1,0 +1,10 @@
+/opt/ansible/bin/apply-olm \
+    --release={{ current_cp4d_cluster.cp4d_version }} \
+    --case_download=false \
+    --catsrc=true --sub=false --offline_dir={{ status_dir }}/cp4d/case -v \
+    --components={% for c in current_cp4d_cluster.cartridges -%}
+{%- if (c.state | default('installed')) == 'installed' -%}
+{%- if not loop.first -%},{% endif -%}
+{{ c.name }}
+{%- endif -%}
+{%- endfor -%}

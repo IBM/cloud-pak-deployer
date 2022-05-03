@@ -36,6 +36,7 @@ import sys
 #  cp4d_version: 4.0
 #  openshift_storage_name: nfs-storage
 #  use_case_files: True
+#  olm_utils: False
 #  change_node_settings: True
 
 #  cartridges:
@@ -224,6 +225,7 @@ def preprocessor(attributes=None, fullConfig=None):
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional()
+    g('olm_utils').isOptional()
     g('change_node_settings').isOptional()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
@@ -282,8 +284,9 @@ def preprocessor(attributes=None, fullConfig=None):
                 if c['name'] == "cpfs":
                     cpFoundationFound=True
                     check_cp_foundation(c)
-                if (c['name'] != "cpfs") and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel must be specified for all cartridges, except for cpfs')
+                # TODO: Reinstate check based on olm_utils property
+                # if (c['name'] != "cpfs") and ("subscription_channel" not in c):
+                #     g.appendError(msg='subscription_channel must be specified for all cartridges, except for cpfs')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')

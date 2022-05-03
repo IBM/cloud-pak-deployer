@@ -1,0 +1,17 @@
+---
+- name: Ensure that OLM utils work directory exists
+  file:
+    path: /tmp/work
+    state: directory
+
+- name: Generate OLM command to create catalog sources
+  set_fact:
+    _apply_olm_command: "{{ lookup('template', 'apply-olm-create-catsrc.j2') }}" 
+
+- name: Show apply-olm command to create catalog sources
+  debug:
+    var: _apply_olm_command
+
+- name: Run apply-olm command to create catalog sources case files, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
+  shell: |
+    {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log

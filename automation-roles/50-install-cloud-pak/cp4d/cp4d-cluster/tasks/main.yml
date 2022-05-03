@@ -105,11 +105,12 @@
   when: not _use_case_files
 
 - name: Create catalog sources from case files in {{ status_dir }}/cp4d/case directory when using case files
-  include_tasks: create-catalog-source-case-file.yml
-  loop: "{{ case_inventories }}"
-  loop_control:
-    loop_var: case_inventory
-  when: _use_case_files
+  include_tasks: create-catalog-source-case-files.yml
+  when: _use_case_files and not (current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- name: Create catalog sources from case files in {{ status_dir }}/cp4d/case using OLM utils
+  include_tasks: create-catalog-source-olm-utils.yml
+  when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.storage_class_name }}
   include_tasks: cp4d-get-storage-classes.yml
