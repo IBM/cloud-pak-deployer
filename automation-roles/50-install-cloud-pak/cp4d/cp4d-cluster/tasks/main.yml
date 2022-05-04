@@ -127,7 +127,12 @@
   include_tasks: openshift-prepare-project.yml
 
 - name: Install Control Plane for Cloud Pak for Data
-  include_tasks: install-control-plane-40.yml
+  include_tasks: install-control-plane.yml
+  when: not (current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- name: Install Control Plane for Cloud Pak for Data using OLM utils
+  include_tasks: install-control-plane-olm-utils.yml
+  when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml
