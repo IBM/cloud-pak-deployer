@@ -48,7 +48,7 @@ import sys
 #  - name: cpd_platform
 #    subscription_channel: v2.0
 #    case_version: 2.0.8
-#  - name: wsl
+#  - name: ws
 #    version: 4.0.4
 #    subscription_channel: v2.0
 #    case_version: 2.0.4
@@ -208,7 +208,7 @@ import sys
   #   case_version: 2.3.4
   #   replicas: 1
   #   size: small
-  # - name: wsl
+  # - name: ws
   #   version: 4.0.4
   #   subscription_channel: v2.0
   #   case_version: 2.0.4
