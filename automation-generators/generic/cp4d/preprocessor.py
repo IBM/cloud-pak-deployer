@@ -233,10 +233,15 @@ def preprocessor(attributes=None, fullConfig=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
-# Check for cp4d:     
-# Check that cp-foundation element exists
-# Check that lite element exists
+        # Check for cp4d:     
+        # Check that cpfs element exists
+        # Check that cpd_platform element exists
 
+        # Store olm_utils property
+        if 'olm_utils' in ge:
+            olm_utils=ge['olm_utils']
+        else:
+            olm_utils=False
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name
@@ -284,9 +289,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 if c['name'] == "cpfs":
                     cpFoundationFound=True
                     check_cp_foundation(c)
-                # TODO: Reinstate check based on olm_utils property
-                # if (c['name'] != "cpfs") and ("subscription_channel" not in c):
-                #     g.appendError(msg='subscription_channel must be specified for all cartridges, except for cpfs')
+                if (not olm_utils) and (c['name'] != "cpfs") and ("subscription_channel" not in c):
+                    g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')
