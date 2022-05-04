@@ -29,11 +29,11 @@
     - set_fact:
         db2_lookup_result_json: "{{ db2_lookup_result.stdout | from_json }}"
 
-    - name: "Prepare Cognos instance creation using internal provisioned DB2 OLTP instance {{ cognos_instance.metastore_ref }}"
+    - name: "Prepare Cognos instance creation using internally provisioned Db2 OLTP instance {{ cognos_instance.metastore_ref }}"
       include_tasks: prepare_provision_cognos_instance_internal.yml
       when: db2_lookup_result_json.total_count == 1
 
-    - name: "Prepare Cognos instance creation using external DB2 service {{ cognos_instance.metastore_ref }}"
+    - name: "Prepare Cognos instance creation using external Db2 service {{ cognos_instance.metastore_ref }}"
       include_tasks: prepare_provision_cognos_instance_external.yml
       when: db2_lookup_result_json.total_count == 0
 
@@ -44,7 +44,7 @@
     - set_fact:
         cp4d_catalog: "{{ cp4d_get_catalog_result.stdout | from_json }}"
 
-    - name: Validate if the connection to the Cognos DB2 Content Repository '{{ cp4d_platform_connection_name }}' is available
+    - name: Validate if the connection to the Cognos Db2 Content Repository '{{ cp4d_platform_connection_name }}' is available
       shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials&entity.name={{ cp4d_platform_connection_name }}'"
       register: cp4d_cognos_db2_content_repo_result
 

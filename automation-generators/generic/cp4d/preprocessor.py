@@ -72,7 +72,7 @@ import sys
   #   version: 7.2.3
   #   subscription_channel: v7.2
   #   case_version: 7.2.3
-  # - name: ca
+  # - name: cognos_analytics
   #   version: 4.0.4
   #   subscription_channel: v4.0
   #   case_version: 4.0.6

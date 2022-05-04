@@ -7,7 +7,7 @@
     src: db2_instance_connection.json.j2
     dest: "{{ cp4d_automation_temp_dir.path }}/cp4d_db2_instance_connection.json"
 
-- name: Get details of internal DB2 instance {{ cognos_instance.metastore_ref }}
+- name: Get details of internal Db2 OLTP instance {{ cognos_instance.metastore_ref }}
   shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases/connection' -T {{ cp4d_automation_temp_dir.path }}/cp4d_db2_instance_connection.json"
   register: db2_details_result
 
@@ -15,11 +15,11 @@
     db2_details_result_json: "{{ db2_details_result.stdout | from_json }}"
     db2_instance_name: "{{ cognos_instance.metastore_ref }}"
 
-- name: Get the db2inst1 password of the {{ cognos_instance.metastore_ref }} DB2 instance
+- name: Get the db2inst1 password of the {{ cognos_instance.metastore_ref }} Db2 OLTP instance
   shell: "oc get secret -n {{ current_cp4d_cluster.project }} c-db2oltp-{{ db2_instance_id }}-instancepassword -o json | jq -r .data.password | base64 --decode"
   register: db2inst1_password_result
 
-- name: Show Db2 instance password
+- name: Show Db2 OLTP instance password
   debug:
     var: db2inst1_password_result
 
@@ -37,11 +37,11 @@
     db2_instance_password: "{{ db2inst1_password_result.stdout }}"
     cp4d_platform_connection_name: "{{ db2_instance_name }}-connection"
 
-- name: Run the DB2 prepare script for DB2
+- name: Run the Db2 prepare script for Db2 OLTP
   shell: "oc exec -n {{ current_cp4d_cluster.project }} c-db2oltp-{{ db2_instance_id }}-db2u-0 -- /tmp/prepareDB2forCA.sh {{ db2_instance_dbname }} {{ db2_instance_user_name }} {{ db2_instance_password }}"
   register: prepare_db2_result
 
-- name: Show results of Db2 preparation
+- name: Show results of Db2 OLTP preparation
   debug:
     msg: "{{ prepare_db2_result }}"
 
