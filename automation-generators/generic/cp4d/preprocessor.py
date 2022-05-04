@@ -278,16 +278,16 @@ def preprocessor(attributes=None, fullConfig=None):
 
 
         # Iterate over all cartridges to check if name-attribute is given. If not throw an error
-        cpFoundationFound=False
-        liteFound=False
+        cpfsFound=False
+        cpdPlatformFound=False
         for c in ge['cartridges']:
             if "name" not in c:
                 g.appendError(msg='name must be specified for all cartridges elements')
             else:
                 if c['name'] == "cpd_platform":
-                    liteFound=True
+                    cpdPlatformFound=True
                 if c['name'] == "cpfs":
-                    cpFoundationFound=True
+                    cpfsFound=True
                     check_cp_foundation(c)
                 if (not olm_utils) and (c['name'] != "cpfs") and ("subscription_channel" not in c):
                     g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
@@ -308,9 +308,9 @@ def preprocessor(attributes=None, fullConfig=None):
                             if not dep_found:
                                 g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
-        if cpFoundationFound==False:
+        if cpfsFound==False:
             g.appendError(msg='You need to specify a cartridge with name "cpfs"')
-        if liteFound==False:
+        if cpdPlatformFound==False:
             g.appendError(msg='You need to specify a cartridge with name "cpd_platform"')
 
     result = {
