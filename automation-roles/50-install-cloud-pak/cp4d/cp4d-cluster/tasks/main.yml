@@ -116,7 +116,12 @@
   include_tasks: cp4d-get-storage-classes.yml
 
 - name: Prepare Cloud Pak for Data operator
-  include_tasks: prepare-cp4d-operator-40.yml
+  include_tasks: create-cpd-platform-sub.yml
+  when: not (current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- name: Prepare Cloud Pak for Data operator using OLM utils
+  include_tasks: create-cpd-platform-sub-olm-utils.yml
+  when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
