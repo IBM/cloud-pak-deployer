@@ -134,7 +134,7 @@ import sys
   #   - name: db2u
   #   instances:
   #   - name: data-virtualization
-  # - name: hadoop
+  # - name: hee
   #   version: 4.0.4
   #   size: small
   #   subscription_channel: v1.0
