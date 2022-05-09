@@ -3,7 +3,7 @@
     --case_download=false \
     --catsrc=false --sub=true --offline_dir={{ status_dir }}/cp4d/case -v \
     --components={% for c in _p_current_cp4d_cluster.cartridges -%}
-{%- if (c.state | default('installed')) == 'installed' -%}
+{%- if ((c.state | default('installed')) == 'installed') or (cpd_test_cartridges | default(False) | bool) -%}
 {%- if not loop.first -%},{% endif -%}
 {{ c.name }}
 {%- endif -%}
