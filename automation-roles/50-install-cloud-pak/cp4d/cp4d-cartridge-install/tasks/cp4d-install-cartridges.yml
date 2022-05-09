@@ -1,23 +1,11 @@
 ---
 
-- name: Install cartridges for CP4D cluster
+- name: Install cartridges for CP4D cluster {{ _p_current_cp4d_cluster.project }}
   debug:
-    msg: "Installing cartridges for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
+    msg: ""
 
 - set_fact:
     _cp4d_cartridges_installed_successfully: True
-
-- name: Create OpenShift operator subscriptions for each of the selected cp4d cartridges
-  include_tasks: cp4d-subscriptions-create.yml
-  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
-  loop_control:
-    loop_var: current_cp4d_cartridge
-
-- name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
-  include_tasks: cp4d-subscriptions-wait.yml
-  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
-  loop_control:
-    loop_var: current_cp4d_cartridge
 
 - name: Get cartridges without dependent cartridges
   set_fact:

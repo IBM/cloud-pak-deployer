@@ -1,19 +1,4 @@
 ---
-# Create Foundational Services project for Cloud Pak for Data
-- name: Create OpenShift Project {{ foundational_services_project }} if it does not exist
-  shell: 
-    oc new-project {{ foundational_services_project }} || true
-
-# Create Operator Group
-- name: Generate definition for OperatorGroup
-  template:
-    src: operator-group.j2
-    dest: "{{ status_dir }}/cp4d/operator-group.yml"
-
-- name: Create OperatorGroup
-  command: |
-    oc apply -f "{{ status_dir }}/cp4d/operator-group.yml"
-
 # Create platform operator subscription
 - name: Prepare yaml file for platform operator subscription
   template:
@@ -23,6 +8,12 @@
 - name: Create subscription for the platform operator
   command: |
     oc apply -f "{{ status_dir }}/cp4d/cpd-operator-subscription.yml"
+
+- name: Create OpenShift operator subscriptions for each of the selected cp4d cartridges
+  include_tasks: cp4d-create-subscription.yml
+  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge
 
 # Wait until subscription has been successfully created
 - name: Wait until Platform Operator CSV has status Succeeded
@@ -42,7 +33,6 @@
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-
 # Also wait for OperandRequest CSV to be created (ODLM)
 - name: Wait until ODLM OperandRequest CSV has status Succeeded
   shell: |
@@ -60,3 +50,9 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
+  include_tasks: cp4d-subscriptions-wait.yml
+  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
+  loop_control:
+    loop_var: current_cp4d_cartridge

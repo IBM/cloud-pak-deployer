@@ -104,16 +104,14 @@
   include_role:
     name: cp4d-catalog-source
 
+- name: Create subscriptions for Cloud Pak for Data
+  include_role:
+    name: cp4d-subscriptions
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
 - name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.storage_class_name }}
   include_tasks: cp4d-get-storage-classes.yml
-
-- name: Prepare Cloud Pak for Data operator
-  include_tasks: create-cpd-platform-sub.yml
-  when: not (current_cp4d_cluster.olm_utils | default(False) | bool)
-
-- name: Prepare Cloud Pak for Data operator using OLM utils
-  include_tasks: create-cpd-platform-sub-olm-utils.yml
-  when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
