@@ -2,7 +2,14 @@
 - block:
   - name: Prepare operator subscriptions
     debug:
-      msg: "Wait for createion operator subscription for cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
+      msg: "Wait for creation operator subscription for cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
+
+  # Validate whether the CR creation requires custom execution
+  - name: Get CR installation details for cartridge
+    set_fact:
+      _cartridge_details: "{{ case_inventories | json_query(jmes_query) | first }}"
+    vars:
+      jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}']"
 
   - block:
     - name: Find label for cartridge {{ current_cp4d_cartridge.name }}
@@ -38,4 +45,6 @@
     - current_cp4d_cartridge.name != "lite"
     - current_cp4d_cartridge.name != "cp-foundation"
 
-  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'
+  when: 
+    - (current_cp4d_cartridge.state | default('installed')) == 'installed'
+    - not (_cartridge_details.cr_internal | default(False) | bool)

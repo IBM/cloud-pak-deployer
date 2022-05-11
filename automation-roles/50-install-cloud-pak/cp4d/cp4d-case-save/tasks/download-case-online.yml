@@ -18,12 +18,13 @@
     when: _current_case_inventory=={}
 
   - set_fact:
-      _dependency: ""
+      _dependency: "--no-dependency"
 
   - set_fact:
-      _dependency: "--no-dependency"
+      _dependency: ""
     when:  
-    - _current_cp4d_cartridge.name == "lite"
+      - _current_cp4d_cartridge.name == "cp-foundation"
+
 
   - name: Save case file {{ _current_case_inventory.search_string }}-{{ _current_cp4d_cartridge.case_version }}
     shell: |
@@ -37,3 +38,12 @@
     delay: 5
     until: _case_save.rc==0
   when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 
+
+- name: Download component_dependencies case files
+  include_tasks: validate-cartridge-dependency.yml
+  loop: "{{ _current_case_inventory.component_dependencies | default([]) }}"
+  loop_control:
+    loop_var: _current_cartridge_dependent_component
+  when: 
+    - _current_case_inventory.component_dependencies is defined
+    - (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

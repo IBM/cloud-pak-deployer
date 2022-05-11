@@ -282,8 +282,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 if c['name'] == "cp-foundation":
                     cpFoundationFound=True
                     check_cp_foundation(c)
-                if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
+                #if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
+                    #g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')

@@ -16,19 +16,17 @@
     include_tasks: "{{ _cartridge_details.operator_preprocessing_script }}"
     when: (_cartridge_details.operator_preprocessing_script | default('')) != ''
 
+  - debug:
+      msg: "{{ current_cp4d_cartridge.name}} with {{ _cartridge_details }}"
+
   # Create of Subscription if not lite or cp-foundation
   - block:
-    - name: Prepare yaml file for operator subscription {{ current_cp4d_cartridge.name }}
-      template:
-        src: "{{ current_cp4d_cartridge.name }}-sub.j2"
-        dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-sub.yml"
-
-    - name: Create subscription for cartridge {{ current_cp4d_cartridge.name }}
-      command: |
-        oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-sub.yml"
-
-    when: 
-    - current_cp4d_cartridge.name != "lite"
-    - current_cp4d_cartridge.name != "cp-foundation"
+  
+      - name: Prepare and create the subscription
+        include_tasks: cp4d-subscriptions-apply.yml
+        when: 
+          - current_cp4d_cartridge.name != "lite"
+          - current_cp4d_cartridge.name != "cp-foundation"
+          - not (_cartridge_details.cr_internal | default(False) | bool)
 
   when: (current_cp4d_cartridge.state | default('installed')) == 'installed'
