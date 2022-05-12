@@ -18,30 +18,45 @@ case_inventories:
   - name: cp-foundation
     inventory: ibmCommonServiceOperatorSetup
     search_string: ibm-cp-common-services
+  - name: scheduler
+    inventory: schedulerSetup
+    search_string: ibm-cpd-scheduling
   - name: analyticsengine
     inventory: analyticsengineOperatorSetup
     search_string: ibm-analyticsengine
   - name: bigsql
     inventory: bigsql
     search_string: ibm-bigsql-case
+    component_dependencies:
+      - db2u    
   - name: ca
     inventory: ibmCaOperatorSetup
     search_string: ibm-cognos-analytics-prod
+    component_dependencies:
+      - ccs    
   - name: cde
     inventory: cdeOperatorSetup
     search_string: ibm-cde
+    component_dependencies:
+      - ccs    
   - name: datagate
     inventory: datagateOperatorSetup
     search_string: ibm-datagate-prod
   - name: datastage
     inventory: dsOperatorSetup
     search_string: ibm-datastage
+    component_dependencies:
+      - ccs    
   - name: db2
     inventory: db2oltpOperatorSetup
     search_string: ibm-db2oltp
+    component_dependencies:
+      - db2u    
   - name: db2aaservice
     inventory: db2aaserviceOperatorSetup
     search_string: ibm-db2aaservice
+    component_dependencies:
+      - db2u    
   - name: db2u
     inventory: db2uOperatorSetup
     search_string: ibm-db2uoperator
@@ -49,9 +64,13 @@ case_inventories:
   - name: db2wh
     inventory: db2whOperatorSetup
     search_string: ibm-db2wh
+    component_dependencies:
+      - db2u    
   - name: dp
     inventory: dpOperatorSetup
     search_string: ibm-dp
+    component_dependencies:
+      - analyticsengine    
   - name: iis
     operator_install_script: cp4d-install-iis-operator.yml
     inventory: iisOperatorSetup
@@ -60,12 +79,25 @@ case_inventories:
   - name: dmc
     inventory: dmcOperatorSetup
     search_string: ibm-dmc
+    component_dependencies:
+      - opencontent_redis
   - name: dods
     inventory: dodsOperatorSetup
     search_string: ibm-dods
+    component_dependencies:
+      - ccs
+      - ws_runtimes
+      - datarefinery
+      - ws
+      - wml    
   - name: dv
     inventory: dv
     search_string: ibm-dv-case
+    component_dependencies:
+      - ccs
+      - db2u
+      - opencontent_redis
+      - dmc    
   - name: hadoop
     inventory: hadoopSetup
     search_string: ibm-hadoop
@@ -75,17 +107,27 @@ case_inventories:
   - name: openpages
     inventory: operatorSetup
     search_string: ibm-openpages
+    component_dependencies:
+      - db2u
+      - db2aaservice    
   - name: planning-analytics
     inventory: ibmPlanningAnalyticsOperatorSetup
     search_string: ibm-planning-analytics
   - name: rstudio
     inventory: rstudioSetup
     search_string: ibm-rstudio
+    component_dependencies:
+      - ccs    
   - inventory: runtimesOperatorSetup
     search_string: ibm-wsl-runtimes
   - name: spss
     inventory: spssSetup
     search_string: ibm-spss
+    component_dependencies:
+      - ccs
+      - datarefinery
+      - ws_runtimes
+      - ws    
   - name: voice-gateway
     inventory: voiceGatewayOperatorSetup
     search_string: ibm-voice-gateway
@@ -93,9 +135,28 @@ case_inventories:
     cr_preprocessing_script: cp4d-prep-watson-assistant.yml
     inventory: assistantOperator
     search_string: ibm-watson-assistant
+    component_dependencies:
+      - postgresql
+      - opencontent_minio
+      - opencontent_etcd
+      - opencontent_auditwebhook
+      - watson_gateway
+      - data_governor
+      - model_train
+      - opencontent_elasticsearch
+      - opencontent_redis
+      - opencontent_rabbitmq    
   - name: watson-discovery
     inventory: discoveryOperators
     search_string: ibm-watson-discovery
+    component_dependencies:
+      - model_train
+      - opencontent_elasticsearch
+      - opencontent_etcd
+      - opencontent_minio
+      - opencontent_rabbitmq
+      - postgresql
+      - watson_gateway    
   - name: watson-ks
     inventory: wksOperatorSetup
     search_string: ibm-watson-ks
@@ -105,15 +166,30 @@ case_inventories:
   - name: watson-speech
     inventory: speechOperatorSetup
     search_string: ibm-watson-speech
+    component_dependencies:
+      - postgresql
+      - opencontent_minio
+      - opencontent_rabbitmq
+      - watson_gateway    
   - name: wkc
     inventory: wkcOperatorSetup
     search_string: ibm-wkc
+    component_dependencies:
+      - ccs
+      - datarefinery
+      - db2u
+      - db2aaservice
+      - iis    
   - name: wml
     inventory: wmlOperatorSetup
     search_string: ibm-wml-cpd
+    component_dependencies:
+      - ccs    
   - name: wml-accelerator
     inventory: wmla_operator_deploy
     search_string: ibm-wml-accelerator
+    component_dependencies:
+      - scheduler    
   - name: wsl
     inventory: wslSetup
     search_string: ibm-wsl
@@ -130,9 +206,39 @@ case_inventories:
   - name: datarefinery
     search_string: ibm-datarefinery
     cr_internal: true    
-
-
-    
+  - name: opencontent_redis
+    search_string: ibm-cloud-databases-redis
+    cr_internal: true
+  - name: postgresql
+    search_string: ibm-cloud-native-postgresql
+    cr_internal: true
+  - name: opencontent_minio
+    search_string: ibm-minio-operator
+    cr_internal: true
+  - name: opencontent_etcd
+    search_string: ibm-etcd-operator
+    cr_internal: true
+  - name: opencontent_auditwebhook
+    search_string: ibm-auditwebhook-operator
+    cr_internal: true
+  - name: watson_gateway
+    search_string: ibm-watson-gateway-operator
+    cr_internal: true
+  - name: data_governor
+    search_string: ibm-data-governor
+    cr_internal: true
+  - name: model_train
+    search_string: ibm-model-train-operator
+    cr_internal: true
+  - name: opencontent_elasticsearch
+    search_string: ibm-elasticsearch-operator
+    cr_internal: true
+  - name: opencontent_redis
+    search_string: ibm-cloud-databases-redis
+    cr_internal: true
+  - name: opencontent_rabbitmq
+    search_string: ibm-rabbitmq-operator
+    cr_internal: true
 
 cartridge_cr:
   - name: lite
