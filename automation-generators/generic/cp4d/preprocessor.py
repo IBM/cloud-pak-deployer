@@ -167,7 +167,7 @@ import sys
   #   subscription_channel: v1.0
   #   case_version: 1.0.4
   #   replicas: 1  
-  # - name: watson-assistant
+  # - name: watson_assistant
   #   version: 4.0.4
   #   subscription_channel: v4.0
   #   case_version: 4.0.4
