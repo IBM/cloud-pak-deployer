@@ -1,5 +1,11 @@
 ---
 
+- name: Get CR installation details for cartridge
+  set_fact:
+    _cartridge_details: "{{ case_inventories | json_query(jmes_query) | first }}"
+  vars:
+    jmes_query: "[?name == '{{ _test_cp4d_cartridge.name }}']"
+
 - block:
   - name: CPD TEST CARTRIDGES - START {{ _test_cp4d_cartridge.name }}
     shell:
@@ -64,3 +70,4 @@
   when:
   - _test_cp4d_cartridge.name != 'lite'
   - _test_cp4d_cartridge.name != 'cp-foundation'
+  - not (_cartridge_details.cr_internal | default(False) | bool)
