@@ -89,6 +89,11 @@
           register: create_cognos_connection_result
       when: "cp4d_cognos_db2_content_repo|length == 0"
 
+    - name: Obtain Cognos Analytics version
+      shell:
+        oc get caservice -n {{ current_cp4d_cluster.project }} ca-addon-cr -o jsonpath='{.spec.version}'
+      register: _ca_version
+
     - name: Create cognos instance json file
       template:
         src: cognos_instance_40.json.j2
