@@ -55,6 +55,15 @@
       - name: Create CR for cartridge {{ current_cp4d_cartridge.name }}
         command: |
           oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+        register: _cr_create_result
+        retries: 10
+        delay: 30
+        until: _cr_create_result.rc == 0
+        vars:
+          ansible_callback_diy_runner_retry_msg: >-
+            {%- set result = ansible_callback_diy.result.output -%}
+            {%- set retries_left = result.retries - result.attempts -%}
+            Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
         
     when: 
     - cr_file_exists_result.stat.exists
