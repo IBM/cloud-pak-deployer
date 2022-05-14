@@ -1,36 +1,8 @@
 ---
 - include_role:
     name: cp4d-variables
-
-- name: Get cartridges with CR details
-  set_fact:
-    _cartridges_to_install: >-
-      {{ _cartridges_to_install | default([]) 
-        + [ item | combine(_cartridge_cr_item) | combine(_cartridge_olm_utils_item) | combine(_case_inventories_item) ]
-      }}
   vars:
-    _cartridge_cr_item: >-
-          {{ cartridge_cr
-            | selectattr('name','equalto',item['name'])
-            | list
-            | first
-            | default([])
-          }}
-    _cartridge_olm_utils_item: >-
-          {{ cartridge_cr
-            | selectattr('olm_utils_name','equalto',item['name'])
-            | list
-            | first
-            | default([])
-          }}
-    _case_inventories_item: >-
-          {{ case_inventories
-            | selectattr('name','equalto',item['name'])
-            | list
-            | first
-            | default([])
-          }}
-  loop: "{{ _p_current_cp4d_cluster.cartridges }}"
+    _p_cartridges: "{{ _p_current_cp4d_cluster.cartridges }}"
     
 - set_fact:
     _case_dir: "{{ status_dir }}/cp4d/case"

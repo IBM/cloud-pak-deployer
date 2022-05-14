@@ -4,3 +4,26 @@
 
 - debug:
     var: implemented_cloud_platform_types
+
+- name: Get cartridges with CR details
+  set_fact:
+    _cartridges_to_install: >-
+      {{ _cartridges_to_install | default([]) 
+        + [ item | combine(_cartridge_cr_item) | combine(_cartridge_olm_utils_item) ]
+      }}
+  vars:
+    _cartridge_cr_item: >-
+          {{ cartridge_cr
+            | selectattr('name','equalto',item['name'])
+            | list
+            | first
+            | default([])
+          }}
+    _cartridge_olm_utils_item: >-
+          {{ cartridge_cr
+            | selectattr('olm_utils_name','equalto',item['name'])
+            | list
+            | first
+            | default([])
+          }}
+  loop: "{{ _p_cartridges }}"
