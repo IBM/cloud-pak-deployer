@@ -294,6 +294,9 @@ while (( "$#" )); do
       echo "Error: Vault secret file ${VAULT_SECRET_FILE} must exist for vault set action."
       command_usage 2
     fi
+    if [ ! -z ${VAULT_SECRET_FILE} ] && [[ "${ACTION}" == "get" ]] && [ ! -f ${VAULT_SECRET_FILE} ];then
+      touch ${VAULT_SECRET_FILE}
+    fi        
     ;;
   --vault-secret-value*|-vsv*)
     if [[ "${SUBCOMMAND}" != "vault" ]];then

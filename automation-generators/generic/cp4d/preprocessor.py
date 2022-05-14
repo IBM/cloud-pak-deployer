@@ -289,8 +289,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 if c['name'] in ["cpfs","cp-foundation"]:
                     cpfsFound=True
                     check_cp_foundation(c)
-                if (not olm_utils) and (not c['name'] in ["cpfs","cp-foundation"]) and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
+                # if (not olm_utils) and (not c['name'] in ["cpfs","cp-foundation"]) and ("subscription_channel" not in c):
+                #     g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')
