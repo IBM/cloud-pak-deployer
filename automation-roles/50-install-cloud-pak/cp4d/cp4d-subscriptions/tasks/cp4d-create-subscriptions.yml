@@ -11,9 +11,9 @@
 
 - name: Create OpenShift operator subscriptions for each of the selected cp4d cartridges
   include_tasks: cp4d-create-subscription.yml
-  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
+  loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
-    loop_var: current_cp4d_cartridge
+    loop_var: _current_cp4d_cartridge
 
 # Wait until subscription has been successfully created
 - name: Wait until Platform Operator CSV has status Succeeded
@@ -53,6 +53,6 @@
 
 - name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
   include_tasks: cp4d-subscriptions-wait.yml
-  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
+  loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
-    loop_var: current_cp4d_cartridge
+    loop_var: _current_cp4d_cartridge

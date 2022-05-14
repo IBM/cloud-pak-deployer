@@ -284,12 +284,12 @@ def preprocessor(attributes=None, fullConfig=None):
             if "name" not in c:
                 g.appendError(msg='name must be specified for all cartridges elements')
             else:
-                if c['name'] == "cpd_platform":
+                if c['name'] in ["cpd_platform","lite"]:
                     cpdPlatformFound=True
-                if c['name'] == "cpfs":
+                if c['name'] in ["cpfs","cp-foundation"]:
                     cpfsFound=True
                     check_cp_foundation(c)
-                if (not olm_utils) and (c['name'] != "cpfs") and ("subscription_channel" not in c):
+                if (not olm_utils) and (not c['name'] in ["cpfs","cp-foundation"]) and ("subscription_channel" not in c):
                     g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
@@ -309,9 +309,9 @@ def preprocessor(attributes=None, fullConfig=None):
                                 g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
         if cpfsFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "cpfs"')
+            g.appendError(msg='You need to specify a cartridge for the Cloud Pak Foundational Services (cpfs or cp-foundation)')
         if cpdPlatformFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "cpd_platform"')
+            g.appendError(msg='You need to specify a cartridge for the Cloud Pak for Data platform (cpd_platform or lite)')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

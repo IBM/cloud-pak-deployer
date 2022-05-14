@@ -5,17 +5,10 @@
 
 # Create CR if cartridge state is installed
 - block:
-  - name: Get the CASE details for cartridge {{ _current_cp4d_cartridge.name }}
-    set_fact:
-      _current_case_inventory: "{{ case_inventories | json_query(query) | first | default({}) }}"
-    vars:
-      query: >-
-        [?name=='{{ _current_cp4d_cartridge.name }}']
-
   - name: Fail if the case file details for the cartridge cannot be found
     fail:
       msg: Case file details for cartridge {{ _current_cp4d_cartridge.name }} not found
-    when: _current_case_inventory=={}
+    when: (_current_cp4d_cartridge.search_string | default(""))==""
 
   - set_fact:
       _dependency: ""
@@ -23,13 +16,13 @@
   - set_fact:
       _dependency: "--no-dependency"
     when:  
-    - _current_cp4d_cartridge.name == "cpd_platform"
+    - _current_cp4d_cartridge.name in ['cpd_platform','lite']
 
   - name: Save case file {{ _current_case_inventory.search_string }}-{{ _current_cp4d_cartridge.case_version }}
     shell: |
       cloudctl case save \
         --repo {{ case_github_url }} \
-        --case {{ _current_case_inventory.search_string }} \
+        --case {{ _current_cp4d_cartridge.search_string }} \
         --version {{ _current_cp4d_cartridge.case_version }} \
         --outputdir {{ _case_dir }} {{ _dependency }}
     register: _case_save

@@ -7,44 +7,15 @@
 - set_fact:
     _cp4d_cartridges_installed_successfully: True
 
-- name: Get cartridges without dependent cartridges
-  set_fact:
-    cartridges_no_dep: "{{ _p_current_cp4d_cluster.cartridges | json_query(cartr_no_dep_query) | default([]) }}"
-  vars:
-    cartr_no_dep_query: "[?dependencies == none]"
-
-- name: Get cartridges with dependent cartridges
-  set_fact:
-    cartridges_with_dep: "{{ _p_current_cp4d_cluster.cartridges | json_query(cartr_dep_query) | default([]) }}"
-  vars:
-    cartr_dep_query: "[?dependencies != none]"
-
-# Install all cartridges without dependent cartridges
-- name: Install custom resource (CR) for each of the selected cp4d cartridges (without dependencies)
+# Install all cartridges
+- name: Install custom resource (CR) for each of the selected cp4d cartridges
   include_tasks: cp4d-install-cr.yml
-  loop: "{{ cartridges_no_dep | default([]) }}"
+  loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
-    loop_var: current_cp4d_cartridge
+    loop_var: _current_cp4d_cartridge
 
-- name: Wait for cartridges to finish installation (without dependencies)
+- name: Wait for cartridges to finish installation
   include_tasks: cp4d-wait-cartridges-ready.yml
-  vars: 
-    wait_for_cartridges: "{{ cartridges_no_dep | default([]) }}"
-  loop: "{{ cartridges_no_dep | default([]) }}"
+  loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
-    loop_var: current_cp4d_cartridge
-
-# Install all cartridges with dependent cartridges
-- name: Install custom resource (CR) for each of the selected cp4d cartridges (with dependencies)
-  include_tasks: cp4d-install-cr.yml
-  loop: "{{ cartridges_with_dep | default([]) }}"
-  loop_control:
-    loop_var: current_cp4d_cartridge
-
-- name: Wait for cartridges to finish installation (with dependencies)
-  include_tasks: cp4d-wait-cartridges-ready.yml
-  vars: 
-    wait_for_cartridges: "{{ cartridges_with_dep | default([]) }}"
-  loop: "{{ cartridges_with_dep | default([]) }}"
-  loop_control:
-    loop_var: current_cp4d_cartridge
+    loop_var: _current_cp4d_cartridge

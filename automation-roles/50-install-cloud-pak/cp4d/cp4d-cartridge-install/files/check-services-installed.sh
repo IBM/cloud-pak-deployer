@@ -15,8 +15,7 @@
 status_dir=$1
 project=$2
 cartridges=$(echo $3 | base64 -d)
-cartridge_cr=$(echo $4 | base64 -d)
-current_cartridge_name=$5
+current_cartridge_name=$4
 
 exit_code=0
 number_pending=0
@@ -42,7 +41,7 @@ fi
 
 # First-time processing only
 if [ ! -f /tmp/check-services-installed.id ];then
-  log "Info: Defined cartridges (cartridge_cr): $(echo $cartridge_cr | jq -r .)"
+  log "Info: Defined cartridges and attributes: $(echo $cartridges | jq -r .)"
   touch /tmp/check-services-installed.id
 fi
 
@@ -55,8 +54,8 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     log "Cartridge $c has been defined as removed"
     continue
   fi
-  cr_cr=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
-  cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
+  cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
+  cr_status_attribute=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
   # Check if cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
     log "Warning: Cartridge $c does not have a definition in object cartridges_cr, it will not be waited for."
@@ -76,12 +75,12 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     continue
   fi
   
-  cr_cartridge_name=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .name')
-  cr_cr=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
-  cr_name=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
-  cr_status_attribute=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
-  cr_status_completed=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
-  cr_operator_label=$(echo $cartridge_cr | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_operator_label')
+  cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .name')
+  cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
+  cr_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
+  cr_status_attribute=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
+  cr_status_completed=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
+  cr_operator_label=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_operator_label')
 
   # Check if current cartridge has been defined
   if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then

@@ -3,10 +3,10 @@
     --license_acceptance=true \
     -v \
     --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
-    --components={% for c in _p_current_cp4d_cluster.cartridges -%}
+    --components={% for c in _cartridges_to_install -%}
 {%- if (c.state | default('installed')) == 'installed' -%}
 {%- if not loop.first -%},{% endif -%}
-{{ c.name }}
+{{ c.olm_utils_name }}
 {%- endif -%}
 {%- endfor %} \
 {% if selected_openshift_storage.storage_type == "ocs" -%}

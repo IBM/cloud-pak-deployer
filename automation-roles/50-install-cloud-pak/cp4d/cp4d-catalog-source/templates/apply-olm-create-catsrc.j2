@@ -2,9 +2,9 @@
     --release={{ current_cp4d_cluster.cp4d_version }} \
     --case_download=false \
     --catsrc=true --sub=false --offline_dir={{ status_dir }}/cp4d/case -v \
-    --components={% for c in current_cp4d_cluster.cartridges -%}
+    --components={% for c in _cartridges_to_install -%}
 {%- if ((c.state | default('installed')) == 'installed') or (cpd_test_cartridges | default(False) | bool) -%}
 {%- if not loop.first -%},{% endif -%}
-{{ c.name }}
+{{ c.olm_utils_name }}
 {%- endif -%}
 {%- endfor -%}

@@ -2,33 +2,25 @@
 - block:
   - name: Create operator subscriptions
     debug:
-      msg: "Creating operator subscription for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
+      msg: "Creating operator subscription for CP4D cartridge {{ _current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
 
-  # Validate whether the subscription creation requires custom execution
-  - name: Get subscription installation details for cartridge
-    set_fact:
-      _cartridge_details: "{{ case_inventories | json_query(jmes_query) | first }}"
-    vars:
-      jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}']"
-
-  # Custom preprocessing of Subscription
+  # Custom preprocessing of Subscription if defied
   - name: "Run operator pre-processing script {{ _cartridge_details.operator_preprocessing_script }}"
-    include_tasks: "{{ _cartridge_details.operator_preprocessing_script }}"
-    when: (_cartridge_details.operator_preprocessing_script | default('')) != ''
+    include_tasks: "{{ _current_cp4d_cartridge.operator_preprocessing_script }}"
+    when: (_current_cp4d_cartridge.operator_preprocessing_script | default('')) != ''
 
   # Create of Subscription if not cpd_platform or cpfs
   - block:
-    - name: Prepare yaml file for operator subscription {{ current_cp4d_cartridge.name }}
+    - name: Prepare yaml file for operator subscription {{ _current_cp4d_cartridge.name }}
       template:
-        src: "{{ current_cp4d_cartridge.name }}-sub.j2"
-        dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-sub.yml"
+        src: "{{ _current_cp4d_cartridge.cr_file_prefix }}-sub.j2"
+        dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-sub.yml"
 
-    - name: Create subscription for cartridge {{ current_cp4d_cartridge.name }}
+    - name: Create subscription for cartridge {{ _current_cp4d_cartridge.name }}
       command: |
-        oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-sub.yml"
+        oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-sub.yml"
 
     when: 
-    - current_cp4d_cartridge.name != "cpd_platform"
-    - current_cp4d_cartridge.name != "cpfs"
+    - not _current_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite']
 
-  when: (current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 
+  when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

@@ -3,62 +3,46 @@
 - block:
   - name: Create custom resources for CP4D cartridge
     debug:
-      msg: "Creating custom resources for CP4D cartridge {{ current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
-
-  # Validate whether the CR creation requires custom execution
-  - name: Get CR installation details for cartridge
-    set_fact:
-      _cartridge_details: "{{ case_inventories | json_query(jmes_query) | first }}"
-    vars:
-      jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}']"
+      msg: "Creating custom resources for CP4D cartridge {{ _current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
 
   - name: Show cartridge details
     debug:
-      var: _cartridge_details
+      var: _current_cp4d_cartridge
 
   # Run the pre-processing script if one has been specified
-  - block:
-      - name: "Run the custom resource pre-processing script {{ _cartridge_details.cr_preprocessing_script }}"
-        include_tasks: "{{ _cartridge_details.cr_preprocessing_script }}"
-    when: (_cartridge_details.cr_preprocessing_script | default('')) != ''
+  - name: "Run the custom resource pre-processing script {{ _current_cp4d_cartridge.cr_preprocessing_script }}"
+    include_tasks: "{{ _current_cp4d_cartridge.cr_preprocessing_script }}"
+    when: (_current_cp4d_cartridge.cr_preprocessing_script | default('')) != ''
     
-  - name: "Validate if the Custom Resource file for {{ current_cp4d_cartridge.name }} exists"
+  - name: "Validate if the Custom Resource file for {{ _current_cp4d_cartridge.name }} exists"
     stat:
-      path: "{{ role_path }}/templates/{{ current_cp4d_cartridge.name }}-cr.j2"
-    register: cr_file_exists_result
+      path: "{{ role_path }}/templates/{{ _current_cp4d_cartridge.cr_file_prefix }}-cr.j2"
+    register: _cr_file_exists_result
 
-  - when: not cr_file_exists_result.stat.exists
-    block:
-      - name: Determine if custom resource already exists
-        debug:
-          msg: "Customer Resource File {{ role_path }}/templates/{{ current_cp4d_cartridge.name }}-cr.j2 does not exist. Skip creating CR for cartridge {{ current_cp4d_cartridge.name }}"
+  - name: Determine if the template for the CR exists
+    debug:
+      msg: "Customer Resource File {{ role_path }}/templates/{{ _current_cp4d_cartridge.cr_file_prefix }}-cr.j2 does not exist. Skip creating CR for cartridge {{ _current_cp4d_cartridge.name }}"
+    when: not _cr_file_exists_result.stat.exists
 
   - block:
-      - name: Find CR name for cartridge {{ current_cp4d_cartridge.name }}
-        set_fact:
-          cr_cr: "{{ cartridge_cr | json_query(jmes_query) }}"
-        vars:
-          jmes_query: "[?name == '{{ current_cp4d_cartridge.name }}'].cr_cr | [0]"
-
-      - name: Fail if the label for cartridge has not been found
+      - name: Fail if the CR for cartridge has not been found
         fail:
-          msg: "Label for cartridge {{ current_cp4d_cartridge.name }} not found, cannot check if CR is successfully installed"
+          msg: "CR for cartridge {{ _current_cp4d_cartridge.name }} not found, cannot check if CR is successfully installed"
         when: 
-        - cr_cr == ""
+        - (current_cartridge.cr_cr | default("")) == ""
 
       # Create CR
-      - name: Prepare yaml file for custom resource {{ cr_cr }} for cartridge {{ current_cp4d_cartridge.name }}
+      - name: Prepare yaml file for custom resource {{ current_cartridge.cr_cr }} for cartridge {{ _current_cp4d_cartridge.name }}
         template:
-          src: "{{ current_cp4d_cartridge.name }}-cr.j2"
-          dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+          src: "{{ _current_cp4d_cartridge.cr_file_prefix }}-cr.j2"
+          dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-cr.yml"
 
-      - name: Create CR for cartridge {{ current_cp4d_cartridge.name }}
+      - name: Create CR for cartridge {{ _current_cp4d_cartridge.name }}
         command: |
-          oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-cr.yml"
+          oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-cr.yml"
         
     when: 
     - cr_file_exists_result.stat.exists
-    - current_cp4d_cartridge.name != "cpfs"
-    - current_cp4d_cartridge.name != "cpd_platform"
+    - not _current_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite']
 
-  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'
+  when: (_current_cp4d_cartridge.state | default('installed')) == 'installed'
