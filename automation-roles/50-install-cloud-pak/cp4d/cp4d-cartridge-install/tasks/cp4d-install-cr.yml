@@ -29,10 +29,10 @@
         fail:
           msg: "CR for cartridge {{ _current_cp4d_cartridge.name }} not found, cannot check if CR is successfully installed"
         when: 
-        - (current_cartridge.cr_cr | default("")) == ""
+        - (_current_cp4d_cartridge.cr_cr | default("")) == ""
 
       # Create CR
-      - name: Prepare yaml file for custom resource {{ current_cartridge.cr_cr }} for cartridge {{ _current_cp4d_cartridge.name }}
+      - name: Prepare yaml file for custom resource {{ _current_cp4d_cartridge.cr_cr }} for cartridge {{ _current_cp4d_cartridge.name }}
         template:
           src: "{{ _current_cp4d_cartridge.cr_file_prefix }}-cr.j2"
           dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-cr.yml"
@@ -51,7 +51,7 @@
             Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
         
     when: 
-    - cr_file_exists_result.stat.exists
+    - _cr_file_exists_result.stat.exists
     
   when: 
   - (_current_cp4d_cartridge.state | default('installed')) == 'installed'
