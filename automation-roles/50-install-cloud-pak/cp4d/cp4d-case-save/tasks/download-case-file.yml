@@ -5,9 +5,6 @@
 
 # Download case file is state is installed
 - block:
-  - debug:
-      var: _current_cp4d_cartridge
-      
   - name: Fail if the case file details for the cartridge cannot be found
     fail:
       msg: Case file details for cartridge {{ _current_cp4d_cartridge.name }} not found
@@ -19,7 +16,7 @@
   - set_fact:
       _dependency: "--no-dependency"
     when:  
-    - _current_cp4d_cartridge.name in ['cpd_platform','lite']
+    - not (_current_cp4d_cartridge.download_dependent_case | default(True) | bool)
 
   - name: Save case file {{ _current_cp4d_cartridge.search_string }}-{{ _current_cp4d_cartridge.case_version }}
     shell: |
@@ -33,12 +30,13 @@
     delay: 5
     until: _case_save.rc==0
 
-  - name: Check component_dependencies case files
+  - name: Check case dependencies case files
     include_tasks: validate-cartridge-dependency.yml
-    loop: "{{ _current_cp4d_cartridge.component_dependencies | default([]) }}"
+    loop: "{{ _current_cp4d_cartridge.case_dependencies | default([]) }}"
     loop_control:
-      loop_var: _current_cartridge_dependent_component
+      loop_var: _current_cartridge_dependent_case
     when: 
-      - _current_cp4d_cartridge.component_dependencies is defined
+      - _current_cp4d_cartridge.case_dependencies is defined
+      - not (_current_cp4d_cartridge.download_dependent_case | default(True) | bool)
 
   when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

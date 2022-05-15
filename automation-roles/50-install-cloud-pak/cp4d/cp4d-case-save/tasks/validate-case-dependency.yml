@@ -1,0 +1,14 @@
+---
+- debug:
+    msg: "Validating dependency {{ _current_cartridge_dependent_case }}"
+
+- name: Validate dependency {{ _current_cartridge_dependent_case }} is defined as a cp4d cartridge
+  set_fact:
+    _cartridge_dependent_details: "{{ _p_current_cp4d_cluster.cartridges | json_query(jmes_query) }}"
+  vars:
+    jmes_query: "[?name == '{{ _current_cartridge_dependent_case }}']"
+
+- name: Fail when dependent cartridge is not specified in the cp4d catridges
+  fail:
+    msg: "Missing dependent cartridge {{ _current_cartridge_dependent_case }}. This component must be configured in the cp4d configuration to be able to download its case files"
+  when: _cartridge_dependent_details | length == 0
