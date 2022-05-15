@@ -6,7 +6,7 @@ echo "Entering Cloud Pak Deployer command line in a container."
 echo 'Use the "exit" command to leave the container and return to the hosting server.'
 echo "-------------------------------------------------------------------------------"
 
-export PS1="\e[0;30m\e[106m[\u@Cloud Pak Deployer Container \W]\e[m\$ "
+export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\$ ';
 export PATH=$PATH:/cloud-pak-deployer
 
 /bin/bash
