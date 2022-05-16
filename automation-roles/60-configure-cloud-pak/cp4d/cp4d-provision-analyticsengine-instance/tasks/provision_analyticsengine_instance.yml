@@ -12,7 +12,7 @@
 
 - name: Determine if AnalyticsEngine instance already exists
   debug:
-    msg: "AnalyticsEngine instance {{ analyticsengine_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_analytics_instance"
+    msg: "AnalyticsEngine instance {{ analyticsengine_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
   when: "not analyticsengine_instance_lookup_result_json.total_count == 0"
 
 
@@ -23,6 +23,11 @@
       template:
         src: analyticsengine_storage_instance_40.json.j2
         dest: "{{ status_dir }}/cp4d/analyticsengine_storage_instance_40.json"
+
+    - name: Obtain AnalyticsEngine version
+      shell:
+        oc get analyticsengine -n {{ current_cp4d_cluster.project }} analyticsengine-sample -o jsonpath='{.spec.version}'
+      register: _ae_version
 
     - name: Prepare AnalyticsEngine instance {{ analyticsengine_instance.name }} json file
       template:
