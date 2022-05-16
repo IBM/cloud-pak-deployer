@@ -26,6 +26,11 @@
 - when: _current_ds_instance.stdout == "0"
   block:
 
+    - name: Obtain DataStage version
+      shell:
+        oc get datastage -n {{ current_cp4d_cluster.project }} datastage -o jsonpath='{.spec.version}'
+      register: _cp4d_ds_version
+
     - name: Create DataStage PXRuntime CRD yaml file
       template:
         src: ds_instance_40.yaml.j2
