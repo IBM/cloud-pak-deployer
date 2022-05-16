@@ -74,6 +74,11 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   if [[ "$cartridge_state" == "removed" ]];then
     continue
   fi
+
+  cartridge_internal=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_internal // false')
+  if [[ "$cartridge_internal" == "true" ]];then
+    continue
+  fi  
   
   cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .name')
   cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
