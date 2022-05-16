@@ -1,9 +1,4 @@
 ---
-
-# Find the latest version
-# curl -s -X GET https://api.github.com/repos/IBM/cloud-pak/contents/repo/case/ibm-cp-datacore | jq -r '.[] | select(.name|test("^[0-9].*")) | .name'
-
-# Download case file is state is installed
 - block:
   - name: Fail if the case file details for the cartridge cannot be found
     fail:
@@ -11,20 +6,15 @@
     when: (_current_cp4d_cartridge.search_string | default(""))==""
 
   - set_fact:
-      _dependency: ""
+      _case_save_command: "{{ lookup('template','case-save-command.j2') }}"
 
-  - set_fact:
-      _dependency: "--no-dependency"
-    when:  
-    - not (_current_cp4d_cartridge.download_dependent_case | default(True) | bool)
+  - name: Show case save command
+    debug:
+      var: _case_save_command
 
   - name: Save case file {{ _current_cp4d_cartridge.search_string }}-{{ _current_cp4d_cartridge.case_version }}
     shell: |
-      cloudctl case save \
-        --repo {{ case_github_url }} \
-        --case {{ _current_cp4d_cartridge.search_string }} \
-        --version {{ _current_cp4d_cartridge.case_version }} \
-        --outputdir {{ _case_dir }} {{ _dependency }}
+      {{ _case_save_command }}
     register: _case_save
     retries: 5
     delay: 5
