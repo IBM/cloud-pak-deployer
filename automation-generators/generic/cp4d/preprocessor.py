@@ -1,6 +1,5 @@
 from generatorPreProcessor import GeneratorPreProcessor
-import sys
-
+import sys, os
 
 # Reference
 # ---
@@ -242,6 +241,10 @@ def preprocessor(attributes=None, fullConfig=None):
             olm_utils=ge['olm_utils']
         else:
             olm_utils=False
+        # Check if olm utils is installed
+        if olm_utils:
+            if not os.path.exists(os.path.expanduser('~')+'/bin/apply-olm'):
+                g.appendError(msg="Container image was not built with olm-utils, cannot specify olm_utils: True")
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name
