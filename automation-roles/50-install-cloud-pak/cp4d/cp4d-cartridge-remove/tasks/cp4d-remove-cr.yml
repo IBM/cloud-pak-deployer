@@ -1,7 +1,7 @@
 ---
 - block:
   - set_fact:
-      _configured_cartridge: "{{ _p_current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
+      _configured_cartridge: "{{ _cartridges_to_install | json_query(query) | first | default({}) }}"
     vars:
       query: >-
         [?name=='{{ _current_cartridge_cr.name }}']
@@ -12,7 +12,7 @@
     failed_when: False
     register: _cartridge_installed
 
-  - name: Remove cartridge if it is installed but has been removed in the mean time
+  - name: Remove cartridge if it is currently installed but is to be uninstalled
     shell: |
       oc delete {{ _current_cartridge_cr.cr_cr }} --namespace {{ _p_current_cp4d_cluster.project }} --all
     when: >
@@ -22,3 +22,4 @@
   - (_current_cartridge_cr.cr_cr | default('')) != ''
   - not (_current_cartridge_cr.embedded | default(False) | bool)
   - not (_current_cartridge_cr.cr_internal | default(False) | bool)
+  - not _current_cartridge_cr.name in ['cpfs','cp-foundation','cpd_platform','lite']
