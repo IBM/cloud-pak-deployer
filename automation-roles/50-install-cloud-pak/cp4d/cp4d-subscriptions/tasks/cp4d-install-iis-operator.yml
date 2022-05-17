@@ -27,25 +27,25 @@
     - name: Prepare yaml file for IIS operator Security Context Constraints
       template:
         src: "iis-scc.j2"
-        dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-scc.yml"
+        dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_current_cp4d_cluster.name }}-scc.yml"
 
     - name: Create ISS Security Context Constraints
       command: |
-        oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ current_cp4d_cartridge.name }}-scc.yml"
+        oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_current_cp4d_cluster.name }}-scc.yml"
    
     - name: "Save Case file for inventory {{ cartridge_details.inventory }}"
       shell: |
         cloudctl case save \
           --repo {{ case_github_url }} \
           --case ibm-iis \
-          --version {{ _current_cp4d_cartridge.case_version }} \
+          --version {{ _p_current_cp4d_cluster.case_version }} \
           --outputdir {{ iis_operator_temp_dir.path }}
       register: case_save_result
 
     - name: "Case launch install Operator for inventory {{ cartridge_details.inventory }}"
       shell: |
         cloudctl case launch \
-          --case {{ iis_operator_temp_dir.path }}/ibm-iis-{{ current_cp4d_cartridge.version }}.tgz \
+          --case {{ iis_operator_temp_dir.path }}/ibm-iis-{{ _p_current_cp4d_cluster.version }}.tgz \
           --tolerance 1 \
           --namespace {{ foundational_services_project }} \
           --action installOperatorNative \
