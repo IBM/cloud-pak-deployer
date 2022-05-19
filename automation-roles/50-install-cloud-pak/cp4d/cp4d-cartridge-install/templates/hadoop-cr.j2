@@ -2,14 +2,16 @@ apiVersion: hadoop.cpd.ibm.com/v1
 kind: Hadoop
 metadata:
   name: hadoop-cr
-  namespace: {{ current_cp4d_cluster.project }}
+  namespace: {{ _p_current_cp4d_cluster.project }}
 spec:
   docker_registry_prefix: cp.icr.io/cp/cpd
-  size: {{ current_cp4d_cartridge.size }}
+  size: {{ _current_cp4d_cartridge.size | default('small') }}
   license:
     accept: true
     license: Enterprise
-  version: {{ current_cp4d_cartridge.version }}
+{% if _current_cp4d_cartridge.version is defined %}
+  version: {{ _current_cp4d_cartridge.version }}
+{% endif %}
 {% if selected_openshift_storage.storage_type == "pwx" %}
   storageVendor: portworx
   storageClass: portworx-shared-gp3

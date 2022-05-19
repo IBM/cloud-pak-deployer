@@ -6,12 +6,12 @@
       msg: "Running preparation for Watson Assistant installation"
 
   - debug:
-      var: "{{ current_cp4d_cartridge }}"
+      var: "{{ _p_current_cp4d_cluster }}"
 
   - name: Create Postgres license key using CASE tool
     shell: |
       cloudctl case launch \
-        --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ current_cp4d_cartridge.case_version }}.tgz \
+        --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ _p_current_cp4d_cluster.case_version }}.tgz \
         --inventory assistantOperator \
         --action create-postgres-licensekey \
         --namespace {{ _p_current_cp4d_cluster.project }}
@@ -19,7 +19,7 @@
   - name: Install Postgres operator using CASE tool
     shell: |
       cloudctl case launch \
-        --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ current_cp4d_cartridge.case_version }}.tgz \
+        --case {{ status_dir }}/cp4d/case/ibm-watson-assistant-{{ _p_current_cp4d_cluster.case_version }}.tgz \
         --inventory assistantOperator \
         --action install-postgres-operator \
         --namespace {{ _p_current_cp4d_cluster.project }} \
@@ -61,4 +61,4 @@
         --type=kubernetes.io/dockerconfigjson | true
       oc set data secret/wa-pull-secret -n {{ _p_current_cp4d_cluster.project }} \
         --from-file=.dockerconfigjson={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-wa-pull-secret.json
-  when: current_cp4d_cartridge.version < "4.0.5"
+  when: _current_cp4d_cartridge.version < "4.0.5"

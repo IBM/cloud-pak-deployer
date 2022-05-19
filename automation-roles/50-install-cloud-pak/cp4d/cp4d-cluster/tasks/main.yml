@@ -5,6 +5,8 @@
 
 - include_role:
     name: cp4d-variables
+  vars:
+    _p_cartridges: "{{ current_cp4d_cluster.cartridges }}"
 
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
@@ -38,7 +40,7 @@
 
 - set_fact:
     _use_case_files: True
-  when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool)
+  when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool) or (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Remove case directory in case it exists and not air-gapped
   file:
@@ -99,29 +101,32 @@
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - cpd_airgap | bool
   - not (cpd_skip_mirror | bool)
-  
-- name: Create catalog sources for entitled registry when not using case files
-  include_tasks: create-catalog-sources-entitled.yml
-  when: not _use_case_files
 
-- name: Create catalog sources from case files in {{ status_dir }}/cp4d/case directory when using case files
-  include_tasks: create-catalog-source-case-file.yml
-  loop: "{{ case_inventories }}"
-  loop_control:
-    loop_var: case_inventory
-  when: _use_case_files
+- name: Create catalog sources for Cloud Pak for Data
+  include_role:
+    name: cp4d-catalog-source
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
+- name: Create subscriptions for Cloud Pak for Data
+  include_role:
+    name: cp4d-subscriptions
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
 - name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.storage_class_name }}
   include_tasks: cp4d-get-storage-classes.yml
-
-- name: Prepare Cloud Pak for Data operator
-  include_tasks: prepare-cp4d-operator-40.yml
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
 
 - name: Install Control Plane for Cloud Pak for Data
-  include_tasks: install-control-plane-40.yml
+  include_tasks: install-control-plane.yml
+  when: not (current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- name: Install Control Plane for Cloud Pak for Data using OLM utils
+  include_tasks: install-control-plane-olm-utils.yml
+  when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml
@@ -139,7 +144,7 @@
     _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='cp-foundation']
+      [?name == 'cpfs' || name == 'cp-foundation']
 
 - name: Show foundational services element
   debug:

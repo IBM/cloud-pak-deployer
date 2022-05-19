@@ -5,7 +5,7 @@ echo "--------------------------------------------------------------------------
 echo "Starting the Web UI in the container"
 echo "-------------------------------------------------------------------------------"
 
-export PS1="\e[0;30m\e[106m[\u@Cloud Pak Deployer Container \W]\e[m\$ "
+export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\$ ';
 export PATH=$PATH:/cloud-pak-deployer
 
 cd /cloud-pak-deployer/deployer-web

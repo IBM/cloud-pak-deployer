@@ -1,0 +1,32 @@
+---
+- block:
+  - name: Fail if the case file details for the cartridge cannot be found
+    fail:
+      msg: Case file details for cartridge {{ _current_cp4d_cartridge.name }} not found
+    when: (_current_cp4d_cartridge.search_string | default(""))==""
+
+  - set_fact:
+      _case_save_command: "{{ lookup('template','case-save-command.j2') }}"
+
+  - name: Show case save command
+    debug:
+      var: _case_save_command
+
+  - name: Save case file {{ _current_cp4d_cartridge.search_string }}-{{ _current_cp4d_cartridge.case_version }}
+    shell: |
+      {{ _case_save_command }}
+    register: _case_save
+    retries: 5
+    delay: 5
+    until: _case_save.rc==0
+
+  - name: Check case dependencies case files
+    include_tasks: validate-case-dependency.yml
+    loop: "{{ _current_cp4d_cartridge.case_dependencies | default([]) }}"
+    loop_control:
+      loop_var: _current_cartridge_dependent_case
+    when: 
+      - _current_cp4d_cartridge.case_dependencies is defined
+      - not (_current_cp4d_cartridge.download_dependent_case | default(True) | bool)
+
+  when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

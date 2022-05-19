@@ -1,6 +1,5 @@
 from generatorPreProcessor import GeneratorPreProcessor
-import sys
-
+import sys, os
 
 # Reference
 # ---
@@ -36,18 +35,19 @@ import sys
 #  cp4d_version: 4.0
 #  openshift_storage_name: nfs-storage
 #  use_case_files: True
+#  olm_utils: False
 #  change_node_settings: True
 
 #  cartridges:
-#  - name: cp-foundation
+#  - name: cpfs
 #    license_service:
 #      state: disabled
 #      threads_per_core: 2
 #    case_version: 1.10.1
-#  - name: lite
+#  - name: cpd_platform
 #    subscription_channel: v2.0
 #    case_version: 2.0.8
-#  - name: wsl
+#  - name: ws
 #    version: 4.0.4
 #    subscription_channel: v2.0
 #    case_version: 2.0.4
@@ -71,7 +71,7 @@ import sys
   #   version: 7.2.3
   #   subscription_channel: v7.2
   #   case_version: 7.2.3
-  # - name: ca
+  # - name: cognos_analytics
   #   version: 4.0.4
   #   subscription_channel: v4.0
   #   case_version: 4.0.6
@@ -133,7 +133,7 @@ import sys
   #   - name: db2u
   #   instances:
   #   - name: data-virtualization
-  # - name: hadoop
+  # - name: hee
   #   version: 4.0.4
   #   size: small
   #   subscription_channel: v1.0
@@ -166,7 +166,7 @@ import sys
   #   subscription_channel: v1.0
   #   case_version: 1.0.4
   #   replicas: 1  
-  # - name: watson-assistant
+  # - name: watson_assistant
   #   version: 4.0.4
   #   subscription_channel: v4.0
   #   case_version: 4.0.4
@@ -207,7 +207,7 @@ import sys
   #   case_version: 2.3.4
   #   replicas: 1
   #   size: small
-  # - name: wsl
+  # - name: ws
   #   version: 4.0.4
   #   subscription_channel: v2.0
   #   case_version: 2.0.4
@@ -224,6 +224,7 @@ def preprocessor(attributes=None, fullConfig=None):
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional()
+    g('olm_utils').isOptional()
     g('change_node_settings').isOptional()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
@@ -231,10 +232,19 @@ def preprocessor(attributes=None, fullConfig=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
-# Check for cp4d:     
-# Check that cp-foundation element exists
-# Check that lite element exists
+        # Check for cp4d:     
+        # Check that cpfs element exists
+        # Check that cpd_platform element exists
 
+        # Store olm_utils property
+        if 'olm_utils' in ge:
+            olm_utils=ge['olm_utils']
+        else:
+            olm_utils=False
+        # Check if olm utils is installed
+        if olm_utils:
+            if not os.path.exists(os.path.expanduser('~')+'/bin/apply-olm'):
+                g.appendError(msg="Container image was not built with olm-utils, cannot specify olm_utils: True")
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name
@@ -271,19 +281,19 @@ def preprocessor(attributes=None, fullConfig=None):
 
 
         # Iterate over all cartridges to check if name-attribute is given. If not throw an error
-        cpFoundationFound=False
-        liteFound=False
+        cpfsFound=False
+        cpdPlatformFound=False
         for c in ge['cartridges']:
             if "name" not in c:
                 g.appendError(msg='name must be specified for all cartridges elements')
             else:
-                if c['name'] == "lite":
-                    liteFound=True
-                if c['name'] == "cp-foundation":
-                    cpFoundationFound=True
+                if c['name'] in ["cpd_platform","lite"]:
+                    cpdPlatformFound=True
+                if c['name'] in ["cpfs","cp-foundation"]:
+                    cpfsFound=True
                     check_cp_foundation(c)
-                if (c['name'] != "cp-foundation") and ("subscription_channel" not in c):
-                    g.appendError(msg='subscription_channel must be specified for all cartridges, except for cp-foundation')
+                # if (not olm_utils) and (not c['name'] in ["cpfs","cp-foundation"]) and ("subscription_channel" not in c):
+                #     g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')
@@ -301,10 +311,10 @@ def preprocessor(attributes=None, fullConfig=None):
                             if not dep_found:
                                 g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
-        if cpFoundationFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "cp-foundation"')
-        if liteFound==False:
-            g.appendError(msg='You need to specify a cartridge with name "lite"')
+        if cpfsFound==False:
+            g.appendError(msg='You need to specify a cartridge for the Cloud Pak Foundational Services (cpfs or cp-foundation)')
+        if cpdPlatformFound==False:
+            g.appendError(msg='You need to specify a cartridge for the Cloud Pak for Data platform (cpd_platform or lite)')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

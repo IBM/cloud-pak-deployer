@@ -29,24 +29,27 @@ cp4d:
   cp4d_version: 4.0
   openshift_storage_name: ocs-storage
   use_case_files: True
+  olm_utils: False
   cartridges:
-  - name: cp-foundation
+  - name: cpfs
     case_version: 1.6.0
-  - name: lite
+  - name: cpd_platform
     subscription_channel: v2.0
     case_version: 2.0.5
-  - name: wsl
+  - name: ws
     version: 4.0.2
     subscription_channel: v2.0
     case_version: 2.0.2
+    state: installed
   - name: wml
     version: 4.0.2
     subscription_channel: v1.1
     case_version: 4.0.3
     size: small
+    state: installed
 ```
 
-In the above example Watson Studio (`wsl`) version `4.0.2` will be installed by the operator with version `2.0.2`. Cloud Pak for Data and the other Cloud Paks use the `cloudctl case` tool to define the package of images and manifests for `CatalogSource` and operators. Version `2.0.2` defines the Watson Studio operator which will be installed when the subscription is being created.
+In the above example Watson Studio (`ws`) version `4.0.2` will be installed by the operator with version `2.0.2`. Cloud Pak for Data and the other Cloud Paks use the `cloudctl case` tool to define the package of images and manifests for `CatalogSource` and operators. Version `2.0.2` defines the Watson Studio operator which will be installed when the subscription is being created.
 
 If Cloud Pak for Data has been configured with a private registry in the deployer config, the deployer will mirror images from the IBM entitled registry to the private registry. In the above configuration, no private registry has been specified but `use_case_files` has been set to `True`, which means that the deployer will automatically download and use the CASE files to create the catalog sources.
 
@@ -75,7 +78,7 @@ With this flow, there is control over patches, promotion approvals and releases 
 ## Feeding patches and releases into the flow
 As discussed above, patches are first "developed" in the dev branch, i.e., changes are fed into the Git repository, images are loaded into the company's registry (dev namespace) and the installed into the Dev environment.
 
-The process of receiving and installing the patches is common for all Cloud Paks: the `cloudctl case` tool downloads the CASE file associated with the operator version and the same CASE file can be used to upload images into the company's registry. Then a Catalog Source is created which makes the images available to the operator subscriptions, which in turn manage the various custom resources in the Cloud Pak instance. For example, the `wsl` operator manages the `Ws` custom resource and this CR ensures that OpenShift deployments, secrets, Config Maps, Stateful Sets, and so forth are managed within the Cloud Pak for Data instance project.
+The process of receiving and installing the patches is common for all Cloud Paks: the `cloudctl case` tool downloads the CASE file associated with the operator version and the same CASE file can be used to upload images into the company's registry. Then a Catalog Source is created which makes the images available to the operator subscriptions, which in turn manage the various custom resources in the Cloud Pak instance. For example, the `ws` operator manages the `Ws` custom resource and this CR ensures that OpenShift deployments, secrets, Config Maps, Stateful Sets, and so forth are managed within the Cloud Pak for Data instance project.
 
 In the git-flow example, Watson Studio release `4.0.2` is installed by updating the Catalog Source. Detailed installation steps for Cloud Pak for Data can be found in the IBM documentation.
 

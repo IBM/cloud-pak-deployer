@@ -76,30 +76,44 @@
 - name: Loop through all cartridges for instance configuration
   when: "current_cp4d_cluster.cartridges is defined"
   block:
-    # Cartridge: DB2
+    # Cartridge: db2oltp
     - set_fact:
         _db2_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
       vars:
         cartridge_name: "db2"
         query_cartridge: "[?name=='{{ cartridge_name }}']"    
 
-    - name: Provision DB2 instances
+    - set_fact:
+        _db2_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+      vars:
+        cartridge_name: "db2oltp"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"
+      when: _db2_instance == {}   
+
+    - name: Provision Db2 OLTP instances
       include_role:
-        name: provision_db2_instance
+        name: cp4d-provision-db2oltp-instance
       when: 
       - _db2_instance != {} 
       - ( _db2_instance.state | default("installed") ) == "installed"
 
-    # Cartridge: CA
+    # Cartridge: cognos_analytics
     - set_fact:
         _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
       vars:
         cartridge_name: "ca"
         query_cartridge: "[?name=='{{ cartridge_name }}']"    
 
+    - set_fact:
+        _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+      vars:
+        cartridge_name: "cognos_analytics"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+      when: _ca_instance == {}
+
     - name: Provision Cognos instances
       include_role:
-        name: provision_cognos_instance
+        name: cp4d-provision-cognos-instance
       when: 
       - _ca_instance != {} 
       - ( _ca_instance.state | default("installed") ) == "installed"
@@ -113,7 +127,7 @@
 
     - name: Provision Data Virtualization instances
       include_role:
-        name: provision_dv_instance
+        name: cp4d-provision-dv-instance
       when: 
       - _dv_instance != {} 
       - ( _dv_instance.state | default("installed") ) == "installed"
@@ -127,7 +141,7 @@
 
     - name: Provision Analytics Engine instances
       include_role:
-        name: provision_analyticsengine_instance
+        name: cp4d-provision-analyticsengine-instance
       when: 
       - _ae_instance != {} 
       - ( _ae_instance.state | default("installed") ) == "installed"
@@ -141,7 +155,7 @@
 
     - name: Provision DataStage instances
       include_role:
-        name: provision_datastage_instance
+        name: cp4d-provision-datastage-instance
       when: 
       - _datastage_instance != {} 
       - ( _datastage_instance.state | default("installed") ) == "installed"

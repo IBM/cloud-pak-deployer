@@ -1,0 +1,49 @@
+---
+- set_fact:
+    db2_instance_id: "{{ db2_lookup_result_json.service_instances[0].id }}"
+
+- name: Create Datasource connection details json file
+  template:
+    src: db2_instance_connection.json.j2
+    dest: "{{ cp4d_automation_temp_dir.path }}/cp4d_db2_instance_connection.json"
+
+- name: Get details of internal Db2 OLTP instance {{ cognos_instance.metastore_ref }}
+  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases/connection' -T {{ cp4d_automation_temp_dir.path }}/cp4d_db2_instance_connection.json"
+  register: db2_details_result
+
+- set_fact:
+    db2_details_result_json: "{{ db2_details_result.stdout | from_json }}"
+    db2_instance_name: "{{ cognos_instance.metastore_ref }}"
+
+- name: Get the db2inst1 password of the {{ cognos_instance.metastore_ref }} Db2 OLTP instance
+  shell: "oc get secret -n {{ current_cp4d_cluster.project }} c-db2oltp-{{ db2_instance_id }}-instancepassword -o json | jq -r .data.password | base64 --decode"
+  register: db2inst1_password_result
+
+- name: Show Db2 OLTP instance password
+  debug:
+    var: db2inst1_password_result
+
+- name: Copy the prepareDB2forCA script to c-db2oltp-{{ db2_instance_id }}-db2u-0
+  shell: "oc cp -n {{ current_cp4d_cluster.project }} {{ role_path }}/files/prepareDB2forCA.sh c-db2oltp-{{ db2_instance_id }}-db2u-0:/tmp"
+
+- name: Assign the execute bit to the script
+  shell: "oc exec -n {{ current_cp4d_cluster.project }} c-db2oltp-{{ db2_instance_id }}-db2u-0 -- chmod +x /tmp/prepareDB2forCA.sh"
+
+- set_fact:
+    db2_instance_host: "{{ db2_details_result_json['connection-info'].ssl.host }}"
+    db2_instance_port: "{{ db2_details_result_json['connection-info'].ssl['node-port'] }}"
+    db2_instance_dbname: "{{ db2_details_result_json['connection-info'].ssl.dbname }}"
+    db2_instance_user_name: "db2inst1"
+    db2_instance_password: "{{ db2inst1_password_result.stdout }}"
+    cp4d_platform_connection_name: "{{ db2_instance_name }}-connection"
+
+- name: Run the Db2 prepare script for Db2 OLTP
+  shell: "oc exec -n {{ current_cp4d_cluster.project }} c-db2oltp-{{ db2_instance_id }}-db2u-0 -- /tmp/prepareDB2forCA.sh {{ db2_instance_dbname }} {{ db2_instance_user_name }} {{ db2_instance_password }}"
+  register: prepare_db2_result
+
+- name: Show results of Db2 OLTP preparation
+  debug:
+    msg: "{{ prepare_db2_result }}"
+
+
+

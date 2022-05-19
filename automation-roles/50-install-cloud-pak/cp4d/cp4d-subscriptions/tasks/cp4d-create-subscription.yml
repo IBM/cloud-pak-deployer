@@ -1,0 +1,27 @@
+---
+- block:
+  - name: Create operator subscriptions
+    debug:
+      msg: "Creating operator subscription for CP4D cartridge {{ _current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
+
+  # Custom preprocessing of Subscription if defied
+  - name: "Run operator pre-processing script {{ _current_cp4d_cartridge.operator_preprocessing_script }}"
+    include_tasks: "{{ _current_cp4d_cartridge.operator_preprocessing_script }}"
+    when: (_current_cp4d_cartridge.operator_preprocessing_script | default('')) != ''
+
+  # Create of Subscription if not cpd_platform or cpfs
+  - block:
+    - name: Prepare yaml file for operator subscription {{ _current_cp4d_cartridge.name }}
+      template:
+        src: "{{ _current_cp4d_cartridge.cr_file_prefix }}-sub.j2"
+        dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-sub.yml"
+
+    - name: Create subscription for cartridge {{ _current_cp4d_cartridge.name }}
+      command: |
+        oc apply -f "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.name }}-sub.yml"
+
+    when: 
+    - not _current_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite']
+    - not (_current_cp4d_cartridge.cr_internal | default(False) | bool)
+
+  when: (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool) 

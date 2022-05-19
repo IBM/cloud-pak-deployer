@@ -1,6 +1,8 @@
 ---
 - include_role:
     name: cp4d-variables
+  vars:
+    _p_cartridges: "{{ _p_current_cp4d_cluster.cartridges }}"
     
 - set_fact:
     _case_dir: "{{ status_dir }}/cp4d/case"
@@ -14,8 +16,8 @@
   debug:
     var: _p_current_cp4d_cluster
 
-- name: Download operator case files to {{ status_dir }}/cp4d/case
-  include_tasks: download-case-online.yml
-  loop: "{{ _p_current_cp4d_cluster.cartridges | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
+- include_tasks: download-case-online.yml
+  when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- include_tasks: download-case-olm-utils.yml
+  when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)

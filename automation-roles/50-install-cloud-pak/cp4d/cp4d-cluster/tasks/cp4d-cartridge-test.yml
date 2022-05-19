@@ -1,5 +1,4 @@
 ---
-
 - block:
   - name: CPD TEST CARTRIDGES - START {{ _test_cp4d_cartridge.name }}
     shell:
@@ -35,6 +34,11 @@
       state: present
       create: True
 
+  - name: Make sure this is considered a new run when waiting for cartridges
+    file:
+      path: /tmp/check-services-installed.id
+      state: absent
+
   - name: CPD TEST CARTRIDGES - Install selected cartridge {{ _test_cp4d_cartridge.name }} for the cluster 
     include_role:
       name: cp4d-cartridge-install
@@ -62,5 +66,5 @@
     debug:
       msg: "Finished testing cartridge"
   when:
-  - _test_cp4d_cartridge.name != 'lite'
-  - _test_cp4d_cartridge.name != 'cp-foundation'
+  - not _test_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite']
+  - not (_test_cp4d_cartridge.cr_internal | default(False) | bool)

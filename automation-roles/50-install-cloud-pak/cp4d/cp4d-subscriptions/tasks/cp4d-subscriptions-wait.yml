@@ -1,0 +1,35 @@
+---
+- block:
+  - name: Wait for operator subscriptions
+    debug:
+      msg: "Wait for creation of operator subscription for cartridge {{ _current_cp4d_cartridge.name }} for CP4D cluster {{ _p_current_cp4d_cluster.project }}"
+
+  - block:
+    - name: Fail if the label for the cartridge cannot be found
+      fail:
+        msg: "Label for cartridge {{ _current_cp4d_cartridge.name }} not found, cannot check if CSV is successfully installed"
+      when: (_current_cp4d_cartridge.cartridge_label | default("")) == ""
+
+    # Wait until subscription for cartridge has been successfully created
+    - name: Wait until CSV for cartridge {{ _current_cp4d_cartridge.name }}, label {{ _current_cp4d_cartridge.cartridge_label }} has status Succeeded
+      shell: |
+        oc get csv -n {{ foundational_services_project }} \
+          --no-headers \
+          -l {{ _current_cp4d_cartridge.cartridge_label }} \
+          -o custom-columns='name:metadata.name,phase:status.phase' | \
+          grep -i succeeded | wc -l
+      register: csv_status
+      retries: 30
+      delay: 30
+      until: csv_status.stdout != "0"
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    when: 
+    - not _current_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite']
+
+  when: 
+  - (_current_cp4d_cartridge.state | default('installed')) == 'installed' or (cpd_test_cartridges | default(False) | bool)
+  - not (_current_cp4d_cartridge.cr_internal | default(False) | bool)

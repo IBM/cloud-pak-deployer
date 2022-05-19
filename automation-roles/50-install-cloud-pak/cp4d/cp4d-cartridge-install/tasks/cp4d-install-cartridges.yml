@@ -1,0 +1,21 @@
+---
+
+- name: Install cartridges for CP4D cluster {{ _p_current_cp4d_cluster.project }}
+  debug:
+    msg: ""
+
+- set_fact:
+    _cp4d_cartridges_installed_successfully: True
+
+# Install all cartridges
+- name: Install custom resource (CR) for each of the selected cp4d cartridges
+  include_tasks: cp4d-install-cr.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+
+- name: Wait for cartridges to finish installation
+  include_tasks: cp4d-wait-cartridges-ready.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge

@@ -1,0 +1,26 @@
+---
+- include_role:
+    name: cp4d-variables
+  vars:
+    _p_cartridges: "{{ _p_current_cp4d_cluster.cartridges }}"
+
+# Create Foundational Services project for Cloud Pak for Data
+- name: Create OpenShift Project {{ foundational_services_project }} if it does not exist
+  shell: 
+    oc new-project {{ foundational_services_project }} || true
+
+# Create Operator Group
+- name: Generate definition for OperatorGroup
+  template:
+    src: operator-group.j2
+    dest: "{{ status_dir }}/cp4d/operator-group.yml"
+
+- name: Create OperatorGroup
+  command: |
+    oc apply -f "{{ status_dir }}/cp4d/operator-group.yml"
+
+- include_tasks: cp4d-create-subscriptions.yml
+  when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- include_tasks: cp4d-create-subscriptions-olm-utils.yml
+  when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)

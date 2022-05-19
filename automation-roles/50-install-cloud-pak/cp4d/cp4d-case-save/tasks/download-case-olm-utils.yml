@@ -1,0 +1,21 @@
+---
+- name: Download operator case files to {{ status_dir }}/cp4d/case using OLM utils
+  debug:
+    msg: ""
+    
+- name: Ensure that OLM utils work directory exists
+  file:
+    path: /tmp/work
+    state: directory
+
+- name: Generate OLM command to save case files
+  set_fact:
+    _apply_olm_command: "{{ lookup('template', 'apply-olm-case-save.j2') }}" 
+
+- name: Show apply-olm command
+  debug:
+    var: _apply_olm_command
+
+- name: Run apply-olm command to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
+  shell: |
+    {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-case-save.log 2>&1

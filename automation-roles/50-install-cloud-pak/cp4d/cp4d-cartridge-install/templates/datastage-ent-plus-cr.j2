@@ -1,0 +1,17 @@
+apiVersion: ds.cpd.ibm.com/v1alpha1
+kind: DataStage
+metadata:
+  name: datastage
+  namespace: {{ _p_current_cp4d_cluster.project }}
+spec:
+  license:
+    accept: true
+    license: Enterprise
+{% if _current_cp4d_cartridge.version is defined %}
+  version: {{ _current_cp4d_cartridge.version }}
+{% endif %}
+{% if selected_openshift_storage.storage_type == "pwx" %}
+  storageClass: portworx-shared-gp3
+{% else %} 
+  storageClass: {{ ocp_storage_class_file }}
+{% endif %}

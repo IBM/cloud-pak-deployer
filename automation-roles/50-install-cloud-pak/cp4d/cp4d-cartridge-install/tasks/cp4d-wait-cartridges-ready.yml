@@ -1,13 +1,15 @@
 ---
+- debug:
+    msg: "{{ _current_cp4d_cartridge }}"
+
 - block:
-  - name: Wait until cartridge {{ current_cp4d_cartridge.name }} has been installed, check logs in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.log
+  - name: Wait until cartridge {{ _current_cp4d_cartridge.name }} has been installed, check logs in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.log
     script: |
       check-services-installed.sh \
         {{ status_dir }} \
         {{ _p_current_cp4d_cluster.project }} \
-        {{ wait_for_cartridges | default([]) | to_json | b64encode }} \
-        {{ cartridge_cr | to_json | b64encode }} \
-        {{ current_cp4d_cartridge.name }}
+        {{ _cartridges_to_install | default([]) | to_json | b64encode }} \
+        {{ _current_cp4d_cartridge.name }}
         
     register: _wait_cartridges_result
     until: _wait_cartridges_result.rc!=0 or _wait_cartridges_result.stdout.find('cartridge installation successfully completed') != -1
@@ -31,4 +33,7 @@
     - not _cp4d_cartridges_installed_successfully
     - not (cpd_test_cartridges | default(False) | bool)
 
-  when: (current_cp4d_cartridge.state | default('installed')) == 'installed'
+  when: 
+  - (_current_cp4d_cartridge.state | default('installed')) == 'installed'
+  - not _current_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite']
+  - not (_current_cp4d_cartridge.cr_internal | default(False) | bool)
