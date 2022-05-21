@@ -13,17 +13,21 @@
   register: ocs_check_addon
   failed_when: False
 
-# TODO: Remove debug
 - name: Show result of ocs add-on check
   debug:
     var: ocs_check_addon
 
+- name: Compose ibmcloud oc cluster addon command
+  set_fact:
+    _ibmcloud_oc_addon: "{{ lookup('template','ibmcloud-oc-addon.j2') }}"
+
+- name: Show ibmcloud oc cluster addon command
+  debug:
+    var: _ibmcloud_oc_addon
+
 - name: Enable openshift-data-foundation add-on for ROKS cluster {{ current_openshift_cluster.name }}
-  command: |
-    ibmcloud oc cluster addon enable openshift-data-foundation \
-      --cluster {{ current_openshift_cluster.name }} \
-      --param "odfDeploy=false" \
-      -f
+  shell: |
+    {{ _ibmcloud_oc_addon }}
   when: ocs_check_addon.rc != 0
 
 - name: Wait until openshift-data-foundation add-on is ready
