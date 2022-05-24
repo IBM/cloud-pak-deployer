@@ -1,0 +1,76 @@
+---
+provider:
+- name: ibm
+  region: {{ ibm_cloud_region }}
+
+resource_group:
+- name: "default" # should exist already
+
+ssh_keys:
+- name: {{ env_id }}-provision
+  managed: True 
+
+security_rule:
+- name: https
+  tcp: {port_min: 443, port_max: 443}
+- name: ssh
+  tcp: {port_min: 22, port_max: 22}
+
+vpc:
+- name: {{ env_id }}
+  allow_inbound: ['ssh']
+
+address_prefix:
+- name: {{ env_id }}-zone
+  zone: {{ ibm_cloud_region }}-1
+  cidr: 10.231.0.0/24
+
+subnet:
+- name: {{ env_id }}-subnet
+  address_prefix: {{ env_id }}-zone
+  ipv4_cidr_block: 10.231.0.0/24
+
+vsi:
+- name: {{ env_id }}-bastion
+  infrastructure:
+    type: vpc
+    subnet: {{ env_id }}-subnet
+    primary_ipv4_address: 10.231.0.196
+    public_ip: True
+    keys:
+    - "{{ env_id }}-provision"
+
+nfs_server:
+- name: {{ env_id }}-nfs
+  infrastructure:
+    type: vpc
+    subnet: {{ env_id }}-subnet
+    zone: {{ ibm_cloud_region }}-1
+    primary_ipv4_address: 10.231.0.197
+    bastion_host: {{ env_id }}-bastion
+    storage_profile: 10iops-tier
+    volume_size_gb: 1000
+    storage_folder: /data/nfs 
+    keys:
+    - "{{ env_id }}-provision"
+
+cos:
+- name: {{ env_id }}-cos
+  plan: standard
+  location: global
+
+openshift:
+- name: {{ env_id }}
+  ocp_version: 4.8
+  compute_flavour: bx2.16x64
+  compute_nodes: 5
+  infrastructure:
+    type: vpc
+    vpc_name: {{ env_id }}
+    subnets: 
+    - {{ env_id }}-subnet
+    cos_name: {{ env_id }}-cos
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+    nfs_server_name: {{ env_id }}-nfs
