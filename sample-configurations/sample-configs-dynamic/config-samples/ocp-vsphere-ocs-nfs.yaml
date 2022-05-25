@@ -1,0 +1,55 @@
+---
+nfs_server:
+- name: sample-nfs
+  infrastructure:
+    host_ip: 10.99.92.31
+    storage_folder: /data/nfs    
+
+vsphere:
+- name: {{ env_id }}
+  vcenter: 10.99.92.13
+  datacenter: Datacenter1
+  datastore: Datastore1
+  cluster: Cluster1
+  network: "VM Network"
+  folder: /Datacenter1/vm/{{ env_id }}
+
+vm_definition:
+- name: control-plane
+  vcpu: 8
+  memory_mb: 32768
+  boot_disk_size_gb: 100
+- name: compute
+  vcpu: 16
+  memory_mb: 65536
+  boot_disk_size_gb: 200
+- name: storage
+  vcpu: 10
+  memory_mb: 32768
+  boot_disk_size_gb: 100
+  # Optional overrides for vsphere properties
+  # datastore: Datastore1
+  # network: "VM Network"
+x
+openshift:
+- name: {{ env_id }}
+  domain_name: example.com
+  vsphere_name: {{ env_id }}
+  ocp_version: 4.8
+  control_plane_nodes: 3
+  control_plane_vm_definition: control-plane
+  compute_nodes: 3
+  compute_vm_definition: compute
+  api_vip: 10.99.92.51
+  ingress_vip: 10.99.92.52
+  openshift_storage:
+  # - storage_name: nfs-storage
+  #   storage_type: nfs
+  #   nfs_server_name: sample-nfs
+  - storage_name: ocs-storage
+    storage_type: ocs
+    ocs_version: 4.8
+    ocs_storage_label: ocs
+    ocs_storage_size_gb: 512
+    ocs_dynamic_storage_class: thin
+    storage_vm_definition: storage
