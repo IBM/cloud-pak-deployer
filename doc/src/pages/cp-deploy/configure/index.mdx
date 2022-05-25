@@ -4,43 +4,50 @@ title: Configure
 
 # Cloud Pak Deployer Configuration
 
-The Cloud Pak Deployer includes several sample configurations which you can use as a basis for your own configuration. You can find sample configuration `yaml` files in the `sample-configurations/sample-config/config-samples` directory of the repository and descriptions in `sample-configurations/sample-config/sample-descriptions`.
+The Cloud Pak Deployer includes several samples which you can use to build your own configuration. You can find sample configuration `yaml` files in the sub-directories of the `sample-configurations` directory of the repository. Descriptions are also included in the sub-directories.
 
 <InlineNotification kind="warning">
-If you want to make changes to the example configurations, it is best to copy the example directory and not to place it under the repository directory structure, otherwise you may not be able to update (pull) the repository with changes applied on github.ibm.com.
+Do not make changes to the sample configurations in the `cloud-pak-deployer` directory, but rather copy it to your own home directory or somewhere else and then make changes. If you store your own configuration under the repository's clone, you may not be able to update (pull) the repository with changes applied on GitHub, or accidentally overwrite it.
 </InlineNotification>
-
-Example of copying a configuration directory to your user home directory:
-```
-cp -r ./sample-configurations/sample-roks-vpc-nfs-cp4d ~/sample-config
-```
-
-## Configuration steps
-* Copy the sample configuration directory to your user home directory:
-```
-mkdir -p /data/config
-cp -r ./sample-configurations/sample-config /data/config/sample
-cd /data/config/sample
-```
-* Update the inventory file `./inventory/sample.inv` to uncomment the `cloud_platform` that matches the infrastructure you're targeting
-* Copy the relevant "ocp-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
-```
-cp ./config-samples/ocp-ibm-cloud-roks-ocs.yaml ./config/
-```
-* Copy the relevant "cp4d-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
-```
-cp ./config-samples/cp4d-408.yaml ./config/
-```
-* Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`
-```
-vi ./config/cp4d-408.yaml
-```
-
-The configurations typically work without any configuration changes and will create all referenced objects, including OpenShift cluster, cloud infrastructure such as VPCs, SSH keys, subnets, NFS servers and OCS storage nodes if specified. There is typically no need to change address prefixes and subnets. The IP addresses used by the provisioned components are private to the VPC and are not externally exposed.
 
 <InlineNotification kind="warning">
-Do not create any of the specified objects referenced in the configuration yourself. The deployer has not been designed to change an existing OpenShift cluster or existing Coud Pak installation.
+The deployer expects to manage all objects referenced in the configuration files, including the referenced OpenShift cluster and Cloud Pak installation. If you have already pre-provisioned the OpenShift cluster, choose a configuration with `existing-ocp` cloud platform. If the Cloud Pak has already been installed, unexpected and undesired activities may happen. The deployer has not been designed to alter a pre-provisioned OpenShift cluster or existing Cloud Pak installation.
 </InlineNotification>
+
+## Configuration steps - static sample configuration
+1. Copy the static sample configuration directory to your own directory:
+```
+    mkdir -p /data/config
+    cp -r ./sample-configurations/roks-ocs-cp4d /data/config/sample
+    cd /data/config/sample
+```
+2. Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`
+```
+    nano ./config/cp4d-408.yaml
+```
+
+The configuration typically work without any configuration changes and will create all referenced objects, including the Virtual Private Cloud, subnets, SSH keys, ROKS cluster and OCS storage ndoes. There is typically no need to change address prefixes and subnets. The IP addresses used by the provisioned components are private to the VPC and are not externally exposed.
+
+## Configuration steps - dynamically choose OpenShift and Cloud Pak
+1. Copy the sample configuration directory to your own directory:
+```
+    mkdir -p /data/config
+    cp -r ./sample-configurations/sample-dynamic /data/config/sample
+    cd /data/config/sample
+```
+2. Update the inventory file `./inventory/sample.inv` to uncomment the `cloud_platform` that matches the infrastructure you're targeting
+3. Copy the relevant "ocp-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
+```
+    cp ./config-samples/ocp-ibm-cloud-roks-ocs.yaml ./config/
+```
+4. Copy the relevant "cp4d-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
+```
+    cp ./config-samples/cp4d-408.yaml ./config/
+```
+5. Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`
+```
+    nano ./config/cp4d-408.yaml
+```
 
 For more advanced configuration topics such as using a private registry, setting up transit gateways between VPCs, etc, go to [advanced configuration](/advanced/advanced-configuration)
 
