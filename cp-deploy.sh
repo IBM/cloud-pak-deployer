@@ -537,13 +537,8 @@ if ! $INSIDE_CONTAINER;then
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
-    if [ $($CONTAINER_ENGINE image list cp.stg.icr.io/cp/cpd/olm-utils:latest-validated -n | wc -l) -eq 0 ];then
-      echo "Building container image for Cloud Pak Deployer without olm-utils"
-      $CONTAINER_ENGINE build -t cloud-pak-deployer ${SCRIPT_DIR}
-    else
-      echo "Building container image for Cloud Pak Deployer including olm-utils"
-      $CONTAINER_ENGINE build -t cloud-pak-deployer -f ${SCRIPT_DIR}/Dockerfile.olm-utils ${SCRIPT_DIR}
-    fi
+    echo "Building container image for Cloud Pak Deployer including olm-utils"
+    $CONTAINER_ENGINE build -t cloud-pak-deployer -f ${SCRIPT_DIR}/Dockerfile.olm-utils ${SCRIPT_DIR}
     exit $?
   fi
 fi
