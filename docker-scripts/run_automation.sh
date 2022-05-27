@@ -100,6 +100,15 @@ env|environment)
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   set -o pipefail
   eval $run_cmd
+  if [ $? -eq 0 ];then
+    echo
+    echo "==========================================================================="
+    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C."
+  else
+    echo
+    echo "===================================================================================="
+    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C."
+  fi
   ;;
 
 vault)
