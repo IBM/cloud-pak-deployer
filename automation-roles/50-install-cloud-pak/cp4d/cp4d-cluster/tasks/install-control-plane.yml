@@ -1,4 +1,23 @@
 ---
+# Check if the scheduler must be installed
+- set_fact:
+    _scheduler: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='scheduler']
+
+- name: Install scheduling service
+  block:
+  - name: Prepare yaml file for scheduling service
+    template:
+    src: scheduler-cr.j2
+    dest: "{{ status_dir }}/cp4d/scheduler-{{ foundational_services_project }}.yml"
+
+  - name: Create scheduling service
+    command: |
+      oc apply -f "{{ status_dir }}/cp4d/scheduler-{{ foundational_services_project }}.yml"
+  when: _scheduler != {} and (scheduler.state | default('installed')) == 'installed'
+
 # Create OperandRequest
 - name: Prepare yaml file for platform operator OperandRequest
   template:
