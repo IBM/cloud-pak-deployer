@@ -1,12 +1,20 @@
 ---
-- name: Show current CP4D cluster
+- name: Show current CP4D cluster object
   debug:
-    msg: "Handling CP4D cluster {{ current_cp4d_cluster.project }}"
+    var: current_cp4d_cluster
 
 - include_role:
     name: cp4d-variables
   vars:
     _p_cartridges: "{{ current_cp4d_cluster.cartridges }}"
+
+- set_fact:
+    _cpd_accept_licenses: "{{ current_cp4d_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
+
+- name: Fail if licenses were not accepted
+  fail:
+    msg: "You must accept the licenses, either in the cp4d object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
+  when: not (_cpd_accept_licenses | bool)
 
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"

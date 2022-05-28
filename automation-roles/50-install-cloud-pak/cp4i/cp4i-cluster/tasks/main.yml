@@ -6,6 +6,14 @@
     msg: "Handling CP4I cluster {{ current_cp4i_cluster.project }}"
 
 - set_fact:
+    _cpd_accept_licenses: "{{ current_cp4i_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
+
+- name: Fail if licenses were not accepted
+  fail:
+    msg: "You must accept the licenses, either in the cp4i object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
+  when: not (_cpd_accept_licenses | bool)
+
+- set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
     query: >-
