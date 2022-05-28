@@ -1,0 +1,23 @@
+---
+- name: Prepare yaml file for scheduling service
+  template:
+    src: scheduler-cr.j2
+    dest: "{{ status_dir }}/cp4d/scheduler-{{ _p_fs_project }}.yml"
+
+- name: Create scheduling service
+  command: |
+    oc apply -f "{{ status_dir }}/cp4d/scheduler-{{ _p_fs_project }}.yml"
+
+- name: Wait for scheduling service to be installed
+  shell: |
+    oc get Scheduling -n {{ _p_fs_project }} ibm-cpd-scheduler -o jsonpath='{.status.cpd-schedulingStatus}' | grep -i 'completed' | \
+      wc -l
+  register: _deployed_scheduling
+  retries: 30
+  delay: 30
+  until: _deployed_scheduling.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

@@ -128,6 +128,13 @@
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
 
+- name: Install or uninstall scheduling service
+  include_role:
+    name: cp4d-scheduling-service
+  vars:
+    _p_fs_project: "{{ foundational_services_project }}"
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
 - name: Install Control Plane for Cloud Pak for Data
   include_tasks: install-control-plane.yml
   when: not (current_cp4d_cluster.olm_utils | default(False) | bool)
