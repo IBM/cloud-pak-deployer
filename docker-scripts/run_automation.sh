@@ -100,6 +100,7 @@ env|environment)
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   set -o pipefail
   eval $run_cmd
+  exit_code=$?
   if [ $? -eq 0 ];then
     echo
     echo "==========================================================================="
@@ -109,6 +110,7 @@ env|environment)
     echo "===================================================================================="
     echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C."
   fi
+  exit ${exit_code}
   ;;
 
 vault)
