@@ -1,0 +1,47 @@
+# Build the pages documentation
+
+name: CI
+
+# Trigger the workflow on push or pull request events but only for the main branch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+  # Allows running this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Check-out repository under $GITHUB_WORKSPACE
+        uses: actions/checkout@v3
+
+      - name: Install nodeJS
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14.15.0
+
+      - name: Install node packages
+        run: npm install
+        working-directory: doc
+
+      - name: Install Gatsby CLI
+        run: npm install -g gatsby-cli
+        working-directory: doc
+
+      - name: Build the static pages and deploy to gh-pages branch
+        run: |
+          gatsby build --prefix-paths
+          git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          npx gh-pages -d public -u "github-actions-bot <support+actions@github.com>"
+        working-directory: doc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
