@@ -4,7 +4,7 @@ import ResourceLinks from 'gatsby-theme-carbon/src/components/LeftNav/ResourceLi
 const links = [
   {
     title: 'Cloud Pak Deployer GitHub',
-    href: 'https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer',
+    href: 'https://github.com/IBM/cloud-pak-deployer',
   },
   {
     title: 'Carbon',

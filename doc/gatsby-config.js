@@ -4,7 +4,7 @@ module.exports = {
     description: 'Automated deployment of OpenShift and Cloud Paks',
     keywords: 'gatsby,theme,carbon',
   },
-  pathPrefix: "/CloudPakDeployer/cloud-pak-deployer",
+  pathPrefix: "/IBM/cloud-pak-deployer",
   plugins: [
     {
       resolve: 'gatsby-plugin-manifest',
@@ -24,7 +24,7 @@ module.exports = {
         mediumAccount: 'carbondesign',
         repository: {
           baseUrl:
-            'https://github.ibm.com/CloudPakDeployer/cloud-pak-deployer',
+            'https://github.com/IBM/cloud-pak-deployer.git',
           subDirectory: '',
           branch: 'main',
         },

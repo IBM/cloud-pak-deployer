@@ -6,7 +6,7 @@ This project was bootstrapped with [Create React App](https://github.com/faceboo
 
 1. Open your terminal and then type
     ```
-    $ git clone git@github.ibm.com:CloudPakDeployer/cloud-pak-deployer.git
+    $ git clone https://github.com/IBM/cloud-pak-deployer.git
     ```
     This clones the repo cloud-pak-deployer. 
 
