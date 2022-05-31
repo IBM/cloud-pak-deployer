@@ -1,0 +1,27 @@
+---
+# Check if the scheduler must be installed
+- set_fact:
+    _scheduler: "{{ _p_current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='scheduler']
+
+- debug:
+    var: _p_current_cp4d_cluster.cartridges
+
+- debug:
+    var: _scheduler
+
+- name: Install scheduling service
+  block:
+
+  - include_tasks: install-scheduler.yml
+    when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+
+  - include_tasks: install-scheduler-olm-utils.yml
+    when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+
+  when: _scheduler != {} and (_scheduler.state | default('installed')) == 'installed'
+
+- include_tasks: uninstall-scheduler.yml
+  when: _scheduler == {} or (_scheduler.state | default('installed')) == 'removed'

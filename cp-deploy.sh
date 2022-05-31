@@ -35,6 +35,7 @@ command_usage() {
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
   echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
+  echo "  --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
   echo "  --vault-cert-ca-file          File with CA of login certificate (\$VAULT_CERT_CA_FILE)"
@@ -97,6 +98,7 @@ if [ "${CPD_SKIP_MIRROR}" == "" ];then CPD_SKIP_MIRROR=false;fi
 if [ "${CPD_SKIP_PORTABLE_REGISTRY}" == "" ];then CPD_SKIP_PORTABLE_REGISTRY=false;fi
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${CPD_TEST_CARTRIDGES}" == "" ];then CPD_TEST_CARTRIDGES=false;fi
+if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
@@ -234,6 +236,14 @@ while (( "$#" )); do
       command_usage 2
     fi
     fi
+    ;;
+  --accept-all-licenses)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --accept-all-licenses is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CPD_ACCEPT_LICENSES=true
+    shift 1
     ;;
   --ibm-cloud-api-key*|-k*)
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
@@ -527,13 +537,8 @@ if ! $INSIDE_CONTAINER;then
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
-    if [ $($CONTAINER_ENGINE image list cp.stg.icr.io/cp/cpd/olm-utils:latest-validated -n | wc -l) -eq 0 ];then
-      echo "Building container image for Cloud Pak Deployer without olm-utils"
-      $CONTAINER_ENGINE build -t cloud-pak-deployer ${SCRIPT_DIR}
-    else
-      echo "Building container image for Cloud Pak Deployer including olm-utils"
-      $CONTAINER_ENGINE build -t cloud-pak-deployer -f ${SCRIPT_DIR}/Dockerfile.olm-utils ${SCRIPT_DIR}
-    fi
+    echo "Building container image for Cloud Pak Deployer including olm-utils"
+    $CONTAINER_ENGINE build -t cloud-pak-deployer -f ${SCRIPT_DIR}/Dockerfile.olm-utils ${SCRIPT_DIR}
     exit $?
   fi
 fi
@@ -855,6 +860,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_SKIP_MIRROR=${CPD_SKIP_MIRROR}"
   run_cmd+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
   run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
+  run_cmd+=" -e CPD_ACCEPT_LICENSES=${CPD_ACCEPT_LICENSES}"
 
   # Handle extra variables
   if [ ${#arrExtraKey[@]} -ne 0 ];then

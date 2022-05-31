@@ -35,6 +35,7 @@ import sys, os
 #  cp4d_version: 4.0
 #  openshift_storage_name: nfs-storage
 #  use_case_files: True
+#  accept_licenses: False
 #  olm_utils: False
 #  change_node_settings: True
 
@@ -212,6 +213,11 @@ import sys, os
   #   subscription_channel: v2.0
   #   case_version: 2.0.4
 
+def str_to_bool(s):
+    if s == None:
+        return False
+    else:
+        return s.lower() in ['true','yes','1']
 
 def preprocessor(attributes=None, fullConfig=None):
     global g
@@ -225,6 +231,7 @@ def preprocessor(attributes=None, fullConfig=None):
     g('cartridges').isRequired()
     g('use_case_files').isOptional()
     g('olm_utils').isOptional()
+    g('accept_licenses').isOptional()
     g('change_node_settings').isOptional()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
@@ -235,6 +242,16 @@ def preprocessor(attributes=None, fullConfig=None):
         # Check for cp4d:     
         # Check that cpfs element exists
         # Check that cpd_platform element exists
+
+        # Check accept_licenses property
+        if 'accept_licenses' in ge:
+            accept_licenses=ge['accept_licenses']
+        else:
+            accept_licenses=False
+        # Check if olm utils is installed
+        if not accept_licenses:
+            if not str_to_bool(os.environ.get('CPD_ACCEPT_LICENSES')):
+                g.appendError(msg="You must accept licenses by specifying accept_licenses: True or by using the --accept-all-licenses command line flag")
 
         # Store olm_utils property
         if 'olm_utils' in ge:

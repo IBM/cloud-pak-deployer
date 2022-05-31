@@ -73,6 +73,7 @@ env|environment)
   run_cmd+=" --extra-vars cpd_skip_mirror=${CPD_SKIP_MIRROR}"
   run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
   run_cmd+=" --extra-vars cpd_test_cartridges=${CPD_TEST_CARTRIDGES}"
+  run_cmd+=" --extra-vars cpd_accept_licenses=${CPD_ACCEPT_LICENSES}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
@@ -99,6 +100,17 @@ env|environment)
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   set -o pipefail
   eval $run_cmd
+  exit_code=$?
+  if [ $? -eq 0 ];then
+    echo
+    echo "==========================================================================="
+    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C."
+  else
+    echo
+    echo "===================================================================================="
+    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C."
+  fi
+  exit ${exit_code}
   ;;
 
 vault)
