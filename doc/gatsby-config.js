@@ -4,7 +4,7 @@ module.exports = {
     description: 'Automated deployment of OpenShift and Cloud Paks',
     keywords: 'gatsby,theme,carbon',
   },
-  pathPrefix: "/IBM/cloud-pak-deployer",
+  pathPrefix: "/cloud-pak-deployer",
   plugins: [
     {
       resolve: 'gatsby-plugin-manifest',
