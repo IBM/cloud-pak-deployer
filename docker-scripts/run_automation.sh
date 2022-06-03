@@ -101,14 +101,14 @@ env|environment)
   set -o pipefail
   eval $run_cmd
   exit_code=$?
-  if [ $? -eq 0 ];then
-    echo
-    echo "==========================================================================="
-    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C."
+  if [ ${exit_code} -eq 0 ];then
+    echo | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "===========================================================================" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C." | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
   else
-    echo
-    echo "===================================================================================="
-    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C."
+    echo | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "====================================================================================" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
   fi
   exit ${exit_code}
   ;;
