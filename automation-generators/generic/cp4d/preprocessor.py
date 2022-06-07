@@ -248,10 +248,11 @@ def preprocessor(attributes=None, fullConfig=None):
             accept_licenses=ge['accept_licenses']
         else:
             accept_licenses=False
-        # Check if olm utils is installed
-        if not accept_licenses:
-            if not str_to_bool(os.environ.get('CPD_ACCEPT_LICENSES')):
-                g.appendError(msg="You must accept licenses by specifying accept_licenses: True or by using the --accept-all-licenses command line flag")
+        # Check if licenses were accepted if cluster must not be destroyed
+        if os.environ.get('ACTION') != 'destroy':
+            if not accept_licenses:
+                if not str_to_bool(os.environ.get('CPD_ACCEPT_LICENSES')):
+                    g.appendError(msg="You must accept licenses by specifying accept_licenses: True or by using the --accept-all-licenses command line flag")
 
         # Store olm_utils property
         if 'olm_utils' in ge:
