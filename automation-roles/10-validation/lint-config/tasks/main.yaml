@@ -1,0 +1,30 @@
+---
+- name: Check that all required variables are set for the generators
+  assert:
+    quiet: true
+    that:
+      - "{{item}} is defined"
+    fail_msg: "'{{item}}' needs to be set for this role to work"
+  with_items:
+  - path_to_generators_dir
+
+- set_fact:
+    generator_validation_error_message: ""
+    generator_validation_error_count: 0
+    generator_last_name: ""
+- set_fact:
+    generator_validation_error_message: |
+      Validation errors:
+
+- name: Lint and pre-process all object types
+  include_tasks: pre-process-object-type.yaml
+  loop: "{{ all_config | dict2items }}"
+  loop_control:
+    loop_var: all_config_item
+
+- name: Fail if configuration errors have been found
+  fail:
+    msg: "{{ generator_validation_error_message }}"
+  when: generator_validation_error_count | int > 0
+  vars:
+    ansible_callback_diy_runner_on_failed_msg: "{{ ansible_callback_diy.result.output.msg }}\n"
