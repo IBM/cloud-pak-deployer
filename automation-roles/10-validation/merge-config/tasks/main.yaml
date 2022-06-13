@@ -1,0 +1,87 @@
+---
+- name: Check that all required variables are set for the generators
+  assert:
+    quiet: true
+    that:
+      - "{{item}} is defined"
+    fail_msg: "'{{item}}' needs to be set for this role to work"
+  with_items:
+  - path_to_config_dir
+
+- name: Create {{status_dir}}/generated/configs work folder if it does not exist
+  file:
+    path: '{{status_dir}}/generated/configs'
+    state: directory
+
+- name: Create {{status_dir}}/generated/defaults work folder if it does not exist
+  file:
+    path: '{{status_dir}}/generated/defaults'
+    state: directory
+    
+# Merge configurations
+- name: Parse the yaml config and provide it as a fact config_merged
+  block:
+    - name: 'Get stats of {{path_to_config_dir}}/config'
+      stat:
+        path: "{{path_to_config_dir}}/config"
+      register: stats_of_config_dir
+
+    - name: 'Lookup *.yaml files in {{ stats_of_config_dir.stat.path }}'
+      find:
+        paths: '{{ stats_of_config_dir.stat.path }}'
+        file_type: file
+        patterns: '*.yaml'
+      register: found_config_files
+    
+    - name: Prepare config facts
+      set_fact: 
+        raw_config_files: {}
+        config_merged: {}
+    - name: Loop over config files
+      include_tasks: process-single-config-file.yaml
+      vars:
+        relative_path_to_config_file: "{{ item.path | replace( path_to_config_dir+'/config', '' ) }}"
+        absolute_path_to_config_file: "{{ item.path }}"
+      loop: '{{ found_config_files.files }}'
+      loop_control:
+        label: "{{ item.path }}"
+
+- name: Show merged config
+  debug:
+    var: config_merged
+
+# Merge defaults
+- name: Parse the yaml defaults and provide it as a fact defaults_merged
+  block:
+    - name: 'Lookup *.yaml files in {{path_to_config_dir}}/defaults'
+      find:
+        paths: '{{path_to_config_dir}}/defaults'
+        file_type: file
+        patterns: '*.yaml'
+      register: found_defaults_files
+    - name: Prepare defaults facts
+      set_fact: 
+        raw_defaults_files: {}
+        defaults_merged: {}
+    - name: Loop over defaults files
+      include_tasks: process-single-defaults-file.yaml
+      vars:
+        relative_path_to_defaults_file: "{{ item.path | replace( path_to_config_dir+'/defaults', '' ) }}"
+        absolute_path_to_defaults_file: "{{ item.path }}"
+      loop: '{{ found_defaults_files.files }}'
+      loop_control:
+        label: "{{ item.path }}"
+
+- name: Show merged defaults
+  debug:
+    var: defaults_merged
+
+- name: Merge config and defaults
+  include_tasks: prepare-defaults-flavour-and-config.yaml
+  loop: '{{ config_merged | dict2items }}'
+  loop_control:
+    loop_var: artifact
+
+- name: OUTPUT all_config
+  debug:
+    var: all_config

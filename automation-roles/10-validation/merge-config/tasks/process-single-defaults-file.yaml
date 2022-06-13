@@ -1,0 +1,29 @@
+---
+- name: Show relative path to defaults file
+  debug:
+    msg: '{{ relative_path_to_defaults_file }}'
+
+- name: Generate defaults through template
+  template:
+    src: "{{ absolute_path_to_defaults_file }}"
+    dest: "{{ status_dir }}/generated/defaults/{{ absolute_path_to_defaults_file | basename }}"
+
+- name: Include the file
+  include_vars:
+    file: "{{ status_dir }}/generated/defaults/{{ absolute_path_to_defaults_file | basename }}"
+    name: 'this_defaults'
+
+- name: Debug just included defaults
+  debug: 
+    msg: '{{ this_defaults }}'
+
+- name: Update raw_defaults_files
+  set_fact: 
+    raw_defaults_files: "{{ raw_defaults_files | combine({ relative_path_to_defaults_file : this_defaults }) }}"
+
+- name: Merge this_defaults with defaults_merged-fact
+  set_fact:
+    defaults_merged: "{{ defaults_merged | combine({defaults_item.key : (defaults_item.value + ( defaults_merged[defaults_item.key]|default([]) ) )  }) }}"
+  loop: "{{ this_defaults | dict2items}}"
+  loop_control:
+    loop_var: defaults_item

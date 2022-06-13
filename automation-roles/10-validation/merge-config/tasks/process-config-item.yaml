@@ -1,0 +1,15 @@
+---
+
+- name: Show config type
+  debug:
+    msg: "{{ config_item.value | type_debug }}"
+
+- name: Merge list into config_merged
+  set_fact:
+    config_merged: "{{ config_merged | combine({config_item.key : (config_item.value + ( config_merged[config_item.key]|default([]) ) )  }) }}"
+  when: config_item.value | type_debug == 'list'
+
+- name: Merge dictionary into config_merged
+  set_fact:
+    config_merged: "{{ config_merged | combine({config_item.key : config_item.value}) }}"
+  when: config_item.value | type_debug == 'dict'
