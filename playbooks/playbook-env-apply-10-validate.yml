@@ -11,6 +11,19 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
+
+  - name: Merge configuration
+    include_role:
+      name: merge-config
+    vars:
+      path_to_config_dir: "{{ config_dir }}"
+      
   - name: Validate variables
     include_role:
       name: validate-variables
+
+  - name: Lint configuration
+    include_role:
+      name: lint-config
+    vars:
+      path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
