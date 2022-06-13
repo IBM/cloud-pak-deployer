@@ -1,0 +1,11 @@
+---
+- name: Get generator to be used for platform {{ cloud_platform }}
+  include_tasks: get-generator-dir.yaml
+
+- include_tasks: run-generator-list.yml
+  when: GENERATOR_ATTRIBUTES | type_debug == 'list'
+
+- include_tasks: run-generator.yml
+  vars:
+    OBJECT_ELEMENT_ATTRIBUTES: "{{ GENERATOR_ATTRIBUTES }}"
+  when: GENERATOR_ATTRIBUTES | type_debug == 'dict'

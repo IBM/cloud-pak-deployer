@@ -1,5 +1,5 @@
 ---
-- name: Debug {{ all_config_item.key }}
+- name: Debug {{ _all_config_item.key }}
   debug:
     msg: |
       element: {{ object_element }}
@@ -7,11 +7,11 @@
 
 - name: If a preprocessor script was found, run it via pre_execution_processing.py
   block:
-  - name: Run the linter and pre-processor script for object {{ all_config_item.key }}
+  - name: Run the linter and pre-processor script for object {{ _all_config_item.key }}
     shell: |
       python3 pre-execution-processor.py \
-        -k {{ all_config_item.key }} \
-        -p {{ _generator_dir }}/{{ all_config_item.key }} \
+        -k {{ _all_config_item.key }} \
+        -p {{ _generator_dir }}/{{ _all_config_item.key }} \
         -i {{ object_element_index }} \
         -s preprocessor.py \
         -a {{ object_element | to_yaml | b64encode }} \
@@ -52,7 +52,7 @@
       generator_validator_error: |
         {{generator_validator_error}}
 
-        {{ all_config_item.key }}:
+        {{ _all_config_item.key }}:
         {{ object_element | to_nice_yaml }}
     when: validator_received_result['errors'] is defined and (validator_received_result['errors']|length>0)
 
