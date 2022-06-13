@@ -1,12 +1,6 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 
-INV_DIR="${CONFIG_DIR}/inventory"
-if [ ! -d "${INV_DIR}" ]; then
-  echo "inventory directory not found in directory ${CONFIG_DIR}."
-  error=1
-fi
-
 echo ""
 echo "Starting download preparation script..."
 echo ""
@@ -20,7 +14,10 @@ fi
 export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
 
 # Assemble command
-run_cmd="ansible-playbook -i ${INV_DIR}"
+run_cmd="ansible-playbook"
+if [ -d "${CONFIG_DIR}/inventory" ]; then
+  run_cmd+=" -i ${CONFIG_DIR}/inventory"
+fi
 run_cmd+=" playbooks/playbook-env-download-10-prepare.yml"
 run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
 run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
