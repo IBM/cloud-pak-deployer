@@ -1,0 +1,28 @@
+---
+# These facts are passed to this task-list via vars:
+#
+# <artifact_key> is the root attribute from the config
+#   that contains the collection of configs we want to 
+#   pass to the generator with name <artifact_key>
+# <artifact_list> contains the collection of artifacts
+#   inside the <artifact_key>
+- name: Initialize all_config
+  set_fact:
+    all_config: "{{ all_config | default({}) }}"
+
+- debug:
+    var: artifact
+
+- name: Add artifact dictionary to all_config
+  set_fact:
+    all_config: "{{ all_config | combine( {artifact.key: artifact.value }) }}"
+  when: artifact.value | type_debug == 'dict'
+
+- name: Add artifact key to all_config in case of list
+  set_fact:
+    all_config: "{{ all_config | combine( {artifact.key: []}) }}"
+  when: artifact.value | type_debug == 'list'
+
+- name: Add artifact items to all_config in case of list
+  include_tasks: process-defaults-flavour-and-config-list.yaml
+  when: artifact.value | type_debug == 'list'

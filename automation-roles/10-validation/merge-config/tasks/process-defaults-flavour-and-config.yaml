@@ -1,0 +1,25 @@
+---
+- name: Check the config of this item
+  debug:
+    var: artifact_item
+
+- name: Process default, flavour and config for merge
+  set_fact: 
+    this_item_default_config: "{{ ( ( defaults_merged.get(this_item_artifact_key) | selectattr('flavour', 'equalto', 'default') | list )                + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+    this_item_flavour_config: "{{ ( ( defaults_merged.get(this_item_artifact_key) | selectattr('flavour', 'equalto', this_item_config.get('flavour') ) | list ) + [{}] ) | first | drop_keys(['flavour']) }}" # | list | first | drop_keys(['flavour']) }}"
+
+- name: Show default configuration
+  debug:
+    var: this_item_default_config
+
+- name: Merge flavour_config over default_config
+  set_fact:
+    this_item_merged_config: "{{ this_item_default_config | combine( this_item_flavour_config, recursive=True) }}"
+
+- name: Merge artifact_config over already merged_config
+  set_fact:
+    this_item_merged_config: "{{ this_item_merged_config | combine( artifact_item, recursive=True) }}"
+
+- name: Store this_item_merged_config in all_config
+  set_fact: 
+    all_config: "{{ all_config | combine({this_item_artifact_key: (all_config.get(this_item_artifact_key)+[this_item_merged_config] ) }) }}"
