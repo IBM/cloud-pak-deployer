@@ -3,19 +3,19 @@
 - set_fact:
     _generator_dir: ""
 
-- name: Check if specific generator {{ GENERATOR_NAME }} for cloud platform {{ cloud_platform }} exists
+- name: Check if specific generator {{ _all_config_item.key }} for cloud platform {{ cloud_platform }} exists
   stat:
-    path: "{{path_to_generators_dir}}/{{ cloud_platform }}/{{ GENERATOR_NAME }}"
+    path: "{{path_to_generators_dir}}/{{ cloud_platform }}/{{ _all_config_item.key }}"
   register: _cloud_platform_generator
 
 - set_fact:
     _generator_dir: "{{path_to_generators_dir}}/{{ cloud_platform }}"
   when: _cloud_platform_generator.stat.exists
 
-- name: Check if generic generator {{ GENERATOR_NAME }} exists
+- name: Check if generic generator {{ _all_config_item.key }} exists
   block:
     - stat:
-        path: "{{path_to_generators_dir}}/generic/{{ GENERATOR_NAME }}"
+        path: "{{path_to_generators_dir}}/generic/{{ _all_config_item.key }}"
       register: _generic_platform_generator
     - set_fact:
         _generator_dir: "{{path_to_generators_dir}}/generic"
@@ -24,5 +24,5 @@
 
 - name: Check that generator directory exists
   fail:
-    msg: "No specific cloud platorm or generic generator exists for object {{ GENERATOR_NAME }}"
+    msg: "No specific cloud platorm or generic generator exists for object {{ _all_config_item.key }}"
   when: _generator_dir==""

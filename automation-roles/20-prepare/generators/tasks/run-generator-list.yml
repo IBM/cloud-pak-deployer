@@ -1,0 +1,42 @@
+---
+- name: Get generator to be used for platform {{ cloud_platform }}
+  include_tasks: get-generator-dir.yaml
+
+- name: Run generators for {{ GENERATOR_NAME }}
+  include_tasks: run-generator.yml
+  loop: "{{ GENERATOR_ATTRIBUTES }}"
+  loop_control:
+    loop_var: OBJECT_ELEMENT_ATTRIBUTES
+
+- name: Run generators for IBM Cloud
+  include_tasks: "{{_generator_dir}}/{{ GENERATOR_NAME }}/main.yaml"
+  vars:
+    generator:
+      name: "{{ GENERATOR_NAME }}"
+      path: "{{ _generator_dir }}/{{ GENERATOR_NAME }}"
+      attributes: "{{ GENERATOR_ATTRIBUTES }}"
+      config: "{{ all_config }}"
+    PATH_TO_TERRAFORM_WORK_DIR: "{{status_dir}}/terraform"
+  when: cloud_platform == 'ibm-cloud'
+
+- name: Run generators for vSphere
+  include_tasks: "{{_generator_dir}}/{{ GENERATOR_NAME }}/main.yaml"
+  vars:
+    generator:
+      name: "{{ GENERATOR_NAME }}"
+      path: "{{ _generator_dir }}/{{ GENERATOR_NAME }}"
+      attributes: "{{ GENERATOR_ATTRIBUTES }}"
+      config: "{{ all_config }}"
+    PATH_TO_OUTPUT_DIR: "{{status_dir}}/vsphere-ipi"
+  when: cloud_platform == 'vsphere'
+
+- name: Run generators for Microsoft Azure
+  include_tasks: "{{_generator_dir}}/{{ GENERATOR_NAME }}/main.yaml"
+  vars:
+    generator:
+      name: "{{ GENERATOR_NAME }}"
+      path: "{{ _generator_dir }}/{{ GENERATOR_NAME }}"
+      attributes: "{{ GENERATOR_ATTRIBUTES }}"
+      config: "{{ all_config }}"
+    PATH_TO_OUTPUT_DIR: "{{status_dir}}/azure-aro"
+  when: cloud_platform == 'azure'
