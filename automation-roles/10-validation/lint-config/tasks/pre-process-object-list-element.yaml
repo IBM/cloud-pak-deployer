@@ -1,0 +1,80 @@
+---
+- name: Debug {{ all_config_item.key }}
+  debug:
+    msg: |
+      element: {{ object_element }}
+      element_index: {{ object_element_index }} 
+
+- name: If a preprocessor script was found, run it via pre_execution_processing.py
+  block:
+  - name: Run the linter and pre-processor script for object {{ all_config_item.key }}
+    shell: |
+      python3 pre-execution-processor.py \
+        -k {{ all_config_item.key }} \
+        -p {{ _generator_dir }}/{{ all_config_item.key }} \
+        -i {{ object_element_index }} \
+        -s preprocessor.py \
+        -a {{ object_element | to_yaml | b64encode }} \
+        -f {{ all_config | to_yaml | b64encode }}
+    args:
+      chdir: "{{ role_path }}/scripts"
+    register: preprocess_result 
+
+# The output of the script should look like:
+# {
+#   'errors': [
+#     {
+#       'path': 
+#       'attributeValue': 
+#       'message': 
+#     }
+#   ]
+# }
+
+  - name: Show pre-processor results
+    debug:
+      var: preprocess_result
+
+  - name: 
+    set_fact:
+      validator_received_result: "{{ preprocess_result.stdout | from_json}}"
+
+  - name: Show results from validator
+    debug:
+      var: validator_received_result
+
+  - name: Create a new error (to trigger the reporting)
+    set_fact:
+      generator_validator_error: ""
+
+  - name: Add error header if errors were found
+    set_fact:
+      generator_validator_error: |
+        {{generator_validator_error}}
+
+        {{ all_config_item.key }}:
+        {{ object_element | to_nice_yaml }}
+    when: validator_received_result['errors'] is defined and (validator_received_result['errors']|length>0)
+
+  - name: Add errors from generator
+    set_fact:
+      generator_validation_error_count: "{{ (generator_validation_error_count | int) + 1 }}"
+      generator_validator_error: |-
+        {{generator_validator_error}}
+        ERROR: {{ error_item.message }}
+    loop: "{{ validator_received_result.errors }}"
+    loop_control:
+      loop_var: error_item
+
+  - set_fact:
+      generator_validation_error_message: |
+        {{ generator_validation_error_message }}
+        {{ generator_validator_error }}
+  # update the global all_config dict
+  - set_fact:
+      all_config: "{{ validator_received_result.get('updated_config') }}"
+  when: preprocessorscript_stat.stat.exists==true
+  
+- name: Show all configuration
+  debug:
+    var: all_config
