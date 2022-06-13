@@ -117,7 +117,10 @@ vault)
 
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
-  run_cmd="ansible-playbook -i ${INV_DIR}"
+  run_cmd="ansible-playbook"
+  if [ -d "${CONFIG_DIR}/inventory" ]; then
+    run_cmd+=" -i ${CONFIG_DIR}/inventory"
+  fi
   run_cmd+=" playbooks/playbook-vault.yml"
   run_cmd+=" --extra-vars ACTION=${ACTION}"
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
