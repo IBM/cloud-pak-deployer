@@ -35,16 +35,15 @@ The configuration typically works without any configuration changes and will cre
     cp -r ./sample-configurations/sample-dynamic /data/config/sample
     cd /data/config/sample
 ```
-2. Update the inventory file `./inventory/sample.inv` to uncomment the `cloud_platform` that matches the infrastructure you're targeting
-3. Copy the relevant "ocp-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
+2. Copy the relevant "ocp-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
 ```
     cp ./config-samples/ocp-ibm-cloud-roks-ocs.yaml ./config/
 ```
-4. Copy the relevant "cp4d-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
+3. Copy the relevant "cp4d-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
 ```
     cp ./config-samples/cp4d-408.yaml ./config/
 ```
-5. Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
+4. Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
 ```
     nano ./config/cp4d-408.yaml
 ```
@@ -58,10 +57,10 @@ Every configuration has a fixed directory structure, consisting of mandatory and
 
 Mandatory subdirectories:
 * `config`: Keeps one or more `yaml` files with your OpenShift and Cloud Pak configuration
-* `inventory`: Holds global settings for the configuration such as environment name and type of vault you want to use
 
 Additionally, there are 2 optional subdirectories:
 * `defaults`: Directory that keeps the defaults which will be merged with your configuration
+* `inventory`: Keep global settings for the configuration such as environment name or other variables used in the configs
 * `assets`: Keeps directories of assets which must be deployed onto the Cloud Pak
 
 ### `config` directory
@@ -75,11 +74,6 @@ ocp-ibm-cloud-roks-ocs.yaml
 
 This will provision a ROKS cluster on IBM Cloud with OpenShift Data Foundation (fka OCS) and Cloud Pak for Data 4.0.8.
 
-### `inventory` directory
-The Cloud Pak Deployer pipeline has been built using Ansible and it can be configured using "inventory" files. Inventory files hold the global parameters which are available throughout the Ansible playbooks. 
-
-The most important configuration you will find in the Cloud Pak Deployer's inventory files are the cloud platform and vault configuration. All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault).
-
 ### `defaults` directory (optional)
 Holds the defaults for all object types. If a certain object property has not been specified in the `config` directory, it will be retrieved from the `defaults` directory using the flavour specified in the configured object. If no flavour has been selected, the `default` flavour will be chosen.
 
@@ -88,8 +82,13 @@ You should not need this subdirectory most circumstances.
 ### `assets` directory (optional)
 Optional directory holding the assets you wish to deploy for the Cloud Pak. More information about Cloud Pak for Data assets which can be deployed can be found in object definition [cp4d_asset](/cpd-design/objects/cloud-pak-assets). The directory can be named differently as well, for example `cp4d-assets` or `customer-churn-demo`.
 
+### `inventory` directory (optional)
+The Cloud Pak Deployer pipeline has been built using Ansible and it can be configured using "inventory" files. Inventory files allow you to specify global variables used throughout Ansible playbooks. In the current version of the Cloud Pak Deployer, the inventory directory has become fully optional as the `global_config` and `vault` objects have taken over its role.
+
 ## Vault secrets
-User passwords, certificates and other "secret" information is kept in the vault, which can be either a flat file (not encrypted), HashiCorp Vault or the IBM Cloud Secrets Manager service. Some of the deployment configurations require that the vault is pre-populated with secrets which as needed during the deployment. For example, a vSphere deployment needs the vSphere user and password to authenticate to vSphere and Cloud Pak for Data SAML configuration requires the idP certificate.
+User passwords, certificates and other "secret" information is kept in the vault, which can be either a flat file (not encrypted), HashiCorp Vault or the IBM Cloud Secrets Manager service. Some of the deployment configurations require that the vault is pre-populated with secrets which as needed during the deployment. For example, a vSphere deployment needs the vSphere user and password to authenticate to vSphere and Cloud Pak for Data SAML configuration requires the idP certificate
+
+All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault).
 
 To set secrets, ensure that the environment variables for the configuration and status directories are set:
 ```
