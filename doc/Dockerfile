@@ -2,7 +2,7 @@ FROM registry.access.redhat.com/ubi8/ubi
 
 LABEL authors="Frank Ketelaars"
 
-ARG NVM_RELEASE=12.21.0
+ARG NVM_RELEASE=14.15.0
 
 # Install required packages
 RUN yum install -y git && \
