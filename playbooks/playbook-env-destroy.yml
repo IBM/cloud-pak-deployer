@@ -20,10 +20,6 @@
       include_role:
         name: load-vault-config
 
-    - name: Validate variables
-      include_role:
-        name: validate-variables-destroy
-
     - name: Connect to Vault
       include_role:
         name: vault-connect
@@ -33,6 +29,16 @@
         name: merge-config
       vars:
         path_to_config_dir: "{{ config_dir }}"
+
+    - name: Validate variables
+      include_role:
+        name: validate-variables-destroy
+        
+    - name: Lint configuration
+      include_role:
+        name: lint-config
+      vars:
+        path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
 
     - name: "Include 'generators'-role and pass variables to it"
       include_role:
