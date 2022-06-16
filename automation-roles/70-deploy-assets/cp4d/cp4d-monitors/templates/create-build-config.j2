@@ -1,9 +1,15 @@
 #! /bin/bash
 
-oc new-build https://iamapikey:{{ _monitor_source_token }}@{{ _monitor_source_repo_address }} --context-dir {{ _monitor_context }} --name {{ _monitor_name }} \
+oc new-build \
+{% if (_monitor_source_token == "") -%}
+https://{{ _monitor_source_repo_address }} \
+{% else -%}
+https://iamapikey:{{ _monitor_source_token }}@{{ _monitor_source_repo_address }} \
+{% endif %}
+--context-dir {{ _monitor_context }} --name {{ _monitor_name }} \
 {% if (_monitor_source_secret != "") -%}
 --source-secret {{ _monitor_source_secret }} \
-{% else -%}
+{% elif (_default_monitor_source_secret != "") -%}
 --source-secret {{ _monitors.name}}-default-repo-auth \
 {% endif %}
 {% if (_monitor_target_cr_secret != "") -%}
