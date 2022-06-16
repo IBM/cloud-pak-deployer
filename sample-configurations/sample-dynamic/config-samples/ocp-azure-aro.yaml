@@ -1,21 +1,25 @@
 ---
+global_config:
+  environment_name: sample
+  cloud_platform: aws
+  
 azure_aro:
-- name: {{ env_id }}-infra
+- name: "{{ env_id }}-infra"
   resource_group:
-    name: {{ env_id }}-rg
-    location: {{ azure_location }}
+    name: "{{ env_id }}-rg"
+    location: "{{ azure_location }}"
   vnet:
-    name: {{ env_id }}-vnet
+    name: "{{ env_id }}-vnet"
     address_space: 10.0.0.0/22
   control_plane:
     subnet:
-      name: {{ env_id }}-control-plane-subnet
+      name: "{{ env_id }}-control-plane-subnet"
       address_prefixes: 10.0.0.0/23
     vm:
       size: Standard_D8s_v3
   compute:
     subnet:
-      name: {{ env_id }}-compute-subnet
+      name: "{{ env_id }}-compute-subnet"
       address_prefixes: 10.0.2.0/23
     vm:
       size: Standard_D16s_v3
@@ -23,9 +27,9 @@ azure_aro:
       count: 3
 
 openshift:
-- name: {{ env_id }}-cluster
-  azure_aro_name: {{ env_id }}-infra
-  subdomain_name: {{ env_id }}
+- name: "{{ env_id }}-cluster"
+  azure_aro_name: "{{ env_id }}-infra"
+  subdomain_name: "{{ env_id }}"
   ocp_version: 4.8
   network:
     pod_cidr: "10.128.0.0/14"

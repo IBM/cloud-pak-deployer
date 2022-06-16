@@ -11,13 +11,34 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-    - name: Validate variables
+
+    - name: Load global config
       include_role:
-        name: validate-variables-destroy
+        name: load-global-config
+
+    - name: Load vault config
+      include_role:
+        name: load-vault-config
 
     - name: Connect to Vault
       include_role:
         name: vault-connect
+
+    - name: Merge configuration
+      include_role:
+        name: merge-config
+      vars:
+        path_to_config_dir: "{{ config_dir }}"
+
+    - name: Validate variables
+      include_role:
+        name: validate-variables-destroy
+        
+    - name: Lint configuration
+      include_role:
+        name: lint-config
+      vars:
+        path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
 
     - name: "Include 'generators'-role and pass variables to it"
       include_role:

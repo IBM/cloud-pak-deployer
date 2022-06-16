@@ -1,0 +1,28 @@
+---
+- name: Show relative path to config file
+  debug:
+    msg: '{{ relative_path_to_config_file }}'
+
+- name: Generate config through template
+  template:
+    src: "{{ absolute_path_to_config_file }}"
+    dest: "{{ status_dir }}/generated/configs/{{ absolute_path_to_config_file | basename }}"
+
+- name: Include the generated config file
+  include_vars:
+    file: "{{ status_dir }}/generated/configs/{{ absolute_path_to_config_file | basename }}"
+    name: this_config
+
+- name: Show just included config
+  debug: 
+    var: this_config
+
+- name: update raw_config_files
+  set_fact: 
+    raw_config_files: "{{ raw_config_files | combine({ relative_path_to_config_file : this_config }) }}"
+
+- name: Process config item
+  include_tasks: process-config-item.yaml
+  loop: "{{ this_config | dict2items}}"
+  loop_control:
+    loop_var: config_item

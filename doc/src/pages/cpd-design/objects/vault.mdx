@@ -8,7 +8,7 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 ## Vault configuration
 Throughout the deployment process, the Cloud Pak Deployer will create secrets in a vault and retrieve them later. Examples of secrets are: ssh keys, Cloud Pak for Data admin password. Additionally, when provisioning infrastructure no the IBM Cloud, the resulting Terraform state file is also stored in the vault so it can be used later if the configuration needs to be changed.
 
-Configuration of the vault is done through the file(s) in the `inventory` directory; you can specify all settings there.
+Configuration of the vault is done through a `vault` object in the configuration. If you want to use the file-based vault in the status directory, you do not need to configure anything.
 
 The following Vault implementations can be used to store and retrieve secrets:
 - File Vault (no encryption)
@@ -16,9 +16,16 @@ The following Vault implementations can be used to store and retrieve secrets:
 - Hashicorp Vault (token authentication)
 - Hashicorp Vault (certificate authentication)
 
-The **File Vault** is the default vault and also the simplest. It does not require a password and all secrets are stored in base-64 encoding in a properties file under the `<status_directory>/vault` directory. The name of the vault file is the `environment_name` you specified in the inventory file or at the command line.
+The **File Vault** is the default vault and also the simplest. It does not require a password and all secrets are stored in base-64 encoding in a properties file under the `<status_directory>/vault` directory. The name of the vault file is the `environment_name` you specified in the global configuration, inventory file or at the command line.
 
 All of the other vault options require some secret manager (IBM Cloud service or Hashicorp Vault) to be available and you need to specify a password or provide a certificate.
+
+Sample Vault config:
+```
+vault:
+  vault_type: file-vault
+  vault_authentication_type: none
+```
 
 ### Properties for all vault implementations
 

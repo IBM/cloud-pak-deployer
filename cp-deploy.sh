@@ -591,10 +591,6 @@ if [[ "${ACTION}" != "wizard"  && "${ACTION}" != "kill" ]]; then
     echo "config directory not found in directory ${CONFIG_DIR}."
     exit 1
   fi
-  if [ ! -d "${CONFIG_DIR}/inventory" ]; then
-    echo "inventory directory not found in directory ${CONFIG_DIR}."
-    exit 1
-  fi
 fi
 
 # Validate if the status has been set
