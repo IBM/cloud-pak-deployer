@@ -1,0 +1,15 @@
+---
+- name: Get generator to be used for object type {{ _all_config_item.key }} platform {{ cloud_platform }}
+  include_tasks: get-generator-dir.yaml
+
+- name: Check if the preprocessor.py file exists for object type {{ _all_config_item.key }}
+  stat:
+    path: "{{ _generator_dir }}/{{ _all_config_item.key }}/preprocessor.py"
+  register: preprocessorscript_stat
+
+- name: Lint object type {{ _all_config_item.key }}
+  include_tasks: pre-process-object-items.yaml
+  when: 
+  - _all_config_item.value | type_debug == 'list'
+  - preprocessorscript_stat.stat.exists==true
+  

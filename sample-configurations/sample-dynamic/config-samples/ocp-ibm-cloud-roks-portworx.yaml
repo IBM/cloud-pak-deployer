@@ -1,14 +1,15 @@
 ---
+global_config:
+  environment_name: sample
+  cloud_platform: ibm-cloud
+  ibm_cloud_region: eu-de
+
 provider:
 - name: ibm
-  region: {{ ibm_cloud_region }}
+  region: "{{ ibm_cloud_region }}"
 
 resource_group:
 - name: "default" # should exist already
-
-ssh_keys:
-- name: {{ env_id }}-provision
-  managed: True 
 
 security_rule:
 - name: https
@@ -17,53 +18,53 @@ security_rule:
   tcp: {port_min: 22, port_max: 22}
 
 vpc:
-- name: {{ env_id }}
+- name: "{{ env_id }}"
   allow_inbound: ['ssh']
 
 address_prefix:
-- name: {{ env_id }}-zone-1
-  zone: {{ ibm_cloud_region }}-1
+- name: "{{ env_id }}-zone-1"
+  zone: "{{ ibm_cloud_region }}-1"
   cidr: 10.231.0.0/26
-- name: {{ env_id }}-zone-2
-  zone: {{ ibm_cloud_region }}-2
+- name: "{{ env_id }}-zone-2"
+  zone: "{{ ibm_cloud_region }}-2"
   cidr: 10.231.0.64/26
-- name: {{ env_id }}-zone-3
-  zone: {{ ibm_cloud_region }}-3
+- name: "{{ env_id }}-zone-3"
+  zone: "{{ ibm_cloud_region }}-3"
   cidr: 10.231.0.128/25 
 
 subnet:
-- name: {{ env_id }}-subnet-zone-1
-  address_prefix: {{ env_id }}-zone-1
+- name: "{{ env_id }}-subnet-zone-1"
+  address_prefix: "{{ env_id }}-zone-1"
   ipv4_cidr_block: 10.231.0.0/26
-- name: {{ env_id }}-subnet-zone-2
-  address_prefix: {{ env_id }}-zone-2
+- name: "{{ env_id }}-subnet-zone-2"
+  address_prefix: "{{ env_id }}-zone-2"
   ipv4_cidr_block: 10.231.0.64/26
-- name: {{ env_id }}-subnet-zone-3
-  address_prefix: {{ env_id }}-zone-3
+- name: "{{ env_id }}-subnet-zone-3"
+  address_prefix: "{{ env_id }}-zone-3"
   ipv4_cidr_block: 10.231.0.128/26
 
 cos:
-- name: {{ env_id }}-cos
+- name: "{{ env_id }}-cos"
   plan: standard
   location: global
 
 openshift:
-- name: {{ env_id }}
+- name: "{{ env_id }}"
   ocp_version: 4.8
   compute_flavour: bx2.16x64
   compute_nodes: 3
   infrastructure:
     type: vpc
-    vpc_name: {{ env_id }}
+    vpc_name: "{{ env_id }}"
     subnets: 
-    - {{ env_id }}-subnet-zone-1
-    - {{ env_id }}-subnet-zone-2
-    - {{ env_id }}-subnet-zone-3
-    cos_name: {{ env_id }}-cos
+    - "{{ env_id }}-subnet-zone-1"
+    - "{{ env_id }}-subnet-zone-2"
+    - "{{ env_id }}-subnet-zone-3"
+    cos_name: "{{ env_id }}-cos"
   openshift_storage:
   - storage_name: pwx-storage
     storage_type: pwx 
-    pwx_etcd_location: {{ ibm_cloud_region }}
+    pwx_etcd_location: "{{ ibm_cloud_region }}"
     pwx_storage_size_gb: 200
     pwx_storage_iops: 10
     pwx_storage_profile: "10iops-tier"

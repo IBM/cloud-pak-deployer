@@ -16,13 +16,6 @@ if [ ! -d "${CONF_DIR}" ]; then
   error=1
 fi
 
-  # Validate if the inventory directory exists
-INV_DIR="${CONFIG_DIR}/inventory"
-if [ ! -d "${INV_DIR}" ]; then
-  echo "inventory directory not found in directory ${CONFIG_DIR}."
-  error=1
-fi
-
 if [[ error -ne 0 ]];then
   echo "Error running deployer"
   exit 1
@@ -46,7 +39,10 @@ env|environment)
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
   # Assemble command
-  run_cmd="ansible-playbook -i ${INV_DIR}"
+  run_cmd="ansible-playbook"
+  if [ -d "${CONFIG_DIR}/inventory" ]; then
+    run_cmd+=" -i ${CONFIG_DIR}/inventory"
+  fi
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
@@ -121,7 +117,10 @@ vault)
 
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
-  run_cmd="ansible-playbook -i ${INV_DIR}"
+  run_cmd="ansible-playbook"
+  if [ -d "${CONFIG_DIR}/inventory" ]; then
+    run_cmd+=" -i ${CONFIG_DIR}/inventory"
+  fi
   run_cmd+=" playbooks/playbook-vault.yml"
   run_cmd+=" --extra-vars ACTION=${ACTION}"
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"

@@ -6,28 +6,24 @@
 - name: Generate defaults through template
   template:
     src: "{{ absolute_path_to_defaults_file }}"
-    dest: "{{ status_dir }}/generated_defaults/{{ absolute_path_to_defaults_file | basename }}"
+    dest: "{{ status_dir }}/generated/defaults/{{ absolute_path_to_defaults_file | basename }}"
 
-- name: include the file
+- name: Include the file
   include_vars:
-    file: "{{ status_dir }}/generated_defaults/{{ absolute_path_to_defaults_file | basename }}"
+    file: "{{ status_dir }}/generated/defaults/{{ absolute_path_to_defaults_file | basename }}"
     name: 'this_defaults'
 
-- name: debug just included defaults
+- name: Debug just included defaults
   debug: 
     msg: '{{ this_defaults }}'
-- name: update raw_defaults_files
+
+- name: Update raw_defaults_files
   set_fact: 
     raw_defaults_files: "{{ raw_defaults_files | combine({ relative_path_to_defaults_file : this_defaults }) }}"
 
-- name: merge this_defaults with defaults_merged-fact
-  # "KEY: {{ defaults_item.key }}"
-  # "VALUE: {{ defaults_item.value }}"
+- name: Merge this_defaults with defaults_merged-fact
   set_fact:
     defaults_merged: "{{ defaults_merged | combine({defaults_item.key : (defaults_item.value + ( defaults_merged[defaults_item.key]|default([]) ) )  }) }}"
-  #debug:
-  #  msg: "VALUE: {{ defaults_item.value }}" # KEY: {{ defaults_item.key }}
-  #defaults_merged: "{{ dict(this_defaults) | dict2items | list }}"
   loop: "{{ this_defaults | dict2items}}"
   loop_control:
     loop_var: defaults_item
