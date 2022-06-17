@@ -12,3 +12,11 @@
   fail:
     msg: "Missing dependent cartridge {{ _current_cartridge_dependent_case }}. This component must be configured in the cp4d configuration to be able to download its case files"
   when: _cartridge_dependent_details | length == 0
+
+- set_fact:
+    _cartridge_dependent_details: "{{ _cartridge_dependent_details | first }}"
+
+- name: Fail when the dependent cartridge is not cr_internal but set to state removed
+  fail:
+    msg: "Dependent cartridge {{ _current_cartridge_dependent_case }} is not set to installed in the configuration. This component must be set to installed to be able to download its case files"
+  when: not _cartridge_dependent_details.state | default('installed') == 'installed'
