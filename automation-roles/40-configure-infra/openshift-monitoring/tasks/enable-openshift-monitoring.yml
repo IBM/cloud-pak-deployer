@@ -30,6 +30,13 @@
       shell: oc wait -n openshift-monitoring --for=condition=Ready pod -l app=prometheus --timeout=240s
       register: _openshift_user_workload_pod
 
+    - name: Wait until pods are created in openshift-user-workload-monitoring project
+      shell: oc get po -n openshift-user-workload-monitoring 2>/dev/null | wc -l
+      register: _oc_user_workload
+      retries: 10
+      delay: 30
+      until: _oc_user_workload.stdout != "0"    
+
     - name: Wait until openshift-user-workload-monitoring pods are ready
       shell: oc wait -n openshift-user-workload-monitoring --for=condition=Ready pod --all --timeout=240s
       register: _openshift_user_workload_pod_enable_persist
