@@ -1,0 +1,35 @@
+---
+- name: Ensure that OLM utils work directory exists
+  file:
+    path: /tmp/work
+    state: directory
+
+- name: Generate OLM command to list components for version {{ _p_current_cp4d_cluster.cp4d_version }}
+  set_fact:
+    _list_components_command: "{{ lookup('template', 'list-components-olm-utils.j2') }}" 
+
+- name: Show list-components command
+  debug:
+    var: _list_components_command
+
+- name: Run list-components command 
+  shell: |
+    {{ _list_components_command }}
+
+- name: Get column headers
+  shell: |
+    head -1 /tmp/work/components.csv
+  register: _csv_column_headers
+
+- name: Remove first line from file
+  lineinfile:
+    path: /tmp/work/components.csv
+    regexp: "^Component name"
+    state: absent
+
+- name: Try to convert to json
+  read_csv:
+    path: /tmp/work/components.csv
+    fieldnames: "{{ _csv_column_headers.stdout | replace(' ','_') }}"
+    skipinitialspace: True
+  register: _list_components_json

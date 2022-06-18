@@ -3,9 +3,7 @@
 # Parameters
 # $1: Status directory
 # $2: OpenShift project for Cloud Pak for Data
-# $3: List of cartridges which are being installed
-# $4: List of all cartridges with their CR name and status
-# $5: Name of the cartridge to be checked
+# $3: Name of the cartridge to be checked
 
 # The script loops through all cartridges which are being installed and checks the CR status for each.
 # It also checks the installation state of the current cartridge. If installation of the current cartridge
@@ -14,7 +12,7 @@
 # If the CR of a cartridge does not exist, the script fails with exit code 1.
 status_dir=$1
 project=$2
-cartridges=$(echo $3 | base64 -d)
+cartridges=$(cat ${status_dir}/log/${project}-cartridges.json)
 current_cartridge_name=$4
 
 exit_code=0
