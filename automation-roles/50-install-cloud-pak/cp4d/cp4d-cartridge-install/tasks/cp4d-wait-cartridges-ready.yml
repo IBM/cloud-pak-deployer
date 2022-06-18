@@ -3,12 +3,16 @@
     msg: "{{ _current_cp4d_cartridge }}"
 
 - block:
+  - name: Write cartridge information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
+    copy:
+      content: "{{ _cartridges_to_install | default([]) | to_json }}"
+      dest: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json"
+
   - name: Wait until cartridge {{ _current_cp4d_cartridge.name }} has been installed, check logs in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.log
     script: |
       check-services-installed.sh \
         {{ status_dir }} \
         {{ _p_current_cp4d_cluster.project }} \
-        {{ _cartridges_to_install | default([]) | to_json | b64encode }} \
         {{ _current_cp4d_cartridge.name }}
         
     register: _wait_cartridges_result
