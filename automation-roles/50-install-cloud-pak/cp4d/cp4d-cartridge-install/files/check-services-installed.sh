@@ -13,7 +13,7 @@
 status_dir=$1
 project=$2
 cartridges=$(cat ${status_dir}/log/${project}-cartridges.json)
-current_cartridge_name=$4
+current_cartridge_name=$3
 
 exit_code=0
 number_pending=0
