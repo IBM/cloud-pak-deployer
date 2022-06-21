@@ -10,6 +10,9 @@
   shell: |
     oc get packagemanifest {{ _cpd_platform.package_manifest }} -o jsonpath="{.status.defaultChannel}"
   register: _cpd_platform_package_manifest
+  retries: 30
+  delay: 10
+  until: _cpd_platform_package_manifest.rc==0
 
 - name: Extract default channel for operator
   set_fact:
