@@ -11,6 +11,18 @@
 
   # Create of Subscription if not cpd_platform or cpfs
   - block:
+    - name: Obtain packagemanifest {{ _current_cp4d_cartridge.package_manifest }} for cartridge {{ _current_cp4d_cartridge.name }}
+      shell: |
+        oc get packagemanifest {{ _current_cp4d_cartridge.package_manifest }} -o jsonpath="{.status.defaultChannel}"
+      register: _package_manifest
+      retries: 30
+      delay: 10
+      until: _package_manifest.rc==0
+    
+    - name: Extract default channel for operator
+      set_fact:
+        _default_channel: "{{ _package_manifest.stdout }}"
+
     - name: Prepare yaml file for operator subscription {{ _current_cp4d_cartridge.name }}
       template:
         src: "{{ _current_cp4d_cartridge.cr_file_prefix }}-sub.j2"
