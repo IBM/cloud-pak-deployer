@@ -6,6 +6,9 @@ echo "Starting download preparation script..."
 echo ""
 cd ${SCRIPT_DIR}/..
 
+# Ensure /tmp/work exists
+mkdir -p /tmp/work
+
 # Set Ansible config file to use
 ANSIBLE_CONFIG_FILE=$PWD/playbooks/ansible-download.cfg
 if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
