@@ -1,5 +1,23 @@
 ---
-# Create platform operator subscription
+- name: Get package manifest name for platform operator
+  set_fact:
+    _cpd_platform: "{{ cartridge_cr | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?olm_utils_name=='cpd_platform']
+
+- name: Obtain packagemanifest {{ _cpd_platform.package_manifest }} for platform operator
+  shell: |
+    oc get packagemanifest {{ _cpd_platform.package_manifest }} -o jsonpath="{.status.defaultChannel}"
+  register: _cpd_platform_package_manifest
+  retries: 30
+  delay: 10
+  until: _cpd_platform_package_manifest.rc==0
+
+- name: Extract default channel for operator
+  set_fact:
+    _default_channel: "{{ _cpd_platform_package_manifest.stdout }}"
+
 - name: Prepare yaml file for platform operator subscription
   template:
     src: cpd-platform-subscription.j2

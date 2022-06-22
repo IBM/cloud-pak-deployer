@@ -1,5 +1,6 @@
 from generatorPreProcessor import GeneratorPreProcessor
 import sys, os
+import re
 
 # Reference
 # ---
@@ -32,7 +33,7 @@ import sys, os
 #cp4d:
 #- project: zen-40
 #  openshift_cluster_name: sample
-#  cp4d_version: 4.0
+#  cp4d_version: 4.0.9
 #  openshift_storage_name: nfs-storage
 #  use_case_files: True
 #  accept_licenses: False
@@ -242,6 +243,10 @@ def preprocessor(attributes=None, fullConfig=None):
         # Check for cp4d:     
         # Check that cpfs element exists
         # Check that cpd_platform element exists
+
+        # Check that version matches x.y.z pattern
+        if not re.match(r"[0-9]\.[0-9]\.[0-9]+",str(ge['cp4d_version'])):
+            g.appendError(msg="cp4d_version must be in the format of x.y.z, for example 4.0.9")
 
         # Check accept_licenses property
         if 'accept_licenses' in ge:
