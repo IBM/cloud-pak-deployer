@@ -8,15 +8,24 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 ## Cloud Pak for Data cartridges
 
 ### `cp4d.cartridges`
-This is a list of cartridges that will be installed in the Cloud Pak for Data instance. Every cartridge will have a number of mandatory properties such as name and subscription channel. Then, some cartridges may require additional information to correctly install or to create an instance for the cartridge. Below you will find a list of all tested cartridges and their specifics.
+This is a list of cartridges that will be installed in the Cloud Pak for Data instance. Every cartridge is identified by its name.
+
+By default, the `case_version`, `subscription_channel` and `version` properties are retrieved using **olm-utils** using the `cp4d_version` property at the `cp4d` level. If you wish you can override the inferred values by specifying them at the cartridge level but this is typically not necessary.
+
+<InlineNotification kind="warning">
+Use with care: If you decide to override the inferred values, this may have unexpected consequences as there are dependencies between some cartridges. For example: both Watson Studio (ws) and Watson Knowledge Catalog (wkc) use the Common Core Services (ccs). If you choose to override the version for ws, the ccs version installed may not be compatible with wkc.
+</InlineNotification>
+
+
+Some cartridges may require additional information to correctly install or to create an instance for the cartridge. Below you will find a list of all tested cartridges and their specifics.
 
 #### Properties for all cartridges
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name of the cartridge                                         | Yes | |
-| subscription_channel | Channel of the subscription                   | Yes for CP4D cartridges | |
-| version  | Version of the custom resource to be installed. If not specified, the latest version of the custom resource for the specified channel will be installed | No | |
-| case_version | Version of cartridge operator. If not specified and CASE files are used, the latest case file found for the cartridge will be used to install the catalog source | No | |
+| subscription_channel | Channel of the subscription. If specified this will override the value retrieved by **olm-utils** based on the `cp4d_version` | No | |
+| version  | Version of the custom resource to be installed. If specified this will override the value retrieved by **olm-utils** based on the `cp4d_version` | No | |
+| case_version | Version of cartridge operator. If specified this will override the value retrieved by **olm-utils** based on the `cp4d_version` | No | |
 | dependencies | A List of cartridges (which should also be listed in the cp4d.cartridges) that need to be deployed prior to deploying the current cartridge | No | |
 | state     | Whether the cartridge must be `installed` or `removed`. If not specified, the cartridge will be installed | No | installed, removed |
 
@@ -28,11 +37,9 @@ This cartridge is mandatory for every Cloud Pak for Data instance.
 #### Additional properties for cartridge `cpfs`
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| subscription_channel | Channel of the subscription                              | Yes for CP4D cartridges | |
+| subscription_channel | Channel of the subscription. If specified this will override the value retrieved by **olm-utils** based on the `cp4d_version` | No | |
 
 ### Cartridge `cpd_platform` or `lite`
 Defines the Cloud Pak for Data platform operator (fka "lite") which installs the base services needed to operate Cloud Pak for Data, such as the Zen metastore, Zen watchdog and the user interface. 
 
 This cartridge is mandatory for every Cloud Pak for Data instance.
-
-### Cartridge `analyticsengine`

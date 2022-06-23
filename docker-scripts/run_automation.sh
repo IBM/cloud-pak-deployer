@@ -26,6 +26,9 @@ echo "Starting Automation script..."
 echo ""
 cd ${SCRIPT_DIR}/..
 
+# Ensure /tmp/work exists
+mkdir -p /tmp/work
+
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}

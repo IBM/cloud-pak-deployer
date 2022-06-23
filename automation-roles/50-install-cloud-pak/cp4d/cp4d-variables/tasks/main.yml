@@ -6,12 +6,17 @@
     var: implemented_cloud_platform_types
 
 - set_fact:
+    _cartridges_with_olm_utils_name: []
     _cartridges_to_install: []
+
+- name: Obtain versions of case files and cartridges
+  include_tasks: list-components-olm-utils.yml
+  when: _list_components_json is not defined
 
 - name: Get cartridges with CR details
   set_fact:
-    _cartridges_to_install: >-
-      {{ _cartridges_to_install | default([]) 
+    _cartridges_with_olm_utils_name: >-
+      {{ _cartridges_with_olm_utils_name | default([]) 
         + [ item | combine(_cartridge_cr_item) | combine(_cartridge_olm_utils_item) ]
       }}
   vars:
@@ -29,4 +34,24 @@
             | first
             | default([])
           }}
-  loop: "{{ _p_cartridges }}"
+  loop: "{{ _p_current_cp4d_cluster.cartridges }}"
+
+- name: Add versions details from olm-utils
+  set_fact:
+    _cartridges_to_install: >-
+      {{ _cartridges_to_install | default([]) 
+        + [ item | combine(_list_components_json_item) ]
+      }}
+  vars:
+    _list_components_json_item: >-
+          {{ _list_components_json.list
+            | selectattr('Component_name','equalto',item['olm_utils_name'])
+            | list
+            | first
+            | default([])
+          }}
+  loop: "{{ _cartridges_with_olm_utils_name }}"
+
+- name: Show full cartridge information
+  debug:
+    var: _cartridges_to_install
