@@ -63,6 +63,11 @@ def preprocessor(attributes=None, fullConfig=None):
         if (ge['compute_nodes'] % len(ge['infrastructure']['subnets'])) != 0:
             g.appendError(msg='compute_nodes must be a factor of the number of subnets')
 
+        # private_only must be true or false if specified
+        if 'private_only' in ge['infrastructure']:
+            if type(ge['infrastructure']['private_only']) != bool:
+                g.appendError(msg='Attribute infrastructure.private_only must be either true or false if specified. Default is false.')
+
         # Check upstream DNS server
         if 'upstream_dns' in ge:
             for dns in ge['upstream_dns']:
