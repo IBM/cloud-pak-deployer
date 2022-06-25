@@ -1,0 +1,16 @@
+---
+
+- name: Extract admin password from OpenShift secret
+  shell: |
+    oc get secrets -n ibm-common-services platform-auth-idp-credentials -ojsonpath='{.data.admin_password}' | base64 -d && echo ""
+  register: admin_pwd
+
+- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Store CP4BA admin password into log file
+  copy:
+    content: "admin password: {{ admin_pwd.stdout }}"
+    dest: "{{ status_dir }}/cloud-paks/cp4ba-{{ current_cp4ba_cluster.openshift_cluster_name }}-{{ current_cp4ba_cluster.project }}-access.txt"
