@@ -1,14 +1,14 @@
 ---
+- name: Generate ConfigMap definition cp4d-crio-conf-cm.yaml
+  shell:
+    oc create configmap -n kube-system cp4d-crio-conf \
+        --from-file={{ status_dir }}/openshift/cp4d-crio.conf \
+        -o yaml --dry-run=client > {{ status_dir }}/openshift/cp4d-crio-conf-cm.yaml
+
 - name: Create ConfigMap cp4d-crio-conf
   shell: |
-    if ! oc get configmap -n kube-system cp4d-crio-conf;then
-      oc create configmap -n kube-system cp4d-crio-conf \
-        --from-file={{ status_dir }}/openshift/cp4d-crio.conf
-    fi
-- name: Set data for config map
-  shell: |
-    oc set data configmap/cp4d-crio-conf -n kube-system \
-      --from-file={{ status_dir }}/openshift/cp4d-crio.conf
+      oc apply -f {{ status_dir }}/openshift/cp4d-crio-conf-cm.yaml
+
 - name: Generate DaemonSet to set the CRI-O config for all nodes
   template:
     src: cp4d-crio-conf-ds.j2

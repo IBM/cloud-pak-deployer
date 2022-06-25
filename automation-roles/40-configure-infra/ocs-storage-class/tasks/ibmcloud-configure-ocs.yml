@@ -78,22 +78,15 @@
   failed_when: False
   register: ocs_cluster_exists
 
-- name: Create temporary file for the OcsCluster object
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: ocscluster_tempfile
-  when: ocs_cluster_exists.rc != 0
-
-- name: "Generate OcsCluster file {{ ocscluster_tempfile.path }}"
+- name: Generate OcsCluster file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ocscluster.yaml
   template:
     src: ocscluster.j2
-    dest: "{{ ocscluster_tempfile.path }}"
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ocscluster.yaml"
   when: ocs_cluster_exists.rc != 0
 
 - name: Create OcsCluster {{ current_openshift_storage.ocs_storage_label }}
   command: |
-    oc apply -f "{{ ocscluster_tempfile.path }}"
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ocscluster.yaml
   when: ocs_cluster_exists.rc != 0
 
 - name: Wait for OcsCluster {{ current_openshift_storage.ocs_storage_label }} to be deployed
