@@ -21,16 +21,16 @@
         - "kernel.shm*"
         - "kernel.sem"
 
+- name: Generate ConfigMap definition cp4d-kubelet-conf-cm.yaml
+  shell:
+    oc create configmap -n kube-system cp4d-kubelet-conf \
+        --from-file={{ status_dir }}/openshift/cp4d-kubelet.conf \
+        -o yaml --dry-run=client > {{ status_dir }}/openshift/cp4d-kubelet-conf-cm.yaml
+
 - name: Create ConfigMap cp4d-kubelet-conf
   shell: |
-    if ! oc get configmap -n kube-system cp4d-kubelet-conf;then
-      oc create configmap -n kube-system cp4d-kubelet-conf \
-        --from-file={{ status_dir }}/openshift/cp4d-kubelet.conf
-    fi
-- name: Set data for config map
-  shell: |
-    oc set data configmap/cp4d-kubelet-conf -n kube-system \
-      --from-file={{ status_dir }}/openshift/cp4d-kubelet.conf
+      oc apply -f {{ status_dir }}/openshift/cp4d-kubelet-conf-cm.yaml
+
 - name: Generate DaemonSet to set Kubelet configuration for all nodes
   template:
     src: cp4d-kubelet-conf-ds.j2
