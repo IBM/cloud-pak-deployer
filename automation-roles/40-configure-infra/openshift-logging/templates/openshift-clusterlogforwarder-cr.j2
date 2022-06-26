@@ -4,4 +4,42 @@ kind: ClusterLogForwarder
 metadata:
   name: instance 
   namespace: openshift-logging 
-  
+spec:
+{% if _p_openshift_logging.logging_output is defined %}
+# Define outputs
+  outputs:
+{% for _logging_output in _p_openshift_logging.logging_output %}
+  - name: {{ _logging_output.name }}
+    type: "{{ _logging_output.type }}"
+    url: {{ _logging_output.url }}
+{% if _p_openshift_logging.certificates is defined %}
+    secret:
+      name: {{ _logging_output.name }}-secret
+{% endif %}
+{% endfor %}
+{% endif %}
+{% if _p_openshift_logging.cluster_wide_logging is defined %}
+# Define pipelines
+  pipelines:
+{% for _cluster_wide_logging in _p_openshift_logging.cluster_wide_logging %}
+  - name: {{ _p_openshift_logging.openshift_cluster_name }}-{{ _cluster_wide_logging.input }}
+    inputRefs:
+    - {{ _cluster_wide_logging.input }}
+    outputRefs:
+{% if _cluster_wide_logging.logging_name is defined %}
+    - {{ _cluster_wide_logging.logging_name }}
+{% endif %}
+{% if _p_openshift_logging.configure_es_log_store | default(False) | bool %}
+    - default
+{% endif %}
+# TODO: Reinstate loki-specific parameters if needed, seem to be ignored by OpenShift ClusterLogForwarder
+#    loki: 
+#      tenantKey: kubernetes.namespace_name
+{% if _cluster_wide_logging.labels is defined %}
+    labels:
+{% for _label in (_cluster_wide_logging.labels | dict2items) %}
+      {{ _label.key }}: {{ _label.value }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
