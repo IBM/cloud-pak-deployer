@@ -4,7 +4,25 @@ metadata:
   name: "instance" 
   namespace: "openshift-logging"
 spec:
-  managementState: "Managed"  
+  managementState: "Managed"
+{% if _p_openshift_logging.configure_es_log_store | default(False) | bool %}
+  logStore:
+    type: "elasticsearch"
+    retentionPolicy: 
+      application:
+        maxAge: 1d
+      infra:
+        maxAge: 7d
+      audit:
+        maxAge: 7d
+    elasticsearch:
+      nodeCount: 3
+      redundancyPolicy: "SingleRedundancy"
+  visualization:
+    type: "kibana"  
+    kibana:
+      replicas: 1
+{% endif %}
   collection:
     logs:
       type: "fluentd"  
