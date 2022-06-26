@@ -48,6 +48,8 @@ openshift:
     - sample-subnet-zone-1
     - sample-subnet-zone-2
     - sample-subnet-zone-3
+    cos_name: sample-cos
+    private_only: False
   upstream_dns:
   - name: sample-dns
      zones:
@@ -80,17 +82,23 @@ openshift:
 | name                    | Name of the OpenShift cluster                                                             | Yes            |                        |
 | managed                 | Is the ROKS cluster managed by this deployer? See note below.                             | No             | True, False            |
 | ocp_version             | ROKS Kubernetes version. If you want to install `4.10`, specify `"4.10"`                  | Yes            |                        |
-| compute_flavour         | Type of compute node to be used                                                           | Yes            | [link]                 |
+| compute_flavour         | Type of compute node to be used                                                           | Yes            | [Node flavours](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles&interface=api)|
 | compute_nodes           | Total number of compute nodes. This must be a factor of the number of subnets             | Yes            | Integer                |
 | resource_group_name     | IBM Cloud resource group for the ROKS cluster                                             | Yes, inferred  |                        |
 | infrastructure.type     | Type of infrastructure to provision ROKS cluster on                                       | No             | vpc (default), classic |
 | infrastructure.vpc_name | Name of the VPC if type is `vpc`                                                          | Yes, inferrred | Existing VPC           |
 | infrastructure.subnets  | List of subnets within the VPC to use. Either 1 or 3 subnets must be specified            | Yes            | Existing subnet        |
+| infrastructure.cos_name | Reference to the `cos` object created for this cluster                                    | Yes            | Existing cos object    |
+| infrastructure.private_only | If true, it indicates that the ROKS cluster must be provisioned without public endpoints            | No             | True, False (default)  |
 | openshift_logging[]     | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)     | No             |                        |
 | upstream_dns[]          | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                | No             |                        |
 | openshift_storage[]     | List of storage definitions to be defined on OpenShift, see below for further explanation | No             |                        |
 
 The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
+
+<InlineNotification kind="warning">
+  If you set `infrastructure.private_only` to `True`, the server from which you run the deployer must be able to access the ROKS cluster via its private endpoint, either by establishing a VPN to the cluster's VPC, or by making sure the deployer runs on a server that has a connection with the ROKS VPC via a transit gateway.
+</InlineNotification>
 
 ##### openshift_storage[] - OpenShift storage definitions
 | Property            | Description                                                                                     | Mandatory                      | Allowed values        |
@@ -112,7 +120,6 @@ The `managed` attribute indicates whether the ROKS cluster is managed by the Clo
 <InlineNotification kind="warning">
   When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
 </InlineNotification>
-
 
 ### OpenShift on vSphere
 
