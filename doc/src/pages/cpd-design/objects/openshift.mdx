@@ -395,42 +395,52 @@ The `logging_output` element is mandatory and defines the external log collector
 ```
 openshift_logging:
 - openshift_cluster_name: sample
+  configure_es_log_store: False
   cluster_wide_logging:
   - input: application
     logging_name: loki-application
+    labels:
+      cluster_name: "{{ env_id }}"
+      cloud_region: eu-de
   - input: infrastructure
     logging_name: loki-application
+    labels:
+      cluster_name: "{{ env_id }}"
   - input: audit
     logging_name: loki-audit
+    labels:
+      cluster_name: "{{ env_id }}"
   logging_output:
   - name: loki-application
     type: loki
     url: https://loki-application.sample.com
     certificates:
-      cert: {{ env_id }}-loki-cert
-      key: {{ env_id }}-loki-key
-      ca: {{ env_id }}-loki-ca
+      cert: "{{ env_id }}-loki-cert"
+      key: "{{ env_id }}-loki-key"
+      ca: "{{ env_id }}-loki-ca"
   - name: loki-audit
     type: loki
     url: https://loki-audit.sample.com
     certificates:
-      cert: {{ env_id }}-loki-cert
-      key: {{ env_id }}-loki-key
-      ca: {{ env_id }}-loki-ca
+      cert: "{{ env_id }}-loki-cert"
+      key: "{{ env_id }}-loki-key"
+      ca: "{{ env_id }}-loki-ca"
 ```
 
 #### Property explanation
-| Property                          | Description                                                                                                       | Mandatory | Allowed values                     |
-|-----------------------------------|-------------------------------------------------------------------------------------------------------------------|-----------|------------------------------------|
-| openshift_cluster_name            | Name of the OpenShift cluster to configure the logging for                                                        | Yes       |                                    |
-| cluster_wide_logging              | Defines which classes of log records will be sent to the log collectors                                           | No        |                                    |
-| cluster_wide_logging.input        | Specifies OpenShift log records class to forwawrd                                                                 | Yes       | application, infrastructure, audit |
-| cluster_wide_logging.logging_name | Specifies the `logging_output` to send the records to                                                             | Yes       |                                    |
-| logging_output                    | Defines the log collectors                                                                                        | Yes       |                                    |
-| logging_output.name               | Name of the log collector, this name is referenced by the cluster wide loggers or Cloud Pak for Data audit config | Yes       |                                    |
-| logging_output.type               | Type of the log collector, currently only `loki` is possible                                                      | Yes       | loki                               |
-| logging_output.url                | URL of the log collector; this URL must be reachable from within the cluster                                      | Yes       |                                    |
-| logging_output.certificates       | Defines the vault secrets that hold the certificate elements                                                      | Yes       |                                    |
-| logging_output.certificates.cert  | Public certificate to connect to the URL                                                                          | Yes       |                                    |
-| logging_output.certificates.key   | Private key to connect to the URL                                                                                 | Yes       |                                    |
-| logging_output.certificates.ca    | Certificate Authority bundle to connect to the URL                                                                | Yes       |                                    |
+| Property                          | Description                                                                        | Mandatory | Allowed values                     |
+|-----------------------------------|------------------------------------------------------------------------------------|-----------|------------------------------------|
+| openshift_cluster_name            | Name of the OpenShift cluster to configure the logging for                         | Yes       |                                    |
+| configure_es_log_store            | Must internal ElasticSearch log store and Kibana be provisioned? (default False)   | No        | True, False                        |
+| cluster_wide_logging              | Defines which classes of log records will be sent to the log collectors            | No        |                                    |
+| cluster_wide_logging.input        | Specifies OpenShift log records class to forwawrd                                  | Yes       | application, infrastructure, audit |
+| cluster_wide_logging.logging_name | Specifies the `logging_output` to send the records to . If not specified, records will be sent to the internal log only | No  |     |
+| cluster_wide_logging.labels       | Specify your own labels to be added to the log records. Every logging input/output combination can have its own labes  | No   |     |
+| logging_output                    | Defines the log collectors. If `configure_es_log_store` is True, output will always be sent to the internal ES log store | No  |     |
+| logging_output.name               | Log collector name, referenced by `cluster_wide_logging` or `cp4d_audit`           | Yes       |                                    |
+| logging_output.type               | Type of the log collector, currently only `loki` is possible                       | Yes       | loki                               |
+| logging_output.url                | URL of the log collector; this URL must be reachable from within the cluster       | Yes       |                                    |
+| logging_output.certificates       | Defines the vault secrets that hold the certificate elements                       | Yes, if url is https |                         |
+| logging_output.certificates.cert  | Public certificate to connect to the URL                                           | Yes       |                                    |
+| logging_output.certificates.key   | Private key to connect to the URL                                                  | Yes       |                                    |
+| logging_output.certificates.ca    | Certificate Authority bundle to connect to the URL                                 | Yes       |                                    |

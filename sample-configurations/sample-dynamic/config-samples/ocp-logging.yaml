@@ -1,0 +1,32 @@
+---
+openshift_logging:
+- openshift_cluster_name: "{{ env_id }}"
+  configure_es_log_store: False
+  cluster_wide_logging:
+  - input: application
+    logging_name: loki-application
+    labels:
+      cluster_name: "{{ env_id }}"
+  - input: infrastructure
+    logging_name: loki-application
+    labels:
+      cluster_name: "{{ env_id }}"
+  - input: audit
+    logging_name: loki-audit
+    labels:
+      cluster_name: "{{ env_id }}"
+  logging_output:
+  - name: loki-application
+    type: loki
+    url: https://loki-application.sample.com
+    certificates:
+      cert: "{{ env_id }}"-loki-cert
+      key: "{{ env_id }}"-loki-key
+      ca: "{{ env_id }}"-loki-ca
+  - name: loki-audit
+    type: loki
+    url: https://loki-audit.sample.com
+    certificates:
+      cert: "{{ env_id }}"-loki-cert
+      key: "{{ env_id }}"-loki-key
+      ca: "{{ env_id }}"-loki-ca
