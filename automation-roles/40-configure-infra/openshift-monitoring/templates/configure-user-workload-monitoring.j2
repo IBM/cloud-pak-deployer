@@ -1,14 +1,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cluster-monitoring-config
-  namespace: openshift-monitoring
+  name: user-workload-monitoring-config
+  namespace: openshift-user-workload-monitoring
 data:
   config.yaml: |
-    enableUserWorkload: true
 {% if ((_oc_remote_rewrite_url|length > 0) or (_oc_monitoring_persist_sc|length > 0) or (_oc_monitoring_retention_period|length > 0))  %}    
-    prometheusK8s: 
-{%- endif %}    
+    prometheus:
+{%- endif %}  
 {% if _oc_monitoring_retention_period|length > 0 %}
       retention: {{ _oc_monitoring_retention_period }}
 {%- endif %} 
@@ -24,4 +23,4 @@ data:
           resources:
             requests:
               storage: {{ _oc_monitoring_persist_size_gb }}Gi
-{%- endif %}
+{% endif %}

@@ -9,6 +9,7 @@ import sys
 #   pvc_storage_class: ibmc-vpc-block-retain-general-purpose
 #   pvc_storage_size_gb: 100
 #   remote_rewrite_url: http://daprintdbrwsbx.dap:9201/write
+#   retention_period: 1y
 #   grafana_operator: enabled
 #   grafana_project: grafana
 
