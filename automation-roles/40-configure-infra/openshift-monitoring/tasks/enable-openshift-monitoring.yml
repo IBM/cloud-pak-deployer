@@ -14,6 +14,15 @@
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-cluster-monitor-config.yaml
 
+- name: Create user workload cluster monitor configuration file
+  template:
+    src: configure-user-workload-monitoring.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-user-workload-cluster-monitor-config.yaml"  
+
+- name: Create cluster monitor configuration
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-user-workload-cluster-monitor-config.yaml
+
 - name: Wait until pods are created in openshift-monitoring project
   shell: oc get po -n openshift-monitoring 2>/dev/null | wc -l
   register: _oc_openshift_monitoring_pods
@@ -34,21 +43,4 @@
 
 - name: Wait until openshift-user-workload-monitoring pods are ready
   shell: oc wait -n openshift-user-workload-monitoring --for=condition=Ready pod --all --timeout=240s
-
-- name: Create user workload cluster monitor configuration file
-  template:
-    src: configure-user-workload-monitoring.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-user-workload-cluster-monitor-config.yaml"  
-
-- name: Create cluster monitor configuration
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-user-workload-cluster-monitor-config.yaml
-    
-- name: Wait 30 seconds
-  pause:
-    seconds: 30
-
-- name: Wait until openshift-user-workload-monitoring pods are restarted with the configured Storage
-  shell: oc wait -n openshift-user-workload-monitoring --for=condition=Ready pod/prometheus-user-workload-0 pod/prometheus-user-workload-1 --timeout=240s
-
 
