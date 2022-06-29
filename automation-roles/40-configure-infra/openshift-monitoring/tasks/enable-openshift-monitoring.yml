@@ -14,9 +14,12 @@
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-cluster-monitor-config.yaml
 
-- name: Wait 30 seconds
-  pause:
-    seconds: 30
+- name: Wait until pods are created in openshift-monitoring project
+  shell: oc get po -n openshift-monitoring 2>/dev/null | wc -l
+  register: _oc_openshift_monitoring_pods
+  retries: 10
+  delay: 30
+  until: _oc_openshift_monitoring_pods.stdout != "0"    
 
 - name: Wait until openshift-monitoring prometheus pods are ready
   shell: oc wait -n openshift-monitoring --for=condition=Ready pod -l app=prometheus --timeout=240s
