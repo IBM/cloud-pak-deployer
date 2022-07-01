@@ -4,12 +4,12 @@
     msg: "Handling CP4WA cluster {{ current_cp4wa_cluster.project }}"
 
 - set_fact:
-    _cpd_accept_licenses: "{{ current_cp4wa_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
+    _cpwa_accept_licenses: "{{ current_cp4wa_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
 
 - name: Fail if licenses were not accepted
   fail:
     msg: "You must accept the licenses, either in the cp4wa object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
-  when: not (_cpd_accept_licenses | bool)
+  when: not (_cpwa_accept_licenses | bool)
 
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
@@ -62,17 +62,17 @@
   when:
   - (current_cp4wa_cluster.image_registry_name | default("")) != ""
 
-- name: Remove Cloud Pak for Integration directory for generated files
+- name: Remove Cloud Pak for Watson AIOps directory for generated files
   file:
     path: "{{ status_dir }}/cp4wa"
     state: absent
 
-- name: Create Cloud Pak for Integration directory for generated files
+- name: Create Cloud Pak for Watson AIOps directory for generated files
   file:
     path: "{{ status_dir }}/cp4wa"
     state: directory
 
-- name: Prepare OpenShift cluster for Cloud Pak for Integration
+- name: Prepare OpenShift cluster for Cloud Pak for Watson AIOps
   include_role:
     name: cp4wa-prepare-openshift
 
@@ -92,11 +92,11 @@
   when: (current_cpwa_cluster.operators_in_all_namespaces | default(False) | bool)
 
 # TODO implement CASE
-# - name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
+# - name: Prepare case files for Cloud Pak for Watson AIOps when using private registry or when explicitly using case files
 #   include_tasks: prepare-cp4wa-case-files.yml
 #   when: _use_case_files
 
-# - name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
+# - name: Mirror images for Cloud Pak for Watson AIOps to private registry {{ current_cp4i_cluster.image_registry_name }}
 #   include_tasks: mirror-images-cp4wa.yml
 #   when: 
 #   - (current_cp4i_cluster.image_registry_name | default("")) != ""
@@ -111,6 +111,8 @@
 - name: Create entitlement key secret
   include_tasks: create-entitlement-key-secret.yml
 
+# TODO ensure external traffic access to AI Manager
+
 # ------------ CREATING CATALOG SOURCES -----------------------------
 
 - name: Create catalog sources for entitled registry when not using CASE files
@@ -119,7 +121,23 @@
 
 - name: Create catalog sources when using CASE files
   include_tasks: create-catalog-source-case-file.yml
-  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop: "{{ current_cp4wa_cluster.instances | default([]) }}"
   loop_control:
-    loop_var: current_cp4i_instance
+    loop_var: current_cp4wa_instance
   when: _use_case_files
+
+# ------------ INSTALLING OPERATORS ---------------------------------
+
+- name: Prepare operator group if installing in specific namespace
+  include_tasks: prepare-operator-group.yml
+  # when: not _operators_in_all_namespaces
+  
+- name: Install AI Manager operator
+  include_tasks: install-operator.yml
+
+# TODO run prereq checker
+
+# ------------ INSTALL CP4WA instance -------------------------------
+
+- name: Install AI Manager instance
+  include_tasks: install-instance.yml
