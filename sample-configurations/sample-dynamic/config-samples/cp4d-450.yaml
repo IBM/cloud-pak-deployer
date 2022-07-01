@@ -1,0 +1,178 @@
+---
+cp4d:
+
+- project: zen-45
+  openshift_cluster_name: "{{ env_id }}"
+  cp4d_version: 4.5.0
+  olm_utils: True
+  use_case_files: True
+  accept_licenses: False
+  cartridges:
+  - name: cp-foundation
+    license_service:
+      state: disabled
+      threads_per_core: 2
+  
+  - name: lite
+
+  - name: scheduler 
+    state: removed
+    
+#
+# All tested cartridges. To install, change the "state" property to "installed". To uninstall, change the state
+# to "removed" or comment out the entire cartridge. Make sure that the "-" and properties are aligned with the lite
+# cartridge; the "-" is at position 3 and the property starts at position 5.
+#
+# If a cartridge has dependencies and you want to install it, you must ensure that the dependent cartridge is also
+# installed.
+#
+
+  - name: analyticsengine 
+    size: small 
+    state: removed
+
+  - name: bigsql
+    state: removed
+
+  - name: ca
+    size: small
+    instances:
+    - name: ca-instance
+      metastore_ref: ca-metastore
+    state: removed
+
+  - name: cde
+    state: removed
+
+  - name: datagate
+    state: removed
+
+  - name: datastage-ent-plus
+    state: removed
+
+  - name: db2
+    size: small
+    instances:
+    - name: ca-metastore
+      metadata_size_gb: 20
+      data_size_gb: 20
+      backup_size_gb: 20  
+      transactionlog_size_gb: 20
+    state: removed
+
+  - name: db2u
+    state: removed
+
+  - name: db2wh
+    state: removed
+
+  - name: dmc
+    state: removed
+
+  - name: dods
+    size: small
+    dependencies:
+    - name: wsl
+    - name: wml
+    state: removed
+
+  - name: dp
+    size: small
+    state: removed
+
+  - name: dv
+    size: small 
+    dependencies:
+    - name: db2u
+    instances:
+    - name: data-virtualization
+    state: removed
+
+  - name: hadoop
+    size: small
+    dependencies:
+    - name: wsl
+    state: removed
+
+  - name: mdm
+    size: small
+    wkc_enabled: true
+    state: removed
+
+  - name: openpages
+    state: removed
+
+  # For Planning Analytics, the case version is needed due to defect in olm utils
+  - name: planning-analytics
+    case_version: 4.0.90573
+    state: removed
+
+  - name: rstudio
+    size: small
+    dependencies:
+    - name: wsl
+    state: removed
+
+  - name: spss
+    dependencies:
+    - name: wsl
+    state: removed
+
+  - name: voice-gateway
+    replicas: 1
+    state: removed
+
+  - name: watson-assistant
+    size: small
+    state: removed
+
+  - name: watson-discovery
+    state: removed
+
+  # For Watson Knowledge Studio, the case version is needed due to defect in olm utils
+  - name: watson-ks
+    case_version: 4.0.9
+    size: small
+    state: removed
+
+  - name: watson-openscale
+    size: small
+    state: removed
+
+  - name: watson-speech
+    stt_size: xsmall
+    tts_size: xsmall
+    state: removed
+
+  - name: wkc
+    size: small
+    state: removed
+
+  - name: wml
+    size: small
+    state: installed
+
+  - name: wml-accelerator
+    replicas: 1
+    size: small
+    state: removed
+
+  - name: wsl
+    state: installed
+
+#
+# Cartridge case dependencies
+#
+  - name: ccs
+
+  - name: datarefinery
+    
+  - name: wsl-runtimes
+
+#
+# Cartridges where extra work is needed (will not install automatically)
+# 
+  # Product Master requires set up of the Db2 instance secret before install
+  - name: productmaster
+    size: small  
+    state: removed
