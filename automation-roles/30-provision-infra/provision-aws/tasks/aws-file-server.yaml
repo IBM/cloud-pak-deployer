@@ -1,0 +1,104 @@
+---
+- name: Check if file server {{ _current_nfs_server.name }} already exists
+  shell: |
+    aws efs describe-file-systems \
+      --query 'FileSystems[?Name==`{{ _current_nfs_server.name }}`].FileSystemId' \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_describe_fs
+
+- name: Get file system ID for {{ _current_nfs_server.name }}
+  set_fact:
+    _aws_fs_id: "{{ _aws_describe_fs.stdout | from_json | first }}"
+  when: (_aws_describe_fs.stdout | from_json) != []
+
+# If file system doesn't exist, create it
+- block:
+  - name: Create file system {{ _current_nfs_server.name }} if not existent
+    shell: |
+      aws efs create-file-system \
+        --performance-mode generalPurpose \
+        --throughput-mode bursting \
+        --encrypted \
+        --region {{ _current_nfs_server.infrastructure.aws_region }} \
+        --tags Key=Name,Value={{ _current_nfs_server.name }}
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_create_fs
+  - name: Get file system ID for {{ _current_nfs_server.name }}
+    set_fact:
+      _aws_fs_id: "{{ (_aws_create_fs.stdout | from_json).FileSystemId }}"
+  when: (_aws_describe_fs.stdout | from_json) == []
+
+# Check if access point already exists in file system
+- name: Check if access point for {{ _current_nfs_server.name }} already exists
+  shell: |
+    aws efs describe-access-points \
+      --file-system-id={{ _aws_fs_id }} \
+      --query 'AccessPoints[?Name==`{{ _current_nfs_server.name }}-ap`].AccessPointId' \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_describe_ap
+
+# If access point doesn't exist, create it
+- name: Create access point {{ _current_nfs_server.name }}-ap if not existent
+  shell: |
+    aws efs create-access-point \
+      --file-system-id={{ _aws_fs_id }} \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --root-directory=Path='{{ _current_nfs_server.infrastructure.storage_folder }},CreationInfo={OwnerUid=65534,OwnerGid=65534,Permissions=0777}' \
+      --tags Key=Name,Value={{ _current_nfs_server.name }}-ap
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_create_ap
+  when: (_aws_describe_ap.stdout | from_json) == []
+
+- name: Get security group for ROSA cluster compute nodes
+  shell: |
+    aws ec2 describe-security-groups \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_nfs_server.openshift_cluster_name }}*-worker-sg" \
+      --query 'SecurityGroups[*].GroupId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_sg
+
+- debug:
+    var: _aws_sg
+
+- name: Fail if security group was not found
+  fail:
+    msg: "Security group with name {{ _current_nfs_server.openshift_cluster_name }}*-worker-sg not found"
+  when: (_aws_sg.stdout | from_json) == []
+
+- set_fact:
+    _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
+
+- name: Get subnets for ROSA cluster
+  shell: |
+    aws ec2 describe-subnets \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_nfs_server.openshift_cluster_name }}*-private*" \
+      --query 'Subnets[*].SubnetId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_subnets
+
+- name: Fail if no private subnets were found
+  fail:
+    msg: "No private subnets for ROSA cluster {{ _current_nfs_server.openshift_cluster_name }} found"
+  when: (_aws_subnets.stdout | from_json) == []
+
+- name: Configure mount points for file system
+  include_tasks: aws-file-server-mount-point.yaml
+  loop: "{{ _aws_subnets.stdout | from_json }}"
+  loop_control:
+    loop_var: _aws_subnet
