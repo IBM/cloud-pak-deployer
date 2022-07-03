@@ -31,9 +31,11 @@
   when: not _aws_cli_download.stat.exists
 
 - name: Unpack aws-cli client installer
-  shell:
-    unzip {{ status_dir }}/downloads/{{ _aws_cli_package }} -d /tmp
+  unarchive:
+    src: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
+    dest: "{{ status_dir }}/downloads"
+    remote_src: True
 
 - name: Install aws client
   shell: |
-    /tmp/aws/install
+    {{ status_dir }}/downloads/aws/install
