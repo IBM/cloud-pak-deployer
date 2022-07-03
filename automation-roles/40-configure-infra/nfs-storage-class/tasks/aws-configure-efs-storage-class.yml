@@ -1,0 +1,40 @@
+---
+- name: Validate if EFS {{ efs_storage_class_name }}  class exists
+  shell: |
+    oc get sc {{ efs_storage_class_name }}
+  failed_when: False
+  register: _oc_storage_class_exists
+
+- name: Install EFS Storage class {{ efs_storage_class_name }}
+  block:
+
+    - set_fact:
+        _current_nfs_server: "{{ all_config.nfs_server | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?name=='{{ current_openshift_storage.nfs_server_name }}']
+
+    - name: Check if file server {{ _current_nfs_server.name }} exists
+      shell: |
+        aws efs describe-file-systems \
+          --query 'FileSystems[?Name==`{{ _current_nfs_server.name }}`].FileSystemId' \
+          --region {{ _current_nfs_server.infrastructure.aws_region }} --output json
+      environment:
+        AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+        AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+      register: _aws_describe_fs
+
+    - name: Fail if no file server {{ _current_nfs_server.name }} found
+      fail:
+        msg: "File server {{ _current_nfs_server.name }} not found"
+      when: (_aws_describe_fs.stdout | from_json) == []
+
+    - set_fact:
+        _nfs_storage_class: "{{ efs_storage_class_name }}"
+        _nfs_storage_server_ip: "{{ aws_describe_fs.stdout | from_json | first }}.efs.{{ _current_nfs_server.aws_region }}.amazonaws.com"
+        _nfs_storage_server_path: "{{ _current_nfs_server.infrastructure.storage_folder }}"
+
+    - name: Create {{ nfs_storage_class_name }} storage class
+      include_tasks: create-nfs-storage-class.yml
+
+  when: _oc_storage_class_exists.rc != 0
