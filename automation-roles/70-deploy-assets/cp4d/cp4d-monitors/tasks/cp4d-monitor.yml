@@ -136,9 +136,6 @@
     file: "{{ _cloud_pak_service_monitor_dir.path }}/event_types.yml"
     name: _monitor_event_types
 
-- debug:
-    msg: "{{ _monitor_event_types }}"
-
 - set_fact:
     _monitor_source_repo_address: "{{ _monitor_source_repo[8:] }}"
 
@@ -150,7 +147,6 @@
 - name: Create the Build Config for {{ _monitor_name }}
   shell: |
     sh {{ _cloud_pak_service_monitor_dir.path }}/create-build-config.sh
-  register: _bc_command_result
 
 - name: Wait for build {{ _monitor_name }}-1 complete
   shell: |
@@ -163,15 +159,46 @@
     - _wait_for_build.rc==0
     - _wait_for_build.stdout=='Complete'      
 
+- name: Validate if the monitor configmap is already present
+  shell: |
+    oc get cm -n {{ current_cp4d_cluster.project }} | grep ^zen-alert-{{ _monitor_name }}-monitor-extension | wc -l
+  register: _cm_monitor_exists
+
+- set_fact:
+    _monitor_icpdata_addon_version: "4.3.0"
+
+- when: "_cm_monitor_exists.stdout == '1'"
+  block:
+    - name: Get the current version marker of CM zen-alert-{{ _monitor_name }}-monitor-extension
+      shell: |
+        oc get cm -n {{ current_cp4d_cluster.project }} zen-alert-{{ _monitor_name }}-monitor-extension -o jsonpath='{.metadata.labels.icpdata_addon_version}'
+      register: _cm_monitor_label_version
+
+    - set_fact:
+        _cm_monitor_label_version: "{{ _cm_monitor_label_version.stdout.split('.')[-1] }}"
+
+    - set_fact:
+        _monitor_icpdata_addon_version: "4.3.{{ (_cm_monitor_label_version | int) + 1 }}"
+
+
+- name: Validate if the monitor cronjob {{ _monitor_name }}-cronjob already exists
+  shell: |
+    oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep ^{{ _monitor_name }}-cronjob | wc -l
+  register: _cronjob_monitor_exists
+
+- name: Delete cronjob {{ _monitor_name }}-cronjob
+  shell: |
+    oc delete cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob
+  when: "_cronjob_monitor_exists.stdout == '1'"
+
 - name: Create monitor extension configmap yaml
   template:
     src: cp4d-monitor-extension.j2
     dest: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml"           
 
-- name: Create monitor extension configmap
+- name: Apply monitor extension configmap
   shell: |
     oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml
-  register: _create_monitor_cm
 
 - name: Wait for {{ _monitor_name }}-cronjob to become available
   shell: |
@@ -199,12 +226,6 @@
 - name: Delete the build config {{ _monitor.name }}
   shell: |
     oc delete bc -n {{ current_cp4d_cluster.project }} {{ _monitor.name }}
-
-  
-
-
-- fail:
-    msg: "DONE....."
 
 
 
