@@ -6,7 +6,6 @@ def preprocessor(attributes=None, fullConfig=None):
     g('name').isRequired()
     g('infrastructure').isRequired()
     g('infrastructure.aws_region').isRequired()
-    g('infrastructure.storage_folder').isRequired()
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
