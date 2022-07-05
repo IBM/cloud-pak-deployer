@@ -33,32 +33,6 @@
       _aws_fs_id: "{{ (_aws_create_fs.stdout | from_json).FileSystemId }}"
   when: (_aws_describe_fs.stdout | from_json) == []
 
-# Check if access point already exists in file system
-- name: Check if access point for {{ _current_nfs_server.name }} already exists
-  shell: |
-    aws efs describe-access-points \
-      --file-system-id={{ _aws_fs_id }} \
-      --query 'AccessPoints[?Name==`{{ _current_nfs_server.name }}-ap`].AccessPointId' \
-      --region {{ _current_nfs_server.infrastructure.aws_region }} --output json
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  register: _aws_describe_ap
-
-# If access point doesn't exist, create it
-- name: Create access point {{ _current_nfs_server.name }}-ap if not existent
-  shell: |
-    aws efs create-access-point \
-      --file-system-id={{ _aws_fs_id }} \
-      --region {{ _current_nfs_server.infrastructure.aws_region }} \
-      --root-directory=Path='{{ _current_nfs_server.infrastructure.storage_folder }},CreationInfo={OwnerUid=65534,OwnerGid=65534,Permissions=0777}' \
-      --tags Key=Name,Value={{ _current_nfs_server.name }}-ap
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  register: _aws_create_ap
-  when: (_aws_describe_ap.stdout | from_json) == []
-
 - name: Get security group for ROSA cluster compute nodes
   shell: |
     aws ec2 describe-security-groups \
@@ -80,6 +54,30 @@
 
 - set_fact:
     _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
+
+- name: Get NFS security group rule for security group {{ _aws_compute_sg }}
+  shell: |
+    aws ec2 describe-security-group-rules \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filter Name="group-id",Values="{{ _aws_compute_sg }}" \
+      --query 'SecurityGroupRules[?ToPort==`2049`]'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_sg_nfs_rule
+
+- name: Create NFS security group rule if not existent
+  shell: |
+    aws ec2 authorize-security-group-ingress \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --group-id {{ _aws_compute_sg }} \
+      --protocol=tcp \
+      --port=2049 --cidr="10.0.0.0/16"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_create_fs
+  when: (_aws_sg_nfs_rule.stdout | from_json) == []
 
 - name: Get subnets for ROSA cluster
   shell: |
