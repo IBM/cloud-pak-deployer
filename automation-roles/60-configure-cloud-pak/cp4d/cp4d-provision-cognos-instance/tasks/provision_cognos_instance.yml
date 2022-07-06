@@ -15,6 +15,10 @@
 - set_fact:
     cognos_lookup_result_json: "{{ cognos_lookup_result.stdout | from_json }}"
 
+- set_fact:
+    cp4d_cognos_instance_storage_class: "{{ ocp_storage_class_file }}"
+    cp4d_cognos_instance_storage_class_block: "{{ ocp_storage_class_block }}"
+
 - name: Determine if Cognos Analytics instance already exists
   debug:
     msg: "Cognos instance {{ cognos_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_cognos_instance for {{ cognos_instance.name }}"
@@ -76,9 +80,6 @@
             db2_name: 'db2'
             query: "[?entity.name=='{{ db2_name }}'].metadata.asset_id"
 
-        - set_fact:
-            cp4d_cognos_instance_storage_class: "{{ ocp_storage_class_file }}"
-
         - name: Create Datasource connection json file
           template:
             src: cognos_connection.json.j2
@@ -94,10 +95,62 @@
         oc get caservice -n {{ current_cp4d_cluster.project }} ca-addon-cr -o jsonpath='{.spec.version}'
       register: _ca_version
 
-    - name: Create cognos instance json file
+    - set_fact:
+        _cognos_instance_pods_count: "7"
+    
+    - name: Create cognos instance 4.0 json file
       template:
         src: cognos_instance_40.json.j2
         dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
+      when: ca_cp4d_version == "4.0"
+
+    - when: ca_cp4d_version == "4.5"
+      block:
+
+        - name: Get current secrets
+          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets'"
+          register: cp4d_secret_get_result       
+
+        - set_fact:
+            cp4d_secret_result: "{{ cp4d_secret_get_result.stdout | from_json }}"          
+
+        - set_fact:
+            cp4d_secret_query: "{{ cp4d_secret_result.secrets|json_query(secret_smtp) }}"
+          vars:
+            secret_smtp_name: "smtpSecret"
+            secret_smtp: "[?secret_name=='{{ secret_smtp_name }}']"        
+
+        - when: cp4d_secret_query|length == 1
+          set_fact:
+            cp4d_cognos_smtp_secret: "{{ cp4d_secret_query[0].secret_urn }}"
+
+        - when: cp4d_secret_query|length == 0
+          block:
+            - name: Create Cognos smtp secret json
+              template:
+                src: cognos_smtp_secret.json.j2
+                dest: "{{ cp4d_automation_temp_dir.path }}/cognos_smtp_secret.json"
+
+            - name: Create Cognos smtp secret
+              shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets' -T {{ cp4d_automation_temp_dir.path }}/cognos_smtp_secret.json"
+              register: cp4d_cognos_smtp_secret_create_result       
+
+            - set_fact:
+                cp4d_cognos_smtp_secret_result: "{{ cp4d_cognos_smtp_secret_create_result.stdout | from_json }}"
+
+            - set_fact:
+                cp4d_cognos_smtp_secret: "{{ cp4d_cognos_smtp_secret_result.secret_urn }}"
+
+        - debug:
+            msg: "Cognos SMTP Secret: {{ cp4d_cognos_smtp_secret }}"
+        
+        - name: Create cognos instance 4.5 json file
+          template:
+            src: cognos_instance_45.json.j2
+            dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
+
+        - set_fact:
+            _cognos_instance_pods_count: "6"
 
     - name: Create Cognos instance
       shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
@@ -126,7 +179,7 @@
       debug:
         msg: "Cognos Analytics instance being provisioned. ID: {{ cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
-    - name: Wait for Cognos Analytics to finish its provisioning, starting all 7 CA pods
+    - name: "Wait for Cognos Analytics to finish its provisioning, starting all {{ _cognos_instance_pods_count }} CA pods"
       shell: |
         oc get po -n {{ current_cp4d_cluster.project }} | grep ^ca{{ cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
       register: ca_provision_complete
@@ -134,7 +187,7 @@
       delay: 30
       until:
         - ca_provision_complete.rc==0
-        - ca_provision_complete.stdout=='7'
+        - ca_provision_complete.stdout==_cognos_instance_pods_count
       vars:
         ansible_callback_diy_runner_retry_msg: >-
           {%- set result = ansible_callback_diy.result.output -%}
