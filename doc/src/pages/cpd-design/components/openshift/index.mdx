@@ -32,15 +32,20 @@ openshift:
 ## Storage
 An OpenShift cluster also defines the type(s) of storage that it will provide. When the OpenShift cluster is provisioned by the deployer, the necessary infrastructure and storage class(es) are also configured. In case an existing OpenShift cluster is referenced by the configuration, the storage classes are expected to exist already.
 
-The table below indicates which storage classes are supported per cloud infrastructure.
+The table below indicates which storage classes are supported by the Cloud Pak Deployer per cloud infrastructure.
 
-| Cloud Provider | NFS Storage | OCS Storage | Portworx Storage | Custom  |
-| -------------- | ----------- | ----------- | ---------------- | ------- |
-| ibm-cloud      | Yes         | Yes         | Yes              | No      |
-| vsphere        | Yes (1)     | Yes         | No               | No      |
-| aws            | No          | Yes         | No               | No      |
-| azure          | No          | Yes         | No               | No      |
-| existing-ocp   | Yes         | Yes         | No               | Yes (2) |
+<InlineNotification kind="warning">
+The ability to provision or use certain storage types does not imply support by the Cloud Paks. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
+</InlineNotification>
+
+| Cloud Provider | NFS Storage | OCS/ODF Storage | Portworx | Elastic | Custom (2) |
+| -------------- | ----------- | --------------- | ---------| ------- } ---------- |
+| ibm-cloud      | Yes         | Yes             | Yes      | No      | Yes        |
+| vsphere        | Yes (1)     | Yes             | No       | No      | Yes        |
+| aws            | No          | Yes             | No       | Yes (3) | Yes        |
+| azure          | No          | Yes             | No       | No      | Yes        |
+| existing-ocp   | Yes         | Yes             | No       | No      | Yes        |
 
 (1) An existing NFS server can be specified so that the deployer configures the `managed-nfs-storage` storage class. The deployer will not provision or change the NFS server itself.
 (2) If you specify a `custom` storage type, you must specify the storage class to be used for block (RWO) and file (RWX) storage.
+(3) Specifying this storage type means that Elastic File Storage (EFS) and Elastic Block Storage (EBS) storage classes will be used. For EFS, an `nfs_server` object is required to define the "file server" storage on AWS.

@@ -17,10 +17,11 @@ tabs:
 
 Infrastructure definitions depend on the cloud provider that is used for the provisioning.
 
-There are 3 cloud providers for the infrastructure objects:
+There are 4 cloud providers for the infrastructure objects:
 
 - [IBM Cloud](#ibm-cloud)
 - [Microsoft Azure](#microsoft-azure)
+- [Amazon AWS][#amazon]
 - [vSphere](#vsphere)
 
 ## IBM Cloud
@@ -465,6 +466,32 @@ serviceid:
 | description      | short description of the serviceid                                        | No        |                |
 | servicekeys      | collection of servicekeys that should be created for the parent serviceid | No        |                |
 | servicekeys.name | Name of the servicekey                                                    | Yes       |                |
+
+## Amazon
+
+For Amazon AWS, the following object types are supported:
+
+- [nfs_server](#aws--efs-server-nfs_server)
+
+### AWS EFS Server `nfs_server`
+
+Defines a new Elastic File Storage (EFS) service that is connected to the OpenShift cluster within the same VPC. The file storage will be used as the back-end for the `efs-nfs-client` OpenShift storage class.
+
+```
+nfs_server:
+- name: sample-elastic
+  infrastructure:
+    aws_region: eu-west-1
+```
+
+#### Property explanation
+
+| Property                      | Description                                                                 | Mandatory | Allowed values |
+| ----------------------------- | --------------------------------------------------------------------------- | --------- | -------------- |
+| name                          | Name of the EFS File System service to be created                           | Yes       |                |
+| infrastructure                | Infrastructure attributes                                                   | Yes       |                |
+| infrastructure.aws_region     | AWS region where the storage will be provisioned                            | Yes       |                |
+
 
 ## vSphere
 
