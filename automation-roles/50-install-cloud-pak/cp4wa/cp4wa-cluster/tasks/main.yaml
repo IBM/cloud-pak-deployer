@@ -62,6 +62,23 @@
   when:
   - (current_cp4wa_cluster.image_registry_name | default("")) != ""
 
+# TODO implement CASE
+- set_fact:
+    _use_case_files: False
+
+- set_fact:
+   _use_case_files: True
+  when: (current_cp4wa_cluster.image_registry_name | default("")) != "" or (current_cp4wa_cluster.use_case_files | default(False) | bool)
+
+- name: Fail if directed to use CASE files (not implemented yet)
+  fail: msg="Using CASE files is not yet implemented"
+  when: _use_case_files | bool
+
+# TODO implement versions beyond v3.3
+- name: Fail if not v3.3 installation
+  fail: msg="Installation of versions other than v3.3 are not yet implemented"
+  when: (current_cp4wa_cluster.cp4wa_version | default("v3.3")) != "v3.3"
+
 - name: Remove Cloud Pak for Watson AIOps directory for generated files
   file:
     path: "{{ status_dir }}/cp4wa"
@@ -75,14 +92,6 @@
 - name: Prepare OpenShift cluster for Cloud Pak for Watson AIOps
   include_role:
     name: cp4wa-prepare-openshift
-
-# TODO implement CASE
-- set_fact:
-    _use_case_files: False
-
-# - set_fact:
-#    _use_case_files: True
-#   when: (current_cp4i_cluster.image_registry_name | default("")) != "" or (current_cp4i_cluster.use_case_files | default(False) | bool)
 
 - set_fact:
     _operators_in_all_namespaces: False
