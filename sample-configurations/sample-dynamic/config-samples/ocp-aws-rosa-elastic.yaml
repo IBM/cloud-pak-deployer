@@ -4,6 +4,11 @@ global_config:
   cloud_platform: aws
   aws_region: eu-central-1
 
+nfs_server:
+- name: "{{ env_id }}-elastic"
+  infrastructure:
+    aws_region: "{{ aws_region }}"
+
 openshift:
 - name: "{{ env_id }}"
   ocp_version: 4.8.24
@@ -15,7 +20,5 @@ openshift:
     multi_zone: True
     use_sts: False
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 500
+  - storage_name: "{{ env_id }}-elastic"
+    storage_type: aws-elastic
