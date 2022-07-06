@@ -7,6 +7,7 @@ tabs: ['Objects', 'Vault', 'Infrastructure', 'OpenShift', 'Cloud Paks', 'Cartrid
 
 - [Cloud Pak for Data](#cp4d)
 - [Cloud Pak for Integration](#cp4i)
+- [Cloud Pak for Watson AIOps](#cp4wa)
 
 ### `cp4d`
 Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
@@ -323,3 +324,29 @@ When the installation is completed, you will find the **admin** user password in
 | version                    | Version of IBM MQ | 9.2.4.0-r1 |
 | channel                    | Subscription channel   | v1.7 |
 | case_version               | CASE version           | 1.7.0 |
+
+## `cp4wa`
+Defines the Cloud Pak for Watson AIOps installation to be configured on the OpenShift cluster(s).
+
+*Only small size deployments of v3.3 are currently supported.*
+
+```
+cp4wa:
+
+- project: cp4waiops
+  openshift_cluster_name: {{ env_id }}
+  cp4wa_version: v3.3
+  accept_licenses: False
+
+```
+
+### Main properties
+
+The following properties are defined on the project level:
+
+| Property                        | Description |
+|---------------------------------|-------------|
+| project                         | The name of the OpenShift project that will be created and used for the installation of the defined instance. |
+| openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. |
+| cp4wa_version                   | The version of the Cloud Pak for Watson AIOps (e.g. v3.3) |
+| accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | True, False |
