@@ -1,0 +1,73 @@
+- name: Show current CP4WA cluster
+  debug:
+    msg: Current CP4WA cluster is {{ current_cp4wa_cluster }}
+
+# Retrieve the openshift storage definition referenced in the cp4wa instance
+- set_fact:
+    openshift_storage: "{{ all_config.openshift | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4wa_cluster.openshift_cluster_name }}'].openshift_storage
+
+- name: Show OpenShift storage objects
+  debug:
+    msg: "{{ openshift_storage }}"
+
+# Obtain the OpenShift storage element from the openshift storage definitions
+- set_fact:
+    selected_openshift_storage: "{{ openshift_storage | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?storage_name=='{{ current_cp4wa_cluster.openshift_storage_name }}']
+
+- name: Fail if the storage information for the Cloud Pak cluster cannot be found
+  fail:
+    msg: "Storage information for storage name {{ current_cp4wa_cluster.openshift_storage_name }} specified for CP4WA cluster {{ current_cp4wa_cluster.openshift_cluster_name }} not found. Check the configuration."
+  when: selected_openshift_storage == {}
+
+- name: Show storage class construct
+  debug:
+    var: selected_openshift_storage
+
+# TODO add other storage types
+- fail: msg="Valid values for storage type are 'ocs'"
+  when: 
+    - selected_openshift_storage.storage_type != 'ocs'
+
+# TODO add other storage types
+# - set_fact:
+#     ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('managed-nfs-storage') }}"
+#     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('managed-nfs-storage') }}"
+#   when: selected_openshift_storage.storage_type == 'nfs'
+
+- set_fact:
+    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
+    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
+  when: selected_openshift_storage.storage_type == 'ocs'
+
+# TODO add other storage types
+# - fail: msg="ocp_storage_class_file and ocp_storage_class_block are required when storage_type is set to 'custom'"
+#   when:
+#     - selected_openshift_storage.ocp_storage_class_file is undefined
+#     - selected_openshift_storage.ocp_storage_class_block is undefined
+#     - selected_openshift_storage.storage_type == 'custom'
+  
+# - set_fact:
+#     ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file }}"
+#     ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block }}"
+#   when: selected_openshift_storage.storage_type == 'custom'
+
+# Portworx storage classes vary according to cartridge, so are set in the relevant CR templates
+# - set_fact:
+#    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
+#    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('portworx-gp3-sc') }}"
+#   when: selected_openshift_storage.storage_type == 'pwx'
+
+- name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
+  shell:
+    oc get sc {{ ocp_storage_class_file }}
+
+- name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
+  shell:
+    oc get sc {{ ocp_storage_class_block }}
+  when: ocp_storage_class_block != ocp_storage_class_file
