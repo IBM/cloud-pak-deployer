@@ -37,28 +37,11 @@ allowedCapabilities: null
 defaultAddCapabilities: null
 fsGroup:
   type: RunAsAny
-users:
-- system:serviceaccount:{{ _p_current_cp4d_cluster.project }}:wkc-iis-sa
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
+kind: ClusterRoleBinding
 metadata:
   name: system:openshift:scc:wkc-iis-scc
-rules:
-- apiGroups:
-  - security.openshift.io
-  resourceNames:
-  - wkc-iis-scc
-  resources:
-  - securitycontextconstraints
-  verbs:
-  - use
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: wkc-iis-scc-rb
-  namespace: {{ _p_current_cp4d_cluster.project }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
