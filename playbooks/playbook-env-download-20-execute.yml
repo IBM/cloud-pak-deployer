@@ -38,9 +38,20 @@
       vars:
         path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
 
-    - name: Prepare deployer environment
+    - name: Store the entitled registry key in the vault if one was passed in the environment variable
       include_role:
-        name: prepare-deployer
+        name: vault-set-secret
+      vars:
+        secret_name: "ibm_cp_entitlement_key"
+        secret_group: "{{ environment_name }}"
+        secret_payload: "{{ cp_entitlement_key }}"
+      when: 
+      - (cp_entitlement_key | default("")) != ""
+
+    - name: Download CLIs
+      include_role:
+        name: download-cli
+      when: not (cpd_check_only | default(False) | bool)
 
     - name: Remove case directory in case it exists
       file:
