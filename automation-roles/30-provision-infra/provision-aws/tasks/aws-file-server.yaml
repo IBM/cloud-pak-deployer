@@ -55,7 +55,20 @@
 - set_fact:
     _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
 
-- name: Get NFS security group rule for security group {{ _aws_compute_sg }}
+- name: Get VPC details for ROSA cluster
+  shell: |
+    aws ec2 describe-vpcs \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_nfs_server.openshift_cluster_name }}-*-vpc"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_rosa_vpc
+
+- set_fact:
+    _aws_rosa_vpc_cidr: "{{ (_aws_rosa_vpc.stdout | from_json | first).CidrBlock }}"
+
+- name: Get NFS rule for security group {{ _aws_compute_sg }}
   shell: |
     aws ec2 describe-security-group-rules \
       --region {{ _current_nfs_server.infrastructure.aws_region }} \
@@ -72,7 +85,7 @@
       --region {{ _current_nfs_server.infrastructure.aws_region }} \
       --group-id {{ _aws_compute_sg }} \
       --protocol=tcp \
-      --port=2049 --cidr="10.0.0.0/16"
+      --port=2049 --cidr="{{ _aws_rosa_vpc_cidr }}"
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
