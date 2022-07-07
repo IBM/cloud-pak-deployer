@@ -166,6 +166,7 @@
 
 - set_fact:
     _monitor_icpdata_addon_version: "4.3.0"
+    _cm_monitor_data: ""
 
 - when: "_cm_monitor_exists.stdout == '1'"
   block:
@@ -180,6 +181,41 @@
     - set_fact:
         _monitor_icpdata_addon_version: "4.3.{{ (_cm_monitor_label_version | int) + 1 }}"
 
+    - name: Get the current content of of CM zen-alert-{{ _monitor_name }}-monitor-extension
+      shell: |
+        oc get cm -n {{ current_cp4d_cluster.project }} zen-alert-{{ _monitor_name }}-monitor-extension -o jsonpath='{.data}'
+      register: _cm_monitor_data_output
+
+    - set_fact:
+        _cm_monitor_data_json: "{{ _cm_monitor_data_output.stdout | from_json }}"
+
+- name: Create monitor extension configmap yaml
+  template:
+    src: cp4d-monitor-extension.j2
+    dest: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml"           
+
+- name: Read the CP4D Monitor Extension yaml
+  include_vars:
+    file: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml" 
+    name: _cp4d_monitor_extension
+
+- debug:
+    msg: "This is the output    {{ _cm_monitor_data_json }}"
+
+- debug:
+    msg: "{{ _cp4d_monitor_extension.data | string }}"
+
+- debug:
+    msg: "They are the SAME!!!"
+  when: _cm_monitor_data_json == _cp4d_monitor_extension.data|string
+
+- debug:
+    msg: "They are NOT the SAME!!!"
+  when: _cm_monitor_data_json != _cp4d_monitor_extension.data|string
+
+- fail:
+    msg: "DONE....."
+
 
 - name: Validate if the monitor cronjob {{ _monitor_name }}-cronjob already exists
   shell: |
@@ -190,11 +226,6 @@
   shell: |
     oc delete cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob
   when: "_cronjob_monitor_exists.stdout == '1'"
-
-- name: Create monitor extension configmap yaml
-  template:
-    src: cp4d-monitor-extension.j2
-    dest: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml"           
 
 - name: Apply monitor extension configmap
   shell: |
