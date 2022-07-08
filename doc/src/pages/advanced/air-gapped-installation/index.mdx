@@ -1,0 +1,69 @@
+---
+title: Air-gapped installations
+---
+# Air-gapped installation
+
+The deployer can mirror images from the entitled registry to a private registry that you want to use for the Cloud Pak. 
+
+We identify two methods for mirroring images to a private registry that the air-gapped OpenShift cluster can pull images from:
+* [Mirror images with a bastion node](#mirror-images-with-a-bastion-node). The bastion node can connect to the internet and to the private registry used by the OpenShift cluster. You run the deployer on the bastion node.
+* [Using an intermediate (portable) registry](#using-a-portable-image-registry). The private registry used by the OpenShift cluster cannot be reached from a machine that is connected to the internet. In this case you need a portable registry to download images and which you then ship to a server that can connect to the OpenShift cluster and its private registry.
+
+The two methods are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=tasks-mirroring-images-your-private-container-registry
+
+<InlineNotification kind="info">
+The deployer only supports using a private registry for the Cloud Pak images, not for OpenShift itself. Air-gapped installation of OpenShift is currently not in scope for the deployer.
+</InlineNotification>
+
+Below we first outline the use of a private registry for the Cloud Pak installation, then we will continue with air-gapped installation.
+
+## Mirror images with a bastion node
+This method is also sometimes referred to as "semi-airgapped". Use this method when the private registry used by the OpenShift cluster **can be** reached from an internet-connected server or workstation. In this case the internet-connected machine can directly mirror the images to the private registry but it cannot do anything on the OpenShift cluster.
+
+### On the server connected to the internet
+* Build the Cloud Pak Deployer image using `cp-deploy.sh build`
+* Create or update the directory with the configuration
+* Create a status directory that will hold the vault and all other downloaded assets
+* Make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
+* Create a vault secret holding the connection credentials for the private registry
+* Run the deployer with the `env download` subcommand and action and specify flag `--skip-portable-registry`. This will download all clients and then mirror images from the entitled registry to the privagte registry. If mirroring fails, fix the issue and just run the `env download` again.
+* When finished successfully, re-run the deployer with `env save` subcommand and action to save the registry and deployer container images to the status directory
+* Ship the config and status directories to a server that can be connected to the private registry and the OpenShift cluster. The status directory now holds all assets required for the air-gapped installation. It should be relatively small (< 5 GB)
+
+### On the bastion server that is connected to the OpenShift cluster
+* Restore the deployer, config and status directories to the bastion server
+* Use the instructions in [Existing OpenShift](/cp-deploy/run/run-on-existing-openshift) to start the deployer. Run the `cp-deploy.sh` command with the `--air-gapped` and `--skip-mirror-images` flag to indicate that images are available in the private registry
+
+## Mirror images using a portable image registry
+Use this method when the private registry used by the OpenShift cluster cannot be reached from an internet-connected machine. In this case you need a portable registry to download images and which you then ship to a server that can connect to the OpenShift cluster and its private registry.
+
+### On the server connected to the internet
+* Build the Cloud Pak Deployer image using `cp-deploy.sh build`
+* Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified
+* Create a status directory that will hold the vault and all other downloaded assets
+* Run the deployer with the `env download` subcommand and action to download all clients, start the portable registry and then mirror images from the entitled registry to the portable registry. If mirroring fails, fix the issue and just run the `env download` again.
+* When finished successfully, re-run the deployer with `env save` subcommand and action to stop the portable registry and save the registry and deployer container images to the status directory
+* Ship the config and status directories to a server that can be connected to the private registry and the OpenShift cluster. The status directory now holds all assets required for the air-gapped installation and its size can be substantial (100+ GB). You may want to use multi-volume tar files if you are using network transfer
+
+### On the bastion server that is connected to the OpenShift cluster
+* Restore the deployer, config and status directories to the bastion server
+* Use the instructions in [Existing OpenShift](/cp-deploy/run/run-on-existing-openshift) to start the deployer. Run the `cp-deploy.sh` command with the `--air-gapped` flag to indicate images have to be mirrored from the portable registry to the private registry and the appropriate OpenShift configuration is done
+
+## Special settings for debug and DaemonSet images in air-gapped mode
+Specifically when running the deployer on IBM Cloud ROKS, certain OpenShift settings must be applied using DaemonSets in the `kube-system` namespace. Additionally, the deployer uses the `oc debug node` commands to retrieve `kubelet` and `crio` configuration files from the compute nodes.
+
+The default container images used by the DaemonSets and `oc debug node` commands are based on Red Hat's Universal Base Image and will be pulled from Red Hat registries. This is typically not possible in air-gapped installations, hence different images must be used. It is your responsibility to copy suitable (preferably UBI) images to an image registry that is connected to the OpenShift cluster. Also, if a pull secret is needed to pull the image(s) from the registry, you must create the associated secret in the `kube-system` OpenShift project.
+
+To configure alternative container images for the deployer to use, set the following properties in the `.inv` file kept in your configuration's `inventory` directory, or specify them as additional command line parameters for the `cp-deploy.sh` command. 
+
+If you do not set these values, the deployer assumes that the default images are used for DaemonSet and `oc debug node`.
+
+| Property             | Description                                            | Example                        |
+| -------------------- | ------------------------------------------------------ | ------------------------------ |
+| cpd_oc_debug_image   | Container image to be used for the `oc debug` command. | `registry.redhat.io/rhel8/support-tools:latest` |
+| cpd_ds_image         | Container image to be used for the DaemonSets that configure Kubelet, etc. | `registry.access.redhat.com/ubi8/ubi:latest` |
+
+Example of using with `cp-deploy.sh`
+```
+./cp-deploy.sh env apply --air-gapped -e cpd_oc_debug_image=registry.redhat.io/rhel8/support-tools:latest
+```
