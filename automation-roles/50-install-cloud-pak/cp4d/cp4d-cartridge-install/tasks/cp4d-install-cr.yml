@@ -9,11 +9,6 @@
     debug:
       var: _current_cp4d_cartridge
 
-  # Run the pre-processing script if one has been specified
-  - name: "Run the custom resource pre-processing script {{ _current_cp4d_cartridge.cr_preprocessing_script }}"
-    include_tasks: "{{ _current_cp4d_cartridge.cr_preprocessing_script }}"
-    when: (_current_cp4d_cartridge.cr_preprocessing_script | default('')) != ''
-    
   - name: "Validate if the Custom Resource file for {{ _current_cp4d_cartridge.name }} exists"
     stat:
       path: "{{ role_path }}/templates/{{ _current_cp4d_cartridge.cr_file_prefix }}-cr.j2"
