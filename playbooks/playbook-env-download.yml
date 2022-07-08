@@ -65,28 +65,6 @@
       loop_control:
         loop_var: _p_current_cp4d_cluster
 
-    # Wait until portable registry is available if not skipped
-    - block:
-      - name: Retrieve IP address of portable registry
-        set_fact:
-          _portable_registry_ip_address: "{{ lookup('file', status_dir + '/imageregistry/portable-registry-ip.out') }}"
-
-      - name: Fail if IP address of portable registry was not found
-        fail:
-          msg: "Portable registry does not appear to be active, IP address is not available"
-        when: _portable_registry_ip_address==""
-
-      - name: Show IP address of portable registry
-        debug:
-          var: _portable_registry_ip_address
-
-      - name: Wait until registry is available on IP address {{ _portable_registry_ip_address }} and port 5000
-        wait_for:
-          host: "{{ _portable_registry_ip_address }}"
-          port: 5000
-          timeout: 30
-      when:
-      - not (cpd_skip_portable_registry | bool)
 
     # Mirror images to portable or private registry
     - block:
@@ -108,9 +86,8 @@
         include_role:
           name: cp-mirror-images
         vars:
-          _p_target_registry_hostname: "{{ _portable_registry_ip_address }}"
-          _p_target_registry_port: 5000
-          _p_target_registry_credentials_secret: portable-registry-credentials
+          _p_target_registry_hostname: "{{ _v_portable_registry }}"
+          _p_target_registry_port: "{{ _v_portable_registry_port }}"
           _p_case_dir: "{{ status_dir }}/cp4d/case"
         when:
         - not (cpd_skip_portable_registry | bool)

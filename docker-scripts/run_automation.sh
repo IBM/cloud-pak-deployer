@@ -57,7 +57,7 @@ env|environment)
   elif [ "$ACTION" == "destroy" ];then
     run_cmd+=" playbooks/playbook-env-destroy.yml"
   elif [ "$ACTION" == "download" ];then
-    run_cmd+=" playbooks/playbook-env-download-20-execute.yml"
+    run_cmd+=" playbooks/playbook-env-download.yml"
   fi
   run_cmd+=" --extra-vars cpd_action=${ACTION}"
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
