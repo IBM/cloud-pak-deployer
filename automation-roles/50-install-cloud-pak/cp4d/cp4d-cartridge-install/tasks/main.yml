@@ -1,6 +1,12 @@
 ---
 - include_role:
     name: cp4d-variables
+
+- name: Run pre-processing scripts
+  include_tasks: cp4d-install-cr-pre-processing.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
     
 - include_tasks: cp4d-install-cartridges.yml
   when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
