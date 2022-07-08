@@ -32,6 +32,12 @@
 - set_fact:
     _aws_secret_access_key: "{{ secret_value }}"
 
+- name: Delete file servers associated with ROSA cluster
+  include_tasks: aws-delete-file-servers.yml
+  loop: "{{ _current_openshift_cluster.openshift_storage }}"
+  loop_control:
+    loop_var: _current_openshift_storage
+
 - name: Check if ROSA cluster exists
   shell: |
     rosa describe cluster \
