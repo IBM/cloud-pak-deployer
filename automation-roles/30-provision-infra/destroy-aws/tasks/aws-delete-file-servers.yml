@@ -19,6 +19,7 @@
   - name: Delete file system {{ _current_openshift_storage.nfs_server_name }}
     shell: |
       aws efs delete-file-system \
+        --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
         --file-system-id={{ _aws_fs_id }}
     when: (_aws_describe_fs.stdout | from_json) != []
     
