@@ -4,32 +4,59 @@
     path: /tmp/work
     state: directory
 
-- name: Generate OLM command to list components for version {{ _p_current_cp4d_cluster.cp4d_version }}
-  set_fact:
-    _list_components_command: "{{ lookup('template', 'list-components-olm-utils.j2') }}" 
+# Only run olm-utils command when not air-gapped
+- block:
+  - name: Generate OLM command to list components for version {{ _p_current_cp4d_cluster.cp4d_version }}
+    set_fact:
+      _list_components_command: "{{ lookup('template', 'list-components-olm-utils.j2') }}" 
 
-- name: Show list-components command
-  debug:
-    var: _list_components_command
+  - name: Show list-components command
+    debug:
+      var: _list_components_command
 
-- name: Run list-components command 
-  shell: |
-    {{ _list_components_command }}
+  - name: Run list-components command 
+    shell: |
+      {{ _list_components_command }}
+
+  - name: Copy file to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv
+    copy:
+      src: /tmp/work/components.csv
+      dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
+      remote_src: True
+
+  when:
+  - not (cpd_airgap | bool)
+
+- name: Check if file {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv exists
+  stat:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
+  register: _cp4d_components_file
+
+- name: Fail if {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv does not exist
+  fail:
+    msg: "File {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv not found. If the deployer is running in air-gapped mode, the file was not persisted earlier. Please re-run env download."
+  when: not _cp4d_components_file.stat.exists
 
 - name: Get column headers
   shell: |
-    head -1 /tmp/work/components.csv
+    head -1 {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv
   register: _csv_column_headers
+
+- name: Copy file to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv
+  copy:
+    src: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv"
+    remote_src: True
 
 - name: Remove first line from file
   lineinfile:
-    path: /tmp/work/components.csv
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv"
     regexp: "^Component name"
     state: absent
 
 - name: Try to convert to json
   read_csv:
-    path: /tmp/work/components.csv
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv"
     fieldnames: "{{ _csv_column_headers.stdout | replace(' ','_') }}"
     skipinitialspace: True
   register: _list_components_json
