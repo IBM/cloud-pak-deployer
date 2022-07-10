@@ -25,21 +25,25 @@
       vars:
         secret_name: "{{ _p_source_registry_credentials_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _source_registry_auth
 
     - name: Fail if the credentials for the source image registry have not been found in the vault
       fail:
         msg: "Secret with credentials for source image registry ({{ _p_source_registry_credentials_secret }}) have not been found in the vault."
       when: 
       - secret_value == ""
+
     when: _p_source_registry_hostname != _v_portable_registry
 
   - set_fact:
+      _source_registry_hostname: "{{ _p_source_registry_hostname }}"
+      _source_registry_port: "{{ _p_source_registry_port | default('') }}"
+      _source_registry_namespace: "{{ _p_source_registry_namespace | default('') }}"
       _registry_hostname: "{{ _p_source_registry_hostname }}"
       _registry_port: "{{ _p_source_registry_port | default('') }}"
       _registry_namespace: "{{ _p_source_registry_namespace | default('') }}"
 
   - set_fact:
-      _source_registry_auth: "{{ secret_value }}"
       _source_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
       _source_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
   when: _p_source_registry_hostname is defined
@@ -58,13 +62,32 @@
     vars:
       secret_name: "{{ _p_target_registry_credentials_secret }}"
       secret_group: "{{ environment_name }}"
+      _p_secret_variable: _target_registry_auth
 
   - name: Fail if the credentials for the target image registry have not been found in the vault
     fail:
       msg: "Secret with credentials for target image registry ({{ _p_target_registry_credentials_secret }}) have not been found in the vault."
     when: 
     - secret_value == ""
+
   when: _p_target_registry_hostname != _v_portable_registry
+
+- set_fact:
+    _target_registry_hostname: "{{ _p_target_registry_hostname }}"
+    _target_registry_port: "{{ _p_target_registry_port | default('') }}"
+    _target_registry_namespace: "{{ _p_target_registry_namespace | default('') }}"
+    _registry_hostname: "{{ _p_target_registry_hostname }}"
+    _registry_port: "{{ _p_target_registry_port | default('') }}"
+    _registry_namespace: "{{ _p_target_registry_namespace | default('') }}"
+
+- set_fact:
+    _target_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
+    _target_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
+
+- name: Generate "{{ status_dir }}/cloud-paks/auth.json"
+  template:
+    src: auth.json.j2
+    dest: "{{ status_dir }}/cloud-paks/auth.json"
 
 # Start registry
 - name: Start portable registry if specified for either source or target
@@ -91,21 +114,6 @@
       port: 12443
       timeout: 30
   when: _p_target_registry_hostname == _v_portable_registry or (_p_source_registry_hostname | default('') == _v_portable_registry)
-
-- set_fact:
-    _registry_hostname: "{{ _p_target_registry_hostname }}"
-    _registry_port: "{{ _p_target_registry_port | default('') }}"
-    _registry_namespace: "{{ _p_target_registry_namespace | default('') }}"
-
-- set_fact:
-    _target_registry_auth: "{{ secret_value }}"
-    _target_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
-    _target_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
-
-- name: Generate "{{ status_dir }}/cloud-paks/auth.json"
-  template:
-    src: auth.json.j2
-    dest: "{{ status_dir }}/cloud-paks/auth.json"
 
 # Mirror images from entitled registry to private registry
 - include_tasks: mirror-images-from-entitled.yml
