@@ -1,10 +1,10 @@
 ---
-- name: Prepare yaml file for WKC SCC and ClusterRoleBinding
+- name: Prepare yaml file for WKC SCC
   template:
     src: "wkc-scc.j2"
     dest: "{{ status_dir }}/cp4d/wkc-scc.yml"
 
-- name: Apply WKC SCC and ClusterRoleBinding
+- name: Apply WKC SCC
   command: |
     oc apply -f "{{ status_dir }}/cp4d/wkc-scc.yml"
   register: _scc_create_result
@@ -15,4 +15,8 @@
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Authorize WKC service account to use SCC
+  shell:
+    oc adm policy add-scc-to-user wkc-iis-scc system:serviceaccount:{{ _p_current_cp4d_cluster.project }}:wkc-iis-sa
