@@ -7,7 +7,7 @@ The deployer can mirror images from the entitled registry to a private registry 
 
 We identify two methods for mirroring images to a private registry that the air-gapped OpenShift cluster can pull images from:
 * [Mirror images with a bastion node](#mirror-images-with-a-bastion-node). The bastion node can connect to the internet and to the private registry used by the OpenShift cluster. You run the deployer on the bastion node.
-* [Using an intermediate (portable) registry](#using-a-portable-image-registry). The private registry used by the OpenShift cluster cannot be reached from a machine that is connected to the internet. In this case you need a portable registry to download images and which you then ship to a server that can connect to the OpenShift cluster and its private registry.
+* [Using an intermediate (portable) registry](#using-a-portable-image-registry). The private registry used by the OpenShift cluster cannot be reached from a machine that is connected to the internet. In this case you need a portable registry to download images and which you then ship to a server that can connect to the **existing ** OpenShift cluster and its private registry.
 
 The two methods are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=tasks-mirroring-images-your-private-container-registry
 
@@ -37,6 +37,10 @@ This method is also sometimes referred to as "semi-airgapped". Use this method w
 ## Mirror images using a portable image registry
 Use this method when the private registry used by the OpenShift cluster cannot be reached from an internet-connected machine. In this case you need a portable registry to download images and which you then ship to a server that can connect to the OpenShift cluster and its private registry.
 
+<InlineNotification kind="warning">
+Please note that in this case the Cloud Pak Deployer expect an OpenShift cluster to be available already and will only work with an `existing-ocp` configuration. The bastion server does not have access to the internet and can therefore not instantiate an OpenShift cluster.
+</InlineNotification>
+
 ### On the server connected to the internet
 * Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified
@@ -45,7 +49,7 @@ Use this method when the private registry used by the OpenShift cluster cannot b
 * When finished successfully, re-run the deployer with `env save` subcommand and action to stop the portable registry and save the registry and deployer container images to the status directory
 * Ship the config and status directories to a server that can be connected to the private registry and the OpenShift cluster. The status directory now holds all assets required for the air-gapped installation and its size can be substantial (100+ GB). You may want to use multi-volume tar files if you are using network transfer
 
-### On the bastion server that is connected to the OpenShift cluster
+### On the bastion server that is not connect to the internat but is connected to the OpenShift cluster
 * Restore the deployer, config and status directories to the bastion server
 * Use the instructions in [Existing OpenShift](/cp-deploy/run/run-on-existing-openshift) to start the deployer. Run the `cp-deploy.sh` command with the `--air-gapped` flag to indicate images have to be mirrored from the portable registry to the private registry and the appropriate OpenShift configuration is done
 
