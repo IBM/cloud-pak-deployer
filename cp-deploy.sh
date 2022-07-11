@@ -76,15 +76,6 @@ run_env_logs() {
   fi
 }
 
-# Find the name of the latest ibm-cp-datacore archive file in the downloads directory
-get_cp_datacore_archive() {
-  CP_DATACORE_ARCHIVE=$(find $STATUS_DIR/downloads -regex '.*ibm-cp-datacore-[0-9]+[.][0-9]+[.][0-9]+.*.tgz' | tail -n 1)
-  if [ "$CP_DATACORE_ARCHIVE" == "" ];then
-    echo "Could not find ibm-cp-datacore archive in $STATUS_DIR/downloads directory. This file is needed for the portable registry."
-    exit 1
-  fi
-}
-
 # --------------------------------------------------------------------------------------------------------- #
 # Initialize                                                                                                #
 # --------------------------------------------------------------------------------------------------------- #
@@ -154,14 +145,14 @@ environment)
   --help|-h)
     command_usage 0
     ;;
-  apply|destroy)
+  apply|destroy|download)
     shift 1
     ;;
   wizard|webui)
     export ACTION="wizard"
     shift 1
     ;;
-  logs|kill|download|save)
+  logs|kill|save)
     if ${INSIDE_CONTAINER};then
       echo "$ACTION action not allowed when running inside container"
       exit 99
@@ -709,75 +700,10 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# If action is download, first run the preparation
-if [ "${ACTION}" == "download" ] && ! ${CHECK_ONLY};then
-  run_prepare="${CONTAINER_ENGINE} run"
-  run_prepare+=" -v ${STATUS_DIR}:${STATUS_DIR}:z "
-  run_prepare+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:z"
-  run_prepare+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
-  run_prepare+=" -e STATUS_DIR=${STATUS_DIR}"
-  run_prepare+=" -e CONFIG_DIR=${CONFIG_DIR}"
-  run_prepare+=" -e CPD_SKIP_MIRROR=${CPD_SKIP_MIRROR}"
-  run_prepare+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
-
-  if ${CPD_DEVELOP};then run_prepare+=" -v ${PWD}:/cloud-pak-deployer:z";fi
-  run_prepare+=" --entrypoint /cloud-pak-deployer/docker-scripts/env-download-prepare.sh"
-  run_prepare+=" cloud-pak-deployer"
-  eval $run_prepare
-fi
-
-if ! ${CHECK_ONLY};then
-  START_PORTABLE_REGISTRY=false
-  # Start portable registry if action download and portable registry or mirror not skipped
-  if [[ "${ACTION}" == "download" && "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && "${CPD_SKIP_MIRROR}" == "false" ]];then
-    START_PORTABLE_REGISTRY=true
-  fi
-  # Start portable registry if action apply and portable registry or mirror not skipped and imageregistry directory exists
-  if [[ "${ACTION}" == "apply" && "${CPD_AIRGAP}" == "true" && "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && "${CPD_SKIP_MIRROR}" == "false" ]];then
-    if [ -d ${STATUS_DIR}/imageregistry ];then
-      START_PORTABLE_REGISTRY=true
-    else
-      echo "Directory ${STATUS_DIR}/imageregistry was not found, skipping mirroring of images"
-      CPD_SKIP_PORTABLE_REGISTRY=true
-      CPD_SKIP_MIRROR=true
-    fi
-  fi
-  # Start portable registry if needed
-  if [ "${START_PORTABLE_REGISTRY}" == "true" ];then
-    # Start the registry, only if not already started
-    if ! ${CONTAINER_ENGINE} ps | grep -q docker-registry;then
-      get_cp_datacore_archive
-      ${CONTAINER_ENGINE} rm docker-registry 2>/dev/null
-      ${STATUS_DIR}/downloads/cloudctl case launch \
-        --case ${CP_DATACORE_ARCHIVE} \
-        --inventory cpdPlatformOperator \
-        --action start-registry \
-        --args "--port 15000 --dir ${STATUS_DIR}/imageregistry --image docker.io/library/registry:2"
-    else
-      echo "Portable registry is already active. The running registry will be used."
-    fi
-
-    # Retrieve the IP address of the container registry
-    podman inspect -f '{{ .NetworkSettings.IPAddress }}' docker-registry > ${STATUS_DIR}/imageregistry/portable-registry-ip.out
-    chmod o+r ${STATUS_DIR}/imageregistry/portable-registry-ip.out
-    echo "Portable registry IP address is $(cat ${STATUS_DIR}/imageregistry/portable-registry-ip.out)"
-  fi
-fi
-
-# If save action, save images of Docker registry and Deployer
+# If save action, save Deployer image
 if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
-  echo "Destroying old archives for registry and deployer"
-  rm -f ${STATUS_DIR}/downloads/docker-registry.tar ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
-  if [[ "${CPD_SKIP_PORTABLE_REGISTRY}" == "false" && -d ${STATUS_DIR}/imageregistry ]];then
-    get_cp_datacore_archive
-    echo "Stopping portable registry"
-    ${STATUS_DIR}/downloads/cloudctl case launch \
-      --case ${CP_DATACORE_ARCHIVE} \
-      --inventory cpdPlatformOperator \
-      --action stop-registry
-    echo "Saving Docker registry image into ${STATUS_DIR}/downloads/docker-registry.tar"
-    ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/docker-registry.tar docker.io/library/registry:2
-  fi
+  echo "Destroying old archives for deployer"
+  rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
   echo "Committing last-run deployer container into image cloud-pak-deployer-airgap:latest"
   ${CONTAINER_ENGINE} commit $CURRENT_CONTAINER_ID cloud-pak-deployer-airgap:latest
   echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"

@@ -93,18 +93,19 @@
   - not (cpd_skip_mirror | bool)
 
 # Mirror from portable registry if airgapped
-- name: Mirror images for Cloud Pak for Data from portable to private registry {{ current_cp4d_cluster.image_registry_name }}
-  include_role: 
-    name: cp-mirror-images
-  vars:
-    _p_source_registry_hostname: "{{ lookup('file', status_dir + '/imageregistry/portable-registry-ip.out') }}"
-    _p_source_registry_port: "5000"
-    _p_source_registry_credentials_secret: "portable-registry-credentials"
-    _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
-    _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
-    _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
-    _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
-    _p_case_dir: "{{ status_dir }}/cp4d/case"
+- block:
+  - name: Mirror images for Cloud Pak for Data from portable to private registry {{ current_cp4d_cluster.image_registry_name }}
+    include_role: 
+      name: cp-mirror-images
+    vars:
+      _p_source_registry_hostname: "{{ _v_portable_registry }}"
+      _p_source_registry_port: "{{ _v_portable_registry_port }}"
+      _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
+      _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
+      _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+      _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
+      _p_case_dir: "{{ status_dir }}/cp4d/case"
+      
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - cpd_airgap | bool
