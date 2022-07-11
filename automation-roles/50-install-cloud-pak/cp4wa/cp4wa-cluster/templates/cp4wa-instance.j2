@@ -1,0 +1,21 @@
+apiVersion: orchestrator.aiops.ibm.com/v1alpha1
+kind: Installation
+metadata:
+    name: ibm-cp-watson-aiops
+    namespace: {{current_cp4wa_cluster.project}}
+spec:
+    imagePullSecret: ibm-entitlement-key
+    license:
+        accept: {{ _cpwa_accept_licenses | default(False) }}
+    pakModules:
+    - enabled: true
+      name: aiopsFoundation
+    - enabled: true
+      name: applicationManager
+    - enabled: true
+      name: aiManager
+    - enabled: false
+      name: connection
+    size: small
+    storageClass: {{ocp_storage_class_file}}
+    storageClassLargeBlock: {{ocp_storage_class_block}}
