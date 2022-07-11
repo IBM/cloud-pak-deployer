@@ -147,6 +147,11 @@
 - name: Create the Build Config for {{ _monitor_name }}
   shell: |
     sh {{ _cloud_pak_service_monitor_dir.path }}/create-build-config.sh
+  register: _run_oc_build
+  retries: 5
+  delay: 10
+  until:
+    - _run_oc_build.rc==0
 
 - name: Wait for build {{ _monitor_name }}-1 complete
   shell: |
@@ -187,7 +192,7 @@
       register: _cm_monitor_data_output
 
     - set_fact:
-        _cm_monitor_data_json: "{{ _cm_monitor_data_output.stdout | from_json }}"
+        _cm_monitor_data: "{{ _cm_monitor_data_output.stdout | string }}"
 
 - name: Create monitor extension configmap yaml
   template:
@@ -199,66 +204,88 @@
     file: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml" 
     name: _cp4d_monitor_extension
 
-- debug:
-    msg: "This is the output    {{ _cm_monitor_data_json }}"
+- name: Write existing CM to file
+  copy: 
+    content: "{{ _cm_monitor_data |  replace('\\n', '') | trim }}" 
+    dest: "{{ _cloud_pak_service_monitor_dir.path}}/existing_cm"
+  
+- set_fact:
+    _cp4d_monitor_extension_data: "{{ _cp4d_monitor_extension.data | string }}"
+
+- name: Write new CM definition to file
+  copy: 
+    content: "{{ _cp4d_monitor_extension_data | replace('\\n', '') | trim }}" 
+    dest: "{{ _cloud_pak_service_monitor_dir.path }}/new_cm"
+
+- name: Get file stat of existing_cm
+  stat:
+    path: "{{ _cloud_pak_service_monitor_dir.path}}/existing_cm"
+    get_checksum: yes
+  register: _existing_cm_stat
+
+- name: Get file stat of new_cm
+  stat:
+    path: "{{ _cloud_pak_service_monitor_dir.path}}/new_cm"
+    get_checksum: yes
+  register: _new_cm_stat
 
 - debug:
-    msg: "{{ _cp4d_monitor_extension.data | string }}"
+    msg: "No changes in ConfigMap of monitor {{ _monitor_name }}. Skip redeploying monitor..."
+  when: _new_cm_stat.stat.checksum == _existing_cm_stat.stat.checksum
 
-- debug:
-    msg: "They are the SAME!!!"
-  when: _cm_monitor_data_json == _cp4d_monitor_extension.data|string
+- when: _new_cm_stat.stat.checksum != _existing_cm_stat.stat.checksum
+  block:
 
-- debug:
-    msg: "They are NOT the SAME!!!"
-  when: _cm_monitor_data_json != _cp4d_monitor_extension.data|string
+    - debug:
+        msg: "Existing ConfigMap for monitor {{ _monitor_name }} differs from new ConfigMap, redeploying Monitor..."
 
-- fail:
-    msg: "DONE....."
+    - name: Validate if the monitor cronjob {{ _monitor_name }}-cronjob already exists
+      shell: |
+        oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep ^{{ _monitor_name }}-cronjob | wc -l
+      register: _cronjob_monitor_exists
 
+    - name: Delete cronjob {{ _monitor_name }}-cronjob
+      shell: |
+        oc delete cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob
+      when: "_cronjob_monitor_exists.stdout == '1'"
 
-- name: Validate if the monitor cronjob {{ _monitor_name }}-cronjob already exists
-  shell: |
-    oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep ^{{ _monitor_name }}-cronjob | wc -l
-  register: _cronjob_monitor_exists
+    - name: Apply monitor extension configmap
+      shell: |
+        oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml
 
-- name: Delete cronjob {{ _monitor_name }}-cronjob
-  shell: |
-    oc delete cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob
-  when: "_cronjob_monitor_exists.stdout == '1'"
+    - name: Wait for {{ _monitor_name }}-cronjob to become available
+      shell: |
+        oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep {{ _monitor_name }}-cronjob | wc -l
+      register: _wait_for_monitor_cronjob
+      retries: 8
+      delay: 20
+      until:
+        - _wait_for_monitor_cronjob.rc==0
+        - _wait_for_monitor_cronjob.stdout=='1'
 
-- name: Apply monitor extension configmap
-  shell: |
-    oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml
+    - name: Check for the user-home-mount volumeMount for {{ _monitor_name }}-cronjob
+      shell: |
+        oc set volume -n {{ current_cp4d_cluster.project }} cronjobs/{{ _monitor_name }}-cronjob | grep "mounted at /user-home" | wc -l
+      register: _user_home_mount_present
 
-- name: Wait for {{ _monitor_name }}-cronjob to become available
-  shell: |
-    oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep {{ _monitor_name }}-cronjob | wc -l
-  register: _wait_for_monitor_cronjob
-  retries: 8
-  delay: 20
-  until:
-    - _wait_for_monitor_cronjob.rc==0
-    - _wait_for_monitor_cronjob.stdout=='1'
-
-- name: Check for the user-home-mount volumeMount for {{ _monitor_name }}-cronjob
-  shell: |
-    oc set volume -n {{ current_cp4d_cluster.project }} cronjobs/{{ _monitor_name }}-cronjob | grep "mounted at /user-home" | wc -l
-  register: _user_home_mount_present
-
-- name: Create the user-home-mount for {{ _monitor_name }}-cronjob
-  shell: |
-    oc patch cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob \
-    --type=json \
-    --patch '[{"op": "add","path": "/spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-","value": {"name": "user-home-mount","mountPath": "/user-home"}}]'
-  register: _patch_result
-  when: _user_home_mount_present.stdout=='0'
+    - name: Create the user-home-mount for {{ _monitor_name }}-cronjob
+      shell: |
+        oc patch cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob \
+        --type=json \
+        --patch '[{"op": "add","path": "/spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-","value": {"name": "user-home-mount","mountPath": "/user-home"}}]'
+      register: _patch_result
+      when: _user_home_mount_present.stdout=='0'
 
 - name: Delete the build config {{ _monitor.name }}
   shell: |
     oc delete bc -n {{ current_cp4d_cluster.project }} {{ _monitor.name }}
 
+- name: Delete existing_cm file
+  file:
+    state: absent
+    path: "{{ _cloud_pak_service_monitor_dir.path}}/existing_cm"
 
-
-
-
+- name: Delete new_cm file
+  file:
+    state: absent
+    path: "{{ _cloud_pak_service_monitor_dir.path}}/new_cm"
