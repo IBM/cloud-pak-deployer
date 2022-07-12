@@ -1,0 +1,64 @@
+---
+- name: Delete file server
+  block:
+  - name: Check if file server {{ _current_openshift_storage.nfs_server_name }} still exists
+    shell: |
+      aws efs describe-file-systems \
+        --query 'FileSystems[?Name==`{{ _current_openshift_storage.nfs_server_name }}`].FileSystemId' \
+        --region {{ _current_openshift_cluster.infrastructure.aws_region }} --output json
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_describe_fs
+
+  - name: Get file system ID for {{ _current_openshift_storage.nfs_server_name }}
+    set_fact:
+      _aws_fs_id: "{{ _aws_describe_fs.stdout | from_json | first }}"
+    when: (_aws_describe_fs.stdout | from_json) != []
+
+  - name: Retrieve mount targets for the file server
+    shell: |
+      aws efs describe-mount-targets \
+        --file-system-id={{ _aws_fs_id }} \
+        --query 'MountTargets[].MountTargetId' \
+        --region {{ _current_openshift_cluster.infrastructure.aws_region }} --output json
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_describe_mount_target
+
+  - debug:
+      var: _aws_describe_mount_target
+
+  - name: Delete mount targets for the file server
+    shell: |
+      aws efs delete-mount-target \
+        --mount-target-id={{ _aws_mount_target_id }} \
+        --region {{ _current_openshift_cluster.infrastructure.aws_region }} --output json
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    loop: "{{ _aws_describe_mount_target.stdout | from_json | default([]) }}"
+    loop_control:
+      loop_var: _aws_mount_target_id
+
+  - name: Delete file system {{ _current_openshift_storage.nfs_server_name }}
+    shell: |
+      aws efs delete-file-system \
+        --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+        --file-system-id={{ _aws_fs_id }}
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_delete_fs
+    retries: 30
+    delay: 10
+    until: _aws_delete_fs.rc == 0
+    when: (_aws_describe_fs.stdout | from_json) != []
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+      
+  when: _current_openshift_storage.storage_type == 'aws-elastic'

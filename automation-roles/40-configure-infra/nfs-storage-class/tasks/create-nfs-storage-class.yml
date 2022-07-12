@@ -1,0 +1,44 @@
+---
+- tempfile:
+    state: directory
+  register: nfs_temp_dir
+
+- name: Show NFS temporary directory
+  debug:
+    msg: "{{ nfs_temp_dir }}"
+
+- name: Create OpenShift Project {{ nfs_storage_class_project }}
+  shell: |
+    oc get project {{ nfs_storage_class_project }} > /dev/null 2>&1 || \
+      oc new-project {{ nfs_storage_class_project }}
+
+- name: Create Dynamic NFS rbac.yaml
+  template:
+    src: rbac.yaml.j2
+    dest: "{{ nfs_temp_dir.path }}/rbac.yaml"
+
+- name: Create Dynamic NFS deployment.yaml
+  template:
+    src: deployment.yaml.j2
+    dest: "{{ nfs_temp_dir.path }}/deployment.yaml"
+
+- name: Create Dynamic NFS class.yaml
+  template:
+    src: class.yaml.j2
+    dest: "{{ nfs_temp_dir.path }}/class.yaml"
+
+- name: Process Dynamic NFS rbac.yaml
+  shell: "oc create -f {{ nfs_temp_dir.path }}/rbac.yaml"
+
+- name: Set scc to nfs-client-provisioner
+  shell: "oc adm policy add-scc-to-user hostmount-anyuid system:serviceaccount:{{ nfs_storage_class_project }}:nfs-client-provisioner"
+
+- name: Create the Storage class
+  shell: "oc create -f {{ nfs_temp_dir.path }}/class.yaml"
+
+- name: Create the nfs-client-provisioner
+  shell: "oc create -f {{ nfs_temp_dir.path }}/deployment.yaml"
+
+- name: Wait 15 seconds for the dynamic NFS client to deploy
+  pause:
+    seconds: 15

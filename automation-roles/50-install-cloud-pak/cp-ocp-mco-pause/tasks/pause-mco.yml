@@ -27,7 +27,6 @@
   when: 
   - cloud_platform == 'existing-ocp'
 
-
 - set_fact:
     _mco_exists: False
   when: (cloud_platform == 'ibm-cloud') or (_mcp_worker.rc | default(0) != 0)
@@ -43,4 +42,6 @@
 - name: Pause the MachineConfig operator to disable rebooting of compute nodes
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
-  when: _mco_exists
+  when: 
+  - _mco_exists
+  - cloud_platform != 'aws'

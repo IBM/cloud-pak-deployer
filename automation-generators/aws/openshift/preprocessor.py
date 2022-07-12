@@ -92,8 +92,8 @@ def preprocessor(attributes=None, fullConfig=None):
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['ocs']:
-                g.appendError(msg='storage_type must be ocs')
+            if "storage_type" in os and os['storage_type'] not in ['ocs','aws-elastic']:
+                g.appendError(msg='storage_type must be ocs or aws-elastic')
             if "storage_type" in os and os['storage_type']=='ocs':
                 if "ocs_storage_label" not in os:
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')

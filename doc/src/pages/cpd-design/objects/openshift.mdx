@@ -187,6 +187,11 @@ openshift:
 ### OpenShift on AWS
 
 ```
+nfs_server:
+- name: sample-elastic
+  infrastructure:
+    aws_region: eu-west-1
+
 openshift:
 - name: sample
   ocp_version: 4.8.24
@@ -208,6 +213,8 @@ openshift:
     storage_type: ocs
     ocs_storage_label: ocs
     ocs_storage_size_gb: 500
+  - storage_name: sample-elastic
+    storage_type: aws-elastic
 ```
 
 #### Property explanation OpenShift clusters on AWS (ROSA)
@@ -249,7 +256,7 @@ In the above case, all referenced subnets have an address space of `/27` so that
 |---------------------------|--------------------------------------------------------------------------------------------------------------------------------|--------------------------------|----------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                         | No                             |                |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                              | Yes                            |                |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                                       | Yes                            | ocs            |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                       | Yes                            | ocs, aws-elastic   |
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                          | No                             |                |
 | ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                    | Yes if `storage_type` is `ocs` |                |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                      | Yes if `storage_type` is `ocs` |                |

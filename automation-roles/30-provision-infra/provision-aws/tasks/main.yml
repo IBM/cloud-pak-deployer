@@ -36,99 +36,14 @@
 - set_fact:
     _aws_secret_access_key: "{{ secret_value }}"
 
-- name: Check if ROSA cluster already exists
-  shell: |
-    rosa describe cluster \
-      --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }}
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  register: _rosa_describe_cluster
-  failed_when: False
+- name: Provision OpenShift on AWS
+  include_tasks: provision-rosa.yml
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
 
-- name: Ensure the status log folder exists
-  file:
-    path: "{{status_dir}}/log"
-    state: directory
-
-- name: Create ROSA cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
-  shell: |
-    {{ lookup('template','rosa-create-cluster.j2') }} \
-      >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  when: _rosa_describe_cluster.rc != 0
-
-- name: Waiting for cluster creation to complete, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
-  shell: |
-    rosa logs install --cluster={{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} --watch \
-      >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  when: _rosa_describe_cluster.rc != 0
-
-- name: Get details for cluster {{ _current_openshift_cluster.name }}
-  shell: |
-    rosa describe cluster \
-      --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      -o json
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  register: _rosa_describe_cluster
-
-- name: Show cluster details for cluster {{ _current_openshift_cluster.name }}
-  debug:
-    var: _rosa_describe_cluster
-
-- name: Check if cluster-admin user already exists for cluster {{ _current_openshift_cluster.name }}
-  shell: |
-    rosa describe admin \
-      --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }}
-  register: _describe_cluster_admin
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-
-- name: Show output of describe admin
-  debug:
-    var: _describe_cluster_admin
-
-- block:
-  - name: Create admin user for cluster {{ _current_openshift_cluster.name }}
-    shell: |
-      rosa create admin \
-        --cluster {{ _current_openshift_cluster.name }} \
-        --region {{ _current_openshift_cluster.infrastructure.aws_region }}
-    register: _create_cluster_admin
-    environment:
-      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-
-  - name: Show ROSA create admin result
-    debug:
-      var: _create_cluster_admin
-
-  - set_fact:
-      _cluster_admin_password: "{{ _create_cluster_admin.stdout | regex_search('--password[ ](.*)','\\1') | first }}"
-
-  - name: Show ROSA cluster-admin password
-    debug:
-      var: _cluster_admin_password
-
-  - name: Store cluster-admin password
-    include_role:
-      name: vault-set-secret
-    vars:
-      secret_name: "{{ _current_openshift_cluster.name }}-cluster-admin-password"
-      secret_description: "ROSA cluster-admin password for cluster {{ _current_openshift_cluster.name }}"
-      secret_payload: "{{ _cluster_admin_password }}"
-      secret_group: "{{ environment_name }}"
-
-  when: _describe_cluster_admin is search("There is no admin")
+- name: Configure file storage on AWS
+  include_tasks: aws-file-server.yaml
+  loop: "{{ all_config.nfs_server | default([]) }}"
+  loop_control:
+    loop_var: _current_nfs_server
