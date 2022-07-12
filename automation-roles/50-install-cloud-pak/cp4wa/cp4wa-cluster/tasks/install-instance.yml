@@ -1,0 +1,119 @@
+---
+
+# ------------ PREPARE AND APPLY YAML -------------------------------
+
+- name: Prepare yaml file for instance
+  template:
+    src: cp4wa-instance.j2
+    dest: "{{ status_dir }}/cp4wa/cp4wa-instance.yml"
+
+- name: Install CP4WA instance from {{ status_dir }}/cp4wa/cp4wa-instance.yml
+  community.kubernetes.k8s:
+    state: present
+    force: False
+    merge_type: merge
+    src: "{{ status_dir }}/cp4wa/cp4wa-instance.yml"
+
+- name: Wait 10 minutes for CP4WA installation to be in state 'Running'
+  community.kubernetes.k8s_info:
+    api_version: orchestrator.aiops.ibm.com/v1alpha1
+    kind: Installation
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: ibm-cp-watson-aiops
+  register: cpwa_instance
+  retries: 20
+  delay: 30
+  until: ('Running' in cpwa_instance | json_query(condition_query) | unique)
+  vars:
+    condition_query: 'resources[*].status.phase'
+
+- name: Wait 20 minutes for CP4WA BaseUI to be Ready
+  community.kubernetes.k8s_info:
+    api_version: consoleui.aiops.ibm.com/v1
+    kind: BaseUI
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: baseui-instance
+  register: baseui
+  retries: 40
+  delay: 30
+  until: (['True'] in baseui | json_query(condition_query) | unique )
+  vars:
+    condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
+
+- name: Wait 30 minutes for CP4WA AIOpsEdge to be in state 'Configured'
+  community.kubernetes.k8s_info:
+    api_version: connectors.aiops.ibm.com/v1beta1
+    kind: AIOpsEdge
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aiopsedge
+  register: aiopsedge
+  retries: 30
+  delay: 60
+  until: ('Configured' in aiopsedge | json_query(condition_query) | unique)
+  vars:
+    condition_query: 'resources[*].status.phase'
+
+- name: Wait 30 minutes for CP4WA LifecycleService to be Ready
+  community.kubernetes.k8s_info:
+    api_version: lifecycle.ir.aiops.ibm.com/v1beta1
+    kind: LifecycleService
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aiops
+  register: lserv
+  retries: 30
+  delay: 60
+  until: (['True'] in lserv | json_query(condition_query) | unique )
+  vars:
+    condition_query: "resources[*].status.conditions[?type == 'Lifecycle Service Ready'].status"
+
+- name: Wait 30 minutes for CP4WA ASM to be in state 'OK'
+  community.kubernetes.k8s_info:
+    api_version: asm.ibm.com/v1beta1
+    kind: ASM
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aiops-topology
+  register: aiops_topology
+  retries: 30
+  delay: 60
+  until: ('OK' in aiops_topology | json_query(condition_query) | unique)
+  vars:
+    condition_query: 'resources[*].status.phase'
+
+- name: Wait 30 minutes for CP4WA IssueResolutionCore to be Ready
+  community.kubernetes.k8s_info:
+    api_version: core.ir.aiops.ibm.com/v1beta1
+    kind: IssueResolutionCore
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aiops
+  register: ircore
+  retries: 30
+  delay: 60
+  until: (['True'] in ircore | json_query(condition_query) | unique )
+  vars:
+    condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
+
+- name: Wait 30 minutes for CP4WA AIManager to be in state 'Completed'
+  community.kubernetes.k8s_info:
+    api_version: ai-manager.watson-aiops.ibm.com/v1beta1
+    kind: AIManager
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aimanager
+  register: aimanager
+  retries: 30
+  delay: 60
+  until: ('Completed' in aimanager | json_query(condition_query) | unique)
+  vars:
+    condition_query: 'resources[*].status.phase'
+
+- name: Wait 40 minutes for CP4WA AIOpsAnalyticsOrchestrator to be Ready
+  community.kubernetes.k8s_info:
+    api_version: ai.ir.aiops.ibm.com/v1beta1
+    kind: AIOpsAnalyticsOrchestrator
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aiops
+  register: anal_orch
+  retries: 40
+  delay: 60
+  until: (['True'] in anal_orch | json_query(condition_query) | unique )
+  vars:
+    condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
