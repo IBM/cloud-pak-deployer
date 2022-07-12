@@ -1,0 +1,116 @@
+---
+- name: Check if file server {{ _current_nfs_server.name }} already exists
+  shell: |
+    aws efs describe-file-systems \
+      --query 'FileSystems[?Name==`{{ _current_nfs_server.name }}`].FileSystemId' \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_describe_fs
+
+- name: Get file system ID for {{ _current_nfs_server.name }}
+  set_fact:
+    _aws_fs_id: "{{ _aws_describe_fs.stdout | from_json | first }}"
+  when: (_aws_describe_fs.stdout | from_json) != []
+
+# If file system doesn't exist, create it
+- block:
+  - name: Create file system {{ _current_nfs_server.name }} if not existent
+    shell: |
+      aws efs create-file-system \
+        --performance-mode generalPurpose \
+        --throughput-mode bursting \
+        --encrypted \
+        --region {{ _current_nfs_server.infrastructure.aws_region }} \
+        --tags Key=Name,Value={{ _current_nfs_server.name }}
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_create_fs
+  - name: Get file system ID for {{ _current_nfs_server.name }}
+    set_fact:
+      _aws_fs_id: "{{ (_aws_create_fs.stdout | from_json).FileSystemId }}"
+  when: (_aws_describe_fs.stdout | from_json) == []
+
+- name: Get security group for ROSA cluster compute nodes
+  shell: |
+    aws ec2 describe-security-groups \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_nfs_server.openshift_cluster_name }}*-worker-sg" \
+      --query 'SecurityGroups[*].GroupId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_sg
+
+- debug:
+    var: _aws_sg
+
+- name: Fail if security group was not found
+  fail:
+    msg: "Security group with name {{ _current_nfs_server.openshift_cluster_name }}*-worker-sg not found"
+  when: (_aws_sg.stdout | from_json) == []
+
+- set_fact:
+    _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
+
+- name: Get VPC details for ROSA cluster
+  shell: |
+    aws ec2 describe-vpcs \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_nfs_server.openshift_cluster_name }}-*-vpc" \
+      --query 'Vpcs[]'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_rosa_vpc
+
+- set_fact:
+    _aws_rosa_vpc_cidr: "{{ (_aws_rosa_vpc.stdout | from_json | first).CidrBlock }}"
+
+- name: Get NFS rule for security group {{ _aws_compute_sg }}
+  shell: |
+    aws ec2 describe-security-group-rules \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filter Name="group-id",Values="{{ _aws_compute_sg }}" \
+      --query 'SecurityGroupRules[?ToPort==`2049`]'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_sg_nfs_rule
+
+- name: Create NFS security group rule if not existent
+  shell: |
+    aws ec2 authorize-security-group-ingress \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --group-id {{ _aws_compute_sg }} \
+      --protocol=tcp \
+      --port=2049 --cidr="{{ _aws_rosa_vpc_cidr }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_create_fs
+  when: (_aws_sg_nfs_rule.stdout | from_json) == []
+
+- name: Get subnets for ROSA cluster
+  shell: |
+    aws ec2 describe-subnets \
+      --region {{ _current_nfs_server.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_nfs_server.openshift_cluster_name }}*-private*" \
+      --query 'Subnets[*].SubnetId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_subnets
+
+- name: Fail if no private subnets were found
+  fail:
+    msg: "No private subnets for ROSA cluster {{ _current_nfs_server.openshift_cluster_name }} found"
+  when: (_aws_subnets.stdout | from_json) == []
+
+- name: Configure mount points for file system
+  include_tasks: aws-file-server-mount-point.yaml
+  loop: "{{ _aws_subnets.stdout | from_json }}"
+  loop_control:
+    loop_var: _aws_subnet

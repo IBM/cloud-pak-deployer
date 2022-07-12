@@ -4,8 +4,13 @@ metadata:
   name: {{ kubelet_config_name }}
 spec:
   machineConfigPoolSelector:
+{% if cloud_platform == "aws" %}
+    matchLabels:
+      pools.operator.machineconfiguration.openshift.io/worker: ""
+{% else %}
     matchLabels:
       db2u-kubelet: sysctl
+{% endif %}
   kubeletConfig:
     allowedUnsafeSysctls:
       - "kernel.msg*"
