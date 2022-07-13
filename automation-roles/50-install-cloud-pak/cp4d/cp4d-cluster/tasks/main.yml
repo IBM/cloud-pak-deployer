@@ -3,6 +3,11 @@
   debug:
     var: current_cp4d_cluster
 
+- name: Create Cloud Pak for Data directory for generated files
+  file:
+    path: "{{ status_dir }}/cp4d"
+    state: directory
+
 - include_role:
     name: cp4d-variables
   vars:
@@ -27,11 +32,6 @@
     name: openshift-login
   vars:
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
-
-- name: Create Cloud Pak for Data directory for generated files
-  file:
-    path: "{{ status_dir }}/cp4d"
-    state: directory
 
 - name: Ensure the status log folder exists
   file:
