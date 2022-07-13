@@ -35,8 +35,9 @@ This method is also sometimes referred to as "semi-airgapped". Use this method w
 * When finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to save the registry and deployer container images to the status directory
 * Ship the `cloud-pak-deployer` direcory and configuration and status directories to a server that can be connected to the private registry and the OpenShift cluster. The total size of the directories should be relatively small, typically < 5 GB
 
-### On the bastion server that is connected to the OpenShift cluster
-* Restore the `cloud-pak-deployer`, configuration and status directories to the bastion server
+### On the bastion server that is not connected to the internet but is connected to the private registry and OpenShift cluster
+* Restore the `cloud-pak-deployer` directory to the bastion server
+* Restore the configuration and status directories to the bastion server
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
 * Run the `./cp-deploy.sh env apply --air-gapped --skip-mirror-images` command to start deployment of the Cloud Pak to the OpenShift cluster. The `--air-gapped` flag tells the deployer it will not download anything from the internet; `--skip-mirror-images` indicates that images are already available in the private registry that is included in the configuration (`image_registry`)
 
@@ -56,8 +57,9 @@ Please note that in this case the Cloud Pak Deployer expects an OpenShift cluste
 * When finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to stop the portable registry and save the registry and deployer container images to the status directory
 * Ship the `cloud-pak-deployer` direcory and configuration and status directories to a server that can be connected to the private registry and the OpenShift cluster. The status directory now holds all assets required for the air-gapped installation and its size can be substantial (100+ GB). You may want to use multi-volume tar files if you are using network transfer
 
-### On the bastion server that is not connected to the internet but is connected to the OpenShift cluster
-* Restore the `cloud-pak-deployer`, configuration and status directories to the bastion server
+### On the bastion server that is not connected to the internet but is connected to the private registry and OpenShift cluster
+* Restore the `cloud-pak-deployer` directory to the bastion server
+* Restore the configuration and status directories to the bastion server
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
 * Create a vault secret holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example: `./cp-deploy.sh vault set -vs image-registry-cpd409 -vsv "admin:very_s3cret"`
 * Run the `./cp-deploy.sh env apply --air-gapped` to start deployment of the Cloud Pak to the OpenShift cluster. The `--air-gapped` flag tells the deployer it will not download anything from the internet. As a first action, the deployer mirrors images from the portable registry to the private registry included in the configuration (`image_registry`)
