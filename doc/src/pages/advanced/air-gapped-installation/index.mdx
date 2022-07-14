@@ -25,7 +25,7 @@ Below we first outline the use of a private registry for the Cloud Pak installat
 ## Mirror images with a bastion node
 This method is also sometimes referred to as "semi-airgapped". Use this method when the private registry used by the OpenShift cluster **can be** reached from an internet-connected server or workstation. In this case the internet-connected machine can directly mirror the images to the private registry but it cannot do anything on the OpenShift cluster.
 
-### On the server connected to the internet
+### On the computer connected to the internet
 * Build the Cloud Pak Deployer image using `./cp-deploy.sh build`
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
@@ -72,11 +72,13 @@ This will download all clients and then mirror images from the entitled registry
 ## Mirror images using a portable image registry
 Use this method when the private registry used by the OpenShift cluster cannot be reached from an internet-connected machine. In this case you need a portable registry to download images and which you then ship to a server that can connect to the OpenShift cluster and its private registry.
 
+![Air-gapped using portable registry](./air-gapped-portable.png)
+
 <InlineNotification kind="warning">
 Please note that in this case the Cloud Pak Deployer expects an OpenShift cluster to be available already and will only work with an `existing-ocp` configuration. The bastion server does not have access to the internet and can therefore not instantiate an OpenShift cluster.
 </InlineNotification>
 
-### On the server connected to the internet
+### On the computer connected to the internet
 * Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
