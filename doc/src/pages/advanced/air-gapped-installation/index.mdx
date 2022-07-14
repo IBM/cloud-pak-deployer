@@ -1,5 +1,5 @@
 ---
-title: Air-gapped installations
+title: Air-gapped installation
 ---
 # Air-gapped installation
 
@@ -9,9 +9,26 @@ There are two methods for mirroring images to a private registry that the air-ga
 * [Mirror images with a bastion node](#method-1-mirror-images-with-a-bastion-node). The bastion node can connect to the internet and to the private registry used by the OpenShift cluster. You run the deployer on the bastion node.
 * [Using an intermediate (portable) registry](#method-2-mirror-images-using-a-portable-image-registry). The private registry used by the OpenShift cluster cannot be reached from a machine that is connected to the internet. In this case you need a portable registry to download images and which you then ship to a server that can connect to the **existing ** OpenShift cluster and its private registry.
 
-For specifying a private registry in the Cloud Pak Deployer configuration, please see [Private registry](/cpd-design/components/private-registry).
-
 The two methods are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=tasks-mirroring-images-your-private-container-registry
+
+For specifying a private registry in the Cloud Pak Deployer configuration, please see [Private registry](/cpd-design/components/private-registry). Example of specifying a private registry with a self-signed certificate in the configuration:
+```
+image_registry:
+- name: cpd409
+  registry_host_name: registry.coc.ibm.com
+  registry_port: 5000
+  registry_insecure: True
+```
+
+Also, the `cp4d` instance must reference the `image_registry` object using the `image_registry_name`:
+```
+cp4d:
+- project: zen-40
+  openshift_cluster_name: {{ env_id }}
+  cp4d_version: 4.0.9
+  openshift_storage_name: ocs-storage
+  image_registry_name: cpd409
+```
 
 <InlineNotification kind="info">
 The deployer only supports using a private registry for the Cloud Pak images, not for OpenShift itself. Air-gapped installation of OpenShift is currently not in scope for the deployer.
@@ -46,7 +63,12 @@ If the status directory does not exist it is created at this point
     --skip-portable-registry
 ```
 This will download all clients and then mirror images from the entitled registry to the privagte registry. If mirroring fails, fix the issue and just run the `env download` again.
-* **Diagram step 2**. When finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to save the registry and deployer container images to the status directory. For example:
+* Before saving the status directory, you can optionally remove the entitlement key from the vault:
+```
+./cp-deploy.sh vault delete \
+    -vs cp_entitlement_key
+```
+* **Diagram step 2**. When the download finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to save the registry and deployer container images to the status directory. For example:
 ```
 ./cp-deploy.sh env save
 ```
@@ -58,19 +80,23 @@ This will download all clients and then mirror images from the entitled registry
     * Configuration and status directories
 * **Diagram step 4**. Use the instructions in [Run on existing OpenShift](/cp-deploy/run/run-on-existing-openshift), adding the `--air-gapped` and `--skip-mirror-images` flags, to start the deployer:
     * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
+    * Set the CPD_AIRGAP environment variable to `true`
+    ```
+    export CPD_AIRGAP=true
+    ```
     * Create a vault secret holding the credentials for the OpenShift cluster. For example: 
     ```
     ./cp-deploy.sh vault set \
         -vs pluto-01-oc-login \
         -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
     ```
-    * Run the `./cp-deploy.sh env apply --air-gapped --skip-mirror-images` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
+    * Run the `./cp-deploy.sh env apply --skip-mirror-images` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
     ```
     ./cp-deploy.sh env apply \
         -e env_id=pluto-01 \
-        --air-gapped --skip-mirror-images
+        --skip-mirror-images
     ```    
-    The `--air-gapped` flag tells the deployer it will not download anything from the internet; `--skip-mirror-images` indicates that images are already available in the private registry that is included in the configuration (`image_registry`)
+    The `CPD_AIRGGAP` environment variable tells the deployer it will not download anything from the internet; `--skip-mirror-images` indicates that images are already available in the private registry that is included in the configuration (`image_registry`)
 
 ## Method 2 - Mirror images using a portable image registry
 Use this method when the private registry used by the OpenShift cluster cannot be reached from an internet-connected machine. In this case you need a portable registry to download images and which you then ship to a server that can connect to the OpenShift cluster and its private registry.
@@ -92,7 +118,12 @@ Please note that in this case the Cloud Pak Deployer expects an OpenShift cluste
     -e env_id=plutu-01
 ```
 This will download all clients, start the portable registry and then mirror images from the entitled registry to the portable registry. If mirroring fails, fix the issue and just run the `env download` again.
-* **Diagram step 2**. When finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to stop the portable registry and save the registry and deployer container images to the status directory. For example:
+* Before saving the status directory, you can optionally remove the entitlement key from the vault:
+```
+./cp-deploy.sh vault delete \
+    -vs cp_entitlement_key
+```
+* **Diagram step 2**. When the download finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to stop the portable registry and save the registry and deployer container images to the status directory. For example:
 ```
 ./cp-deploy.sh env save
 ```
@@ -104,6 +135,10 @@ This will download all clients, start the portable registry and then mirror imag
     * Configuration and status directories
 * **Diagram step 4**. Use the instructions in [Run on existing OpenShift](/cp-deploy/run/run-on-existing-openshift), adding the `--air-gapped` flag, to start the deployer:
     * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
+    * Set the CPD_AIRGAP environment variable to `true`
+    ```
+    export CPD_AIRGAP=true
+    ```
     * Create a vault secret holding the credentials for the OpenShift cluster. For example: 
     ```
     ./cp-deploy.sh vault set \
@@ -116,13 +151,12 @@ This will download all clients, start the portable registry and then mirror imag
         -vs image-registry-cpd409 \
         -vsv "admin:very_s3cret"
     ```
-    * Run the `./cp-deploy.sh env apply --air-gapped` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
+    * Run the `./cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
     ```
     ./cp-deploy.sh env apply \
-        -e env_id=pluto-01 \
-        --air-gapped
+        -e env_id=pluto-01
     ```  
-    The `--air-gapped` flag tells the deployer it will not download anything from the internet. As a first action, the deployer mirrors images from the portable registry to the private registry included in the configuration (`image_registry`)
+    The `CPD_AIRGGAP` environment variable tells the deployer it will not download anything from the internet. As a first action, the deployer mirrors images from the portable registry to the private registry included in the configuration (`image_registry`)
 
 ## Special settings for debug and DaemonSet images in air-gapped mode
 Specifically when running the deployer on IBM Cloud ROKS, certain OpenShift settings must be applied using DaemonSets in the `kube-system` namespace. Additionally, the deployer uses the `oc debug node` commands to retrieve `kubelet` and `crio` configuration files from the compute nodes.
