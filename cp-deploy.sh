@@ -465,8 +465,8 @@ while (( "$#" )); do
       echo "$1 flag not allowed when running inside container"
       exit 99
     fi
-    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy"  ]];then
-      echo "Error: --air-gapped is only valid for environment subcommand with apply/destroy."
+    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${SUBCOMMAND}" != "vault" ]];then
+      echo "Error: --air-gapped is only valid for environment subcommand with apply/destroy or vault."
       command_usage 2
     fi
     export CPD_AIRGAP=true
