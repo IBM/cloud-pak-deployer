@@ -248,6 +248,11 @@ def preprocessor(attributes=None, fullConfig=None):
         if not re.match(r"[0-9]\.[0-9]\.[0-9]+",str(ge['cp4d_version'])):
             g.appendError(msg="cp4d_version must be in the format of x.y.z, for example 4.0.9")
 
+        # If air-gapped install, image registry name must be specified
+        if str_to_bool(os.environ.get('CPD_AIRGAP')):
+            if 'image_registry_name' not in ge:
+                g.appendError(msg="When doing an air-gapped install, the image_registry_name must be specified for the cp4d object")
+
         # Check accept_licenses property
         if 'accept_licenses' in ge:
             accept_licenses=ge['accept_licenses']

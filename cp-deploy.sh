@@ -465,8 +465,8 @@ while (( "$#" )); do
       echo "$1 flag not allowed when running inside container"
       exit 99
     fi
-    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy"  ]];then
-      echo "Error: --air-gapped is only valid for environment subcommand with apply/destroy."
+    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${SUBCOMMAND}" != "vault" ]];then
+      echo "Error: --air-gapped is only valid for environment subcommand with apply/destroy or vault."
       command_usage 2
     fi
     export CPD_AIRGAP=true
@@ -627,10 +627,10 @@ fi
 
 # Make sure that Deployer image exists
 if [ "${CPD_AIRGAP}" == "true" ];then
-  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer-airgap:latest > /dev/null 2>&1;then
+  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:latest > /dev/null 2>&1;then
     if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar ];then
+      echo "Loading Cloud Pak Deployer image from tar file..."
       ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
-      ${CONTAINER_ENGINE} tag cloud-pak-deployer-airgap:latest cloud-pak-deployer:latest
     else
       echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
       exit 99
@@ -704,10 +704,8 @@ fi
 if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
   echo "Destroying old archives for deployer"
   rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
-  echo "Committing last-run deployer container into image cloud-pak-deployer-airgap:latest"
-  ${CONTAINER_ENGINE} commit $CURRENT_CONTAINER_ID cloud-pak-deployer-airgap:latest
   echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
-  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer-airgap:latest
+  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:latest
   echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
   exit 0
 fi
