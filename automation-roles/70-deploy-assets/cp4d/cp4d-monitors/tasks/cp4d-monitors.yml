@@ -24,14 +24,12 @@
       vars:
         secret_name: "{{ _default_monitor_source_token_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _default_monitor_source_token
 
     - name: Fail if the monitor source token was not found in the vault
       fail:
         msg: "Unable to get secret value for {{ _default_monitor_source_token_secret }} from the vault"
-      when: "secret_value == ''"
-
-    - set_fact:
-        _default_monitor_source_token: "{{ secret_value }}"
+      when: "_default_monitor_source_token == ''"
 
     - name: Create default repo secret yaml
       template:
@@ -54,14 +52,12 @@
       vars:
         secret_name: "{{ _default_monitor_target_cr_user_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _default_monitor_target_cr_user
 
     - name: Fail if the target container registry user was not found in the vault
       fail:
         msg: "Unable to get secret value for {{ _default_monitor_target_cr_user_secret }} from the vault"
-      when: "secret_value == ''"
-
-    - set_fact:
-        _default_monitor_target_cr_user: "{{ secret_value }}"
+      when: "_default_monitor_target_cr_user == ''"
 
 #Retrieve default monitor target cr password
 - when: "_default_monitor_target_cr_password_secret != ''"
@@ -72,14 +68,12 @@
       vars:
         secret_name: "{{ _default_monitor_target_cr_password_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _default_monitor_target_cr_password
 
     - name: Fail if the monitor target registry password was not found in the vault
       fail:
         msg: "Unable to get secret value for {{ _default_monitor_target_cr_password_secret }} from the vault"
-      when: "secret_value == ''"
-
-    - set_fact:
-        _default_monitor_target_cr_password: "{{ secret_value }}"
+      when: "_default_monitor_target_cr_password == ''"
 
     - set_fact:
         _default_monitor_target_cr_auth: "{{ _default_monitor_target_cr_user }}:{{ _default_monitor_target_cr_password }}"
