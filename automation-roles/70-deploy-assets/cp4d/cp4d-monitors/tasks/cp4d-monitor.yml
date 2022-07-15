@@ -17,16 +17,7 @@
 
 - name: Validate if the monitor build config is already present
   shell: |
-    oc get bc -n {{ current_cp4d_cluster.project }} | grep ^{{ _monitor.name }} | wc -l
-  register: _bc_exists  
-
-- when: _bc_exists.stdout == "1"
-  name: Delete Build Configs if they already exist
-  block:
-
-    - name: Delete the build config {{ _monitor.name }}
-      shell: |
-        oc delete bc -n {{ current_cp4d_cluster.project }} {{ _monitor.name }}
+    oc delete bc -n {{ current_cp4d_cluster.project }} {{ _monitor.name }} --ignore-not-found
 
 #Retrieve monitor source git access token
 - when: "_default_monitor_source_token_secret != _monitor_source_token_secret"
@@ -37,14 +28,12 @@
       vars:
         secret_name: "{{ _monitor_source_token_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _monitor_source_token
 
     - name: Fail if the monitor source token was not found in the vault
       fail:
         msg: "Unable to get secret value for {{ _monitor_source_token_secret }} from the vault"
-      when: "secret_value == ''"
-
-    - set_fact:
-        _monitor_source_token: "{{ secret_value }}"
+      when: "_monitor_source_token == ''"
 
     - name: Create repo secret yaml
       template:
@@ -67,14 +56,12 @@
       vars:
         secret_name: "{{ _monitor_target_cr_user_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _monitor_target_cr_user
 
     - name: Fail if the secret for the target container registry was not in the vault
       fail:
         msg: "Unable to get secret value for {{ _monitor_target_cr_user_secret }} from the vault"
-      when: "secret_value == ''"            
-
-    - set_fact:
-        _monitor_target_cr_user: "{{ secret_value }}"
+      when: "_monitor_target_cr_user == ''"            
 
 #Retrieve monitor target cr password
 - when: "_default_monitor_target_cr_password_secret != _monitor_target_cr_password_secret"
@@ -85,14 +72,12 @@
       vars:
         secret_name: "{{ _monitor_target_cr_password_secret }}"
         secret_group: "{{ environment_name }}"
+        _p_secret_variable: _monitor_target_cr_password
 
     - name: Fail if the container registry password was not found in the vault
       fail:
         msg: "Unable to get secret value for {{ _monitor_target_cr_password_secret }} from the vault"
-      when: "secret_value == ''"            
-
-    - set_fact:
-        _monitor_target_cr_password: "{{ secret_value }}"
+      when: "_monitor_target_cr_password == ''"            
 
     - set_fact:
         _monitor_target_cr_auth: "{{ _monitor_target_cr_user }}:{{ _monitor_target_cr_password }}"            
@@ -188,12 +173,21 @@
 
     - name: Get the current content of of CM zen-alert-{{ _monitor_name }}-monitor-extension
       shell: |
-        oc get cm -n {{ current_cp4d_cluster.project }} zen-alert-{{ _monitor_name }}-monitor-extension -o jsonpath='{.data}'
+        oc extract  -n {{ current_cp4d_cluster.project }} ConfigMap/zen-alert-{{ _monitor_name }}-monitor-extension --to={{ _cloud_pak_service_monitor_dir.path }} --confirm
+      
+    - name: Read the monitor extension
+      shell: |
+        cat {{ _cloud_pak_service_monitor_dir.path }}/extensions
       register: _cm_monitor_data_output
 
-    - set_fact:
-        _cm_monitor_data: "{{ _cm_monitor_data_output.stdout | string }}"
+    - name: Delete monitor extensions file
+      file:
+        state: absent
+        path: "{{ _cloud_pak_service_monitor_dir.path}}/extensions"
 
+    - set_fact:
+       _cm_monitor_data: "{{ _cm_monitor_data_output.stdout }}"
+      
 - name: Create monitor extension configmap yaml
   template:
     src: cp4d-monitor-extension.j2
@@ -202,52 +196,23 @@
 - name: Read the CP4D Monitor Extension yaml
   include_vars:
     file: "{{ _cloud_pak_service_monitor_dir.path }}/cp4d_monitor_extension.yaml" 
-    name: _cp4d_monitor_extension
+    name: _cp4d_monitor_yaml
 
-- name: Write existing CM to file
-  copy: 
-    content: "{{ _cm_monitor_data |  replace('\\n', '') | trim }}" 
-    dest: "{{ _cloud_pak_service_monitor_dir.path}}/existing_cm"
-  
 - set_fact:
-    _cp4d_monitor_extension_data: "{{ _cp4d_monitor_extension.data | string }}"
-
-- name: Write new CM definition to file
-  copy: 
-    content: "{{ _cp4d_monitor_extension_data | replace('\\n', '') | trim }}" 
-    dest: "{{ _cloud_pak_service_monitor_dir.path }}/new_cm"
-
-- name: Get file stat of existing_cm
-  stat:
-    path: "{{ _cloud_pak_service_monitor_dir.path}}/existing_cm"
-    get_checksum: yes
-  register: _existing_cm_stat
-
-- name: Get file stat of new_cm
-  stat:
-    path: "{{ _cloud_pak_service_monitor_dir.path}}/new_cm"
-    get_checksum: yes
-  register: _new_cm_stat
+    _cp4d_monitor_extension: "{{ _cp4d_monitor_yaml.data.extensions }}"
 
 - debug:
     msg: "No changes in ConfigMap of monitor {{ _monitor_name }}. Skip redeploying monitor..."
-  when: _new_cm_stat.stat.checksum == _existing_cm_stat.stat.checksum
+  when: _cm_monitor_data == _cp4d_monitor_extension
 
-- when: _new_cm_stat.stat.checksum != _existing_cm_stat.stat.checksum
+- when: _cm_monitor_data != _cp4d_monitor_extension
   block:
-
     - debug:
         msg: "Existing ConfigMap for monitor {{ _monitor_name }} differs from new ConfigMap, redeploying Monitor..."
 
-    - name: Validate if the monitor cronjob {{ _monitor_name }}-cronjob already exists
-      shell: |
-        oc get cronjob -n {{ current_cp4d_cluster.project }} --no-headers | grep ^{{ _monitor_name }}-cronjob | wc -l
-      register: _cronjob_monitor_exists
-
     - name: Delete cronjob {{ _monitor_name }}-cronjob
       shell: |
-        oc delete cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob
-      when: "_cronjob_monitor_exists.stdout == '1'"
+        oc delete cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob --ignore-not-found
 
     - name: Apply monitor extension configmap
       shell: |
@@ -278,14 +243,4 @@
 
 - name: Delete the build config {{ _monitor.name }}
   shell: |
-    oc delete bc -n {{ current_cp4d_cluster.project }} {{ _monitor.name }}
-
-- name: Delete existing_cm file
-  file:
-    state: absent
-    path: "{{ _cloud_pak_service_monitor_dir.path}}/existing_cm"
-
-- name: Delete new_cm file
-  file:
-    state: absent
-    path: "{{ _cloud_pak_service_monitor_dir.path}}/new_cm"
+    oc delete bc -n {{ current_cp4d_cluster.project }} {{ _monitor.name }} --ignore-not-found
