@@ -30,9 +30,9 @@
         oc get ServiceMonitor -n {{ current_cp4d_cluster.project }} --no-headers | grep zen-watchdog | wc -l
       register: _cp4d_servicemonitor_exists
 
-    - name: Make a temporary work folder available
-      tempfile:
-        path: "{{status_dir}}/cp4d"
+    - name: Ensure the CP4D Monitors status folder is available
+      file:
+        path: "{{status_dir}}/cp4d/monitors"
         state: directory
       register: _cloud_pak_service_monitor_dir
 
@@ -58,8 +58,3 @@
       loop: "{{ _cp4d_monitors | default([]) }}"
       loop_control:
         loop_var: _monitors
-
-    - name: Delete temporary directory 
-      file:
-        state: absent
-        path: "{{ _cloud_pak_service_monitor_dir.path }}"
