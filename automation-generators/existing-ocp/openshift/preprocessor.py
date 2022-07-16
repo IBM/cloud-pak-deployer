@@ -8,6 +8,7 @@ from packaging import version
 #   ocp_version: 4.8
 #   cluster_name: {{ env_id }}
 #   domain_name: example.com
+#   cloud_native_toolkit: False
 #   openshift_storage:
 #   - storage_name: nfs-storage
 #     storage_type: nfs
@@ -34,6 +35,10 @@ def preprocessor(attributes=None, fullConfig=None):
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
             g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
+
+        if 'cloud_native_toolkit' in ge:
+            if type(ge['cloud_native_toolkit']) != bool:
+                g.appendError(msg='Attribute cloud_native_toolkit must be either true or false if specified. Default is false.')
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:

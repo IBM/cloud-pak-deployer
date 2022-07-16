@@ -21,6 +21,7 @@ from packaging import version
     # - subnet-02b676f92c83f4422
     # - subnet-0f1b03a02973508ed
     # - subnet-027ca7cc695ce8515
+#   cloud_native_toolkit: False
 #   openshift_storage:
 #   - storage_name: ocs-storage
 #     storage_type: ocs
@@ -47,6 +48,10 @@ def preprocessor(attributes=None, fullConfig=None):
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
             g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
+
+        if 'cloud_native_toolkit' in ge:
+            if type(ge['cloud_native_toolkit']) != bool:
+                g.appendError(msg='Attribute cloud_native_toolkit must be either true or false if specified. Default is false.')
 
         # Check infrastructure attributes
         if "type" not in ge['infrastructure']:
