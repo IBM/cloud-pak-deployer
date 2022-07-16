@@ -1,0 +1,53 @@
+---
+- name: Validate mandatory variables for Cloud Native Toolkit
+  assert:
+    that:
+      - _p_openshift_cluster is defined
+
+- block:
+  - name: Clone Cloud Native Toolkit repository
+    ansible.builtin.git:
+      repo: "{{ _cntk_github_repo }}"
+      dest: "{{ status_dir }}/openshift/multi-tenancy-gitops"
+
+  - name: Install GitOps operator
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x
+
+  - name: Wait until OpenShift GitOps CSV has status Succeeded
+    shell: |
+      oc get csv -n openshift-operators \
+        -l operators.coreos.com/openshift-gitops-operator.openshift-operators \
+        --no-headers \
+        -o custom-columns='name:metadata.name,phase:status.phase' | \
+        grep -i succeeded | wc -l
+    register: _openshift_gitops_csv_status
+    retries: 30
+    delay: 30
+    until: _openshift_gitops_csv_status.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+  - name: Create ArgoCD instance
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x/argocd-instance/argocd-instance.yaml \
+        -n openshift-gitops
+
+  - name: Wait until ArgoCD instance has been created in OpenShift project openshift-gitops
+    shell: |
+      oc get argocd -n openshift-gitops openshift-gitops-cntk \
+        --no-headers | wc -l
+    register: _argocd_instance
+    retries: 30
+    delay: 30
+    until: _argocd_instance.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
+
+  when: (_p_openshift_cluster.cloud_native_toolkit | default(False) | bool)

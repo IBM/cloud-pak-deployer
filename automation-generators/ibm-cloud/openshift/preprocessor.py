@@ -15,6 +15,7 @@ from packaging import version
 #     - sample-subnet-zone-1
 #     - sample-subnet-zone-2
 #     - sample-subnet-zone-3
+#   cloud_native_toolkit: False
 #   upstream_dns:
 #   - name: sample-dns
 #     zones:
@@ -54,6 +55,10 @@ def preprocessor(attributes=None, fullConfig=None):
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
             g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
+
+        if 'cloud_native_toolkit' in ge:
+            if type(ge['cloud_native_toolkit']) != bool:
+                g.appendError(msg='Attribute cloud_native_toolkit must be either true or false if specified. Default is false.')
 
         # Number of subnets must be 1 or 3
         if len(ge['infrastructure']['subnets']) != 1 and len(ge['infrastructure']['subnets']) != 3:
