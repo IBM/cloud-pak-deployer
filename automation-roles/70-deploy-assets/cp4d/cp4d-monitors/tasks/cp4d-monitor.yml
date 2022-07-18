@@ -208,7 +208,7 @@
 - when: _cm_monitor_data != _cp4d_monitor_extension
   block:
     - debug:
-        msg: "Existing ConfigMap for monitor {{ _monitor_name }} differs from new ConfigMap, redeploying Monitor..."
+        msg: "Either new Monitor or existing ConfigMap for monitor {{ _monitor_name }} differs from new ConfigMap, redeploying Monitor..."
 
     - name: Delete cronjob {{ _monitor_name }}-cronjob
       shell: |
@@ -240,6 +240,12 @@
         --patch '[{"op": "add","path": "/spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-","value": {"name": "user-home-mount","mountPath": "/user-home"}}]'
       register: _patch_result
       when: _user_home_mount_present.stdout=='0'
+
+    - name: Patch cronjob to PullImage Always
+      shell: |
+        oc patch cronjob -n {{ current_cp4d_cluster.project }} {{ _monitor_name }}-cronjob \
+        --type=json \
+        --patch '[{"op": "replace","path": "/spec/jobTemplate/spec/template/spec/containers/0/imagePullPolicy","value": "Always"}]'
 
 - name: Delete the build config {{ _monitor.name }}
   shell: |
