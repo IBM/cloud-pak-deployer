@@ -1,0 +1,82 @@
+---
+- name: Get information in the current openshift configuration
+  debug:
+    var: current_openshift_cluster
+
+- name: Get information in the current openshift configuration
+  debug:
+    var: current_openshift_cluster.infrastructure.deny_node_ports | default(False)
+
+- set_fact:
+    _nacl_security_setting: "{{ current_openshift_cluster.infrastructure.deny_node_ports | default(False) }}"
+
+- debug:
+    msg: "_nacl_security_setting is {{ _nacl_security_setting }}"
+
+- name: Get all OpenShift clusters
+  shell: ibmcloud oc cluster ls --provider vpc-gen2 --output json
+  register: _all_oc_clusters_output
+
+- set_fact:
+    _all_oc_clusters: "{{ _all_oc_clusters_output.stdout }}"
+
+- set_fact:
+    _current_cluster: "{{ _all_oc_clusters | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.name }}']
+
+- fail:
+    msg: "Unable to locate OpenShift cluster with name {{ current_openshift_cluster.name }}"
+  when: _current_cluster == {}
+
+- name: Get the Security Group for current OpenShift cluster 
+  shell: ibmcloud is security-group kube-{{ _current_cluster.id }} --output json
+  register: _current_security_group_output
+
+- set_fact:
+    _current_security_group: "{{ _current_security_group_output.stdout }}"
+
+- set_fact:
+    _inbound_rules: "{{ _current_security_group.rules | json_query(query) | default([]) }}"
+  vars:
+    query: >-
+      [?direction=='inbound']
+
+- name: Remove ICMP, TCP and UDP rules when deny_node_ports is True
+  shell: ibmcloud is security-group-rule-delete kube-{{ _current_cluster.id }} {{ item.id }} -f
+  when: ((item.protocol | lower == "tcp") or (item.protocol | lower == "udp") or (item.protocol | lower == "icmp")) and _nacl_security_setting | bool
+  with_items: "{{ _inbound_rules }}"
+
+- set_fact:
+    _inbound_rules_tcp: "{{ _inbound_rules | json_query(query) | default([]) }}"
+  vars:
+    query: >-
+      [?protocol=='tcp']
+  when: not (_nacl_security_setting | bool )
+
+- name: Add TCP rule when it does not exist and deny_node_ports is False
+  shell: ibmcloud is security-group-rule-add kube-{{ _current_cluster.id }} inbound tcp --port-min {{ _nacl_security_rule_tcp_min }} --port-max {{ _nacl_security_rule_tcp_max }}
+  when: _inbound_rules_tcp is defined and _inbound_rules_tcp | length == 0
+
+- set_fact:
+    _inbound_rules_udp: "{{ _inbound_rules | json_query(query) | default([]) }}"
+  vars:
+    query: >-
+      [?protocol=='udp']
+  when: not (_nacl_security_setting | bool )
+
+- name: Add UDP rule when it does not exist and deny_node_ports is False
+  shell: ibmcloud is security-group-rule-add kube-{{ _current_cluster.id }} inbound udp --port-min {{ _nacl_security_rule_udp_min }} --port-max {{ _nacl_security_rule_udp_max }}
+  when: _inbound_rules_udp is defined and _inbound_rules_udp | length == 0
+
+- set_fact:
+    _inbound_rules_icmp: "{{ _inbound_rules | json_query(query) | default([]) }}"
+  vars:
+    query: >-
+      [?protocol=='icmp']
+  when: not (_nacl_security_setting | bool )
+
+- name: Add ICMP rule when it does not exist and deny_node_ports is False
+  shell: ibmcloud is security-group-rule-add kube-{{ _current_cluster.id }} inbound icmp --icmp-type 8 --icmp-code 0
+  when: _inbound_rules_icmp is defined and _inbound_rules_icmp | length == 0
