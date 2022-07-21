@@ -10,33 +10,19 @@
 oc login ... --insecure-skip-tls-verify
 ```
 
-## Create config
+Keep the login command, you will need it later to set the vault secret the deployer will use.
+
+## Create configuration
 ```
-export CONFIG_DIR=./cpd-config && mkdir -p $CONFIG_DIR
+export CONFIG_DIR=./cpd-config && mkdir -p $CONFIG_DIR/config
 export STATUS_DIR=./cpd-status && mkdir -p $STATUS_DIR
-
-mkdir -p $CONFIG_DIR/{config,inventory}
-
-cat << EOF > $CONFIG_DIR/inventory/sample.inv
-[automation]
-localhost
-
-[automation:vars]
-environment_name=sample
-
-# Uncomment for Existing OpenShift deployment
-cloud_platform=existing-ocp
-
-#####################
-# Using File Vault
-#####################
-vault_type=file-vault
-vault_authentication_type=none
-
-EOF
 
 cat << EOF > $CONFIG_DIR/config/sample.yaml
 ---
+global_config:
+  environment_name: demo
+  cloud_platform: existing-ocp
+
 openshift:
 - name: cpd-demo
   ocp_version: 4.8
@@ -45,13 +31,15 @@ openshift:
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
+    ocp_storage_class_file: managed-nfs-storage
+    ocp_storage_class_block: managed-nfs-storage
 
 cp4d:
-
-- project: zen-40
+- project: cpd-instance
   openshift_cluster_name: cpd-demo
-  cp4d_version: 4.0.8
+  cp4d_version: 4.5.0
   olm_utils: True
+  accept_licenses: True
   cartridges:
   - name: cp-foundation
     license_service:
@@ -86,7 +74,7 @@ cp4d:
     state: removed
 
   - name: datastage-ent-plus
-    state: installed
+    state: removed
 
   - name: db2
     size: small
@@ -173,7 +161,7 @@ cp4d:
 
   - name: wml
     size: small
-    state: removed
+    state: installed
 
   - name: wml-accelerator
     replicas: 1
@@ -219,6 +207,11 @@ spec:
         name: cloud-pak-deployer
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
         volumeMounts:
         - mountPath: /Data
           name: cloud-pak-deployer-volume-1
@@ -237,26 +230,22 @@ spec:
 EOF
 ```
 
-## Copy config
+## Copy local configuration and status directory into deployer pod
 ```
-oc cp $CONFIG_DIR $(oc get po --no-headers -l deployment=cloud-pak-deployer | head -1 | awk '{print $1}'):/Data/cpd-config
-oc cp $STATUS_DIR $(oc get po --no-headers -l deployment=cloud-pak-deployer | head -1 | awk '{print $1}'):/Data/cpd-status
+export DEPLOYER_POD=$(oc get po --no-headers -l deployment=cloud-pak-deployer | head -1 | awk '{print $1}')
+oc rsh $DEPLOYER_POD rm -rf /Data/cpd-config && oc cp $CONFIG_DIR $DEPLOYER_POD:/Data/cpd-config/
 ```
 
 ## Prepare for deployer run
 ```
 oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault set \
-  -vs cp_entitlement_key -vsv "your_entitlement_key" \
-  --config-dir=/Data/cpd-config --status-dir=/Data/cpd-status
+  -vs cp_entitlement_key -vsv "your_entitlement_key"
 oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault set \
-  -vs cpd-demo-oc-login -vsv "your_oc_login_command" \
-  --config-dir=/Data/cpd-config --status-dir=/Data/cpd-status
-oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault list \
-  --config-dir=/Data/cpd-config --status-dir=/Data/cpd-status
+  -vs cpd-demo-oc-login -vsv "your_oc_login_command"
+oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault list
 ```
 
 ## Run deployer
 ```
-oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh env apply -v \
-    --config-dir=/Data/cpd-config --status-dir=/Data/cpd-status
+oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh env apply -v 
 ```
