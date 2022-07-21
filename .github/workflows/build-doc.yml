@@ -5,9 +5,16 @@ name: CI
 # Trigger the workflow on push or pull request events but only for the main branch
 on:
   push:
-    branches: [ main ]
+    branches:
+    - main
+    paths:
+    - 'doc/**'
   pull_request:
-    branches: [ main ]
+    branches:
+    - main
+    paths:
+    - 'doc/**'
+
 
   # Allows running this workflow manually from the Actions tab
   workflow_dispatch:
@@ -37,9 +44,16 @@ jobs:
         run: npm install -g gatsby-cli
         working-directory: doc
 
-      - name: Build the static pages and deploy to gh-pages branch
+      - name: Build the static pages
         run: |
           gatsby build --prefix-paths
+        working-directory: doc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy static pages to gh-pages branch
+        if: ${{ github.event_name == 'push' }}
+        run: |
           git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           npx gh-pages -d public -u "github-actions-bot <support+actions@github.com>"
         working-directory: doc
