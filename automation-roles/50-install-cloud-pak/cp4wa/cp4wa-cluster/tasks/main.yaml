@@ -40,8 +40,10 @@
     ibm_cp_entitlement_key: "{{ secret_value }}"
 
 - fail:
-    msg: "No image registry name specified for CP4I but cannot pull from entitled registry because of missing entitlement key in vault"
-  when: ibm_cp_entitlement_key == "" and (current_cp4wa_cluster.image_registry_name | default("")) == ""
+    #msg: "No image registry name specified for CP4WA but cannot pull from entitled registry because of missing entitlement key in vault"
+    msg: "Image registry not yet supported or entitled registry entitlement key missing in vault"
+  #when: ibm_cp_entitlement_key == "" and (current_cp4wa_cluster.image_registry_name | default("")) == ""
+  when: ibm_cp_entitlement_key == "" or (current_cp4wa_cluster.image_registry_name | default("")) != ""
 
 - set_fact:
     entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
@@ -62,17 +64,12 @@
   when:
   - (current_cp4wa_cluster.image_registry_name | default("")) != ""
 
-# TODO implement CASE
 - set_fact:
     _use_case_files: False
 
 - set_fact:
    _use_case_files: True
   when: (current_cp4wa_cluster.image_registry_name | default("")) != "" or (current_cp4wa_cluster.use_case_files | default(False) | bool)
-
-- name: Fail if directed to use CASE files (not implemented yet)
-  fail: msg="Using CASE files is not yet implemented"
-  when: _use_case_files | bool
 
 # TODO implement versions beyond v3.3
 - name: Fail if not v3.3 installation
@@ -100,16 +97,18 @@
     _operators_in_all_namespaces: True
   when: (current_cpwa_cluster.operators_in_all_namespaces | default(False) | bool)
 
-# TODO implement CASE
-# - name: Prepare case files for Cloud Pak for Watson AIOps when using private registry or when explicitly using case files
-#   include_tasks: prepare-cp4wa-case-files.yml
-#   when: _use_case_files
+- name: Remove case directory if it exists
+  file:
+    path: "{{ status_dir }}/cp4wa/case"
+    state: absent
 
-# - name: Mirror images for Cloud Pak for Watson AIOps to private registry {{ current_cp4i_cluster.image_registry_name }}
-#   include_tasks: mirror-images-cp4wa.yml
-#   when: 
-#   - (current_cp4i_cluster.image_registry_name | default("")) != ""
-#   - ibm_cp_entitlement_key != ""
+- name: Save case files for Cloud Pak for Watson AIOps when using private registry or when explicitly using case files
+  include_role: 
+    name: cp4wa-case-save
+  vars:
+    _p_current_cp4wa_cluster: "{{ current_cp4wa_cluster }}"
+  when: 
+  - _use_case_files
 
 - name: Get OpenShift storage classes to use for {{ current_cp4wa_cluster.project }} and storage class name {{ current_cp4wa_cluster.storage_class_name }}
   include_tasks: cp4wa-get-storage-classes.yml
@@ -124,16 +123,22 @@
 
 # ------------ CREATING CATALOG SOURCES -----------------------------
 
-- name: Create catalog sources for entitled registry when not using CASE files
-  include_tasks: create-catalog-sources-entitled.yml
-  when: not _use_case_files
+- name: Create catalog sources for Cloud Pak for Watson AIOps
+  include_role:
+    name: cp4wa-catalog-source
+  vars:
+    _p_current_cp4wa_cluster: "{{ current_cp4wa_cluster }}"
 
-- name: Create catalog sources when using CASE files
-  include_tasks: create-catalog-source-case-file.yml
-  loop: "{{ current_cp4wa_cluster.instances | default([]) }}"
-  loop_control:
-    loop_var: current_cp4wa_instance
-  when: _use_case_files
+# - name: Create catalog sources for entitled registry when not using CASE files
+#   include_tasks: create-catalog-sources-entitled.yml
+#   when: not _use_case_files
+
+# - name: Create catalog sources when using CASE files
+#   include_tasks: create-catalog-source-case-file.yml
+#   loop: "{{ current_cp4wa_cluster.instances | default([]) }}"
+#   loop_control:
+#     loop_var: current_cp4wa_instance
+#   when: _use_case_files
 
 # ------------ INSTALLING OPERATORS ---------------------------------
 

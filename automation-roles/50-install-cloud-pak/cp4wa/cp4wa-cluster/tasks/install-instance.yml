@@ -14,6 +14,7 @@
     merge_type: merge
     src: "{{ status_dir }}/cp4wa/cp4wa-instance.yml"
 
+# TODO Put waits in block and repeat 2-3 times
 - name: Wait 10 minutes for CP4WA installation to be in state 'Running'
   community.kubernetes.k8s_info:
     api_version: orchestrator.aiops.ibm.com/v1alpha1
@@ -40,19 +41,6 @@
   vars:
     condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
 
-- name: Wait 30 minutes for CP4WA AIOpsEdge to be in state 'Configured'
-  community.kubernetes.k8s_info:
-    api_version: connectors.aiops.ibm.com/v1beta1
-    kind: AIOpsEdge
-    namespace: "{{ current_cp4wa_cluster.project }}"
-    name: aiopsedge
-  register: aiopsedge
-  retries: 30
-  delay: 60
-  until: ('Configured' in aiopsedge | json_query(condition_query) | unique)
-  vars:
-    condition_query: 'resources[*].status.phase'
-
 - name: Wait 30 minutes for CP4WA LifecycleService to be Ready
   community.kubernetes.k8s_info:
     api_version: lifecycle.ir.aiops.ibm.com/v1beta1
@@ -65,6 +53,19 @@
   until: (['True'] in lserv | json_query(condition_query) | unique )
   vars:
     condition_query: "resources[*].status.conditions[?type == 'Lifecycle Service Ready'].status"
+
+- name: Wait 30 minutes for CP4WA AIOpsEdge to be in state 'Configured'
+  community.kubernetes.k8s_info:
+    api_version: connectors.aiops.ibm.com/v1beta1
+    kind: AIOpsEdge
+    namespace: "{{ current_cp4wa_cluster.project }}"
+    name: aiopsedge
+  register: aiopsedge
+  retries: 30
+  delay: 60
+  until: ('Configured' in aiopsedge | json_query(condition_query) | unique)
+  vars:
+    condition_query: 'resources[*].status.phase'
 
 - name: Wait 30 minutes for CP4WA ASM to be in state 'OK'
   community.kubernetes.k8s_info:
