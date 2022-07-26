@@ -1,14 +1,20 @@
 ---
-- name: Get information in the current openshift configuration
-  debug:
-    var: current_openshift_cluster
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ environment_name }}']
 
 - name: Get information in the current openshift configuration
   debug:
-    var: current_openshift_cluster.infrastructure.deny_node_ports | default(False)
+    var: _current_openshift_cluster
+
+- name: Get information in the current openshift configuration
+  debug:
+    var: _current_openshift_cluster.infrastructure.deny_node_ports | default(False)
 
 - set_fact:
-    _nacl_security_setting: "{{ current_openshift_cluster.infrastructure.deny_node_ports | default(False) }}"
+    _nacl_security_setting: "{{ _current_openshift_cluster.infrastructure.deny_node_ports | default(False) }}"
 
 - debug:
     msg: "_nacl_security_setting is {{ _nacl_security_setting }}"
@@ -24,10 +30,10 @@
     _current_cluster: "{{ _all_oc_clusters | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='{{ current_openshift_cluster.name }}']
+      [?name=='{{ _current_openshift_cluster.name }}']
 
 - fail:
-    msg: "Unable to locate OpenShift cluster with name {{ current_openshift_cluster.name }}"
+    msg: "Unable to locate OpenShift cluster with name {{ _current_openshift_cluster.name }}"
   when: _current_cluster == {}
 
 - name: Get the Security Group for current OpenShift cluster 
