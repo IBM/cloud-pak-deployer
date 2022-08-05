@@ -73,6 +73,12 @@ def preprocessor(attributes=None, fullConfig=None):
             if type(ge['infrastructure']['private_only']) != bool:
                 g.appendError(msg='Attribute infrastructure.private_only must be either true or false if specified. Default is false.')
 
+
+        # check deny_node_ports must be true or false if specified
+        if 'deny_node_ports' in ge['infrastructure']:
+            if type(ge['infrastructure']['deny_node_ports']) != bool:
+                g.appendError(msg='Attribute infrastructure.deny_node_ports must be either true or false if specified. Default is false.')
+
         # Check upstream DNS server
         if 'upstream_dns' in ge:
             for dns in ge['upstream_dns']:
