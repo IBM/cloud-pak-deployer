@@ -24,6 +24,9 @@
     msg: "Cognos instance {{ cognos_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, ending play provision_cognos_instance for {{ cognos_instance.name }}"
   when: "not cognos_lookup_result_json.total_count == 0"
 
+- set_fact:
+    _internal_db2_instance_id: ""
+
 - when: "cognos_lookup_result_json.total_count == 0"
   block:
     - name: "Get provisioned db2oltp instances with name {{ cognos_instance.metastore_ref }}"
@@ -33,9 +36,14 @@
     - set_fact:
         db2_lookup_result_json: "{{ db2_lookup_result.stdout | from_json }}"
 
-    - name: "Prepare Cognos instance creation using internally provisioned Db2 OLTP instance {{ cognos_instance.metastore_ref }}"
-      include_tasks: prepare_provision_cognos_instance_internal.yml
-      when: db2_lookup_result_json.total_count == 1
+    - when: db2_lookup_result_json.total_count == 1
+      block:
+        - name: "Prepare Cognos instance creation using internally provisioned Db2 OLTP instance {{ cognos_instance.metastore_ref }}"
+          include_tasks: prepare_provision_cognos_instance_internal.yml
+
+        - set_fact:
+            _internal_db2_instance_id: "{{ db2_lookup_result_json.service_instances[0].id }}"
+  
 
     - name: "Prepare Cognos instance creation using external Db2 service {{ cognos_instance.metastore_ref }}"
       include_tasks: prepare_provision_cognos_instance_external.yml
@@ -150,7 +158,7 @@
             dest: "{{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
 
         - set_fact:
-            _cognos_instance_pods_count: "6"
+            _cognos_instance_pods_count: "5"
 
     - name: Create Cognos instance
       shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' -T {{ cp4d_automation_temp_dir.path }}/cognos_instance.json"
@@ -197,3 +205,8 @@
     - name: Cognos Analytics instance provisioning completed
       debug:
         msg: "Cognos Analytics instance provisioning completed. ID: {{ cognos_instance_create_result_json.id }}"
+
+    - name: Label DB2 STS when using internal metastore
+      shell: |
+        oc label sts -n {{ current_cp4d_cluster.project }} c-db2oltp-{{ _internal_db2_instance_id }}-db2u cognos_instance_id={{ cognos_instance_create_result_json.id }} --overwrite
+      when: not _internal_db2_instance_id == ""
