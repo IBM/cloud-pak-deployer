@@ -20,6 +20,16 @@
     debug:
       var: ca_cartridge
 
+  - set_fact:
+      cp4d_cognos_instance_tshirt_size: "{{ ca_cartridge.size | default ('small') }}"
+
+  - fail:
+      msg: "Cognos Analytics size can be small, medium or large. {{ cp4d_cognos_instance_tshirt_size }} is not supported."
+    when: | 
+      not (cp4d_cognos_instance_tshirt_size == "small" or
+           cp4d_cognos_instance_tshirt_size == "medium" or
+           cp4d_cognos_instance_tshirt_size == "large")
+
   - name: Show number of instances in Cognos Analytics cartridge
     debug:
       msg: "{{ ca_cartridge.instances | length }}"
