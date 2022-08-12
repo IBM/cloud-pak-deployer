@@ -1,0 +1,30 @@
+---
+- set_fact:
+    _postgresql_instance_name: "{{ _postgresql_instance.metadata.name }}"
+    _postgresql_cartridge_listed: {}
+
+- set_fact:
+    _postgresql_cartridge_listed: "{{ _postgresql_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+  vars:
+    _query_instance: "[?name=='{{ _postgresql_instance_name }}']" 
+  when: _postgresql_cartridge.instances is defined
+
+- when: _postgresql_cartridge_listed == {}
+  block:
+
+      - debug:
+          msg: "CPDEdbService instance {{ _postgresql_instance_name }} is not available in the Cloud Pak Deployer configuration file. Destroying instance..."
+
+     
+      - name: "Destroy CPDEdbService {{ _postgresql_instance_name }}"
+        shell: |
+          oc delete CPDEdbService -n {{ current_cp4d_cluster.project }} {{ _postgresql_instance_name }}
+
+      - name: Wait 30 seconds for the cleanup to complete
+        pause:
+          seconds: 30
+
+
+
+
+      

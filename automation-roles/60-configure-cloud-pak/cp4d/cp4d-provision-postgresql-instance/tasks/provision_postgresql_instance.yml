@@ -1,0 +1,58 @@
+---
+- name: Show PostgreSQL instance information
+  debug:
+    var: _postgresql_instance
+
+- set_fact:
+    _postgresql_instance_name: "{{ _postgresql_instance.name }}"
+    _postgresql_instance_namespace: "{{ current_cp4d_cluster.project }}"
+    _postgresql_instance_type: "{{ _postgresql_instance.type | default ('Standard') }}"
+    _postgresql_instance_members: "{{ _postgresql_instance.members | default('1') }}"
+    _postgresql_instance_storage_class: "{{ _postgresql_instance.storage_class | default(ocp_storage_class_file) }}"
+    _postgresql_instance_storage_size_gb: "{{ _postgresql_instance.size_gb }}"
+    _postgresql_instance_resource_request_cpu: "{{ _postgresql_instance.resource_request_cpu | default ('1000m') }}"
+    _postgresql_instance_resource_request_memory: "{{ _postgresql_instance.resource_request_memory | default ('4Gi') }}"
+    _postgresql_instance_resource_limit_cpu: "{{ _postgresql_instance.resource_limit_cpu | default ('1000m') }}"
+    _postgresql_instance_resource_limit_memory: "{{ _postgresql_instance.resource_limit_memory | default ('4Gi') }}"
+
+- name: "Validate if PostgreSQL instance is already present"
+  shell: "oc get CPDEdbService -n {{ _postgresql_instance_namespace }} --no-headers | grep "^{{ _postgresql_instance_name }}[[:space:]]" | wc -l"
+  register: _postgresql_instance_lookup_result
+
+- when: not _postgresql_instance_lookup_result.stdout == "0"
+  debug:
+    msg: "PostgreSQL instance {{ _postgresql_instance_name }} already available. Skipping provision..."
+
+- when: _postgresql_instance_lookup_result.stdout == "0"
+  block:
+
+    - name: Obtain PostgreSQL version
+      shell:
+        oc get edbpgs -n {{ _postgresql_instance_namespace }} edbpgs -o jsonpath='{.spec.version}'
+      register: _cp4d_postgresql_version
+
+    - name: Create PostgreSQL CRD yaml file
+      template:
+        src: postgresql_instance.json.j2
+        dest: "{{ status_dir }}/cp4d/postgresql-instance-cr.yaml"
+
+    - name: Provision CPDEdbService {{ _postgresql_instance_name }} 
+      shell: |
+        oc create -f {{ status_dir }}/postgresql-instance-cr.yaml
+      register: _oc_create_postgresql
+
+    - name: Wait for CPDEdbService {{ _postgresql_instance_name }} deployment completes
+      shell: |
+        oc get CPDEdbService "{{ _postgresql_instance_name }}" -n {{ _postgresql_instance_namespace }} --output json | jq -r '.status.edbStatus' | grep -i 'completed' | wc -l 
+      register: _deployed_postgresql_service
+      retries: 30
+      delay: 60
+      until: _deployed_postgresql_service.stdout == "1"
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+    - debug:
+        msg: "CP4D CPDEdbService {{ _postgresql_instance_name }} deployed and running successfully..."
