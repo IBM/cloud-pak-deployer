@@ -6,18 +6,18 @@
 - set_fact:
     _cdp_edb_cartridge_listed: "{{ _cdp_edb_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
   vars:
-    _query_instance: "[?name=='{{ _cdp_edb_instance_name }}']" 
+    _query_instance: "[?name=='{{ _cpd_edb_instance_name }}']" 
   when: _cdp_edb_cartridge.instances is defined
 
 - when: _cdp_edb_cartridge_listed == {}
   block:
 
       - debug:
-          msg: "CPDEdbInstance instance {{ _cdp_edb_instance_name }} is not available in the Cloud Pak Deployer configuration file. Destroying instance..."
+          msg: "CPDEdbInstance instance {{ _cpd_edb_instance_name }} is not available in the Cloud Pak Deployer configuration file. Destroying instance..."
      
-      - name: "Destroy CPDEdbInstance {{ _cdp_edb_instance_name }}"
+      - name: "Destroy CPDEdbInstance {{ _cpd_edb_instance_name }}"
         shell: |
-          oc delete CPDEdbInstance -n {{ current_cp4d_cluster.project }} {{ _cdp_edb_instance_name }}
+          oc delete CPDEdbInstance -n {{ current_cp4d_cluster.project }} {{ _cpd_edb_instance_name }}
 
       - name: Wait 30 seconds for the cleanup to complete
         pause:
