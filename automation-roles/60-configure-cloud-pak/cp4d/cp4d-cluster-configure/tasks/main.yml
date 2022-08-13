@@ -160,6 +160,22 @@
       - _datastage_instance != {} 
       - ( _datastage_instance.state | default("installed") ) == "installed"
 
+    # Cartridge: CPD EDB
+    - set_fact:
+        _cpd_edb_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+      vars:
+        cartridge_name: "edb_cp4d"
+        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+
+    - name: Provision CPD EDB instances
+      include_role:
+        name: cp4d-provision-cpd-edb-instance
+      when: 
+      - _cpd_edb_instance != {} 
+      - ( _cpd_edb_instance.state | default("installed") ) == "installed"
+
+- fail:
+    msg: "DONE....."
 
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"

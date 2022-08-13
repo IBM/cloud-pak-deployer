@@ -1,0 +1,23 @@
+---
+- name: Acquire EDB PostgreSQL license key from vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cpd-edb-postgres-license-key }}"
+    secret_group: "{{ environment_name }}" 
+
+- fail:
+    msg: "Unable to locate secret {{ _cpd-edb-postgres-license-key }} from the vault. Ensure this secret is populated, and rerun the Deployer"
+  when: secret_value == ""
+
+- set_fact:
+    _cpd_edb_license_key: "{{ secret_value | b64encode }}"
+
+- name: Create EDB PostgreSQL license secret object
+  template:
+    src: "cpd-edb-license-secret.j2"
+    dest: "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
+
+- name: Apply EDB PostgreSQL secret
+  command: |
+    oc apply -f "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
