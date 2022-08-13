@@ -1,15 +1,21 @@
 ---
 - set_fact:
     _cpd_edb_instance_name: "{{ _cpd_edb_instance.metadata.name }}"
-    _cdp_edb_cartridge_listed: {}
+    _cpd_edb_cartridge_listed: {}
+
+- debug:
+    msg: "{{ _cpd_edb_cartridge.instances }}"
+
+- debug:
+    msg: "{{ _cpd_edb_instance_name }}"
 
 - set_fact:
-    _cdp_edb_cartridge_listed: "{{ _cdp_edb_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    _cpd_edb_cartridge_listed: "{{ _cpd_edb_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
   vars:
     _query_instance: "[?name=='{{ _cpd_edb_instance_name }}']" 
-  when: _cdp_edb_cartridge.instances is defined
+  when: _cpd_edb_cartridge.instances is defined
 
-- when: _cdp_edb_cartridge_listed == {}
+- when: _cpd_edb_cartridge_listed == {}
   block:
 
       - debug:
