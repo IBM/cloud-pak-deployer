@@ -1,9 +1,10 @@
 ---
 cp4d:
 
-- project: zen-40
+- project: zen-45
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 4.0.9
+  cp4d_version: 4.5.0
+  olm_utils: True
   use_case_files: True
   accept_licenses: False
   cartridges:
@@ -11,7 +12,9 @@ cp4d:
     license_service:
       state: disabled
       threads_per_core: 2
+  
   - name: lite
+
   - name: scheduler 
     state: removed
     
@@ -85,6 +88,21 @@ cp4d:
     - name: data-virtualization
     state: removed
 
+  # Please note that for EDB Postgress, a secret edb-postgres-license-key must be created in the vault
+  # before deploying
+  - name: edb_cp4d
+    state: removed
+    instances:
+      - name: instance1
+        version: "13.5"
+        #type: Standard
+        #members: 1
+        #size_gb: 50
+        #resource_request_cpu: 1000m
+        #resource_request_memory: 4Gi
+        #resource_limit_cpu: 1000m
+        #resource_limit_memory: 4Gi
+
   - name: hadoop
     size: small
     dependencies:
@@ -128,6 +146,7 @@ cp4d:
 
   # For Watson Knowledge Studio, the case version is needed due to defect in olm utils
   - name: watson-ks
+    case_version: 4.0.9
     size: small
     state: removed
 
