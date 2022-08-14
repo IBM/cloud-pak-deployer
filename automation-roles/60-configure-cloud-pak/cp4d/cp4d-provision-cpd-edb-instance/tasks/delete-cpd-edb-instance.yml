@@ -3,12 +3,6 @@
     _cpd_edb_instance_name: "{{ _cpd_edb_instance.metadata.name }}"
     _cpd_edb_cartridge_listed: {}
 
-- debug:
-    msg: "{{ _cpd_edb_cartridge.instances }}"
-
-- debug:
-    msg: "{{ _cpd_edb_instance_name }}"
-
 - set_fact:
     _cpd_edb_cartridge_listed: "{{ _cpd_edb_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
   vars:
@@ -24,10 +18,6 @@
       - name: "Destroy CPDEdbInstance {{ _cpd_edb_instance_name }}"
         shell: |
           oc delete CPDEdbInstance -n {{ current_cp4d_cluster.project }} {{ _cpd_edb_instance_name }}
-
-      - name: Wait 30 seconds for the cleanup to complete
-        pause:
-          seconds: 30
 
 
 
