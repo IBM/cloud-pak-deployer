@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cpd-edb-aux-br-cm
+  namespace: {{ _p_current_cp4d_cluster.project }}
+  labels:
+    cpdfwk.version: 1.0.0
+    cpdfwk.module: edb-aux
+    cpdfwk.component: edb
+    cpdfwk.aux-kind: br
+    cpdfwk.managed-by: ibm-cpd-sre
+    cpdfwk.name: edb-aux-br-cm
+    cpdfwk.vendor: ibm
+    app.kubernetes.io/instance: cpd-edb-aux
+    app.kubernetes.io/name: edb-aux
+    app.kubernetes.io/version: 1.0.0.0
+data:
+  aux-meta: |-
+    name: edb-aux
+    description: "EDB CM"
+    version: 1.0.0.0
+    component: edb
+    aux-kind: br
+    priority-order: 100
+    support-instances: false
+    managed-resources:
+    - resource-kind: pod
+      labels: 'icpdsupport/addOnId=edb'
+  backup-meta: |-
+    pre-hooks:
+      exec-rules:
+      - resource-kind: cpdedbinstance
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: add
+              key: velero.io/exclude-from-backup
+              value: "true"
+            timeout: 360s
+      - resource-kind: cpdedbinstance
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: add
+              key: icpdsupport/ignore-on-nd-backup
+              value: "true"
+            timeout: 360s
+      - resource-kind: persistentvolumeclaim
+        labels: 'icpdsupport/addOnId=edb'
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: add
+              key: velero.io/exclude-from-backup
+              value: "true"
+            timeout: 360s
+      - resource-kind: persistentvolumeclaim
+        labels: 'icpdsupport/addOnId=edb'
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: add
+              key: icpdsupport/ignore-on-nd-backup 
+              value: "true"
+            timeout: 360s
+    post-hooks:
+      exec-rules:
+      - resource-kind: cpdedbinstance
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: remove
+              key: velero.io/exclude-from-backup
+            timeout: 360s
+      - resource-kind: cpdedbinstance
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: remove
+              key: icpdsupport/ignore-on-nd-backup
+            timeout: 360s    
+      - resource-kind: persistentvolumeclaim
+        labels: 'icpdsupport/addOnId=edb'
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: remove
+              key: velero.io/exclude-from-backup 
+            timeout: 360s
+      - resource-kind: persistentvolumeclaim
+        labels: 'icpdsupport/addOnId=edb'
+        actions:
+        - builtins:
+            name: cpdbr.cpd.ibm.com/label-resources
+            params:
+              action: remove
+              key: icpdsupport/ignore-on-nd-backup
+            timeout: 360s
