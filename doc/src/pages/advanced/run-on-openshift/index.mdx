@@ -174,7 +174,7 @@ cp4d:
 EOF
 ```
 
-## Start deployer
+## Prepare the deployer and start
 ```
 oc new-project cloud-pak-deployer
 
@@ -240,6 +240,8 @@ spec:
 EOF
 ```
 
+The OpenShift job consists of 2 containers: `wait-config` and `cloud-pak-deployer`, where the `wait-config` is an "init" container, just waiting for the signal that the deployer can start. In the next steps, the deployer configuration and secrets are created inside the pod, then the configuration is marked "ready" and deployment can start.
+
 ## Copy local configuration and status directory into deployer pod
 ```
 export DEPLOYER_POD=$(oc get po --no-headers -l app=cloud-pak-deployer | head -1 | awk '{print $1}')
@@ -264,3 +266,5 @@ oc rsh -c wait-config $DEPLOYER_POD bash -c 'touch /Data/cpd-config/config-ready
 ```
 oc logs -f $DEPLOYER_POD
 ```
+
+In some cases, especially if the OpenShift cluster is remote from where the `oc` command is running, the `oc logs -f` command may terminate abruptly. 
