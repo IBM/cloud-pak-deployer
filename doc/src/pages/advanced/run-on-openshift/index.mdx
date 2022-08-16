@@ -174,7 +174,7 @@ cp4d:
 EOF
 ```
 
-## Start deployer
+## Prepare the deployer and start
 ```
 oc new-project cloud-pak-deployer
 
@@ -184,23 +184,35 @@ oc adm policy add-scc-to-user privileged -z cloud-pak-deployer-sa
 oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
 
 cat << EOF | oc apply -f -
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
   labels:
     app: cloud-pak-deployer
   name: cloud-pak-deployer
   namespace: cloud-pak-deployer
 spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      deployment: cloud-pak-deployer
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
   template:
     metadata:
+      name: cloud-pak-deployer
       labels:
-        deployment: cloud-pak-deployer
+        app: cloud-pak-deployer
     spec:
+      initContainers:
+      - name: wait-config
+        image: quay.io/fketelaars/cloud-pak-deployer:latest
+        command: ['sh', '-c', 'until [ -f /Data/cpd-config/config-ready ]; do ls -al /Data/cpd-config; echo Waiting for /Data/cpd-config/config-ready file; sleep 1; done;echo "Configuration is ready, starting deployer"']
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
+        volumeMounts:
+        - mountPath: /Data
+          name: cloud-pak-deployer-volume
       containers:
       - image: quay.io/fketelaars/cloud-pak-deployer:latest
         imagePullPolicy: Always
@@ -214,38 +226,45 @@ spec:
           value: /Data/cpd-status
         volumeMounts:
         - mountPath: /Data
-          name: cloud-pak-deployer-volume-1
+          name: cloud-pak-deployer-volume
         command: ["/bin/sh","-xc"]
         args: 
-          - sleep infinity
-      restartPolicy: Always
-      schedulerName: default-scheduler
+          - /cloud-pak-deployer/cp-deploy.sh env apply -v
+      restartPolicy: Never
       securityContext:
         runAsUser: 0
       serviceAccountName: cloud-pak-deployer-sa
-      terminationGracePeriodSeconds: 30
       volumes:
       - emptyDir: {}
-        name: cloud-pak-deployer-volume-1
+        name: cloud-pak-deployer-volume
 EOF
 ```
 
+The OpenShift job consists of 2 containers: `wait-config` and `cloud-pak-deployer`, where the `wait-config` is an "init" container, just waiting for the signal that the deployer can start. In the next steps, the deployer configuration and secrets are created inside the pod, then the configuration is marked "ready" and deployment can start.
+
 ## Copy local configuration and status directory into deployer pod
 ```
-export DEPLOYER_POD=$(oc get po --no-headers -l deployment=cloud-pak-deployer | head -1 | awk '{print $1}')
-oc rsh $DEPLOYER_POD rm -rf /Data/cpd-config && oc cp $CONFIG_DIR $DEPLOYER_POD:/Data/cpd-config/
+export DEPLOYER_POD=$(oc get po --no-headers -l app=cloud-pak-deployer | head -1 | awk '{print $1}')
+oc cp -c wait-config $CONFIG_DIR $DEPLOYER_POD:/Data/cpd-config/
 ```
 
 ## Prepare for deployer run
 ```
-oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault set \
-  -vs cp_entitlement_key -vsv "your_entitlement_key"
-oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault set \
+oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault set \
+  -vs ibm_cp_entitlement_key -vsv "your_entitlement_key"
+oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault set \
   -vs cpd-demo-oc-login -vsv "your_oc_login_command"
-oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh vault list
+oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault list
 ```
 
-## Run deployer
+## Mark the configuration ready to start the deployment
 ```
-oc rsh deploy/cloud-pak-deployer /cloud-pak-deployer/cp-deploy.sh env apply -v 
+oc rsh -c wait-config $DEPLOYER_POD bash -c 'touch /Data/cpd-config/config-ready; chmod 777 /Data/cpd-config/config-ready'
 ```
+
+## Follow the logs of the deployment
+```
+oc logs -f $DEPLOYER_POD
+```
+
+In some cases, especially if the OpenShift cluster is remote from where the `oc` command is running, the `oc logs -f` command may terminate abruptly. 
