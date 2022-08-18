@@ -56,8 +56,8 @@ def preprocessor(attributes=None, fullConfig=None):
         # Check infrastructure attributes
         if "type" not in ge['infrastructure']:
             g.appendError(msg='type must be specified for infrastructure')
-        elif ge['infrastructure']['type'] not in ['rosa']:
-            g.appendError(msg='infrastructure.type must be rosa')
+        elif ge['infrastructure']['type'] not in ['rosa','self-managed']:
+            g.appendError(msg='infrastructure.type must be rosa or self-managed')
         if "aws_region" not in ge['infrastructure']:
             g.appendError(msg='aws_region must be specified for infrastructure')
         if "multi_zone" in ge['infrastructure']:

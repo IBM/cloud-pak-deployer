@@ -9,7 +9,10 @@
   when: cloud_platform == 'vsphere'
 
 - include_tasks: aws-rosa-configure-ocs.yml
-  when: cloud_platform == 'aws'
+  when: _is_aws_rosa is defined and _is_aws_rosa == True
+
+- include_tasks: aws-ipi-configure-ocs.yml
+  when: cloud_platform == 'aws' and _is_aws_rosa is not defined
 
 - include_tasks: azure-aro-configure-ocs.yml
   when: cloud_platform == 'azure'

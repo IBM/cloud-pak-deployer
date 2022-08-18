@@ -1,1 +1,81 @@
 ---
+
+- name: "Start {{generator.name}} generator"
+  debug:
+    msg: 'from {{generator.name}} in {{generator.path}} attributes: {{generator.attributes}}'
+
+- name: Show generator
+  debug:
+    var: generator
+
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ generator.attributes.name }}']
+
+- name: Get aws-access-key secret from in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-access-key"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _aws_access_key: "{{ secret_value }}"
+
+- name: Get aws-secret-access-key secret from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-secret-access-key"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _aws_secret_access_key: "{{ secret_value }}"
+
+- name: Delete aws credentials folder if it exists
+  file:
+    path: "{{ lookup('env','HOME') }}/.aws/"
+    state: absent
+
+- name: Create aws credentials work folder
+  file:
+    path: "{{ lookup('env','HOME') }}/.aws/"
+    state: directory 
+
+- name: Generate aws credentials file in {{ lookup('env','HOME') }}/.aws/
+  template:
+    src: '../templates/credentials.j2'
+    dest: "{{ lookup('env','HOME') }}/.aws/credentials"
+
+- name: Retrieve pull secret from vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-pullsecret"
+    secret_group: "{{ environment_name }}" 
+    secret_file: /tmp/ocp_pullsecret.json
+
+- set_fact:
+    _ocp_pullsecret: "{{ secret_value }}"
+
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-ssh-pub-key"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _ocp_ssh_pub_key: "{{ secret_value }}"
+
+- name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
+  file:
+    path: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}"
+    state: directory
+
+- name: Generate instance of "{{generator.name}}" in {{ PATH_TO_OUTPUT_DIR }}
+  template:
+    src: '../templates/main.tf.j2'
+    dest: '{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml'

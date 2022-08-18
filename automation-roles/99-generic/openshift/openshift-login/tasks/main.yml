@@ -40,7 +40,10 @@
   when: cloud_platform == 'azure'
 
 - include_tasks: aws-login-rosa-ocp.yml
-  when: cloud_platform == 'aws'
+  when: _is_aws_rosa is defined and _is_aws_rosa == True
+
+- include_tasks: aws-login-ipi-ocp.yml
+  when: cloud_platform == 'aws' and _is_aws_rosa is not defined
 
 - name: Check that we can retrieve cluster information
   shell: |
