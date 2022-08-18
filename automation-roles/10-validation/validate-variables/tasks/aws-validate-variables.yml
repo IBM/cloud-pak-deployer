@@ -23,14 +23,59 @@
     msg: "Secret aws-secret-access-key is mandatory and was not found in the vault"
   when: secret_value==""
 
-- name: Check if rosa-login-token secret is in the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "rosa-login-token"
-    secret_group: "{{ environment_name }}" 
+- name: Check if need to check rosa-login-token secret
+  set_fact:
+    _is_aws_rosa: True  
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type is defined and _current_openshift_cluster.infrastructure.type == "rosa"
+  
+- name: Check rosa-login-token secret for rosa
+  block:
+  - name: Check if rosa-login-token secret is in the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "rosa-login-token"
+      secret_group: "{{ environment_name }}"
 
-- name: Check that rosa-login-token secret is present in the vault
+  - name: Check that rosa-login-token secret is present in the vault
+    fail:
+      msg: "Secret rosa-login-token is mandatory and was not found in the vault"
+    when: secret_value==""
+  when: _is_aws_rosa is defined and _is_aws_rosa == True
+  
+- block:
+  - name: Check if ocp-pullsecret secret is in the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "ocp-pullsecret"
+      secret_group: "{{ environment_name }}" 
+
+  - name: Check that ocp-pullsecret secret is present in the vault
+    fail:
+      msg: "Secret ocp-pullsecret is mandatory and was not found in the vault"
+    when: secret_value==""
+
+  - name: Check if ocp-ssh-pub-key secret is in the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "ocp-ssh-pub-key"
+      secret_group: "{{ environment_name }}" 
+
+  - name: Check that ocp-ssh-pub-key secret is present in the vault
+    fail:
+      msg: "Secret ocp-ssh-pub-key is mandatory and was not found in the vault"
+    when: secret_value==""
+  when: _is_aws_rosa is not defined
+  
+- name: Check domain_name in present in openshift config
   fail:
-    msg: "Secret rosa-login-token is mandatory and was not found in the vault"
-  when: secret_value==""
+    msg: "domain_name is mandatory and was not found in the openshift config"
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _is_aws_rosa is not defined and (_current_openshift_cluster.domain_name is not defined or _current_openshift_cluster.domain_name =="")

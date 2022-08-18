@@ -1,0 +1,22 @@
+---
+- name: Get current storage class
+  debug:
+    var: current_openshift_storage
+
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.name }}']
+
+- name: Show Openshift configuration
+  debug:
+    var: _openshift_config
+
+- name: Retrieve infrastructure ID
+  shell: |
+    oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
+  register: _get_infrastructure_id
+
+- set_fact:
+    _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"

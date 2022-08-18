@@ -1,0 +1,47 @@
+apiVersion: v1
+baseDomain: {{ generator.attributes.domain_name }}
+metadata:
+  name: {{ generator.attributes.name }}
+
+controlPlane:   
+  hyperthreading: Enabled 
+  name: master
+  platform:
+    aws:
+      type: {{ generator.attributes.control_plane_flavour }}
+      zones: 
+      - "{{generator.attributes.infrastructure.aws_region}}a"
+      - "{{generator.attributes.infrastructure.aws_region}}b"
+      - "{{generator.attributes.infrastructure.aws_region}}c"
+  replicas: {{ generator.attributes.control_plane_nodes }}
+
+compute: 
+- hyperthreading: Enabled 
+  name: worker
+  platform:
+    aws:
+      type: {{ generator.attributes.compute_flavour }}
+      zones: 
+      - "{{generator.attributes.infrastructure.aws_region}}a"
+      - "{{generator.attributes.infrastructure.aws_region}}b"
+      - "{{generator.attributes.infrastructure.aws_region}}c"
+  replicas: {{ generator.attributes.compute_nodes }}
+
+networking:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: 10.0.0.0/16
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+
+platform:
+  aws:
+    region: {{ generator.attributes.infrastructure.aws_region }}
+
+publish: External
+fips: false
+pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
+sshKey: '{{ _ocp_ssh_pub_key }}'
