@@ -8,10 +8,6 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: Login to ROSA
-  include_role:
-    name: aws-login-rosa
-
 - name: Get aws-access-key secret from in the vault
   include_role: 
     name: vault-get-secret
@@ -32,57 +28,10 @@
 - set_fact:
     _aws_secret_access_key: "{{ secret_value }}"
 
-- name: Delete file servers associated with ROSA cluster
-  include_tasks: aws-delete-file-servers.yml
-  loop: "{{ _current_openshift_cluster.openshift_storage }}"
-  loop_control:
-    loop_var: _current_openshift_storage
+- name: Destory Openshift with AWS ROSA
+  include_tasks: destroy-aws-rosa.yml
+  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'rosa'
 
-- name: Check if ROSA cluster exists
-  shell: |
-    rosa describe cluster \
-      --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --output json
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  register: _rosa_describe_cluster
-  failed_when: False
-
-- name: Ensure the status log folder exists
-  file:
-    path: "{{status_dir}}/log"
-    state: directory
-    
-- name: Delete ROSA cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log
-  shell: |
-    rosa delete cluster --cluster {{ _current_openshift_cluster.name }} \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --yes --watch >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  when: _rosa_describe_cluster.rc == 0
-
-- name: Delete operator roles for ROSA cluster {{ _current_openshift_cluster.name }} when STS was used
-  shell: |
-    rosa delete operator roles -c {{ (_rosa_describe_cluster.stdout | from_json).id }} --mode auto --yes \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  when: 
-  - _rosa_describe_cluster.rc == 0
-  - _current_openshift_cluster.infrastructure.use_sts | default(False) | bool
-
-- name: Delete OIDC provider for ROSA cluster {{ _current_openshift_cluster.name }} when STS was used
-  shell: |
-    rosa delete oidc-provider -c {{ (_rosa_describe_cluster.stdout | from_json).id }} --mode auto --yes \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  when: 
-  - _rosa_describe_cluster.rc == 0
-  - _current_openshift_cluster.infrastructure.use_sts | default(False) | bool
+- name: Destory Openshift with AWS IPI
+  include_tasks: destroy-aws-ipi.yml
+  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'self-managed'

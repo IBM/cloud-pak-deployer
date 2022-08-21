@@ -1,5 +1,4 @@
 ---
-
 - name: "Start {{generator.name}} generator"
   debug:
     msg: 'from {{generator.name}} in {{generator.path}} attributes: {{generator.attributes}}'
@@ -33,21 +32,6 @@
 
 - set_fact:
     _aws_secret_access_key: "{{ secret_value }}"
-
-- name: Delete aws credentials folder if it exists
-  file:
-    path: "{{ lookup('env','HOME') }}/.aws/"
-    state: absent
-
-- name: Create aws credentials work folder
-  file:
-    path: "{{ lookup('env','HOME') }}/.aws/"
-    state: directory 
-
-- name: Generate aws credentials file in {{ lookup('env','HOME') }}/.aws/
-  template:
-    src: '../templates/credentials.j2'
-    dest: "{{ lookup('env','HOME') }}/.aws/credentials"
 
 - name: Retrieve pull secret from vault
   include_role: 
