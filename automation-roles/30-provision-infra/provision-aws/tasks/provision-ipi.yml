@@ -1,13 +1,4 @@
 ---
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - cloud_platform is defined
-
-- name: Validate cloud_platform is implemented
-  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
-  when: "cloud_platform not in implemented_cloud_platform_types"
-
 - set_fact:
     _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
@@ -26,15 +17,12 @@
 
 # Run OpenShift IPI installer if no OpenShift cluster does not exist yet
 - block:
-  - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
-    include_role:
-      name: openshift-download-installer
-    vars:
-      _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
-
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}
     shell:
       openshift-install create cluster --dir={{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
 
   - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
     set_fact:
