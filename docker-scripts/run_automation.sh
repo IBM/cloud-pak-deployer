@@ -95,19 +95,22 @@ env|environment)
   fi
   # Make sure that the logs of the Ansible playbook are written to a log file
   mkdir -p ${STATUS_DIR}/log
-  run_cmd+=" 2>&1 | tee ${STATUS_DIR}/log/cloud-pak-deployer.log"
+  echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  echo "Starting deployer" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  run_cmd+=" 2>&1 | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   set -o pipefail
   eval $run_cmd
   exit_code=$?
   if [ ${exit_code} -eq 0 ];then
-    echo | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "===========================================================================" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C." | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   else
-    echo | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "====================================================================================" | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "====================================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   fi
   exit ${exit_code}
   ;;
