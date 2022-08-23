@@ -81,25 +81,18 @@
 # ------------ SETTING PROCESSING FACTS -----------------------------
 
 - set_fact:
-    _use_case_files: False
+    _use_case_files: True
 
 - set_fact:
-   _use_case_files: True
-  when: (current_cp4i_cluster.image_registry_name | default("")) != "" or (current_cp4i_cluster.use_case_files | default(False) | bool)
-
-- set_fact:
-    _use_top_level_operator: False
-
-- set_fact:
-    _use_top_level_operator: True
-  when: (current_cp4i_cluster.use_top_level_operator | default(False) | bool) and not (current_cp4i_cluster.use_case_files | default(False) | bool) 
-
-- set_fact:
-    _operators_in_all_namespaces: False
+   _use_case_files: False
+  when: not current_cp4i_cluster.use_case_files
 
 - set_fact:
     _operators_in_all_namespaces: True
-  when: (current_cp4i_cluster.operators_in_all_namespaces | default(False) | bool)
+
+- set_fact:
+    _operators_in_all_namespaces: False
+  when: not current_cp4i_cluster.operators_in_all_namespaces
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
@@ -148,11 +141,6 @@
   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
   loop_control:
     loop_var: current_cp4i_instance
-  when: not _use_top_level_operator
-
-- name: Install all CP4I operators using top level operator
-  include_tasks: install-operators-top-level.yml
-  when: _use_top_level_operator
 
 # ------------ PLATFORM NAVIGATOR -----------------------------------
 
