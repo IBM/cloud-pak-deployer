@@ -34,6 +34,7 @@
     - selected_openshift_storage.storage_type != 'nfs'
     - selected_openshift_storage.storage_type != 'ocs'
     - selected_openshift_storage.storage_type != 'pwx'
+    - selected_openshift_storage.storage_type != 'aws-elastic'    
     - selected_openshift_storage.storage_type != 'custom'
 
 - set_fact:
@@ -62,6 +63,11 @@
    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('portworx-gp3-sc') }}"
   when: selected_openshift_storage.storage_type == 'pwx'
+
+- set_fact:
+   ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+   ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('gp2') }}"
+  when: selected_openshift_storage.storage_type == 'aws-elastic'
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
