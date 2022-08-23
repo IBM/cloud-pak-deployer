@@ -13,20 +13,16 @@
     name: vault-get-secret
   vars:
     secret_name: "aws-access-key"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _aws_access_key: "{{ secret_value }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_access_key
 
 - name: Get aws-secret-access-key secret from the vault
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "aws-secret-access-key"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _aws_secret_access_key: "{{ secret_value }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_secret_access_key
 
 - include_tasks: provision-rosa.yml
   loop: "{{ all_config.openshift | default([]) }}"

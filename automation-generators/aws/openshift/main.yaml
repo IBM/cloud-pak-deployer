@@ -13,26 +13,6 @@
     query: >-
       [?name=='{{ generator.attributes.name }}']
 
-- name: Get aws-access-key secret from in the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "aws-access-key"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _aws_access_key: "{{ secret_value }}"
-
-- name: Get aws-secret-access-key secret from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "aws-secret-access-key"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _aws_secret_access_key: "{{ secret_value }}"
-
 - name: Retrieve pull secret from vault
   include_role: 
     name: vault-get-secret
@@ -40,9 +20,7 @@
     secret_name: "ocp-pullsecret"
     secret_group: "{{ environment_name }}" 
     secret_file: /tmp/ocp_pullsecret.json
-
-- set_fact:
-    _ocp_pullsecret: "{{ secret_value }}"
+    _p_secret_variable: _ocp_pullsecret
 
 - name: Retrieve SSH public key from the vault
   include_role: 
@@ -50,9 +28,7 @@
   vars:
     secret_name: "ocp-ssh-pub-key"
     secret_group: "{{ environment_name }}"
-
-- set_fact:
-    _ocp_ssh_pub_key: "{{ secret_value }}"
+    _p_secret_variable: _ocp_ssh_pub_key
 
 - name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
   file:
