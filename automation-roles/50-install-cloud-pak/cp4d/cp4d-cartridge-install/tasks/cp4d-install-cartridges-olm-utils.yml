@@ -26,11 +26,16 @@
 
 - name: Starting installation of cartridges, state is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridge-state.log
   shell: |
-    log-services-installed.sh \
+    {{ role_path }}/files/log-services-installed.sh \
       {{ status_dir }} \
       {{ _p_current_cp4d_cluster.project }}
   async: 86400
   poll: 0
+  register: _log_services
+
+- name: Show details of background task to log cartridge state
+  debug:
+    var: _log_services
 
 - name: Run apply-cr command to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
   shell: |
