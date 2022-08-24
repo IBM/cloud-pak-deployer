@@ -34,6 +34,9 @@
 
 - name: Run generators for AWS IPI
   include_tasks: "{{_generator_dir}}/{{ GENERATOR_NAME }}/main.yaml"
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
   vars:
     generator:
       name: "{{ GENERATOR_NAME }}"
@@ -41,4 +44,4 @@
       attributes: "{{ OBJECT_ELEMENT_ATTRIBUTES }}"
       config: "{{ all_config }}"
     PATH_TO_OUTPUT_DIR: "{{status_dir}}/aws-ipi"
-  when: cloud_platform == 'aws' and _openshift_on_aws_type  == 'self-managed'
+  when: cloud_platform == 'aws' and _current_openshift_cluster.infrastructure.type  == 'self-managed'

@@ -1,12 +1,4 @@
 ---
-- name: OpenShift on AWS type
-  set_fact:
-    _openshift_on_aws_type: "{{ _current_openshift_cluster.infrastructure.type }}"
-  loop: "{{ all_config.openshift | default([]) }}"
-  loop_control:
-    loop_var: _current_openshift_cluster
-  when: _current_openshift_cluster.infrastructure.type is defined
-
 - name: Check if aws-access-key secret is in the vault
   include_role: 
     name: vault-get-secret
@@ -32,7 +24,13 @@
   when: secret_value==""
 
 - include_tasks: aws-rosa-validate-variables.yml
-  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'rosa'
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type is defined and _current_openshift_cluster.infrastructure.type  == 'rosa'
 
 - include_tasks: aws-ipi-validate-variables.yml
-  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'self-managed'
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type is defined and _current_openshift_cluster.infrastructure.type  == 'self-managed'

@@ -1,11 +1,8 @@
 ---
-- include_tasks: aws-rosa-download-cli.yml
-  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'rosa'
+- name: Download ROSA command line tool 
+  include_role:
+    name: aws-download-rosa
 
-- include_tasks: aws-ipi-download-cli.yml
-  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'self-managed'
-  vars:
-    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
-  loop: "{{ all_config.openshift | default([]) }}"
-  loop_control:
-    loop_var: _current_openshift_cluster
+- name: Download AWS Client
+  include_role:
+    name: aws-download-cli
