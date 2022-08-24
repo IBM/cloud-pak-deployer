@@ -1,20 +1,9 @@
 ---
-- name: Find file holding vault configuration
-  find:
-    paths: "{{ config_dir }}/config"
-    patterns: "*.yaml"
-    file_type: file
-    contains: 'vault:'
-    recurse: False
-  register: _found_vault_config_file
-
-- debug:
-    var: _found_vault_config_file
-
-- name: Load yaml file into variables
+- name: Load yaml files for vault configuration
   include_vars:
-    file: "{{ (_found_vault_config_file.files | first).path }}"
-  when: _found_vault_config_file.matched != 0
+    dir: "{{ config_dir }}/config"
+    extensions:
+    - yaml
 
 - name: Read vault config
   include_tasks: read-vault-config.yml
