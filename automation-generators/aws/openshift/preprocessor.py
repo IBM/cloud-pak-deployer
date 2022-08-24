@@ -74,6 +74,10 @@ def preprocessor(attributes=None, fullConfig=None):
                 g.appendError(msg='You can specify either 2 subnet IDs or 6 subnet IDs if there are existing subnets in the VPC')
             if "machine_cidr" not in ge['infrastructure']:
                 g.appendError(msg='If subnet IDs are specified, you must also specify the machine_cidr attribute')
+        
+        #check domain_name for aws self-managed cluster
+        if "type" in ge['infrastructure'] and ge['infrastructure']['type'] in ['self-managed']:
+            g('domain_name').isRequired()
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:

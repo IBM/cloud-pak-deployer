@@ -28,13 +28,13 @@
   loop: "{{ all_config.openshift | default([]) }}"
   loop_control:
     loop_var: _current_openshift_cluster
-  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'rosa'
+  when: _current_openshift_cluster.infrastructure.type  == 'rosa'
 
 - include_tasks: provision-ipi.yml
   loop: "{{ all_config.openshift | default([]) }}"
   loop_control:
     loop_var: _current_openshift_cluster
-  when: _openshift_on_aws_type is defined and _openshift_on_aws_type  == 'self-managed'
+  when: _current_openshift_cluster.infrastructure.type  == 'self-managed'
 
 - name: Configure file storage on AWS
   include_tasks: aws-file-server.yaml
