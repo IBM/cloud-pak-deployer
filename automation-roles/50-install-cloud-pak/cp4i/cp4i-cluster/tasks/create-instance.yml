@@ -78,14 +78,21 @@
       oc apply -f {{ status_dir }}/cp4i/{{current_cp4i_instance.type}}-{{current_cp4i_instance.name}}.yml
     when: instance_exists.stdout == "0"
 
+
+  # In the current version, we wait only for the platform navigator to become
+  # ready. If this is needed also for the other types, change the "when" condition. 
+  # Potentially include name and type in the title.
+  # Alternatively start creating all instances in parallel and check at the end
+  # if they are ready.
   - name: Wait for the {{_inst_type_def.kind}} to become ready
     shell: |
       oc get {{_inst_type_def.kind}} -n {{current_cp4i_cluster.project}} {{current_cp4i_instance.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
-    register: pn_status
+    register: instance_status
     retries: 300
     delay: 30
-    until: pn_status.stdout == "True"
-  
+    until: instance_status.stdout == "True"
+    when: current_cp4i_instance.type == 'platform-navigator'
+
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'
 
