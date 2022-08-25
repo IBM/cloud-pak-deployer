@@ -50,7 +50,9 @@
     when: _inst_type_ver=={}
 
   - name: Merge properties
-    # "Do something with {{ _inst_type_ver_item.key }} : {{ _inst_type_ver_item.value }}"
+    set_fact:
+      current_cp4i_instance.{{ _inst_type_ver_item.key }} : "{{ _inst_type_ver_item.value }}"
+    when: (current_cp4i_instance.{{ _inst_type_ver_item.key }} | default('null')) != 'null'
     loop: "{{ _inst_type_ver | dict2items }}"
     loop_control:
       loop_var: _inst_type_ver_item     
