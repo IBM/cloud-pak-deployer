@@ -3,6 +3,8 @@
 - name: Install operator for {{ current_cp4i_instance.type }}
   block:
 
+  - name: Find version specific instance type properties
+    include_tasks: get-instance-properties.yml
 
   # ------------ FIND INSTANCE TYPE DEFINITION ----------------------
 
@@ -11,11 +13,11 @@
       _inst_type_def: "{{ instance_types | json_query(query) | first | default({}) }}"
     vars:
       query: >-
-        [?type=='{{ current_cp4i_instance.type }}']
+        [?type=='{{ instance_properties.type }}']
 
   - name: Fail if the instance type cannot be found
     fail:
-      msg: "Case instance type for instance {{ current_cp4i_instance.name }} not found."
+      msg: "Case instance type for instance {{ instance_properties.name }} not found."
     when: _inst_type_def=={}
 
   # ------------ SUBSCRIPTION VARIABLES -------------------------------
@@ -32,7 +34,7 @@
     when: not _operators_in_all_namespaces
 
   - set_fact:
-      _subscr_channel: "{{ current_cp4i_instance.channel }}"
+      _subscr_channel: "{{ instance_properties.channel }}"
 
   - set_fact:
       _subscr_source: "{{ _inst_type_def.source_catalog_case }}"

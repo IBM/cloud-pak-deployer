@@ -8,23 +8,26 @@
 - name: Create catalog source file for {{ current_cp4i_instance.type }}
   block:
 
-  - name: Get the details for instance type {{ current_cp4i_instance.type }}
+  - name: Find version specific instance type properties
+    include_tasks: get-instance-properties.yml
+
+  - name: Get the details for instance type {{ instance_properties.type }}
     set_fact:
       _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
     vars:
       query: >-
-        [?type=='{{ current_cp4i_instance.type }}']
+        [?type=='{{ cinstance_properties.type }}']
 
   - fail:
-      msg: The definition of instance type {{ current_cp4i_instance.type }} not found
+      msg: The definition of instance type {{ instance_properties.type }} not found
     when: _instance_type_details=={}
 
   # -------------------- ENTITLED REGISTRY ----------------------------
 
-  - name: Create catalog source from CASE archive {{ _instance_type_details.package_name }}-{{ current_cp4i_instance.case_version }}.tgz
+  - name: Create catalog source from CASE archive {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz
     shell: |
       cloudctl case launch  \
-        --case {{ _case_dir }}/{{ _instance_type_details.package_name }}-{{ current_cp4i_instance.case_version }}.tgz \
+        --case {{ _case_dir }}/{{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz \
         --inventory {{ _instance_type_details.case_inventory }} \
         --action install-catalog \
         --namespace {{ current_cp4i_cluster.project }} \
