@@ -42,7 +42,7 @@
 
   when: 
     - (_p_current_cp4d_cluster.image_registry_name | default("")) == ""
-    - _wkc_option_enableMANTA == "True"
+    - _wkc_option_enableMANTA == True
 
 - name: Ensure WKC CR is available
   command: |
@@ -68,7 +68,7 @@
   shell: |
     oc get WKC wkc-cr -n {{ _p_current_cp4d_cluster.project }} --output json | jq -r '.status.wkcStatus' | grep -i 'completed' | wc -l 
   register: _patch_wkc_status
-  retries: 30
+  retries: 60
   delay: 60
   until: _patch_wkc_status.stdout == "1"
   vars:
