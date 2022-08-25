@@ -1,15 +1,15 @@
 apiVersion: mq.ibm.com/v1beta1
 kind: QueueManager
 metadata:
-  name: {{current_cp4i_instance.name}}
+  name: {{instance_properties.name}}
   namespace: {{current_cp4i_cluster.project}}
 spec:
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
-    license: {{current_cp4i_instance.license}}
+    license: {{instance_properties.license}}
     use: NonProduction
   queueManager:
-    name: {{current_cp4i_instance.queue_manager_name}}
+    name: {{instance_properties.queue_manager_name}}
     resources:
       limits:
         cpu: 500m
@@ -26,6 +26,6 @@ spec:
             - name: MQSNOAUT
               value: 'yes'
           name: qmgr
-  version: "{{current_cp4i_instance.version}}"
+  version: "{{instance_properties.version}}"
   web:
     enabled: true

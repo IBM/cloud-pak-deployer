@@ -103,51 +103,51 @@
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
-# - name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
-#   include_tasks: prepare-cp4i-case-files.yml
-#   when: _use_case_files
+- name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
+  include_tasks: prepare-cp4i-case-files.yml
+  when: _use_case_files
 
-# - name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
-#   include_tasks: mirror-images-cp4i.yml
-#   when: 
-#   - (current_cp4i_cluster.image_registry_name | default("")) != ""
-#   - ibm_cp_entitlement_key != ""
+- name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
+  include_tasks: mirror-images-cp4i.yml
+  when: 
+  - (current_cp4i_cluster.image_registry_name | default("")) != ""
+  - ibm_cp_entitlement_key != ""
 
 # ------------ OPENSHIFT OBJECTS ------------------------------------
 
-# - name: Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.storage_class_name }}
-#   include_tasks: cp4i-get-storage-classes.yml
+- name: Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.storage_class_name }}
+  include_tasks: cp4i-get-storage-classes.yml
 
-# - name: Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration
-#   include_tasks: openshift-prepare-project.yml
+- name: Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration
+  include_tasks: openshift-prepare-project.yml
 
-# - name: Create entitlement key secret
-#   include_tasks: create-entitlement-key-secret.yml
+- name: Create entitlement key secret
+  include_tasks: create-entitlement-key-secret.yml
 
 # ------------ CREATING CATALOG SOURCES -----------------------------
 
-# - name: Create catalog sources for entitled registry when not using CASE files
-#   include_tasks: create-catalog-sources-entitled.yml
-#   when: not _use_case_files
+- name: Create catalog sources for entitled registry when not using CASE files
+  include_tasks: create-catalog-sources-entitled.yml
+  when: not _use_case_files
 
-# - name: Create catalog sources when using CASE files
-#   include_tasks: create-catalog-source-case-file.yml
-#   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-#   loop_control:
-#     loop_var: current_cp4i_instance
-#   when: _use_case_files
+- name: Create catalog sources when using CASE files
+  include_tasks: create-catalog-source-case-file.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
+  when: _use_case_files
 
 # ------------ INSTALLING OPERATORS ---------------------------------
 
-# - name: Prepare operator group if installing in specific namespace
-#   include_tasks: prepare-operator-group.yml
-#   when: not _operators_in_all_namespaces
+- name: Prepare operator group if installing in specific namespace
+  include_tasks: prepare-operator-group.yml
+  when: not _operators_in_all_namespaces
   
-# - name: Install operators for each needed instance type
-#   include_tasks: install-operator.yml
-#   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-#   loop_control:
-#     loop_var: current_cp4i_instance
+- name: Install operators for each needed instance type
+  include_tasks: install-operator.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
 
 # ------------ INTEGRATION INSTANCES --------------------------------
 
@@ -159,18 +159,18 @@
 
 # ------------ FINALIZING -------------------------------------------
 
-# - name: Add Cloud Pak for Integration route to /etc/hosts for vSphere
-#   include_tasks: vsphere-configure-etc-hosts.yml
-#   when: cloud_platform == "vsphere"
+- name: Add Cloud Pak for Integration route to /etc/hosts for vSphere
+  include_tasks: vsphere-configure-etc-hosts.yml
+  when: cloud_platform == "vsphere"
 
-# - name: Configure CP4I admin password and store in vault
-#   include_tasks: configure-cpi-admin-password.yml
+- name: Configure CP4I admin password and store in vault
+  include_tasks: configure-cpi-admin-password.yml
 
-# - name: Output Cloud pak for Integration URL and admin password
-#   include_role:
-#     name: cp4i-cluster-show
+- name: Output Cloud pak for Integration URL and admin password
+  include_role:
+    name: cp4i-cluster-show
 
-# - name: Ensure the status log folder exists
-#   file:
-#     path: "{{status_dir}}/log"
-#     state: directory
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
+    state: directory
