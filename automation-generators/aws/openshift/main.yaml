@@ -13,29 +13,32 @@
     query: >-
       [?name=='{{ generator.attributes.name }}']
 
-- name: Retrieve pull secret from vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "ocp-pullsecret"
-    secret_group: "{{ environment_name }}" 
-    secret_file: /tmp/ocp_pullsecret.json
-    _p_secret_variable: _ocp_pullsecret
+# Only run generators for self-managed OpenShift on AWS
+- block:
+  - name: Retrieve pull secret from vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "ocp-pullsecret"
+      secret_group: "{{ environment_name }}" 
+      secret_file: /tmp/ocp_pullsecret.json
+      _p_secret_variable: _ocp_pullsecret
 
-- name: Retrieve SSH public key from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "ocp-ssh-pub-key"
-    secret_group: "{{ environment_name }}"
-    _p_secret_variable: _ocp_ssh_pub_key
+  - name: Retrieve SSH public key from the vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "ocp-ssh-pub-key"
+      secret_group: "{{ environment_name }}"
+      _p_secret_variable: _ocp_ssh_pub_key
 
-- name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
-  file:
-    path: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}"
-    state: directory
+  - name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
+    file:
+      path: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}"
+      state: directory
 
-- name: Generate instance of "{{generator.name}}" in {{ PATH_TO_OUTPUT_DIR }}
-  template:
-    src: '../templates/main.tf.j2'
-    dest: '{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml'
+  - name: Generate instance of "{{generator.name}}" in {{ PATH_TO_OUTPUT_DIR }}
+    template:
+      src: '../templates/main.tf.j2'
+      dest: '{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml'
+  when: _openshift_config.infrastructure.type == 'self-managed'
