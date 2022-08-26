@@ -40,7 +40,7 @@ while true;do
     if oc logs -n $project ${pod_name} | grep -q "ping: socket: Operation not permitted";then
       log "Found pod with ping error: ${pod_name}"
       # Pause the probe if the db2ucluster deployment is restricted
-      if oc get db2ucluster -m $project ${db2ucluster} -o yaml | grep -q -i "restricted: true";then
+      if oc get db2ucluster -n $project ${db2ucluster} -o yaml | grep -q -i "restricted: true";then
         oc exec -ti -n $project ${pod_name} -- /bin/bash -c "touch /db2u/tmp/.pause_probe"
       fi
       # Patch sysctl in statefulset
@@ -52,11 +52,13 @@ while true;do
         oc patch sts -n $project ${sts_name} -p '{"spec": {"template":{"spec":{"securityContext":{"sysctls":[{"name": "net.ipv4.ping_group_range","value": "0 2147483647"}]}}}}}'
       fi
       # Resume the probe if the db2ucluster deployment is restricted
-      if oc get db2ucluster -m $project ${db2ucluster} -o yaml | grep -q -i "restricted: true";then
+      if oc get db2ucluster -n $project ${db2ucluster} -o yaml | grep -q -i "restricted: true";then
         oc exec -ti -n $project ${pod_name} -- /bin/bash -c "rm -f /db2u/tmp/.pause_probe"
       fi
     fi
   done
+  log "----------"
+  log "Finished checks"
   sleep 600
 done
 exit 0
