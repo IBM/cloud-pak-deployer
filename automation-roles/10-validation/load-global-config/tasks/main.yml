@@ -1,20 +1,9 @@
 ---
-- name: Find file holding global configuration
-  find:
-    paths: "{{ config_dir }}/config"
-    patterns: "*.yaml"
-    file_type: file
-    contains: 'global_config:'
-    recurse: False
-  register: _found_global_config_file
-
-- debug:
-    var: _found_global_config_file
-
-- name: Load yaml file into variables
+- name: Load yaml files for global_config
   include_vars:
-    file: "{{ (_found_global_config_file.files | first).path }}"
-  when: _found_global_config_file.matched != 0
+    dir: "{{ config_dir }}/config"
+    extensions:
+    - yaml
 
 - name: Read global config
   include_tasks: read-global-config.yml

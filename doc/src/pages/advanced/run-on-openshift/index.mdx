@@ -14,10 +14,9 @@ Keep the login command, you will need it later to set the vault secret the deplo
 
 ## Create configuration
 ```
-export CONFIG_DIR=./cpd-config && mkdir -p $CONFIG_DIR/config
-export STATUS_DIR=./cpd-status && mkdir -p $STATUS_DIR
+export CONFIG_DIR=$PWD/cpd-config && mkdir -p $CONFIG_DIR/config
 
-cat << EOF > $CONFIG_DIR/config/sample.yaml
+cat << EOF > $CONFIG_DIR/config/cpd-config.yaml
 ---
 global_config:
   environment_name: demo
@@ -174,14 +173,87 @@ cp4d:
 EOF
 ```
 
-## Prepare the deployer and start
+## Prepare the deployer project
 ```
-oc new-project cloud-pak-deployer
+oc new-project cloud-pak-deployer 
 
 oc project cloud-pak-deployer
 oc create serviceaccount cloud-pak-deployer-sa
 oc adm policy add-scc-to-user privileged -z cloud-pak-deployer-sa
 oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
+```
+
+## Build deployer image and push to the internal registry
+Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.
+
+```
+if ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest --no-headers 2> /dev/null;then 
+
+cat << EOF | oc apply -f -
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: cloud-pak-deployer
+spec:
+  lookupPolicy:
+    local: true
+EOF
+
+cat << EOF | oc apply -f -
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: cloud-pak-deployer-bc
+  namespace: cloud-pak-deployer
+spec:
+  source:
+    type: Git
+    git:
+      uri: https://github.com/IBM/cloud-pak-deployer
+  strategy:
+    type: Docker                      
+  output:
+    to:
+      kind: ImageStreamTag
+      name: cloud-pak-deployer:latest
+EOF
+
+  oc delete build -n cloud-pak-deployer -l buildconfig=cloud-pak-deployer-bc
+  oc start-build -n cloud-pak-deployer bc/cloud-pak-deployer-bc
+
+echo "Wait for image to be built and pushed to internal registry..."
+while ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest 2>/dev/null;do
+  sleep 1
+done
+
+fi
+```
+
+## Set configuration
+```
+oc create cm -n cloud-pak-deployer cloud-pak-deployer-config
+oc set data -n cloud-pak-deployer cm/cloud-pak-deployer-config \
+  --from-file=$CONFIG_DIR/config/cpd-config.yaml
+```
+  
+## Start the deployer job
+```
+export DEPLOYER_SC=managed-nfs-storage
+
+cat << EOF | oc apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cloud-pak-deployer-status
+  namespace: cloud-pak-deployer
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: $DEPLOYER_SC
+EOF
 
 cat << EOF | oc apply -f -
 apiVersion: batch/v1
@@ -203,20 +275,22 @@ spec:
     spec:
       initContainers:
       - name: wait-config
-        image: quay.io/fketelaars/cloud-pak-deployer:latest
-        command: ['sh', '-c', 'until [ -f /Data/cpd-config/config-ready ]; do ls -al /Data/cpd-config; echo Waiting for /Data/cpd-config/config-ready file; sleep 1; done;echo "Configuration is ready, starting deployer"']
+        image: cloud-pak-deployer:latest
+        command: ['sh', '-c', 'until [ -f /tmp/cpd-config-ready ]; do echo Waiting for /tmp/cpd-config-ready file; sleep 1; done; echo "Configuration is ready, starting deployer"']
         env:
         - name: CONFIG_DIR
           value: /Data/cpd-config
         - name: STATUS_DIR
           value: /Data/cpd-status
         volumeMounts:
-        - mountPath: /Data
-          name: cloud-pak-deployer-volume
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
       containers:
-      - image: quay.io/fketelaars/cloud-pak-deployer:latest
+      - name: cloud-pak-deployer
+        image: cloud-pak-deployer:latest
         imagePullPolicy: Always
-        name: cloud-pak-deployer
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         env:
@@ -225,8 +299,10 @@ spec:
         - name: STATUS_DIR
           value: /Data/cpd-status
         volumeMounts:
-        - mountPath: /Data
-          name: cloud-pak-deployer-volume
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
         command: ["/bin/sh","-xc"]
         args: 
           - /cloud-pak-deployer/cp-deploy.sh env apply -v
@@ -235,8 +311,12 @@ spec:
         runAsUser: 0
       serviceAccountName: cloud-pak-deployer-sa
       volumes:
-      - emptyDir: {}
-        name: cloud-pak-deployer-volume
+      - name: config-volume
+        configMap:
+          name: cloud-pak-deployer-config
+      - name: status-volume
+        persistentVolumeClaim:
+          claimName: cloud-pak-deployer-status        
 EOF
 ```
 
@@ -245,7 +325,6 @@ The OpenShift job consists of 2 containers: `wait-config` and `cloud-pak-deploye
 ## Copy local configuration and status directory into deployer pod
 ```
 export DEPLOYER_POD=$(oc get po --no-headers -l app=cloud-pak-deployer | head -1 | awk '{print $1}')
-oc cp -c wait-config $CONFIG_DIR $DEPLOYER_POD:/Data/cpd-config/
 ```
 
 ## Prepare for deployer run
@@ -254,12 +333,15 @@ oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault set \
   -vs ibm_cp_entitlement_key -vsv "your_entitlement_key"
 oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault set \
   -vs cpd-demo-oc-login -vsv "your_oc_login_command"
+oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault set \
+  -vs cp4d_admin_cpd_instance_cpd_demo -vsv "your_cp4d_admin_password"
+
 oc rsh -c wait-config $DEPLOYER_POD /cloud-pak-deployer/cp-deploy.sh vault list
 ```
 
 ## Mark the configuration ready to start the deployment
 ```
-oc rsh -c wait-config $DEPLOYER_POD bash -c 'touch /Data/cpd-config/config-ready; chmod 777 /Data/cpd-config/config-ready'
+oc rsh -c wait-config $DEPLOYER_POD bash -c 'touch /tmp/cpd-config-ready; chmod 777 /tmp/cpd-config-ready'
 ```
 
 ## Follow the logs of the deployment
