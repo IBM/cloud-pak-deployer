@@ -41,24 +41,60 @@ while true;do
       log "Found pod with ping error: ${pod_name}"
       # Pause the probe if the db2ucluster deployment is restricted
       if oc get db2ucluster -n $project ${db2ucluster} -o yaml | grep -q -i "restricted: true";then
+        log "Pausing probe in pod ${pod_name}"
         oc exec -ti -n $project ${pod_name} -- /bin/bash -c "touch /db2u/tmp/.pause_probe"
+        # Now wait for pod to become ready
+        log "Waiting for pod ${pod_name} to become ready"
+        container_ready="false"
+        waittime=0
+        while [ "${container_ready}" != "true" ] && [ $waittime -lt 300 ]; do
+          sleep 5
+          container_ready=$(oc get pod ${pod_name} -o=json | jq -r '.status.containerStatuses[0].ready')
+          log "Container of pod ${pod_name} ready: ${container_ready}"
+          waittime=$((waittime+5))
+        done
+        if [ $waittime -ge 300 ];then
+          echo "ERROR: Timeout while waiting for pod ${pod_name} to become ready"
+        fi
+        # Now wait for formation to converge
+        log "Waiting for formation ${db2ucluster} to converge"
+        formation_converged="false"
+        waittime=0
+        while [ "${formation_converged}" != "OK" ] && [ $waittime -lt 300 ]; do
+          sleep 5
+          formation_converged=$(oc get formation ${db2ucluster} -o=json | jq -r '.status.components[] | select(.kind=="StatefulSet") | .status.state')
+          log "Convergence state of formation ${db2ucluster} ready: ${formation_converged}"
+          waittime=$((waittime+5))
+        done
+        if [ $waittime -ge 300 ];then
+          echo "ERROR: Timeout while waiting for formation ${db2ucluster} to converge"
+        fi
       fi
       # Patch sysctl in statefulset
       if oc get sts -n $project ${sts_name} -o yaml | grep -q "sysctls";then
-        log "Patching sysctls when sysctls exists in statetefulset ${sts_name}"
-        oc patch sts -n $project ${sts_name} --type json -p '[{"op":"add","path":"/spec/template/spec/securityContext/sysctls/-","value":{"name":"net.ipv4.ping_group_range","value":"0 2147483647"}}]'
+        if ! oc get sts -n $project ${sts_name} -o yaml | grep -q "net.ipv4.ping_group_range";then
+          log "Adding sysctls when sysctls exists in statetefulset ${sts_name}"
+          oc patch sts -n $project ${sts_name} --type json -p '[{"op":"add","path":"/spec/template/spec/securityContext/sysctls/-","value":{"name":"net.ipv4.ping_group_range","value":"0 2147483647"}}]'
+        else
+          log "Patch for net.ipv4.ping_group_range already in place, skipped"
+        fi
       else
-        log "Adding sysctls when sysctls does not exists in statetefulset ${sts_name}"
+        log "Patching sysctls when sysctls does not exist in statetefulset ${sts_name}"
         oc patch sts -n $project ${sts_name} -p '{"spec": {"template":{"spec":{"securityContext":{"sysctls":[{"name": "net.ipv4.ping_group_range","value": "0 2147483647"}]}}}}}'
       fi
-      # Resume the probe if the db2ucluster deployment is restricted
-      if oc get db2ucluster -n $project ${db2ucluster} -o yaml | grep -q -i "restricted: true";then
-        oc exec -ti -n $project ${pod_name} -- /bin/bash -c "rm -f /db2u/tmp/.pause_probe"
-      fi
+    fi
+
+    # Check if the configmap must be patched
+    if oc extract -n ${project} cm/db2aaservice-databases-watch-cm --to=- | grep addDatabaseTriggered;then
+      temp_dir=$(mktemp -d)
+      echo "Patching ConfigMap db2aaservice-databases-watch-cm to remove addDatabaseTriggered attribute."
+      oc extract -n ${project} cm/db2aaservice-databases-watch-cm --to=${temp_dir}
+      cat ${temp_dir}/instances | jq '.[] |= del(.addDatabaseTriggered)' > ${temp_dir}/instances-new.json
+      oc set data -n ${project} cm/db2aaservice-databases-watch-cm --from-file=instances=${temp_dir}/instances-new.json
     fi
   done
   log "----------"
-  log "Finished checks"
+  log "Finished checks, sleeping for 10 minutes"
   sleep 600
 done
 exit 0
