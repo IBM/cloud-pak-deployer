@@ -13,6 +13,11 @@
   when: 
   - (cp_entitlement_key | default("")) != ""
 
+- name: Download CLIs
+  include_role:
+    name: download-cli
+  when: not (cpd_check_only | default(False) | bool)
+
 - name: Run generators
   include_role:
     name: generators
@@ -20,7 +25,3 @@
     path_to_config_dir: "{{ config_dir }}"
     path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
 
-- name: Download CLIs
-  include_role:
-    name: download-cli
-  when: not (cpd_check_only | default(False) | bool)
