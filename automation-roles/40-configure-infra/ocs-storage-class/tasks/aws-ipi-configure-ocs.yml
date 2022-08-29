@@ -33,11 +33,20 @@
 - name: Wait for machine sets
   include_tasks: wait-for-machine-set.yml
   with_items:
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ aws_region }}a"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ aws_region }}b"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ aws_region }}c"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[0] }}"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[1] }}"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[2] }}"
   loop_control:
     loop_var: machine_set_name
+  when: current_openshift_cluster.infrastructure.multi_zone == True
+
+- name: Wait for machine sets
+  include_tasks: wait-for-machine-set.yml
+  with_items:
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[0] }}"
+  loop_control:
+    loop_var: machine_set_name
+  when: current_openshift_cluster.infrastructure.multi_zone == False
 
 - name: Create openshift-storage OpenShift project
   shell: |
