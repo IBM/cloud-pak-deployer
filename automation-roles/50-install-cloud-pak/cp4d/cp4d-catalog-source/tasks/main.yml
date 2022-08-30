@@ -2,11 +2,19 @@
 - include_role:
     name: cp4d-variables
 
-- include_tasks: create-catalog-source-ibm-operator-catalog.yml
-  when: not _use_case_files
-
 - include_tasks: create-catalog-source-case-files.yml
-  when: _use_case_files and not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+  when: 
+  - not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+  - _p_current_cp4d_cluster.cp4d_version < "4.5.0"
 
 - include_tasks: create-catalog-source-olm-utils.yml
+  vars:
+    _p_preview_script: True
+  when: 
+  - not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+  - _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
+
+- include_tasks: create-catalog-source-olm-utils.yml
+  vars:
+    _p_preview_script: False
   when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
