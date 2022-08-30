@@ -9,12 +9,21 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
 - set_fact:
-    _cpd_accept_licenses: "{{ current_cp4d_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
+    _cpd_accept_licenses: "False"
+
+- set_fact:
+    _cpd_accept_licenses: "True"
+  when: (cpd_accept_licenses | default(False) | bool) or (current_cp4d_cluster.accept_licenses | default(False) | bool)
+
+- debug:
+    var: _cpd_accept_licenses
 
 - name: Fail if licenses were not accepted
   fail:
     msg: "You must accept the licenses, either in the cp4d object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
-  when: not (_cpd_accept_licenses | bool)
+  when: 
+  - not (cpd_accept_licenses | default(False) | bool)
+  - not (current_cp4d_cluster.accept_licenses | default(False) | bool)
 
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
