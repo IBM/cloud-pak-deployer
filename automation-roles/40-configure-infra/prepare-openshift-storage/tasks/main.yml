@@ -34,9 +34,12 @@
     name: pwx-storage-class
   when: current_openshift_storage.storage_type == 'pwx'
 
+- name: Check if Cloud Pak for Data is running on IBM Cloud with file storage
+  shell: |
+    oc get sc ibmc-file-gold-gid | grep -i '^ibmc-file-gold-gid' | wc -l
+  register: _ibm_cloud_file_sc
+
 - name: Configure ibmc-file-gold-gid storage class
   include_role: 
     name: ibmc-file-gold-gid-storage-class
-  when: 
-    - current_openshift_storage.storage_type == 'custom'
-    - current_openshift_storage.ocp_storage_class_file == 'ibmc-file-gold-gid'
+  when: _ibm_cloud_file_sc.stdout != "0"
