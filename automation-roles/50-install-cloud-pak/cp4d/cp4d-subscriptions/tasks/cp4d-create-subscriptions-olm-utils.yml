@@ -4,6 +4,33 @@
     path: /tmp/work
     state: directory
 
+- name: Generate OLM utils command to create subscriptions for Cloud Pak for Data platform
+  set_fact:
+    _platform_apply_olm_command: "{{ lookup('template', 'apply-olm-cpd-platform-sub.j2') }}" 
+
+- name: Show apply-olm command for creating platform subscriptions
+  debug:
+    var: _platform_apply_olm_command
+
+- name: Run apply-olm command to install platform subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log
+  shell: |
+    {{ _platform_apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log 2>&1
+
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.sh
+  copy:
+    src: "/tmp/work/preview.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.sh"
+    remote_src: True
+    mode: u+rwx
+  when: _p_preview_script
+
+- name: Run shell script to create platform subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log 2>&1
+
+- name: Wait for platform subscirptions to be created
+  include_tasks: cp4d-wait-platform-subscriptions.yml
+
 - name: Generate OLM utils command to create subscriptions for cartridges
   set_fact:
     _apply_olm_command: "{{ lookup('template', 'apply-olm-cartridge-sub.j2') }}" 
@@ -15,3 +42,15 @@
 - name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
   shell: |
     {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
+
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh
+  copy:
+    src: "/tmp/work/preview.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh"
+    remote_src: True
+    mode: u+rwx
+  when: _p_preview_script
+
+- name: Run shell script to create cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
