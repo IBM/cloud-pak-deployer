@@ -529,7 +529,7 @@ if ! $INSIDE_CONTAINER;then
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"
-    $CONTAINER_ENGINE build -t cloud-pak-deployer -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
+    $CONTAINER_ENGINE build -t cloud-pak-deployer --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
     exit $?
   fi
 fi
