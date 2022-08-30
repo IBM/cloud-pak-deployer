@@ -1,0 +1,42 @@
+---
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _current_openshift_cluster.name }}']
+
+- name: Check if OpenShift cluster already exists by checking kubeadmin password secret
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _kubeadmin_password
+
+# Run OpenShift IPI installer if no OpenShift cluster does not exist yet
+- block:
+  - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
+    include_role:
+      name: openshift-download-installer
+    vars:
+      _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+      
+  - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}
+    shell:
+      openshift-install create cluster --dir={{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+
+  - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
+    set_fact:
+      _new_kubeadmin_password: "{{ lookup('file', status_dir + '/aws-ipi/' + _current_openshift_cluster.name + '/auth/kubeadmin-password') }}"
+
+  - name: Store kubeadmin password into the vault
+    include_role: 
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+      secret_group: "{{ environment_name }}" 
+      secret_payload: "{{ _new_kubeadmin_password }}"
+  when: _kubeadmin_password==""
