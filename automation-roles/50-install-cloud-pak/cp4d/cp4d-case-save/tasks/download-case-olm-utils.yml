@@ -19,3 +19,15 @@
 - name: Run apply-olm command to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
   shell: |
     {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-case-save.log 2>&1
+
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh
+  copy:
+    src: "/tmp/work/preview.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh"
+    remote_src: True
+    mode: u+rwx
+  when: _p_preview_script
+
+- name: Run shell script to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh >> {{ status_dir }}/log/apply-olm-case-save.log 2>&1
