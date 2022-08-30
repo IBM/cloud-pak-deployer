@@ -28,6 +28,13 @@
     mode: u+rwx
   when: _p_preview_script
 
+# TODO: Remove step once problem in preview.sh is fixed
+- name: Update script to fix invalid oc apply -f commands
+  replace:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh"
+    regexp: '^(.*)oc apply -f << EOF(.*)'
+    replace: 'oc apply -f - << EOF'
+
 - name: Run shell script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh >> {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
