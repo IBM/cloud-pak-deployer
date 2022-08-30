@@ -16,17 +16,18 @@
   shell: |
     {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-platform.sh
+- name: Copy script to {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh
   copy:
     src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-platform.sh"
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh"
     remote_src: True
     mode: u+rwx
   when: _p_preview_script
 
 - name: Run shell script to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
   shell: |
-    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-platform.sh >> {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
+    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh >> {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
+  when: _p_preview_script
 
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for ZenService to be completed

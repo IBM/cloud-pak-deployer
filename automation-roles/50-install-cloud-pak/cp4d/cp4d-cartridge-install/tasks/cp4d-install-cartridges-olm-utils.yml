@@ -24,7 +24,7 @@
     content: "{{ _cartridges_to_install | default([]) | to_json }}"
     dest: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json"
 
-- name: Starting installation of cartridges, state is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridge-state.log
+- name: Logging state of cartridges in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridge-state.log
   shell: |
     {{ role_path }}/files/log-services-installed.sh \
       {{ status_dir }} \
@@ -53,3 +53,23 @@
   when: 
   - not _cp4d_cartridges_installed_successfully
   - not (cpd_test_cartridges | default(False) | bool)
+
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh
+  copy:
+    src: "/tmp/work/preview.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
+    remote_src: True
+    mode: u+rwx
+  when: _p_preview_script
+
+- name: Run shell script to install Cloud Pak for Data cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
+  when: _p_preview_script
+
+- name: Wait for cartridges to finish installation
+  include_tasks: cp4d-wait-cartridges-ready.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+  when: _p_preview_script
