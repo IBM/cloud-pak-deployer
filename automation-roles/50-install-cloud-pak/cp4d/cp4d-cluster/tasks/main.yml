@@ -42,24 +42,24 @@
     path: "{{status_dir}}/log"
     state: directory
 
-# - name: Prepare OpenShift cluster for Cloud Pak for Data
-#   include_role:
-#     name: cp4d-prepare-openshift
-#   when: ( current_cp4d_cluster.change_node_settings | default(True) | bool )
+- name: Prepare OpenShift cluster for Cloud Pak for Data
+  include_role:
+    name: cp4d-prepare-openshift
+  when: ( current_cp4d_cluster.change_node_settings | default(True) | bool )
 
-# - name: Remove case directory in case it exists and not air-gapped
-#   file:
-#     path: "{{ status_dir }}/cp4d/case"
-#     state: absent
-#   when: not (cpd_airgap | bool)
+- name: Remove case directory in case it exists and not air-gapped
+  file:
+    path: "{{ status_dir }}/cp4d/case"
+    state: absent
+  when: not (cpd_airgap | bool)
 
-# - name: Save case files for Cloud Pak for Data when using private registry or when explicitly using case files
-#   include_role: 
-#     name: cp4d-case-save
-#   vars:
-#     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-#   when: 
-#   - not (cpd_airgap | bool)
+- name: Save case files for Cloud Pak for Data when using private registry or when explicitly using case files
+  include_role: 
+    name: cp4d-case-save
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+  when: 
+  - not (cpd_airgap | bool)
 
 # Mirror from the entitled registry if not airgapped and entitlement key found in vault
 - block:
