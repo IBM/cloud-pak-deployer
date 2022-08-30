@@ -23,14 +23,14 @@
     msg: "Secret aws-secret-access-key is mandatory and was not found in the vault"
   when: secret_value==""
 
-- name: Check if rosa-login-token secret is in the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "rosa-login-token"
-    secret_group: "{{ environment_name }}" 
+- include_tasks: aws-rosa-validate-variables.yml
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type  == 'rosa'
 
-- name: Check that rosa-login-token secret is present in the vault
-  fail:
-    msg: "Secret rosa-login-token is mandatory and was not found in the vault"
-  when: secret_value==""
+- include_tasks: aws-ipi-validate-variables.yml
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type  == 'self-managed'
