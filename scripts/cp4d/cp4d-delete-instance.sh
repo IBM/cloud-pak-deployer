@@ -11,6 +11,20 @@ log() {
 }
 
 CP4D_PROJECT=$1
+if [ -z "${CP4D_PROJECT}" ];then
+    echo "Usage: $0 <cp4d-project>"
+    exit 1
+fi
+
+# Ask for final confirmation to delete the CP4D instance
+read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT} and Cloud Pak Foundational Services (y/N)? " -r
+case "${REPLY}" in 
+  y|Y)
+  ;;
+  * )
+  exit 99
+  ;;
+esac
 
 # Create temporary directory
 temp_dir=$(mktemp -d)
@@ -35,7 +49,7 @@ while read -r line;do
 done < ${temp_dir}/cp4d-resources.out
 
 if ${resource_deleted};then
-    log "Waiting a bit for pods to start terminating"
+    log "Waiting a jiffy for pods to start terminating"
     sleep 10
 fi
 
@@ -56,7 +70,7 @@ while read -r line;do
 done < ${temp_dir}/cp4d-resources.out
 
 if ${resource_deleted};then
-    log "Waiting a bit for remaining pods to start terminating"
+    log "Waiting a jiffy for remaining pods to start terminating"
     sleep 10
 fi
 
