@@ -28,6 +28,14 @@
     mode: u+rwx
   when: _p_preview_script
 
+# TODO: Remove step once problem in preview.sh is fixed
+- name: Update script to comment out oc patch command (not connected to cluster at this stage)
+  replace:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh"
+    regexp: '^oc patch(.*)'
+    replace: '#REMOVED: oc patch\1'
+
 - name: Run shell script to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh >> {{ status_dir }}/log/apply-olm-case-save.log 2>&1
+  when: _p_preview_script
