@@ -12,10 +12,40 @@
     failed_when: False
     register: _cartridge_installed
 
+  - set_fact:
+      _cartridge_is_dependent: False
+
+  - name: Validate if cartridge is installed as part of a dependent component
+    block:
+      - name: Check if cartridge {{ _current_cartridge_cr.name }} is installed with a dependency flag
+        shell: |
+          oc get {{ _current_cartridge_cr.cr_cr }} \
+            --namespace {{ _p_current_cp4d_cluster.project }} \
+            -o json | jq -r ".items [] | select({{ _current_cartridge_cr.filter_dependency }}) | .metadata.name" | wc -l
+        register: _cartridge_dependency_result
+
+      - set_fact:
+          _cartridge_is_dependent: True
+        when:
+          - _cartridge_dependency_result.rc == 0
+          - _cartridge_dependency_result.stdout != '0'
+
+      - debug:
+          msg: >
+            "Cartridge {{ _current_cartridge_cr.name }} is deployed as part of a dependency. 
+            CR {{ _current_cartridge_cr.cr_cr }} contains select filter: {{ _current_cartridge_cr.filter_dependency }}. 
+            Skipping delete...."
+        when: _cartridge_is_dependent == True
+
+    when: >
+      _cartridge_installed.rc == 0 and
+      _current_cartridge_cr.filter_dependency | default ('') != ''
+
   - name: Remove cartridge if it is currently installed but is to be uninstalled
     shell: |
       oc delete {{ _current_cartridge_cr.cr_cr }} --namespace {{ _p_current_cp4d_cluster.project }} --all
     when: >
+      _cartridge_is_dependent == False and
       _cartridge_installed.rc == 0 and 
         ( _configured_cartridge == {} or ( (_configured_cartridge.state | default('installed')) == 'removed' ) )
   when:

@@ -1,0 +1,81 @@
+---
+- debug:
+    var: _current_cp4d_cartridge
+
+- set_fact:
+    _wkc_option_install_wkc_core_only: "{{ _current_cp4d_cartridge.installation_options.install_wkc_core_only | default ('False') }}"
+    _wkc_option_enableKnowledgeGraph: "{{ _current_cp4d_cartridge.installation_options.enableKnowledgeGraph | default ('False') }}"
+    _wkc_option_enableDataQuality: "{{ _current_cp4d_cartridge.installation_options.enableDataQuality | default ('False') }}"
+    _wkc_option_enableFactSheet: "{{ _current_cp4d_cartridge.installation_options.enableFactSheet | default ('False') }}"
+    _wkc_option_enableMANTA: "{{ _current_cp4d_cartridge.installation_options.enableMANTA | default ('False') }}"
+
+- fail:
+    msg: "WKC installation option install_wkc_core_only must be either 'True' or 'False'. Unsupported value {{ _wkc_option_install_wkc_core_only }}"
+  when: not (_wkc_option_install_wkc_core_only == True or _wkc_option_install_wkc_core_only == False)
+
+- fail:
+    msg: "WKC installation option enableKnowledgeGraph must be either 'True' or 'False'. Unsupported value {{ _wkc_option_enableKnowledgeGraph }}"
+  when: not (_wkc_option_enableKnowledgeGraph == True or _wkc_option_enableKnowledgeGraph == False)
+
+- fail:
+    msg: "WKC installation option enableDataQuality must be either 'True' or 'False'. Unsupported value {{ _wkc_option_enableDataQuality }}"
+  when: not (_wkc_option_enableDataQuality == True or _wkc_option_enableDataQuality == False)
+
+- fail:
+    msg: "WKC installation option enableFactSheet must be either 'True' or 'False'. Unsupported value {{ _wkc_option_enableFactSheet }}"
+  when: not (_wkc_option_enableFactSheet == True or _wkc_option_enableFactSheet == False)
+
+- fail:
+    msg: "WKC installation option enableMANTA must be either 'True' or 'False'. Unsupported value {{ _wkc_option_enableMANTA }}"
+  when: not (_wkc_option_enableMANTA == True or _wkc_option_enableMANTA == False)
+
+- name: For MANTA, create ICSP when using public icr.io entitled registry
+  block:
+    - name: Create WKC Manta ICSP for public repo
+      template:
+        src: "wkc-manta-mirror-icsp-public-config.j2"
+        dest: "{{ status_dir }}/cp4d/wkc-manta-mirror-icsp-public-config.yml"
+
+    - name: Apply WKC Manta ICSP for public repo
+      command: |
+        oc apply -f "{{ status_dir }}/cp4d/wkc-manta-mirror-icsp-public-config.yml"
+
+  when: 
+    - (_p_current_cp4d_cluster.image_registry_name | default("")) == ""
+    - _wkc_option_enableMANTA == True
+
+- name: Ensure WKC CR is available
+  command: |
+    oc get WKC wkc-cr -n {{ _p_current_cp4d_cluster.project }}
+  register: _wkc_cr_details
+
+- name: Patch WKC with the installation options
+  command: |
+    oc patch WKC wkc-cr \
+     -n {{ _p_current_cp4d_cluster.project }} \ 
+     --type merge
+     -p '{"spec":{"install_wkc_core_only": {{ _wkc_option_install_wkc_core_only | string | lower}}, "enableKnowledgeGraph": {{ _wkc_option_enableKnowledgeGraph | string | lower }}, "enableDataQuality": {{ _wkc_option_enableDataQuality | string | lower }}, "enableFactSheet": {{ _wkc_option_enableFactSheet | string | lower }}, "enableMANTA": {{ _wkc_option_enableMANTA | string | lower }} }}'
+  register: _wkc_patch_options_result
+
+- debug:
+    var: _wkc_patch_options_result
+
+- name: Sleep 30 seconds for WKC wkc-cr to start processing
+  pause:
+    seconds: 30
+
+- name: Wait for WKC CR to complete its configuration
+  shell: |
+    oc get WKC wkc-cr -n {{ _p_current_cp4d_cluster.project }} --output json | jq -r '.status.wkcStatus' | grep -i 'completed' | wc -l 
+  register: _patch_wkc_status
+  retries: 60
+  delay: 60
+  until: _patch_wkc_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- debug:
+    msg: "WKC installation options configuration completed..."
