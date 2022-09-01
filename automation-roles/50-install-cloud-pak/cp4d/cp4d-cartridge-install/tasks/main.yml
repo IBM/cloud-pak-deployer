@@ -13,3 +13,9 @@
 
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
   when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+
+- name: Run post-processing scripts
+  include_tasks: cp4d-install-cr-post-processing.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
