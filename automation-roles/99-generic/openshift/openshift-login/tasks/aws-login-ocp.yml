@@ -1,6 +1,12 @@
 ---
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _p_openshift_cluster_name }}']
+
 - include_tasks: aws-login-rosa-ocp.yml
-  when: current_openshift_cluster.infrastructure.type  == 'rosa'
+  when: _openshift_config.infrastructure.type  == 'rosa'
 
 - include_tasks: aws-login-ipi-ocp.yml
-  when: current_openshift_cluster.infrastructure.type  == 'self-managed'
+  when: _openshift_config.infrastructure.type  == 'self-managed'
