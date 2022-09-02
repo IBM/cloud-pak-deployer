@@ -27,6 +27,12 @@ if [ $? -ne 0 ];then
   exit 99
 fi
 
+# Check if db2ucluster crd exists
+if ! oc get crd db2uclusters.db2u.databases.ibm.com;then
+  log "Info: No Db2UCluster Custom Resource Definition found, exiting"
+  exit 0
+fi
+
 while true;do
   log "----------"
   log "Checking Db2u statefulsets"
