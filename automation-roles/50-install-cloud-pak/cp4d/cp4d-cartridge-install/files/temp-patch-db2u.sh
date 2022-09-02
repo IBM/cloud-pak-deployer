@@ -15,7 +15,7 @@ get_logtime() {
 
 log() {
   LOG_TIME=$(get_logtime)
-  printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-wkc-temp-patch.log
+  printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-db2u-temp-patch.log
 }
 
 log "----------"
