@@ -1,0 +1,47 @@
+---
+
+# Finds version specific properties for the selected instance type
+# based on the version of cloud pak defined in the configuration.
+# Combines those properties with the instance properties already
+# defined in the configuration. The properties defined in the 
+# configuratin have precedence over properties found here. 
+#
+# Input:
+#   - current_cp4i_cluster
+#   - current_cp4i_instance
+#
+# Output
+#   - instance_properties
+
+- name: Include version details variables
+  include_vars: versions.yml
+
+- name: Get cloud pak version
+  set_fact:
+    _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?cp4i_version=='{{ current_cp4i_cluster.cp4i_version }}']
+
+- name: Fail if the cloud pak version cannot be found
+  fail:
+    msg: "The cloud pak version {{ current_cp4i_cluster.cp4i_version }} not found."
+  when: _cloud_pak_ver=={}
+
+- name: Get instance type version specific properties
+  set_fact:
+    _inst_type_ver: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='{{ current_cp4i_instance.type }}']
+
+- name: Fail if the instance type version specific properties cannot be found
+  fail:
+    msg: "The version specific properties for instance type {{ current_cp4i_instance.type }} not found."
+  when: _inst_type_ver=={}
+
+- name: Combine properties
+  set_fact: 
+    instance_properties: "{{ _inst_type_ver | combine(current_cp4i_instance) }}"
+
+
