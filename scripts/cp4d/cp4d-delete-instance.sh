@@ -100,6 +100,6 @@ oc delete ns ibm-common-services
 log "Deleting IBM catalog sources"
 oc delete catsrc -n openshift-marketplace \
     $(oc get catsrc -n openshift-marketplace \
-    --no-headers | grep -i ibm | awk '{print $1}')
+    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}')
 
 exit 0

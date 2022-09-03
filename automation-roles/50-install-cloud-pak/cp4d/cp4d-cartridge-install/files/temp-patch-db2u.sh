@@ -15,7 +15,7 @@ get_logtime() {
 
 log() {
   LOG_TIME=$(get_logtime)
-  printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-wkc-temp-patch.log
+  printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-db2u-temp-patch.log
 }
 
 log "----------"
@@ -25,6 +25,12 @@ oc get project $project
 if [ $? -ne 0 ];then
   log "Error: Could not access project $project. Has the OpenShift login token expired?"
   exit 99
+fi
+
+# Check if db2ucluster crd exists
+if ! oc get crd db2uclusters.db2u.databases.ibm.com;then
+  log "Info: No Db2UCluster Custom Resource Definition found, exiting"
+  exit 0
 fi
 
 while true;do

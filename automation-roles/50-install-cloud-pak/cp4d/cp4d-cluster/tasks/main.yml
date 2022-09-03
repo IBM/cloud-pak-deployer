@@ -47,13 +47,6 @@
     name: cp4d-prepare-openshift
   when: ( current_cp4d_cluster.change_node_settings | default(True) | bool )
 
-- set_fact:
-    _use_case_files: False
-
-- set_fact:
-    _use_case_files: True
-  when: (current_cp4d_cluster.image_registry_name | default("")) != "" or (current_cp4d_cluster.use_case_files | default(False) | bool) or (current_cp4d_cluster.olm_utils | default(False) | bool)
-
 - name: Remove case directory in case it exists and not air-gapped
   file:
     path: "{{ status_dir }}/cp4d/case"
@@ -66,7 +59,6 @@
   vars:
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
   when: 
-  - _use_case_files
   - not (cpd_airgap | bool)
 
 # Mirror from the entitled registry if not airgapped and entitlement key found in vault
@@ -140,12 +132,21 @@
     _p_fs_project: "{{ foundational_services_project }}"
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
-- name: Install Control Plane for Cloud Pak for Data
-  include_tasks: install-control-plane.yml
-  when: not (current_cp4d_cluster.olm_utils | default(False) | bool)
+- include_tasks: install-control-plane.yml
+  when: 
+  - not (current_cp4d_cluster.olm_utils | default(False) | bool)
+  - current_cp4d_cluster.cp4d_version < "4.5.0"
 
-- name: Install Control Plane for Cloud Pak for Data using OLM utils
-  include_tasks: install-control-plane-olm-utils.yml
+- include_tasks: install-control-plane-olm-utils.yml
+  vars:
+    _p_preview_script: True
+  when: 
+  - not (current_cp4d_cluster.olm_utils | default(False) | bool)
+  - current_cp4d_cluster.cp4d_version >= "4.5.0"
+
+- include_tasks: install-control-plane-olm-utils.yml
+  vars:
+    _p_preview_script: False
   when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere

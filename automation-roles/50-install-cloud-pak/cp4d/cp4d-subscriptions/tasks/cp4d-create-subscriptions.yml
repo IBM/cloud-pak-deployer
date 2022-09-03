@@ -27,47 +27,14 @@
   command: |
     oc apply -f "{{ status_dir }}/cp4d/cpd-operator-subscription.yml"
 
+- name: Wait for platform subscirptions to be created
+  include_tasks: cp4d-wait-platform-subscriptions.yml
+
 - name: Create OpenShift operator subscriptions for each of the selected cp4d cartridges
   include_tasks: cp4d-create-subscription.yml
   loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge
-
-# Wait until subscription has been successfully created
-- name: Wait until Platform Operator CSV has status Succeeded
-  shell: |
-     oc get csv -n {{ foundational_services_project }} \
-      -l operators.coreos.com/cpd-platform-operator.{{ foundational_services_project }} \
-      --no-headers \
-      -o custom-columns='name:metadata.name,phase:status.phase' | \
-      grep -i succeeded | wc -l
-  register: csv_status
-  retries: 30
-  delay: 30
-  until: csv_status.stdout == "1"
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-
-# Also wait for OperandRequest CSV to be created (ODLM)
-- name: Wait until ODLM OperandRequest CSV has status Succeeded
-  shell: |
-     oc get csv -n {{ foundational_services_project }} \
-      -l operators.coreos.com/ibm-odlm.{{ foundational_services_project }} \
-      --no-headers \
-      -o custom-columns='name:metadata.name,phase:status.phase' | \
-      grep -i succeeded | wc -l
-  register: odlm_status
-  retries: 30
-  delay: 30
-  until: odlm_status.stdout == "1"
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 - name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
   include_tasks: cp4d-subscriptions-wait.yml
