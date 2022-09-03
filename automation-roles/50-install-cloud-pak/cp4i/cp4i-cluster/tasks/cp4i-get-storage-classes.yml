@@ -1,8 +1,11 @@
+---
+
 - name: Show current CP4I cluster
   debug:
     msg: Current CP4I cluster is {{ current_cp4i_cluster }}
 
-# Retrieve the openshift storage definition referenced in the cp4i instance
+# --- RETRIEVE STORAGE DEFINITION FROM OPENSHIFT CLUSTER REFERENCED IN CP4I ---
+
 - set_fact:
     openshift_storage: "{{ all_config.openshift | json_query(query) | first }}"
   vars:
@@ -13,28 +16,49 @@
   debug:
     msg: "{{ openshift_storage }}"
 
-# Obtain the OpenShift storage element from the openshift storage definitions
-- set_fact:
-    selected_openshift_storage: "{{ openshift_storage | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?storage_name=='{{ current_cp4i_cluster.openshift_storage_name }}']
+# --- IF STORAGE NAME IS DEFINED IN CP4I: OBTAIN THE STORAGE ELEMENT ----------
 
-- name: Fail if the storage information for the Cloud Pak cluster cannot be found
-  fail:
-    msg: "Storage information for storage name {{ current_cp4i_cluster.openshift_storage_name }} specified for CP4I cluster {{ current_cp4i_cluster.openshift_cluster_name }} not found. Check the configuration."
-  when: selected_openshift_storage == {}
+- name: Obtain storage element 
+  block:
+  - set_fact:
+      selected_openshift_storage: "{{ openshift_storage | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?storage_name=='{{ current_cp4i_cluster.openshift_storage_name }}']
+
+  - name: Fail if the storage information for the Cloud Pak cluster cannot be found
+    fail:
+      msg: "Storage information for storage name {{ current_cp4i_cluster.openshift_storage_name }} specified for CP4I cluster {{ current_cp4i_cluster.openshift_cluster_name }} not found. Check the configuration."
+    when: selected_openshift_storage == {}
+
+  when: current_cp4i_cluster.openshift_storage_name is defined
+
+# --- IF STORAGE NAME IS NOT DEFINED IN CP4I: TAKE THE FIRST ELEMENT ----------
+
+- name: Take the first storage element 
+  block:
+  - set_fact:
+      selected_openshift_storage: "{{ openshift_storage | first | default({}) }}"    
+  when: current_cp4i_cluster.openshift_storage_name is undefined
+
+
+# --- SHOW THE SELECTED STORAGE -----------------------------------------------
 
 - name: Show storage class construct
   debug:
     var: selected_openshift_storage
 
-- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx' and 'custom'"
+# --- VALIDATE TYPE -----------------------------------------------------------
+
+- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx', aws-elastic' and 'custom'"
   when: 
     - selected_openshift_storage.storage_type != 'nfs'
     - selected_openshift_storage.storage_type != 'ocs'
     - selected_openshift_storage.storage_type != 'pwx'
+    - selected_openshift_storage.storage_type != 'aws-elastic'    
     - selected_openshift_storage.storage_type != 'custom'
+
+# --- OBTAIN STORAGE CLASSES --------------------------------------------------
 
 - set_fact:
     ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('managed-nfs-storage') }}"
@@ -62,6 +86,13 @@
    ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
    ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('portworx-gp3-sc') }}"
   when: selected_openshift_storage.storage_type == 'pwx'
+
+- set_fact:
+   ocp_storage_class_file: "{{ selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+   ocp_storage_class_block: "{{ selected_openshift_storage.ocp_storage_class_block | default('gp2') }}"
+  when: selected_openshift_storage.storage_type == 'aws-elastic'
+
+# --- VALIDATE CLASSES --------------------------------------------------------
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
