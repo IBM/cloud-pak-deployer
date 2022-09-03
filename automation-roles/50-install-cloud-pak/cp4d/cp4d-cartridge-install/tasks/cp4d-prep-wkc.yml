@@ -20,16 +20,3 @@
 - name: Authorize WKC service account to use SCC
   shell:
     oc adm policy add-scc-to-user wkc-iis-scc system:serviceaccount:{{ _p_current_cp4d_cluster.project }}:wkc-iis-sa
-
-- name: Starting patching of Db2u clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wkc-temp-patch.log
-  shell: |
-    {{ role_path }}/files/temp-patch-wkc.sh \
-      {{ status_dir }} \
-      {{ _p_current_cp4d_cluster.project }}
-  async: 86400
-  poll: 0
-  register: _patch_wkc
-
-- name: Show details of background task to patch WKC
-  debug:
-    var: _patch_wkc

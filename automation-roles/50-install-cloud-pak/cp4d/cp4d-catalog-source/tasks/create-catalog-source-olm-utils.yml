@@ -8,14 +8,48 @@
     path: /tmp/work
     state: directory
 
-- name: Generate OLM command to create catalog sources
+# Always generate the preview script to log what will be done
+- name: Generate command preview script to create catalog sources
   set_fact:
-    _apply_olm_command: "{{ lookup('template', 'apply-olm-create-catsrc.j2') }}" 
+    _apply_olm_command_script: "{{ lookup('template', 'apply-olm-create-catsrc.j2') }}" 
+  vars:
+    _p_preview_script: True
 
 - name: Show apply-olm command to create catalog sources
   debug:
-    var: _apply_olm_command
+    var: _apply_olm_command_script
 
-- name: Run apply-olm command to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
+- name: Generate preview script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
   shell: |
-    {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
+    {{ _apply_olm_command_script }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
+
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh
+  copy:
+    src: "/tmp/work/preview.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh"
+    remote_src: True
+    mode: u+rwx
+
+# TODO: Remove step once problem in preview.sh is fixed
+- name: Update script to fix invalid oc apply -f commands
+  replace:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh"
+    regexp: '^(.*)oc apply -f << EOF(.*)'
+    replace: 'oc apply -f - << EOF'
+
+- name: Run apply-olm command to create catalog sources
+  block:
+  - name: Generate OLM command to create catalog sources
+    set_fact:
+      _apply_olm_command: "{{ lookup('template', 'apply-olm-create-catsrc.j2') }}" 
+    vars:
+      _p_preview_script: False
+  - name: Run apply-olm command to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
+    shell: |
+      {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
+  when: not _p_use_preview_script
+
+- name: Run shell script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh >> {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
+  when: _p_use_preview_script

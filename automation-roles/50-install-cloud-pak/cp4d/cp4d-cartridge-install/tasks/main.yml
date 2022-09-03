@@ -7,15 +7,45 @@
   loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge
-    
+
+- name: Starting background task to patch Db2U clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-db2u-temp-patch.log
+  shell: |
+    {{ role_path }}/files/temp-patch-db2u.sh \
+      {{ status_dir }} \
+      {{ _p_current_cp4d_cluster.project }}
+  async: 86400
+  poll: 0
+  register: _patch_db2u
+
+- name: Show details of background task to patch Db2U
+  debug:
+    var: _patch_db2u
+
 - include_tasks: cp4d-install-cartridges.yml
-  when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+  when: 
+  - not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+  - _p_current_cp4d_cluster.cp4d_version < "4.5.0"
 
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
+  vars:
+    _p_use_preview_script: True
+  when: 
+  - not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
+  - _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
+
+- include_tasks: cp4d-install-cartridges-olm-utils.yml
+  vars:
+    _p_use_preview_script: False
   when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Run post-processing scripts
   include_tasks: cp4d-install-cr-post-processing.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+
+- name: Wait for cartridges to finish installation
+  include_tasks: cp4d-wait-cartridges-ready.yml
   loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge

@@ -29,21 +29,6 @@
     msg: "WKC installation option enableMANTA must be either 'True' or 'False'. Unsupported value {{ _wkc_option_enableMANTA }}"
   when: not (_wkc_option_enableMANTA == True or _wkc_option_enableMANTA == False)
 
-- name: For MANTA, create ICSP when using public icr.io entitled registry
-  block:
-    - name: Create WKC Manta ICSP for public repo
-      template:
-        src: "wkc-manta-mirror-icsp-public-config.j2"
-        dest: "{{ status_dir }}/cp4d/wkc-manta-mirror-icsp-public-config.yml"
-
-    - name: Apply WKC Manta ICSP for public repo
-      command: |
-        oc apply -f "{{ status_dir }}/cp4d/wkc-manta-mirror-icsp-public-config.yml"
-
-  when: 
-    - (_p_current_cp4d_cluster.image_registry_name | default("")) == ""
-    - _wkc_option_enableMANTA == True
-
 - name: Ensure WKC CR is available
   command: |
     oc get WKC wkc-cr -n {{ _p_current_cp4d_cluster.project }}
@@ -59,23 +44,6 @@
 
 - debug:
     var: _wkc_patch_options_result
-
-- name: Sleep 30 seconds for WKC wkc-cr to start processing
-  pause:
-    seconds: 30
-
-- name: Wait for WKC CR to complete its configuration
-  shell: |
-    oc get WKC wkc-cr -n {{ _p_current_cp4d_cluster.project }} --output json | jq -r '.status.wkcStatus' | grep -i 'completed' | wc -l 
-  register: _patch_wkc_status
-  retries: 60
-  delay: 60
-  until: _patch_wkc_status.stdout == "1"
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 - debug:
     msg: "WKC installation options configuration completed..."

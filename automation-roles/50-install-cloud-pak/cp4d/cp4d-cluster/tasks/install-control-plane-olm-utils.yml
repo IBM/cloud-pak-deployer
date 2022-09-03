@@ -15,3 +15,33 @@
 - name: Run apply-cr command to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
   shell: |
     {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
+
+- name: Copy script to {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh
+  copy:
+    src: "/tmp/work/preview.sh"
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh"
+    remote_src: True
+    mode: u+rwx
+  when: _p_preview_script
+
+- name: Run shell script to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh >> {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
+  when: _p_preview_script
+
+# Wait for ZenService to be created (can take 10-15 minutes)
+- name: Wait for ZenService to be completed
+  shell: |
+    oc get ZenService -n {{ current_cp4d_cluster.project }} lite-cr --output json | \
+      jq -r '.status.zenStatus' | grep -i 'completed' | \
+      wc -l
+  register: deployed_zenservice
+  retries: 60
+  delay: 60
+  until: deployed_zenservice.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: _p_preview_script
