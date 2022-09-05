@@ -93,7 +93,7 @@ if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
-if [ -f /run/.containerenv ] || [ -f /.dockerenv ];then
+if [ -f /run/.containerenv ] || [ -f /.dockerenv ] || grep -q "/kubepods" /proc/1/cgroup;then
   INSIDE_CONTAINER=true
 else
   INSIDE_CONTAINER=false
