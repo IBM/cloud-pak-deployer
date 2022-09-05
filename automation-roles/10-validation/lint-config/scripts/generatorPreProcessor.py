@@ -1,7 +1,7 @@
 from benedict import benedict
 
 class GeneratorPreProcessor:
-    def __init__(self,attributes=None, fullConfig=None) -> None:
+    def __init__(self,attributes=None, fullConfig=None, moduleVariables=None) -> None:
         self.d = benedict()
         self.recentCheck = {}
         self.attributes = attributes
@@ -10,6 +10,7 @@ class GeneratorPreProcessor:
         self.attributesDict = benedict(attributes) 
         self.fullConfig = fullConfig
         self.fullConfigDict = benedict(fullConfig)
+        self.moduleVariables = moduleVariables
         self.errors = []
 
     def __call__(self,pathToCheck):
@@ -186,6 +187,7 @@ class GeneratorPreProcessor:
         return self.attributesDict
     def getErrors(self):
         return self.errors
-    def getErrorsAsString(self):
-        
+    def getErrorsAsString(self):        
         return self.errors
+    def getModuleVariables(self):
+        return self.moduleVariables

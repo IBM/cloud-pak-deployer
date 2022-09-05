@@ -28,22 +28,22 @@ from packaging import version
 #     ocs_storage_label: ocs
 #     ocs_storage_size_gb: 500
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
-
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
+    
+    #Check Must Fields
     g('name').isRequired()
     g('ocp_version').isRequired()
     g('compute_flavour').isRequired()
-    g('compute_nodes').isRequired()
-    
+    g('compute_nodes').isRequired()    
     g('infrastructure').isRequired()
-
     g('openshift_storage').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
-        fc = g.getFullConfig()
+        fc=g.getFullConfig()
         ge=g.getExpandedAttributes()
+        var=g.getModuleVariables()
 
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
@@ -75,10 +75,6 @@ def preprocessor(attributes=None, fullConfig=None):
             if "machine_cidr" not in ge['infrastructure']:
                 g.appendError(msg='If subnet IDs are specified, you must also specify the machine_cidr attribute')
         
-        #check domain_name for aws self-managed cluster
-        if "type" in ge['infrastructure'] and ge['infrastructure']['type'] in ['self-managed']:
-            g('domain_name').isRequired()
-
         # Check upstream DNS server
         if 'upstream_dns' in ge:
             for dns in ge['upstream_dns']:
@@ -111,6 +107,25 @@ def preprocessor(attributes=None, fullConfig=None):
                 if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
                     g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
 
+        #check variables for aws   
+        if var['_aws_access_key'] == "":
+            g.appendError(msg='Secret aws-access-key is not found or it is empty in the vault')
+        if var['_aws_secret_access_key'] == "":
+            g.appendError(msg='Secret aws-secret-access-key is not found or it is empty in the vault')
+
+        #check configuration and variables for self-managed aws
+        if "type" in ge['infrastructure'] and ge['infrastructure']['type'] in ['self-managed']:
+            g('domain_name').isRequired()
+
+            if var['_ocp_pullsecret'] == "":
+                g.appendError(msg='Secret ocp-pullsecret is not found or it is empty in the vault')
+            if var['_ocp_ssh_pub_key'] == "":
+                g.appendError(msg='Secret ocp-ssh-pub-key is not found or it is empty in the vault')
+
+        #check configuration and variables for rosa aws
+        if "type" in ge['infrastructure'] and ge['infrastructure']['type'] in ['rosa']:  
+            if var['_rosa_login_token'] == "":
+                g.appendError(msg='Secret rosa-login-token is not found or it is empty in the vault')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
