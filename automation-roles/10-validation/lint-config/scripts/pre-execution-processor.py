@@ -11,12 +11,14 @@ parser.add_argument('--generatorpath', '-p', help="absolute path to the generato
 parser.add_argument('--output', '-o', help="output file", type= str)
 parser.add_argument('--script', '-s', help="filename of the preprocess-script", type= str)
 parser.add_argument('--index', '-i', help="index of the element inside the generator array", type=int)
+parser.add_argument('--platform', '-t', help="cloud platform", type=str)
 parser.add_argument('--vars', '-v', help="module variables", type= str, required=True)
 args = parser.parse_args()
 
 generatorAttributes = yaml.load(base64.b64decode(args.attributes), Loader=yaml.FullLoader)
 generatorFullConfig = yaml.load(base64.b64decode(args.full), Loader=yaml.FullLoader)
 generatorVariables = yaml.load(base64.b64decode(args.vars), Loader=yaml.FullLoader)
+
 
 
 # add the generators directory to the path 
@@ -30,8 +32,10 @@ from preprocessor import preprocessor
 # attributes_updated: <dict>
 # errors: []
 
-
-result = preprocessor(attributes=generatorAttributes, fullConfig=generatorFullConfig, moduleVariables=generatorVariables)
+if args.platform == "aws":
+    result = preprocessor(attributes=generatorAttributes, fullConfig=generatorFullConfig, moduleVariables=generatorVariables)
+else:
+    result = preprocessor(attributes=generatorAttributes, fullConfig=generatorFullConfig)
 
 generatorFullConfig[args.key][args.index] = result.get('attributes_updated')
 

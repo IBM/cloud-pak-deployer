@@ -16,7 +16,8 @@
         -s preprocessor.py \
         -a {{ object_element | to_yaml | b64encode }} \
         -f {{ all_config | to_yaml | b64encode }} \
-        -v {{ vault_var | to_yaml | b64encode }}
+        -t {{ cloud_platform }} \
+        -v {{ vault_var|default("{}") | to_yaml | b64encode }}
     args:
       chdir: "{{ role_path }}/scripts"
     register: preprocess_result 
