@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    icpdsupport/addOnId: discovery
+    icpdsupport/app: wd-discovery-kubeapi-egress-network-policy
+    icpdsupport/empty-on-nd-backup: "true"
+    icpdsupport/ignore-on-nd-backup: "true"
+    owner: discovery
+    service: discovery
+    tenant: wd
+  name: wd-discovery-kubeapi-egress-network-policy
+  namespace: {{ current_cp4d_cluster.project }}
+spec:
+  egress:
+  - {}
+  podSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values:
+      - ck-gen
+      - cn-postgres-license-config
+      - jks-secret
+      - postgres-secret-gen
+      - ranker-master
+      - cn-postgres
+    matchLabels:
+      app.kubernetes.io/instance: wd
+      app.kubernetes.io/name: discovery
+  policyTypes:
+  - Egress
