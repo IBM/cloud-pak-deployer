@@ -2,6 +2,13 @@
 - include_role:
     name: cp4d-variables
 
+- name: Create network policy for waston discovery
+  include_tasks: cp4d-pre-wd.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+  when: cloud_platform == "ibm-cloud"
+
 - name: Run pre-processing scripts
   include_tasks: cp4d-install-cr-pre-processing.yml
   loop: "{{ _cartridges_to_install | default([]) }}"
