@@ -1,17 +1,23 @@
 ---
-- debug:
-    var: _current_cp4d_cartridge
+- block:
+  - debug:
+      var: current_cp4d_cluster
 
-- debug:
-    var: current_cp4d_cluster
+  - name: Prepare yaml file for network policy 
+    template:
+      src: cpd-network-policy.j2
+      dest: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
 
-- name: Prepare yaml file for network policy 
-  template:
-    src: cpd-network-policy.j2
-    dest: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
-  when: _current_cp4d_cartridge.name == "watson-discovery" and current_cp4d_cluster.cp4d_version >= "4.5.0"
-
-- name: Create Network Policy
-  shell: |
-    oc apply -f {{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml
-  when: _current_cp4d_cartridge.name == "watson-discovery"  and current_cp4d_cluster.cp4d_version >= "4.5.0"
+  - name: Create Network Policy
+    shell: |
+      oc apply -f {{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml
+    register: _network_policy_create_result
+    retries: 10
+    delay: 30
+    until: _network_policy_create_result.rc == 0
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: cloud_platform == "ibm-cloud" and _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
