@@ -32,8 +32,8 @@ from generatorPreProcessor import GeneratorPreProcessor
 #     icmp:
 #       code: 1
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     fc = g.getFullConfig()
     tgw = g.getExpandedAttributes()
