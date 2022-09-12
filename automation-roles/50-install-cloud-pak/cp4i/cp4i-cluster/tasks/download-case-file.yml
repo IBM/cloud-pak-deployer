@@ -20,7 +20,9 @@
   - name: Save case file {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}
     shell: |
       cloudctl case save \
-        --case {{ case_github_url }}/{{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz \
+        --repo {{ case_github_url }} \
+        --case {{ _instance_type_details.package_name }} \
+        --version {{ instance_properties.case_version }} \
         --outputdir {{ _case_dir }} 
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'
