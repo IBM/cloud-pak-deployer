@@ -13,8 +13,8 @@ import sys
 #   identifier_format: ""
 #   callback_url: ""
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('project').isRequired()
     g('entrypoint').isRequired()

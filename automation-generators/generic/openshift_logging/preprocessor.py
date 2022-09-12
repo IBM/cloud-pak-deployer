@@ -35,8 +35,8 @@ import sys
 #       key: "{{ env_id }}"-loki-key
 #       ca: "{{ env_id }}"-loki-ca
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('openshift_cluster_name').isRequired()
 

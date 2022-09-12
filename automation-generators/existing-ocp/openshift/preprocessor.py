@@ -16,8 +16,8 @@ from packaging import version
 #     ocp_storage_class_file: nfs-client 
 #     ocp_storage_class_block: nfs-client
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('name').isRequired()
     g('ocp_version').isRequired()

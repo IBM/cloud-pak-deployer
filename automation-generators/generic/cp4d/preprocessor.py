@@ -220,9 +220,9 @@ def str_to_bool(s):
     else:
         return s.lower() in ['true','yes','1']
 
-def preprocessor(attributes=None, fullConfig=None):
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     global g
-    g = GeneratorPreProcessor(attributes,fullConfig)
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
