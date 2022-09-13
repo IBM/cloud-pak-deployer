@@ -7,8 +7,8 @@ import sys
 #   registry_host_name: de.icr.io
 #   registry_namespace: cpd405
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('name').isRequired()
     g('registry_host_name').isRequired()

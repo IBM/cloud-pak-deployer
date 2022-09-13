@@ -14,8 +14,8 @@ import sys
 #     - monitor_project
 #     - manage_groups
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('openshift_cluster_name').isRequired()
     g('project').isRequired()
