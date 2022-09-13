@@ -1,0 +1,14 @@
+---
+- block:
+  - debug:
+      var: _p_current_cp4d_cluster
+
+  - name: Prepare yaml file for Watson Knowledge Studio CR
+    template:
+      src: watson-ks-cr-45.j2
+      dest: "{{ status_dir }}/cp4d/watson-ks-cr-45-{{ _p_current_cp4d_cluster.project }}.yml"
+
+  - name: Create Watson Knowledge Studio CR
+    shell: |
+      oc apply -f {{ status_dir }}/cp4d/watson-ks-cr-45-{{ _p_current_cp4d_cluster.project }}.yml
+  when: _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
