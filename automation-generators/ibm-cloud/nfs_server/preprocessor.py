@@ -14,9 +14,8 @@ from generatorPreProcessor import GeneratorPreProcessor
 #     keys:
 #     - "{{ env_id }}-provision"
 
-def preprocessor(attributes=None, fullConfig=None):
-
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
     g('name').isRequired()
 
     g('infrastructure.type').isRequired().mustBeOneOf(['vpc'])

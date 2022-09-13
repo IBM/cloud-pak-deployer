@@ -1,36 +1,42 @@
 ---
-- name: Check if aws-access-key secret is in the vault
+- name: Get aws-access-key secret from in the vault
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "aws-access-key"
-    secret_group: "{{ environment_name }}" 
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_access_key
 
-- name: Check that aws-access-key secret is present in the vault
-  fail:
-    msg: "Secret aws-access-key is mandatory and was not found in the vault"
-  when: secret_value==""
-
-- name: Check if aws-secret-access-key secret is in the vault
+- name: Get aws-secret-access-key secret from the vault
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "aws-secret-access-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_secret_access_key
+
+- name: Retrieve pull secret from vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-pullsecret"
     secret_group: "{{ environment_name }}" 
+    secret_file: /tmp/ocp_pullsecret.json
+    _p_secret_variable: _ocp_pullsecret
 
-- name: Check that aws-secret-access-key secret is present in the vault
-  fail:
-    msg: "Secret aws-secret-access-key is mandatory and was not found in the vault"
-  when: secret_value==""
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-ssh-pub-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ocp_ssh_pub_key
 
-- include_tasks: aws-rosa-validate-variables.yml
-  loop: "{{ all_config.openshift | default([]) }}"
-  loop_control:
-    loop_var: _current_openshift_cluster
-  when: _current_openshift_cluster.infrastructure.type  == 'rosa'
+- name: Retrieve rosa-login-token secret from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "rosa-login-token"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _rosa_login_token
 
-- include_tasks: aws-ipi-validate-variables.yml
-  loop: "{{ all_config.openshift | default([]) }}"
-  loop_control:
-    loop_var: _current_openshift_cluster
-  when: _current_openshift_cluster.infrastructure.type  == 'self-managed'

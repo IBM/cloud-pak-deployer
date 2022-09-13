@@ -31,8 +31,8 @@ from packaging import version
 #     ocs_storage_label: ocs
 #     ocs_storage_size_gb: 500
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('name').isRequired()
     g('ocp_version').isRequired()

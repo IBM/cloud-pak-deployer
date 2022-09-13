@@ -1,8 +1,7 @@
 from generatorPreProcessor import GeneratorPreProcessor
 
-def preprocessor(attributes=None, fullConfig=None):
-
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
     g('name').isRequired()
 
 

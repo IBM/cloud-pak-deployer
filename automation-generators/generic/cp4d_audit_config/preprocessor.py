@@ -10,8 +10,8 @@ import sys
 #   - type: openshift-logging
 #     logging_name: loki-audit
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('project').isRequired()
     g('audit_replicas').isOptional()

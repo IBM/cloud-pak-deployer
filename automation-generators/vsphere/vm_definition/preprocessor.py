@@ -19,8 +19,8 @@ from generatorPreProcessor import GeneratorPreProcessor
 #   network: "VM Network"
 
 
-def preprocessor(attributes=None, fullConfig=None):
-    g = GeneratorPreProcessor(attributes,fullConfig)
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
+    g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('name').isRequired()
     g('vcpu').isRequired()
