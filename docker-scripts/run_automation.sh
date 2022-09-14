@@ -28,7 +28,7 @@ cd ${SCRIPT_DIR}/..
 mkdir -p /tmp/work
 
 # Retrieve version by checking the git log
-DEPLOYER_VERSION_INFO=$(git log -n1 --pretty='format:%h %cd |%s' --date=format:'%Y-%m-%dT%H:%M:%S')
+DEPLOYER_VERSION_INFO=$(git log -n1 --pretty='format:%h %cd |%s' --date=format:'%Y-%m-%dT%H:%M:%S' 2> /dev/null)
 COMMIT_HASH=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $1}')
 COMMIT_TIMESTAMP=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $2}')
 COMMIT_MESSAGE=$(echo $DEPLOYER_VERSION_INFO  | cut -d'|' -f2)
