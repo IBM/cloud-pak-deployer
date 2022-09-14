@@ -108,18 +108,18 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
 
         #check variables for aws   
-        if var['_aws_access_key'] == "":
+        if '_aws_access_key' in var and var['_aws_access_key'] == "":
             g.appendError(msg='Secret aws-access-key is not found or it is empty in the vault')
-        if var['_aws_secret_access_key'] == "":
+        if '_aws_secret_access_key' in var and var['_aws_secret_access_key'] == "":
             g.appendError(msg='Secret aws-secret-access-key is not found or it is empty in the vault')
 
         #check configuration and variables for self-managed aws
         if "type" in ge['infrastructure'] and ge['infrastructure']['type'] in ['self-managed']:
             g('domain_name').isRequired()
 
-            if var['_ocp_pullsecret'] == "":
+            if '_ocp_pullsecret' in var and var['_ocp_pullsecret'] == "":
                 g.appendError(msg='Secret ocp-pullsecret is not found or it is empty in the vault')
-            if var['_ocp_ssh_pub_key'] == "":
+            if '_ocp_ssh_pub_key' in var and var['_ocp_ssh_pub_key'] == "":
                 g.appendError(msg='Secret ocp-ssh-pub-key is not found or it is empty in the vault')
 
         #check configuration and variables for rosa aws

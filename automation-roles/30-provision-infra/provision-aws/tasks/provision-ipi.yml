@@ -28,6 +28,14 @@
       AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
       AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
 
+  - name: Store the metadata json file as secret {{ environment_name }}-metadata-json in group {{ environment_name }}
+    include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ environment_name }}-metadata-json"
+      secret_group: "{{ environment_name }}"
+      secret_file: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
+
   - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
     set_fact:
       _new_kubeadmin_password: "{{ lookup('file', status_dir + '/aws-ipi/' + _current_openshift_cluster.name + '/auth/kubeadmin-password') }}"
