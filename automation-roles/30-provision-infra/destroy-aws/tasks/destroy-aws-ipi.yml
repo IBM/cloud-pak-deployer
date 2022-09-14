@@ -20,12 +20,12 @@
     include_role: 
       name: vault-get-secret
     vars:
-      secret_name: "{{ environment_name }}-metadata-json"
+      secret_name: "{{ current_openshift_cluster.name }}-metadata-json"
       secret_group: "{{ environment_name }}"
 
-  - name: Check that metadata json has been found in the vault
+  - name: Check that metadata has been found in the vault
     fail:
-      msg: "No metadata json found in secret {{ environment_name }}/{{ environment_name }}-metadata-json"
+      msg: "No metadata found in secret {{ environment_name }}/{{ current_openshift_cluster.name }}-metadata-json"
     when: "secret_value | trim | length == 0"
 
   - name: Checking {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} directory exists
