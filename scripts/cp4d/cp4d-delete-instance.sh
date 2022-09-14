@@ -41,8 +41,8 @@ while read -r line;do
         ;;
         *)
         log "Deleting $CR $CR_NAME"
-        oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false
-        oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}'
+        oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false --ignore-not-found
+        oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
         resource_deleted=true
         ;;
     esac
@@ -60,8 +60,8 @@ while read -r line;do
     case $CR in
         Ibmcpd|CommonService|OperandRequest)
         log "Deleting $CR $CR_NAME"
-        oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false
-        oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}'
+        oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false --ignore-not-found
+        oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
         resource_deleted=true
         ;;
         *)
@@ -79,20 +79,20 @@ oc delete ns ${CP4D_PROJECT}
 
 log "Deleting everything in the ibm-common-services project"
 oc project ibm-common-services
-oc delete CommonService  -n ibm-common-services common-service
-oc delete sub -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services
-oc delete csv -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services
+oc delete CommonService  -n ibm-common-services common-service --ignore-not-found
+oc delete sub -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
+oc delete csv -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
 
-oc delete operandrequest -n ibm-common-services --all
+oc delete operandrequest -n ibm-common-services --all --ignore-not-found
 
-oc delete operandconfig -n ibm-common-services --all
+oc delete operandconfig -n ibm-common-services --all --ignore-not-found
 
-oc delete operandregistry -n ibm-common-services --all
+oc delete operandregistry -n ibm-common-services --all --ignore-not-found
 
-oc delete nss -n ibm-common-services --all
+oc delete nss -n ibm-common-services --all --ignore-not-found
 
-oc delete sub -n ibm-common-services --all
-oc delete csv -n ibm-common-services --all
+oc delete sub -n ibm-common-services --all --ignore-not-found
+oc delete csv -n ibm-common-services --all --ignore-not-found
 
 log "Deleting ibm-common-services project"
 oc delete ns ibm-common-services
@@ -100,6 +100,6 @@ oc delete ns ibm-common-services
 log "Deleting IBM catalog sources"
 oc delete catsrc -n openshift-marketplace \
     $(oc get catsrc -n openshift-marketplace \
-    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}')
+    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found
 
 exit 0
