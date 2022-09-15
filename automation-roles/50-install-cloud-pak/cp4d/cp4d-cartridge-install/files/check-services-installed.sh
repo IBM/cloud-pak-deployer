@@ -135,7 +135,30 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   fi
 done
 
-if [ $exit_code -ne 0 ];then
+# 
+log "Log status of pods in project ${project} to file ${status_dir}/log/${project}-pods.out"
+oc get po -n ${project} > ${status_dir}/log/${project}-pods.out
+
+# Check if there are any pods in Pending state for > 15 minutes
+CURRENT_TIME=$(date +%s)
+while read -r line;do
+  if [ ! -z "${line}" ];then
+    read -r POD_NAME POD_START POD_STATE <<< "${line}"
+    POD_START_EPOCH=$(date -d "${POD_START}" +%s)
+    TIME_DIFF=$((CURRENT_TIME-POD_START_EPOCH))
+    if [ ${TIME_DIFF} -gt 900 ];then
+      log "Pod ${POD_NAME} in project ${project} has been Pending for more than 15 minutes"
+      exit_code=4
+    fi
+  fi
+done <<< $(oc get po -n ${project} -o jsonpath='{range .items[?(@.status.phase=="Pending")]}{.metadata.name}{"\t"}{.metadata.creationTimestamp}{"\t"}{.status.phase}{"\n"}{end}')
+
+if [ "${exit_code}" == "4" ];then
+  log "Pods have been in Pending state for more than 15 minutes. Most-likely the OpenShift cluster does not have enough capacity for all selected services."
+fi
+
+if [ "${exit_code}" != "0" ];then
+  log "Exiting because of error."
   exit $exit_code
 fi
 
