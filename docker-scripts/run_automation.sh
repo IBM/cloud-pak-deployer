@@ -21,13 +21,17 @@ if [[ error -ne 0 ]];then
   exit 1
 fi
 
-echo ""
-echo "Starting Automation script..."
-echo ""
+# Change to base directory
 cd ${SCRIPT_DIR}/..
 
 # Ensure /tmp/work exists
 mkdir -p /tmp/work
+
+# Retrieve version by checking the git log
+DEPLOYER_VERSION_INFO=$(git log -n1 --pretty='format:%h %cd |%s' --date=format:'%Y-%m-%dT%H:%M:%S' 2> /dev/null)
+COMMIT_HASH=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $1}')
+COMMIT_TIMESTAMP=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $2}')
+COMMIT_MESSAGE=$(echo $DEPLOYER_VERSION_INFO  | cut -d'|' -f2)
 
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
@@ -97,6 +101,9 @@ env|environment)
   mkdir -p ${STATUS_DIR}/log
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "Starting deployer" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  echo "  Commit ID       : ${COMMIT_HASH}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  echo "  Commit timestamp: ${COMMIT_TIMESTAMP}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  echo "  Commit message  : ${COMMIT_MESSAGE}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   run_cmd+=" 2>&1 | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
