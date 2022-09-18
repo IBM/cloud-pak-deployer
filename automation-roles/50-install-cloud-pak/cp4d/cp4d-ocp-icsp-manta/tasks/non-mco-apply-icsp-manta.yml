@@ -1,0 +1,26 @@
+---
+
+- name: Create private registry configuration (ImageContentSourcePolicy) on ROKS using DaemonSet
+  block:
+    - name: Check if ConfigMap cloud-pak-icsp-registries exists
+      shell: "oc get configmap -n kube-system | grep -i '^cloud-pak-icsp-registries' | wc -l"
+      register: oc_icsp_cm_exists
+    - name: Create private registries configuration
+      template:
+        src: cloud-pak-icsp-registries-conf-manta.j2
+        dest: "{{ status_dir }}/openshift/cloud-pak-icsp-registries-manta.conf"
+    - name: Create ConfigMap cloud-pak-icsp-registries
+      shell: |
+        oc create configmap -n kube-system cloud-pak-icsp-registries || true
+    - name: Set data for config map
+      shell: |
+        oc set data configmap/cloud-pak-icsp-registries -n kube-system \
+          --from-file=cloud-pak-icsp-registries.conf={{ status_dir }}/openshift/cloud-pak-icsp-registries-manta.conf
+    - name: Generate DaemonSet to set the private registry configuration for all nodes
+      template:
+        src: cloud-pak-icsp-registries-conf-manta-ds.j2
+        dest: "{{ status_dir }}/openshift/cloud-pak-icsp-registries-conf-manta-ds.yaml"
+    - name: Create or replace DaemonSet cloud-pak-icsp-registries-conf-manta-ds
+      shell: |
+        oc delete ds -n kube-system cloud-pak-icsp-registries-conf-manta-ds --ignore-not-found
+        oc apply -f {{ status_dir }}/openshift/cloud-pak-icsp-registries-conf-manta-ds.yaml
