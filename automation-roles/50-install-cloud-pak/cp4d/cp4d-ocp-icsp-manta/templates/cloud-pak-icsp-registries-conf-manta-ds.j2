@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cloud-pak-icsp-registries-conf-manta-ds
+  namespace: kube-system
+  labels:
+    tier: management
+    app: cloud-pak-icsp-registries-ds
+spec:
+  selector:
+    matchLabels:
+      name: cloud-pak-icsp-registries-ds
+  template:
+    metadata:
+      labels:
+        name: cloud-pak-icsp-registries-ds
+    spec:
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      containers:
+        - name: sleepforever
+          resources:
+            requests:
+              cpu: 0.01
+          image: {{ cpd_ds_image | default('registry.access.redhat.com/ubi8:latest') }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              date >> /ext-tmp/cloud-pak-icsp-registries-ds.log ;
+              echo "The following will be added to the registries configuration" ;
+              cat /cloud-pak-icsp-registries/cloud-pak-icsp-registries.conf ;
+              cat /cloud-pak-icsp-registries/cloud-pak-icsp-registries.conf > /ext-cloud-pak-node-fix/cloud-pak-icsp-registries.conf ;
+              while true; do
+                sleep 100000;
+              done
+          volumeMounts:
+            - name: cloud-pak-icsp-registries
+              mountPath: /cloud-pak-icsp-registries
+              readOnly: true
+            - name: modifytmp
+              mountPath: /ext-tmp
+            - name: modifycpnodefix
+              mountPath: /ext-cloud-pak-node-fix
+      volumes:
+        - name: cloud-pak-icsp-registries
+          configMap:
+            name: cloud-pak-icsp-registries
+        - name: modifytmp
+          hostPath:
+            path: /tmp
+        - name: modifycpnodefix
+          hostPath:
+            path: /cloud-pak-node-fix
