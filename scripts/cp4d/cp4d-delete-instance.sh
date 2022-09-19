@@ -74,6 +74,10 @@ if ${resource_deleted};then
     sleep 10
 fi
 
+log "Delete role binding if Cloud Pak for Data was connected to IAM"
+oc delete rolebinding -n ${CP4D_PROJECT} admin --ignore-not-found --wait=false
+oc patch -n ${CP4D_PROJECT} rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+
 log "Deleting ${CP4D_PROJECT} namespace"
 oc delete ns ${CP4D_PROJECT}
 
@@ -93,6 +97,10 @@ oc delete nss -n ibm-common-services --all --ignore-not-found
 
 oc delete sub -n ibm-common-services --all --ignore-not-found
 oc delete csv -n ibm-common-services --all --ignore-not-found
+
+log "Delete role binding in Foundation Services if Cloud Pak for Data was connected to IAM"
+oc delete rolebinding -n ibm-common-services admin --ignore-not-found --wait=false
+oc patch -n ibm-common-services rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
 
 log "Deleting ibm-common-services project"
 oc delete ns ibm-common-services
