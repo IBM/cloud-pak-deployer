@@ -1,0 +1,35 @@
+---
+- debug:
+    var: _p_openshift_cluster
+
+- set_fact: 
+    _existing_ocp_infra_type: "standard"
+  when: _p_openshift_cluster.infrastructure.type is not defined
+
+- block:
+  - name: Get Storage Class Information
+    shell: oc get sc -o name
+    register: _existing_ocp_storage_class
+
+  - debug:
+      var: _existing_ocp_storage_class.stdout
+
+  - set_fact:
+      _existing_ocp_infra_type: "{{ item.key }}"
+    loop: "{{ existing_ocp_cloud_infra | dict2items }}"
+    when: _existing_ocp_storage_class.stdout is search('storageclass.storage.k8s.io/{{ item.value.storage_class }}')
+
+  - set_fact:
+      _existing_ocp_infra_type: "standard"
+    when: _existing_ocp_infra_type is not defined
+
+  when: _p_openshift_cluster.infrastructure.type is defined and _p_openshift_cluster.infrastructure.type == "detect"
+
+
+- set_fact: 
+    _existing_ocp_infra_type: "{{ _p_openshift_cluster.infrastructure.type }}"
+  when: _p_openshift_cluster.infrastructure.type is defined and _p_openshift_cluster.infrastructure.type != "detect"
+
+- debug:
+    var: _existing_ocp_infra_type
+
