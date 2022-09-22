@@ -100,7 +100,7 @@ while true;do
     fi
   done
   log "----------"
-  log "Finished checks, sleeping for 10 minutes"
-  sleep 600
+  log "Finished checks, sleeping for 5 minutes"
+  sleep 300
 done
 exit 0
