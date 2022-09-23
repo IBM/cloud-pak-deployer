@@ -132,8 +132,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
         # Iterate over all instances to check if name and type attributes is given. If not throw an error
         for c in ge['instances']:
-            if "name" not in c:
-                g.appendError(msg='name must be specified for all instances elements')
             if "type" not in c:
                 g.appendError(msg='type must be specified for all instances elements')
             if "state" in c:
