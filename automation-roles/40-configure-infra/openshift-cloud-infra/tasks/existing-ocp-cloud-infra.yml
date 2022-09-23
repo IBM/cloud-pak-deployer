@@ -10,6 +10,9 @@
   - name: Get Storage Class Information
     shell: oc get sc -o name
     register: _existing_ocp_storage_class
+    retries: 5
+    delay: 15
+    until: _existing_ocp_storage_class.rc == 0
 
   - debug:
       var: _existing_ocp_storage_class.stdout
@@ -22,6 +25,23 @@
   - set_fact:
       _existing_ocp_infra_type: "standard"
     when: _existing_ocp_infra_type is not defined
+
+  - block:
+    - name: Get OpenShift Cluster Information for OpenShift on AWS
+      shell: oc cluster-info
+      register: _existing_ocp_cluster_info
+      retries: 5
+      delay: 15
+      until: _existing_ocp_cluster_info.rc == 0
+
+    - set_fact:
+        _existing_ocp_infra_type: "aws-rosa"
+      when: _existing_ocp_cluster_info.stdout is search("https://.*.openshiftapps.com:.*")
+
+    - set_fact:
+        _existing_ocp_infra_type: "aws-self-managed"
+      when: _existing_ocp_cluster_info.stdout is not search("https://.*.openshiftapps.com:.*")
+    when: _existing_ocp_infra_type is defined and _existing_ocp_infra_type == "aws"
 
   when: _p_openshift_cluster.infrastructure.type is defined and _p_openshift_cluster.infrastructure.type == "detect"
 
