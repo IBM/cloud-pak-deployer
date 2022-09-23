@@ -165,10 +165,20 @@ vault)
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   eval $run_cmd
   ;;
+
+version)
+  echo "==========================================================================="
+  echo "  Commit ID       : ${COMMIT_HASH}" 
+  echo "  Commit timestamp: ${COMMIT_TIMESTAMP}" 
+  echo "  Commit message  : ${COMMIT_MESSAGE}"
+  echo "==========================================================================="
+  ;;
+  
 *) 
   echo "Invalid subcommand $SUBCOMMAND."
   command_usage 1
   ;;
+
 esac
 
 
