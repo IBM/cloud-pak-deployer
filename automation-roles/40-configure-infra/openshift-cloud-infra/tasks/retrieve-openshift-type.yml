@@ -22,11 +22,15 @@
       _existing_ocp_infra_type: "{{ item.key }}"
     loop: "{{ existing_ocp_cloud_infra | dict2items }}"
     when: _existing_ocp_storage_class.stdout is search('storageclass.storage.k8s.io/{{ item.value.storage_class }}')
-
+  # Do not match anything
   - set_fact:
       _existing_ocp_infra_type: "standard"
     when: _existing_ocp_infra_type is not defined
-
+  # Extra handling for ibm cloud 
+  - set_fact:
+      _existing_ocp_infra_type: "ibm-roks"
+    when: _existing_ocp_infra_type is defined and (_existing_ocp_infra_type == "ibm-classic" or _existing_ocp_infra_type == "ibm-vpc-gen2")
+  # Extra handling for AWS
   - name: Distinquish AWS OpenShift between self-managed and ROSA
     block:
     - name: Get OpenShift Cluster Information for OpenShift on AWS
