@@ -20,11 +20,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('name').isRequired()
-    g('ocp_version').isRequired()
-    
+    g('ocp_version').isRequired()    
     g('cluster_name').isRequired()
     g('domain_name').isRequired()
-
     g('openshift_storage').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed

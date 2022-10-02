@@ -230,9 +230,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('cp4d_version').isRequired()
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
-    g('use_case_files').isOptional()
-    g('olm_utils').isOptional()
-    g('accept_licenses').isOptional()
+    g('use_case_files').isOptional().mustBeOneOf([True, False])
+    g('olm_utils').isOptional().mustBeOneOf([True, False])
+    g('accept_licenses').isOptional().mustBeOneOf([True, False])
     g('change_node_settings').isOptional()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
@@ -343,7 +343,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             g.appendError(msg='You need to specify a cartridge for the Cloud Pak Foundational Services (cpfs or cp-foundation)')
         if cpdPlatformFound==False:
             g.appendError(msg='You need to specify a cartridge for the Cloud Pak for Data platform (cpd_platform or lite)')
-
+        
+        
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()

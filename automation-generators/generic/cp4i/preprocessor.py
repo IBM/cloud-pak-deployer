@@ -65,9 +65,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('cp4i_version').isRequired()
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('instances').isRequired()
-    g('use_case_files').isOptional()
-    g('olm_utils').isOptional()
-    g('accept_licenses').isOptional()
+    g('use_case_files').isOptional().mustBeOneOf([True, False])
+    g('olm_utils').isOptional().mustBeOneOf([True, False])
+    g('accept_licenses').isOptional().mustBeOneOf([True, False])
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:

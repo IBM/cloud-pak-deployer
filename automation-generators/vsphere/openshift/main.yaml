@@ -7,11 +7,19 @@
   debug:
     var: generator
 
+- fail:
+    msg: "vsphere configuration was not found."
+  when: all_config.vsphere is not defined
+  
 - set_fact:
     _vsphere_config: "{{ all_config.vsphere | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?name=='{{ generator.attributes.vsphere_name }}']
+
+- fail:
+    msg: "vm_definition configuration was not found."
+  when: all_config.vm_definition is not defined
 
 - set_fact:
     _control_plane_vm_config: "{{ all_config.vm_definition | json_query(query) | first | default({}) }}"

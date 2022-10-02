@@ -31,7 +31,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('name').isRequired()
     g('ocp_version').isRequired()
     
-    g('cluster_name').isRequired()
     g('domain_name').isRequired()
 
     g('vsphere_name').expandWith('vsphere[*]',remoteIdentifier='name')
@@ -49,7 +48,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
-        fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
         # OpenShift version must be 4.6 or higher
@@ -84,11 +82,18 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
             if "storage_type" in os and os['storage_type'] not in ['nfs','ocs']:
                 g.appendError(msg='storage_type must be nfs or ocs')
-            if "storage_type" in os and os['storage_type'] == 'ocs' and "storage_vm_definition" not in os:
-                g.appendError(msg='storage_vm_definition must be specified for openshift_storage elements of storage_type ocs')
             if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
                 g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
-
+            #for ocs
+            if "storage_type" in os and os['storage_type'] == 'ocs':
+                if "storage_vm_definition" not in os:
+                    g.appendError(msg='storage_vm_definition must be specified for openshift_storage elements of storage_type ocs')
+                if "ocs_storage_label" not in os:
+                    g.appendError(msg='ocs_storage_label must be specified for openshift_storage elements of storage_type ocs')
+                if "ocs_storage_size_gb" not in os:
+                    g.appendError(msg='ocs_storage_size_gb must be specified for openshift_storage elements of storage_type ocs')
+                if "ocs_dynamic_storage_class" not in os:
+                    g.appendError(msg='ocs_dynamic_storage_class must be specified for openshift_storage elements of storage_type ocs')
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()
