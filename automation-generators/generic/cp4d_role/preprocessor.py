@@ -26,7 +26,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
-        fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
         if ge['state'] not in ['installed','removed']:

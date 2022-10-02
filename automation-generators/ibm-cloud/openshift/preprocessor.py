@@ -34,18 +34,20 @@ from packaging import version
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
+    #Level 1
     g('name').isRequired()
+    g('managed').isOptional().mustBeOneOf([True,False])
     g('ocp_version').isRequired()
     g('compute_flavour').isRequired()
-    g('compute_nodes').isRequired()
-    
+    g('compute_nodes').isRequired()    
     g('infrastructure').isRequired()
-    g('infrastructure.type').mustBeOneOf(['vpc'])
-    g('infrastructure.vpc_name').expandWith('vpc[*]',remoteIdentifier='name')
-    g('infrastructure.subnets').isRequired()
-    g('infrastructure.cos_name').isRequired()
-
     g('openshift_storage').isRequired()
+    #Level 2
+    if len(g.getErrors()) == 0:
+        g('infrastructure.type').mustBeOneOf(['vpc'])
+        g('infrastructure.vpc_name').expandWith('vpc[*]',remoteIdentifier='name')
+        g('infrastructure.subnets').isRequired()
+        g('infrastructure.cos_name').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
@@ -72,7 +74,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         if 'private_only' in ge['infrastructure']:
             if type(ge['infrastructure']['private_only']) != bool:
                 g.appendError(msg='Attribute infrastructure.private_only must be either true or false if specified. Default is false.')
-
 
         # check deny_node_ports must be true or false if specified
         if 'deny_node_ports' in ge['infrastructure']:
@@ -121,10 +122,14 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
 
             if "storage_type" in os and os['storage_type']=='pwx':
-                if "pwx_storage_label" not in os:
-                    g.appendError(msg='pwx_storage_label must be specified when storage_type is pwx')
+                if "pwx_etcd_location" not in os:
+                    g.appendError(msg='pwx_etcd_location must be specified when storage_type is pwx')
                 if "pwx_storage_size_gb" not in os:
                     g.appendError(msg='pwx_storage_size_gb must be specified when storage_type is pwx')
+                if "pwx_storage_iops" not in os:
+                    g.appendError(msg='pwx_storage_iops must be specified when storage_type is pwx')
+                if "pwx_storage_profile" not in os:
+                    g.appendError(msg='pwx_storage_profile must be specified when storage_type is pwx')
                 if "portworx_version" not in os:
                     g.appendError(msg='portworx_version must be specified when storage_type is pwx')
                 if "stork_version" not in os:
