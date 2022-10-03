@@ -12,6 +12,7 @@ command_usage() {
   echo "  environment,env           Apply configuration to create, modify or destroy an environment"
   echo "  vault                     Get, create, modify or delete secrets in the configured vault"
   echo "  build                     Build the container image for the Cloud Pak Deployer"
+  echo "  version                   Show deployer version"
   echo "  help,h                    Show help"
   echo
   echo "ACTION:"
@@ -119,6 +120,9 @@ env|environment)
   shift 1
   ;;
 vault)
+  shift 1
+  ;;
+version)
   shift 1
   ;;
 build)

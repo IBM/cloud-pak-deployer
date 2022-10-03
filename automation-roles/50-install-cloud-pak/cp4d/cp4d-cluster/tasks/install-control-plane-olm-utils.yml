@@ -29,6 +29,13 @@
     {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh >> {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
   when: _p_preview_script
 
+- name: Setup Coud Pak for Data to use Foundational Services IAM
+  shell: |
+    oc patch -n {{ current_cp4d_cluster.project }} Ibmcpd ibmcpd-cr \
+      --type=merge \
+      --patch='{"spec":{"cloudpakfordata": true, "iamIntegration": true}}'
+  when: (current_cp4d_cluster.use_fs_iam | default(False) | bool)
+
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for ZenService to be completed
   shell: |
@@ -36,7 +43,7 @@
       jq -r '.status.zenStatus' | grep -i 'completed' | \
       wc -l
   register: deployed_zenservice
-  retries: 60
+  retries: 90
   delay: 60
   until: deployed_zenservice.stdout == "1"
   vars:

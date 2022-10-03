@@ -335,6 +335,8 @@ openshift:
   cluster_name: sample
   domain_name: example.com
   cloud_native_toolkit: False
+  infrastructure:
+    type: standard
   upstream_dns:
   - name: sample-dns
      zones:
@@ -356,9 +358,21 @@ openshift:
 | cluster_name        | Name of the cluster (part of the FQDN)                                                                          | Yes       |                |
 | domain_name         | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                |
 | cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                 | No        | True, False (default) |
+| infrastructure.type | Infrastructure OpenShfit is deployed on. See below for additional explanation                                   | detect (default) |
 | openshift_logging[] | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                           | No        |                |
 | upstream_dns[]      | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                      | No        |                |
 | openshift_storage[] | List of storage definitions to be defined on OpenShift, see below for further explanation                       | No        |                |
+
+##### infastructure.type - Type of infrastructure
+When deploying on existing OpenShift, the underlying infrastructure can pose some restrictions on capabilities available. For example, Red Hat OpenShift on IBM Cloud (aka ROKS) does not include the Machine Config Operator and ROSA on AWS does not allow to set labels for Machine Config Pools. This means that node settings required for Cloud Pak for Data must be applied in a non-standard manner.
+
+The following values are allowed for `infrastructure.type`:
+* `detect` (default): The deployer will attempt to detect the underlying cloud infrastructure. This is done by retrieving the existing storage classes and then inferring the cloud type.
+* `standard`: The deployer will assume a standard OpenShift cluster with no further restrictions. This is the fallback value for `detect` if the underlying infra cannot be detected. 
+* `aws-self-managed`: A self-managed OpenShift cluster on AWS. No restrictions.
+* `aws-rosa`: Managed Red Hat OpenShift on AWS. Some restrictions with regards to Machine Config Pools apply.
+* `azure-aro`: Managed Red Hat OpenShift on Azure. No known restrictions.
+* `vsphere`: OpenShift on vSphere. No known restrictions.
 
 ##### openshift_storage[] - OpenShift storage definitions
 | Property                | Description                                                                         | Mandatory                         | Allowed values    |
