@@ -1,0 +1,19 @@
+---
+# On ROKS, there is no MachineConfig operator to update system settings so we're changing kubelet and crio settings
+# in the files directly via a cron job on the compute node. If there is a change in the settings, the cron job will recycle
+# the kubelet and crio daemons.
+
+- name: Create ConfigMap cloud-pak-node-fix-scripts
+  shell: |
+    oc delete cm -n kube-system cloud-pak-node-fix-scripts --ignore-not-found
+    oc create cm -n kube-system cloud-pak-node-fix-scripts
+
+- name: Create ConfigMap cloud-pak-node-fix-config
+  shell: |
+    oc delete cm -n kube-system cloud-pak-node-fix-config --ignore-not-found
+    oc create cm -n kube-system cloud-pak-node-fix-config
+
+- name: Create secret cloud-pak-node-fix-secrets
+  shell: |
+    oc delete secret -n kube-system cloud-pak-node-fix-secrets --ignore-not-found
+    oc create secret generic -n kube-system cloud-pak-node-fix-secrets

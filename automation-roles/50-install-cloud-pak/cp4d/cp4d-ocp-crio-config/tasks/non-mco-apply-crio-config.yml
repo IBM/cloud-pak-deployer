@@ -19,23 +19,7 @@
     option: pids_limit
     value: "12288"
     
-- name: Generate ConfigMap definition cp4d-crio-conf-cm.yaml
+- name: Add cp4d-crio.conf to node fix config map
   shell:
-    oc create configmap -n kube-system cp4d-crio-conf \
-        --from-file={{ status_dir }}/openshift/cp4d-crio.conf \
-        -o yaml --dry-run=client > {{ status_dir }}/openshift/cp4d-crio-conf-cm.yaml
-
-- name: Create ConfigMap cp4d-crio-conf
-  shell: |
-      oc apply -f {{ status_dir }}/openshift/cp4d-crio-conf-cm.yaml
-
-- name: Generate DaemonSet to set the CRI-O config for all nodes
-  template:
-    src: cp4d-crio-conf-ds.j2
-    dest: "{{ status_dir }}/openshift/cp4d-crio-conf-ds.yaml"
-- name: Create or replace DaemonSet cp4d-crio-conf-ds
-  shell: |
-    if oc get ds -n kube-system cp4d-crio-conf-ds;then
-      oc delete ds -n kube-system cp4d-crio-conf-ds
-    fi
-    oc apply -f {{ status_dir }}/openshift/cp4d-crio-conf-ds.yaml
+    oc set data -n kube-system cm/cloud-pak-node-fix-config  \
+        --from-file={{ status_dir }}/openshift/cp4d-crio.conf
