@@ -19,18 +19,15 @@
       status_code: 200
     register: _cpd_cli_releases
 
-  - debug:
-      var: _cpd_cli_releases.json.tag_name
-
   - set_fact:
-      _cpd_cli_download: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
+      _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
     vars:
       query: >-
         [?starts_with(name,'cpd-cli-linux-EE')].browser_download_url 
 
   - name: Download latest cpd-cli release
     get_url:
-      url: "{{ _cpd_cli_download }}"
+      url: "{{ _cpd_cli_download_url }}"
       dest: "{{ status_dir }}/downloads/cpd-cli-linux-amd64.tar.gz"
       owner: root
       mode: 0644
@@ -41,27 +38,18 @@
 
   when: not _cpd_cli_download.stat.exists
 
-- name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli--linux-amd64.tar.gz
+- name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli-linux-amd64.tar.gz
   unarchive:
     src: "{{ status_dir }}/downloads/cpd-cli-linux-amd64.tar.gz"
-    dest: "{{ status_dir }}/downloads"
+    dest: /usr/local/bin/
+    extra_opts: 
+    - --strip-components=1
 
-- name: Rename to cloudctl
+- name: Get cpd-cli version
   shell: |
-    mv -f {{ status_dir }}/downloads/cloudctl-linux-amd64 {{ status_dir }}/downloads/cloudctl
+    cpd-cli version
+  register: _cpd_cli_version
 
-- name: Make sure cloudctl can be run within path
-  copy:
-    src: "{{ status_dir }}/downloads/cloudctl"
-    dest: /usr/local/bin/cloudctl
-    mode: preserve
-    remote_src: True
-
-- name: Get cloudctl version
-  shell: |
-    cloudctl version
-  register: _cpd_cli_releases
-
-- name: Show cloudctl version
+- name: Show cpd-cli version
   debug:
-    var: _cpd_cli_releases.stdout
+    var: _cpd_cli_version.stdout
