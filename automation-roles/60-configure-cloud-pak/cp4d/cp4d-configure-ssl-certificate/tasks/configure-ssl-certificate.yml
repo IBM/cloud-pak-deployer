@@ -9,49 +9,6 @@
     state: directory
   register: cloud_pak_cert_temp_dir
 
-- name: Get the {{ current_cp4d_cluster.openshift_cluster_name }} OpenShift cluster details
-  shell: "ibmcloud oc cluster get -c {{ current_cp4d_cluster.openshift_cluster_name }} --output json"
-  register: oc_cluster_details_output
-
-- set_fact:
-    oc_cluster_details: "{{ oc_cluster_details_output.stdout | from_json }}"
-
-- name: Get the certificate manager details of kube-certmgr-{{ oc_cluster_details.id }}
-  shell: "ibmcloud resource service-instance kube-certmgr-{{ oc_cluster_details.id }} --output JSON | jq .[0]"
-  register: oc_cert_manager_details_output
-
-- set_fact:
-    oc_cert_manager_details: "{{ oc_cert_manager_details_output.stdout | from_json }}"
-
-- name: "URL encode the CRN of the Certificate Manager"
-  shell: "jq -R -r @uri <<<\"{{ oc_cert_manager_details.crn }}\""
-  register: encode_crn_output
-
-- set_fact:
-    security_manager_instance_id_encode: "{{ encode_crn_output.stdout }}"
-
-- name: Generate Bearer token to communicate with the certificate manager endpoint
-  shell: "curl -X POST 'https://iam.cloud.ibm.com/identity/token' -H 'Content-Type: application/x-www-form-urlencoded' -d 'grant_type=urn:ibm:params:oauth:grant-type:apikey&apikey={{ ibmcloud_api_key }}'"
-  register: generate_bearer_result_output
-
-- set_fact:
-    generate_bearer_result: "{{ generate_bearer_result_output.stdout | from_json }}"
-
-- name: Fail if the bearer token was not defined
-  fail:
-    msg: "Unable to acquire BEARER token."
-  when:  generate_bearer_result.access_token is not defined
-
-- set_fact:
-    bearer_token: "{{ generate_bearer_result.access_token }}"
-
-- name: Get List of certificates
-  shell: "curl -H 'Authorization: Bearer ${BEARER_TOKEN}' https://eu-de.certificate-manager.cloud.ibm.com/api/v3/{{ security_manager_instance_id_encode }}/certificates/"
-  register: list_of_certificates_output
-
-- set_fact:
-    list_of_certificate: "{{ list_of_certificates_output.stdout | from_json }}"
-
 - name: Get current implemented certificate on OpenShift cluster
   shell: "oc get -n openshift-ingress-operator ingresscontrollers/default -o json | jq -r .spec.defaultCertificate.name"
   register: current_ingress_certificate_result
