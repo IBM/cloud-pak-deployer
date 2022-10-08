@@ -5,7 +5,7 @@ from packaging import version
 # ---
 # openshift:
 # - name: sample
-#   ocp_version: 4.8.24
+#   ocp_version: 4.10.34
 #   compute_flavour: m5.4xlarge
 #   compute_nodes: 3
 #   infrastructure:
