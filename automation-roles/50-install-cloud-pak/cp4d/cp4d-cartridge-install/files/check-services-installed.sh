@@ -146,8 +146,11 @@ while read -r line;do
     read -r POD_NAME POD_START POD_STATE <<< "${line}"
     POD_START_EPOCH=$(date -d "${POD_START}" +%s)
     TIME_DIFF=$((CURRENT_TIME-POD_START_EPOCH))
-    if [ ${TIME_DIFF} -gt 900 ];then
-      log "Pod ${POD_NAME} in project ${project} has been Pending for more than 15 minutes"
+    schedule_status=$(oc get po -n ${project} ${POD_NAME} -o jsonpath='{range .status.conditions[?(@.type=="PodScheduled")]}{.status}{end}')
+    schedule_reason=$(oc get po -n ${project} ${POD_NAME} -o jsonpath='{range .status.conditions[?(@.type=="PodScheduled")]}{.reason}{end}')
+    schedule_message=$(oc get po -n ${project} ${POD_NAME} -o jsonpath='{range .status.conditions[?(@.type=="PodScheduled")]}{.message}{end}')
+    if [ ${TIME_DIFF} -gt 900 ] && [[ "$schedule_status" != "True" ]];then
+      log "Pod ${POD_NAME} in project ${project} has been Pending for more than 15 minutes. Schedule status: ${schedule_status}, reason: ${schedule_reason}, message: ${schedule_message}"
       exit_code=4
     fi
   fi
