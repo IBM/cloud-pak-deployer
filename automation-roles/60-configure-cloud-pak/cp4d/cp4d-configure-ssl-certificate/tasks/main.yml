@@ -3,6 +3,12 @@
   debug:
     msg: "Handling TLS certificate configuration for CP4D cluster {{ current_cp4d_cluster.openshift_cluster_name }}"
 
+- name: Get current implemented certificate on OpenShift cluster
+  shell: |
+    oc get -n openshift-ingress-operator ingresscontrollers/default -o jsonpath='{.spec.defaultCertificate.name}'
+  register: _current_ingress_certificate_result
+
 - name: Configure TLS Certificate Cloud Pak for Data 
   include_tasks: configure-ssl-certificate.yml
+  when: _current_ingress_certificate_result.rc == 0 and _current_ingress_certificate_result.stdout != ""
 
