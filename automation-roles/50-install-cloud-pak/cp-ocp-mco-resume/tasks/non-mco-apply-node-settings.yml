@@ -23,3 +23,12 @@
   shell: |
     oc delete ds -n kube-system cloud-pak-crontab-ds --ignore-not-found
     oc apply -f {{ status_dir }}/openshift/cloud-pak-node-fix-ds.yaml
+
+- name: Delete old DaemonSets that have now been replaced by cloud-pak-crontab-ds
+  shell: |
+    oc delete ds -n kube-system \
+      cloud-pak-icsp-registries-conf-manta-ds \
+      cloud-pak-pull-secret-ds \
+      cp4d-crio-conf-ds \
+      cp4d-kubelet-conf-ds \
+      --ignore-not-found
