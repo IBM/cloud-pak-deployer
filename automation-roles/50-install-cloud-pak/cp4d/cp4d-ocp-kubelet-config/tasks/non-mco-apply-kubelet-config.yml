@@ -21,23 +21,7 @@
         - "kernel.shm*"
         - "kernel.sem"
 
-- name: Generate ConfigMap definition cp4d-kubelet-conf-cm.yaml
+- name: Add cp4d-kubelet.conf to node fix config map
   shell:
-    oc create configmap -n kube-system cp4d-kubelet-conf \
-        --from-file={{ status_dir }}/openshift/cp4d-kubelet.conf \
-        -o yaml --dry-run=client > {{ status_dir }}/openshift/cp4d-kubelet-conf-cm.yaml
-
-- name: Create ConfigMap cp4d-kubelet-conf
-  shell: |
-      oc apply -f {{ status_dir }}/openshift/cp4d-kubelet-conf-cm.yaml
-
-- name: Generate DaemonSet to set Kubelet configuration for all nodes
-  template:
-    src: cp4d-kubelet-conf-ds.j2
-    dest: "{{ status_dir }}/openshift/cp4d-kubelet-conf-ds.yaml"
-- name: Create or replace DaemonSet cp4d-kubelet-conf-ds
-  shell: |
-    if oc get ds -n kube-system cp4d-kubelet-conf-ds;then
-      oc delete ds -n kube-system cp4d-kubelet-conf-ds
-    fi
-    oc apply -f {{ status_dir }}/openshift/cp4d-kubelet-conf-ds.yaml
+    oc set data -n kube-system cm/cloud-pak-node-fix-config  \
+        --from-file={{ status_dir }}/openshift/cp4d-kubelet.conf

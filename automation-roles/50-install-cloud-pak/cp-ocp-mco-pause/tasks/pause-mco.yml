@@ -15,15 +15,12 @@
   - cloud_platform != 'ibm-cloud'
   - cloud_platform != 'existing-ocp'
 
-# Check if the MachineConfigPool worker exists for existing OpenShift, only 2 retries
+# Check if the MachineConfigPool worker exists for existing OpenShift
 - name: Check if MachineConfigPool exists for existing OpenShift
   shell: |
     oc get mcp worker
   failed_when: false
   register: _mcp_worker
-  until: _mcp_worker.rc==0
-  delay: 10
-  retries: 2
   when: 
   - cloud_platform == 'existing-ocp'
 
@@ -45,3 +42,6 @@
   when: 
   - _mco_exists
   - cloud_platform != 'aws'
+
+- include_tasks: non-mco-prepare-node-settings.yml
+  when: not _mco_exists

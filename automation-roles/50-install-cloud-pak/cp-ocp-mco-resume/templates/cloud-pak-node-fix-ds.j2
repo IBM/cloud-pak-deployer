@@ -28,7 +28,8 @@ spec:
           args:
             - >
               date ;
-              /usr/bin/cp -f /cloud-pak-node-fix-secret/cloud-pak-node-fix.sh /ext-cloud-pak-node-fix/ ;
+              /usr/bin/rm -rf /ext-cloud-pak-node-fix/* ;
+              /usr/bin/cp -rL /cloud-pak-node-fix/* /ext-cloud-pak-node-fix/ ;
               chmod +x /ext-cloud-pak-node-fix/cloud-pak-node-fix.sh ;
               touch /ext-var/spool/cron/root ;
               if ! grep -q 'cloud-pak-node-fix' /ext-var/spool/cron/root;then 
@@ -39,24 +40,29 @@ spec:
                 sleep 100000;
               done
           volumeMounts:
-            - name: fix-script
-              mountPath: /cloud-pak-node-fix-secret
+            - name: node-settings-scripts
+              mountPath: /cloud-pak-node-fix
+            - name: node-settings-config
+              mountPath: /cloud-pak-node-fix/config
+            - name: node-settings-secrets
+              mountPath: /cloud-pak-node-fix/secrets
             - name: modifycpnodefix
               mountPath: /ext-cloud-pak-node-fix
-            - name: modifytmp
-              mountPath: /ext-tmp
             - name: modifyvar
               mountPath: /ext-var
       volumes:
-        - name: fix-script
+        - name: node-settings-scripts
           configMap:
-            name: cloud-pak-node-fix
+            name: cloud-pak-node-fix-scripts
+        - name: node-settings-config
+          configMap:
+            name: cloud-pak-node-fix-config
+        - name: node-settings-secrets
+          secret:
+            secretName: cloud-pak-node-fix-secrets
         - name: modifycpnodefix
           hostPath:
             path: /cloud-pak-node-fix
-        - name: modifytmp
-          hostPath:
-            path: /tmp
         - name: modifyvar
           hostPath:
             path: /var

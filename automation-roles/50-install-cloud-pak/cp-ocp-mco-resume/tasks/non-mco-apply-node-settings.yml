@@ -9,15 +9,10 @@
     src: cloud-pak-node-fix.j2
     dest: "{{ status_dir }}/openshift/cloud-pak-node-fix.sh"
 
-- name: Generate ConfigMap definition cloud-pak-node-fix-cm.yaml
+- name: Put cloud-pak-node-fix.sh script into config map
   shell:
-    oc create configmap -n kube-system cloud-pak-node-fix \
-        --from-file={{ status_dir }}/openshift/cloud-pak-node-fix.sh \
-        -o yaml --dry-run=client > {{ status_dir }}/openshift/cloud-pak-node-fix-cm.yaml
-
-- name: Create ConfigMap cloud-pak-node-fix
-  shell: |
-      oc apply -f {{ status_dir }}/openshift/cloud-pak-node-fix-cm.yaml
+    oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
+        --from-file={{ status_dir }}/openshift/cloud-pak-node-fix.sh 
 
 - name: Create DaemonSet to change node settings via crontab
   template:
@@ -26,7 +21,14 @@
 
 - name: Create DaemonSet cloud-pak-node-fix-ds
   shell: |
-    if oc get ds -n kube-system cloud-pak-crontab-ds;then
-      oc delete ds -n kube-system cloud-pak-crontab-ds
-    fi
+    oc delete ds -n kube-system cloud-pak-crontab-ds --ignore-not-found
     oc apply -f {{ status_dir }}/openshift/cloud-pak-node-fix-ds.yaml
+
+- name: Delete old DaemonSets that have now been replaced by cloud-pak-crontab-ds
+  shell: |
+    oc delete ds -n kube-system \
+      cloud-pak-icsp-registries-conf-manta-ds \
+      cloud-pak-pull-secret-ds \
+      cp4d-crio-conf-ds \
+      cp4d-kubelet-conf-ds \
+      --ignore-not-found
