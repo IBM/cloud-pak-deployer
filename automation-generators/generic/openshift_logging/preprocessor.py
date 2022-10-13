@@ -42,8 +42,14 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
-        fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
+        fc=g.getFullConfig()
+        openshift_names = []
+        if 'openshift' in fc:
+            openshift_names = fc.match('openshift[*].name')
+      
+        if ge['openshift_cluster_name'] not in openshift_names:
+            g.appendError(msg="Was not able to find an OpenShift cluster with name: "+ge['openshift_cluster_name'])  
 
         if 'configure_es_log_store' in ge:
             if type(ge['configure_es_log_store']) != bool:
