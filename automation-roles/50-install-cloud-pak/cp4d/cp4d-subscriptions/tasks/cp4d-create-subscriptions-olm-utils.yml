@@ -96,3 +96,9 @@
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
   when: _p_use_preview_script
+
+- name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
+  include_tasks: cp4d-subscriptions-wait.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge

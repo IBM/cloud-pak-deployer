@@ -1,0 +1,100 @@
+---
+- name: Show current CP4D cluster
+  debug:
+    msg: "{{ current_cp4d_cluster }}"
+
+- name: Make a temporary work folder available
+  tempfile:
+    path: "{{status_dir}}/cp4d"
+    state: directory
+  register: _cloud_pak_cert_temp_dir
+
+- set_fact:
+    _current_certificate: "{{ _current_ingress_certificate_result.stdout }}"
+
+- name: Get the current tls.crt from secret {{ _current_certificate }}
+  shell: |
+    oc extract secret/{{ _current_certificate }} -n openshift-ingress --keys=tls.crt --to=-
+  register: _ocp_certificate_tls_crt_result
+
+- name: Create the cert.crt file
+  copy:
+    content: "{{ _ocp_certificate_tls_crt_result.stdout }}"
+    dest: "{{ _cloud_pak_cert_temp_dir.path }}/cert.crt"
+
+- name: Get the current tls.key from secret {{ _current_certificate }}
+  shell: |
+    oc extract secret/{{ _current_certificate }} -n openshift-ingress --keys=tls.key --to=-
+  register: _ocp_certificate_tls_key_result
+
+- name: Create the cert.key file
+  copy:
+    content: "{{ _ocp_certificate_tls_key_result.stdout }}"
+    dest: "{{ _cloud_pak_cert_temp_dir.path }}/cert.key"
+
+- set_fact:
+    _update_cp4d_ssl_config: 0
+
+- name: Validate existing Cloud Pak for Data SSL configuration
+  shell: |
+    oc -n {{ current_cp4d_cluster.project }} get secrets | grep external-tls-secret | wc -l
+  register: _cp4d_existing_external_tls_secret_result
+
+- set_fact:
+    _update_cp4d_ssl_config: 1
+  when: _cp4d_existing_external_tls_secret_result.stdout == "0"
+
+- when: _cp4d_existing_external_tls_secret_result.stdout == "1"
+  block:
+    - name: Get current cert.crt from Cloud Pak for Data
+      shell: |
+        oc extract secret/external-tls-secret -n {{ current_cp4d_cluster.project }} --keys=cert.crt --to=-
+      register: _cp4d_certificate_cert_crt_result
+
+    - name: Get current cert.key from Cloud Pak for Data
+      shell: |
+        oc extract secret/external-tls-secret -n {{ current_cp4d_cluster.project }} --keys=cert.key --to=-
+      register: _cp4d_certificate_cert_key_result
+
+    - set_fact:
+        _update_cp4d_ssl_config: 1
+      when: _cp4d_certificate_cert_key_result.stdout != _ocp_certificate_tls_key_result.stdout
+
+    - set_fact:
+        _update_cp4d_ssl_config: 1
+      when: _cp4d_certificate_cert_crt_result.stdout != _ocp_certificate_tls_crt_result.stdout
+
+- name: Determine if TLS certificate must be configured
+  debug:
+    msg: "No changes to current TLS certificate of Cloud Pak for Data, skipping configuration of TLS certificate"
+  when: _update_cp4d_ssl_config == 0
+
+- when: _update_cp4d_ssl_config == 1
+  block:
+    - name: Delete existing external-tls-secret if present
+      shell: |
+        oc delete secret -n {{ current_cp4d_cluster.project }} external-tls-secret
+      when: _cp4d_existing_external_tls_secret_result.stdout == "1"
+
+    - name: Create the Cloud Pak for Data secret external-tls-secret
+      shell: |
+        oc create secret -n {{ current_cp4d_cluster.project }} generic external-tls-secret --from-file=cert.crt={{ _cloud_pak_cert_temp_dir.path }}/cert.crt --from-file=cert.key={{ _cloud_pak_cert_temp_dir.path }}/cert.key --dry-run=client -o yaml | oc apply -f -
+      register: _create_cp4d_external_tls_secret
+
+    - name: Reload the Cloud Pak for Data nginx pods
+      shell: |
+        for i in `oc get pods -n {{ current_cp4d_cluster.project }} | grep ibm-nginx |  cut -f1 -d\\ `; do oc exec -n {{ current_cp4d_cluster.project }} ${i} -- /scripts/reload.sh; done
+      register: _reload_nginx_pods_result
+      until: _reload_nginx_pods_result.stdout.find('Custom ssl certificate files were found') != -1
+      retries: 10
+      delay: 30  
+      vars:
+        ansible_callback_diy_runner_retry_msg: >-
+          {%- set result = ansible_callback_diy.result.output -%}
+          {%- set retries_left = result.retries - result.attempts -%}
+          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...         
+
+- name: Delete temporary directory 
+  file:
+    state: absent
+    path: "{{ _cloud_pak_cert_temp_dir.path }}"
