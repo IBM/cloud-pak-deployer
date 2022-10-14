@@ -29,7 +29,10 @@
   - name: Generate SSH key pair
     include_role:
       name: ssh-keygen
-    when: cloud_platform == 'aws' or cloud_platform == 'vsphere'
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: _current_openshift_cluster
+    when: cloud_platform == 'vsphere' or cloud_platform == 'aws'
       
   - name: Validate variables
     include_role:
