@@ -53,6 +53,8 @@ env|environment)
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
+    elif [ "$CPD_SKIP_CP_INSTALL" == "true" ];then
+      run_cmd+=" playbooks/playbook-env-apply-skip-cp-install.yml"
     elif [ "$CP_CONFIG_ONLY" == "true" ];then
       run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
     else
@@ -74,6 +76,7 @@ env|environment)
   run_cmd+=" --extra-vars cpd_check_only=${CHECK_ONLY}"
   run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
   run_cmd+=" --extra-vars cpd_skip_mirror=${CPD_SKIP_MIRROR}"
+  run_cmd+=" --extra-vars cpd_skip_cp_install=${CPD_SKIP_CP_INSTALL}"
   run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
   run_cmd+=" --extra-vars cpd_test_cartridges=${CPD_TEST_CARTRIDGES}"
   run_cmd+=" --extra-vars cpd_accept_licenses=${CPD_ACCEPT_LICENSES}"
