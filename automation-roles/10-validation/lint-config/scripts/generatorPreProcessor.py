@@ -135,6 +135,10 @@ class GeneratorPreProcessor:
         #     print( generatorsListOfEntities[0] )
         #     self.attributesDict[self.recentCheck.pathToCheck] = generatorsListOfEntities[0][remotePath]
         #     return self
+
+    def set(self, newValue):
+        self.attributesDict[ self.recentCheck.get('pathToCheck') ] = newValue
+        return self
     
     # matchPattern (string): should look like 'vpc[*].name'
     def expandWith(self, matchPattern, remoteIdentifier='name'):
