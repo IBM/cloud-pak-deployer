@@ -37,7 +37,7 @@ import re
 #  openshift_storage_name: nfs-storage
 #  use_case_files: True
 #  accept_licenses: False
-#  olm_utils: False
+#  sequential_install: False
 #  change_node_settings: True
 
 #  cartridges:
@@ -231,7 +231,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional().mustBeOneOf([True, False])
-    g('olm_utils').isOptional().mustBeOneOf([True, False])
+    g('sequential_install').isOptional().mustBeOneOf([True, False])
     g('accept_licenses').isOptional().mustBeOneOf([True, False])
     g('change_node_settings').isOptional()
 
@@ -264,15 +264,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 if not str_to_bool(os.environ.get('CPD_ACCEPT_LICENSES')):
                     g.appendError(msg="You must accept licenses by specifying accept_licenses: True or by using the --accept-all-licenses command line flag")
 
-        # Store olm_utils property
-        if 'olm_utils' in ge:
-            olm_utils=ge['olm_utils']
-        else:
-            olm_utils=False
-        # Check if olm utils is installed
-        if olm_utils:
-            if not os.path.exists(os.path.expanduser('~')+'/bin/apply-olm'):
-                g.appendError(msg="Container image was not built with olm-utils, cannot specify olm_utils: True")
+        # Handle deprecated olm_utils property
+        if 'olm_utils' in ge and not 'sequential_install' in ge:
+            g('sequential_install').set(ge['olm_utils'])
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name
