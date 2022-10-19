@@ -74,9 +74,9 @@
   - set_fact:
       _cp4d_cartridges_installed_successfully: False
     when: _install_cartridges_result.rc!=0
-  when: not _p_use_preview_script
+  when: _sequential_install
 
 - name: Run shell script to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
-  when: _p_use_preview_script
+  when: not _sequential_install

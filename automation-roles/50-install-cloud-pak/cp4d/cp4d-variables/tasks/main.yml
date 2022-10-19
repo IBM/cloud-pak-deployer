@@ -57,6 +57,19 @@
           }}
   loop: "{{ _cartridges_with_olm_utils_name }}"
 
+- set_fact:
+    _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
+
+- name: Determine if CP4D services must be installed sequentially
+  set_fact:
+    _sequential_install: "{{ _sequential_install or item.force_sequential_install }}"
+  when: (item.state | default('installed')) == 'installed'
+  loop: "{{ _cartridges_to_install }}"
+
+- name: Show if sequential install is done
+  debug:
+    var: _sequential_install
+
 - name: Show full cartridge information
   debug:
     var: _cartridges_to_install

@@ -54,7 +54,7 @@
   - name: Run apply-olm command to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
-  when: not _p_use_preview_script
+  when: _sequential_install
 
 - block:
   # Set current project to openshift-marketplace because script does not specify namespace for all catalog sources
@@ -65,4 +65,4 @@
   - name: Run shell script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
     shell: |
       {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh >> {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
-  when: _p_use_preview_script
+  when: not _sequential_install
