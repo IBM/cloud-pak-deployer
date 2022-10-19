@@ -47,12 +47,12 @@
   - name: Run apply-olm command to install platform subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log
     shell: |
       {{ _platform_apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log 2>&1
-  when: not _p_use_preview_script
+  when: _sequential_install
 
 - name: Run shell script to create platform subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-platform-sub.log 2>&1
-  when: _p_use_preview_script
+  when: not _sequential_install
 
 - name: Wait for platform subscirptions to be created
   include_tasks: cp4d-wait-platform-subscriptions.yml
@@ -90,12 +90,12 @@
   - name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
-  when: not _p_use_preview_script
+  when: _sequential_install
 
 - name: Run shell script to create cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
-  when: _p_use_preview_script
+  when: not _sequential_install
 
 - name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
   include_tasks: cp4d-subscriptions-wait.yml
