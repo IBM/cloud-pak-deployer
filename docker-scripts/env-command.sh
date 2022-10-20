@@ -8,34 +8,51 @@ echo "--------------------------------------------------------------------------
 
 export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\$ ';
 
-if [ -z "$cloud_platform" ]; then
-  echo "cloud_platform is not defined."
-  exit 1
-fi
+# 0 - not exist; 1 - exists
+ocp_ssh_private_key_exists=$($SCRIPT_DIR/../cp-deploy.sh vault list |grep "ocp-ssh-private-key" |wc -l)
+ocp_ssh_pub_key_exists=$($SCRIPT_DIR/../cp-deploy.sh vault list |grep "ocp-ssh-pub-key" |wc -l)
 
 #Create the ssh key pair
-if [ -f "$STATUS_DIR/vault/$cloud_platform" ]; then
-  ocp_ssh_private_key=$(awk -F "-key=" '/ocp-ssh-private/ {print $2}' $STATUS_DIR/vault/$cloud_platform)
-  ocp_ssh_pub_key=$(awk -F "-key=" '/ocp-ssh-pub/ {print $2}' $STATUS_DIR/vault/$cloud_platform)
+if [ "$ocp_ssh_private_key_exists" == 1 ] && [ "$ocp_ssh_pub_key_exists" == 1 ]; then
 
-  if [ ! -z "$ocp_ssh_private_key" ] && [ ! -z "$ocp_ssh_pub_key" ];then
-  ssh_key_pair_folder='/root/.ssh'
-  if [ ! -d "$ssh_key_pair_folder" ]; then
-    mkdir -p "$ssh_key_pair_folder"
+  ocp_ssh_private_result=$($SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-private-key")
+  ocp_ssh_private_key_re="(-----.*-----)(.*)(-----.*-----)"
+  if [[ $ocp_ssh_private_result =~ $ocp_ssh_private_key_re ]]; then
+      ocp_ssh_private_header=${BASH_REMATCH[1]}
+      ocp_ssh_private_body=${BASH_REMATCH[2]}
+      ocp_ssh_private_footer=${BASH_REMATCH[3]}
   fi
-  echo "Create the SSH key-pair id_rsa.pub and id_rsa files in the folder root/.ssh/"
-  echo $ocp_ssh_private_key |base64 -d > "$ssh_key_pair_folder"/id_rsa
-  echo $ocp_ssh_pub_key |base64 -d > "$ssh_key_pair_folder"/id_rsa.pub
-  #fix the issue "invalid format"
-  sed -i '$a\\r' "$ssh_key_pair_folder"/id_rsa
-  chmod 600 "$ssh_key_pair_folder"/id_rsa
-  chmod 600 "$ssh_key_pair_folder"/id_rsa.pub
+
+  ocp_ssh_pub_result=$($SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-pub-key")
+  ocp_ssh_pub_key_re="ocp-ssh-pub-key: (.*)PLAY RECAP"
+  if [[ $ocp_ssh_pub_result =~ $ocp_ssh_pub_key_re ]]; then
+    ocp_ssh_pub_key=${BASH_REMATCH[1]}
+  fi
+
+  if [ ! -z "$ocp_ssh_private_body" ] && [ ! -z "$ocp_ssh_pub_key" ]; then
+    ssh_key_pair_folder='/root/.ssh'
+    
+    if [ ! -d "$ssh_key_pair_folder" ]; then
+      mkdir -p "$ssh_key_pair_folder"
+    fi
+
+    echo "Create the SSH key-pair id_rsa.pub and id_rsa files in the folder root/.ssh/"
+    # write private key
+    echo $ocp_ssh_private_header >> "$ssh_key_pair_folder"/id_rsa
+    ocp_ssh_private_key_array=(${ocp_ssh_private_body//' '/'\r' })  
+    for ocp_ssh_private_key_item in ${ocp_ssh_private_key_array[@]}
+    do
+      echo $ocp_ssh_private_key_item >> "$ssh_key_pair_folder"/id_rsa
+    done
+    echo $ocp_ssh_private_footer >> "$ssh_key_pair_folder"/id_rsa
+
+    # write public key
+    echo $ocp_ssh_pub_key > "$ssh_key_pair_folder"/id_rsa.pub
+
+    chmod 600 "$ssh_key_pair_folder"/id_rsa
+    chmod 600 "$ssh_key_pair_folder"/id_rsa.pub
+  fi
 fi
-
-fi
-
-
-
 
 oc_zip=$(find $STATUS_DIR/downloads/ -name "openshift-client*" | tail -1)
 if [ "$oc_zip" != "" ];then
