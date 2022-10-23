@@ -13,6 +13,7 @@
 - set_fact:
     _cartridges_with_olm_utils_name: []
     _cartridges_to_install: []
+    _cartridge_dependencies: []
 
 - name: Obtain versions of case files and cartridges
   include_tasks: list-components-olm-utils.yml
@@ -70,6 +71,22 @@
   debug:
     var: _sequential_install
 
+- name: Determine cartridge dependencies
+  set_fact:
+    _cartridge_dependencies: >-
+      {{ _cartridge_dependencies + ( item.Dependencies.split('+') | map("trim") | list | reject('match','^$') | list ) | unique }}
+  when: (item.state | default('installed')) == 'installed'
+  loop: "{{ _cartridges_to_install }}"
+
+- name: Remove duplicate entries from cartridge dependencies
+  set_fact:
+    _cartridge_dependencies: >-
+      {{ _cartridge_dependencies | unique }}
+
 - name: Show full cartridge information
   debug:
     var: _cartridges_to_install
+
+- name: Show cartridge dependencies
+  debug:
+    var: _cartridge_dependencies
