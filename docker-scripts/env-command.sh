@@ -15,42 +15,25 @@ ocp_ssh_pub_key_exists=$($SCRIPT_DIR/../cp-deploy.sh vault list |grep "ocp-ssh-p
 #Create the ssh key pair
 if [ "$ocp_ssh_private_key_exists" == 1 ] && [ "$ocp_ssh_pub_key_exists" == 1 ]; then
 
-  ocp_ssh_private_result=$($SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-private-key")
-  ocp_ssh_private_key_re="(-----.*-----)(.*)(-----.*-----)"
-  if [[ $ocp_ssh_private_result =~ $ocp_ssh_private_key_re ]]; then
-      ocp_ssh_private_header=${BASH_REMATCH[1]}
-      ocp_ssh_private_body=${BASH_REMATCH[2]}
-      ocp_ssh_private_footer=${BASH_REMATCH[3]}
+  ssh_key_pair_folder='/root/.ssh' 
+  echo "Create the SSH key-pair id_rsa.pub and id_rsa files in the folder $ssh_key_pair_folder"      
+  if [ ! -d "$ssh_key_pair_folder" ]; then
+    mkdir -p "$ssh_key_pair_folder"
   fi
 
-  ocp_ssh_pub_result=$($SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-pub-key")
-  ocp_ssh_pub_key_re="ocp-ssh-pub-key: (.*)PLAY RECAP"
-  if [[ $ocp_ssh_pub_result =~ $ocp_ssh_pub_key_re ]]; then
-    ocp_ssh_pub_key=${BASH_REMATCH[1]}
-  fi
-
-  if [ ! -z "$ocp_ssh_private_body" ] && [ ! -z "$ocp_ssh_pub_key" ]; then
-    ssh_key_pair_folder='/root/.ssh'
-    
-    if [ ! -d "$ssh_key_pair_folder" ]; then
-      mkdir -p "$ssh_key_pair_folder"
-    fi
-
-    echo "Create the SSH key-pair id_rsa.pub and id_rsa files in the folder root/.ssh/"
-    # write private key
-    echo $ocp_ssh_private_header >> "$ssh_key_pair_folder"/id_rsa
-    ocp_ssh_private_key_array=(${ocp_ssh_private_body//' '/'\r' })  
-    for ocp_ssh_private_key_item in ${ocp_ssh_private_key_array[@]}
-    do
-      echo $ocp_ssh_private_key_item >> "$ssh_key_pair_folder"/id_rsa
-    done
-    echo $ocp_ssh_private_footer >> "$ssh_key_pair_folder"/id_rsa
-
-    # write public key
-    echo $ocp_ssh_pub_key > "$ssh_key_pair_folder"/id_rsa.pub
-
-    chmod 600 "$ssh_key_pair_folder"/id_rsa
-    chmod 600 "$ssh_key_pair_folder"/id_rsa.pub
+  # Write private key
+  $SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-private-key" -vsf "$ssh_key_pair_folder/id_rsa"
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to create private key file: $ssh_key_pair_folder/id_rsa"
+  else
+    chmod 400 "$ssh_key_pair_folder"/id_rsa
+  fi 
+  # Write public key
+  $SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-pub-key" -vsf "$ssh_key_pair_folder/id_rsa.pub"
+  if [[ "$?" -ne 0 ]]; then
+    echo "Failed to create public key file: $ssh_key_pair_folder/id_rsa.pub"
+  else
+    chmod 400 "$ssh_key_pair_folder"/id_rsa.pub
   fi
 fi
 
