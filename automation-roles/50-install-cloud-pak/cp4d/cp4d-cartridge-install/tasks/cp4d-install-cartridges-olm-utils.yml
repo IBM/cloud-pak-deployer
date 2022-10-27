@@ -22,8 +22,6 @@
 - name: Generate preview script to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
   shell: |
     {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
-  vars:
-    _p_preview_script: True
 
 - name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh
   copy:
@@ -55,7 +53,7 @@
 
 - name: Run apply-cr command to install cartridges
   block:
-  - name: Generate OLM utils command to install cartridges
+  - name: Generate apply-cr command to install cartridges
     set_fact:
       _apply_cr_command: "{{ lookup('template', 'apply-cr-cartridges.j2') }}"
     vars:
@@ -65,7 +63,7 @@
       {{ _apply_cr_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
     register: _install_cartridges_result
     failed_when: False
-  - name: Fail if there was an error installing the cartridge(s) using OLM utils
+  - name: Fail if there was an error installing the cartridge(s) using apply-cr
     fail:
       msg: "{{ _install_cartridges_result }}"
     when: 
