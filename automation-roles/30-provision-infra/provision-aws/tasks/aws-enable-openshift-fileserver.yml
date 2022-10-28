@@ -1,0 +1,97 @@
+---
+- name: Get existing file systems
+  shell: |
+    aws efs describe-file-systems \
+      --query 'FileSystems[?Name==`{{ _current_openshift_storage.storage_name }}`].FileSystemId' \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} --output json
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_describe_fs
+
+- name: Get file system ID for {{ _current_openshift_storage.storage_name }}
+  set_fact:
+    _aws_fs_id: "{{ _aws_describe_fs.stdout | from_json | first }}"
+  when: (_aws_describe_fs.stdout | from_json) != []
+
+- name: Get security group for OpenShift cluster compute nodes
+  shell: |
+    aws ec2 describe-security-groups \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}*-worker-sg" \
+      --query 'SecurityGroups[*].GroupId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_sg
+
+- debug:
+    var: _aws_sg
+
+- name: Fail if security group was not found
+  fail:
+    msg: "Security group with name {{ _current_openshift_cluster.name }}*-worker-sg not found"
+  when: (_aws_sg.stdout | from_json) == []
+
+- set_fact:
+    _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
+
+- name: Get VPC details for OpenShift cluster {{ _current_openshift_cluster }}
+  shell: |
+    aws ec2 describe-vpcs \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}-*-vpc" \
+      --query 'Vpcs[]'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_openshift_vpc
+
+- set_fact:
+    _aws_openshift_vpc_cidr: "{{ (_aws_openshift_vpc.stdout | from_json | first).CidrBlock }}"
+
+- name: Get NFS rule for security group {{ _aws_compute_sg }}
+  shell: |
+    aws ec2 describe-security-group-rules \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --filter Name="group-id",Values="{{ _aws_compute_sg }}" \
+      --query 'SecurityGroupRules[?ToPort==`2049`]'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_sg_nfs_rule
+
+- name: Create NFS security group rule if not existent
+  shell: |
+    aws ec2 authorize-security-group-ingress \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --group-id {{ _aws_compute_sg }} \
+      --protocol=tcp \
+      --port=2049 --cidr="{{ _aws_openshift_vpc_cidr }}"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    register: _aws_create_fs
+  when: (_aws_sg_nfs_rule.stdout | from_json) == []
+
+- name: Get subnets for OpenShift cluster {{ _current_openshift_cluster.name }}
+  shell: |
+    aws ec2 describe-subnets \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}*-private*" \
+      --query 'Subnets[*].SubnetId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_subnets
+
+- name: Fail if no private subnets were found
+  fail:
+    msg: "No private subnets for OpenShift cluster {{ _current_openshift_cluster.name }} found"
+  when: (_aws_subnets.stdout | from_json) == []
+
+- name: Configure mount points for file system
+  include_tasks: aws-file-server-mount-point.yaml
+  loop: "{{ _aws_subnets.stdout | from_json }}"
+  loop_control:
+    loop_var: _aws_subnet
