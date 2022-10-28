@@ -8,6 +8,12 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+- name: Configure file storage on AWS
+  include_tasks: aws-file-server.yaml
+  loop: "{{ all_config.nfs_server | default([]) }}"
+  loop_control:
+    loop_var: _current_nfs_server
+
 - include_tasks: provision-rosa.yml
   loop: "{{ all_config.openshift | default([]) }}"
   loop_control:
@@ -19,9 +25,3 @@
   loop_control:
     loop_var: _current_openshift_cluster
   when: _current_openshift_cluster.infrastructure.type  == 'self-managed'
-
-- name: Configure file storage on AWS
-  include_tasks: aws-file-server.yaml
-  loop: "{{ all_config.nfs_server | default([]) }}"
-  loop_control:
-    loop_var: _current_nfs_server
