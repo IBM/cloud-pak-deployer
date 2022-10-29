@@ -34,8 +34,17 @@ networking:
 platform:
   aws:
     region: {{ generator.attributes.infrastructure.aws_region }}
+{% if generator.attributes.infrastructure.subnet_ids is defined  %}
+    subnets:
+{% for subnet_id in generator.attributes.infrastructure.subnet_ids %}
+    - {{ subnet_id }}
+{% endfor %}
+{% endif %}
 
-publish: External
+{% if generator.attributes.infrastructure.private_only | default(False) %}
+publish: internal
+{% endif %}
+
 fips: false
 pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
 sshKey: '{{ _ocp_ssh_pub_key }}'

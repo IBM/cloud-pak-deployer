@@ -237,20 +237,20 @@ openshift:
 | infrastructure             | Infrastructure properties                                                                                                               | Yes       |                     |
 | infrastructure.type        | Type of OpenShift cluster on AWS.                                                                                                       | Yes       | `rosa` or `self-managed`             |
 | infrastructure.aws_region  | Region of AWS where cluster is deployed.                                                                                                | Yes       |                     |
-| infrastructure.multi_zone  | Determines whether the ROSA cluster is deployed across multiple availability zones. Default is True.                                    | No        | True (default), False         |
+| infrastructure.multi_zone  | Determines whether the OpenShift cluster is deployed across multiple availability zones. Default is True.                                    | No        | True (default), False         |
 | infrastructure.use_sts     | Determines whether AWS Security Token Service must be used. Default is False.                                                           | No        | True, False (default)       |
 | infrastructure.machine_cdr | Machine CIDR if existing VPC and subnets are used, for example 10.243.0.0/16. Do not specify if subnets are not specified.              | No        | CIDR                |
-| infrastructure.subnet_ids  | Existing public and private subnet IDs in the VPC to be used for the ROSA cluster.  Must be specified in combination with machine_cidr. | No        | Existing subnet IDs |
+| infrastructure.subnet_ids  | Existing public and private subnet IDs in the VPC to be used for the OpenShift cluster.  Must be specified in combination with machine_cidr. | No        | Existing subnet IDs |
 | compute_nodes              | Total number of compute nodes                                                                                                           | Yes       | Integer             |
 | upstream_dns[]             | Upstream DNS servers(s), see (#upstream-dns-servers)                                                                                    | No        |                     |
 | openshift_logging[]        | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                   | No        |                     |
 | upstream_dns[]             | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                              | No        |                     |
 | openshift_storage[]        | List of storage definitions to be defined on OpenShift, see below for further explanation                                               | Yes       |                     |
 
-When deploying the ROSA cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
+When deploying the OpenShift cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
 ```
     machine_cidr: 10.243.0.0/24
-    subnets:
+    subnets_ids:
     - subnet-0e63f662bb1842e8a
     - subnet-0673351cd49877269
     - subnet-00b007a7c2677cdbc
@@ -271,7 +271,7 @@ In the above case, all referenced subnets have an address space of `/27` so that
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                          | No                             |                |
 | ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                    | Yes if `storage_type` is `ocs` |                |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                      | Yes if `storage_type` is `ocs` |                |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On ROSA clusters, `gp2` i usually available after OpenShift installation | No                             |                |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. `gp2` is usually available after OpenShift installation | No                             |                |
 
 
 ### OpenShift on Microsoft Azure (ARO)
