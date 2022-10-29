@@ -10,47 +10,39 @@
   vars:
     _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
-- name: Check if metadata.json exists
-  stat: 
-    path: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
-  register: _openshift_metadata_json
+- name: Delete file servers associated with OpenShift cluster
+  include_tasks: aws-delete-file-servers.yml
+  loop: "{{ _current_openshift_cluster.openshift_storage }}"
+  loop_control:
+    loop_var: _current_openshift_storage
+
+- name: Retrieve metadata json from the vault to check if OpenShift cluster still exist
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-metadata-json"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_metadata_json
 
 - block:
-  - name: Retrieve metadata json from the vault
-    include_role: 
-      name: vault-get-secret
-    vars:
-      secret_name: "{{ current_openshift_cluster.name }}-metadata-json"
-      secret_group: "{{ environment_name }}"
-
-  - name: Check that metadata has been found in the vault
-    fail:
-      msg: "No metadata found in secret {{ environment_name }}/{{ current_openshift_cluster.name }}-metadata-json"
-    when: "secret_value | trim | length == 0"
-
-  - name: Checking {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} directory exists
-    stat: 
-      path: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}"
-    register: _openshift_metadata_json_folder
-
-  - name: Create {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} directory 
+  - name: Ensure {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} directory exists
     file:
       path: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}"
       state: directory
-    when: not _openshift_metadata_json_folder.stat.exists
 
   - name: Write {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json file
     copy:
       content: "{{ secret_value }}"
       dest: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
-  when: not _openshift_metadata_json.stat.exists 
 
-- name: Delete IPI cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log
-  shell: |
-    openshift-install destroy cluster --dir={{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  - name: Delete IPI cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log
+    shell: |
+      openshift-install destroy cluster --dir={{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+
+  when: _aws_metadata_json != '' 
 
 - name: Delete "{{ _current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
   include_role:
