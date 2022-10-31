@@ -1,0 +1,33 @@
+---
+# Check if OpenShift cluster still exists
+- name: Retrieve kubeadmin password from vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _kubeadmin_password
+
+- block:
+  - name: Login to the OpenShift cluster {{ current_openshift_cluster.name }}
+    include_role:
+      name: openshift-login
+    vars:
+      _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
+  - name: Delete namespaces which use OCS storage classes
+    shell: |
+      for ns in $(oc get pvc -A \
+        -o jsonpath='{range .items[*]}{@.metadata.namespace}{" "}{@.spec.storageClassName}{"\n"}' | \
+          grep -E '^openshift' | \
+          grep 'ocs-storagecluster' | \
+          awk '{print $1}' | uniq);do
+        oc delete namespace $ns --grace-period=5 --timeout=10s
+      done
+    failed_when: False
+    register: _delete_ns_result
+
+  - name: Show output of namespace deletion
+    debug:
+      var: _delete_ns_result
+  when: _kubeadmin_password != ''

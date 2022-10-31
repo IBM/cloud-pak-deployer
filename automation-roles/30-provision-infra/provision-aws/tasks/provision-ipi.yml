@@ -13,7 +13,7 @@
     secret_group: "{{ environment_name }}"
     _p_secret_variable: _kubeadmin_password
 
-# Run OpenShift IPI installer if no OpenShift cluster does not exist yet
+# Run OpenShift IPI installer if OpenShift cluster does not exist yet
 - block:
   - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
     include_role:
@@ -48,3 +48,9 @@
       secret_group: "{{ environment_name }}" 
       secret_payload: "{{ _new_kubeadmin_password }}"
   when: _kubeadmin_password==""
+
+- include_tasks: aws-enable-openshift-fileserver.yml
+  loop: "{{ _current_openshift_cluster.openshift_storage | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_storage
+  when: _current_openshift_storage.storage_type  == 'aws-elastic'
