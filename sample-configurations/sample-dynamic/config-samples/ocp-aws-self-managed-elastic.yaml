@@ -1,0 +1,24 @@
+---
+global_config:
+  environment_name: sample
+  cloud_platform: aws
+  aws_region: eu-central-1
+
+nfs_server:
+- name: "{{ env_id }}-elastic"
+  infrastructure:
+    aws_region: "{{ aws_region }}"
+
+openshift:
+- name: "{{ env_id }}"
+  ocp_version: 4.10.34
+  compute_flavour: m5.4xlarge
+  compute_nodes: 3
+  infrastructure:
+    type: self-managed
+    aws_region: "{{ aws_region }}"
+    multi_zone: True
+    use_sts: False
+  openshift_storage:
+  - storage_name: "{{ env_id }}-elastic"
+    storage_type: aws-elastic
