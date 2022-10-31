@@ -7,10 +7,6 @@ const links = [
     href: 'https://github.com/IBM/cloud-pak-deployer',
   },
   {
-    title: 'Development setup',
-    href: 'https://ibm.github.io/cloud-pak-deployer/development/deployer-development-setup',
-  },
-  {
     title: 'Carbon',
     href: 'https://www.carbondesignsystem.com',
   },
