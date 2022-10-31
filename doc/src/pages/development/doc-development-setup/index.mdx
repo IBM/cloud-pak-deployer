@@ -1,9 +1,8 @@
 ---
-title: Development
-tabs: ['Deployer Development Setup', 'Doc Development Setup', 'Doc Guidelines']
+title: Documentation Development setup
 ---
 
-# Documentation Development Setup
+# Documentation Development setup
 
 Gatsby themes encapsulate all of the configuration and implementation details of Gatsby websites. This GitHub repository has been built with a dependancy on the gatsby-theme-carbon package. The primary goal of gatsby-theme-carbon is to get content authors speaking the IBM Design Language with Carbon as soon as possible. This GiHub repository is connected to Travis any commit will cause a build of the GitHub pages to be triggered. A better way of working is to use the tooling from a loacal system
 
@@ -11,30 +10,24 @@ Gatsby themes encapsulate all of the configuration and implementation details of
 If you want to test the documentation pages you're developing, it is best to run Gatsby in a container and map your local doc folder to a folder inside the container. This avoids having to install nvm and many modules on your workstation.
 
 Do the following:
-* Make sure you have cloned this repository to your workstation
-* Install Docker on your workstation
+* Make sure you have cloned this repository to your development server
 * Start from the main directory of the cloud-pak-deployer repository
 ```
 cd doc
-docker build -t cpd-doc .
+podman build -t cpd-doc .
 ```
 
-This will build a CentOS image with `nvm` and the required Node.js modules already installed. It will take ~5-10 minutes to complete this step, dependent on your network bandwidth.
+This will build a Red Hat UBI image with `nvm` and the required Node.js modules already installed. It will take ~5-10 minutes to complete this step, dependent on your network bandwidth.
 
-## Running the docker image
+## Running the documentation image
 ```
-docker run --name cpd-doc -d -p 8000:8000 -v $PWD:/doc cpd-doc:latest
-```
-
-This will start the docker container as a daemon. You can monitor its progress by tailing the logs.
-
-```
-docker logs -f cpd-doc 
+podman rm -f cpd-doc 2>/dev/null && \
+rm -rf public node_modules .cache package-lock.json && \
+podman run --name cpd-doc -d -p 8000:8000 -v $PWD:/doc:Z cpd-doc:latest && \
+podman logs -fl
 ```
 
-It will take approximately 10 minutes to install all Node.js packages into the `node_modules` directory, this is only the first time. The `node_modules` directory is ignored by Git so it will no be synchronized with the upstream repository. Next time you start the container, it should take less than 1 minute.
-
-Once finished, you will see the following message:
+This will start the container as a daemon and tail the logs. It will take approximaely 5-10 minutes to download packages and build the server. Once finished, you will see the following message:
 ```output
 ✖ 6 problems (0 errors, 6 warnings)
 
@@ -60,22 +53,19 @@ Once you the container has fully started, it automatically tracks all changes in
 
 http://localhost:8000
 
-## Stopping the docker container
+## Stopping the documentation container
 If you don't want to test your changes locally anymore, stop the docker container.
 ```
-docker kill cpd-doc
+podman kill cpd-doc
 ```
 
-Next time you want to test your changes, you only have to run:
-```
-docker start cpd-doc
-```
+Next time you want to test your changes, re-run the series of commands that delete the container, delete cache and build the documentation.
 
 ## Removing the docker container and image
-If you want to remove all from your workstation, do the following:
+If you want to remove all from your development server, do the following:
 ```
-docker rm -f cpd-doc
-docker rmi -f cpd-doc:latest
+podman rm -f cpd-doc
+podman rmi -f cpd-doc:latest
 ```
 
-Note that after pushing your updated documentation, a request will be sent to a Travis job that will rebuild the pages site. The Travis job can be followed at https://travis.ibm.com, you can login to follow the build using your github credentials. 
+Note that after merging your updated documentation with the `main` branch, the pages site will be rendered by a GitHub action. Go to GitHub Actions if you want to monitor the build process.
