@@ -69,8 +69,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             if "subnet_ids" not in ge['infrastructure']:
                 g.appendError(msg='If machine_cidr is specified, you must also specify the subnet_ids attribute')
         if "subnet_ids" in ge['infrastructure']:
-            if len(ge['infrastructure']['subnet_ids']) != 2 and len(ge['infrastructure']['subnet_ids']) != 6:
-                g.appendError(msg='You can specify either 2 subnet IDs or 6 subnet IDs if there are existing subnets in the VPC')
+            # if len(ge['infrastructure']['subnet_ids']) != 2 and len(ge['infrastructure']['subnet_ids']) != 6:
+            #     g.appendError(msg='You can specify either 2 subnet IDs or 6 subnet IDs if there are existing subnets in the VPC')
             if "machine_cidr" not in ge['infrastructure']:
                 g.appendError(msg='If subnet IDs are specified, you must also specify the machine_cidr attribute')
         
