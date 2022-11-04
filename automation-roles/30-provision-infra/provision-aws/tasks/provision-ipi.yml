@@ -30,6 +30,11 @@
     ignore_errors: yes
     register: _openshift_install_result
 
+  - name: Check if metadata.json was created
+    stat:
+      path: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
+      register: _metadata_json
+
   - name: Store the metadata json file as secret {{ _current_openshift_cluster.name }}-metadata-json in group {{ environment_name }}
     include_role:
       name: vault-set-secret
@@ -37,6 +42,7 @@
       secret_name: "{{ _current_openshift_cluster.name }}-metadata-json"
       secret_group: "{{ environment_name }}"
       secret_file: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
+    when: _metadata_json.stat.exists
 
   - name: Fail if there were errors during the installation process
     fail:
