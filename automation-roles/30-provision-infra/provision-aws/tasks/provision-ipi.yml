@@ -27,6 +27,13 @@
     environment:
       AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
       AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    ignore_errors: yes
+    register: _openshift_install_result
+
+  - name: Check if metadata.json was created
+    stat:
+      path: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
+    register: _metadata_json
 
   - name: Store the metadata json file as secret {{ _current_openshift_cluster.name }}-metadata-json in group {{ environment_name }}
     include_role:
@@ -35,6 +42,13 @@
       secret_name: "{{ _current_openshift_cluster.name }}-metadata-json"
       secret_group: "{{ environment_name }}"
       secret_file: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
+    when: _metadata_json.stat.exists
+
+  - name: Fail if there were errors during the installation process
+    fail:
+      msg: Error occurred during OpenShift installation, check the  apply, state has been preserved. Failing now. Check the {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log for details
+    when: 
+    - _openshift_install_result.rc!=0
 
   - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
     set_fact:
