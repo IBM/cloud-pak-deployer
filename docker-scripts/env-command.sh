@@ -8,38 +8,32 @@ echo "--------------------------------------------------------------------------
 
 export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\$ ';
 
-# 0 - not exist; 1 - exists
-ocp_ssh_private_key_exists=$($SCRIPT_DIR/../cp-deploy.sh vault list |grep "ocp-ssh-private-key" |wc -l)
-ocp_ssh_pub_key_exists=$($SCRIPT_DIR/../cp-deploy.sh vault list |grep "ocp-ssh-pub-key" |wc -l)
+# Get the public and private keys if existing
+echo "Getting SSH keys from vault, if existing..."
+TEMP_DIR=$(mktemp -d)
+$SCRIPT_DIR/../cp-deploy.sh vault get -vs ocp-ssh-private-key -vsf $TEMP_DIR/id_rsa > /dev/null
+$SCRIPT_DIR/../cp-deploy.sh vault get -vs ocp-ssh-pub-key -vsf $TEMP_DIR/id_rsa.pub > /dev/null
 
-#Create the ssh key pair
-if [ "$ocp_ssh_private_key_exists" == 1 ] && [ "$ocp_ssh_pub_key_exists" == 1 ]; then
 
-  ssh_key_pair_folder='/root/.ssh' 
-  echo "Create the SSH key-pair id_rsa.pub and id_rsa files in the folder $ssh_key_pair_folder"      
-  if [ ! -d "$ssh_key_pair_folder" ]; then
-    mkdir -p "$ssh_key_pair_folder"
-  fi
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
 
-  # Write private key
-  $SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-private-key" -vsf "$ssh_key_pair_folder/id_rsa"
-  if [[ "$?" -ne 0 ]]; then
-    echo "Failed to create private key file: $ssh_key_pair_folder/id_rsa"
-  else
-    chmod 400 "$ssh_key_pair_folder"/id_rsa
-  fi 
-  # Write public key
-  $SCRIPT_DIR/../cp-deploy.sh vault get -e ANSIBLE_STANDARD_OUTPUT=false -vs "ocp-ssh-pub-key" -vsf "$ssh_key_pair_folder/id_rsa.pub"
-  if [[ "$?" -ne 0 ]]; then
-    echo "Failed to create public key file: $ssh_key_pair_folder/id_rsa.pub"
-  else
-    chmod 400 "$ssh_key_pair_folder"/id_rsa.pub
-  fi
+if [[ ! -z $(grep '[^[:space:]]' $TEMP_DIR/id_rsa) ]];then
+  echo "Writing SSH keys to ~/.ssh..."
+  rm -f ~/.ssh/id_rsa
+  cp $TEMP_DIR/id_rsa ~/.ssh/id_rsa
+  chmod 600 ~/.ssh/id_rsa
+fi
+
+if [[ ! -z $(grep '[^[:space:]]' $TEMP_DIR/id_rsa.pub) ]];then
+  rm -f ~/.ssh/id_rsa.pub
+  cp $TEMP_DIR/id_rsa ~/.ssh/id_rsa.pub
+  chmod 600 ~/.ssh/id_rsa.pub
 fi
 
 oc_zip=$(find $STATUS_DIR/downloads/ -name "openshift-client*" | tail -1)
 if [ "$oc_zip" != "" ];then
-  echo "Installing OpenShift client"
+  echo "Installing OpenShift client..."
   tar xvzf $oc_zip -C /usr/local/bin --exclude='README.md' > /dev/null
   if [ -e $STATUS_DIR/openshift/kubeconfig ];then
     # Use a copy of the kubeconfig file so that the command line doesn't conflict with an active deployer
