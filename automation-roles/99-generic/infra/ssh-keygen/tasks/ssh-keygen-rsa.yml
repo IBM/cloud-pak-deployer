@@ -1,0 +1,51 @@
+---
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-ssh-pub-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ocp_ssh_pub_key
+
+- block:
+  - name: Create temporary directory to hold SSH keys
+    tempfile:
+      state: directory
+      suffix: _ssh
+    register: ssh_tempdir
+
+  - name: Create SSH key if not already in the vault and managed
+    community.crypto.openssh_keypair:
+      path: "{{ ssh_tempdir.path }}/id_ssh_rsa"
+      type: rsa
+      comment: "provision-key for id_ssh_rsa"
+
+  - name: Show SSH key file name
+    debug:
+      msg: "{{ ssh_tempdir.path }}/id_ssh_rsa"
+
+  - name: Store SSH private key id_ssh_rsa in vault
+    include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "ocp-ssh-private-key"
+      secret_description: "Private SSH key for environment {{ environment_name }}"
+      secret_file: "{{ ssh_tempdir.path + '/id_ssh_rsa' }}"
+      secret_group: "{{ environment_name }}"
+
+  # Public SSH key must match its private counterpart; therefore always store the public
+  # key if the private key was (re-)generated
+  - name: Store SSH public key {{ ssh_key_item.name }} in vault
+    include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "ocp-ssh-pub-key"
+      secret_description: "Public SSH key for environment {{ environment_name }}"
+      secret_file: "{{ ssh_tempdir.path + '/id_ssh_rsa.pub' }}"
+      secret_group: "{{ environment_name }}"
+
+  - name: Delete temporary SSH key directory
+    file:
+      path: "{{ ssh_tempdir.path }}"
+      state: absent
+  when: _ocp_ssh_pub_key == ""
