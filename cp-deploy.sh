@@ -34,8 +34,8 @@ command_usage() {
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
-  echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
-  echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
+  echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files \$HOME/cpd-status if not specified (\$STATUS_DIR)"
+  echo "  --config-dir,-c <dir>         Directory to read the configuration from. \$HOME/cpd-config if not specified (\$CONFIG_DIR)"
   echo "  --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
@@ -583,10 +583,11 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [[ "${ACTION}" != "wizard"  && "${ACTION}" != "kill" ]]; then
+if [[ "${ACTION}" != "kill" ]]; then
   if [ "${CONFIG_DIR}" == "" ]; then
-    echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
-    exit 1
+    echo "Config directory not specified, assuming $HOME/cpd-config"
+    export CONFIG_DIR=$HOME/cpd-config
+    mkdir -p $CONFIG_DIR/config
   fi
   if [ ! -d "${CONFIG_DIR}" ]; then
     echo "config directory ${CONFIG_DIR} not found."
@@ -601,8 +602,8 @@ fi
 # Validate if the status has been set
 if [[ "${ACTION}" != "wizard" ]]; then
   if [ "${STATUS_DIR}" == "" ]; then
-    echo "Status directory must be specified using the STATUS_DIR environment variable or the --status-dir parameter."
-    exit 1
+    echo "Status directory not specified, assuming $HOME/cpd-status"
+    export STATUS=$HOME/cpd-status
   fi
 fi
 
