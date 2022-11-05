@@ -597,6 +597,11 @@ if [[ "${ACTION}" != "kill" ]]; then
     echo "config directory not found in directory ${CONFIG_DIR}."
     exit 1
   fi
+  yaml_count=`ls -1 *.yaml 2>/dev/null | wc -l`
+  if [ $yaml_count == 0 ];then
+    echo "Directory ${CONFIG_DIR}/config does not hold any yaml files. Please add configuration to this directory."
+    exit 1
+  fi
 fi
 
 # Validate if the status has been set
