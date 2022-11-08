@@ -13,6 +13,7 @@ from packaging import version
 #     aws_region: eu-central-1
 #     multi_zone: True
 #     use_sts: False
+#     credentials_mode: Manual
     # machine-cidr: 10.243.0.24
     # subnet_idss:
     # - subnet-0e63f662bb1842e8a
@@ -65,6 +66,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         if "use_sts" in ge['infrastructure']:
             if type(ge['infrastructure']['use_sts']) != bool:
                 g.appendError(msg='use_sts must be True or False if specified')
+        if "credentials_mode" in ge['infrastructure']:
+            if ge['infrastructure']['credentials_mode'] not in ['Manual','Mint']:
+                g.appendError(msg='credentials_mode must be Manual or Mint if specified')
         if "machine_cidr" in ge['infrastructure']:
             if "subnet_ids" not in ge['infrastructure']:
                 g.appendError(msg='If machine_cidr is specified, you must also specify the subnet_ids attribute')
