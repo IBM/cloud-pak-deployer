@@ -8,6 +8,7 @@ const Infrastructure = ({cloudPlatform, IBMCloudSettings, updateInfraValue, upda
     const [loadingIBMRegion, setLoadingIBMRegion] = useState(false)
     const [loadIBMRegionErr, setLoadIBMRegionErr] = useState(false)
     const [IBMRegion, setIBMRegion] = useState(IBMCloudSettings.region)
+    const [AWSRegion, setAWSRegion] = useState(IBMCloudSettings.region)
 
     const [isIBMregionInValid, setIBMregionInValid] = useState(false)    
 
@@ -85,7 +86,7 @@ const Infrastructure = ({cloudPlatform, IBMCloudSettings, updateInfraValue, upda
          <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="0" />
          <RadioButton labelText="AWS" value="aws" id="1" disabled  />
          <RadioButton labelText="vSphere" value="vsphere" id="2" disabled />
-         <RadioButton labelText="Openshift" value="openshift" id="3" disabled />
+         <RadioButton labelText="Existing OpenShift" value="existing-ocp" id="3" />
       </RadioButtonGroup>
 
       {cloudPlatform === 'ibm-cloud' ? 
@@ -118,10 +119,29 @@ const Infrastructure = ({cloudPlatform, IBMCloudSettings, updateInfraValue, upda
           <div className="infra-container">
             <div>
               <div className="infra-items">AWS Access Key</div>
-              <TextInput.PasswordInput placeholder="AWS Access Key" id="4" labelText="" />
+              <TextInput placeholder="AWS Access Key" id="4" labelText="" />
+            </div>
+            <div>
+              <div className="infra-items">AWS Secret Access Key</div>
+              <TextInput.PasswordInput placeholder="AWS Secret Access Key" id="4" labelText="" />
+            </div>
+            {/* <div>
+              <div className="infra-items">AWS Region</div>
+              <TextInput onChange={setIBMCloudRegion} placeholder={AWSRegion} id="3" labelText="" value={AWSRegion} invalidText="AWS region."  invalid={isAWSregionInValid}/>
+            </div>  */}
+          </div>
+        </> : null}
+
+        {cloudPlatform === 'existing-ocp' ?
+        <>
+          <div className="infra-container">
+            <div>
+              <div className="infra-items">oc login command</div>
+              <TextInput placeholder="oc login command" id="4" labelText="" />
             </div>
           </div>
-        </> : null}    
+        </> : null}
+
       </>
     );
   };
