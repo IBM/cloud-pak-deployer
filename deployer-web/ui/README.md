@@ -2,6 +2,38 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Prerequisites
+
+- Git is installed
+- Node.js 16/18/19 is installed. If Node.js is not installed, please refer to section [Install Node.js](#install-nodejs) to install node.js.
+
+## Install Node.js
+
+1. To **install** or **update** nvm, please run the following cURL or Wget command:
+```sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+```
+```sh
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+```
+
+Running either of the above commands downloads a script and runs it. The script clones the nvm repository to `~/.nvm`, and attempts to add the source lines from the snippet below to the correct profile file (`~/.bash_profile`, `~/.zshrc`, `~/.profile`, or `~/.bashrc`).
+
+<a id="profile_snippet"></a>
+```sh
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+```
+
+2. Use the nvm command to install node.js. 
+```sh
+nvm install <node.js version>
+```
+For example:
+```sh
+nvm install 16.15.1
+```
+
 ## Getting started
 
 1. Open your terminal and then type
