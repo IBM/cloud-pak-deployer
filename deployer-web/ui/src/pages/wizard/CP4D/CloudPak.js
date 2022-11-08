@@ -1,4 +1,4 @@
-import { Checkbox, Loading, InlineNotification } from 'carbon-components-react';
+import { Checkbox, Loading, InlineNotification, TextInput } from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
@@ -94,24 +94,57 @@ const CloudPak = ({CPDData, setCPDData}) => {
       }      
     }
 
+
+    const Entitlement = () => {
+      return (
+        <div>
+          <div className="cloud-pak-items">Entitlement key</div>
+          <TextInput.PasswordInput  placeholder="Entitlement key" id="1" labelText="" value=""/>
+        </div> 
+      )
+    }
+
+   
+
     return (
         <>     
           <div className='cpd-container'>
-          </div>  
+          
 
           { loadingCPD && <Loading /> }  
           { loadCPDErr && <InlineNotification className="cpd-error"
                 {...errorProps()}        
-            /> }             
-            <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeParentCheckBox} checked={checkParentCheckBox} indeterminate={indeterminateParentCheckBox}/>
-              { CPDData.map((item)=>{
-                if (item.description) {
-                  return (
-                    <Checkbox className='child' onClick={changeChildCheckBox} labelText={item.description} id={item.name} key={item.name} checked={item.state === "installed"} />                
-                  )  
-                }
-                return null        
-              }) }             
+            /> }  
+
+
+           
+
+          <Entitlement />
+
+          {/* CP4D */}
+          <div className="cloud-pak-items">Cartridges for IBM Cloud Pak for Data</div>
+          <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeParentCheckBox} checked={checkParentCheckBox} indeterminate={indeterminateParentCheckBox}/>
+            { CPDData.map((item)=>{
+              if (item.description) {
+                return (
+                  <Checkbox className='child' onClick={changeChildCheckBox} labelText={item.description} id={item.name} key={item.name} checked={item.state === "installed"} />                
+                )  
+              }
+              return null        
+            }) } 
+
+          {/* CP4I */}
+          <div className="cloud-pak-items">Cartridges for IBM Cloud Pak for Integration</div>
+          <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeParentCheckBox} checked={checkParentCheckBox} indeterminate={indeterminateParentCheckBox}/>
+            { CPDData.map((item)=>{
+              if (item.description) {
+                return (
+                  <Checkbox className='child' onClick={changeChildCheckBox} labelText={item.description} id={item.name} key={item.name} checked={item.state === "installed"} />                
+                )  
+              }
+              return null        
+            }) } 
+          </div>  
         </>
     )
 }
