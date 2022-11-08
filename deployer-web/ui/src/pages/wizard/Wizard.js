@@ -20,16 +20,21 @@ const Wizard = () => {
   const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
 
   //Step 1
-  const [cloudPlatform, setCloudPlatform] = useState('ibm-cloud')
-  //--ibm cloud
+  const [cloudPlatform, setCloudPlatform] = useState('existing-ocp')
+  //--IBM Cloud
   const [IBMCloudSettings, setIBMCloudSettings] = useState({
     IBMAPIKey: '',
     envId: '',
-    entilementKey: '',
     region: '',
   })
   //--AWS
-  const [AWSSecurityKey, setAWSSecurityKey] = useState('')
+  const [AWSSettings, setAWSSettings] = useState({
+    accessKeyID: '',
+    secretAccessKey:'',
+    region: '',
+  })
+  
+
   //Step 2
   const [storage, setStorage] = useState([])
   const [storagesOptions, setStoragesOptions] = useState([])
@@ -83,6 +88,7 @@ const Wizard = () => {
   }
   
   const updateInfraValue = ({cloudPlatform, region}) => {
+      console.log(cloudPlatform)
       if (cloudPlatform){
         setCloudPlatform(cloudPlatform)
       }      
@@ -131,52 +137,9 @@ const Wizard = () => {
     }
   }, [])
 
-  return (
-    <>
-     <div className="wizard-container">
-      <div className="wizard-container__page">
-        <div className='wizard-container__page-header'>
-          <div className='wizard-container__page-header-title'>         
-            <h2>Deploy Wizard</h2>
-            <div className='wizard-container__page-header-subtitle'>IBM Cloud Pak</div>                      
-          </div>
-          { isDeployStart ? null: 
-          <div>
-            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
-            {currentIndex === 3 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment}>Deploy</Button>
-              :
-              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
-            }            
-          </div>
-          }          
-        </div> 
-        {loadingDeployStatus && <Loading /> }            
-        {
-          isDeployStart ? 
-            isDeployErr ?
-              <InlineNotification className="deploy-error"
-                    {...errorProps()}        
-                />  
-                :
-                <>
-                <InlineNotification className="deploy-error"
-                {...successProps()}        
-              /> 
-
-              <h4>Logs:</h4>
-              <div>
-                <TextArea ref={logsRef}
-                        rows={20}
-                        className="wizard-logs"
-                        hideLabel={true}
-                        placeholder={deployLog}   
-                        labelText=""                    
-                    />
-              </div>
-              </>
-          :
-          <ProgressIndicator className="wizard-container__page-progress"
+  const DeployerProgressIndicator = () => {
+    return (
+      <ProgressIndicator className="wizard-container__page-progress"
           vertical={false}
           currentIndex={currentIndex}
           spaceEqually={false}>      
@@ -207,13 +170,89 @@ const Wizard = () => {
             label={'Summary'}
             description="Step 4"
           />    
-          </ProgressIndicator>           
+          </ProgressIndicator>  
+    )
+  }
+
+  return (
+    <>
+     <div className="wizard-container">
+      <div className="wizard-container__page">
+        <div className='wizard-container__page-header'>
+          <div className='wizard-container__page-header-title'>         
+            <h2>Deploy Wizard</h2>
+            <div className='wizard-container__page-header-subtitle'>IBM Cloud Pak</div>                      
+          </div>
+          { isDeployStart ? null: 
+          <div>
+            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
+            {currentIndex === 3 ?
+              <Button className="wizard-container__page-header-button" onClick={createDeployment}>Deploy</Button>
+              :
+              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
+            }            
+          </div>
+          }          
+        </div> 
+        {loadingDeployStatus && <Loading /> }            
+        {
+          isDeployStart ? 
+            //Deploy Process
+            isDeployErr ?
+              <InlineNotification className="deploy-error"
+                    {...errorProps()}        
+                />  
+                :
+                <>
+                <InlineNotification className="deploy-error"
+                {...successProps()}        
+              /> 
+
+              <h4>Logs:</h4>
+              <div>
+                <TextArea ref={logsRef}
+                        rows={20}
+                        className="wizard-logs"
+                        hideLabel={true}
+                        placeholder={deployLog}   
+                        labelText=""                    
+                    />
+              </div>
+              </>
+          :
+          //Wizard Process
+          <DeployerProgressIndicator />                   
         }          
-          {currentIndex === 0 ? <Infrastructure setIBMCloudSettings={setIBMCloudSettings} cloudPlatform={cloudPlatform} updateInfraValue={updateInfraValue} updateWizardError={updateWizardError} IBMCloudSettings={IBMCloudSettings}></Infrastructure> : null} 
-          {currentIndex === 1 ? <Storage cloudPlatform={cloudPlatform} setStorage={setStorage} storage={storage} storagesOptions={storagesOptions} setStoragesOptions={setStoragesOptions}></Storage> : null}    
-          {currentIndex === 2 ? <CloudPak CPDData={CPDData} setCPDData={setCPDData}></CloudPak> : null}    
-          {currentIndex === 3 ? <Summary envId={IBMCloudSettings.envId} cloudPlatform={cloudPlatform} storage={storage} region={IBMCloudSettings.region} CPDData={CPDData}></Summary> : null}          
-    
+          {currentIndex === 0 ? <Infrastructure
+                                     cloudPlatform={cloudPlatform} 
+                                     IBMCloudSettings={IBMCloudSettings}
+                                     setIBMCloudSettings={setIBMCloudSettings}                                      
+                                     AWSSettings={AWSSettings}
+                                     setAWSSettings={setAWSSettings}
+                                     updateInfraValue={updateInfraValue} 
+                                     updateWizardError={updateWizardError}>
+                                </Infrastructure> : null} 
+          {currentIndex === 1 ? <Storage 
+                                      cloudPlatform={cloudPlatform} 
+                                      setStorage={setStorage} 
+                                      storage={storage} 
+                                      storagesOptions={storagesOptions} 
+                                      setStoragesOptions={setStoragesOptions}>
+                                      
+                                </Storage> : null}    
+          {currentIndex === 2 ? <CloudPak 
+                                      CPDData={CPDData} 
+                                      setCPDData={setCPDData}>
+                                    
+                                </CloudPak> : null}    
+          {currentIndex === 3 ? <Summary 
+                                      envId={IBMCloudSettings.envId} 
+                                      cloudPlatform={cloudPlatform} 
+                                      storage={storage} 
+                                      region={IBMCloudSettings.region} 
+                                      CPDData={CPDData}>
+
+                                </Summary> : null}       
       </div> 
     </div>
      </>
