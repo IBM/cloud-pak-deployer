@@ -84,19 +84,9 @@
     _p_fs_project: "{{ foundational_services_project }}"
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
-- include_tasks: install-control-plane.yml
-  when: 
-  - current_cp4d_cluster.cp4d_version < "4.5.0"
-
 - include_tasks: install-control-plane-olm-utils.yml
   when: 
-  - current_cp4d_cluster.cp4d_version >= "4.5.0"
   - not _upgrade_cp4d
-
-- include_tasks: install-control-plane-olm-utils.yml
-  vars:
-    _p_preview_script: False
-  when: (current_cp4d_cluster.olm_utils | default(False) | bool)
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml
