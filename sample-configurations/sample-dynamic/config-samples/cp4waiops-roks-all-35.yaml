@@ -9,9 +9,9 @@ global_config:
   cloud_platform: existing-ocp
 
 openshift:
-- name: "Nik"
+- name: "mycluster"
   ocp_version: "4.10"
-  cluster_name: "Nik"
+  cluster_name: "mycluster"
   domain_name: example.com
   openshift_storage:
   - storage_name: ibm-cloud-storage
@@ -19,7 +19,6 @@ openshift:
 # Use file storate class provided as part of ROKS cluster
     ocp_storage_class_file: ibmc-file-gold-gid
     ocp_storage_class_block: ibmc-file-gold-gid
-
 
 cp4waiops:
 - project: cp4waiops
@@ -30,6 +29,8 @@ cp4waiops:
   - name: cp4waiops-aimanager
     kind: AIManager
     install: true
+
+    # current_cp4waiops_feature
     # CP4WAIOPS Size of the install (small: PoC/Demo, tall: Production)
     waiops_size: small
     # Custom Sizing File (waiops_size must be set to "custom")
@@ -39,7 +40,28 @@ cp4waiops:
     # Version of the catalog subscription
     subscription_channel: v3.5
 
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    storage_class_file: automatic
+    storage_class_block: automatic
+
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Install with CASE Files
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    case_install: false
+    case_github_url: "https://github.com/IBM/cloud-pak/raw/master/repo/case"
+    case_name: ibm-cp-waiops
+    case_version: 1.4.1
+    case_inventory_setup: cpwaiopsSetup
     
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # CP4WAIOPS Pull Registires
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    entitled_registry: cp.icr.io
+    entitled_registry_user: cp
+    catalog_image: icr.io/cpopen/ibm-operator-catalog:latest
+
   # --------------------------------------------------------------------------------------------------------------------------------------
   # CP4WAIOPS AI Manager Demo Content
   # --------------------------------------------------------------------------------------------------------------------------------------
@@ -164,6 +186,19 @@ cp4waiops:
     starting_csv: noi.v1.6.0
     noi_version: 1.6.6
 
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    storage_class_file: automatic
+    storage_class_block: automatic
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # CP4WAIOPS Pull Registires
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    entitled_registry: cp.icr.io
+    entitled_registry_user: cp
+    catalog_image: icr.io/cpopen/ibm-operator-catalog:latest
+
   # --------------------------------------------------------------------------------------------------------------------------------------
   # CP4WAIOPS Event Manager Demo Content
   # --------------------------------------------------------------------------------------------------------------------------------------
@@ -183,10 +218,21 @@ cp4waiops:
     kind: InfrastructureManagement
     install: false
     # Version of the catalog subscription
-    subscription_channel: v3.
+    subscription_channel: v3.5
     #subscription_channel: 3.4-dev
-
-
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    storage_class_file: automatic
+    storage_class_block: automatic
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # CP4WAIOPS Pull Registires
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    entitled_registry: cp.icr.io
+    entitled_registry_user: cp
+    catalog_image: icr.io/cpopen/ibm-operator-catalog:latest
 
 
 - project: cp4waiops-addons
@@ -207,11 +253,16 @@ cp4waiops:
     install: true
     turbo_version: 8.6.6
 
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    storage_class_file: automatic
+    storage_class_block: automatic
 
 
 # *************************************************************************************************************************************************
 # --------------------------------------------------------------------------------------------------------------------------------------
-# CP4WAIOPS GLOBAL CONFIGURATION
+# CP4WAIOPS USAGE
 # --------------------------------------------------------------------------------------------------------------------------------------
 # *************************************************************************************************************************************************
 
@@ -221,13 +272,14 @@ cp4waiops:
 # --------------------------------------------------------------------------------------------------------------------------------------
 
 # Override the Storage Class auto detection (not_configured, ibmc-file-gold-gid, rook-cephfs, nfs-client, ...)
-storage_class_file: automatic
+#storage_class_file: automatic
 #storage_class_file: ibmc-file-gold-gid               # ROKS
 #storage_class_file: ocs-storagecluster-cephfs        # ODF
 #storage_class_file: ibmc-vpc-block-10iops-tier       # IBM VPC
 #storage_class_file: rook-cephfs                      # FYRE
 #storage_class_file: nfs-client                       # TEC
-storage_class_block: automatic
+
+#storage_class_block: automatic
 #storage_class_block: ibmc-block-gold                 # ROKS
 #storage_class_block: ocs-storagecluster-ceph-rbd     # ODF
 #storage_class_block: ibmc-vpc-block-10iops-tier      # IBM VPC
@@ -235,14 +287,3 @@ storage_class_block: automatic
 #storage_class_block: nfs-client                      # TEC
 
 
-
-# --------------------------------------------------------------------------------------------------------------------------------------
-# CP4WAIOPS Pull Registires
-# --------------------------------------------------------------------------------------------------------------------------------------
-entitled_registry: cp.icr.io
-entitled_registry_user: cp
-catalog_image: icr.io/cpopen/ibm-operator-catalog:latest
-
-
-#Version of your OCP Cluster (override by setting manually - 4.6, 4.7,...)
-ocp_major_version: automatic
