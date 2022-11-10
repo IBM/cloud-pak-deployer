@@ -540,6 +540,11 @@ if ! $INSIDE_CONTAINER;then
     exit 99
   fi
 
+#TODO: REMOVE
+    CONTAINER_ENGINE="docker"
+
+
+
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"

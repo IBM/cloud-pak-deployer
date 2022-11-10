@@ -19,10 +19,10 @@
     include_role: 
       name: vault-get-secret
     vars:
-      secret_name: "cp_entitlement_key"
+      secret_name: "ibm_cp_entitlement_key"
       secret_group: "{{ environment_name }}"
   - set_fact:
-      cp_entitlement_key: "{{ secret_value }}"
+      ibm_cp_entitlement_key: "{{ secret_value }}"
 
   - name: Mirror images for Cloud Pak for Data from entitled to private registry {{ current_cp4d_cluster.image_registry_name }}
     include_role: 
@@ -34,7 +34,7 @@
       _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
       _p_case_dir: "{{ status_dir }}/cp4d/case"
     when: 
-    - cp_entitlement_key | default("") != ""
+    - ibm_cp_entitlement_key | default("") != ""
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - not (cpd_airgap | bool)

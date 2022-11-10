@@ -37,7 +37,7 @@ def deploy():
     env ={}
     if body['cloud']=='ibm-cloud':
       env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
-             'cp_entitlement_key': body['env']['entilementKey'],
+             'CP_ENTITLEMENT_KEY': body['env']['entilementKey'],
              'CONFIG_DIR':config_dir,
              'STATUS_DIR':status_dir}
 
