@@ -57,6 +57,18 @@ def deploy():
 
     return 'runing'
 
+@app.route('/api/v1/oc-login',methods=["POST"])
+def oc_login():
+    body = json.loads(request.get_data())
+    print(body, file=sys.stderr)
+    env ={}
+    oc_login_command=body['oc_login_command']
+    env = {'OC_LOGIN_COMMAND': oc_login_command}
+    process = subprocess.Popen(oc_login_command,
+                    universal_newlines=True,
+                    env=env)
+    return 'ok'
+
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 def getCartridges(cloudpak):
     cartridges_list=[]
