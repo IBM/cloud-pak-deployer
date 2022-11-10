@@ -1,0 +1,62 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install ADDONS
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install OpenLDAP
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - INSTALL OPENLDAP
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing Open LDAP"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+
+- name: LDAP -               🚀 Create OpenLDAP namespace
+  kubernetes.core.k8s:
+    name: "{{ current_cp4waiops_feature.ldap_namespace }}"
+    api_version: v1
+    kind: Namespace
+    state: present
+
+- name: LDAP -               🚀 Create OpenLDAP namespace RoleBinding
+  kubernetes.core.k8s:
+    template: ./templates/ldap/anyuid-rolebinding.j2
+    state: present
+
+- name: LDAP -               🚀 Install OpenLDAP
+  kubernetes.core.k8s:
+    state: present
+    template: ./templates/ldap/install-ldap-persistent.j2
+  #when: INSTALL_LDAP == true
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for LDAP ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 CHECK -  Wait for 2 pods Running in namespace {{ current_cp4waiops_feature.ldap_namespace }} (this might take some time)
+  shell: |
+    NUM_PODS=$(oc get po -n {{ current_cp4waiops_feature.ldap_namespace }} | grep openldap| grep Running| wc -l)
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int >= 2
+  retries: 100
+  delay: 15
+
+
+
+- name: 🕦 TIMESTAMP - END INSTALLATION - INSTALL OPENLDAP
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+

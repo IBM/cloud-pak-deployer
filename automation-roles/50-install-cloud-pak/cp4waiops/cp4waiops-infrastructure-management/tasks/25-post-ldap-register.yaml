@@ -1,0 +1,227 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Register LDAP
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Register LDAP
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - LDAP REGISTER
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Register LDAP Users"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Get Cluster FQDN
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🚀 LDAPREGISTER - Get Cluster FQDN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    echo ${CLUSTER_FQDN##*console.}
+  register: CLUSTER_NAME
+
+
+- name: 🚀 LDAPREGISTER - Get CS Server
+  shell:         
+    echo "https://cp-console.{{ CLUSTER_NAME.stdout_lines[0] }}"
+  register: CS_SERVER
+
+
+- name: 🚀 LDAPREGISTER - Get CS Server IP
+  shell:         
+    echo $(ping cp-console.{{ CLUSTER_NAME.stdout_lines[0] }} -c 1 -q | grep -m1 "("| awk '{print $3}' | sed "s/[(]//" | sed "s/[)]//" | sed "s/[:]//")
+  register: CS_SERVER_IP
+
+
+- name: 🚀 LDAPREGISTER - Get CS Server Password
+  shell:         
+    echo $(oc -n ibm-common-services get secret platform-auth-idp-credentials -o jsonpath='{.data.admin_password}' | base64 --decode)
+  register: CS_PWD
+
+    
+- name: 🚀 LDAPREGISTER - SC Login
+  shell:   
+    cloudctl login -a {{ CS_SERVER.stdout_lines[0] }} --skip-ssl-validation -u admin -p {{ CS_PWD.stdout_lines[0] }} -n kube-system
+  register: LOGIN
+- name: 🟢  OUTPUT
+  debug: 
+    var: LOGIN.stdout_lines
+
+
+- name: 🚀 LDAPREGISTER - Check already registered
+  shell:   
+    echo $(cloudctl iam resources|grep "Directory:LDAP")
+  register: LDAPS
+- name: 🟢  OUTPUT
+  debug: 
+    var: LDAPS.stdout_lines
+
+
+- name: 🚀 LDAPREGISTER - Create LDAP Integration
+  block:
+  - name: 🚀 LDAPREGISTER -           📥 Register LDAP Server
+    shell:         
+      #echo 'cloudctl iam ldap-create "LDAP" --basedn "{{ LDAP_BASE }}" --server "ldap://openldap.default:389" --binddn "cn=admin,{{ LDAP_BASE }}" --binddn-password "{{ LDAP_ADMIN_PASSWORD }}" -t "Custom" --group-filter "(&(cn=%v)(objectclass=groupOfUniqueNames))" --group-id-map "*:cn" --group-member-id-map "groupOfUniqueNames:uniqueMember" --user-filter "(&(uid=%v)(objectclass=Person))" --user-id-map "*:uid"'
+      cloudctl iam ldap-create "LDAP" --basedn {{ current_cp4waiops_feature.ldap_base }} --server ldap://openldap.default:389 --binddn cn=admin,{{ current_cp4waiops_feature.ldap_base }} --binddn-password {{ current_cp4waiops_feature.ldap_admin_password }} -t "Custom" --group-filter "(&(cn=%v)(objectclass=groupOfUniqueNames))" --group-id-map "*:cn" --group-member-id-map "groupOfUniqueNames:uniqueMember" --user-filter "(&(uid=%v)(objectclass=Person))" --user-id-map "*:uid"
+    ignore_errors: yes
+    register: LOGIN
+  - name: 🟢  OUTPUT
+    debug: 
+      var: LOGIN.stdout_lines
+
+  # - name: LDAPREGISTER -           📥 Get Team ID
+  #   shell:         
+  #     echo $(cloudctl iam teams | awk '{print $1}'| sed -n 2p)
+  #   register: TEAM_ID
+
+
+  # - name: LDAPREGISTER -           📥 Register Users and Teams
+  #   shell: |
+  #     cloudctl iam user-import -u demo -f
+  #     cloudctl iam user-import -u dev -f
+  #     cloudctl iam user-import -u test -f
+  #     cloudctl iam user-import -u prod -f
+  #     cloudctl iam user-import -u boss -f
+  #     cloudctl iam user-import -u nik -f
+  #     cloudctl iam user-import -u sre1 -f
+  #     cloudctl iam user-import -u sre2 -f
+
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} ClusterAdministrator -u demo
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} Administrator -u dev
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} Administrator -u test
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} Administrator -u prod
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} ClusterAdministrator -u boss    
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} ClusterAdministrator -u nik
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} ClusterAdministrator -u sre1
+  #     cloudctl iam team-add-users {{ TEAM_ID.stdout_lines[0] }} ClusterAdministrator -u sre2
+
+  #     cloudctl iam resource-add {{ TEAM_ID.stdout_lines[0] }} -r crn:v1:icp:private:iam::::Directory:LDAP
+  #   register: TEAMS
+  #   ignore_errors: yes
+  when: LDAPS.stdout_lines|length == 0
+
+
+
+
+
+
+- name: 🚀 LDAPREGISTER - CREATE AI Manager Groups and Users
+  shell: |
+    set -x
+    
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep infrastructure-automation-operator |awk '{print$1}')
+    echo "       🛠️   Get Route"
+    export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+    echo "        Route: $ROUTE"
+    echo ""
+ 
+    echo "       🛠️   Getting ZEN Token"
+  
+    ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+    ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+    LOGIN_USER=admin
+    LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+    ZEN_LOGIN_RESPONSE=$(
+    curl -k \
+    -H 'Content-Type: application/json' \
+    -XPOST \
+    "${ZEN_LOGIN_URL}" \
+    -d '{
+          "username": "'"${LOGIN_USER}"'",
+          "password": "'"${LOGIN_PASSWORD}"'"
+    }' 2> /dev/null
+    )
+
+    ZEN_LOGIN_MESSAGE=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .message)
+
+    if [ "${ZEN_LOGIN_MESSAGE}" != "success" ]; then
+    echo "Login failed: ${ZEN_LOGIN_MESSAGE}" 1>&2
+
+    exit 2
+    fi
+
+    ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+    echo "${ZEN_TOKEN}"
+
+    echo "Sucessfully logged in" 1>&2
+
+    echo ""
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Demo Group"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v2/groups" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+      "account_id": 1000,
+            "name": "demo",
+      "description": "demo",
+      "role_identifiers": [
+        "zen_administrator_role"
+      ]
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Demo User"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/user" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+    "username": "demo",
+    "user_roles": ["zen_administrator_role"],
+    "displayName": "demo",
+    "password": "P4ssw0rd!",
+    "email": "demo@ibm.com",
+    "approval_status": "approved",
+    "permissions": ["administrator"],
+     "misc": {
+        "dark_mode": true
+      }
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+  register: output_string
+  ignore_errors: yes
+  args:
+    executable: /bin/bash
+    
+- name: 🟢  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+  #when: PRINT_LOGINS == true
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,83 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cp4waiops-demo-ui
+  namespace: {{current_cp4waiops_cluster.project}}-demo-ui
+  labels:
+      app: cp4waiops-demo-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cp4waiops-demo-ui
+  template:
+    metadata:
+      labels:
+        app: cp4waiops-demo-ui
+    spec:
+      containers:
+      - image: niklaushirt/cp4waiops-demo-ui:0.76
+        imagePullPolicy: Always
+        name: cp4waiops-demo-ui
+        command:
+        ports:
+        - containerPort: 8000
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "128Mi"
+          limits:
+            cpu: "256m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 60
+          timeoutSeconds: 1
+          periodSeconds: 10
+          successThreshold: 1
+          failureThreshold: 3
+        envFrom:
+        - configMapRef:
+            name:  cp4waiops-demo-ui-config
+        - configMapRef:
+            name:  cp4waiops-demo-ui-config-events
+        - configMapRef:
+            name:  cp4waiops-demo-ui-config-logs
+        - configMapRef:
+            name:  cp4waiops-demo-ui-config-metrics
+      serviceAccountName: cp4waiops-demo-ui-admin
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cp4waiops-demo-ui-service
+  namespace: {{current_cp4waiops_cluster.project}}-demo-ui
+spec:
+  selector:
+    app: cp4waiops-demo-ui
+  ports:
+    - protocol: TCP
+      port: 8000
+      targetPort: 8000
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name:  cp4waiops-demo-ui
+  namespace: {{current_cp4waiops_cluster.project}}-demo-ui
+spec:
+  to:
+    kind: Service
+    name: cp4waiops-demo-ui-service
+    weight: 100
+  port:
+    targetPort: 8000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None

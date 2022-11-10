@@ -1,0 +1,158 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patching some stuff
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+- name: 🛰️  START - OCP MENU
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Openshift WebConsole Menu Item"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+   
+
+
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item - RobotShop
+  shell: |
+    appURL=$(oc get routes -n robot-shop robotshop  -o jsonpath="{['spec']['host']}")|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-robotshop
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/application--web.svg
+          section: CP4WAIOps Addons
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: RobotShop Demo App
+    EOF
+  ignore_errors: yes
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item - AWX
+  shell: |
+    appURL=$(oc get route -n awx awx -o jsonpath={.spec.host})|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-awx
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/ibm-cloud--vpc-endpoints.svg
+          section: CP4WAIOps Addons
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: AWX Runbooks
+    EOF
+  ignore_errors: yes
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item - LDAP
+  shell: |
+    appURL=$(oc get route -n openldap admin -o jsonpath={.spec.host})|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-ldap
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/user--access.svg
+          section: CP4WAIOps Addons
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: Open LDAP
+    EOF
+  ignore_errors: yes
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    appURL=$(oc get routes -n $WAIOPS_NAMESPACE job-manager  -o jsonpath="{['spec']['host']}")|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-flink-connectors
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/3D-curve--auto-vessels.svg
+          section: CP4WAIOps Tools
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: CP4WAIOps Flink Connectors
+    EOF
+  ignore_errors: yes
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    appURL=$(oc get routes -n $WAIOPS_NAMESPACE job-manager-policy  -o jsonpath="{['spec']['host']}")|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-flink-policy
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/3D-curve--auto-vessels.svg
+          section: CP4WAIOps Tools
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: CP4WAIOps Flink Policies
+    EOF
+  ignore_errors: yes
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    appURL=$(oc get routes -n $WAIOPS_NAMESPACE sparkadmin  -o jsonpath="{['spec']['host']}")|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-spark
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/3D-curve--auto-vessels.svg
+          section: CP4WAIOps Tools
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: CP4WAIOps Spark
+    EOF
+  ignore_errors: yes

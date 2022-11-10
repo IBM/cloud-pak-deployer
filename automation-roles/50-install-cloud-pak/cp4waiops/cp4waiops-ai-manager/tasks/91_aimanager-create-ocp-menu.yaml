@@ -1,0 +1,48 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patching some stuff
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+- name: 🛰️  START - OCP MENU
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Openshift WebConsole Menu Item"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+   
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    appURL=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath={.spec.host})|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-aimanager
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons//microservices--1.svg
+          section: IBM Cloud Paks
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: AI Manager
+    EOF
+  ignore_errors: yes
+
+
+

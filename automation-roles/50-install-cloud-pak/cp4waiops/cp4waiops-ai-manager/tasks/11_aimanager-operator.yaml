@@ -1,0 +1,207 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install CP4WAIOPS PREREQUISITES
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - AI MANAGER OPERATORS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing CP4WAIOPS Operator"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+
+
+
+# Create IBM Operator Catalog
+- name:   🚀 AIMANAGER OPERATOR - Install IBM Operator Catalog
+  kubernetes.core.k8s:
+    state: present
+    template: ./templates/waiops/1_cat-ibm-operator.j2
+
+
+# Create IBM AIOps Catalog
+# - name: AIMANAGER -            🚀 Install IBM AIOps Catalog
+#   kubernetes.core.k8s:
+#     state: present
+#     template: ./templates/waiops/2_cat-ibm-aiops.j2
+
+
+# Create IBM AIOps Operator Group
+- name:   🚀 AIMANAGER OPERATOR - Install Operator Group
+  kubernetes.core.k8s:
+    state: present
+    template: ./templates/waiops/2_opgroup-ibm-aiops.j2
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for serviceaccount being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 AIMANAGER OPERATOR - 🕦 Wait for serviceaccount to become ready
+  shell: oc get -n openshift-marketplace serviceaccount ibm-operator-catalog --no-headers| grep -c ""
+  register: kubectl_get_sa
+  until: kubectl_get_sa.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for CSV being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 AIMANAGER OPERATOR - Patch service account for pull secret (you can ignore errors)
+  shell: |
+    oc patch -n openshift-marketplace serviceaccount ibm-operator-catalog -p '{"imagePullSecrets": [{"name": "ibm-entitlement-key"}]}'
+    oc patch -n openshift-marketplace serviceaccount default -p '{"imagePullSecrets": [{"name": "ibm-entitlement-key"}]}'
+    errorPods=$(oc get po -n openshift-marketplace|grep ImagePull|awk '{print$1}')
+    if [[ ! $errorPods == "" ]]; then
+      echo "Refreshing Pods"
+      oc delete pod $(oc get po -n openshift-marketplace|grep ImagePull|awk '{print$1}') -n openshift-marketplace --ignore-not-found
+    fi
+  register: kubectl_get_pods
+  ignore_errors: yes
+
+
+
+
+
+
+# - name: AIMANAGER OPERATOR -     🕦 Wait 120 seconds
+#   shell: |
+#     sleep 120
+#   ignore_errors: yes
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Delete lingering Pods before check for reinstall
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 AIMANAGER OPERATOR - Delete lingering Pods before check for reinstall
+  shell: |
+    oc delete pod $(oc get po -n {{ current_cp4waiops_cluster.project }}|grep ContainerStatusUnknown|awk '{print$1}') -n {{ current_cp4waiops_cluster.project }}
+  register: kubectl_get_pods
+  ignore_errors: yes
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Operator to settle
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 AIMANAGER OPERATOR - Wait for Operator Catalog to settle
+  shell: |
+    # Wait for Operator to settle
+    sleep 20
+  register: kubectl_get_pods
+  ignore_errors: yes
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Delete lingering Pods before check for reinstall
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 AIMANAGER OPERATOR - Delete operator for pull secret (hack 3.5)
+  shell: |
+    oc delete pod $(oc get po -n openshift-marketplace|grep ImagePullBackOff|awk '{print$1}') -n openshift-marketplace
+  register: kubectl_get_pods
+  ignore_errors: yes
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Marketplace being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 AIMANAGER OPERATOR - Wait for ibm-operator-catalog to become ready
+  shell: oc get po -n openshift-marketplace |grep ibm-operator-catalog| grep '1/1' | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+# Create IBM AIOps Subscription
+- name:   🚀 AIMANAGER OPERATOR - Install Subscription
+  kubernetes.core.k8s:
+    state: present
+    template: ./templates/waiops/3_sub-ibm-aiops-orchestrator.j2
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Marketplace being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+# - name: CHECK -              🕦 Wait for openshift-marketplace to become ready
+#   shell: oc get po -n openshift-marketplace | grep -v Running |grep -v Completed | grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout == "1"
+#   retries: 500
+#   delay: 15
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Operators being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+# - name: CHECK -              🕦 Wait for operators to become ready in Namespace {{ current_cp4waiops_cluster.project }}
+#   shell: oc get po -n {{ current_cp4waiops_cluster.project }} | grep Running | grep -v "0/1" |grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout|int > "6"
+#   retries: 500
+#   delay: 15
+
+
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for CSVs to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for CSV being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name:   🕦 AIMANAGER OPERATOR - Wait for ibm-aiops-orchestrator to become ready
+  shell: oc get csv -n {{ current_cp4waiops_cluster.project }}|grep ibm-aiops-orchestrator|grep "Succeeded"| grep -v ibm-watson-aiops-ui-operator | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+- name:   🕦 AIMANAGER OPERATOR - Wait for CSVs to become ready
+  shell: oc get csv -n {{ current_cp4waiops_cluster.project }}|grep -v "Succeeded"| grep -v ibm-watson-aiops-ui-operator | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" ✅ CSVs are ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+

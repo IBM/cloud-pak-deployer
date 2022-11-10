@@ -1,0 +1,61 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Open Doc
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🌏 Open DemoUI"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+
+- name: 🌏 DEMO-UI - Get DEMO UI LOGINS
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export DEMOUI_ROUTE=$(oc get route -n {{ current_cp4waiops_cluster.project }} waiops-demo-ui-python -o jsonpath={.spec.host})
+    echo "                🌏 URL:      http://$DEMOUI_ROUTE"
+    echo ""
+    echo "                🔐 Token:    $(oc get cm -n {{ current_cp4waiops_cluster.project }} demo-ui-python-config -o jsonpath='{.data.TOKEN}' && echo)"
+
+    export URL=http://$DEMOUI_ROUTE
+    if [ -x "$(command -v open)" ]; then
+      open $URL
+    else 
+      if [ -x "$(command -v firefox)" ]; then
+        firefox $URL
+      else 
+        if [ -x "$(command -v google-chrome)" ]; then
+          google-chrome $URL
+        fi
+      fi
+    fi
+  ignore_errors: yes
+  register: LOGINS
+
+
+- name: 🟢 DEMO-UI - DEMO UI LOGINS
+  debug: 
+    var: LOGINS.stdout_lines
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for AI Manager to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    appURL=$(oc get routes -n $WAIOPS_NAMESPACE waiops-demo-ui-python  -o jsonpath="{['spec']['host']}")|| true
+    appToken=$(oc get cm -n $WAIOPS_NAMESPACE demo-ui-python-config -o jsonpath='{.data.TOKEN}')
+    echo "            📥 Demo UI:"     >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "    "   >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🌏 URL:           http://$appURL/"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🔐 Token:         $appToken"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes

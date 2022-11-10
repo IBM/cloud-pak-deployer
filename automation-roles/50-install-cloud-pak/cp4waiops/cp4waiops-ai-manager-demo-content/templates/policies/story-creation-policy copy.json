@@ -1,0 +1,70 @@
+{
+  "id": "story-creation",
+  "metadata": {
+    "labels": {
+      "ibm.com/aiops/uitemplate": "alert:createstory",
+      "ibm.com/is-default": "true"
+    },
+    "name": "DEMO Story creation policy for all alerts",
+    "description": "Created by Nicks scripts",
+    "createdBy": {
+      "id": "system",
+      "type": "system"
+    }
+  },
+  "state": "enabled",
+  "executionPriority": 50,
+  "spec": {
+    "trigger": {
+      "entityId": "alert",
+      "triggerId": "aiops.ibm.com/trigger/alert-created"
+    },
+    "actions": [
+      {
+        "actionId": "aiops.ibm.com/action/internal/conditional",
+        "arguments": {
+          "name": "Match all alerts",
+          "condition": "{{ alert.severity }} >= 5",
+          "then": [
+            {
+              "actionId": "aiops.ibm.com/action/internal/stories/derive",
+              "arguments": {
+                "entity": {
+                  "$variable": "alert"
+                },
+                "retentionDays": 30,
+                "title": {
+                  "$template": "{{ alert.Summary }}"
+                },
+                "description": {
+                  "$template": "{{ alert.Summary }}"
+                },
+                "holdoffSec": 0,
+                "priority": 1,
+                "notification": [
+                  {
+                    "type": "slack",
+                    "name": "AIOPSSystemDefault",
+                    "details": {}
+                  },
+                  {
+                    "type": "msteams",
+                    "name": "AIOPSSystemDefault",
+                    "details": {}
+                  }
+                ],
+                "assignment": {
+                  "owner": null,
+                  "team": null
+                },
+                "addRelatedAlerts": {
+                  "update": false
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

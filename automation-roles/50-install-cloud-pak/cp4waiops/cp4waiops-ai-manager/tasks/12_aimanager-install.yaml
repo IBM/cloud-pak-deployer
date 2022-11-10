@@ -1,0 +1,47 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install CP4WAIOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - AI MANAGER INSTALLATION
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing AI MAnager Instance"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+
+- name:  🚀 AIMANAGER INSTALL - Create Custom Profile ConfigMap
+  shell: |
+    oc apply -n {{ current_cp4waiops_cluster.project }} -f {{current_cp4waiops_feature.custom_size_file}}
+  register: kubectl_get_pods
+  when: current_cp4waiops_feature.waiops_size == "custom"
+
+
+
+- name:  🚀 AIMANAGER INSTALL - Install Custom Resource with Custom Profile - INSTALL AI MANAGER
+  kubernetes.core.k8s:
+    state: present
+    template: './templates/waiops/4_waiops-install-template-custom.j2'
+  when: current_cp4waiops_feature.waiops_size == "custom"
+
+
+
+
+
+- name:  🚀 AIMANAGER INSTALL - Install Custom Resource - INSTALL AI MANAGER
+  kubernetes.core.k8s:
+    state: present
+    template: './templates/waiops/4_waiops-install-template.j2'
+  when: current_cp4waiops_feature.waiops_size != "custom"
+
+    

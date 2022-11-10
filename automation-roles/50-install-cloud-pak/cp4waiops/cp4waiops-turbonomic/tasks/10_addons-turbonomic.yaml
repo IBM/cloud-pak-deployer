@@ -1,0 +1,96 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - INSTALL TURBONOMIC
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing TURBONOMIC"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+- name: 🚀 TURBONOMIC - Create Turbonomic namespace
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "turbonomic"
+    state: present
+  
+
+- name: 🚀 TURBONOMIC - Create Turbonomic scc
+  shell: |
+    oc adm policy add-scc-to-group anyuid system:serviceaccounts:turbonomic
+    oc create clusterrolebinding turbonomic-admin1 --clusterrole=cluster-admin --serviceaccount=turbonomic:t8c-operator
+    oc create clusterrolebinding turbonomic-admin2 --clusterrole=cluster-admin --serviceaccount=turbonomic:turbo-user
+  ignore_errors: yes
+  register: demo_robot_shop
+        
+
+- name: 🚀 TURBONOMIC - Create Turbonomic Operator Group
+  kubernetes.core.k8s:
+    state: present
+    namespace: turbonomic
+    src: ./templates/turbonomic/turbo-operatorgroup.yaml
+  
+
+
+- name: 🚀 TURBONOMIC - Create Turbonomic Subscription
+  kubernetes.core.k8s:
+    state: present
+    namespace: turbonomic
+    src: ./templates/turbonomic/turbo-subscription.yaml
+  
+
+
+
+- name: 🕦 TURBONOMIC - Wait for CRD to become ready
+  shell: oc get crd -n turbonomic xls.charts.helm.k8s.io --ignore-not-found  --no-headers| grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+- name: 🚀 TURBONOMIC - Create Turbonomic Instance
+  kubernetes.core.k8s:
+    state: present
+    namespace: turbonomic
+    template: ./templates/turbonomic/turbo-instance.j2
+  
+
+- name: 🕦 TURBONOMIC - Wait for 120 seconds
+  shell: sleep 120
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for turbonomic Namespace to be ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 TURBONOMIC - Wait for >50 pods in namespace turbonomic
+  shell: oc get po -n turbonomic |grep "1/"| wc -l
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > 62
+  retries: 500
+  delay: 15
+
+
+- name: 🕦 TURBONOMIC - Wait for turbonomic to become ready
+  shell: oc get po -n turbonomic | grep -v Running |grep -v Completed|grep -v Error|grep -v prometheus-server | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
