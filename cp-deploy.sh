@@ -540,6 +540,11 @@ if ! $INSIDE_CONTAINER;then
     exit 99
   fi
 
+#TODO: REMOVE
+    CONTAINER_ENGINE="docker"
+
+
+
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"
@@ -750,7 +755,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CONFIG_DIR=${CONFIG_DIR}"
   run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
   run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
-  run_cmd+=" -e CP_ENTITLEMENT_KEY=${CP_ENTITLEMENT_KEY}"
+  run_cmd+=" -e cp_entitlement_key=${cp_entitlement_key}"
 
   if [ ! -z $VAULT_GROUP ];then
     run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"

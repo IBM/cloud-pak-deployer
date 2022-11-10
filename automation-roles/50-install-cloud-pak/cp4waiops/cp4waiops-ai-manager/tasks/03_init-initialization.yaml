@@ -57,9 +57,9 @@
     - " AI Manager Installation Size:      {{current_cp4waiops_feature.waiops_size}}"
     - ""
     - "** Installation Options ***********************************************************************"
-    - " Storage Class File Override:      {{config_file.storage_class_file}}"
-    - " Storage Class Block Override:     {{config_file.storage_class_block}}"
-    - " Storage Class InfraManagement:    {{config_file.storage_class_file}}"
+    - " Storage Class File Override:      {{ current_cp4waiops_feature.storage_class_file}}"
+    - " Storage Class Block Override:     {{ current_cp4waiops_feature.storage_class_block}}"
+    - " Storage Class InfraManagement:    {{ current_cp4waiops_feature.storage_class_file}}"
     - ""
 
 
@@ -76,7 +76,7 @@
 
 # - name: PREREQUISITES -      🔐 Check Entitlement provided
 #   fail: msg="Please provide IBM Entitlement Pull Secret Key/Token (Get it from here https://myibm.ibm.com/products-services/containerlibrary)"
-#   when: "CP_ENTITLEMENT_KEY is not defined"
+#   when: "cp_entitlement_key is not defined"
 
 
 # *************************************************************************************************************************************************
@@ -120,30 +120,6 @@
   set_fact: CLUSTER_NAME_GLOBAL={{ CLUSTER_NAME.stdout_lines[0] }} 
 
 
-
-
-
-# *************************************************************************************************************************************************
-# --------------------------------------------------------------------------------------------------------------------------------------
-# Openshift Version
-# --------------------------------------------------------------------------------------------------------------------------------------
-# *************************************************************************************************************************************************
-- name:   🚀 INITIALIZATION - Determine OpenShift Major Version
-  shell: |
-    DECLARED_VERSION={{ config_file.ocp_major_version }}
-    if [ -z "${DECLARED_VERSION##*automatic*}" ]; 
-    then
-      VERSION=$(oc version | grep "Server Version"| cut -d':' -f2| cut -d'.' -f1-2)
-      echo ${VERSION//* } 
-    else 
-      echo $DECLARED_VERSION
-    fi
-  register: MAJOR_VERSION
-  args:
-    executable: /bin/bash
-
-- name:   🚀 INITIALIZATION - Set OCP_MAJOR_VERSION={{ MAJOR_VERSION.stdout_lines[0] }} 
-  set_fact: OCP_MAJOR_VERSION={{ MAJOR_VERSION.stdout_lines[0] }} 
 
 
 

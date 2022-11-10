@@ -23,8 +23,8 @@
     - " Event Manager Namespace:           {{current_cp4waiops_cluster.project}}"
     - ""
     - "** Installation Options ***********************************************************************"
-    - " Storage Class File Override:      {{config_file.storage_class_file}}"
-    - " Storage Class Block Override:     {{config_file.storage_class_block}}"
+    - " Storage Class File Override:      {{ current_cp4waiops_feature.storage_class_file}}"
+    - " Storage Class Block Override:     {{ current_cp4waiops_feature.storage_class_block}}"
     - ""
     - "**************************************************************************************************************************"
 
@@ -38,11 +38,11 @@
 
 - name:   🔐 INIT CHECKS - Check Entitlement provided
   fail: msg="Please provide IBM Entitlement Pull Secret Key/Token (Get it from here https://myibm.ibm.com/products-services/containerlibrary)"
-  when: "CP_ENTITLEMENT_KEY is not defined"
+  when: "cp_entitlement_key is not defined"
 
 - name:   🔐 INIT CHECKS - Check Entitlement provided
   fail: msg="Please provide IBM Entitlement Pull Secret Key/Token (Get it from here https://myibm.ibm.com/products-services/containerlibrary)"
-  when: '"<REGISTRY_TOKEN>" in CP_ENTITLEMENT_KEY'
+  when: '"<REGISTRY_TOKEN>" in cp_entitlement_key'
 
 # *************************************************************************************************************************************************
 # --------------------------------------------------------------------------------------------------------------------------------------
@@ -66,7 +66,7 @@
 # --------------------------------------------------------------------------------------------------------------------------------------
 # Create Namespace 
 - name: 🚀 EVENTMANAGER - Create EventManager namespace {{current_cp4waiops_cluster.project}}
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     api_version: v1
     kind: Namespace
     name: "{{current_cp4waiops_cluster.project}}"
@@ -76,8 +76,8 @@
 
 - name: 🚀 EVENTMANAGER - Create Pull Secret for {{current_cp4waiops_cluster.project}} Namespace (you can ignore errors if it already exists)
   shell: |
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace={{ current_cp4waiops_cluster.project }}
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
   ignore_errors: yes
 
 
@@ -85,7 +85,7 @@
 
 # Create EventManager Catalog
 - name: 🚀 EVENTMANAGER - Install Catalog
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/eventmanager/1_cat-ibm-eventmanager.j2
 
@@ -93,14 +93,14 @@
 
 # Create EventManager Operator Group
 - name: 🚀 EVENTMANAGER - Install Operator Group
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/eventmanager/2_group-ibm-eventmanager.j2
 
 
 # Create EventManager Subscription
 - name: 🚀 EVENTMANAGER - Install Subscription
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/eventmanager/3_sub-ibm-eventmanager.j2
 
@@ -117,7 +117,7 @@
 
 # Create EventManager Instance
 - name: 🚀 EVENTMANAGER - Install EventManager
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/eventmanager/4_eventmanager-install-template.j2
 

@@ -55,9 +55,9 @@
   debug:
     msg:
     - "** Installation Options ***********************************************************************"
-    - " Storage Class File Override:      {{config_file.storage_class_file}}"
-    - " Storage Class Block Override:     {{config_file.storage_class_block}}"
-    - " Storage Class InfraManagement:    {{config_file.storage_class_file}}"
+    - " Storage Class File Override:      {{ current_cp4waiops_feature.storage_class_file}}"
+    - " Storage Class Block Override:     {{ current_cp4waiops_feature.storage_class_block}}"
+    - " Storage Class InfraManagement:    {{ current_cp4waiops_feature.storage_class_file}}"
     - ""
 
 
@@ -85,23 +85,47 @@
 
 - name: 📥 Get Storage Class
   include_tasks: "{{role_path}}/../cp4waiops-global/tasks/05_init-get-storage-class.yaml"
-      
+
+
 - name: 📥 AI Manager Prerequisites 
   include_tasks: 06_aimanager-prerequisites.yaml
       
+
+# Install CP4WAIOPS Operator
+- name: 📥 AI Manager Custom Hook
+  include_tasks: 08_aimanager-custom-hook.yaml
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL CATALOG with YAML FILE
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥 Install AI Manager Catalog - Classic Way
+  include_tasks: 10_aimanager-catalog.yaml
+  when: current_cp4waiops_feature.case_install==false
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL CATALOG with CASE FILE
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥 Install AI Manager Catalog - Save Case File (this can take some time)
+  include_role:
+    name: cp4waiops-case-save
+  when: current_cp4waiops_feature.case_install==true
+
+
+- name: 📥 Install AI Manager Catalog - Create CatalogSources from Case File (this can take some time)
+  include_role:
+    name: cp4waiops-catalog-source
+  when: current_cp4waiops_feature.case_install==true
 
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------"
 # INSTALL AI MANAGER
 # ---------------------------------------------------------------------------------------------------------------------------------------------------"
-# Install CP4WAIOPS Operator
-- name: 📥 AI Manager Custom Hook
-  include_tasks: 10_aimanager-custom-hook.yaml
 - name: 📥 Install AI Manager Operator
   include_tasks: 11_aimanager-operator.yaml
-      
-      
+
+
 # Install CP4WAIOPS Instance
 - name: 📥 Install AI Manager Instance
   include_tasks: 12_aimanager-install.yaml

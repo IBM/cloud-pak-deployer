@@ -39,21 +39,21 @@
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "ibm_cp_entitlement_key"
+    secret_name: "cp_entitlement_key"
     secret_group: "{{ environment_name }}"
 
 - set_fact:
-    ibm_cp_entitlement_key: "{{ secret_value }}"
+    cp_entitlement_key: "{{ secret_value }}"
 
 - fail:
     #msg: "No image registry name specified for CP4WA but cannot pull from entitled registry because of missing entitlement key in vault"
     msg: "Image registry not yet supported or entitled registry entitlement key missing in vault"
-  #when: ibm_cp_entitlement_key == "" and (current_cp4wa_cluster.image_registry_name | default("")) == ""
-  when: ibm_cp_entitlement_key == "" or (current_cp4wa_cluster.image_registry_name | default("")) != ""
+  #when: cp_entitlement_key == "" and (current_cp4wa_cluster.image_registry_name | default("")) == ""
+  when: cp_entitlement_key == "" or (current_cp4wa_cluster.image_registry_name | default("")) != ""
 
 - set_fact:
-    entitled_auth: "{{ entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
-  when: ibm_cp_entitlement_key != ""
+    entitled_auth: "{{ entitled_registry_username }}:{{ cp_entitlement_key }}"
+  when: cp_entitlement_key != ""
 
 - set_fact:
     use_entitled_registry: False

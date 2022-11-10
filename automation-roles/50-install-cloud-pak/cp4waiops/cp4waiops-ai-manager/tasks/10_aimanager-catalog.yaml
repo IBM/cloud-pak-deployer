@@ -1,0 +1,40 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install CP4WAIOPS PREREQUISITES
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - AI MANAGER CATALOG
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing CP4WAIOPS Operator"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$USER" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: yes
+
+
+
+
+
+# Create IBM Operator Catalog
+- name:   🚀 AIMANAGER OPERATOR - Install IBM Operator Catalog
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/waiops/1_cat-ibm-catalog.j2
+
+
+
+
+
+# Create IBM AIOps Catalog
+# - name: AIMANAGER -            🚀 Install IBM AIOps Catalog
+#   community.kubernetes.k8s:
+#     state: present
+#     template: ./templates/waiops/2_cat-ibm-aiops.j2
+

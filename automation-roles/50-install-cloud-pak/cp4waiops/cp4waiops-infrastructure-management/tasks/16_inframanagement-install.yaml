@@ -24,7 +24,7 @@
 
 # Create Namespace 
 - name: 🚀 INFRA MGT - Create CP4WAIOPS Infra namespace {{ current_cp4waiops_cluster.project }}
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     api_version: v1
     kind: Namespace
     name: "{{ current_cp4waiops_cluster.project }}"
@@ -34,13 +34,13 @@
 
 - name: 🚀 INFRA MGT - Create Pull Secret
   shell: |
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace={{ current_cp4waiops_cluster.project }}
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace=openshift-marketplace
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace=openshift-operators
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace={{ current_cp4waiops_cluster.project }}
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace=openshift-marketplace
-    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace=openshift-operators
-    oc create secret docker-registry 'ibm-management-pull-secret' --docker-server={{ config_file.entitled_registry }} --docker-username={{ config_file.entitled_registry_user }} --docker-password={{ CP_ENTITLEMENT_KEY }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-marketplace
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-operators
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-marketplace
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-operators
+    oc create secret docker-registry 'ibm-management-pull-secret' --docker-server={{ current_cp4waiops_feature.entitled_registry }} --docker-username={{ current_cp4waiops_feature.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
   ignore_errors: yes
 
 
@@ -53,28 +53,28 @@
 
 # Create IBM Operator Catalog
 - name: 🚀 INFRA MGT - Install IBM Operator Catalog
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/infra-automation/1_cat-ibm-operator.j2
 
 
 # Create IBM AIOps Catalog
 # - name: 🚀 INFRA MGT - Install IBM AIOps Catalog
-#   kubernetes.core.k8s:
+#   community.kubernetes.k8s:
 #     state: present
 #     template: ./templates/infra-automation/2_cat-ibm-aiops.j2
 
 
 # Create IBM AIOps Operator Group
 - name: 🚀 INFRA MGT - Install Operator Group
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/infra-automation/2_opgroup-ibm-aiops.j2
 
 
 # Create IBM AIOps Subscription
 - name: 🚀 INFRA MGT - Install Subscription
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/infra-automation/3_sub-ibm-aiops-infra.j2
 
@@ -105,7 +105,7 @@
 
 # Create IBM AIOps Subscription
 - name: 🚀 INFRA MGT - Create IA Config
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/infra-automation/4_iaconfig-aiops-infra.j2
 
@@ -171,7 +171,7 @@
 
 # Create Infrastructure Management
 - name: 🚀 INFRA MGT - Install Infrastructure Management with {{ INFRA_NAME }}
-  kubernetes.core.k8s:
+  community.kubernetes.k8s:
     state: present
     template: ./templates/infra-automation/5_iminstall.j2
 
