@@ -11,4 +11,4 @@ A couple of notes from the authors:
 
 > **DISCLAIMER** The scripts in this repository are provided **"as is"** and have been developed with several use cases in mind, from deploying canned demonstrations to proofs of concept, test deployments and production deployments. Their main goals are automation and acceleration of initial deployment, day 2 operations and continuous adoption of Cloud Pak updates. Scripts and playbooks in the Cloud Pak Deployer do not do anything "special" you could not do manually using the official documentation or via your own automation. IBM does not and cannot support the Cloud Pak Deployer; it is the responsibility of the installer to verify that the installation of Red Hat OpenShift and the Cloud Pak meets the requirements for resilience, security and other functional and non-functional aspects. You can choose to use the Cloud Pak Deployer in mission-critical environments such as production, but it is your responsibility to support such an installation.
 
-**Thank you in advance for using this this toolkit!**
+**Thank you in advance for using this this toolkit!** 
