@@ -44,6 +44,32 @@
     - "🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻🔻"
 
 
+- name: 🟢 Installing {{current_cp4waiops_feature.kind}} with the following configuration
+  debug:
+    var: current_cp4waiops_feature
+
+
+- name:  🟢 Storage Class Parameters - SPECIFIC INSTANCE"
+  debug:
+    msg:
+    - "** Installation Options for SPECIFIC INSTANCE ***********************************************************************"
+    - " Storage Class File Override:      {{ current_cp4waiops_feature.storage_class_file}}"
+    - " Storage Class Block Override:     {{ current_cp4waiops_feature.storage_class_block}}"
+    - " Storage Class InfraManagement:    {{ current_cp4waiops_feature.storage_class_file}}"
+    - ""
+  when: current_cp4waiops_feature.storage_class_file is defined
+
+
+- name:  🟢 Storage Class Parameters - GLOBAL"
+  debug:
+    msg:
+    - "** Installation Options from GLOBAL ***********************************************************************"
+    - " Storage Class File Override:      {{ all_config.openshift[0].openshift_storage[0].ocp_storage_class_file}}"
+    - " Storage Class Block Override:     {{ all_config.openshift[0].openshift_storage[0].ocp_storage_class_block}}"
+    - " Storage Class InfraManagement:    {{ all_config.openshift[0].openshift_storage[0].ocp_storage_class_file}}"
+    - ""
+  when: current_cp4waiops_feature.storage_class_file is not defined and all_config.openshift[0].openshift_storage[0].ocp_storage_class_file is defined
+
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------------"
 # INITIALIZATION
