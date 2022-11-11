@@ -34,12 +34,13 @@
 # --------------------------------------------------------------------------------------------------------------------------------------
 # Wait for serviceaccount being ready
 # --------------------------------------------------------------------------------------------------------------------------------------
-- name:   🚀 AIMANAGER OPERATOR - 🕦 Wait for serviceaccount to become ready
+- name:   🚀 AIMANAGER OPERATOR - 🕦 Wait for serviceaccount ibm-operator-catalog to become ready
   shell: oc get -n openshift-marketplace serviceaccount ibm-operator-catalog --no-headers| grep -c ""
   register: kubectl_get_sa
   until: kubectl_get_sa.stdout == "1"
   retries: 500
   delay: 15
+  when: current_cp4waiops_feature.case_install==true
 
 
 
