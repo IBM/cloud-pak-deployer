@@ -121,7 +121,7 @@
 - name:   🚀 AIMANAGER OPERATOR - Install Subscription
   community.kubernetes.k8s:
     state: present
-    template: ./templates/waiops/3_sub-ibm-aiops-orchestrator.j2
+    template: ./templates/waiops/3_sub-ibm-aiops-subscription.j2
 
 
 # --------------------------------------------------------------------------------------------------------------------------------------
@@ -166,7 +166,7 @@
 # Wait for CSV being ready
 # --------------------------------------------------------------------------------------------------------------------------------------
 
-- name:   🕦 AIMANAGER OPERATOR - Wait for ibm-aiops-orchestrator to become ready
+- name:   🕦 AIMANAGER OPERATOR - Wait for ibm-aiops-orchestrator Subscription to become ready
   shell: oc get csv -n {{ current_cp4waiops_cluster.project }}|grep ibm-aiops-orchestrator|grep "Succeeded"| grep -v ibm-watson-aiops-ui-operator | grep -c ""
   register: kubectl_get_pods
   until: kubectl_get_pods.stdout == "1"

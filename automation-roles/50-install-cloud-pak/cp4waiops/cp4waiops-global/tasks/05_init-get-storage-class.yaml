@@ -35,17 +35,68 @@
   fail: msg="You must be logged in to the server!"
   when: CLUSTER_NAME.stdout==""
 
+- name: 🛠️  Show Config File
+  debug:
+    var: current_cp4waiops_feature.storage_class_block
+
+
+
+- name: 🛠️  GLOBAL STRING_STORAGE_CLASS_FILE
+  set_fact: STRING_STORAGE_CLASS_FILE={{ _current_openshift_cluster[0].openshift_storage[0].ocp_storage_class_file }}
+  when: _current_openshift_cluster[0].openshift_storage[0].ocp_storage_class_file is defined
+
+- name: 🛠️  GLOBAL STRING_STORAGE_CLASS_BLOCK
+  set_fact: STRING_STORAGE_CLASS_BLOCK={{ _current_openshift_cluster[0].openshift_storage[0].ocp_storage_class_block }}
+  when: _current_openshift_cluster[0].openshift_storage[0].ocp_storage_class_block is defined
+
+- name: 🛠️  Show GLOBAL STRING_STORAGE_CLASS_FILE
+  debug:
+    var: STRING_STORAGE_CLASS_FILE
+    
+- name: 🛠️  Show GLOBAL STRING_STORAGE_CLASS_BLOCK
+  debug:
+    var: STRING_STORAGE_CLASS_BLOCK
+
+
+- name: 🛠️  INSTANCE STRING_STORAGE_CLASS_FILE
+  set_fact: STRING_STORAGE_CLASS_FILE={{ current_cp4waiops_feature.storage_class_file }}
+  when: current_cp4waiops_feature.storage_class_file is defined
+
+- name: 🛠️  INSTANCE STRING_STORAGE_CLASS_BLOCK
+  set_fact: STRING_STORAGE_CLASS_BLOCK={{ current_cp4waiops_feature.storage_class_block }}
+  when: current_cp4waiops_feature.storage_class_block is defined
+
+- name: 🛠️  Show FINAL STRING_STORAGE_CLASS_FILE
+  debug:
+    var: STRING_STORAGE_CLASS_FILE
+    
+- name: 🛠️  Show FINAL STRING_STORAGE_CLASS_BLOCK
+  debug:
+    var: STRING_STORAGE_CLASS_BLOCK
+
+
+- fail: msg="STRING_STORAGE_CLASS_FILE not defined"
+  when: STRING_STORAGE_CLASS_FILE is not defined
+
+
+- fail: msg="STRING_STORAGE_CLASS_BLOCK not defined"
+  when: STRING_STORAGE_CLASS_BLOCK is not defined
+
+  
+
+
+
 # --------------------------------------------------------------------------------------------------------------------------------------
 # If Storage Classes are overridden
 # --------------------------------------------------------------------------------------------------------------------------------------
 - name: 🌏 STORAGECLASS - Determine Storage Class File Override
-  set_fact: WAIOPS_STORAGE_CLASS_LARGE_BLOCK={{ current_cp4waiops_feature.storage_class_block }}
-  when: current_cp4waiops_feature.storage_class_block!="automatic"
+  set_fact: WAIOPS_STORAGE_CLASS_LARGE_BLOCK={{ STRING_STORAGE_CLASS_BLOCK }}
+  when: STRING_STORAGE_CLASS_BLOCK!="automatic"
 
 
 - name: 🌏 STORAGECLASS - Determine Storage Class Block Override
-  set_fact: WAIOPS_STORAGE_CLASS_FILE={{ current_cp4waiops_feature.storage_class_file }}
-  when: current_cp4waiops_feature.storage_class_file!="automatic"
+  set_fact: WAIOPS_STORAGE_CLASS_FILE={{ STRING_STORAGE_CLASS_FILE }}
+  when: STRING_STORAGE_CLASS_FILE!="automatic"
 
 
 # --------------------------------------------------------------------------------------------------------------------------------------
@@ -82,7 +133,7 @@
         fi
       fi
   register: INSTALL_DETECTED_STORAGECLASS
-  when: current_cp4waiops_feature.storage_class_file=="automatic"
+  when: STRING_STORAGE_CLASS_FILE=="automatic"
   #args:
   #  executable: /bin/bash
 
@@ -122,7 +173,7 @@
         fi
       fi
   register: INSTALL_DETECTED_BLOCK_STORAGECLASS
-  when: current_cp4waiops_feature.storage_class_block=="automatic"
+  when: STRING_STORAGE_CLASS_BLOCK=="automatic"
   #args:
   #  executable: /bin/bash
 
@@ -131,14 +182,14 @@
 # --------------------------------------------------------------------------------------------------------------------------------------
 - name: 🌏 STORAGECLASS - Set WAIOPS_STORAGE_CLASS_FILE={{ INSTALL_DETECTED_STORAGECLASS.stdout_lines[0] }}
   set_fact: WAIOPS_STORAGE_CLASS_FILE={{ INSTALL_DETECTED_STORAGECLASS.stdout_lines[0] }} 
-  when: current_cp4waiops_feature.storage_class_file=="automatic"
+  when: STRING_STORAGE_CLASS_FILE=="automatic"
 
 # --------------------------------------------------------------------------------------------------------------------------------------
 # Set Large Block Storage Class to same value
 # --------------------------------------------------------------------------------------------------------------------------------------
 - name: 🌏 STORAGECLASS - Set WAIOPS_STORAGE_CLASS_LARGE_BLOCK={{ INSTALL_DETECTED_BLOCK_STORAGECLASS.stdout_lines[0] }} 
   set_fact: WAIOPS_STORAGE_CLASS_LARGE_BLOCK={{ INSTALL_DETECTED_BLOCK_STORAGECLASS.stdout_lines[0] }} 
-  when: current_cp4waiops_feature.storage_class_block=="automatic" 
+  when: STRING_STORAGE_CLASS_BLOCK=="automatic" 
 
 
 
