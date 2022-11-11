@@ -1,0 +1,84 @@
+---
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS INSTANCES
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+global_config:
+  environment_name: cp4waiops
+  cloud_platform: existing-ocp
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS Pull Registires
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  entitled_registry: cp.icr.io
+  entitled_registry_user: cp
+  catalog_image: icr.io/cpopen/ibm-operator-catalog:latest
+
+
+openshift:
+- name: "mycluster"
+  ocp_version: "4.10"
+  cluster_name: "mycluster"
+  domain_name: example.com
+  openshift_storage:
+  - storage_name: ibm-cloud-storage
+    storage_type: custom
+# Use file storate class provided as part of ROKS cluster
+    ocp_storage_class_file: automatic
+    ocp_storage_class_block: automatic
+    #ocp_storage_class_file: ibmc-file-gold-gid
+    #ocp_storage_class_block: ibmc-block-gold
+
+
+cp4waiops:
+- project: cp4waiops-infra
+  instances:
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS Infrastructure Management
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-infrastructure-management
+    kind: InfrastructureManagement
+    install: false
+    # Version of the catalog subscription
+    subscription_channel: v3.5
+    #subscription_channel: 3.4-dev
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    #storage_class_file: automatic
+    #storage_class_block: automatic
+    
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS USAGE
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS Storage Classes
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+# Override the Storage Class auto detection (not_configured, ibmc-file-gold-gid, rook-cephfs, nfs-client, ...)
+#storage_class_file: automatic
+#storage_class_file: ibmc-file-gold-gid               # ROKS
+#storage_class_file: ocs-storagecluster-cephfs        # ODF
+#storage_class_file: ibmc-vpc-block-10iops-tier       # IBM VPC
+#storage_class_file: rook-cephfs                      # FYRE
+#storage_class_file: nfs-client                       # TEC
+
+#storage_class_block: automatic
+#storage_class_block: ibmc-block-gold                 # ROKS
+#storage_class_block: ocs-storagecluster-ceph-rbd     # ODF
+#storage_class_block: ibmc-vpc-block-10iops-tier      # IBM VPC
+#storage_class_block: rook-cephfs                     # FYRE
+#storage_class_block: nfs-client                      # TEC
+
+
+
+
