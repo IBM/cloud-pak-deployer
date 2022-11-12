@@ -1,4 +1,11 @@
 ---
+- name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.openshift_storage_name }}
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"
+
 - name: Remove case directory in case it exists and not air-gapped
   file:
     path: "{{ status_dir }}/cp4d/case"
@@ -78,9 +85,6 @@
     name: cp4d-subscriptions
   vars:
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-
-- name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.storage_class_name }}
-  include_tasks: cp4d-get-storage-classes.yml
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml

@@ -1,0 +1,27 @@
+- name: Get storage classes from cluster
+  shell:
+    oc get sc -o jsonpath='{.items[*].metadata.name}'
+  register: _openshift_storage_classes
+
+- name: Show found storage classes
+  debug:
+    var: _openshift_storage_classes
+- set_fact:
+    _storage_type: 'pwx'
+  when: _openshift_storage_classes.stdout is search("portworx-shared-gp3")
+
+- set_fact:   
+    _storage_type: 'nfs'
+  when: _openshift_storage_classes.stdout is search("managed-nfs-storage")
+
+- set_fact:
+    _storage_type: 'ocs'
+  when: _openshift_storage_classes.stdout is search("ocs-storagecluster-ceph-rbd")
+
+- set_fact:
+    _storage_type: 'aws-elastic'
+  when: _openshift_storage_classes.stdout is search("efs-nfs-client")
+
+- name: Show detected storage type when set to auto
+  debug:
+    msg: "Detected storage type: {{ _storage_type }}"
