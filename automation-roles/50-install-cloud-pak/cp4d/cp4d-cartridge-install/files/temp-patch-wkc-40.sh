@@ -29,13 +29,13 @@ fi
 
 while true;do
   log "----------"
-  log "Checking UG CR"
+  log "Checking UG ug-cr in project ${project}"
   log "----------"
 
   if oc get UG -n ${project} ug-cr;then
     log "Info: Patch UG ug-cr"
-    oc patch WKC wkc-cr \
-     -n ${project} \ 
+    oc patch UG ug-cr \
+     -n ${project} \
      --type merge \
      -p '{
       "spec": {
