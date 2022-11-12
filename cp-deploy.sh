@@ -526,6 +526,15 @@ done
 # Check container engine and build if wanted                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 
+# Set image tag if not specified
+if ! $INSIDE_CONTAINER;then
+  if [ "$CPD_IMAGE_TAG" == "" ];then
+    CPD_IMAGE_TAG="latest"
+  else
+    echo "Cloud Pak Deployer image tag ${CPD_IMAGE_TAG} will be used."
+  fi
+fi
+
 # container engine used to run the registry, either 'docker' or 'podman'
 CONTAINER_ENGINE=
 
@@ -543,7 +552,7 @@ if ! $INSIDE_CONTAINER;then
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"
-    $CONTAINER_ENGINE build -t cloud-pak-deployer --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
+    $CONTAINER_ENGINE build -t cloud-pak-deployer:${CPD_IMAGE_TAG} --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
     exit $?
   fi
 fi
@@ -647,7 +656,7 @@ fi
 
 # Make sure that Deployer image exists
 if [ "${CPD_AIRGAP}" == "true" ];then
-  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:latest > /dev/null 2>&1;then
+  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
     if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar ];then
       echo "Loading Cloud Pak Deployer image from tar file..."
       ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
@@ -660,8 +669,8 @@ fi
 
 # Check if the cloud-pak-deployer image exists
 if ! $INSIDE_CONTAINER;then
-  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
-    echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
+  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:${CPD_IMAGE_TAG} 2> /dev/null)" == "" ]]; then
+    echo "Container image cloud-pak-deployer:${CPD_IMAGE_TAG} does not exist on the local machine, please build first."
     exit 99
   fi
 fi
@@ -725,7 +734,7 @@ if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
   echo "Destroying old archives for deployer"
   rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
   echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
-  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:latest
+  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
   echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
   exit 0
 fi
@@ -820,7 +829,7 @@ if ! $INSIDE_CONTAINER;then
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
-  run_cmd+=" cloud-pak-deployer"
+  run_cmd+=" cloud-pak-deployer:${CPD_IMAGE_TAG}"
 
   # If running "environment" subcommand with apply/destroy, follow log
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
