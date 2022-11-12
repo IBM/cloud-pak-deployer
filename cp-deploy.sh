@@ -72,9 +72,9 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+    ${CPD_CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
   else
-    ${CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
+    ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
   fi
 }
 
@@ -535,24 +535,29 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# container engine used to run the registry, either 'docker' or 'podman'
-CONTAINER_ENGINE=
-
 if ! $INSIDE_CONTAINER;then
   # Check if podman or docker command was found
-  if command -v podman &> /dev/null;then
-    CONTAINER_ENGINE="podman"
-  elif command -v docker &> /dev/null;then
-    CONTAINER_ENGINE="docker"
+  if [ -z $CPD_CONTAINER_ENGINE ];then
+    if command -v podman &> /dev/null;then
+      CPD_CONTAINER_ENGINE="podman"
+    elif command -v docker &> /dev/null;then
+      CPD_CONTAINER_ENGINE="docker"
+    else
+      echo "podman or docker command was not found."
+      exit 99
+    fi
   else
-    echo "podman or docker command was not found."
-    exit 99
+    echo "Container engine ${CPD_CONTAINER_ENGINE} will be used." 
+    if ! command -v ${CPD_CONTAINER_ENGINE} &> /dev/null;then
+      echo "${CPD_CONTAINER_ENGINE} command was not found."
+      exit 99
+    fi
   fi
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"
-    $CONTAINER_ENGINE build -t cloud-pak-deployer:${CPD_IMAGE_TAG} --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
+    ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
     exit $?
   fi
 fi
@@ -656,10 +661,10 @@ fi
 
 # Make sure that Deployer image exists
 if [ "${CPD_AIRGAP}" == "true" ];then
-  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
+  if ! ${CPD_CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
     if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar ];then
       echo "Loading Cloud Pak Deployer image from tar file..."
-      ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
+      ${CPD_CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
     else
       echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
       exit 99
@@ -669,7 +674,7 @@ fi
 
 # Check if the cloud-pak-deployer image exists
 if ! $INSIDE_CONTAINER;then
-  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:${CPD_IMAGE_TAG} 2> /dev/null)" == "" ]]; then
+  if [[ "$(${CPD_CONTAINER_ENGINE} images -q cloud-pak-deployer:${CPD_IMAGE_TAG} 2> /dev/null)" == "" ]]; then
     echo "Container image cloud-pak-deployer:${CPD_IMAGE_TAG} does not exist on the local machine, please build first."
     exit 99
   fi
@@ -685,7 +690,7 @@ if ! $INSIDE_CONTAINER;then
       ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
       # If container ID was found, check if it is currently running
       if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
-        if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+        if ! ${CPD_CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
           ACTIVE_CONTAINER_ID=""
         fi
       fi
@@ -723,7 +728,7 @@ if ! $INSIDE_CONTAINER;then
       exit 1
     else
       echo "Terminating container process ${ACTIVE_CONTAINER_ID}"
-      ${CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
+      ${CPD_CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
       exit 0
     fi
   fi
@@ -734,14 +739,14 @@ if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
   echo "Destroying old archives for deployer"
   rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
   echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
-  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
+  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
   echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
   exit 0
 fi
 
 # Build command when not running inside container
 if ! $INSIDE_CONTAINER;then
-  run_cmd="${CONTAINER_ENGINE} run"
+  run_cmd="${CPD_CONTAINER_ENGINE} run"
 
   # If running "environment" subcommand with apply or destroy, run as daemon
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
@@ -839,7 +844,7 @@ if ! $INSIDE_CONTAINER;then
       echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
     fi
     run_env_logs
-    PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
+    PODMAN_EXIT_CODE=$(${CPD_CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
   else
     eval $run_cmd
     PODMAN_EXIT_CODE=$?
