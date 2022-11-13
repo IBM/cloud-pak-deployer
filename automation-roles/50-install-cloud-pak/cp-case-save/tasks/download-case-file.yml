@@ -1,0 +1,15 @@
+---
+- set_fact:
+    _case_save_command: "{{ lookup('template','case-save-command.j2') }}"
+
+- name: Show case save command
+  debug:
+    var: _case_save_command
+
+- name: Save case file {{ _p_case }}-{{ _p_case_version }}
+  shell: |
+    {{ _case_save_command }}
+  register: _case_save
+  retries: 5
+  delay: 5
+  until: _case_save.rc==0
