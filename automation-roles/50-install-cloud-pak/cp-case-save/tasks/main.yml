@@ -1,0 +1,17 @@
+---
+- name: Check that all required variables are set
+  assert:
+    quiet: true
+    that:
+    - _p_case is defined
+    - _p_case_version is defined
+    
+- set_fact:
+    _case_dir: "{{ _p_case_dir | default(status_dir + '/cloud-paks/case') }}"
+
+- name: Create directory {{ _case_dir }} for case files if not existent
+  file:
+    path: "{{ _case_dir }}"
+    state: directory
+
+- include_tasks: download-case-file.yml
