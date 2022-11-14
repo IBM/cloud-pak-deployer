@@ -34,7 +34,7 @@ while true;do
 
   if oc get UG -n ${project} ug-cr;then
     log "Info: Patch UG ug-cr"
-    oc patch UG ug-cr \
+    patch_result=$(oc patch UG ug-cr \
      -n ${project} \
      --type merge \
      -p '{
@@ -90,7 +90,11 @@ while true;do
               }
           }
       }
-    }' | tee -a ${status_dir}/log/$project-wkc-40-patch.log
+    }' 2>&1 | tee -a ${status_dir}/log/$project-wkc-40-patch.log)
+    if [[ "$patch_result" == *"(no change)"* ]];then
+      echo "UG has been patched. No changed needed anymore, exiting." | tee -a ${status_dir}/log/$project-wkc-40-patch.log
+      exit 0
+    fi
   fi
 
   log "----------"
