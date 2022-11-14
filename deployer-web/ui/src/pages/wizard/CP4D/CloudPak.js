@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
 
-const CloudPak = ({CPDData, setCPDData}) => {
+const CloudPak = ({CPDData, setCPDData, entilementKey, setEntilementKey, setWizardError}) => {
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
 
     const [checkParentCheckBox, setCheckParentCheckBox] = useState(false)
     const [indeterminateParentCheckBox, setIndeterminateParentCheckBox] = useState(false)
+
+    const [isEntilementKeyInvalid, setEntilementKeyInvalid] = useState(false)
 
     useEffect(() => {
       const fetchCloudPakData =async () => {
@@ -27,8 +29,12 @@ const CloudPak = ({CPDData, setCPDData}) => {
       else {
         updateParentCheckBox(CPDData) 
       }      
-      setLoadingCPD(false)         
-    }, [])
+      setLoadingCPD(false)          
+      
+      if (entilementKey ) {
+        setWizardError(false)
+      }
+    }, [entilementKey])
 
     const errorProps = () => ({
       kind: 'error',
@@ -94,30 +100,34 @@ const CloudPak = ({CPDData, setCPDData}) => {
       }      
     }
 
+    const entilementKeyOnChange = (e) => {
+      setEntilementKey(e.target.value);
+      if (e.target.value === '') {
+        setEntilementKeyInvalid(true)
+        setWizardError(true)
+        return
+      }
+      setWizardError(false)     
+    }
 
     const Entitlement = () => {
       return (
         <div>
           <div className="cloud-pak-items">Entitlement key</div>
-          <TextInput.PasswordInput  placeholder="Entitlement key" id="1" labelText="" value=""/>
+          <TextInput.PasswordInput onChange={entilementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entilementKey} invalidText="Entitlement  Key can not be empty." invalid={isEntilementKeyInvalid}/>
         </div> 
       )
-    }
-
-   
+    }   
 
     return (
         <>     
-          <div className='cpd-container'>
-          
+          <div className='cpd-container'>          
 
           { loadingCPD && <Loading /> }  
           { loadCPDErr && <InlineNotification className="cpd-error"
                 {...errorProps()}        
-            /> }  
-
-
-           
+            /> 
+          }             
 
           <Entitlement />
 

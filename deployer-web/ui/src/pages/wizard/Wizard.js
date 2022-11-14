@@ -6,52 +6,91 @@ import { useState, useEffect, useRef } from 'react';
 import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, TextArea} from 'carbon-components-react';
 import Summary from './Summary/Summary';
 import axios from 'axios';
-import CloudPak from './CP4D/CloudPak';
+import CloudPak from './CloudPak/CloudPak';
 
 const Wizard = () => {
 
   //wizard index
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [wizardError, setWizardError] = useState(false)
+  const [wizardError, setWizardError] = useState(true);
+  const [ocLoginErr, setOcLoginErr] = useState(false)
 
   //DeployStart hidden wizard
   const [isDeployStart, setDeployStart] = useState(false);
   const [isDeployErr, setDeployErr] = useState(false);
   const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
 
-  //Step 1
+  //Infrastructure
   const [cloudPlatform, setCloudPlatform] = useState('existing-ocp')
-  //--IBM Cloud
+  //---IBM Cloud
   const [IBMCloudSettings, setIBMCloudSettings] = useState({
     IBMAPIKey: '',
     envId: '',
     region: '',
   })
-  //--AWS
+  //---AWS
   const [AWSSettings, setAWSSettings] = useState({
     accessKeyID: '',
     secretAccessKey:'',
     region: '',
   })
-  
+  //---Existing OpenShift
+  const [OCPSettings, setOCPSettings] = useState({
+    ocLoginCmd:'',
+    envId: '',
+  })  
 
-  //Step 2
+  //Storage
   const [storage, setStorage] = useState([])
   const [storagesOptions, setStoragesOptions] = useState([])
-  //Step 3
-  const [CPDData, setCPDData] = useState([])
 
-  //Step 4
+  //Cloud Pak
+  // const [OCPData, setOCPData] = useState([])
+  const [CPDCartridgesData, setCPDCartridgesData] = useState([])
+  const [CPICartridgesData, setCPICartridgesData] = useState([])
+  const [entilementKey, setEntilementKey] = useState('')
+
+  //Summary
   const [deployLog, setDeployLog] = useState('')
 
   const logsRef = useRef(null);
 
   const clickPrevious = ()=> {
+    //setWizardError(false)
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
   }
 
-  const clickNext = ()=> {
+  const testOcLoginCmd = async() => {
+    const body={
+      "oc_login_command": OCPSettings.ocLoginCmd
+    }
+    let result=-1
+    await axios.post('/api/v1/oc-login', body).then(res =>{     
+      result=res.data.code            
+      if (result!==0) {
+        setOcLoginErr(true)    
+      } else {
+        setOcLoginErr(false)  
+      }      
+    }, err => {
+      setOcLoginErr(true)
+    }
+    );  
+    setLoadingDeployStatus(false) 
+    return result;
+  }
+
+  const clickNext = async()=> {
+    if (currentIndex === 0 && cloudPlatform === "existing-ocp") {
+      setLoadingDeployStatus(true) 
+      let result=await testOcLoginCmd();
+      if (result!==0) {
+        return
+      }
+    }
+
+    setWizardError(true)
     if (currentIndex <= 2)
       setCurrentIndex(currentIndex + 1)
   }
@@ -83,18 +122,10 @@ const Wizard = () => {
     setLoadingDeployStatus(false)    
   }
 
-  const updateWizardError = (e)=>{
-    setWizardError(e)
-  }
-  
-  const updateInfraValue = ({cloudPlatform, region}) => {
-      console.log(cloudPlatform)
+  const updateInfraValue = ({cloudPlatform}) => {
       if (cloudPlatform){
         setCloudPlatform(cloudPlatform)
       }      
-      if (region) {
-        setIBMCloudSettings({...IBMCloudSettings, region})
-      }
   }
 
   const errorProps = () => ({
@@ -135,6 +166,7 @@ const Wizard = () => {
     return () => {
       clearInterval(scheduledJob)
     }
+    // eslint-disable-next-line
   }, [])
 
   const DeployerProgressIndicator = () => {
@@ -142,7 +174,8 @@ const Wizard = () => {
       <ProgressIndicator className="wizard-container__page-progress"
           vertical={false}
           currentIndex={currentIndex}
-          spaceEqually={false}>      
+          spaceEqually={false}>  
+
           <ProgressStep
             onClick={() => setCurrentIndex(0)}
             current={currentIndex === 0}
@@ -170,7 +203,7 @@ const Wizard = () => {
             label={'Summary'}
             description="Step 4"
           />    
-          </ProgressIndicator>  
+       </ProgressIndicator>  
     )
   }
 
@@ -200,13 +233,13 @@ const Wizard = () => {
             //Deploy Process
             isDeployErr ?
               <InlineNotification className="deploy-error"
-                    {...errorProps()}        
-                />  
-                :
-                <>
-                <InlineNotification className="deploy-error"
+                {...errorProps()}        
+              />  
+              :
+              <>
+              <InlineNotification className="deploy-error"
                 {...successProps()}        
-              /> 
+              />   
 
               <h4>Logs:</h4>
               <div>
@@ -222,40 +255,55 @@ const Wizard = () => {
           :
           //Wizard Process
           <DeployerProgressIndicator />                   
-        }          
-          {currentIndex === 0 ? <Infrastructure
-                                     cloudPlatform={cloudPlatform} 
-                                     IBMCloudSettings={IBMCloudSettings}
-                                     setIBMCloudSettings={setIBMCloudSettings}                                      
-                                     AWSSettings={AWSSettings}
-                                     setAWSSettings={setAWSSettings}
-                                     updateInfraValue={updateInfraValue} 
-                                     updateWizardError={updateWizardError}>
-                                </Infrastructure> : null} 
-          {currentIndex === 1 ? <Storage 
-                                      cloudPlatform={cloudPlatform} 
-                                      setStorage={setStorage} 
-                                      storage={storage} 
-                                      storagesOptions={storagesOptions} 
-                                      setStoragesOptions={setStoragesOptions}>
-                                      
-                                </Storage> : null}    
-          {currentIndex === 2 ? <CloudPak 
-                                      CPDData={CPDData} 
-                                      setCPDData={setCPDData}>
-                                    
-                                </CloudPak> : null}    
-          {currentIndex === 3 ? <Summary 
-                                      envId={IBMCloudSettings.envId} 
-                                      cloudPlatform={cloudPlatform} 
-                                      storage={storage} 
-                                      region={IBMCloudSettings.region} 
-                                      CPDData={CPDData}>
-
-                                </Summary> : null}       
+        } 
+      
+        {currentIndex === 0 ? <Infrastructure
+                                    cloudPlatform={cloudPlatform} 
+                                    IBMCloudSettings={IBMCloudSettings}
+                                    setIBMCloudSettings={setIBMCloudSettings}                                      
+                                    AWSSettings={AWSSettings}
+                                    setAWSSettings={setAWSSettings}
+                                    OCPSettings={OCPSettings}
+                                    setOCPSettings={setOCPSettings}
+                                    updateInfraValue={updateInfraValue} 
+                                    setWizardError={setWizardError}
+                                    ocLoginErr={ocLoginErr}
+                              >
+                              </Infrastructure> : null} 
+        {currentIndex === 1 ? <Storage 
+                                    cloudPlatform={cloudPlatform} 
+                                    setStorage={setStorage} 
+                                    storage={storage} 
+                                    storagesOptions={storagesOptions} 
+                                    setStoragesOptions={setStoragesOptions}
+                                    setWizardError={setWizardError}
+                              >                                    
+                              </Storage> : null}    
+        {currentIndex === 2 ? <CloudPak
+                                    entilementKey={entilementKey} 
+                                    setEntilementKey={setEntilementKey}
+                                    CPDCartridgesData={CPDCartridgesData}
+                                    setCPDCartridgesData={setCPDCartridgesData}
+                                    CPICartridgesData={CPICartridgesData}
+                                    setCPICartridgesData={setCPICartridgesData}                                    
+                                    setWizardError={setWizardError}
+                              >
+                              </CloudPak> : null}    
+        {currentIndex === 3 ? <Summary 
+                                    cloudPlatform={cloudPlatform} 
+                                    IBMCloudSettings={IBMCloudSettings}                                                                      
+                                    AWSSettings={AWSSettings}
+                                    OCPSettings={OCPSettings}
+                                    storage={storage} 
+                                    CPDCartridgesData={CPDCartridgesData}
+                                    setCPDCartridgesData={setCPDCartridgesData}
+                                    CPICartridgesData={CPICartridgesData}
+                                    setCPICartridgesData={setCPICartridgesData}
+                              >
+                              </Summary> : null}       
       </div> 
     </div>
-     </>
+    </>
   )
 };
 
