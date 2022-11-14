@@ -61,22 +61,12 @@ def deploy():
 def oc_login():
     body = json.loads(request.get_data())
     print(body, file=sys.stderr)
-<<<<<<< HEAD
-    env = {}
     oc_login_command=body['oc_login_command']
     
     result_code=os.system(oc_login_command)
     result={"code": result_code}    
     return json.dumps(result)
-=======
-    env ={}
-    oc_login_command=body['oc_login_command']
-    env = {'OC_LOGIN_COMMAND': oc_login_command}
-    process = subprocess.Popen(oc_login_command,
-                    universal_newlines=True,
-                    env=env)
-    return 'ok'
->>>>>>> d05db8d5fbe6c848f00c414a69e3de843447d665
+
 
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 def getCartridges(cloudpak):
