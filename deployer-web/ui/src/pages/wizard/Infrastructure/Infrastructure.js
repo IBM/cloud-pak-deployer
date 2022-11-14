@@ -1,72 +1,158 @@
 import axios from "axios";
-import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput } from "carbon-components-react";
+import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput  } from "carbon-components-react";
 import { useEffect, useState } from "react";
 import './Infrastructure.scss'
 
-const Infrastructure = ({cloudPlatform, IBMCloudSettings, updateInfraValue, updateWizardError, setIBMCloudSettings, AWSSettings, setAWSSettings}) => {
+const Infrastructure = ({cloudPlatform, 
+                         IBMCloudSettings, 
+                         setIBMCloudSettings, 
+                         AWSSettings, 
+                         setAWSSettings,
+                         OCPSettings,
+                         setOCPSettings,
+                         updateInfraValue, 
+                         setWizardError,
+                         ocLoginErr
+                         }) => {
 
     //IBM Cloud
     const [loadingIBMRegion, setLoadingIBMRegion] = useState(false)
-    const [loadIBMRegionErr, setLoadIBMRegionErr] = useState(false)
-    const [IBMRegion, setIBMRegion] = useState(IBMCloudSettings.region)
-    const [isIBMregionInValid, setIBMregionInValid] = useState(false)
+    const [loadIBMRegionErr, setLoadIBMRegionErr] = useState(false)    
+    const [isIBMregionInvalid, setIBMregionInvalid] = useState(false)
+    const [isIBMAPIKeyInvalid, setIBMAPIKeyInvalid] = useState(false)
+    const [isIBMenvIdInvalid, setIBMenvIdInvalid] = useState(false)
 
-    //AWS
-    const [AWSAccessKeyID, setAWSAccessKeyID] = useState(AWSSettings.accessKeyID)
-    const [AWSSecretAccessKey, setAWSSecretAccessKey] = useState(AWSSettings.secretAccessKey)
-    const [AWSRegion, setAWSRegion] = useState(AWSSettings.region)    
-    const [isAWSregionInValid, setAWSregionInValid] = useState(false)      
+    //AWS   
+    const [isAWSAccessKeyIDInvalid, setAWSAccessKeyIDInvalid] = useState(false)
+    const [isAWSSecretAccessKeyInvalid, setAWSSecretAccessKeyInvalid] = useState(false)
+    const [isAWSregionInvalid, setAWSregionInvalid] = useState(false)   
+    
+    //Existing OCP
+    const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
+    const [isOCPenvIdInvalid, setOCPenvIdInvalid] = useState(false)
+
 
     useEffect(() => {
       const getIBMRegion = async() => {
-        await axios.get('/api/v1/region/ibm-cloud').then(res =>{ 
-          setIBMRegion(res.data.region) 
-          updateInfraValue({region:res.data.region});          
+        await axios.get('/api/v1/region/ibm-cloud').then(res =>{          
+          setIBMCloudSettings({...IBMCloudSettings, region:res.data.region});        
         }, err => {
           setLoadIBMRegionErr(true)
           console.log(err)
         });
         setLoadingIBMRegion(false)  
       }
-      
-      if (cloudPlatform === 'ibm-cloud') {           
-        if (IBMRegion === '') {
-          setLoadingIBMRegion(true)
-          getIBMRegion()
-        }
-      }      
-    }, [cloudPlatform])
+
+      switch (cloudPlatform) {
+        case "ibm-cloud":
+          if (IBMCloudSettings.region === '') {
+            setLoadingIBMRegion(true)
+            getIBMRegion()
+          }
+          if (IBMCloudSettings.IBMAPIKey && IBMCloudSettings.envId && IBMCloudSettings.region ) {
+            setWizardError(false)
+          }
+          break; 
+        case "aws":
+          if (AWSSettings.accessKeyID && AWSSettings.secretAccessKey && AWSSettings.region ) {
+            setWizardError(false)
+          }
+          break;
+        case "existing-ocp":
+          if (OCPSettings.ocLoginCmd && OCPSettings.envId) {
+            setWizardError(false)
+          }
+          break;  
+        default:
+
+      }   // eslint-disable-next-line
+    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings])
 
     const setCloudPlatformValue = (value) => {    
+      setWizardError(true)
       updateInfraValue({cloudPlatform: value});
     }
 
-    const setIBMAPIKeyValue = (e) => {
-      //updateInfraValue({IBMAPIKey:e.target.value});     
-      setIBMCloudSettings({...IBMCloudSettings, IBMAPIKey:e.target.value})    
+    const IBMCloudSettingsOnChange = (e) => {
+      switch (e.target.id) {
+        case "100":
+          setIBMCloudSettings({...IBMCloudSettings, IBMAPIKey:e.target.value});
+          if (e.target.value === '') {
+            setIBMAPIKeyInvalid(true)
+            setWizardError(true)
+            return
+          }          
+          break;
+        case "101":
+          setIBMCloudSettings({...IBMCloudSettings, envId:e.target.value});
+          if (e.target.value === '') {
+            setIBMenvIdInvalid(true)
+            setWizardError(true)
+            return
+          }
+          break;
+        case "102":
+          setIBMCloudSettings({...IBMCloudSettings, region:e.target.value});
+          if (e.target.value === '') {
+            setIBMregionInvalid(true)
+            setWizardError(true)
+            return
+          }
+          break;
+        default:
+      }  
     }
 
-    const setEnvIDValue = (e) => {
-      //updateInfraValue({envId:e.target.value});
-      setIBMCloudSettings({...IBMCloudSettings, envId:e.target.value})
+    const AWSSettingsOnChange = (e) => {
+      switch (e.target.id) {
+        case "110":
+          setAWSSettings({...AWSSettings, accessKeyID:e.target.value});
+          if (e.target.value === '') {
+            setAWSAccessKeyIDInvalid(true)
+            setWizardError(true)
+            return
+          }          
+          break;
+        case "111":
+          setAWSSettings({...AWSSettings, secretAccessKey:e.target.value});
+          if (e.target.value === '') {
+            setAWSSecretAccessKeyInvalid(true)
+            setWizardError(true)
+            return
+          }
+          break;
+        case "112":
+          setAWSSettings({...AWSSettings, region:e.target.value});
+          if (e.target.value === '') {
+            setAWSregionInvalid(true)
+            setWizardError(true)
+            return
+          }
+          break;
+        default:
+      }  
     }
 
-    const setEntilementKeyValue = (e) => {
-      //updateInfraValue({entilementKey:e.target.value});
-      setIBMCloudSettings({...IBMCloudSettings, entilementKey:e.target.value})
-    }
-
-    const setIBMCloudRegion =(e)=>{
-      setIBMRegion(e.target.value)
-      if (e.target.value === '') {
-        setIBMregionInValid(true)        
-        updateWizardError(true)
-        return
-      }
-      updateWizardError(false)
-      setIBMregionInValid(false)      
-      //updateInfraValue({region:e.target.value});    
-      setIBMCloudSettings({...IBMCloudSettings, region:e.target.value})  
+    const OCPSettingsOnChange = (e) => {
+      switch (e.target.id) {
+        case "130":
+          setOCPSettings({...OCPSettings, ocLoginCmd:e.target.value});
+          if (e.target.value === '') {
+            setOcLoginCmdInvalid(true)
+            setWizardError(true)
+            return
+          }          
+          break;
+        case "131":
+          setOCPSettings({...OCPSettings, envId:e.target.value});
+          if (e.target.value === '') {
+            setOCPenvIdInvalid(true)
+            setWizardError(true)
+            return
+          }          
+          break;
+        default:
+      }  
     }
 
     const errorProps = () => ({
@@ -75,93 +161,89 @@ const Infrastructure = ({cloudPlatform, IBMCloudSettings, updateInfraValue, upda
       role: 'error',
       title: 'Unable to get IBM Cloud Region from server.',
       hideCloseButton: false,
-    });  
+    });
 
-    // 0 - IBMCloudPlatform
-    const IBMCloudPlatform = () => {
-      return (        
-        <>
-          {loadingIBMRegion && <Loading /> }          
-          <div className="infra-container">
-            <div>
-              <div className="infra-items">IBM Cloud API Key</div>
-              <TextInput.PasswordInput onChange={setIBMAPIKeyValue} placeholder="IBM Cloud API Key" id="0" labelText="" value={IBMCloudSettings.IBMAPIKey} />
-            </div>
-            {/* <div>
-              <div className="infra-items">Entitlement key</div>
-              <TextInput.PasswordInput onChange={setEntilementKeyValue} placeholder="Entitlement key" id="1" labelText="" value={IBMCloudSettings.entilementKey}/>
-            </div> */}
-            <div>
-              <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={setEnvIDValue} placeholder="Enviroment ID" id="2" labelText="" value={IBMCloudSettings.envId} />
-            </div>  
-            <div>
-              <div className="infra-items">IBM Cloud Region</div>
-              <TextInput onChange={setIBMCloudRegion} placeholder={IBMRegion} id="3" labelText="" value={IBMRegion} invalidText="IBM Cloud Region can not be empty."  invalid={isIBMregionInValid}/>
-            </div> 
-          </div>        
-        </> 
-      );
-    }
-
-    // 1 - AWSPlatform
-    const AWSPlatform = () => {
-      return (
-        <>
-          <div className="infra-container">
-            <div>
-              <div className="infra-items">AWS Access Key ID</div>
-              <TextInput placeholder="AWS Access Key" id="10" labelText="" value={AWSSettings.AWSAccessKeyID} />
-            </div>
-            <div>
-              <div className="infra-items">AWS Secret Access Key</div>
-              <TextInput.PasswordInput placeholder="AWS Secret Access Key" id="11" labelText="" value={AWSSettings.AWSSecretAccessKey}/>
-            </div>
-            <div>
-              <div className="infra-items">AWS Region</div>
-              <TextInput onChange={setIBMCloudRegion} placeholder={AWSRegion} id="12" labelText="" value={AWSRegion} invalidText="AWS region."  invalid={isAWSregionInValid}/>
-            </div> 
-          </div>
-        </>
-      )
-    }
-
-    // 3 - ExistingOpenShiftPlatform
-    const ExistingOpenShiftPlatform = () => {
-      return (
-        <>
-          <div className="infra-container">
-            <div>
-              <div className="infra-items">oc login command</div>
-              <TextInput placeholder="oc login command" id="30" labelText="" />
-            </div>
-          </div>
-        </>
-      )
-    }    
+    const ocLoginErrorProps = () => ({
+      kind: 'error',
+      lowContrast: true,
+      role: 'error',
+      title: 'Get error to login the existing OpenShift platform. ',
+      hideCloseButton: false,
+    }); 
 
     return (
       <> 
-      <div className="infra-title">Cloud Platform</div>  
+
       { loadIBMRegionErr && <InlineNotification className="cpd-error"
-                {...errorProps()}        
+          {...errorProps()}        
             /> } 
+      {/* oc login error */}
+      {ocLoginErr && <InlineNotification className="cpd-error"
+          {...ocLoginErrorProps()}        
+           />  }   
+
+      <div className="infra-title">Cloud Platform</div>        
+
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"
          defaultSelected={cloudPlatform}     
          onChange={(value)=>{setCloudPlatformValue(value)}
          }
          >
+         <RadioButton labelText="Existing OpenShift" value="existing-ocp" id="3" />
          <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="0" />
          <RadioButton labelText="AWS" value="aws" id="1" />
-         <RadioButton labelText="vSphere" value="vsphere" id="2" disabled />
-         <RadioButton labelText="Existing OpenShift" value="existing-ocp" id="3" />
+         <RadioButton labelText="vSphere" value="vsphere" id="2" disabled />         
       </RadioButtonGroup>
 
-      {cloudPlatform === 'ibm-cloud' ?  <IBMCloudPlatform /> : null } 
-      {cloudPlatform === 'aws' ? <AWSPlatform />: null}
-      {cloudPlatform === 'existing-ocp' ? <ExistingOpenShiftPlatform/> : null}
-
+      {cloudPlatform === 'ibm-cloud' ?  
+         <>
+          {loadingIBMRegion && <Loading /> }          
+          <div className="infra-container">
+            <div>
+              <div className="infra-items">IBM Cloud API Key</div>
+              <PasswordInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud API Key" id="100" labelText="" value={IBMCloudSettings.IBMAPIKey} invalidText="IBM Cloud API Key can not be empty." invalid={isIBMAPIKeyInvalid}/>
+            </div>
+            <div>
+              <div className="infra-items">Enviroment ID</div>
+              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={IBMCloudSettings.envId} invalidText="Environment ID can not be empty." invalid={isIBMenvIdInvalid}/>
+            </div>  
+            <div>
+              <div className="infra-items">IBM Cloud Region</div>
+              <TextInput onChange={IBMCloudSettingsOnChange} placeholder={IBMCloudSettings.region} id="102" labelText="" value={IBMCloudSettings.region} invalidText="IBM Cloud Region can not be empty." invalid={isIBMregionInvalid}/>
+            </div> 
+          </div>        
+         </>  : null } 
+      {cloudPlatform === 'aws' ? 
+          <>
+            <div className="infra-container">
+              <div>
+                <div className="infra-items">AWS Access Key ID</div>
+                <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Access Key" id="110" labelText="" value={AWSSettings.accessKeyID} invalidText="AWS Access Key ID can not be empty."  invalid={isAWSAccessKeyIDInvalid}/>
+              </div>
+              <div>
+                <div className="infra-items">AWS Secret Access Key</div>
+                <TextInput.PasswordInput onChange={AWSSettingsOnChange} placeholder="AWS Secret Access Key" id="111" labelText="" value={AWSSettings.secretAccessKey} invalidText="AWS Secret Access Key can not be empty."  invalid={isAWSSecretAccessKeyInvalid}/>
+              </div>
+              <div>
+                <div className="infra-items">AWS Region</div>
+                <TextInput onChange={AWSSettingsOnChange} placeholder={AWSSettings.region} id="112" labelText="" value={AWSSettings.region} invalidText="AWS region can not be empty."  invalid={isAWSregionInvalid}/>
+              </div> 
+            </div>
+          </>: null}
+      {cloudPlatform === 'existing-ocp' ? 
+        <>
+          <div className="infra-container">
+            <div>
+              <div className="infra-items">oc login command</div>
+              <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="oc login command can not be empty."  invalid={isOcLoginCmdInvalid}/>
+            </div>
+            <div>
+              <div className="infra-items">Enviroment ID</div>
+              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={OCPSettings.envId} invalidText="Environment ID can not be empty." invalid={isOCPenvIdInvalid}/>
+            </div>
+          </div>
+        </> : null}
       </>
     );
   };

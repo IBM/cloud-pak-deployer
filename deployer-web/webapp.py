@@ -57,15 +57,31 @@ def deploy():
 
     return 'runing'
 
+@app.route('/api/v1/oc-login',methods=["POST"])
+def oc_login():
+    body = json.loads(request.get_data())
+    print(body, file=sys.stderr)
+    env = {}
+    oc_login_command=body['oc_login_command']
+    
+    result_code=os.system(oc_login_command)
+    result={"code": result_code}    
+    return json.dumps(result)
+
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 def getCartridges(cloudpak):
+    #cp4d
+    type_name="cartridges"
+    #cp4i
+    if cloudpak == "cp4i":
+        type_name="instances"    
     cartridges_list=[]
     with open(cp4d_config_path+'/{}.yaml'.format(cloudpak),encoding='UTF-8') as f:
         read_all = f.read()
         docs =yaml.load_all(read_all, Loader=yaml.FullLoader)
         for doc in docs:
             if cloudpak in doc.keys():
-               cartridges_list = doc[cloudpak][0]['cartridges']
+               cartridges_list = doc[cloudpak][0][type_name]
                break
     return json.dumps(cartridges_list)
 
@@ -92,14 +108,17 @@ def getRegion(cloud):
 
 def update_region(path, region):
     lines=[]
+    newlines=[]
     with open(path, 'r') as f1:
        lines = f1.readlines()
        for line in lines:
-         if 'ibm_cloud_region' in line:
-             line = f'ibm_cloud_region={region}'
-             break
+          if 'ibm_cloud_region' in line:
+            line = f'ibm_cloud_region={region}'
+          if 'aws_region' in line:
+            line = f'aws_region={region}'
+          newlines.append(line)
     with open(path, 'w') as w:
-         w.writelines(lines)    
+         w.writelines(newlines)    
 
 def update_storage(path, storage):
     content = ""
@@ -117,18 +136,18 @@ def update_storage(path, storage):
 
 @app.route('/api/v1/storages/<cloud>',methods=["GET"])
 def getStorages(cloud):
-   ocp_config=""
-   with open(ocp_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
-    read_all = f.read()
+    ocp_config=""
+    with open(ocp_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
+        read_all = f.read()
 
     datas = yaml.load_all(read_all, Loader=yaml.FullLoader)
     for data in datas:
-      if 'openshift' in data.keys():
-        ocp_config = data['openshift'][0]['openshift_storage']
-        break
-   return json.dumps(ocp_config)
+        if 'openshift' in data.keys():
+            ocp_config = data['openshift'][0]['openshift_storage']
+            break
+    return json.dumps(ocp_config)
 
-def update_cartridges(path,cartridges, storage, cloudpak):
+def update_cp4d_cartridges(path, cartridges, storage, cloudpak):
     content=""
     with open(path, 'r') as f1:
         content = f1.read()
@@ -143,38 +162,71 @@ def update_cartridges(path,cartridges, storage, cloudpak):
     with open(path, 'w') as f1:
         f1.write(content)
 
+def update_cp4i_cartridges(path, cartridges, storage, cloudpak):
+    content=""
+    with open(path, 'r') as f1:
+        content = f1.read()
+        docs=yaml.safe_load_all(content)
+        for doc in docs:
+            if cloudpak in doc.keys():
+                doc[cloudpak][0]['instances']=cartridges
+                doc[cloudpak][0]['openshift_storage_name']=storage
+                content=yaml.safe_dump(doc)
+                content = '---\n'+content
+                break
+    with open(path, 'w') as f1:
+        f1.write(content)
 
 @app.route('/api/v1/loadConfig',methods=["POST"])
 def loadConfig():
     body = json.loads(request.get_data())
-    if not body['envId'] or not  body['cloud'] or not body['cartridges'] or not body['storages']:
+    if not body['envId']  or not body['cloud'] or not body['cp4d'] or not body['cp4i'] or not body['storages']:
        return make_response('Bad Request', 400)
     env_id=body['envId']
     cloud=body['cloud']
-    cartridges=body['cartridges']
+    region=body['region']
+    cp4d=body['cp4d']
+    cp4i=body['cp4i']
+    ocp=body['ocp']
     storages=body['storages']
 
-    source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
-    generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
-    copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
-    update_cartridges(generated_cp4d_yaml_path,cartridges,storages[0]['storage_name'],'cp4d')
-
-    source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
     generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
-    copyfile(source_ocp_config_path,generated_ocp_yaml_path)
-    update_storage(generated_ocp_yaml_path,storages)
-    
-    source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
-    generated_inventory_yaml_path = target_inventory+'/{}.inv'.format(env_id)
-    copyfile(source_inventory_config_path,generated_inventory_yaml_path)
-    update_region(generated_inventory_yaml_path,storages[0]['storage_type'])
+    generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
+    generated_cp4i_yaml_path = target_config+'/{}-cp4i.yaml'.format(env_id)
+
+    if not ocp:
+        source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
+        copyfile(source_ocp_config_path,generated_ocp_yaml_path)
+        update_storage(generated_ocp_yaml_path,storages)
+
+        source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
+        copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
+        update_cp4d_cartridges(generated_cp4d_yaml_path,cp4d,storages[0]['storage_name'],'cp4d')
+
+        source_cp4i_config_path = cp4d_config_path+'/cp4i.yaml'
+        copyfile(source_cp4i_config_path,generated_cp4i_yaml_path)
+        update_cp4i_cartridges(generated_cp4i_yaml_path,cp4i,storages[0]['storage_name'],'cp4i')
+        
+        source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
+        generated_inventory_yaml_path = target_inventory+'/{}.inv'.format(env_id)
+        copyfile(source_inventory_config_path,generated_inventory_yaml_path)
+        update_region(generated_inventory_yaml_path,region)
+    else:
+        writeYamlFile(generated_ocp_yaml_path, ocp)
+        writeYamlFile(generated_cp4d_yaml_path, cp4d)
+        writeYamlFile(generated_cp4i_yaml_path, cp4i)
 
     result={}
+    result["ocp"]=open(generated_ocp_yaml_path, "r").read()
     result["cp4d"]=open(generated_cp4d_yaml_path,"r").read()
-    result["envId"]=open(generated_ocp_yaml_path, "r").read()
-    return json.dumps(result)
-            
-        
+    result["cp4i"]=open(generated_cp4i_yaml_path,"r").read()
+    return json.dumps(result) 
+
+def writeYamlFile(path, data):
+    content=yaml.safe_dump(data)
+    content = '---\n'+content
+    with open(path, 'w') as f1:
+        f1.write(content)
     
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port='32080', debug=False)    
