@@ -116,8 +116,12 @@
   when: 
   - _use_case_files
 
-- name: Get OpenShift storage classes to use for {{ current_cp4wa_cluster.project }} and storage class name {{ current_cp4wa_cluster.storage_class_name }}
-  include_tasks: cp4wa-get-storage-classes.yml
+- name: Get OpenShift storage classes to use for {{ current_cp4wa_cluster.project }} and storage class name {{ current_cp4wa_cluster.openshift_storage_name }}
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4wa_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ current_cp4wa_cluster.openshift_storage_name }}"
 
 - name: Prepare OpenShift project {{ current_cp4wa_cluster.project }} for Cloud Pak for Watson AIOps
   include_tasks: openshift-prepare-project.yml
