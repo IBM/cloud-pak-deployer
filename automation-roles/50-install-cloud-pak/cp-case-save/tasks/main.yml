@@ -1,0 +1,24 @@
+---
+
+# Parameters
+# - _p_case: name of the case file, for example wkc (required)
+# - _p_case_version: version of the case file (required)
+# - _p_case_dir: directory where the case file will be saved (optional, default is status_dir/cloud-paks/case)
+# - _p_download_dependent_case: download dependent case files (optional, default is True)
+
+- name: Check that all required variables are set
+  assert:
+    quiet: true
+    that:
+    - _p_case is defined
+    - _p_case_version is defined
+    
+- set_fact:
+    _case_dir: "{{ _p_case_dir | default(status_dir + '/cloud-paks/case') }}"
+
+- name: Create directory {{ _case_dir }} for case files if not existent
+  file:
+    path: "{{ _case_dir }}"
+    state: directory
+
+- include_tasks: download-case-file.yml

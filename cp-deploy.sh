@@ -34,8 +34,8 @@ command_usage() {
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
-  echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files (\$STATUS_DIR)"
-  echo "  --config-dir,-c <dir>         Directory to read the configuration from. Must be specified. (\$CONFIG_DIR)"
+  echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files \$HOME/cpd-status if not specified (\$STATUS_DIR)"
+  echo "  --config-dir,-c <dir>         Directory to read the configuration from. \$HOME/cpd-config if not specified (\$CONFIG_DIR)"
   echo "  --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
@@ -72,9 +72,9 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    ${CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+    ${CPD_CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
   else
-    ${CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
+    ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
   fi
 }
 
@@ -526,24 +526,38 @@ done
 # Check container engine and build if wanted                                                                #
 # --------------------------------------------------------------------------------------------------------- #
 
-# container engine used to run the registry, either 'docker' or 'podman'
-CONTAINER_ENGINE=
+# Set image tag if not specified
+if ! $INSIDE_CONTAINER;then
+  if [ "$CPD_IMAGE_TAG" == "" ];then
+    CPD_IMAGE_TAG="latest"
+  else
+    echo "Cloud Pak Deployer image tag ${CPD_IMAGE_TAG} will be used."
+  fi
+fi
 
 if ! $INSIDE_CONTAINER;then
   # Check if podman or docker command was found
-  if command -v podman &> /dev/null;then
-    CONTAINER_ENGINE="podman"
-  elif command -v docker &> /dev/null;then
-    CONTAINER_ENGINE="docker"
+  if [ -z $CPD_CONTAINER_ENGINE ];then
+    if command -v podman &> /dev/null;then
+      CPD_CONTAINER_ENGINE="podman"
+    elif command -v docker &> /dev/null;then
+      CPD_CONTAINER_ENGINE="docker"
+    else
+      echo "podman or docker command was not found."
+      exit 99
+    fi
   else
-    echo "podman or docker command was not found."
-    exit 99
+    echo "Container engine ${CPD_CONTAINER_ENGINE} will be used." 
+    if ! command -v ${CPD_CONTAINER_ENGINE} &> /dev/null;then
+      echo "${CPD_CONTAINER_ENGINE} command was not found."
+      exit 99
+    fi
   fi
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"
-    $CONTAINER_ENGINE build -t cloud-pak-deployer --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
+    ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
     exit $?
   fi
 fi
@@ -583,10 +597,11 @@ fi
 # --------------------------------------------------------------------------------------------------------- #
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [[ "${ACTION}" != "wizard"  && "${ACTION}" != "kill" ]]; then
+if [[ "${ACTION}" != "kill" ]]; then
   if [ "${CONFIG_DIR}" == "" ]; then
-    echo "Config directory must be specified using the CONFIG_DIR environment variable or the --config-dir parameter."
-    exit 1
+    echo "Config directory not specified, assuming $HOME/cpd-config"
+    export CONFIG_DIR=$HOME/cpd-config
+    mkdir -p $CONFIG_DIR/config
   fi
   if [ ! -d "${CONFIG_DIR}" ]; then
     echo "config directory ${CONFIG_DIR} not found."
@@ -596,13 +611,18 @@ if [[ "${ACTION}" != "wizard"  && "${ACTION}" != "kill" ]]; then
     echo "config directory not found in directory ${CONFIG_DIR}."
     exit 1
   fi
+  yaml_count=`ls -1 ${CONFIG_DIR}/config/*.yaml 2>/dev/null | wc -l`
+  if [ $yaml_count == 0 ];then
+    echo "Directory ${CONFIG_DIR}/config does not hold any yaml files. Please add configuration to this directory."
+    exit 1
+  fi
 fi
 
 # Validate if the status has been set
 if [[ "${ACTION}" != "wizard" ]]; then
   if [ "${STATUS_DIR}" == "" ]; then
-    echo "Status directory must be specified using the STATUS_DIR environment variable or the --status-dir parameter."
-    exit 1
+    echo "Status directory not specified, assuming $HOME/cpd-status"
+    export STATUS=$HOME/cpd-status
   fi
 fi
 
@@ -641,10 +661,10 @@ fi
 
 # Make sure that Deployer image exists
 if [ "${CPD_AIRGAP}" == "true" ];then
-  if ! ${CONTAINER_ENGINE} inspect cloud-pak-deployer:latest > /dev/null 2>&1;then
+  if ! ${CPD_CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
     if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar ];then
       echo "Loading Cloud Pak Deployer image from tar file..."
-      ${CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
+      ${CPD_CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
     else
       echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
       exit 99
@@ -654,8 +674,8 @@ fi
 
 # Check if the cloud-pak-deployer image exists
 if ! $INSIDE_CONTAINER;then
-  if [[ "$(${CONTAINER_ENGINE} images -q cloud-pak-deployer:latest 2> /dev/null)" == "" ]]; then
-    echo "Container image cloud-pak-deployer does not exist on the local machine, please build first."
+  if [[ "$(${CPD_CONTAINER_ENGINE} images -q cloud-pak-deployer:${CPD_IMAGE_TAG} 2> /dev/null)" == "" ]]; then
+    echo "Container image cloud-pak-deployer:${CPD_IMAGE_TAG} does not exist on the local machine, please build first."
     exit 99
   fi
 fi
@@ -670,7 +690,7 @@ if ! $INSIDE_CONTAINER;then
       ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
       # If container ID was found, check if it is currently running
       if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
-        if ! ${CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+        if ! ${CPD_CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
           ACTIVE_CONTAINER_ID=""
         fi
       fi
@@ -708,7 +728,7 @@ if ! $INSIDE_CONTAINER;then
       exit 1
     else
       echo "Terminating container process ${ACTIVE_CONTAINER_ID}"
-      ${CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
+      ${CPD_CONTAINER_ENGINE} kill ${ACTIVE_CONTAINER_ID}
       exit 0
     fi
   fi
@@ -719,14 +739,14 @@ if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
   echo "Destroying old archives for deployer"
   rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
   echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
-  ${CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:latest
+  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
   echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
   exit 0
 fi
 
 # Build command when not running inside container
 if ! $INSIDE_CONTAINER;then
-  run_cmd="${CONTAINER_ENGINE} run"
+  run_cmd="${CPD_CONTAINER_ENGINE} run"
 
   # If running "environment" subcommand with apply or destroy, run as daemon
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
@@ -814,7 +834,7 @@ if ! $INSIDE_CONTAINER;then
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
-  run_cmd+=" cloud-pak-deployer"
+  run_cmd+=" cloud-pak-deployer:${CPD_IMAGE_TAG}"
 
   # If running "environment" subcommand with apply/destroy, follow log
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
@@ -824,7 +844,7 @@ if ! $INSIDE_CONTAINER;then
       echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
     fi
     run_env_logs
-    PODMAN_EXIT_CODE=$(${CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
+    PODMAN_EXIT_CODE=$(${CPD_CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
   else
     eval $run_cmd
     PODMAN_EXIT_CODE=$?

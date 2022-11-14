@@ -1,9 +1,9 @@
 ---
 cp4d:
 
-- project: zen-40
+- project: zen-45
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 4.0.9
+  cp4d_version: 4.5.3
   olm_utils: False
   use_case_files: True
   accept_licenses: False
@@ -83,6 +83,21 @@ cp4d:
     - name: data-virtualization
     state: removed
 
+  # Please note that for EDB Postgress, a secret edb-postgres-license-key must be created in the vault
+  # before deploying
+  - name: edb_cp4d
+    state: removed
+    instances:
+      - name: instance1
+        version: "13.5"
+        #type: Standard
+        #members: 1
+        #size_gb: 50
+        #resource_request_cpu: 1000m
+        #resource_request_memory: 4Gi
+        #resource_limit_cpu: 1000m
+        #resource_limit_memory: 4Gi
+
   - name: hadoop
     size: small
     state: removed
@@ -97,7 +112,6 @@ cp4d:
 
   # For Planning Analytics, the case version is needed due to defect in olm utils
   - name: planning-analytics
-    case_version: 4.0.90573
     state: removed
 
   - name: rstudio
@@ -120,7 +134,6 @@ cp4d:
 
   # For Watson Knowledge Studio, the case version is needed due to defect in olm utils
   - name: watson-ks
-    case_version: 4.0.9
     size: small
     state: removed
 
@@ -136,6 +149,12 @@ cp4d:
   - name: wkc
     size: small
     state: removed
+    installation_options:
+      install_wkc_core_only: False
+      enableKnowledgeGraph: False
+      enableDataQuality: False
+      enableFactSheet: False
+      enableMANTA: False
 
   - name: wml
     size: small
