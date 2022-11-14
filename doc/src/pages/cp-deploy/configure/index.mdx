@@ -17,13 +17,13 @@ The deployer expects to manage all objects referenced in the configuration files
 ## Configuration steps - static sample configuration
 1. Copy the static sample configuration directory to your own directory:
 ```
-    mkdir -p /data/config
-    cp -r ./sample-configurations/roks-ocs-cp4d /data/config/sample
-    cd /data/config/sample
+    mkdir -p $HOME/cpd-config/config
+    cp -r ./sample-configurations/roks-ocs-cp4d/config/* $HOME/cpd-config/config/
+    cd $HOME/cpd-config/config
 ```
-2. Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
+2. Edit the "cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
 ```
-    nano ./config/cp4d-408.yaml
+    nano ./config/cp4d-450.yaml
 ```
 
 The configuration typically works without any configuration changes and will create all referenced objects, including the Virtual Private Cloud, subnets, SSH keys, ROKS cluster and OCS storage ndoes. There is typically no need to change address prefixes and subnets. The IP addresses used by the provisioned components are private to the VPC and are not externally exposed.
@@ -31,18 +31,19 @@ The configuration typically works without any configuration changes and will cre
 ## Configuration steps - dynamically choose OpenShift and Cloud Pak
 1. Copy the sample configuration directory to your own directory:
 ```
-    mkdir -p /data/config
-    cp -r ./sample-configurations/sample-dynamic /data/config/sample
-    cd /data/config/sample
+    mkdir -p $HOME/cpd-config
+    cp -r ./sample-configurations/sample-dynamic/* $HOME/cpd-config
+    cd $HOME/cpd-config/config
 ```
 2. Copy the relevant "ocp-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
 ```
-    cp ./config-samples/ocp-ibm-cloud-roks-ocs.yaml ./config/
+    cp ../config-samples/ocp-ibm-cloud-roks-ocs.yaml .
 ```
 3. Copy the relevant "cp4d-..." file from the `./config-samples` direcotry to the `./config` directory, for example:
 ```
-    cp ./config-samples/cp4d-408.yaml ./config/
+    cp ../config-samples/cp4d-463.yaml ./config/
 ```
+
 4. Edit the "config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
 ```
     nano ./config/cp4d-408.yaml
@@ -90,10 +91,10 @@ User passwords, certificates and other "secret" information is kept in the vault
 
 All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](/cpd-design/objects/vault).
 
-To set secrets, ensure that the environment variables for the configuration and status directories are set:
+Optional: Ensure that the environment variables for the configuration and status directories are set. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
 ```
-export STATUS_DIR=/data/status/sample
-export CONFIG_DIR=/data/config/sample
+export STATUS_DIR=$HOME/cpd-status
+export CONFIG_DIR=$HOME/cpd-config
 ```
 
 Set vSphere user secret:
