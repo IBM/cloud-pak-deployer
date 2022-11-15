@@ -623,7 +623,7 @@ fi
 # Validate if the status has been set
 if [ "${STATUS_DIR}" == "" ]; then
   echo "Status directory not specified, assuming $HOME/cpd-status"
-  export STATUS=$HOME/cpd-status
+  export STATUS_DIR=$HOME/cpd-status
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
