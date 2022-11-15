@@ -55,6 +55,8 @@ const Wizard = () => {
   //Summary
   const [deployLog, setDeployLog] = useState('')
 
+  const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
+
   const logsRef = useRef(null);
 
   const clickPrevious = ()=> {
@@ -64,6 +66,14 @@ const Wizard = () => {
   }
 
   const testOcLoginCmd = async() => {
+
+    let patt = /oc\s+login\s+/;    
+    if (!patt.test(OCPSettings.ocLoginCmd.trim())) {
+      setOcLoginCmdInvalid(true)
+      setLoadingDeployStatus(false) 
+      return
+    }   
+    setOcLoginCmdInvalid(false)
     const body={
       "oc_login_command": OCPSettings.ocLoginCmd
     }
@@ -268,6 +278,8 @@ const Wizard = () => {
                                     setConfiguration={setConfiguration}
                                     locked={locked}
                                     setLocked={setLocked}
+                                    isOcLoginCmdInvalid={isOcLoginCmdInvalid}
+                                    setOcLoginCmdInvalid={setOcLoginCmdInvalid}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 1 ? <Storage 

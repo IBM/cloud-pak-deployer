@@ -48,10 +48,8 @@ const CloudPak = ({CPDCartridgesData,
             setLoadingCPI(false)
             setLoadCPIErr(true)            
             console.log(err)
-        });
-                 
+        });         
       } 
-
       updateCPDParentCheckBox(CPDCartridgesData)
       updateCPIParentCheckBox(CPICartridgesData)     
 
@@ -214,6 +212,17 @@ const CloudPak = ({CPDCartridgesData,
       setWizardError(false)     
     }
 
+    
+    const [cp4dExpand, setcp4dExpand] = useState(false)
+    const [cp4iExpand, setcp4iExpand] = useState(false)
+
+    useEffect(() => {      
+      let cp4dItem = CPDCartridgesData.filter(item => item.state === "installed") 
+      setcp4dExpand( cp4dItem.length > 0 )
+      let cp4IItem = CPICartridgesData.filter(item => item.state === "installed") 
+      setcp4iExpand( cp4IItem.length > 0 )
+    }, [])
+
     return (
         <>  
           { (loadingCPD ||loadingCPI) && <Loading /> }  
@@ -234,7 +243,7 @@ const CloudPak = ({CPDCartridgesData,
             {/* CP4D */}
             <div>
               <Accordion>                
-                <AccordionItem title="IBM Cloud Pak for Data" >
+                <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>
 
                   {CPDCartridgesData.length > 0 &&
                   <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeCPDParentCheckBox} checked={CPDCheckParentCheckBox} indeterminate={CPDIndeterminateParentCheckBox}/>
@@ -254,7 +263,7 @@ const CloudPak = ({CPDCartridgesData,
           {/* CP4I */}          
           <div>
               <Accordion>                
-                <AccordionItem title="IBM Cloud Pak for Integration" >
+                <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
                   {CPICartridgesData.length > 0 &&
                   <Checkbox className='parent' id="cp4i" labelText="IBM Cloud Pak for Integration" onClick={changeCPIParentCheckBox} checked={CPICheckParentCheckBox} indeterminate={CPIIndeterminateParentCheckBox}/>
                   }

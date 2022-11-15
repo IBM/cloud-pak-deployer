@@ -6,6 +6,7 @@ import os
 import yaml
 from shutil import copyfile
 from pathlib import Path
+import re
 
 
 app = Flask(__name__,static_url_path='', static_folder='ww')
@@ -64,11 +65,18 @@ def oc_login():
     print(body, file=sys.stderr)
     env = {}
     oc_login_command=body['oc_login_command']
+    oc_login_command = oc_login_command.strip()
+
+    pattern = r'oc(\s+)login(\s)(.*)'    
+    isOcLoginCmd = re.match(pattern, oc_login_command)    
+
+    if isOcLoginCmd : 
+        result_code=os.system(oc_login_command)
+        result={"code": result_code}    
+        return json.dumps(result)
+    else:
+        return make_response('Bad Request', 400)  
     
-    result_code=os.system(oc_login_command)
-    result={"code": result_code}
-    
-    return json.dumps(result)
 
 @app.route('/api/v1/configuration',methods=["GET"])
 def check_configuration():
@@ -83,7 +91,6 @@ def check_configuration():
             content = f.read()
             docs=yaml.safe_load_all(content)
             for doc in docs:
-                print(doc)
                 temp={**temp, **doc}
 
             result['data']['cp4d']=temp['cp4d']
@@ -339,7 +346,6 @@ def saveConfig():
     ocp_config=config_data
 
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
-
 
   
 if __name__ == '__main__':
