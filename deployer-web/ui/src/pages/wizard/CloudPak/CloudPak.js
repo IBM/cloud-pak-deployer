@@ -25,6 +25,8 @@ const CloudPak = ({CPDCartridgesData,
 
     const [isEntilementKeyInvalid, setEntilementKeyInvalid] = useState(false)
 
+
+
     useEffect(() => {
       const fetchCloudPakData =async () => {        
         await axios.get('/api/v1/cartridges/cp4d').then(res =>{   
@@ -212,17 +214,21 @@ const CloudPak = ({CPDCartridgesData,
       setWizardError(false)     
     }
 
-    
     const [cp4dExpand, setcp4dExpand] = useState(false)
     const [cp4iExpand, setcp4iExpand] = useState(false)
 
-    useEffect(() => {      
-      let cp4dItem = CPDCartridgesData.filter(item => item.state === "installed") 
-      setcp4dExpand( cp4dItem.length > 0 )
-      let cp4IItem = CPICartridgesData.filter(item => item.state === "installed") 
-      setcp4iExpand( cp4IItem.length > 0 )
+    useEffect(() => {  
+      if (locked) {
+        let cp4dItem = configuration.data.cp4d[0].cartridges.filter(item => item.state === "installed") 
+        setcp4dExpand( cp4dItem.length > 0 )
+        let cp4IItem = configuration.data.cp4i[0].instances.filter(item => item.state === "installed") 
+        setcp4iExpand( cp4IItem.length > 0 )
+
+      }   
+
       // eslint-disable-next-line
     }, [])
+
 
     return (
         <>  
