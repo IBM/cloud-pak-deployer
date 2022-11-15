@@ -4,11 +4,18 @@ import { useEffect, useState } from "react";
 import './Summary.scss'
 import yaml from 'js-yaml';
 
-const Summary = ({cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, storage, CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, setCPICartridgesData}) => {
+const Summary = ({cloudPlatform, 
+                  IBMCloudSettings, 
+                  AWSSettings, 
+                  OCPSettings, 
+                  storage, 
+                  CPDCartridgesData, 
+                  CPICartridgesData, 
+                  locked,
+                }) => {
 
-    const [summaryLoading, setSummaryLoading] = useState(true)
-    const [saving, setSaving] = useState(false)
-
+    const [summaryLoading, setSummaryLoading] = useState(false)
+  
     const [showErr, setShowErr] = useState(false)
     const [summaryInfo, setSummaryInfo] = useState("")  
     const [tempSummaryInfo, setTempSummaryInfo] = useState("") 
@@ -16,38 +23,9 @@ const Summary = ({cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, sto
     
     const [editable, setEditable] = useState(false)
 
-    // const [CPDFullData, setCPDFullData] = useState([])
-    // const [CPIFullData, setCPIFullData] = useState([])  
-    const [OCPFullData, setOCPFullData] = useState([])  
-
-    const saveFetchSummaryData = async (body) => {           
-        // console.log("summary", body)
-        await axios.post('/api/v1/loadConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{          
-            // yaml.loadAll(res.data.cp4d, function (doc) { 
-            //     setCPDCartridgesData(doc.cp4d[0].cartridges) 
-            //     setCPDFullData(doc.cp4d)
-            // }); 
-            // yaml.loadAll(res.data.cp4i, function (doc) {  
-            //     setCPICartridgesData(doc.cp4i[0].instances)              
-            //     setCPIFullData(doc.cp4i)
-            // });
-            yaml.loadAll(res.data.ocp, function (doc) {    
-                setOCPFullData(doc) 
-            });
-            setSummaryInfo(res.data.ocp + res.data.cp4d + res.data.cp4i)
-            setTempSummaryInfo(res.data.ocp + res.data.cp4d + res.data.cp4i)
-        }, err => {
-            setShowErr(true)
-            console.log(err)
-        }); 
-        setSummaryLoading(false)  
-        setSaving(false)     
-    }  
-    
-    const generateBody =()=>{
-        let envId = ""
-        let region= ""
-        let body={}
+    const createSummaryData = async () => {    
+        let envId=""
+        let region=""    
         switch (cloudPlatform) {
             case "ibm-cloud":
                 envId=IBMCloudSettings.envId
@@ -62,25 +40,65 @@ const Summary = ({cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, sto
                 break
             default:
         }  
-        body = {
+        let body = {
             "envId": envId,
             "cloud": cloudPlatform,
             "region": region,
             "storages": storage,
-        }       
-        return body
-    }
-
-    useEffect(() => { 
-        let body = generateBody()  
-        
-        body = {...body,
             "cp4d": CPDCartridgesData,
             "cp4i": CPICartridgesData,
-            "ocp": OCPFullData,}
-        
-        // console.log(body)     
-        saveFetchSummaryData(body)
+        }     
+
+        await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
+            setSummaryLoading(false)          
+            setSummaryInfo(res.data.config)
+            setTempSummaryInfo(res.data.config)
+        }, err => {
+            setSummaryLoading(false)  
+            setShowErr(true)
+            console.log(err)
+        }); 
+           
+    } 
+    
+    const updateSummaryData = async () => {  
+        let body = {
+            "cp4d": CPDCartridgesData,
+            "cp4i": CPICartridgesData,
+        }  
+        await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            setSummaryLoading(false)        
+            setSummaryInfo(res.data.config)
+            setTempSummaryInfo(res.data.config)
+        }, err => {
+            setSummaryLoading(false) 
+            setShowErr(true)
+            console.log(err)
+        });          
+    }
+
+    const saveSummaryData = async (body) => {         
+        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            setEditable(false)
+            setSummaryLoading(false)        
+            setSummaryInfo(res.data.config)
+            setTempSummaryInfo(res.data.config)
+        }, err => {
+            setSummaryLoading(false) 
+            setShowErr(true)
+            console.log(err)
+        });          
+    }     
+
+    useEffect(() => {        
+        if (locked) {
+            setSummaryLoading(true) 
+            updateSummaryData()
+        } 
+        else {
+            setSummaryLoading(true)  
+            createSummaryData()
+        }        
         // eslint-disable-next-line
     }, []);
 
@@ -96,35 +114,28 @@ const Summary = ({cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, sto
         setEditable(true)
     }
 
-    const clickSaveBtn = async() => {   
-        let body = generateBody()
-        setSaving(true)
+    const clickSaveBtn = async() => { 
+        let body = {}
+        let result = {}
             
         try {                   
-            yaml.loadAll(tempSummaryInfo, function (doc) {  
-
-                if (doc.cp4d) {                    
-                    body.cp4d = doc
-                }
-                else if (doc.cp4i) {
-                    body.cp4i = doc
-                }
-                else {
-                    body.ocp = doc
-                }    
+            yaml.loadAll(tempSummaryInfo, function (doc) {
+                result = {...doc, ...result}
             }); 
-            await saveFetchSummaryData(body)
+            body['config'] = result
+            setSummaryLoading(true)      
+            await saveSummaryData(body)
 
         } catch (error) {
             setConfigInvalid(true)
             console.error(error)
             return
         }        
-        setEditable(false)
     }
 
     const clickCancelBtn = () => {
         setTempSummaryInfo(summaryInfo)
+        setConfigInvalid(false)
         setEditable(false)
     }
 
@@ -151,7 +162,7 @@ const Summary = ({cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, sto
                 </div>
                 :
                 <div className="align-right">
-                    <Button onClick={clickEditBtn} className="wizard-container__page-header-button">Edit</Button> 
+                    <Button onClick={clickEditBtn} className="wizard-container__page-header-button" disabled={showErr} >Edit</Button> 
                 </div>            
             }          
 
@@ -159,9 +170,9 @@ const Summary = ({cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, sto
                 <Tabs type="container">
                     <Tab id="configuration" label="Configuration">
                         {
-                            (summaryLoading || saving)? <InlineLoading />: 
+                            summaryLoading ? <InlineLoading />: 
                                 editable ? 
-                                <TextArea onChange={textAreaOnChange} type="multi" feedback="Copied to clipboard" rows={33} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Please do not remove three dashes (---), which is used to separate different documents.">
+                                <TextArea onChange={textAreaOnChange} type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Please do not remove three dashes (---), which is used to separate different documents.">
                                 </TextArea>
                                 :
                                 <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={40}>

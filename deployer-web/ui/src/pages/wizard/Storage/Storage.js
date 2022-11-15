@@ -4,30 +4,49 @@ import { useEffect, useState } from "react";
 import './Storage.scss'
 
 
-const Storage = ({cloudPlatform, setStorage, storage, storagesOptions, setStoragesOptions, setWizardError}) => {
+const Storage = ({cloudPlatform, 
+                  setStorage, 
+                  storage, 
+                  storagesOptions, 
+                  setStoragesOptions, 
+                  setWizardError,
+                  locked,
+                  configuration
+                }) => {
 
-    const [loadingStorage, setLoadingStorage] = useState(true)
+    const [loadingStorage, setLoadingStorage] = useState(false)
     const [loadStorageErr, setLoadStorageErr] = useState(false)
 
     useEffect(() => {
       const fetchStorageData = async () => {
         // if (storagesOptions.length === 0) {
-        await axios.get('/api/v1/storages/' + cloudPlatform).then(res =>{                 
+        await axios.get('/api/v1/storages/' + cloudPlatform).then(res =>{   
+          setLoadingStorage(false)              
           setStoragesOptions(res.data)
           setStorage([res.data[0]])
           setLoadingStorage(false)
           setWizardError(false)
         }, err => {
+          setLoadingStorage(false)
           setStorage([])
           setStoragesOptions([])
           setLoadStorageErr(true)    
           setWizardError(true)      
         });          
-        // }
-        setLoadingStorage(false)
+        // }        
         //updateStorageClass()
       }
-      fetchStorageData()
+
+      if (locked) {        
+        setStoragesOptions([{storage_type: configuration.data.cp4d[0].openshift_storage_name}])
+        setStorage([{storage_type: configuration.data.cp4d[0].openshift_storage_name}])
+        setWizardError(false)
+      } else {
+        setLoadingStorage(true)
+        fetchStorageData()
+      }
+
+
       // eslint-disable-next-line
     }, [cloudPlatform])    
     
@@ -54,7 +73,7 @@ const Storage = ({cloudPlatform, setStorage, storage, storagesOptions, setStorag
             /> }                
           <div className="storage-title">Storage</div> 
           <div style={{ width: 400 }}>
-            <Dropdown
+            <Dropdown disabled={locked}
               id="default"
               label="Please select the storage class"
               items={storagesOptions}

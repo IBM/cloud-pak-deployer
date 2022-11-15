@@ -10,45 +10,76 @@ const Infrastructure = ({cloudPlatform,
                          setAWSSettings,
                          OCPSettings,
                          setOCPSettings,
-                         updateInfraValue, 
+                         setCloudPlatform, 
                          setWizardError,
-                         ocLoginErr
+                         ocLoginErr,
+                         configuration,
+                         setConfiguration,
+                         locked,
+                         setLocked
                          }) => {
 
     //IBM Cloud
-    const [loadingIBMRegion, setLoadingIBMRegion] = useState(false)
-    const [loadIBMRegionErr, setLoadIBMRegionErr] = useState(false)    
+    const [loadingConfiguration, setLoadingConfiguration] = useState(false)
+    const [loadConfigurationErr, setLoadConfigurationErr] = useState(false)    
     const [isIBMregionInvalid, setIBMregionInvalid] = useState(false)
     const [isIBMAPIKeyInvalid, setIBMAPIKeyInvalid] = useState(false)
-    const [isIBMenvIdInvalid, setIBMenvIdInvalid] = useState(false)
+    const [isIBMEnvIdInvalid, setIBMEnvIdInvalid] = useState(false)
 
     //AWS   
     const [isAWSAccessKeyIDInvalid, setAWSAccessKeyIDInvalid] = useState(false)
     const [isAWSSecretAccessKeyInvalid, setAWSSecretAccessKeyInvalid] = useState(false)
     const [isAWSregionInvalid, setAWSregionInvalid] = useState(false)   
+    const [isAWSEnvIdInvalid, setAWSEnvIdInvalid] = useState(false)
     
     //Existing OCP
     const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
-    const [isOCPenvIdInvalid, setOCPenvIdInvalid] = useState(false)
-
+    const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
 
     useEffect(() => {
-      const getIBMRegion = async() => {
-        await axios.get('/api/v1/region/ibm-cloud').then(res =>{          
-          setIBMCloudSettings({...IBMCloudSettings, region:res.data.region});        
+      const getConfiguration = async() => {
+        setLoadingConfiguration(true)  
+        await axios.get('/api/v1/configuration').then(res =>{   
+          setLoadingConfiguration(false)   
+          setLoadConfigurationErr(false)     
+          setConfiguration(res.data)
+         
+          if (res.data.code === 0) {
+            setLocked(true)
+            
+            let cloud=res.data.data.ocp.global_config.cloud_platform
+            setCloudPlatform(cloud)
+            switch (cloud) {
+              case "ibm-cloud": 
+                setIBMCloudSettings({...IBMCloudSettings, envId:res.data.data.ocp.global_config.env_id});
+                break;
+              case "aws":
+                setAWSSettings({...AWSSettings, envId:res.data.data.ocp.global_config.env_id});
+                break;
+              case "existing-ocp":
+                setOCPSettings({...OCPSettings, envId:res.data.data.ocp.global_config.env_id});
+                break;
+              default:
+            } 
+          }
         }, err => {
-          setLoadIBMRegionErr(true)
+          setLoadingConfiguration(false) 
+          setLoadConfigurationErr(true)
           console.log(err)
         });
-        setLoadingIBMRegion(false)  
+         
+      }      
+
+      if(loadConfigurationErr) {
+        return
+      }
+      //Load configuration
+      if (JSON.stringify(configuration) === "{}") {
+        getConfiguration()        
       }
 
       switch (cloudPlatform) {
-        case "ibm-cloud":
-          if (IBMCloudSettings.region === '') {
-            setLoadingIBMRegion(true)
-            getIBMRegion()
-          }
+        case "ibm-cloud": 
           if (IBMCloudSettings.IBMAPIKey && IBMCloudSettings.envId && IBMCloudSettings.region ) {
             setWizardError(false)
           }
@@ -66,12 +97,7 @@ const Infrastructure = ({cloudPlatform,
         default:
 
       }   // eslint-disable-next-line
-    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings])
-
-    const setCloudPlatformValue = (value) => {    
-      setWizardError(true)
-      updateInfraValue({cloudPlatform: value});
-    }
+    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked])
 
     const IBMCloudSettingsOnChange = (e) => {
       switch (e.target.id) {
@@ -81,14 +107,18 @@ const Infrastructure = ({cloudPlatform,
             setIBMAPIKeyInvalid(true)
             setWizardError(true)
             return
-          }          
+          } else {
+            setIBMAPIKeyInvalid(false)
+          }     
           break;
         case "101":
           setIBMCloudSettings({...IBMCloudSettings, envId:e.target.value});
           if (e.target.value === '') {
-            setIBMenvIdInvalid(true)
+            setIBMEnvIdInvalid(true)
             setWizardError(true)
             return
+          } else {
+            setIBMEnvIdInvalid(false)
           }
           break;
         case "102":
@@ -97,6 +127,8 @@ const Infrastructure = ({cloudPlatform,
             setIBMregionInvalid(true)
             setWizardError(true)
             return
+          } else {
+            setIBMregionInvalid(false)
           }
           break;
         default:
@@ -111,7 +143,9 @@ const Infrastructure = ({cloudPlatform,
             setAWSAccessKeyIDInvalid(true)
             setWizardError(true)
             return
-          }          
+          } else {
+            setAWSAccessKeyIDInvalid(false)
+          }       
           break;
         case "111":
           setAWSSettings({...AWSSettings, secretAccessKey:e.target.value});
@@ -119,6 +153,8 @@ const Infrastructure = ({cloudPlatform,
             setAWSSecretAccessKeyInvalid(true)
             setWizardError(true)
             return
+          } else {
+            setAWSSecretAccessKeyInvalid(false)
           }
           break;
         case "112":
@@ -127,8 +163,20 @@ const Infrastructure = ({cloudPlatform,
             setAWSregionInvalid(true)
             setWizardError(true)
             return
+          } else {
+            setAWSregionInvalid(false)
           }
           break;
+        case "113":
+            setAWSSettings({...AWSSettings, envId:e.target.value});
+            if (e.target.value === '') {
+              setAWSEnvIdInvalid(true)
+              setWizardError(true)
+              return
+            } else {
+              setAWSEnvIdInvalid(false)
+            }
+            break;
         default:
       }  
     }
@@ -141,25 +189,29 @@ const Infrastructure = ({cloudPlatform,
             setOcLoginCmdInvalid(true)
             setWizardError(true)
             return
-          }          
+          } else {
+            setOcLoginCmdInvalid(false)
+          }       
           break;
         case "131":
           setOCPSettings({...OCPSettings, envId:e.target.value});
           if (e.target.value === '') {
-            setOCPenvIdInvalid(true)
+            setOCPEnvIdInvalid(true)
             setWizardError(true)
             return
-          }          
+          } else {
+            setOCPEnvIdInvalid(false)
+          }     
           break;
         default:
       }  
     }
 
-    const errorProps = () => ({
+    const errorConfigurationProps = () => ({
       kind: 'error',
       lowContrast: true,
       role: 'error',
-      title: 'Unable to get IBM Cloud Region from server.',
+      title: 'Unable to get Configuration from server.',
       hideCloseButton: false,
     });
 
@@ -172,51 +224,55 @@ const Infrastructure = ({cloudPlatform,
     }); 
 
     return (
-      <> 
-
-      { loadIBMRegionErr && <InlineNotification className="cpd-error"
-          {...errorProps()}        
+      <>
+      { loadConfigurationErr && <InlineNotification className="cpd-error"
+          {...errorConfigurationProps()}        
             /> } 
       {/* oc login error */}
       {ocLoginErr && <InlineNotification className="cpd-error"
           {...ocLoginErrorProps()}        
            />  }   
-
+      {loadingConfiguration && <Loading /> }
+      
       <div className="infra-title">Cloud Platform</div>        
 
       <RadioButtonGroup orientation="vertical"
-         name="radio-button-group"
-         defaultSelected={cloudPlatform}     
-         onChange={(value)=>{setCloudPlatformValue(value)}
+         name="radio-button-group"          
+         onChange={(value)=>{setCloudPlatform(value)}  
          }
+         defaultSelected={cloudPlatform}  
+         valueSelected={cloudPlatform}  
          >
-         <RadioButton labelText="Existing OpenShift" value="existing-ocp" id="3" />
-         <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="0" />
-         <RadioButton labelText="AWS" value="aws" id="1" />
-         <RadioButton labelText="vSphere" value="vsphere" id="2" disabled />         
+         <RadioButton labelText="Existing OpenShift" value="existing-ocp" id="0" disabled={locked}/>
+         <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="1" disabled={locked}/>
+         <RadioButton labelText="AWS" value="aws" id="2" disabled={locked}/>
+         <RadioButton labelText="vSphere" value="vsphere" id="3" disabled />         
       </RadioButtonGroup>
 
       {cloudPlatform === 'ibm-cloud' ?  
-         <>
-          {loadingIBMRegion && <Loading /> }          
+         <>                    
           <div className="infra-container">
+            <div>
+              <div className="infra-items">Enviroment ID</div>
+              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={IBMCloudSettings.envId} invalidText="Environment ID can not be empty." invalid={isIBMEnvIdInvalid} disabled={locked}/>
+            </div>  
             <div>
               <div className="infra-items">IBM Cloud API Key</div>
               <PasswordInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud API Key" id="100" labelText="" value={IBMCloudSettings.IBMAPIKey} invalidText="IBM Cloud API Key can not be empty." invalid={isIBMAPIKeyInvalid}/>
             </div>
             <div>
-              <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={IBMCloudSettings.envId} invalidText="Environment ID can not be empty." invalid={isIBMenvIdInvalid}/>
-            </div>  
-            <div>
               <div className="infra-items">IBM Cloud Region</div>
-              <TextInput onChange={IBMCloudSettingsOnChange} placeholder={IBMCloudSettings.region} id="102" labelText="" value={IBMCloudSettings.region} invalidText="IBM Cloud Region can not be empty." invalid={isIBMregionInvalid}/>
+              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud Region" id="102" labelText="" value={IBMCloudSettings.region} invalidText="IBM Cloud Region can not be empty." invalid={isIBMregionInvalid}/>
             </div> 
           </div>        
          </>  : null } 
       {cloudPlatform === 'aws' ? 
           <>
             <div className="infra-container">
+              <div>
+                <div className="infra-items">Enviroment ID</div>
+                <TextInput onChange={AWSSettingsOnChange} placeholder="Environment ID" id="113" labelText="" value={AWSSettings.envId} invalidText="Environment ID can not be empty."  invalid={isAWSEnvIdInvalid}/>
+              </div> 
               <div>
                 <div className="infra-items">AWS Access Key ID</div>
                 <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Access Key" id="110" labelText="" value={AWSSettings.accessKeyID} invalidText="AWS Access Key ID can not be empty."  invalid={isAWSAccessKeyIDInvalid}/>
@@ -227,7 +283,7 @@ const Infrastructure = ({cloudPlatform,
               </div>
               <div>
                 <div className="infra-items">AWS Region</div>
-                <TextInput onChange={AWSSettingsOnChange} placeholder={AWSSettings.region} id="112" labelText="" value={AWSSettings.region} invalidText="AWS region can not be empty."  invalid={isAWSregionInvalid}/>
+                <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Region" id="112" labelText="" value={AWSSettings.region} invalidText="AWS region can not be empty."  invalid={isAWSregionInvalid}/>
               </div> 
             </div>
           </>: null}
@@ -240,7 +296,7 @@ const Infrastructure = ({cloudPlatform,
             </div>
             <div>
               <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={OCPSettings.envId} invalidText="Environment ID can not be empty." invalid={isOCPenvIdInvalid}/>
+              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={OCPSettings.envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid}/>
             </div>
           </div>
         </> : null}
