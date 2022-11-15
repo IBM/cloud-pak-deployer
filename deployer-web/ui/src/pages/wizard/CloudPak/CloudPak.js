@@ -221,6 +221,7 @@ const CloudPak = ({CPDCartridgesData,
       setcp4dExpand( cp4dItem.length > 0 )
       let cp4IItem = CPICartridgesData.filter(item => item.state === "installed") 
       setcp4iExpand( cp4IItem.length > 0 )
+      // eslint-disable-next-line
     }, [])
 
     return (
