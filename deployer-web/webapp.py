@@ -16,21 +16,17 @@ source = os.getcwd()
 parent = os.path.dirname(source)
 cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
 ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
-inventory_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/inventory')
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
 target_config=config_dir+'/config'
-target_inventory=config_dir+'/inventory'
 generated_config_yaml_path = target_config+'/cpd-config.yaml'
 
 Path( status_dir+'/log' ).mkdir( parents=True, exist_ok=True )
 Path( target_config ).mkdir( parents=True, exist_ok=True )
-Path( target_inventory ).mkdir( parents=True, exist_ok=True )
 
 @app.route('/')
 def index():
     return send_from_directory(app.static_folder,'index.html')
-
 
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
@@ -38,14 +34,14 @@ def deploy():
     print(body, file=sys.stderr)
     env ={}
     if body['cloud']=='ibm-cloud':
-      env = {'IBM_CLOUD_API_KEY': body['env']['ibmCloudAPIKey'],
-             'CP_ENTITLEMENT_KEY': body['env']['entilementKey'],
-             'CONFIG_DIR':config_dir,
-             'STATUS_DIR':status_dir}
+      env['IBM_CLOUD_API_KEY']=body['env']['ibmCloudAPIKey']
+    env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
+    env['CONFIG_DIR']=config_dir
+    env['STATUS_DIR']=status_dir
 
-      log = open('/tmp/cp-deploy.log', 'a')
-      process = subprocess.Popen([parent+'/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
-                        format(body['envId']), '-e', 'ibm_cloud_region={}'.format(body['region'])], 
+    log = open('/tmp/cp-deploy.log', 'a')
+    process = subprocess.Popen(['/cloud-pak-deployer/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
+                        format(body['envId'])], 
                     stdout=log,
                     stderr=log,
                     universal_newlines=True,
@@ -234,13 +230,16 @@ def loadYamlFile(path):
 
 def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
     ocp_yaml=yaml.safe_dump(ocp_config)
-    cp4d_yaml=yaml.safe_dump(cp4d_config)
-    cp4i_yaml=yaml.safe_dump(cp4i_config)
-
-    ocp_yaml = '---\n'+ocp_yaml
-    cp4d_yaml = '---\n'+cp4d_yaml
-    cp4i_yaml = '---\n'+cp4i_yaml
-    all_in_one = ocp_yaml + cp4d_yaml + cp4i_yaml
+    
+    all_in_one = '---\n'+ocp_yaml
+    if cp4d_config!={}:
+        cp4d_yaml=yaml.safe_dump(cp4d_config)
+        cp4d_yaml = '\n\n'+cp4d_yaml
+        all_in_one = all_in_one + cp4d_yaml
+    if cp4i_config!={}:
+        cp4i_yaml=yaml.safe_dump(cp4i_config)
+        cp4i_yaml = '\n\n'+cp4i_yaml
+        all_in_one = all_in_one + cp4i_yaml
 
     with open(generated_config_yaml_path, 'w', encoding='UTF-8') as f1:
         f1.write(all_in_one)
@@ -285,11 +284,23 @@ def createConfig():
     # Update for EnvId
     ocp_config['global_config']['env_id']=env_id
     # Update for cp4d
-    cp4d_config['cp4d'][0]['cartridges']=cp4d
-    cp4d_config['cp4d'][0]['openshift_storage_name']=storages[0]['storage_type']
+    cp4d_selected=False
+    for cartridge in cp4d:
+        if 'state' in cartridge and cartridge['state']=='installed':
+            cp4d_selected=True
+    if cp4d_selected:
+        cp4d_config['cp4d'][0]['cartridges']=cp4d
+    else:
+        cp4d_config={}
     # Update for cp4i
-    cp4i_config['cp4i'][0]['instances']=cp4i  
-    cp4i_config['cp4i'][0]['openshift_storage_name']=storages[0]['storage_type']
+    cp4i_selected=False
+    for instance in cp4i:
+        if 'state' in instance and instance['state']=='installed':
+            cp4i_selected=True
+    if cp4i_selected:
+        cp4i_config['cp4i'][0]['instances']=cp4i
+    else:
+        cp4i_config={}
 
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
 
