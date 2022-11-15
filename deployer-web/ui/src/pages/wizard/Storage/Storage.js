@@ -3,7 +3,6 @@ import { Dropdown, InlineNotification, Loading } from "carbon-components-react";
 import { useEffect, useState } from "react";
 import './Storage.scss'
 
-
 const Storage = ({cloudPlatform, 
                   setStorage, 
                   storage, 
@@ -37,9 +36,9 @@ const Storage = ({cloudPlatform,
         //updateStorageClass()
       }
 
-      if (locked) {        
-        setStoragesOptions([{storage_type: configuration.data.cp4d[0].openshift_storage_name}])
-        setStorage([{storage_type: configuration.data.cp4d[0].openshift_storage_name}])
+      if (locked) {       
+        setStoragesOptions([configuration.data.ocp.openshift[0].openshift_storage[0]])
+        setStorage([configuration.data.ocp.openshift[0].openshift_storage[0]])
         setWizardError(false)
       } else {
         setLoadingStorage(true)

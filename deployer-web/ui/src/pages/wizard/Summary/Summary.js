@@ -172,7 +172,7 @@ const Summary = ({cloudPlatform,
                         {
                             summaryLoading ? <InlineLoading />: 
                                 editable ? 
-                                <TextArea onChange={textAreaOnChange} type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Please do not remove three dashes (---), which is used to separate different documents.">
+                                <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Please do not remove three dashes (---), which is used to separate different documents.">
                                 </TextArea>
                                 :
                                 <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={40}>

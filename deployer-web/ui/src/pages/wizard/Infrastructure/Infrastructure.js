@@ -16,7 +16,9 @@ const Infrastructure = ({cloudPlatform,
                          configuration,
                          setConfiguration,
                          locked,
-                         setLocked
+                         setLocked,
+                         isOcLoginCmdInvalid,
+                         setOcLoginCmdInvalid,
                          }) => {
 
     //IBM Cloud
@@ -33,7 +35,6 @@ const Infrastructure = ({cloudPlatform,
     const [isAWSEnvIdInvalid, setAWSEnvIdInvalid] = useState(false)
     
     //Existing OCP
-    const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
     const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
 
     useEffect(() => {
@@ -292,11 +293,11 @@ const Infrastructure = ({cloudPlatform,
           <div className="infra-container">
             <div>
               <div className="infra-items">oc login command</div>
-              <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="oc login command can not be empty."  invalid={isOcLoginCmdInvalid}/>
+              <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
             </div>
             <div>
               <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={OCPSettings.envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid}/>
+              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={OCPSettings.envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
             </div>
           </div>
         </> : null}
