@@ -50,7 +50,7 @@ const Wizard = () => {
   // const [OCPData, setOCPData] = useState([])
   const [CPDCartridgesData, setCPDCartridgesData] = useState([])
   const [CPICartridgesData, setCPICartridgesData] = useState([])
-  const [entilementKey, setEntilementKey] = useState('')
+  const [entitlementKey, setEntitlementKey] = useState('')
 
   //Summary
   const [deployLog, setDeployLog] = useState('')
@@ -111,12 +111,12 @@ const Wizard = () => {
     setLoadingDeployStatus(true)
     const body = {
       "env":{
-          "ibmCloudAPIKey":IBMCloudSettings.IBMAPIKey,
-          "entilementKey":IBMCloudSettings.entilementKey,
+          "ibmCloudAPIKey":IBMCloudSettings.IBMAPIKey
       },
+      "entitlementKey": entitlementKey,
       "cloud": cloudPlatform,
-      "envId": IBMCloudSettings.envId,
-      "region":IBMCloudSettings.region,
+      "envId": OCPSettings.envId,
+      "region": IBMCloudSettings.region,
     }
     //console.log("deploy", body)
     
@@ -294,8 +294,8 @@ const Wizard = () => {
                               >                                    
                               </Storage> : null}    
         {currentIndex === 2 ? <CloudPak
-                                    entilementKey={entilementKey} 
-                                    setEntilementKey={setEntilementKey}
+                                    entitlementKey={entitlementKey} 
+                                    setEntitlementKey={setEntitlementKey}
                                     CPDCartridgesData={CPDCartridgesData}
                                     setCPDCartridgesData={setCPDCartridgesData}
                                     CPICartridgesData={CPICartridgesData}

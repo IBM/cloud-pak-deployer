@@ -7,8 +7,8 @@ const CloudPak = ({CPDCartridgesData,
                   setCPDCartridgesData, 
                   CPICartridgesData, 
                   setCPICartridgesData, 
-                  entilementKey, 
-                  setEntilementKey, 
+                  entitlementKey, 
+                  setEntitlementKey, 
                   setWizardError,
                   configuration,
                   locked,
@@ -23,7 +23,7 @@ const CloudPak = ({CPDCartridgesData,
     const [CPICheckParentCheckBox, setCPICheckParentCheckBox] = useState(false)
     const [CPIIndeterminateParentCheckBox, setCPIIndeterminateParentCheckBox] = useState(false)
 
-    const [isEntilementKeyInvalid, setEntilementKeyInvalid] = useState(false)
+    const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
 
 
 
@@ -72,7 +72,7 @@ const CloudPak = ({CPDCartridgesData,
         }
       } 
       
-      if (entilementKey && (loadCPDErr === false && loadCPIErr === false) ) {
+      if (entitlementKey && (loadCPDErr === false && loadCPIErr === false) ) {
         setWizardError(false)
       }
       else {
@@ -202,14 +202,14 @@ const CloudPak = ({CPDCartridgesData,
       }      
     }
 
-    const entilementKeyOnChange = (e) => {
-      setEntilementKey(e.target.value);
+    const entitlementKeyOnChange = (e) => {
+      setEntitlementKey(e.target.value);
       if (e.target.value === '') {
-        setEntilementKeyInvalid(true)
+        setEntitlementKeyInvalid(true)
         setWizardError(true)
         return
       } else {
-        setEntilementKeyInvalid(false)
+        setEntitlementKeyInvalid(false)
       }
       setWizardError(false)     
     }
@@ -241,7 +241,7 @@ const CloudPak = ({CPDCartridgesData,
           {/* Entitlement */}
           <div>
             <div className="cloud-pak-items">Entitlement key</div>
-            <PasswordInput onChange={entilementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entilementKey} invalidText="Entitlement Key can not be empty." invalid={isEntilementKeyInvalid}/>
+            <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} invalidText="Entitlement key can not be empty." invalid={isEntitlementKeyInvalid}/>
           </div> 
 
           {/* CP4D */}
