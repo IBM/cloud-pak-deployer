@@ -21,23 +21,25 @@ const Wizard = () => {
   const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
 
   //Infrastructure
-  const [cloudPlatform, setCloudPlatform] = useState('existing-ocp')
+  const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
+  const [configuration, setConfiguration] = useState({})
+  const [locked, setLocked] = useState(false)
   //---IBM Cloud
   const [IBMCloudSettings, setIBMCloudSettings] = useState({
     IBMAPIKey: '',
-    envId: '',
+    envId: "",
     region: '',
   })
   //---AWS
   const [AWSSettings, setAWSSettings] = useState({
     accessKeyID: '',
+    envId: "",
     secretAccessKey:'',
-    region: '',
   })
   //---Existing OpenShift
   const [OCPSettings, setOCPSettings] = useState({
     ocLoginCmd:'',
-    envId: '',
+    envId: "",
   })  
 
   //Storage
@@ -120,12 +122,6 @@ const Wizard = () => {
         setDeployErr(true)
     });
     setLoadingDeployStatus(false)    
-  }
-
-  const updateInfraValue = ({cloudPlatform}) => {
-      if (cloudPlatform){
-        setCloudPlatform(cloudPlatform)
-      }      
   }
 
   const errorProps = () => ({
@@ -259,15 +255,19 @@ const Wizard = () => {
       
         {currentIndex === 0 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
+                                    setCloudPlatform={setCloudPlatform} 
                                     IBMCloudSettings={IBMCloudSettings}
                                     setIBMCloudSettings={setIBMCloudSettings}                                      
                                     AWSSettings={AWSSettings}
                                     setAWSSettings={setAWSSettings}
                                     OCPSettings={OCPSettings}
-                                    setOCPSettings={setOCPSettings}
-                                    updateInfraValue={updateInfraValue} 
+                                    setOCPSettings={setOCPSettings}                                    
                                     setWizardError={setWizardError}
                                     ocLoginErr={ocLoginErr}
+                                    configuration={configuration}
+                                    setConfiguration={setConfiguration}
+                                    locked={locked}
+                                    setLocked={setLocked}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 1 ? <Storage 
@@ -277,6 +277,8 @@ const Wizard = () => {
                                     storagesOptions={storagesOptions} 
                                     setStoragesOptions={setStoragesOptions}
                                     setWizardError={setWizardError}
+                                    configuration={configuration}
+                                    locked={locked}
                               >                                    
                               </Storage> : null}    
         {currentIndex === 2 ? <CloudPak
@@ -287,6 +289,8 @@ const Wizard = () => {
                                     CPICartridgesData={CPICartridgesData}
                                     setCPICartridgesData={setCPICartridgesData}                                    
                                     setWizardError={setWizardError}
+                                    configuration={configuration}
+                                    locked={locked}
                               >
                               </CloudPak> : null}    
         {currentIndex === 3 ? <Summary 
@@ -299,6 +303,8 @@ const Wizard = () => {
                                     setCPDCartridgesData={setCPDCartridgesData}
                                     CPICartridgesData={CPICartridgesData}
                                     setCPICartridgesData={setCPICartridgesData}
+                                    configuration={configuration}
+                                    locked={locked}
                               >
                               </Summary> : null}       
       </div> 

@@ -20,6 +20,7 @@ config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
 target_config=config_dir+'/config'
 target_inventory=config_dir+'/inventory'
+generated_config_yaml_path = target_config+'/cpd-config.yaml'
 
 Path( status_dir+'/log' ).mkdir( parents=True, exist_ok=True )
 Path( target_config ).mkdir( parents=True, exist_ok=True )
@@ -61,12 +62,50 @@ def deploy():
 def oc_login():
     body = json.loads(request.get_data())
     print(body, file=sys.stderr)
+    env = {}
     oc_login_command=body['oc_login_command']
     
     result_code=os.system(oc_login_command)
-    result={"code": result_code}    
+    result={"code": result_code}
+    
     return json.dumps(result)
 
+@app.route('/api/v1/configuration',methods=["GET"])
+def check_configuration():
+    result = {
+        "code":-1,
+        "message":"",
+        "data":{},
+    }
+    try:
+        with open(target_config+"/cpd-config.yaml", "r", encoding='UTF-8') as f:
+            temp={}
+            content = f.read()
+            docs=yaml.safe_load_all(content)
+            for doc in docs:
+                print(doc)
+                temp={**temp, **doc}
+
+            result['data']['cp4d']=temp['cp4d']
+            del temp['cp4d']
+            result['data']['cp4i']=temp['cp4i']
+            del temp['cp4i']
+            result['data']['ocp']=temp
+
+            result['code'] = 0
+            result['message'] = "success to get configuration."
+            f.close()
+
+    except FileNotFoundError:
+        result['code'] = 404
+        result['message'] = "Configuration File is not found."
+    except PermissionError:
+        result['code'] = 401
+        result['message'] = "Permission Error."
+    except IOError:
+        result['code'] = 101
+        result['message'] = "IO Error."
+    return result
 
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 def getCartridges(cloudpak):
@@ -124,7 +163,6 @@ def update_storage(path, storage):
     content = ""
     with open(path, 'r') as f1:
         read_all = f1.read()
-
         datas = yaml.safe_load_all(read_all)
         for data in datas:
             content=content+"---\n"
@@ -177,56 +215,132 @@ def update_cp4i_cartridges(path, cartridges, storage, cloudpak):
     with open(path, 'w') as f1:
         f1.write(content)
 
-@app.route('/api/v1/loadConfig',methods=["POST"])
-def loadConfig():
+def loadYamlFile(path):
+    result={}
+    content=""
+    with open(path, 'r', encoding='UTF-8') as f1:
+        content=f1.read()
+        docs=yaml.safe_load_all(content)
+        for doc in docs:
+            result={**result, **doc}
+    return result
+
+def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
+    ocp_yaml=yaml.safe_dump(ocp_config)
+    cp4d_yaml=yaml.safe_dump(cp4d_config)
+    cp4i_yaml=yaml.safe_dump(cp4i_config)
+
+    ocp_yaml = '---\n'+ocp_yaml
+    cp4d_yaml = '---\n'+cp4d_yaml
+    cp4i_yaml = '---\n'+cp4i_yaml
+    all_in_one = ocp_yaml + cp4d_yaml + cp4i_yaml
+
+    with open(generated_config_yaml_path, 'w', encoding='UTF-8') as f1:
+        f1.write(all_in_one)
+        f1.close()
+
+    with open(generated_config_yaml_path, "r", encoding='UTF-8') as f1:
+        result={}
+        result["config"]=f1.read()
+        f1.close()
+    return json.dumps(result) 
+
+@app.route('/api/v1/createConfig',methods=["POST"])
+def createConfig():
     body = json.loads(request.get_data())
-    if not body['envId']  or not body['cloud'] or not body['cp4d'] or not body['cp4i'] or not body['storages']:
+    if not body['envId'] or not body['cloud'] or not body['cp4d'] or not body['cp4i'] or not body['storages']:
        return make_response('Bad Request', 400)
+
     env_id=body['envId']
     cloud=body['cloud']
     region=body['region']
     cp4d=body['cp4d']
     cp4i=body['cp4i']
-    ocp=body['ocp']
     storages=body['storages']
-
-    generated_ocp_yaml_path = target_config+'/{}-ocp.yaml'.format(env_id)
-    generated_cp4d_yaml_path = target_config+'/{}-cp4d.yaml'.format(env_id)
-    generated_cp4i_yaml_path = target_config+'/{}-cp4i.yaml'.format(env_id)
-
-    if not ocp:
-        source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
-        copyfile(source_ocp_config_path,generated_ocp_yaml_path)
-        update_storage(generated_ocp_yaml_path,storages)
-
-        source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
-        copyfile(source_cp4d_config_path,generated_cp4d_yaml_path)
-        update_cp4d_cartridges(generated_cp4d_yaml_path,cp4d,storages[0]['storage_name'],'cp4d')
-
-        source_cp4i_config_path = cp4d_config_path+'/cp4i.yaml'
-        copyfile(source_cp4i_config_path,generated_cp4i_yaml_path)
-        update_cp4i_cartridges(generated_cp4i_yaml_path,cp4i,storages[0]['storage_name'],'cp4i')
-        
-        source_inventory_config_path=inventory_config_path+'/{}.inv'.format(cloud)
-        generated_inventory_yaml_path = target_inventory+'/{}.inv'.format(env_id)
-        copyfile(source_inventory_config_path,generated_inventory_yaml_path)
-        update_region(generated_inventory_yaml_path,region)
-    else:
-        writeYamlFile(generated_ocp_yaml_path, ocp)
-        writeYamlFile(generated_cp4d_yaml_path, cp4d)
-        writeYamlFile(generated_cp4i_yaml_path, cp4i)
-
-    result={}
-    result["ocp"]=open(generated_ocp_yaml_path, "r").read()
-    result["cp4d"]=open(generated_cp4d_yaml_path,"r").read()
-    result["cp4i"]=open(generated_cp4i_yaml_path,"r").read()
-    return json.dumps(result) 
-
-def writeYamlFile(path, data):
-    content=yaml.safe_dump(data)
-    content = '---\n'+content
-    with open(path, 'w') as f1:
-        f1.write(content)
     
+    #generated_config_yaml_path = target_config+'/cpd-config.yaml'
+    # Load the default yaml file
+    source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
+    ocp_config=loadYamlFile(source_ocp_config_path)
+
+    source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
+    cp4d_config=loadYamlFile(source_cp4d_config_path)
+
+    source_cp4i_config_path = cp4d_config_path+'/cp4i.yaml'
+    cp4i_config=loadYamlFile(source_cp4i_config_path)
+
+    # Update for region
+    if cloud=="ibm-cloud":
+        ocp_config['global_config']['ibm_cloud_region']=region
+    elif cloud=="aws":
+        ocp_config['global_config']['aws_region']=region
+
+    # Update for EnvId
+    ocp_config['global_config']['env_id']=env_id
+    # Update for cp4d
+    cp4d_config['cp4d'][0]['cartridges']=cp4d
+    cp4d_config['cp4d'][0]['openshift_storage_name']=storages[0]['storage_type']
+    # Update for cp4i
+    cp4i_config['cp4i'][0]['instances']=cp4i  
+    cp4i_config['cp4i'][0]['openshift_storage_name']=storages[0]['storage_type']
+
+    return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
+
+@app.route('/api/v1/updateConfig',methods=["PUT"])
+def updateConfig():
+    body = json.loads(request.get_data())
+    if not body['cp4d'] or not body['cp4i']:
+       return make_response('Bad Request', 400)
+
+    cp4d=body['cp4d']
+    cp4i=body['cp4i']
+
+    #generated_config_yaml_path = target_config+'/cpd-config.yaml'
+    with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f1:
+        temp={}
+        cp4d_config={}
+        cp4i_config={}
+        ocp_config={}
+        content = f1.read()
+        docs=yaml.safe_load_all(content)
+        for doc in docs:
+            temp={**temp, **doc}
+
+        cp4d_config['cp4d']=temp['cp4d']
+        del temp['cp4d']
+        cp4i_config['cp4i']=temp['cp4i']
+        del temp['cp4i']
+        ocp_config=temp
+        f1.close()
+    
+    # Update for cp4d
+    cp4d_config['cp4d'][0]['cartridges']=cp4d
+    # Update for cp4i
+    cp4i_config['cp4i'][0]['instances']=cp4i
+    
+    return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
+
+@app.route('/api/v1/saveConfig',methods=["POST"])
+def saveConfig():
+    body = json.loads(request.get_data())
+    if not body['config']:
+       return make_response('Bad Request', 400)
+
+    config_data=body['config']
+
+    cp4d_config={}
+    cp4i_config={}
+    ocp_config={}
+    
+    cp4d_config['cp4d']=config_data['cp4d']
+    del config_data['cp4d']
+    cp4i_config['cp4i']=config_data['cp4i']
+    del config_data['cp4i']
+    ocp_config=config_data
+
+    return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
+
+
+  
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port='32080', debug=False)    

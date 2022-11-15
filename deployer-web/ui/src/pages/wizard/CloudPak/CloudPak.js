@@ -3,7 +3,16 @@ import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
 
-const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, setCPICartridgesData, entilementKey, setEntilementKey, setWizardError}) => {
+const CloudPak = ({CPDCartridgesData, 
+                  setCPDCartridgesData, 
+                  CPICartridgesData, 
+                  setCPICartridgesData, 
+                  entilementKey, 
+                  setEntilementKey, 
+                  setWizardError,
+                  configuration,
+                  locked,
+                }) => {
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadingCPI, setLoadingCPI] = useState(false)
@@ -17,35 +26,51 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
     const [isEntilementKeyInvalid, setEntilementKeyInvalid] = useState(false)
 
     useEffect(() => {
-      const fetchCloudPakData =async () => {
-        setLoadingCPD(true)
-        await axios.get('/api/v1/cartridges/cp4d').then(res =>{            
+      const fetchCloudPakData =async () => {        
+        await axios.get('/api/v1/cartridges/cp4d').then(res =>{   
+            setLoadingCPD(false)         
             setCPDCartridgesData(res.data) 
             updateCPDParentCheckBox(res.data)                        
         }, err => {
+            setLoadingCPD(false)
             setLoadCPDErr(true)          
             console.log(err)
         });   
-        setLoadingCPD(false)      
+              
       }
       
-      const fetchCloudPakIntegration =async () => {
-        setLoadingCPI(true)
-        await axios.get('/api/v1/cartridges/cp4i').then(res =>{            
+      const fetchCloudPakIntegration =async () => {        
+        await axios.get('/api/v1/cartridges/cp4i').then(res =>{  
+            setLoadingCPI(false)          
             setCPICartridgesData(res.data) 
             updateCPIParentCheckBox(res.data)                        
         }, err => {
+            setLoadingCPI(false)
             setLoadCPIErr(true)            
             console.log(err)
         });
-        setLoadingCPI(false)         
+                 
       } 
-      //CP4D      
-      fetchCloudPakData()       
 
-      //CP4I
-      fetchCloudPakIntegration()    
-      setLoadingCPI(false)  
+      updateCPDParentCheckBox(CPDCartridgesData)
+      updateCPIParentCheckBox(CPICartridgesData)     
+
+      if (locked) {
+        setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
+        setCPICartridgesData(configuration.data.cp4i[0].instances)
+        setWizardError(false)
+      } else {
+        if (CPDCartridgesData.length === 0) {
+            //CP4D 
+            setLoadingCPD(true)     
+            fetchCloudPakData() 
+        }
+        if (CPICartridgesData.length === 0) {
+            //CP4I
+            setLoadingCPI(true)
+            fetchCloudPakIntegration() 
+        }
+      } 
       
       if (entilementKey && (loadCPDErr === false && loadCPIErr === false) ) {
         setWizardError(false)
@@ -54,7 +79,7 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
         setWizardError(true)
       }
       // eslint-disable-next-line
-    }, [])
+    }, [CPDCartridgesData, CPICartridgesData])
 
     const errorProps = () => ({
       kind: 'error',
@@ -110,7 +135,7 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
             } 
             return item             
         })  
-        updateCPDParentCheckBox(newCPDCartridgesData)        
+        //updateCPDParentCheckBox(newCPDCartridgesData)        
         return newCPDCartridgesData
       })          
     }
@@ -126,10 +151,9 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
             } 
             return item             
         })  
-        updateCPIParentCheckBox(newCPICartridgesData)        
+        //updateCPIParentCheckBox(newCPICartridgesData)        
         return newCPICartridgesData
-      }) 
-               
+      })                
     }
 
     const changeCPDParentCheckBox =(e) => {      
@@ -184,6 +208,8 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
         setEntilementKeyInvalid(true)
         setWizardError(true)
         return
+      } else {
+        setEntilementKeyInvalid(false)
       }
       setWizardError(false)     
     }
@@ -208,7 +234,7 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
             {/* CP4D */}
             <div>
               <Accordion>                
-                <AccordionItem title="IBM Cloud Pak for Data" open={true}>
+                <AccordionItem title="IBM Cloud Pak for Data" >
 
                   {CPDCartridgesData.length > 0 &&
                   <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeCPDParentCheckBox} checked={CPDCheckParentCheckBox} indeterminate={CPDIndeterminateParentCheckBox}/>
@@ -228,7 +254,7 @@ const CloudPak = ({CPDCartridgesData, setCPDCartridgesData, CPICartridgesData, s
           {/* CP4I */}          
           <div>
               <Accordion>                
-                <AccordionItem title="IBM Cloud Pak for Integration" open={true}>
+                <AccordionItem title="IBM Cloud Pak for Integration" >
                   {CPICartridgesData.length > 0 &&
                   <Checkbox className='parent' id="cp4i" labelText="IBM Cloud Pak for Integration" onClick={changeCPIParentCheckBox} checked={CPICheckParentCheckBox} indeterminate={CPIIndeterminateParentCheckBox}/>
                   }
