@@ -92,9 +92,15 @@ def check_configuration():
             if 'cp4d' in temp:
                 result['data']['cp4d']=temp['cp4d']
                 del temp['cp4d']
+            else:
+                result['data']['cp4d']=loadYamlFile(cp4d_config_path+'/cp4d.yaml')['cp4d']
+
             if 'cp4i' in temp:
                 result['data']['cp4i']=temp['cp4i']
                 del temp['cp4i']
+            else:
+                result['data']['cp4i']=loadYamlFile(cp4d_config_path+'/cp4i.yaml')['cp4i']
+
             result['data']['ocp']=temp
 
             result['code'] = 0
@@ -326,10 +332,18 @@ def updateConfig():
         for doc in docs:
             temp={**temp, **doc}
 
-        cp4d_config['cp4d']=temp['cp4d']
-        del temp['cp4d']
-        cp4i_config['cp4i']=temp['cp4i']
-        del temp['cp4i']
+        if 'cp4d' in temp:
+            cp4d_config['cp4d']=temp['cp4d']
+            del temp['cp4d']
+        else:
+            cp4d_config['cp4d']=loadYamlFile(cp4d_config_path+'/cp4d.yaml')['cp4d']
+
+        if 'cp4i' in temp:
+            cp4i_config['cp4i']=temp['cp4i']
+            del temp['cp4i']
+        else:
+            cp4i_config['cp4i']=loadYamlFile(cp4d_config_path+'/cp4i.yaml')['cp4i']
+        
         ocp_config=temp
         f1.close()
     
