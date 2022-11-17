@@ -89,10 +89,12 @@ def check_configuration():
             for doc in docs:
                 temp={**temp, **doc}
 
-            result['data']['cp4d']=temp['cp4d']
-            del temp['cp4d']
-            result['data']['cp4i']=temp['cp4i']
-            del temp['cp4i']
+            if 'cp4d' in temp:
+                result['data']['cp4d']=temp['cp4d']
+                del temp['cp4d']
+            if 'cp4i' in temp:
+                result['data']['cp4i']=temp['cp4i']
+                del temp['cp4i']
             result['data']['ocp']=temp
 
             result['code'] = 0
