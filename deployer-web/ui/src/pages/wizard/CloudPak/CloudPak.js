@@ -56,8 +56,18 @@ const CloudPak = ({CPDCartridgesData,
       updateCPIParentCheckBox(CPICartridgesData)     
 
       if (locked) {
-        setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
-        setCPICartridgesData(configuration.data.cp4i[0].instances)
+        if(configuration.data.cp4d[0].cartridges) {
+          setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
+        } else {
+          setCPDCartridgesData([])
+        }
+        if(configuration.data.cp4i[0].instances) {
+          setCPICartridgesData(configuration.data.cp4i[0].instances)
+        } else {
+          setCPICartridgesData([])
+        }
+        
+        
         setWizardError(false)
       } else {
         if (CPDCartridgesData.length === 0) {
@@ -92,7 +102,7 @@ const CloudPak = ({CPDCartridgesData,
     const updateCPDParentCheckBox = (data)=> {  
       setCPDCheckParentCheckBox(false)  
       setCPDIndeterminateParentCheckBox(false) 
-      let totalItems = data.filter(item => item.description != null )      
+      let totalItems = data.filter(item => item.state != null )      
       let selectedItem = data.filter(item => item.state === "installed")      
       if (totalItems.length === selectedItem.length) {
         // console.log(totalItems.length )
@@ -110,7 +120,7 @@ const CloudPak = ({CPDCartridgesData,
     const updateCPIParentCheckBox = (data)=> {  
       setCPICheckParentCheckBox(false)  
       setCPIIndeterminateParentCheckBox(false) 
-      let totalItems = data.filter(item => item.description != null )      
+      let totalItems = data.filter(item => item.state != null )      
       let selectedItem = data.filter(item => item.state === "installed")      
       if (totalItems.length === selectedItem.length) {
         // console.log(totalItems.length )
@@ -159,7 +169,7 @@ const CloudPak = ({CPDCartridgesData,
     const changeCPDParentCheckBox =(e) => {      
       setCPDCartridgesData((CPDCartridgesData)=>{
         const newCPDCartridgesData = CPDCartridgesData.map((item)=>{
-            if (item.description){
+            if (item.state){
               if (e.target.checked)
                 item.state = "installed"
               else
@@ -182,7 +192,7 @@ const CloudPak = ({CPDCartridgesData,
     const changeCPIParentCheckBox =(e) => {      
       setCPICartridgesData((CPICartridgesData)=>{
         const newCPICartridgesData = CPICartridgesData.map((item)=>{
-            if (item.description){
+            if (item.state){
               if (e.target.checked)
                 item.state = "installed"
               else
@@ -256,9 +266,9 @@ const CloudPak = ({CPDCartridgesData,
                   <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeCPDParentCheckBox} checked={CPDCheckParentCheckBox} indeterminate={CPDIndeterminateParentCheckBox}/>
                   }
                   { CPDCartridgesData.map((item)=>{
-                    if (item.description) {
+                    if (item.state) {
                       return (
-                        <Checkbox className='child' onClick={changeCPDChildCheckBox} labelText={item.description} id={item.name} key={item.name} checked={item.state === "installed"} />                
+                        <Checkbox className='child' onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />                
                       )  
                     }
                     return null        
@@ -275,9 +285,9 @@ const CloudPak = ({CPDCartridgesData,
                   <Checkbox className='parent' id="cp4i" labelText="IBM Cloud Pak for Integration" onClick={changeCPIParentCheckBox} checked={CPICheckParentCheckBox} indeterminate={CPIIndeterminateParentCheckBox}/>
                   }
                   { CPICartridgesData.map((item)=>{
-                    if (item.description) {
+                    if (item.state) {
                       return (
-                        <Checkbox className='child' onClick={changeCPIChildCheckBox} labelText={item.description} id={item.type} key={item.type} checked={item.state === "installed"} />                
+                        <Checkbox className='child' onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />                
                       )  
                     }
                     return null        
