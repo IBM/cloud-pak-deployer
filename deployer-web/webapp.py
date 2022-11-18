@@ -7,22 +7,43 @@ import yaml
 from shutil import copyfile
 from pathlib import Path
 import re
+import glob
 
+from logging.config import dictConfig
+
+dictConfig(
+    {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "formatter": "default",
+            }
+        },
+        "root": {"level": "DEBUG", "handlers": ["console"]},
+    }
+)
 
 app = Flask(__name__,static_url_path='', static_folder='ww')
 
-source = os.getcwd()
-#parent = source
-parent = os.path.dirname(source)
-cp4d_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
-ocp_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
+parent = Path(os.path.dirname(os.path.realpath(__file__))).parent
+app.logger.info('Parent path of python script: {}'.format(parent))
+cp_base_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
+ocp_base_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
-target_config=config_dir+'/config'
-generated_config_yaml_path = target_config+'/cpd-config.yaml'
 
 Path( status_dir+'/log' ).mkdir( parents=True, exist_ok=True )
-Path( target_config ).mkdir( parents=True, exist_ok=True )
+Path( config_dir+'/config' ).mkdir( parents=True, exist_ok=True )
+
+# Global variable set in /v1/configuration
+generated_config_yaml_path = ""
 
 @app.route('/')
 def index():
@@ -32,12 +53,12 @@ def index():
 def deploy():
     body = json.loads(request.get_data())
     print(body, file=sys.stderr)
-    env ={}
+    deployer_env = os.environ.copy()
     if body['cloud']=='ibm-cloud':
-      env['IBM_CLOUD_API_KEY']=body['env']['ibmCloudAPIKey']
-    env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
-    env['CONFIG_DIR']=config_dir
-    env['STATUS_DIR']=status_dir
+      deployer_env['IBM_CLOUD_API_KEY']=body['env']['ibmCloudAPIKey']
+    deployer_env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
+    deployer_env['CONFIG_DIR']=config_dir
+    deployer_env['STATUS_DIR']=status_dir
 
     log = open('/tmp/cp-deploy.log', 'a')
     process = subprocess.Popen(['/cloud-pak-deployer/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
@@ -45,15 +66,9 @@ def deploy():
                     stdout=log,
                     stderr=log,
                     universal_newlines=True,
-                    env=env)
+                    env=deployer_env)
 
-    #   process = subprocess.Popen([parent+'/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
-    #                     format(body['envId']), '-e', 'ibm_cloud_region={}'.format(body['region']), '--check-only'], 
-    #                 stdout=subprocess.PIPE,
-    #                 universal_newlines=True,
-    #                 env=env)
-
-    return 'runing'
+    return 'running'
 
 @app.route('/api/v1/oc-login',methods=["POST"])
 def oc_login():
@@ -81,10 +96,27 @@ def check_configuration():
         "message":"",
         "data":{},
     }
+
+    global generated_config_yaml_path
+
+    found_config_files=glob.glob(config_dir+'/config/*.yaml')
+    if len(found_config_files) == 0:
+        generated_config_yaml_path = config_dir+'/config/cpd-config.yaml'
+    elif len(found_config_files) > 1:
+        errmsg="More than 1 yaml file found in directory {}. Wizard can be used for 0 or 1 config files.".format(config_dir+'/config')
+        app.logger.error(errmsg)
+        result['code'] = 400
+        result['message'] = errmsg
+        return result
+    else:
+        generated_config_yaml_path = found_config_files[0]
+
+    app.logger.info('Config file that will be updated is {}'.format(generated_config_yaml_path))
     try:
-        with open(target_config+"/cpd-config.yaml", "r", encoding='UTF-8') as f:
+        with open(generated_config_yaml_path, "r", encoding='UTF-8') as f:
             temp={}
             content = f.read()
+            # app.logger.info(content)
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
@@ -93,23 +125,26 @@ def check_configuration():
                 result['data']['cp4d']=temp['cp4d']
                 del temp['cp4d']
             else:
-                result['data']['cp4d']=loadYamlFile(cp4d_config_path+'/cp4d.yaml')['cp4d']
+                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4i.yaml'))
+                result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d.yaml')['cp4d']
 
             if 'cp4i' in temp:
                 result['data']['cp4i']=temp['cp4i']
                 del temp['cp4i']
             else:
-                result['data']['cp4i']=loadYamlFile(cp4d_config_path+'/cp4i.yaml')['cp4i']
+                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i.yaml'))
+                result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
 
             result['data']['ocp']=temp
 
             result['code'] = 0
             result['message'] = "success to get configuration."
             f.close()
-
+            # app.logger.info('Result of reading file: {}'.format(result))
     except FileNotFoundError:
         result['code'] = 404
         result['message'] = "Configuration File is not found."
+        app.logger.warning('Error while reading file'.format(result))
     except PermissionError:
         result['code'] = 401
         result['message'] = "Permission Error."
@@ -126,7 +161,7 @@ def getCartridges(cloudpak):
     if cloudpak == "cp4i":
         type_name="instances"    
     cartridges_list=[]
-    with open(cp4d_config_path+'/{}.yaml'.format(cloudpak),encoding='UTF-8') as f:
+    with open(cp_base_config_path+'/{}.yaml'.format(cloudpak),encoding='UTF-8') as f:
         read_all = f.read()
         docs =yaml.load_all(read_all, Loader=yaml.FullLoader)
         for doc in docs:
@@ -186,7 +221,7 @@ def update_storage(path, storage):
 @app.route('/api/v1/storages/<cloud>',methods=["GET"])
 def getStorages(cloud):
     ocp_config=""
-    with open(ocp_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
+    with open(ocp_base_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
         read_all = f.read()
 
     datas = yaml.load_all(read_all, Loader=yaml.FullLoader)
@@ -237,6 +272,8 @@ def loadYamlFile(path):
     return result
 
 def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
+    global generated_config_yaml_path
+
     ocp_yaml=yaml.safe_dump(ocp_config)
     
     all_in_one = '---\n'+ocp_yaml
@@ -272,16 +309,10 @@ def createConfig():
     cp4i=body['cp4i']
     storages=body['storages']
     
-    #generated_config_yaml_path = target_config+'/cpd-config.yaml'
-    # Load the default yaml file
-    source_ocp_config_path = ocp_config_path+'/{}.yaml'.format(cloud)
-    ocp_config=loadYamlFile(source_ocp_config_path)
-
-    source_cp4d_config_path = cp4d_config_path+'/cp4d.yaml'
-    cp4d_config=loadYamlFile(source_cp4d_config_path)
-
-    source_cp4i_config_path = cp4d_config_path+'/cp4i.yaml'
-    cp4i_config=loadYamlFile(source_cp4i_config_path)
+    # Load the base yaml files
+    ocp_config=loadYamlFile(ocp_base_config_path+'/{}.yaml'.format(cloud))
+    cp4d_config=loadYamlFile(cp_base_config_path+'/cp4d.yaml')
+    cp4i_config=loadYamlFile(cp_base_config_path+'/cp4i.yaml')
 
     # Update for region
     if cloud=="ibm-cloud":
@@ -314,14 +345,15 @@ def createConfig():
 
 @app.route('/api/v1/updateConfig',methods=["PUT"])
 def updateConfig():
+    global generated_config_yaml_path
+
     body = json.loads(request.get_data())
     if not body['cp4d'] or not body['cp4i']:
        return make_response('Bad Request', 400)
 
-    cp4d=body['cp4d']
-    cp4i=body['cp4i']
+    cp4d_cartridges=body['cp4d']
+    cp4i_instances=body['cp4i']
 
-    #generated_config_yaml_path = target_config+'/cpd-config.yaml'
     with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f1:
         temp={}
         cp4d_config={}
@@ -332,25 +364,39 @@ def updateConfig():
         for doc in docs:
             temp={**temp, **doc}
 
-        if 'cp4d' in temp:
-            cp4d_config['cp4d']=temp['cp4d']
-            del temp['cp4d']
-        else:
-            cp4d_config['cp4d']=loadYamlFile(cp4d_config_path+'/cp4d.yaml')['cp4d']
+        if 'cp4d' not in temp:
+            temp['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d.yaml')['cp4d']
+        if 'cp4i' not in temp:
+            temp['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
 
-        if 'cp4i' in temp:
+        app.logger.info("temp: {}".format(temp))
+        app.logger.info("temp.cp4d: {}".format(temp['cp4d']))
+
+        cp4d_selected=False
+        for cartridge in cp4d_cartridges:
+            if 'state' in cartridge and cartridge['state']=='installed':
+                cp4d_selected=True
+        if cp4d_selected:
+            cp4d_config['cp4d']=temp['cp4d']
+            cp4d_config['cp4d'][0]['cartridges']=cp4d_cartridges
+        del temp['cp4d']
+
+        cp4i_selected=False
+        for instance in cp4i_instances:
+            if 'state' in instance and instance['state']=='installed':
+                cp4i_selected=True
+        if cp4i_selected:
             cp4i_config['cp4i']=temp['cp4i']
-            del temp['cp4i']
-        else:
-            cp4i_config['cp4i']=loadYamlFile(cp4d_config_path+'/cp4i.yaml')['cp4i']
+            cp4d_config['cp4i'][0]['instances']=cp4i_instances
+        del temp['cp4i']
         
         ocp_config=temp
         f1.close()
     
     # Update for cp4d
-    cp4d_config['cp4d'][0]['cartridges']=cp4d
+    # cp4d_config['cp4d'][0]['cartridges']=cp4d
     # Update for cp4i
-    cp4i_config['cp4i'][0]['instances']=cp4i
+    # cp4i_config['cp4i'][0]['instances']=cp4i
     
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
 
@@ -366,14 +412,15 @@ def saveConfig():
     cp4i_config={}
     ocp_config={}
     
-    cp4d_config['cp4d']=config_data['cp4d']
-    del config_data['cp4d']
-    cp4i_config['cp4i']=config_data['cp4i']
-    del config_data['cp4i']
+    if 'cp4d' in config_data:
+        cp4d_config['cp4d']=config_data['cp4d']
+        del config_data['cp4d']
+    if 'cp4i' in config_data:
+        cp4i_config['cp4i']=config_data['cp4i']
+        del config_data['cp4i']
     ocp_config=config_data
 
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
-
   
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port='32080', debug=False)    
