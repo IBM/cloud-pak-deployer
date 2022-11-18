@@ -220,7 +220,7 @@ const Infrastructure = ({cloudPlatform,
       kind: 'error',
       lowContrast: true,
       role: 'error',
-      title: 'Get error to login the existing OpenShift platform. ',
+      title: 'Error logging into the OpenShift cluster.',
       hideCloseButton: false,
     }); 
 
