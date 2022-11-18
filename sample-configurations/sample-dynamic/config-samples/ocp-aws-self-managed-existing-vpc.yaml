@@ -1,0 +1,30 @@
+---
+global_config:
+  environment_name: sample
+  cloud_platform: aws
+  aws_region: eu-central-1
+
+nfs_server:
+- name: "{{ env_id }}-elastic"
+  infrastructure:
+    aws_region: "{{ aws_region }}"
+
+openshift:
+- name: "{{ env_id }}"
+  ocp_version: 4.10.34
+  compute_flavour: m5.4xlarge
+  compute_nodes: 3
+  infrastructure:
+    type: self-managed
+    aws_region: "{{ aws_region }}"
+    use_sts: False
+    multi_zone: False
+    private_only: False
+    machine_cidr: 10.2.1.0/24
+    subnet_ids:
+    - subnet-06bbef28f585a0dd3
+    - subnet-0ea5ac344c0fbadf5
+    hosted_zone_id: Z08291873MCIC4TMIK4UP
+  openshift_storage:
+  - storage_name: "{{ env_id }}-elastic"
+    storage_type: aws-elastic
