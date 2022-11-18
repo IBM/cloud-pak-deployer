@@ -69,14 +69,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         if "credentials_mode" in ge['infrastructure']:
             if ge['infrastructure']['credentials_mode'] not in ['Manual','Mint']:
                 g.appendError(msg='credentials_mode must be Manual or Mint if specified')
-        if "machine_cidr" in ge['infrastructure']:
-            if "subnet_ids" not in ge['infrastructure']:
-                g.appendError(msg='If machine_cidr is specified, you must also specify the subnet_ids attribute')
-        if "subnet_ids" in ge['infrastructure']:
-            # if len(ge['infrastructure']['subnet_ids']) != 2 and len(ge['infrastructure']['subnet_ids']) != 6:
-            #     g.appendError(msg='You can specify either 2 subnet IDs or 6 subnet IDs if there are existing subnets in the VPC')
-            if "machine_cidr" not in ge['infrastructure']:
-                g.appendError(msg='If subnet IDs are specified, you must also specify the machine_cidr attribute')
         
         # Check upstream DNS server
         if 'upstream_dns' in ge:
