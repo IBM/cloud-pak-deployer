@@ -52,17 +52,35 @@ def index():
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
     body = json.loads(request.get_data())
-    print(body, file=sys.stderr)
+    with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f:
+        content = f.read()
+        docs=yaml.load_all(content, Loader=yaml.FullLoader)
+        f.close()
+        for doc in docs:
+            if 'global_config' in doc.keys():
+                global_env_id=doc['global_config']['env_id']
+            if 'openshift' in doc.keys():
+                openshift_name=doc['openshift'][0]['name'].replace('{{ env_id }}',global_env_id)
+                break
     deployer_env = os.environ.copy()
     if body['cloud']=='ibm-cloud':
       deployer_env['IBM_CLOUD_API_KEY']=body['env']['ibmCloudAPIKey']
     deployer_env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
     deployer_env['CONFIG_DIR']=config_dir
     deployer_env['STATUS_DIR']=status_dir
+    app.logger.info('openshift name: {}'.format(openshift_name))
+    app.logger.info('oc login command: {}'.format(body['oc_login_command']))
+
+    # Assemble the deploy command
+    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command+=['env','apply']
+    deploy_command+=['-e=env_id={}'.format(body['envId'])]
+    deploy_command+=['-vs={}-oc-login={}'.format(openshift_name, body['oc_login_command'])]
+    deploy_command+=['-vvv']
+    app.logger.info('deploy command: {}'.format(deploy_command))
 
     log = open('/tmp/cp-deploy.log', 'a')
-    process = subprocess.Popen(['/cloud-pak-deployer/cp-deploy.sh', 'env', 'apply','-e', 'env_id={}'.
-                        format(body['envId'])], 
+    process = subprocess.Popen(deploy_command, 
                     stdout=log,
                     stderr=log,
                     universal_newlines=True,
@@ -136,9 +154,12 @@ def check_configuration():
                 result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
 
             result['data']['ocp']=temp
+            if 'env_id' not in result['data']['ocp']['global_config']:
+                result['data']['ocp']['global_config']['env_id']='demo'
+                app.logger.warning("Added env_id to global_config: {}".format(result['data']['ocp']['global_config']))
 
             result['code'] = 0
-            result['message'] = "success to get configuration."
+            result['message'] = "Successfully retrieved configuration."
             f.close()
             # app.logger.info('Result of reading file: {}'.format(result))
     except FileNotFoundError:
@@ -360,6 +381,7 @@ def updateConfig():
         cp4i_config={}
         ocp_config={}
         content = f1.read()
+        f1.close()
         docs=yaml.safe_load_all(content)
         for doc in docs:
             temp={**temp, **doc}
@@ -369,8 +391,7 @@ def updateConfig():
         if 'cp4i' not in temp:
             temp['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
 
-        app.logger.info("temp: {}".format(temp))
-        app.logger.info("temp.cp4d: {}".format(temp['cp4d']))
+        # app.logger.info("temp: {}".format(temp))
 
         cp4d_selected=False
         for cartridge in cp4d_cartridges:
@@ -391,13 +412,9 @@ def updateConfig():
         del temp['cp4i']
         
         ocp_config=temp
-        f1.close()
-    
-    # Update for cp4d
-    # cp4d_config['cp4d'][0]['cartridges']=cp4d
-    # Update for cp4i
-    # cp4i_config['cp4i'][0]['instances']=cp4i
-    
+        if 'env_id' not in ocp_config['global_config']:
+            ocp_config['global_config']['env_id']='demo'
+        
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
 
 @app.route('/api/v1/saveConfig',methods=["POST"])
