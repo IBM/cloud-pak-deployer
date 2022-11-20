@@ -116,6 +116,7 @@ const Wizard = () => {
       "entitlementKey": entitlementKey,
       "cloud": cloudPlatform,
       "envId": OCPSettings.envId,
+      "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "region": IBMCloudSettings.region,
     }
     //console.log("deploy", body)
