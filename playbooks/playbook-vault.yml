@@ -45,17 +45,20 @@
 
   - include_role:
       name: vault-set-secret
+    vars:
+      _p_vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
     when: ACTION == "set"
 
   - include_role:
       name: vault-delete-secret
+    vars:
+      _p_vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
     when: ACTION == "delete"
-
-  - set_fact:
-      show_secret: True
-    when: ACTION == "get"
 
   - include_role:
       name: vault-get-secret
+    vars:
+      _p_vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
+      show_secret: True
     when: ACTION == "get"
 
