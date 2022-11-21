@@ -889,6 +889,12 @@ else
     export EXTRA_PARMS="${arrExtraKey[*]}"
     # echo $EXTRA_PARMS
   fi
-  export VAULT_SECRETS
-  . /cloud-pak-deployer/docker-scripts/run_automation.sh
+
+  if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "wizard" ]];then
+    . /cloud-pak-deployer/docker-scripts/container-webui.sh
+  else
+    export VAULT_SECRETS
+    . /cloud-pak-deployer/docker-scripts/run_automation.sh
+  fi
+
 fi
