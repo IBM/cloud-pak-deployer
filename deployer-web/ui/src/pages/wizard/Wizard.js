@@ -24,38 +24,42 @@ const Wizard = () => {
   const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
   const [configuration, setConfiguration] = useState({})
   const [locked, setLocked] = useState(false)
+  const [envId, setEnvId] = useState("")
   //---IBM Cloud
   const [IBMCloudSettings, setIBMCloudSettings] = useState({
     IBMAPIKey: '',
-    envId: "",
     region: '',
   })
   //---AWS
   const [AWSSettings, setAWSSettings] = useState({
     accessKeyID: '',
-    envId: "",
     secretAccessKey:'',
   })
   //---Existing OpenShift
   const [OCPSettings, setOCPSettings] = useState({
     ocLoginCmd:'',
-    envId: "",
   })  
+  const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
 
   //Storage
   const [storage, setStorage] = useState([])
   const [storagesOptions, setStoragesOptions] = useState([])
 
   //Cloud Pak
-  // const [OCPData, setOCPData] = useState([])
   const [CPDCartridgesData, setCPDCartridgesData] = useState([])
   const [CPICartridgesData, setCPICartridgesData] = useState([])
   const [entitlementKey, setEntitlementKey] = useState('')
+  const [CP4DPlatformCheckBox, setCP4DPlatformCheckBox] = useState(false)  
+  const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
+
+  const [cp4dLicense, setCp4dLicense] =  useState(false)
+  const [cp4iLicense, setCp4iLicense] =  useState(false)
+  const [cp4dVersion, setCp4dVersion] = useState("")
+  const [cp4iVersion, setCp4iVersion] = useState("")
+
 
   //Summary
   const [deployLog, setDeployLog] = useState('')
-
-  const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
 
   const logsRef = useRef(null);
 
@@ -115,7 +119,7 @@ const Wizard = () => {
       },
       "entitlementKey": entitlementKey,
       "cloud": cloudPlatform,
-      "envId": OCPSettings.envId,
+      "envId": envId,
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "region": IBMCloudSettings.region,
     }
@@ -281,6 +285,8 @@ const Wizard = () => {
                                     setLocked={setLocked}
                                     isOcLoginCmdInvalid={isOcLoginCmdInvalid}
                                     setOcLoginCmdInvalid={setOcLoginCmdInvalid}
+                                    envId={envId}
+                                    setEnvId={setEnvId}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 1 ? <Storage 
@@ -304,6 +310,18 @@ const Wizard = () => {
                                     setWizardError={setWizardError}
                                     configuration={configuration}
                                     locked={locked}
+                                    cp4dLicense={cp4dLicense}
+                                    cp4iLicense={cp4iLicense}
+                                    cp4dVersion={cp4dVersion}
+                                    cp4iVersion={cp4iVersion}
+                                    setCp4dLicense={setCp4dLicense}
+                                    setCp4iLicense={setCp4iLicense}
+                                    setCp4dVersion={setCp4dVersion}
+                                    setCp4iVersion={setCp4iVersion}
+                                    CP4DPlatformCheckBox={CP4DPlatformCheckBox}
+                                    CP4IPlatformCheckBox={CP4IPlatformCheckBox}
+                                    setCP4DPlatformCheckBox={setCP4DPlatformCheckBox}
+                                    setCP4IPlatformCheckBox={setCP4IPlatformCheckBox}
                               >
                               </CloudPak> : null}    
         {currentIndex === 3 ? <Summary 
@@ -318,6 +336,13 @@ const Wizard = () => {
                                     setCPICartridgesData={setCPICartridgesData}
                                     configuration={configuration}
                                     locked={locked}
+                                    cp4dLicense={cp4dLicense}
+                                    cp4iLicense={cp4iLicense}
+                                    cp4dVersion={cp4dVersion}
+                                    cp4iVersion={cp4iVersion}
+                                    envId={envId}
+                                    CP4DPlatformCheckBox={CP4DPlatformCheckBox}
+                                    CP4IPlatformCheckBox={CP4IPlatformCheckBox}
                               >
                               </Summary> : null}       
       </div> 
