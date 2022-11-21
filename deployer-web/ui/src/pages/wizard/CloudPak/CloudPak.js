@@ -1,4 +1,4 @@
-import { Checkbox, Loading, InlineNotification, PasswordInput ,Accordion,AccordionItem } from 'carbon-components-react';
+import { Checkbox, Loading, InlineNotification, PasswordInput,Accordion,AccordionItem,TextInput} from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
@@ -12,61 +12,97 @@ const CloudPak = ({CPDCartridgesData,
                   setWizardError,
                   configuration,
                   locked,
+                  cp4dLicense,
+                  cp4iLicense,
+                  cp4dVersion,
+                  cp4iVersion,
+                  setCp4dLicense,
+                  setCp4iLicense,
+                  setCp4dVersion,
+                  setCp4iVersion,
+                  CP4DPlatformCheckBox,
+                  CP4IPlatformCheckBox,
+                  setCP4DPlatformCheckBox,
+                  setCP4IPlatformCheckBox,
                 }) => {
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadingCPI, setLoadingCPI] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
 
-    const [CPDCheckParentCheckBox, setCPDCheckParentCheckBox] = useState(false)
-    const [CPDIndeterminateParentCheckBox, setCPDIndeterminateParentCheckBox] = useState(false)
-    const [CPICheckParentCheckBox, setCPICheckParentCheckBox] = useState(false)
-    const [CPIIndeterminateParentCheckBox, setCPIIndeterminateParentCheckBox] = useState(false)
-
     const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
 
-
+    const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
+    const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
 
     useEffect(() => {
       const fetchCloudPakData =async () => {        
         await axios.get('/api/v1/cartridges/cp4d').then(res =>{   
-            setLoadingCPD(false)         
-            setCPDCartridgesData(res.data) 
-            updateCPDParentCheckBox(res.data)                        
+            setLoadingCPD(false)  
+            if (res.data.cp4d[0].cartridges) {
+              setCPDCartridgesData(res.data.cp4d[0].cartridges) 
+            }             
+            if (res.data.cp4d[0].accept_licenses) {
+              setCp4dLicense(res.data.cp4d[0].accept_licenses)
+            }
+            if (res.data.cp4d[0].cp4d_version) {
+              setCp4dVersion(res.data.cp4d[0].cp4d_version)
+            }                    
         }, err => {
             setLoadingCPD(false)
             setLoadCPDErr(true)          
             console.log(err)
-        });   
-              
+        });                
       }
       
       const fetchCloudPakIntegration =async () => {        
         await axios.get('/api/v1/cartridges/cp4i').then(res =>{  
-            setLoadingCPI(false)          
-            setCPICartridgesData(res.data) 
-            updateCPIParentCheckBox(res.data)                        
+            setLoadingCPI(false)   
+            if (res.data.cp4i[0].instances) {  
+              setCPICartridgesData(res.data.cp4i[0].instances) 
+            }     
+            if (res.data.cp4i[0].accept_licenses) {
+              setCp4iLicense(res.data.cp4i[0].accept_licenses)
+            }
+            if (res.data.cp4i[0].cp4i_version) {
+              setCp4iVersion(res.data.cp4i[0].cp4i_version)
+            }   
+            // updateCPIParentCheckBox(res.data)                        
         }, err => {
             setLoadingCPI(false)
             setLoadCPIErr(true)            
             console.log(err)
         });         
-      } 
-      updateCPDParentCheckBox(CPDCartridgesData)
-      updateCPIParentCheckBox(CPICartridgesData)     
+      }  
+      
+      updateCP4DPlatformCheckBox(CPDCartridgesData)
+      updateCP4IPlatformCheckBox(CPICartridgesData)  
 
       if (locked) {
+  
+        if(configuration.data.cp4d[0].cp4d_version) {
+          setCp4dVersion(configuration.data.cp4d[0].cp4d_version)
+        }
+        if(configuration.data.cp4d[0].accept_licenses) {
+          setCp4dLicense(configuration.data.cp4d[0].accept_licenses)
+        }
         if(configuration.data.cp4d[0].cartridges) {
           setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
         } else {
           setCPDCartridgesData([])
         }
+
+        if(configuration.data.cp4i[0].cp4i_version) {
+          setCp4iVersion(configuration.data.cp4i[0].cp4i_version)
+        }
+        if(configuration.data.cp4i[0].accept_licenses) {
+          setCp4iLicense(configuration.data.cp4i[0].accept_licenses)
+        }
         if(configuration.data.cp4i[0].instances) {
           setCPICartridgesData(configuration.data.cp4i[0].instances)
         } else {
           setCPICartridgesData([])
-        }
-        
+        }        
         
         setWizardError(false)
       } else {
@@ -81,15 +117,17 @@ const CloudPak = ({CPDCartridgesData,
             fetchCloudPakIntegration() 
         }
       } 
+
+
       
-      if (entitlementKey && (loadCPDErr === false && loadCPIErr === false) ) {
+      if (entitlementKey && (loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
         setWizardError(false)
       }
       else {
         setWizardError(true)
       }
       // eslint-disable-next-line
-    }, [CPDCartridgesData, CPICartridgesData])
+    }, [CPDCartridgesData, CPICartridgesData, entitlementKey, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense, CP4DPlatformCheckBox, CP4IPlatformCheckBox])
 
     const errorProps = () => ({
       kind: 'error',
@@ -97,41 +135,21 @@ const CloudPak = ({CPDCartridgesData,
       role: 'error',
       title: 'Unable to get IBM Cloud Pak Configuration from server.',
       hideCloseButton: false,
-    });     
-
-    const updateCPDParentCheckBox = (data)=> {  
-      setCPDCheckParentCheckBox(false)  
-      setCPDIndeterminateParentCheckBox(false) 
-      let totalItems = data.filter(item => item.state != null )      
-      let selectedItem = data.filter(item => item.state === "installed")      
-      if (totalItems.length === selectedItem.length) {
-        // console.log(totalItems.length )
-        // console.log(selectedItem.length)
-        setCPDCheckParentCheckBox(true)
-      }        
-      else {
-        if (selectedItem.length > 0) {
-          // console.log(selectedItem.length)
-          setCPDIndeterminateParentCheckBox(true)
-        }
-      }       
+    });  
+    
+    
+    const updateCP4DPlatformCheckBox = (data) => {
+      let selectedItem = data.filter(item => item.state === "installed")  
+      if (selectedItem.length > 0) {
+        setCP4DPlatformCheckBox(true)
+      }
     }
 
-    const updateCPIParentCheckBox = (data)=> {  
-      setCPICheckParentCheckBox(false)  
-      setCPIIndeterminateParentCheckBox(false) 
-      let totalItems = data.filter(item => item.state != null )      
-      let selectedItem = data.filter(item => item.state === "installed")      
-      if (totalItems.length === selectedItem.length) {
-        // console.log(totalItems.length )
-        // console.log(selectedItem.length)
-        setCPICheckParentCheckBox(true)
-      }        
-      else {
-        if (selectedItem.length > 0) {
-          setCPIIndeterminateParentCheckBox(true)
-        }
-      }       
+    const updateCP4IPlatformCheckBox = (data) => {
+      let selectedItem = data.filter(item => item.state === "installed")  
+      if (selectedItem.length > 0) {
+        setCP4IPlatformCheckBox(true)
+      }
     }
 
     const changeCPDChildCheckBox = (e) => {
@@ -144,8 +162,7 @@ const CloudPak = ({CPDCartridgesData,
                 item.state = "removed"
             } 
             return item             
-        })  
-        //updateCPDParentCheckBox(newCPDCartridgesData)        
+        })         
         return newCPDCartridgesData
       })          
     }
@@ -160,56 +177,9 @@ const CloudPak = ({CPDCartridgesData,
                 item.state = "removed"
             } 
             return item             
-        })  
-        //updateCPIParentCheckBox(newCPICartridgesData)        
+        })         
         return newCPICartridgesData
       })                
-    }
-
-    const changeCPDParentCheckBox =(e) => {      
-      setCPDCartridgesData((CPDCartridgesData)=>{
-        const newCPDCartridgesData = CPDCartridgesData.map((item)=>{
-            if (item.state){
-              if (e.target.checked)
-                item.state = "installed"
-              else
-                item.state = "removed"
-            } 
-            return item             
-        })
-        return newCPDCartridgesData
-      })
-      if (e.target.checked) {
-        setCPDIndeterminateParentCheckBox(false)
-        setCPDCheckParentCheckBox(true)
-      } 
-      else {
-        setCPDIndeterminateParentCheckBox(false)
-        setCPDCheckParentCheckBox(false)
-      }      
-    }
-
-    const changeCPIParentCheckBox =(e) => {      
-      setCPICartridgesData((CPICartridgesData)=>{
-        const newCPICartridgesData = CPICartridgesData.map((item)=>{
-            if (item.state){
-              if (e.target.checked)
-                item.state = "installed"
-              else
-                item.state = "removed"
-            } 
-            return item             
-        })
-        return newCPICartridgesData
-      })
-      if (e.target.checked) {
-        setCPIIndeterminateParentCheckBox(false)
-        setCPICheckParentCheckBox(true)
-      } 
-      else {
-        setCPIIndeterminateParentCheckBox(false)
-        setCPICheckParentCheckBox(false)
-      }      
     }
 
     const entitlementKeyOnChange = (e) => {
@@ -224,6 +194,30 @@ const CloudPak = ({CPDCartridgesData,
       setWizardError(false)     
     }
 
+    const cp4iVersionOnChange = (e) => {
+      setCp4iVersion(e.target.value);
+      if (e.target.value === '') {
+        setCp4iVersionInvalid(true)
+        setWizardError(true)
+        return
+      } else {
+        setCp4iVersionInvalid(false)
+      }
+      setWizardError(false)     
+    } 
+    
+    const cp4dVersionOnChange = (e) => {
+      setCp4dVersion(e.target.value);
+      if (e.target.value === '') {
+        setCp4dVersionInvalid(true)
+        setWizardError(true)
+        return
+      } else {
+        setCp4dVersionInvalid(false)
+      }
+      setWizardError(false)     
+    }  
+
     const [cp4dExpand, setcp4dExpand] = useState(false)
     const [cp4iExpand, setcp4iExpand] = useState(false)
 
@@ -233,9 +227,7 @@ const CloudPak = ({CPDCartridgesData,
         setcp4dExpand( cp4dItem.length > 0 )
         let cp4IItem = configuration.data.cp4i[0].instances.filter(item => item.state === "installed") 
         setcp4iExpand( cp4IItem.length > 0 )
-
-      }   
-
+      } 
       // eslint-disable-next-line
     }, [])
 
@@ -256,23 +248,36 @@ const CloudPak = ({CPDCartridgesData,
 
           {/* CP4D */}
           <div>
-            <div className="cloud-pak-items">Cartridges for IBM Cloud Pak</div>
+            <div className="cloud-pak-items">IBM Cloud Pak</div>
             {/* CP4D */}
             <div>
+              
               <Accordion>                
-                <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>
+                 <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>                
+                  
+                  <div className="cpd-version">
+                    <div className="item">Version:</div>
+                    <TextInput placeholder="version" onChange={cp4dVersionOnChange} id="cp4d-version" labelText="" value={cp4dVersion} invalidText="Version can not be empty." invalid={cp4dVersionInvalid}/>
+                  </div>
 
-                  {CPDCartridgesData.length > 0 &&
-                  <Checkbox className='parent' id="cp4d" labelText="IBM Cloud Pak for Data" onClick={changeCPDParentCheckBox} checked={CPDCheckParentCheckBox} indeterminate={CPDIndeterminateParentCheckBox}/>
-                  }
+                  <div className="cpd-cartridges">
+                    <div className="item">Cartridges:</div>
+                  </div>
+
+                  <Checkbox onClick={()=>(setCP4DPlatformCheckBox((CP4DPlatformCheckBox)=>(!CP4DPlatformCheckBox)))} labelText="IBM Cloud Pak for Data Platform" id="cp4d-platform" key="cp4d-platform" checked={CP4DPlatformCheckBox} />
                   { CPDCartridgesData.map((item)=>{
                     if (item.state) {
                       return (
-                        <Checkbox className='child' onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />                
+                        <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />                
                       )  
                     }
                     return null        
                   }) } 
+
+                  <div className="cpd-license">
+                    <div className="item">Licenses:</div>
+                  </div>
+                  <Checkbox onClick={()=>(setCp4dLicense((cp4dLicense)=>(!cp4dLicense)))} labelText="Accept Licenses" id="cp4d-license" key="cp4d-license" checked={cp4dLicense} />
                 </AccordionItem>
               </Accordion> 
             </div>
@@ -281,17 +286,29 @@ const CloudPak = ({CPDCartridgesData,
           <div>
               <Accordion>                
                 <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
-                  {CPICartridgesData.length > 0 &&
-                  <Checkbox className='parent' id="cp4i" labelText="IBM Cloud Pak for Integration" onClick={changeCPIParentCheckBox} checked={CPICheckParentCheckBox} indeterminate={CPIIndeterminateParentCheckBox}/>
-                  }
+                  <div className="cpd-version">
+                    <div className="item">Version:</div>
+                    <TextInput placeholder="version" onChange={cp4iVersionOnChange} id="cp4i-version" value={cp4iVersion} labelText="" invalidText="Version can not be empty." invalid={cp4iVersionInvalid} />
+                  </div>
+
+                  <div className="cpd-cartridges">
+                    <div className="item">Cartridges:</div>
+                  </div>
+
+                  <Checkbox onClick={()=>(setCP4IPlatformCheckBox((CP4IPlatformCheckBox)=>(!CP4IPlatformCheckBox)))} labelText="IBM Cloud Pak for Integration Platform" id="cp4i-platform" key="cp4i-platform" checked={CP4IPlatformCheckBox} />
+
                   { CPICartridgesData.map((item)=>{
                     if (item.state) {
                       return (
-                        <Checkbox className='child' onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />                
+                        <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />                
                       )  
                     }
                     return null        
                   }) } 
+                  <div className="cpd-license">
+                    <div className="item">Licenses:</div>
+                  </div>
+                  <Checkbox onClick={()=>(setCp4iLicense((cp4iLicense)=>(!cp4iLicense)))}  labelText="Accept Licenses" id="cp4i-license" key="cp4i-license" checked={cp4iLicense}/>
                 </AccordionItem>
               </Accordion> 
             </div>

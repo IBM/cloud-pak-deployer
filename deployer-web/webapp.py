@@ -176,20 +176,11 @@ def check_configuration():
 
 @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 def getCartridges(cloudpak):
-    #cp4d
-    type_name="cartridges"
-    #cp4i
-    if cloudpak == "cp4i":
-        type_name="instances"    
-    cartridges_list=[]
-    with open(cp_base_config_path+'/{}.yaml'.format(cloudpak),encoding='UTF-8') as f:
-        read_all = f.read()
-        docs =yaml.load_all(read_all, Loader=yaml.FullLoader)
-        for doc in docs:
-            if cloudpak in doc.keys():
-               cartridges_list = doc[cloudpak][0][type_name]
-               break
-    return json.dumps(cartridges_list)
+    if cloudpak not in ['cp4d', 'cp4i']:
+       return make_response('Bad Request', 400)
+
+    return loadYamlFile(cp_base_config_path+'/{}.yaml'.format(cloudpak))
+
 
 @app.route('/api/v1/logs',methods=["GET"])
 def getLogs():
@@ -317,11 +308,13 @@ def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
         f1.close()
     return json.dumps(result) 
 
+
+
 @app.route('/api/v1/createConfig',methods=["POST"])
 def createConfig():
     body = json.loads(request.get_data())
-    if not body['envId'] or not body['cloud'] or not body['cp4d'] or not body['cp4i'] or not body['storages']:
-       return make_response('Bad Request', 400)
+    # if not body['envId'] or not body['cloud'] or not body['cp4d'] or not body['cp4i'] or not body['storages'] or not body['cp4dLicense'] or not body['cp4iLicense'] or not body['cp4dVersion'] or not body['cp4iVersion'] or not body['CP4DPlatform'] or not body['CP4IPlatform']:
+    #    return make_response('Bad Request', 400)
 
     env_id=body['envId']
     cloud=body['cloud']
@@ -329,6 +322,12 @@ def createConfig():
     cp4d=body['cp4d']
     cp4i=body['cp4i']
     storages=body['storages']
+    cp4dLicense=body['cp4dLicense']
+    cp4iLicense=body['cp4iLicense']
+    cp4dVersion=body['cp4dVersion']
+    cp4iVersion=body['cp4iVersion']
+    CP4DPlatform=body['CP4DPlatform']
+    CP4IPlatform=body['CP4IPlatform']
     
     # Load the base yaml files
     ocp_config=loadYamlFile(ocp_base_config_path+'/{}.yaml'.format(cloud))
@@ -343,22 +342,27 @@ def createConfig():
 
     # Update for EnvId
     ocp_config['global_config']['env_id']=env_id
+
     # Update for cp4d
-    cp4d_selected=False
-    for cartridge in cp4d:
-        if 'state' in cartridge and cartridge['state']=='installed':
-            cp4d_selected=True
+    cp4d_selected=CP4DPlatform
+    # for cartridge in cp4d:
+    #     if 'state' in cartridge and cartridge['state']=='installed':
+    #         cp4d_selected=True
     if cp4d_selected:
         cp4d_config['cp4d'][0]['cartridges']=cp4d
+        cp4d_config['cp4d'][0]['accept_licenses']=cp4dLicense
+        cp4d_config['cp4d'][0]['cp4d_version']=cp4dVersion
     else:
         cp4d_config={}
     # Update for cp4i
-    cp4i_selected=False
-    for instance in cp4i:
-        if 'state' in instance and instance['state']=='installed':
-            cp4i_selected=True
+    cp4i_selected=CP4IPlatform
+    # for instance in cp4i:
+    #     if 'state' in instance and instance['state']=='installed':
+    #         cp4i_selected=True
     if cp4i_selected:
         cp4i_config['cp4i'][0]['instances']=cp4i
+        cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
+        cp4d_config['cp4i'][0]['cp4i_version']=cp4iVersion
     else:
         cp4i_config={}
 
@@ -369,11 +373,17 @@ def updateConfig():
     global generated_config_yaml_path
 
     body = json.loads(request.get_data())
-    if not body['cp4d'] or not body['cp4i']:
-       return make_response('Bad Request', 400)
+    # if not body['cp4d'] or not body['cp4i'] or not body['cp4dLicense'] or not body['cp4iLicense'] or not body['cp4dVersion'] or not body['cp4iVersion'] or not body['CP4DPlatform'] or not body['CP4IPlatform']:
+    #    return make_response('Bad Request', 400)
 
     cp4d_cartridges=body['cp4d']
     cp4i_instances=body['cp4i']
+    cp4dLicense=body['cp4dLicense']
+    cp4iLicense=body['cp4iLicense']
+    cp4dVersion=body['cp4dVersion']
+    cp4iVersion=body['cp4iVersion']
+    CP4DPlatform=body['CP4DPlatform']
+    CP4IPlatform=body['CP4IPlatform']
 
     with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f1:
         temp={}
@@ -393,22 +403,26 @@ def updateConfig():
 
         # app.logger.info("temp: {}".format(temp))
 
-        cp4d_selected=False
-        for cartridge in cp4d_cartridges:
-            if 'state' in cartridge and cartridge['state']=='installed':
-                cp4d_selected=True
+        cp4d_selected=CP4DPlatform
+        # for cartridge in cp4d_cartridges:
+        #     if 'state' in cartridge and cartridge['state']=='installed':
+        #         cp4d_selected=True
         if cp4d_selected:
             cp4d_config['cp4d']=temp['cp4d']
             cp4d_config['cp4d'][0]['cartridges']=cp4d_cartridges
+            cp4d_config['cp4d'][0]['accept_licenses']=cp4dLicense
+            cp4d_config['cp4d'][0]['cp4d_version']=cp4dVersion
         del temp['cp4d']
 
-        cp4i_selected=False
-        for instance in cp4i_instances:
-            if 'state' in instance and instance['state']=='installed':
-                cp4i_selected=True
+        cp4i_selected=CP4IPlatform
+        # for instance in cp4i_instances:
+        #     if 'state' in instance and instance['state']=='installed':
+        #         cp4i_selected=True
         if cp4i_selected:
             cp4i_config['cp4i']=temp['cp4i']
             cp4d_config['cp4i'][0]['instances']=cp4i_instances
+            cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
+            cp4d_config['cp4i'][0]['cp4i_version']=cp4iVersion
         del temp['cp4i']
         
         ocp_config=temp

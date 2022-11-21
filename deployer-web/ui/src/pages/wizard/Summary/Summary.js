@@ -12,6 +12,13 @@ const Summary = ({cloudPlatform,
                   CPDCartridgesData, 
                   CPICartridgesData, 
                   locked,
+                  envId,
+                  cp4dLicense,
+                  cp4iLicense,
+                  cp4dVersion,
+                  cp4iVersion,
+                  CP4DPlatformCheckBox,
+                  CP4IPlatformCheckBox,
                 }) => {
 
     const [summaryLoading, setSummaryLoading] = useState(false)
@@ -24,19 +31,14 @@ const Summary = ({cloudPlatform,
     const [editable, setEditable] = useState(false)
 
     const createSummaryData = async () => {    
-        let envId=""
+
         let region=""    
         switch (cloudPlatform) {
-            case "ibm-cloud":
-                envId=IBMCloudSettings.envId
+            case "ibm-cloud":               
                 region=IBMCloudSettings.region
                 break
-            case "aws":
-                envId=AWSSettings.envId
+            case "aws":                
                 region=AWSSettings.region
-                break
-            case "existing-ocp":
-                envId=OCPSettings.envId
                 break
             default:
         }  
@@ -47,6 +49,12 @@ const Summary = ({cloudPlatform,
             "storages": storage,
             "cp4d": CPDCartridgesData,
             "cp4i": CPICartridgesData,
+            "cp4dLicense":cp4dLicense,
+            "cp4iLicense":cp4iLicense,
+            "cp4dVersion":cp4dVersion,
+            "cp4iVersion":cp4iVersion,
+            "CP4DPlatform":CP4DPlatformCheckBox,
+            "CP4IPlatform":CP4IPlatformCheckBox,      
         }     
 
         await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
@@ -65,6 +73,12 @@ const Summary = ({cloudPlatform,
         let body = {
             "cp4d": CPDCartridgesData,
             "cp4i": CPICartridgesData,
+            "cp4dLicense":cp4dLicense,
+            "cp4iLicense":cp4iLicense,
+            "cp4dVersion":cp4dVersion,
+            "cp4iVersion":cp4iVersion,
+            "CP4DPlatform":CP4DPlatformCheckBox,
+            "CP4IPlatform":CP4IPlatformCheckBox,   
         }  
         await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
             setSummaryLoading(false)        

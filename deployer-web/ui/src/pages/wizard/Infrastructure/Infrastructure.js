@@ -19,6 +19,8 @@ const Infrastructure = ({cloudPlatform,
                          setLocked,
                          isOcLoginCmdInvalid,
                          setOcLoginCmdInvalid,
+                         envId,
+                         setEnvId,
                          }) => {
 
     //IBM Cloud
@@ -50,18 +52,7 @@ const Infrastructure = ({cloudPlatform,
             
             let cloud=res.data.data.ocp.global_config.cloud_platform
             setCloudPlatform(cloud)
-            switch (cloud) {
-              case "ibm-cloud": 
-                setIBMCloudSettings({...IBMCloudSettings, envId:res.data.data.ocp.global_config.env_id});
-                break;
-              case "aws":
-                setAWSSettings({...AWSSettings, envId:res.data.data.ocp.global_config.env_id});
-                break;
-              case "existing-ocp":
-                setOCPSettings({...OCPSettings, envId:res.data.data.ocp.global_config.env_id});
-                break;
-              default:
-            } 
+            setEnvId(res.data.data.ocp.global_config.env_id)
           }
         }, err => {
           setLoadingConfiguration(false) 
@@ -81,17 +72,17 @@ const Infrastructure = ({cloudPlatform,
 
       switch (cloudPlatform) {
         case "ibm-cloud": 
-          if (IBMCloudSettings.IBMAPIKey && IBMCloudSettings.envId && IBMCloudSettings.region ) {
+          if (IBMCloudSettings.IBMAPIKey && envId && IBMCloudSettings.region ) {
             setWizardError(false)
           }
           break; 
         case "aws":
-          if (AWSSettings.accessKeyID && AWSSettings.secretAccessKey && AWSSettings.region ) {
+          if (AWSSettings.accessKeyID && AWSSettings.secretAccessKey && AWSSettings.region && envId ) {
             setWizardError(false)
           }
           break;
         case "existing-ocp":
-          if (OCPSettings.ocLoginCmd && OCPSettings.envId) {
+          if (OCPSettings.ocLoginCmd && envId) {
             setWizardError(false)
           }
           break;  
@@ -113,7 +104,7 @@ const Infrastructure = ({cloudPlatform,
           }     
           break;
         case "101":
-          setIBMCloudSettings({...IBMCloudSettings, envId:e.target.value});
+          setEnvId(e.target.value);
           if (e.target.value === '') {
             setIBMEnvIdInvalid(true)
             setWizardError(true)
@@ -169,7 +160,7 @@ const Infrastructure = ({cloudPlatform,
           }
           break;
         case "113":
-            setAWSSettings({...AWSSettings, envId:e.target.value});
+            setEnvId(e.target.value);
             if (e.target.value === '') {
               setAWSEnvIdInvalid(true)
               setWizardError(true)
@@ -195,7 +186,7 @@ const Infrastructure = ({cloudPlatform,
           }       
           break;
         case "131":
-          setOCPSettings({...OCPSettings, envId:e.target.value});
+          setEnvId(e.target.value);
           if (e.target.value === '') {
             setOCPEnvIdInvalid(true)
             setWizardError(true)
@@ -255,7 +246,7 @@ const Infrastructure = ({cloudPlatform,
           <div className="infra-container">
             <div>
               <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={IBMCloudSettings.envId} invalidText="Environment ID can not be empty." invalid={isIBMEnvIdInvalid} disabled={locked}/>
+              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isIBMEnvIdInvalid} disabled={locked}/>
             </div>  
             <div>
               <div className="infra-items">IBM Cloud API Key</div>
@@ -272,7 +263,7 @@ const Infrastructure = ({cloudPlatform,
             <div className="infra-container">
               <div>
                 <div className="infra-items">Enviroment ID</div>
-                <TextInput onChange={AWSSettingsOnChange} placeholder="Environment ID" id="113" labelText="" value={AWSSettings.envId} invalidText="Environment ID can not be empty."  invalid={isAWSEnvIdInvalid}/>
+                <TextInput onChange={AWSSettingsOnChange} placeholder="Environment ID" id="113" labelText="" value={envId} invalidText="Environment ID can not be empty."  invalid={isAWSEnvIdInvalid}/>
               </div> 
               <div>
                 <div className="infra-items">AWS Access Key ID</div>
@@ -293,7 +284,7 @@ const Infrastructure = ({cloudPlatform,
           <div className="infra-container">
            <div>
               <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={OCPSettings.envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
+              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
               </div>
            </div>
             <div>
