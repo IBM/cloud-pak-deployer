@@ -60,12 +60,13 @@ command_usage() {
   echo "Options for environment subcommand:"
   echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
   echo
-  echo "Options for vault subcommand:"
+  echo "Options for vault and env subcommands:"
   echo "  --vault-group,-vg <name>          Group of secret (\$VAULT_GROUP)"
   echo "  --vault-secret,-vs <name>         Secret name to get, set or delete (\$VAULT_SECRET)"
   echo "  --vault-secret-value,-vsv <value> Secret value to set (\$VAULT_SECRET_VALUE)"
   echo "  --vault-secret-file,-vsf <value>  File with secret value to set or get (\$VAULT_SECRET_FILE)"
-  echo
+  echo "  -vs=secret_name=secret_value      Set vault secret secret_name to secret_value"
+  echo "  -vs=secret_name=@secret_file      Set vault secret secret_name to contents of secret_file"
   exit $1
 }
 
