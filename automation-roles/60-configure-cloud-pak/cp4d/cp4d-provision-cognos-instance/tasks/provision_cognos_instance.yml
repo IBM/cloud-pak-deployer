@@ -43,11 +43,12 @@
 
         - set_fact:
             _internal_db2_instance_id: "{{ db2_lookup_result_json.service_instances[0].id }}"
-  
 
-    - name: "Prepare Cognos instance creation using external Db2 service {{ cognos_instance.metastore_ref }}"
-      include_tasks: prepare_provision_cognos_instance_external.yml
-      when: db2_lookup_result_json.total_count == 0
+    - name: "Prepare Cognos instance creation using external Db2 service {{ cognos_instance.metastore_ref }} on IBM Cloud"
+      include_tasks: prepare_provision_cognos_instance_external_ibm_cloud.yml
+      when: 
+        - db2_lookup_result_json.total_count == 0
+        - cloud_platform == 'ibm-cloud'
 
     - name: Get the Catalog 'Platform assets catalog'
       shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/catalogs?entity.name={{ cp4d_all_assets_catalog_name }}'"
