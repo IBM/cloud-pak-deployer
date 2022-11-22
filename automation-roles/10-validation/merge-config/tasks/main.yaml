@@ -87,3 +87,21 @@
 - name: OUTPUT all_config
   debug:
     var: all_config
+
+- name: Retrieve current configuration from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ environment_name }}-all-config"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _current_all_config
+
+- name: Store all configuration into the vault for later comparison
+  include_role:
+    name: vault-set-secret
+  vars:
+    secret_name: "{{ environment_name }}-all-config"
+    secret_description: "All configuration"
+    secret_payload: "{{ all_config }}"
+    secret_group: "{{ environment_name }}"
+  when: _current_all_config == ""
