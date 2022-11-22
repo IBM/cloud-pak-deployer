@@ -93,6 +93,20 @@
   loop: "{{ _cartridges_with_olm_utils_name }}"
 
 - set_fact:
+    _dp_cartridge: >-
+      {{ _cartridges_to_install | selectattr('Component_name','match','dp') | default({}) }}
+
+- debug:
+    var: _dp_cartridge
+
+- set_fact:
+    _tmp_cartridges: "{{ _cartridges_to_install | rejectattr('Component_name','match','dp') }}"
+
+- set_fact:
+    _cartridges_to_install: >-
+      {{ _tmp_cartridges + _dp_cartridge }}
+
+- set_fact:
     _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
 
 - name: Force sequential install if CP4D must be upgraded
@@ -124,6 +138,7 @@
 - name: Show full cartridge information
   debug:
     var: _cartridges_to_install
+
 
 - name: Show cartridge dependencies
   debug:
