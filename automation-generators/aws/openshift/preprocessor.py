@@ -14,6 +14,8 @@ from packaging import version
 #     multi_zone: True
 #     use_sts: False
 #     credentials_mode: Manual
+    # control_plane_iam_role: OpenShift-control-plane-role
+    # compute_iam_role: OpenShift-compute-role
     # machine-cidr: 10.243.0.24
     # subnet_idss:
     # - subnet-0e63f662bb1842e8a
