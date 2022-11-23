@@ -104,8 +104,41 @@ def oc_login():
         result={"code": result_code}    
         return json.dumps(result)
     else:
-        return make_response('Bad Request', 400)  
-    
+        return make_response('Bad Request', 400) 
+
+@app.route('/api/v1/deployer-status',methods=["GET"])
+def get_deployer_status():
+    result = {}
+
+    app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.out'))
+    try:
+        with open((status_dir + '/log/deployer-state.out', "r", encoding='UTF-8') as f:
+            content = f.read()
+            f.close()
+            app.logger.info(content)
+            docs=yaml.safe_load_all(content)
+            for doc in docs:
+                temp={**temp, **doc}
+
+            result['percentage_completed']=56
+            if 'current-stage' in temp:
+                result['deployer_stage']=temp['current-stage']
+            if 'current-task' in temp:
+                result['last_step']=temp['current-task']
+            if 'deployer-status' in temp:
+                if temp['deployer-status'] == 'ACTIVE':
+                    result['deployer_active']=True
+                else
+                    result['deployer_active']=False
+    except FileNotFoundError:
+        result={}
+        app.logger.warning('Error while reading file'.format(result))
+    except PermissionError:
+        result={}
+        app.logger.warning('Permission error while reading file'.format(result))
+    except IOError:
+        app.logger.warning('IO Error while reading file'.format(result))
+    return result
 
 @app.route('/api/v1/configuration',methods=["GET"])
 def check_configuration():
