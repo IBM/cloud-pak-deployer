@@ -46,10 +46,10 @@ while true;do
 
   log_state "deployer-status" "ACTIVE"
 
-  mv -f ${temp_file} ${status_dir}/log/deployer-state.out
+  mv -f ${temp_file} ${status_dir}/log/deployer-state.yaml
 
   log "----------"
-  log "Finished checks, sleeping for 1 minute"
-  sleep 60
+  log "Finished checks, sleeping for 10 seconds"
+  sleep 10
 done
 exit 0
