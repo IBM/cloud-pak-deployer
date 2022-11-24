@@ -72,7 +72,7 @@ def deploy():
     app.logger.info('oc login command: {}'.format(body['oc_login_command']))
 
     # Assemble the deploy command
-    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command=['/root/feiye/ui/cloud-pak-deployer/cp-deploy.sh']
     deploy_command+=['env','apply']
     deploy_command+=['-e=env_id={}'.format(body['envId'])]
     deploy_command+=['-vs={}-oc-login={}'.format(openshift_name, body['oc_login_command'])]
@@ -87,6 +87,12 @@ def deploy():
                     env=deployer_env)
 
     return 'running'
+
+@app.route('/api/v1/download-log')
+def downloadLog ():
+    log_path = status_dir + '/log/deployer-state.out'
+    return send_file(log_path, as_attachment=True)
+
 
 @app.route('/api/v1/oc-login',methods=["POST"])
 def oc_login():
@@ -112,7 +118,7 @@ def get_deployer_status():
 
     app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.out'))
     try:
-        with open((status_dir + '/log/deployer-state.out', "r", encoding='UTF-8') as f:
+        with open(status_dir + '/log/cloud-pak-deployer.log', "r", encoding='UTF-8') as f:
             content = f.read()
             f.close()
             app.logger.info(content)
@@ -128,7 +134,7 @@ def get_deployer_status():
             if 'deployer-status' in temp:
                 if temp['deployer-status'] == 'ACTIVE':
                     result['deployer_active']=True
-                else
+                else:
                     result['deployer_active']=False
     except FileNotFoundError:
         result={}
@@ -346,8 +352,8 @@ def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
 @app.route('/api/v1/createConfig',methods=["POST"])
 def createConfig():
     body = json.loads(request.get_data())
-    # if not body['envId'] or not body['cloud'] or not body['cp4d'] or not body['cp4i'] or not body['storages'] or not body['cp4dLicense'] or not body['cp4iLicense'] or not body['cp4dVersion'] or not body['cp4iVersion'] or not body['CP4DPlatform'] or not body['CP4IPlatform']:
-    #    return make_response('Bad Request', 400)
+    if 'envId' not in body or 'cloud' not in body or 'cp4d' not in body or 'cp4i' not in body or 'storages' not in body or 'cp4dVersion' not in body or 'cp4iVersion' not in body or 'cp4dLicense' not in body or 'cp4iLicense' not in body or 'CP4DPlatform' not in body or 'CP4IPlatform' not in body:
+       return make_response('Bad Request', 400)
 
     env_id=body['envId']
     cloud=body['cloud']
@@ -395,7 +401,7 @@ def createConfig():
     if cp4i_selected:
         cp4i_config['cp4i'][0]['instances']=cp4i
         cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
-        cp4d_config['cp4i'][0]['cp4i_version']=cp4iVersion
+        cp4i_config['cp4i'][0]['cp4i_version']=cp4iVersion
     else:
         cp4i_config={}
 
@@ -406,8 +412,8 @@ def updateConfig():
     global generated_config_yaml_path
 
     body = json.loads(request.get_data())
-    # if not body['cp4d'] or not body['cp4i'] or not body['cp4dLicense'] or not body['cp4iLicense'] or not body['cp4dVersion'] or not body['cp4iVersion'] or not body['CP4DPlatform'] or not body['CP4IPlatform']:
-    #    return make_response('Bad Request', 400)
+    if 'cp4d' not in body or 'cp4i' not in body or 'cp4dVersion' not in body or 'cp4iVersion' not in body or 'cp4dLicense' not in body or 'cp4iLicense' not in body or 'CP4DPlatform' not in body or 'CP4IPlatform' not in body:
+       return make_response('Bad Request', 400)
 
     cp4d_cartridges=body['cp4d']
     cp4i_instances=body['cp4i']
@@ -453,9 +459,9 @@ def updateConfig():
         #         cp4i_selected=True
         if cp4i_selected:
             cp4i_config['cp4i']=temp['cp4i']
-            cp4d_config['cp4i'][0]['instances']=cp4i_instances
+            cp4i_config['cp4i'][0]['instances']=cp4i_instances
             cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
-            cp4d_config['cp4i'][0]['cp4i_version']=cp4iVersion
+            cp4i_config['cp4i'][0]['cp4i_version']=cp4iVersion
         del temp['cp4i']
         
         ocp_config=temp

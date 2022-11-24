@@ -2,15 +2,16 @@ import React from 'react';
 import Infrastructure from './Infrastructure/Infrastructure';
 import Storage from './Storage/Storage';
 import './Wizard.scss'
-import { useState, useEffect, useRef } from 'react';
-import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, TextArea} from 'carbon-components-react';
+import { useState, useEffect } from 'react';
+import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, } from 'carbon-components-react';
+import ProgressBar from 'carbon-components-react/lib/components/ProgressBar'
 import Summary from './Summary/Summary';
 import axios from 'axios';
 import CloudPak from './CloudPak/CloudPak';
 
 const Wizard = () => {
 
-  //wizard index
+   //wizard index
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wizardError, setWizardError] = useState(true);
   const [ocLoginErr, setOcLoginErr] = useState(false)
@@ -52,19 +53,20 @@ const Wizard = () => {
   const [CP4DPlatformCheckBox, setCP4DPlatformCheckBox] = useState(false)  
   const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
 
-  const [cp4dLicense, setCp4dLicense] =  useState(false)
-  const [cp4iLicense, setCp4iLicense] =  useState(false)
+  const [cp4dLicense, setCp4dLicense] = useState(false)
+  const [cp4iLicense, setCp4iLicense] = useState(false)
   const [cp4dVersion, setCp4dVersion] = useState("")
   const [cp4iVersion, setCp4iVersion] = useState("")
 
+  //deploy
+  const [deployerStatus, setDeployerStatus] = useState('')
+  const [deployerStage, setDeployerStage] = useState(0)
+  const [deployerLastStep, setDeployerLastStep] = useState('')
 
-  //Summary
-  const [deployLog, setDeployLog] = useState('')
+  const [scheduledJob, setScheduledJob] = useState(0)
 
-  const logsRef = useRef(null);
 
   const clickPrevious = ()=> {
-    //setWizardError(false)
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
   }
@@ -123,20 +125,21 @@ const Wizard = () => {
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "region": IBMCloudSettings.region,
     }
-    //console.log("deploy", body)
     
     setCurrentIndex(-1)
     await axios.post('/api/v1/deploy', body).then(res =>{
-        //console.log(res)  
+        setLoadingDeployStatus(false)    
         setDeployStart(true)  
-        fetchLog()
-        refreshLog()    
+        setDeployErr(false)
+        getDeployStatus()
+        refreshStatus()        
+  
     }, err => {
+        setLoadingDeployStatus(false)    
         console.log(err)
         setDeployStart(true)
         setDeployErr(true)
-    });
-    setLoadingDeployStatus(false)    
+    });    
   }
 
   const errorProps = () => ({
@@ -155,30 +158,36 @@ const Wizard = () => {
     hideCloseButton: false,
   });
 
-  const fetchLog = async() => {
+  const getDeployStatus = async() => {
     if (isDeployErr)
       return 
-    await axios.get('/api/v1/logs').then(res =>{
-        setDeployLog(res.data.logs)            
+
+    await axios.get('/api/v1/deployer-status').then(res =>{
+        setDeployerStatus(res.data.deployer_active)
+        setDeployerStage(res.data.deployer_stage)
+        setDeployerLastStep(res.data.last_step)
     }, err => {
         console.log(err)        
     });
   }
 
-  let scheduledJob;
-  const refreshLog = ()=>{
-    scheduledJob = setInterval(() => {
-      fetchLog()
-      logsRef.current.scrollTo({left:0, top: logsRef.current.scrollHeight, behavior: 'smooth'})
-    }, 2000);
+  const refreshStatus = ()=>{
+    setScheduledJob(setInterval(() => {
+        getDeployStatus()
+      }, 5000))
   }
 
-  useEffect(() => {    
+  useEffect(() => {  
+    if (isDeployStart && !isDeployErr) {   
+      if (deployerStatus && deployerStatus.toLowerCase()==='inactive') {
+        clearInterval(scheduledJob)
+      }
+    }
     return () => {
       clearInterval(scheduledJob)
     }
     // eslint-disable-next-line
-  }, [])
+  },[deployerStatus])
 
   const DeployerProgressIndicator = () => {
     return (
@@ -252,16 +261,31 @@ const Wizard = () => {
                 {...successProps()}        
               />   
 
-              <h4>Logs:</h4>
               <div>
-                <TextArea ref={logsRef}
-                        rows={20}
-                        className="wizard-logs"
-                        hideLabel={true}
-                        placeholder={deployLog}   
-                        labelText=""                    
-                    />
-              </div>
+                <div className="deploy-status">Deployer Status:</div>
+
+                <div className="deploy-key" >
+                  <div>Deployer:</div>
+                  <div className="deploy-value">{deployerStatus}</div> 
+                </div>
+                <div className="deploy-key" >
+                  <div>Current Stage:</div>
+                  <div className="deploy-value">{deployerLastStep}</div> 
+                </div>
+                <div className="deploy-key" >
+                  <div>Log:</div>
+                  <div className="deploy-value"><a href="/api/v1/download-log">Download</a></div> 
+                </div>
+
+                <div className="deploy-item">Deployer Progress:
+                  <ProgressBar
+                    label=""
+                    helperText=""
+                    value={deployerStage}
+                  />
+                </div>
+              </div>        
+
               </>
           :
           //Wizard Process

@@ -260,6 +260,11 @@ const CloudPak = ({CPDCartridgesData,
                     <TextInput placeholder="version" onChange={cp4dVersionOnChange} id="cp4d-version" labelText="" value={cp4dVersion} invalidText="Version can not be empty." invalid={cp4dVersionInvalid}/>
                   </div>
 
+                  <div className="cpd-license">
+                    <div className="item">Licenses:</div>
+                    <Checkbox onClick={()=>(setCp4dLicense((cp4dLicense)=>(!cp4dLicense)))} labelText="Accept Licenses" id="cp4d-license" key="cp4d-license" checked={cp4dLicense} />
+                  </div>
+
                   <div className="cpd-cartridges">
                     <div className="item">Cartridges:</div>
                   </div>
@@ -273,11 +278,7 @@ const CloudPak = ({CPDCartridgesData,
                     }
                     return null        
                   }) } 
-
-                  <div className="cpd-license">
-                    <div className="item">Licenses:</div>
-                  </div>
-                  <Checkbox onClick={()=>(setCp4dLicense((cp4dLicense)=>(!cp4dLicense)))} labelText="Accept Licenses" id="cp4d-license" key="cp4d-license" checked={cp4dLicense} />
+                 
                 </AccordionItem>
               </Accordion> 
             </div>
@@ -289,6 +290,11 @@ const CloudPak = ({CPDCartridgesData,
                   <div className="cpd-version">
                     <div className="item">Version:</div>
                     <TextInput placeholder="version" onChange={cp4iVersionOnChange} id="cp4i-version" value={cp4iVersion} labelText="" invalidText="Version can not be empty." invalid={cp4iVersionInvalid} />
+                  </div>
+
+                  <div className="cpd-license">
+                    <div className="item">Licenses:</div>
+                    <Checkbox onClick={()=>(setCp4iLicense((cp4iLicense)=>(!cp4iLicense)))}  labelText="Accept Licenses" id="cp4i-license" key="cp4i-license" checked={cp4iLicense}/>
                   </div>
 
                   <div className="cpd-cartridges">
@@ -305,10 +311,7 @@ const CloudPak = ({CPDCartridgesData,
                     }
                     return null        
                   }) } 
-                  <div className="cpd-license">
-                    <div className="item">Licenses:</div>
-                  </div>
-                  <Checkbox onClick={()=>(setCp4iLicense((cp4iLicense)=>(!cp4iLicense)))}  labelText="Accept Licenses" id="cp4i-license" key="cp4i-license" checked={cp4iLicense}/>
+                  
                 </AccordionItem>
               </Accordion> 
             </div>

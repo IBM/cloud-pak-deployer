@@ -89,7 +89,7 @@ const Infrastructure = ({cloudPlatform,
         default:
 
       }   // eslint-disable-next-line
-    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked])
+    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked, envId])
 
     const IBMCloudSettingsOnChange = (e) => {
       switch (e.target.id) {
