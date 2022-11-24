@@ -72,7 +72,7 @@ def deploy():
     app.logger.info('oc login command: {}'.format(body['oc_login_command']))
 
     # Assemble the deploy command
-    deploy_command=['/root/feiye/ui/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
     deploy_command+=['env','apply']
     deploy_command+=['-e=env_id={}'.format(body['envId'])]
     deploy_command+=['-vs={}-oc-login={}'.format(openshift_name, body['oc_login_command'])]
@@ -118,7 +118,7 @@ def get_deployer_status():
 
     app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.out'))
     try:
-        with open(status_dir + '/log/cloud-pak-deployer.log', "r", encoding='UTF-8') as f:
+        with open(status_dir + '/log/deployer-state.out', "r", encoding='UTF-8') as f:
             content = f.read()
             f.close()
             app.logger.info(content)
