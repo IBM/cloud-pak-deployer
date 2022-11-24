@@ -69,6 +69,7 @@ env|environment)
   run_cmd+=" --extra-vars config_dir=${CONFIG_DIR}"
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
+  run_cmd+=" --extra-vars secret_group_param=${VAULT_GROUP}"
   run_cmd+=" --extra-vars cp_entitlement_key=${CP_ENTITLEMENT_KEY}"
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
@@ -143,9 +144,6 @@ vault)
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
   run_cmd+=" --extra-vars secret_group_param=${VAULT_GROUP}"
-  run_cmd+=" --extra-vars secret_name=${VAULT_SECRET}"
-  run_cmd+=" --extra-vars \"secret_payload=\\\"${VAULT_SECRET_VALUE}\\\"\""
-  run_cmd+=" --extra-vars secret_file=${VAULT_SECRET_FILE}"
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
   fi
@@ -166,6 +164,7 @@ vault)
     done
   fi
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
+  # echo $run_cmd
   eval $run_cmd
   ;;
 

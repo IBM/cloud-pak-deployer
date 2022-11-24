@@ -2,50 +2,16 @@
 - name: Validate mandatory variables are defined for Get Secret
   assert:
     that:
-      - secret_name is defined
+      - _p_vault_secrets is defined or secret_name is defined
       - secret_group is defined
 
-- name: Get Secret from Vault Hashicorp
-  block:
-    
-    - include_tasks: get-secret-hashicorp.yml  
+- name: Get secrets
+  include_tasks: get-secrets.yml
+  vars:
+    secret_name: "{{ item.key }}"
+    _p_secret_value: "{{ item.value }}"
+  with_dict: "{{ _p_vault_secrets }}"
+  when: _p_vault_secrets is defined
 
-  when: "vault_type == 'hashicorp-vault'"
-  rescue:
-    #Re-connect to vault
-    - include_role:
-        name: vault-connect
-    
-    #Re-attempt the get-secret
-    - include_tasks: main.yml  
- 
-- name: Get Secret from IBM Cloud vault
-  block:
-    - include_tasks: get-secret-ibmcloud.yml
-      vars:
-        ibmcloud_vault_address: "{{ vault_url }}"
-        ibm_cloud_secret_name: "{{ secret_name }}"
-
-  when: "vault_type == 'ibmcloud-vault'"
-  rescue:
-    #Re-connect to vault
-    - include_role:
-        name: vault-connect
-    
-    #Re-attempt the get-secret
-    - include_tasks: main.yml  
-
-- name: Get Secret from Vault file
-  block:
-    - include_tasks: get-secret-file.yml
-  when: "vault_type == 'file-vault'"
-
-- name: Set secret variable if specified
-  set_fact:
-    "{{ _p_secret_variable }}": "{{ secret_value }}"
-  when: _p_secret_variable is defined
-
-- include_tasks: show-secret.yml
-  when: 
-  - secret_file | default("") == ''
-  - show_secret | default(False) | bool
+- include_tasks: get-secret.yml
+  when: _p_vault_secrets is not defined

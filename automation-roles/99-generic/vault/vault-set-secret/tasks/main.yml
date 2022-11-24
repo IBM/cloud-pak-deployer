@@ -1,68 +1,18 @@
 - name: Validate mandatory variables are defined
   assert:
     that:
-      - secret_name is defined
+      - _p_vault_secrets is defined or secret_name is defined
       - secret_group is defined
 
-- name: Validate secret payload is defined if no file specified
-  assert:
-    that:
-      - secret_payload is defined
-  when: secret_file is not defined
+- debug:
+    var: _p_vault_secrets
 
-- name: Get secret from secret file if it was specified
-  set_fact:
-    secret_value_to_set: "{{ lookup('file', secret_file, rstrip=false) | b64encode }}"
-  when: 
-  - secret_file is defined
-  - secret_file != ''
-
-- name: Set secret value from payload if no file specified
-  set_fact:
-    secret_value_to_set: "{{ secret_payload | b64encode}}"
-  when: (secret_file is not defined) or (secret_file == '')
-
-- name: Set Secret Vault Hashicorp
-  block:
-
-    - include_tasks: create-secret-hashicorp.yml
-
-  when: vault_type == 'hashicorp-vault'
-  rescue:
-    #Re-connect to vault
-    - include_role:
-        name: vault-connect
-    
-    #Re-attempt the set-secret
-    - include_tasks: main.yml
-
-- name: Set secret Vault IBM Cloud
-  block:
-
-    - include_tasks: create-secret-ibmcloud.yml
-      vars:
-        ibmcloud_vault_address: "{{ vault_url }}"
-        ibm_cloud_secret_name: "{{ secret_name }}"
-        ibm_vault_secret_payload: "{{ secret_value_to_set }}"
-  when: "vault_type == 'ibmcloud-vault'"
-  rescue:
-    #Re-connect to vault
-    - include_role:
-        name: vault-connect
-    
-    #Re-attempt the set-secret
-    - include_tasks: main.yml  
-
-- name: Set secret in Vault file
-  block:
-    - include_tasks: create-secret-file.yml
-      vars:
-        file_secret_payload: "{{ secret_value_to_set }}"
-  when: "vault_type == 'file-vault'"
-
-- name: Secret {{ secret_group }}/{{ secret_name }} was set
-  debug:
-    msg: ""
+- include_tasks: create-secrets.yml
   vars:
-    ansible_callback_diy_runner_on_ok_msg: |+2
-      Secret {{ secret_group }}/{{ secret_name }} was set
+    secret_name: "{{ item.key }}"
+    secret_value: "{{ item.value }}"
+  with_dict: "{{ _p_vault_secrets }}"
+  when: _p_vault_secrets is defined
+
+- include_tasks: create-secret.yml
+  when: _p_vault_secrets is not defined

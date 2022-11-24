@@ -2,92 +2,95 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
-## Getting started
+## Prerequisites
+
+- Git is installed
+- Node.js 16/18/19 is installed. If Node.js is not installed, please refer to section [Install Node.js](#install-nodejs) to install node.js.
+
+## Install Node.js
+
+1. To **install** or **update** nvm, please run the following cURL or Wget command:
+```sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+```
+```sh
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash
+```
+
+Running either of the above commands downloads a script and runs it. The script clones the nvm repository to `~/.nvm`, and attempts to add the source lines from the snippet below to the correct profile file (`~/.bash_profile`, `~/.zshrc`, `~/.profile`, or `~/.bashrc`).
+
+<a id="profile_snippet"></a>
+```sh
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+```
+
+2. Use the nvm command to install node.js. 
+```sh
+nvm install <node.js version>
+```
+For example:
+```sh
+nvm install 16.15.1
+```
+
+## Getting started, run the application in development mode
 
 1. Open your terminal and then type
-    ```
-    $ git clone https://github.com/IBM/cloud-pak-deployer.git
+    ```sh
+    git clone https://github.com/IBM/cloud-pak-deployer.git
     ```
     This clones the repo cloud-pak-deployer. 
 
 2. cd into the ui folder and type
-    ```
-    $ cd cloud-pak-deployer/deployer-web/ui/
+    ```sh
+    cd cloud-pak-deployer/deployer-web/ui/
     ```
 
 3. Install the required dependencies
-    ```
-    $ npm install
-    ```
-
-4. To run the React project.
-    ```
-    $ npm start
+    ```sh
+    npm install
     ```
 
-## Available Scripts
+4. To run the React project in development mode
+    ```sh
+    npm start
+    ```
+This runs the app in the development mode. Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+The page will reload when you make changes. You may also see any lint errors in the console.
 
-In the project directory, you can run:
+Alternatively, run the React project in interactive watch mode
+```sh
+npm test
+```
 
-### `npm start`
+Launches the test runner in the interactive watch mode. See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Build the application for production
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+1. Open your terminal and then type
+    ```sh
+    git clone https://github.com/IBM/cloud-pak-deployer.git
+    ```
+    This clones the repo cloud-pak-deployer. 
 
-### `npm test`
+2. cd into the ui folder and type
+    ```sh
+    cd cloud-pak-deployer/deployer-web/ui/
+    ```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+3. Install the required dependencies
+    ```sh
+    rm -rf node_modules
+    npm install
+    ```
 
-### `npm run build`
+4. Build the production application
+    ```sh
+    npm run build
+    ```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+5. Copy the build to the served folder
+    ```sh
+    cp -r build/* ../ww/
+    ```
