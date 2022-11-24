@@ -9,6 +9,13 @@
     query: >-
       [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
 
+- set_fact:
+    _cpd_accept_licenses: "False"
+
+- set_fact:
+    _cpd_accept_licenses: "True"
+  when: (cpd_accept_licenses | default(False) | bool) or (_current_openshift_cluster.accept_licenses | default(False) | bool)
+
 - name: Login to IBM Cloud
   include_role:
     name: login-ibmcloud
