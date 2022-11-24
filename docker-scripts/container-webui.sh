@@ -25,6 +25,19 @@ if [ "${STATUS_DIR}" == "" ];then
     mkdir -p $STATUS_DIR
 fi
 
+echo "Check if OpenShift client is already in ${STATUS_DIR}/downloads folder..."
+oc_tar=`ls -1 ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-* 2>/dev/null | tail -1`
+if [ "$oc_tar" == "" ];then
+    echo "Downloading OpenShift client..."
+    mkdir -p ${STATUS_DIR}/downloads
+    curl -s -L -o ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-4.10 https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.10/openshift-client-linux.tar.gz
+    oc_tar=${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-4.10
+fi
+
+echo "Unpacking OpenShift client from ${oc_tar}..."
+tar xzf ${oc_tar} -C /usr/local/bin/
+
+echo "Starting Deployer web UI..."
 python3 webapp.py
 
 exit 0

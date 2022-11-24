@@ -60,12 +60,13 @@ command_usage() {
   echo "Options for environment subcommand:"
   echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
   echo
-  echo "Options for vault subcommand:"
+  echo "Options for vault and env subcommands:"
   echo "  --vault-group,-vg <name>          Group of secret (\$VAULT_GROUP)"
   echo "  --vault-secret,-vs <name>         Secret name to get, set or delete (\$VAULT_SECRET)"
   echo "  --vault-secret-value,-vsv <value> Secret value to set (\$VAULT_SECRET_VALUE)"
   echo "  --vault-secret-file,-vsf <value>  File with secret value to set or get (\$VAULT_SECRET_FILE)"
-  echo
+  echo "  -vs=secret_name=secret_value      Set vault secret secret_name to secret_value"
+  echo "  -vs=secret_name=@secret_file      Set vault secret secret_name to contents of secret_file"
   exit $1
 }
 
@@ -104,6 +105,8 @@ fi
 
 arrExtraKey=()
 arrExtraValue=()
+arrVaultSecret=()
+arrVaultSecretValue=()
 
 # --------------------------------------------------------------------------------------------------------- #
 # Check subcommand and action                                                                               #
@@ -278,82 +281,87 @@ while (( "$#" )); do
     arrExtraValue+=("${extra_value}")
     ;;
   --vault-secret-file*|-vsf*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];then
-      echo "Error: --vault-secret-file is not valid for $SUBCOMMAND subcommand."
-      command_usage 2
-    fi
     if [ ! -z "${VAULT_SECRET_VALUE}" ];then
       echo "Error: either specify --vault-secret-file or --vault-secret-value, not both."
       command_usage 2
     fi
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export VAULT_SECRET_FILE="${1#*=}"
+      VAULT_SECRET_FILE="${1#*=}"
       shift 1
     else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export VAULT_SECRET_FILE=$2
+      VAULT_SECRET_FILE=("$2")
       shift 2
     else
       echo "Error: Missing argument for --vault-secret-file parameter."
       command_usage 2
     fi
     fi
-    if [ ! -z ${VAULT_SECRET_FILE} ] && [[ "${ACTION}" == "set" ]] && [ ! -f ${VAULT_SECRET_FILE} ];then
-      echo "Error: Vault secret file ${VAULT_SECRET_FILE} must exist for vault set action."
+    if [ ${#arrVaultSecretValue[@]} -ne 0 ];then
+      echo "Error: --vault-secret-file parameter can only be specified once and also when vault secrets are not specified as --vault-secret=secret=@file."
+      command_usage 2
+    fi
+    if [ ! -z ${VAULT_SECRET_FILE} ] && [[ "${ACTION}" != "get" ]] && [ ! -f ${VAULT_SECRET_FILE} ];then
+      echo "Error: Vault secret file ${VAULT_SECRET_FILE} must exist when the vault secret is set for ${SUBCOMMAND}."
       command_usage 2
     fi
     if [ ! -z ${VAULT_SECRET_FILE} ] && [[ "${ACTION}" == "get" ]] && [ ! -f ${VAULT_SECRET_FILE} ];then
       touch ${VAULT_SECRET_FILE}
-    fi        
+    fi
+    arrVaultSecretValue=("@${VAULT_SECRET_FILE}")        
     ;;
   --vault-secret-value*|-vsv*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];then
-      echo "Error: --vault-secret-value is not valid for $SUBCOMMAND subcommand."
-      command_usage 2
-    fi
-    if [[ "${ACTION}" != "set" ]];then
-      echo "Error: --vault-secret-value is not valid for action $ACTION."
-      command_usage 2
-    fi
     if [ ! -z "${VAULT_SECRET_FILE}" ];then
       echo "Error: either specify --vault-secret-file or --vault-secret-value, not both."
       command_usage 2
     fi
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export VAULT_SECRET_VALUE="${1#*=}"
+      VAULT_SECRET_VALUE="${1#*=}"
       shift 1
     else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export VAULT_SECRET_VALUE=$2
+      VAULT_SECRET_VALUE=$2
       shift 2
     else
       echo "Error: Missing argument for --vault-secret-value parameter."
       command_usage 2
     fi
     fi
+    if [ ${#arrVaultSecretValue[@]} -ne 0 ];then
+      echo "Error: --vault-secret-value parameter can only be specified once and also when vault secrets are not specified as --vault-secret=secret=value."
+      command_usage 2
+    fi
+    arrVaultSecretValue=("${VAULT_SECRET_VALUE}")
     ;;
   # The --vault-secret must be parsed after --vault-secret-value, otherwise the secret value is already
   # picked up when the first part of the option has a match
   --vault-secret*|-vs*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];then
-      echo "Error: --vault-secret is not valid for $SUBCOMMAND subcommand."
-      command_usage 2
-    fi
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-      export VAULT_SECRET="${1#*=}"
+      VAULT_SECRET="${1#*=}"
       shift 1
     else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-      export VAULT_SECRET=$2
+      VAULT_SECRET=$2
       shift 2
     else
       echo "Error: Missing argument for --vault-secret parameter."
       command_usage 2
     fi
     fi
+    
+    # If the vault secret has been specified as -vs=secret=value, extract the secret name and its value
+    if [[ "$VAULT_SECRET" =~ "=" ]] && [ ! -z "${VAULT_SECRET#*=}" ];then
+      arrVaultSecret+=("$(echo ${VAULT_SECRET} | cut -s -d= -f1)")
+      VAULT_SECRET_VALUE=$(echo ${VAULT_SECRET} | cut -s -d= -f2-)
+      arrVaultSecretValue+=("${VAULT_SECRET_VALUE}")
+      if [[ ${VAULT_SECRET_VALUE} = @* ]];then
+        VAULT_SECRET_FILE=${VAULT_SECRET_VALUE:1}
+        if [[ "${ACTION}" == "get" ]] && [ ! -f ${VAULT_SECRET_FILE} ];then
+          touch ${VAULT_SECRET_FILE}
+        fi
+      fi
+    else
+      arrVaultSecret+=("${VAULT_SECRET}")
+    fi
     ;;
   --vault-group*|-vg*)
-    if [[ "${SUBCOMMAND}" != "vault" ]];then
-      echo "Error: --vault-group is not valid for $SUBCOMMAND subcommand."
-      command_usage 2
-    fi
     if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
       export VAULT_GROUP="${1#*=}"
       shift 1
@@ -522,6 +530,11 @@ while (( "$#" )); do
   esac
 done
 
+# In case we need to debug the vault secrets
+# for (( i=0; i<${#arrVaultSecret[@]}; i++ ));do
+#       echo "Vault secrets ($i): ${arrVaultSecret[$i]}=${arrVaultSecretValue[$i]}"
+# done
+
 # --------------------------------------------------------------------------------------------------------- #
 # Check container engine and build if wanted                                                                #
 # --------------------------------------------------------------------------------------------------------- #
@@ -568,26 +581,20 @@ fi
 
 # Validate combination of parameters for subcommand vault
 if [[ "${SUBCOMMAND}" == "vault" ]];then
-  if [[ "${ACTION}" == "set" && "${VAULT_SECRET_VALUE}" == "" && "${VAULT_SECRET_FILE}" == "" ]] ;then
-    echo "--vault-secret-value or --vault-secret-file must be specified for subcommand vault and action set."
+  if [[ "${ACTION}" == "set" ]] && [ ${#arrVaultSecretValue[@]} -eq 0 ];then
+    echo "--vault-secret=secret-value or --vault-secret-value or --vault-secret-file must be specified for subcommand vault and action set."
     exit 1
   fi
-  if [[ "${ACTION}" != "list" && "${VAULT_SECRET}" == "" ]];then
+  if [[ "${ACTION}" != "list" ]] && [ ${#arrVaultSecret[@]} -eq 0 ];then
     echo "--vault-secret must be specified for subcommand vault and action ${ACTION}."
     exit 1
   fi
-  if [[ "${ACTION}" == "list" && \
-        ( "${VAULT_SECRET_VALUE}" != "" || "${VAULT_SECRET_FILE}" != "" ) ]] ;then
+  if [[ "${ACTION}" == "list" ]] &&  [ ${#arrVaultSecret[@]} -ne 0 ];then
     echo "--vault-secret-value and --vault-secret-file not allowed for subcommand vault and action list."
     exit 1
   fi
-
-  if [[ "${ACTION}" != "set" && "${VAULT_SECRET_VALUE}" != "" ]];then
-    echo "--vault-secret-value must not be specified for subcommand vault and action ${ACTION}."
-    exit 1
-  fi
-  if [[ "${VAULT_SECRET_VALUE}" != "" && "${VAULT_SECRET_FILE}" != "" ]];then
-    echo "Specify either --vault-secret-value or --vault-secret-file, not both."
+  if [[ "${ACTION}" == "delete" ]] && [ ${#arrVaultSecretValue[@]} -ne 0 ];then
+    echo "--vault-secret=secret-value or --vault-secret-value must not be specified for subcommand vault and action ${ACTION}."
     exit 1
   fi
 fi
@@ -611,19 +618,19 @@ if [[ "${ACTION}" != "kill" ]]; then
     echo "config directory not found in directory ${CONFIG_DIR}."
     exit 1
   fi
-  yaml_count=`ls -1 ${CONFIG_DIR}/config/*.yaml 2>/dev/null | wc -l`
-  if [ $yaml_count == 0 ];then
-    echo "Directory ${CONFIG_DIR}/config does not hold any yaml files. Please add configuration to this directory."
-    exit 1
+  if [[ "${ACTION}" != "wizard" ]];then
+    yaml_count=`ls -1 ${CONFIG_DIR}/config/*.yaml 2>/dev/null | wc -l`
+    if [ $yaml_count == 0 ];then
+      echo "Directory ${CONFIG_DIR}/config does not hold any yaml files. Please add configuration to this directory."
+      exit 1
+    fi
   fi
 fi
 
 # Validate if the status has been set
-if [[ "${ACTION}" != "wizard" ]]; then
-  if [ "${STATUS_DIR}" == "" ]; then
-    echo "Status directory not specified, assuming $HOME/cpd-status"
-    export STATUS=$HOME/cpd-status
-  fi
+if [ "${STATUS_DIR}" == "" ]; then
+  echo "Status directory not specified, assuming $HOME/cpd-status"
+  export STATUS_DIR=$HOME/cpd-status
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -639,6 +646,21 @@ if [[ ! -z $VAULT_CERT_KEY_FILE && ! -f $VAULT_CERT_KEY_FILE ]];then
 fi
 if [[ ! -z $VAULT_CERT_CERT_FILE && ! -f $VAULT_CERT_CERT_FILE ]];then
     echo "Vault certificate file ${VAULT_CERT_CERT_FILE} not found."
+fi
+
+# --------------------------------------------------------------------------------------------------------- #
+# Build the VAULT_SECRETS environment variable                                                              #
+# --------------------------------------------------------------------------------------------------------- #
+VAULT_SECRETS=""
+if [ ${#arrVaultSecret[@]} -ne 0 ];then
+  VAULT_SECRETS="["
+  for (( i=0; i<${#arrVaultSecret[@]}; i++ ));do
+    if [ $i -gt 0 ];then
+      VAULT_SECRETS+=','
+    fi
+    VAULT_SECRETS+='{"'${arrVaultSecret[$i]}'":"'${arrVaultSecretValue[$i]}'"}'
+  done
+  VAULT_SECRETS+="]"
 fi
 
 # Set remaining parameters
@@ -776,14 +798,16 @@ if ! $INSIDE_CONTAINER;then
     run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
   fi
 
-  if [ ! -z $VAULT_SECRET ];then
-    run_cmd+=" -e VAULT_SECRET=${VAULT_SECRET} \
-              -e VAULT_SECRET_VALUE=\"${VAULT_SECRET_VALUE}\" \
-              -e VAULT_SECRET_FILE=${VAULT_SECRET_FILE}"
-    if [ ! -z $VAULT_SECRET_FILE ];then
-      run_cmd+=" -v ${VAULT_SECRET_FILE}:${VAULT_SECRET_FILE}:z"
-    fi
+  if [[ "${VAULT_SECRETS}" != ""  ]];then
+    run_cmd+=" -e VAULT_SECRETS='${VAULT_SECRETS}'"
   fi
+
+  # Map the file secrets to the container
+  for (( i=0; i<${#arrVaultSecretValue[@]}; i++ ));do
+    if [[ ${arrVaultSecretValue[$i]} = @* ]];then
+      run_cmd+=" -v ${arrVaultSecretValue[$i]:1}:${arrVaultSecretValue[$i]:1}:z"
+    fi
+  done
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" -e VAULT_PASSWORD=${VAULT_PASSWORD}"
@@ -836,6 +860,8 @@ if ! $INSIDE_CONTAINER;then
   fi
   run_cmd+=" cloud-pak-deployer:${CPD_IMAGE_TAG}"
 
+  # echo $run_cmd
+
   # If running "environment" subcommand with apply/destroy, follow log
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
     CURRENT_CONTAINER_ID=$(eval $run_cmd)
@@ -861,7 +887,14 @@ else
       export ${arrExtraKey[$i]}="${arrExtraValue[$i]}"
     done
     export EXTRA_PARMS="${arrExtraKey[*]}"
-    echo $EXTRA_PARMS
+    # echo $EXTRA_PARMS
   fi
-  . /cloud-pak-deployer/docker-scripts/run_automation.sh
+
+  if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "wizard" ]];then
+    . /cloud-pak-deployer/docker-scripts/container-webui.sh
+  else
+    export VAULT_SECRETS
+    . /cloud-pak-deployer/docker-scripts/run_automation.sh
+  fi
+
 fi

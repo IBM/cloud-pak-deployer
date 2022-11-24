@@ -1,33 +1,119 @@
 import axios from "axios";
-import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet } from "carbon-components-react";
+import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet, Button, TextArea } from "carbon-components-react";
 import { useEffect, useState } from "react";
 import './Summary.scss'
+import yaml from 'js-yaml';
 
-const Summary = ({envId, cloudPlatform, storage, region, CPDData}) => {
+const Summary = ({cloudPlatform, 
+                  IBMCloudSettings, 
+                  AWSSettings, 
+                  OCPSettings, 
+                  storage, 
+                  CPDCartridgesData, 
+                  CPICartridgesData, 
+                  locked,
+                  envId,
+                  cp4dLicense,
+                  cp4iLicense,
+                  cp4dVersion,
+                  cp4iVersion,
+                  CP4DPlatformCheckBox,
+                  CP4IPlatformCheckBox,
+                }) => {
 
-    const [summaryLoading, setSummaryLoading] = useState(true)
+    const [summaryLoading, setSummaryLoading] = useState(false)
+  
     const [showErr, setShowErr] = useState(false)
-    const [summaryInfo, setSummaryInfo] = useState({})      
+    const [summaryInfo, setSummaryInfo] = useState("")  
+    const [tempSummaryInfo, setTempSummaryInfo] = useState("") 
+    const [configInvalid, setConfigInvalid] = useState(false)  
+    
+    const [editable, setEditable] = useState(false)
 
-    useEffect(() => {
-        const fetchSummaryData = async () => {            
-            let body = {
-                "envId": envId,
-                "cloud": cloudPlatform,
-                "cartridges": CPDData,
-                "region": region,
-                "storages": storage,
-            }
-            //console.log("summary", body)
-            await axios.post('/api/v1/loadConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{       
-                setSummaryInfo(res.data)
-                setSummaryLoading(false)
-            }, err => {
-                setShowErr(true)
-                console.log(err)
-            });        
+    const createSummaryData = async () => {    
+
+        let region=""    
+        switch (cloudPlatform) {
+            case "ibm-cloud":               
+                region=IBMCloudSettings.region
+                break
+            case "aws":                
+                region=AWSSettings.region
+                break
+            default:
+        }  
+        let body = {
+            "envId": envId,
+            "cloud": cloudPlatform,
+            "region": region,
+            "storages": storage,
+            "cp4d": CPDCartridgesData,
+            "cp4i": CPICartridgesData,
+            "cp4dLicense":cp4dLicense,
+            "cp4iLicense":cp4iLicense,
+            "cp4dVersion":cp4dVersion,
+            "cp4iVersion":cp4iVersion,
+            "CP4DPlatform":CP4DPlatformCheckBox,
+            "CP4IPlatform":CP4IPlatformCheckBox,      
+        }     
+
+        await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
+            setSummaryLoading(false)          
+            setSummaryInfo(res.data.config)
+            setTempSummaryInfo(res.data.config)
+        }, err => {
+            setSummaryLoading(false)  
+            setShowErr(true)
+            console.log(err)
+        }); 
+           
+    } 
+    
+    const updateSummaryData = async () => {  
+        let body = {
+            "cp4d": CPDCartridgesData,
+            "cp4i": CPICartridgesData,
+            "cp4dLicense":cp4dLicense,
+            "cp4iLicense":cp4iLicense,
+            "cp4dVersion":cp4dVersion,
+            "cp4iVersion":cp4iVersion,
+            "CP4DPlatform":CP4DPlatformCheckBox,
+            "CP4IPlatform":CP4IPlatformCheckBox,   
+        }  
+        await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            setSummaryLoading(false)        
+            setSummaryInfo(res.data.config)
+            setTempSummaryInfo(res.data.config)
+        }, err => {
+            setSummaryLoading(false) 
+            setShowErr(true)
+            console.log(err)
+        });          
+    }
+
+    const saveSummaryData = async (body) => {         
+        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            setEditable(false)
+            setSummaryLoading(false)        
+            setSummaryInfo(res.data.config)
+            setTempSummaryInfo(res.data.config)
+        }, err => {
+            setSummaryLoading(false) 
+            setShowErr(true)
+            console.log(err)
+        });          
+    }     
+
+    useEffect(() => {        
+        if (locked) {
+            setSummaryLoading(true) 
+            updateSummaryData()
+        } 
+        else {
+            setSummaryLoading(true)  
+            createSummaryData()
         }        
-        fetchSummaryData()
+        // eslint-disable-next-line
     }, []);
 
     const errorProps = () => ({
@@ -36,62 +122,80 @@ const Summary = ({envId, cloudPlatform, storage, region, CPDData}) => {
         role: 'error',
         title: 'Unable to load deployment configuration from server.',
         hideCloseButton: false,
-    });    
+    });  
+    
+    const clickEditBtn = () => {
+        setEditable(true)
+    }
+
+    const clickSaveBtn = async() => { 
+        let body = {}
+        let result = {}
+            
+        try {                   
+            yaml.loadAll(tempSummaryInfo, function (doc) {
+                result = {...doc, ...result}
+            }); 
+            body['config'] = result
+            setSummaryLoading(true)      
+            await saveSummaryData(body)
+
+        } catch (error) {
+            setConfigInvalid(true)
+            console.error(error)
+            return
+        }        
+    }
+
+    const clickCancelBtn = () => {
+        setTempSummaryInfo(summaryInfo)
+        setConfigInvalid(false)
+        setEditable(false)
+    }
+
+    const textAreaOnChange = (e) => {
+        setTempSummaryInfo(e.target.value)
+    }
 
     return (      
         <>     
-        <div className="summary-title">Summary</div> 
+            <div className="summary-title">Summary</div> 
             {showErr &&           
                 <InlineNotification className="summary-error"
                     {...errorProps()}        
                 />           
             }
-            {/* <Accordion>
-                <AccordionItem title="Openshift Configuration">
-                {
-                    summaryLoading ? <InlineLoading />:
-                    <TextArea
-                        rows={30}
-                        className="summary-config-item"
-                        hideLabel={true}
-                        placeholder={summaryInfo.envId}   
-                        labelText=""   
-                        disabled                 
-                    />
-                }
-                </AccordionItem>
-                <AccordionItem title="IBM Cloud Pak Configuration">
-                {
-                    summaryLoading ? <InlineLoading />:
-                    <TextArea
-                        rows={30}
-                        className="summary-config-item"
-                        hideLabel={true}
-                        placeholder={summaryInfo.envId}   
-                        labelText=""   
-                        disabled                 
-                    />
-                }            
-                </AccordionItem>              
-            </Accordion>  */}
-            <Tabs type="container">
-                <Tab id="openshift" label="Openshift Configuration">
-                {
-                    summaryLoading ? <InlineLoading />:
-                    <CodeSnippet type="multi" feedback="Copied to clipboard">
-                    {summaryInfo.envId}  
-                    </CodeSnippet>
-                }    
-                </Tab>
-                <Tab id="cp4d" label="IBM Cloud Pak Configuration">
-                {
-                    summaryLoading ? <InlineLoading />:
-                    <CodeSnippet type="multi" feedback="Copied to clipboard">
-                        {summaryInfo.cp4d}  
-                    </CodeSnippet>
-                 }                 
-                </Tab>     
-          </Tabs>           
+            {editable ? 
+                <div className="flex-right">
+                    <div >
+                        <Button onClick={clickCancelBtn} className="wizard-container__page-header-button">Cancel</Button> 
+                    </div>
+                    <div>
+                        <Button onClick={clickSaveBtn} className="wizard-container__page-header-button">Save</Button> 
+                    </div>
+                </div>
+                :
+                <div className="align-right">
+                    <Button onClick={clickEditBtn} className="wizard-container__page-header-button" disabled={showErr} >Edit</Button> 
+                </div>            
+            }          
+
+            <div className="configuration">
+                <Tabs type="container">
+                    <Tab id="configuration" label="Configuration">
+                        {
+                            summaryLoading ? <InlineLoading />: 
+                                editable ? 
+                                <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Please do not remove three dashes (---), which is used to separate different documents.">
+                                </TextArea>
+                                :
+                                <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={40}>
+                                    {summaryInfo}                                   
+                                </CodeSnippet>                                                    
+                        }    
+                    </Tab>
+                </Tabs>
+            </div>      
         </>        
     )
 }
