@@ -38,14 +38,22 @@
 - name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
   shell: |
     {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
+  failed_when: False
+  register: _apply_olm_result
 
 # - name: Run shell script to create cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
 #   shell: |
 #     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
 #   when: not _sequential_install
 
-- name: Wait for OpenShift operator subscriptions for each of the selected cp4d cartridges
-  include_tasks: cp4d-subscriptions-wait.yml
-  loop: "{{ _cartridges_to_install | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
+- name: Show subscriptions state if apply-olm failed
+  block:
+  - name: Retrieving state of all operators in project {{ foundational_services_project }}
+    shell: |
+      oc get sub -n {{ foundational_services_project }} \
+        --no-headers \
+        -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
+    register: _subscription_state
+  - fail:
+      msg: "{{ _subscription_state.stdout_lines }}"
+  when: _apply_olm_result.rc != 0
