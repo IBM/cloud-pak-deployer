@@ -1,0 +1,16 @@
+---
+- name: Waiting until catalog sources in project openshift-marketplace are ready
+  shell: |
+    oc get catsrc -n openshift-marketplace \
+      --no-headers \
+      -o custom-columns='name:metadata.name,status:status.connectionState.lastObservedState' | \
+      grep -v READY | wc -l
+  register: _catsrc_state
+  retries: 60
+  delay: 10
+  until: _catsrc_state.stdout == "0"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
