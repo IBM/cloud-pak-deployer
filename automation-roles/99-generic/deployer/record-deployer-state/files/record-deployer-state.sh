@@ -39,10 +39,10 @@ while true;do
   rm -f ${temp_file}
 
   current_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
-  log_state "current-stage" "${current_stage}"
+  log_state "current-stage" "\"${current_stage}\""
 
   current_task=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
-  log_state "current-task" "${current_task}"
+  log_state "current-task" "\"${current_task}\""
 
   log_state "deployer-status" "ACTIVE"
 
