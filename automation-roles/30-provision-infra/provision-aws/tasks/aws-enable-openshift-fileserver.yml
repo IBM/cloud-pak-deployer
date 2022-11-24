@@ -36,16 +36,57 @@
 - set_fact:
     _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
 
-- name: Get VPC details for OpenShift cluster {{ _current_openshift_cluster }}
+- name: Get subnets for compute nodes in OpenShift cluster {{ _current_openshift_cluster }}
+  shell: |
+    aws ec2 describe-instances --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}-*-worker-*" \
+      --query 'Reservations[*].Instances[*].SubnetId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_instance_subnets
+
+- set_fact:
+    _aws_subnets: "{{ _aws_instance_subnets.stdout | from_json | flatten | unique | default([]) }}"
+
+- name: Show subnets found for the compute nodes of OpenShift cluster {{ _current_openshift_cluster }}
+  debug:
+    var: _aws_subnets
+
+- name: Fail if no subnets were found for the compute nodes
+  fail:
+    msg: "No subnets were found for compute nodes with name {{ _current_openshift_cluster.name }}-*-worker-*"
+  when: _aws_subnets == []
+
+- name: Get VPC for subnet {{ _aws_subnets | first }}
+  shell: |
+    aws ec2 describe-subnets \
+      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --filters "Name=subnet-id,Values={{ _aws_subnets | first }}" \
+      --query 'Subnets[*].VpcId'
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+  register: _aws_subnet_vpc
+
+- name: Show the details of the first subnet in the list
+  debug:
+    var: _aws_subnet_vpc
+
+- name: Get VPC details for VPC ID {{ _aws_subnet_vpc.stdout | from_json | first }}
   shell: |
     aws ec2 describe-vpcs \
       --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}-*-vpc" \
+      --filters "Name=vpc-id,Values={{ _aws_subnet_vpc.stdout | from_json | first }}" \
       --query 'Vpcs[]'
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
   register: _aws_openshift_vpc
+
+- name: Show the found VPC for subnet {{ _aws_subnet_vpc.stdout | from_json | first }}
+  debug:
+    var: _aws_openshift_vpc
 
 - set_fact:
     _aws_openshift_vpc_cidr: "{{ (_aws_openshift_vpc.stdout | from_json | first).CidrBlock }}"
@@ -74,24 +115,8 @@
     register: _aws_create_fs
   when: (_aws_sg_nfs_rule.stdout | from_json) == []
 
-- name: Get subnets for OpenShift cluster {{ _current_openshift_cluster.name }}
-  shell: |
-    aws ec2 describe-subnets \
-      --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}*-private*" \
-      --query 'Subnets[*].SubnetId'
-  environment:
-    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-  register: _aws_subnets
-
-- name: Fail if no private subnets were found
-  fail:
-    msg: "No private subnets for OpenShift cluster {{ _current_openshift_cluster.name }} found"
-  when: (_aws_subnets.stdout | from_json) == []
-
-- name: Configure mount points for file system
+- name: Configure mount points for file system {{ _aws_fs_id }}
   include_tasks: aws-file-server-mount-point.yaml
-  loop: "{{ _aws_subnets.stdout | from_json }}"
+  loop: "{{ _aws_subnets }}"
   loop_control:
     loop_var: _aws_subnet

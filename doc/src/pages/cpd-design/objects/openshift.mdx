@@ -213,6 +213,7 @@ openshift:
     aws_region: eu-central-1
     multi_zone: True
     use_sts: False
+    credentials_mode: Manual
     private_only: True
     machine_cidr: 10.2.1.0/24
     subnet_ids:
@@ -230,27 +231,30 @@ openshift:
 
 #### Property explanation OpenShift clusters on AWS (self-managed)
 
-| Property                      | Description                                                                                                                                                           | Mandatory | Allowed values           |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------ |
-| name                          | Name of the OpenShift cluster                                                                                                                                         | Yes       |                          |
-| ocp_version                   | OpenShift version version, specified as `x.y.z`                                                                                                                       | Yes       | >= 4.6                   |
-| domain_name                   | Base domain name of the cluster. Together with the `name`, this will be the domain of the OpenShift cluster.                                                          | Yes       |                          |
-| control_plane_flavour         | Flavour of the AWS servers used for the control plane nodes. `m5.xxlarge` is the recommended value     4 GB of memory                                                 | Yes       |                          |
-| control_plane_nodes           | Total number of control plane                                                                                                                                         | Yes       | Integer                  |
-| compute_flavour               | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory                                                 | Yes       |                          |
-| compute_nodes                 | Total number of compute nodes                                                                                                                                         | Yes       | Integer                  |
-| cloud_native_toolkit          | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                                                                        | No        | True, False (default)    |
-| infrastructure                | Infrastructure properties                                                                                                                                             | Yes       |                          |
-| infrastructure.type           | Type of OpenShift cluster on AWS.                                                                                                                                     | Yes       | `rosa` or `self-managed` |
-| infrastructure.aws_region     | Region of AWS where cluster is deployed.                                                                                                                              | Yes       |                          |
-| infrastructure.multi_zone     | Determines whether the OpenShift cluster is deployed across multiple availability zones. Default is True.                                                             | No        | True (default), False    |
-| infrastructure.use_sts        | Determines whether AWS Security Token Service must be used. Default is False.                                                                                         | No        | True, False (default)    |
-| infrastructure.machine_cdr    | Machine CIDR if existing VPC and subnets are used, for example 10.243.0.0/16. Do not specify if subnet_ids are not specified.                                         | No        | CIDR                     |
-| infrastructure.subnet_ids     | Existing public and private subnet IDs in the VPC to be used for the OpenShift cluster.  Must be specified in combination with machine_cidr.                          | No        | Existing subnet IDs      |
-| infrastructure.private_only   | Indicates whether the OpenShift can be accessed from the internet. Default is True                                                                                    | No        | True, False              |
-| infrastructure.hosted_zone_id | ID of the AWS Route 53 hosted zone that controls the DNS entries. If not specified, the OpenShift installer will create a hosted zone for the specified `domain_name` | No        |                          |
-| openshift_logging[]           | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                                                 | No        |                          |
-| openshift_storage[]           | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                             | Yes       |                          |
+| Property                        | Description                                                                                                                                                           | Mandatory | Allowed values           |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------ |
+| name                            | Name of the OpenShift cluster                                                                                                                                         | Yes       |                          |
+| ocp_version                     | OpenShift version version, specified as `x.y.z`                                                                                                                       | Yes       | >= 4.6                   |
+| domain_name                     | Base domain name of the cluster. Together with the `name`, this will be the domain of the OpenShift cluster.                                                          | Yes       |                          |
+| control_plane_flavour           | Flavour of the AWS servers used for the control plane nodes. `m5.xxlarge` is the recommended value     4 GB of memory                                                 | Yes       |                          |
+| control_plane_nodes             | Total number of control plane                                                                                                                                         | Yes       | Integer                  |
+| compute_flavour                 | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory                                                 | Yes       |                          |
+| compute_nodes                   | Total number of compute nodes                                                                                                                                         | Yes       | Integer                  |
+| cloud_native_toolkit            | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                                                                        | No        | True, False (default)    |
+| infrastructure                  | Infrastructure properties                                                                                                                                             | Yes       |                          |
+| infrastructure.type             | Type of OpenShift cluster on AWS.                                                                                                                                     | Yes       | `rosa` or `self-managed` |
+| infrastructure.aws_region       | Region of AWS where cluster is deployed.                                                                                                                              | Yes       |                          |
+| infrastructure.multi_zone       | Determines whether the OpenShift cluster is deployed across multiple availability zones. Default is True.                                                             | No        | True (default), False    |
+| infrastructure.use_sts          | Determines whether AWS Security Token Service must be used. Default is False.                                                                                         | No        | True, False (default)    |
+| infrastructure.credentials_mode | Change the security requirement of the Cloud Credential Operator (COO). Default (omit) is automatically handled by CCO.                                               | No        | Manual, Mint             |
+| infrastructure.machine_cdr      | Machine CIDR                                               | No        | CIDR                     |
+| infrastructure.subnet_ids       | Existing public and private subnet IDs in the VPC to be used for the OpenShift cluster.  Must be specified in combination with machine_cidr.                          | No        | Existing subnet IDs      |
+| infrastructure.private_only     | Indicates whether the OpenShift can be accessed from the internet. Default is True                                                                                    | No        | True, False              |
+| infrastructure.hosted_zone_id   | ID of the AWS Route 53 hosted zone that controls the DNS entries. If not specified, the OpenShift installer will create a hosted zone for the specified `domain_name` | No        |                          |
+| infrastructure.control_plane_iam_role | If not standard, specify the IAM role that the OpenShift installer must use for the control plane nodes during cluster creation | No        |   |
+| infrastructure.compute_iam_role | If not standard, specify the IAM role that the OpenShift installer must use for the compute nodes during cluster creation | No        |   |
+| openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                                                 | No        |                          |
+| openshift_storage[]           |   List of storage definitions to be defined on OpenShift, see below for further explanation                                                                             | Yes       |                          |
 
 When deploying the OpenShift cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
 ```
@@ -297,6 +301,7 @@ openshift:
     aws_region: eu-central-1
     multi_zone: True
     use_sts: False
+    credentials_mode: Manual
   upstream_dns:
   - name: sample-dns
      zones:
@@ -314,24 +319,25 @@ openshift:
 
 #### Property explanation OpenShift clusters on AWS (ROSA)
 
-| Property                   | Description                                                                                                                                  | Mandatory | Allowed values           |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------ |
-| name                       | Name of the OpenShift cluster                                                                                                                | Yes       |                          |
-| ocp_version                | OpenShift version version, specified as `x.y.z`                                                                                              | Yes       | >= 4.6                   |
-| compute_flavour            | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory                        | Yes       |                          |
-| cloud_native_toolkit       | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                                               | No        | True, False (default)    |
-| infrastructure             | Infrastructure properties                                                                                                                    | Yes       |                          |
-| infrastructure.type        | Type of OpenShift cluster on AWS.                                                                                                            | Yes       | `rosa` or `self-managed` |
-| infrastructure.aws_region  | Region of AWS where cluster is deployed.                                                                                                     | Yes       |                          |
-| infrastructure.multi_zone  | Determines whether the OpenShift cluster is deployed across multiple availability zones. Default is True.                                    | No        | True (default), False    |
-| infrastructure.use_sts     | Determines whether AWS Security Token Service must be used. Default is False.                                                                | No        | True, False (default)    |
-| infrastructure.machine_cdr | Machine CIDR if existing VPC and subnets are used, for example 10.243.0.0/16. Do not specify if subnets are not specified.                   | No        | CIDR                     |
-| infrastructure.subnet_ids  | Existing public and private subnet IDs in the VPC to be used for the OpenShift cluster.  Must be specified in combination with machine_cidr. | No        | Existing subnet IDs      |
-| compute_nodes              | Total number of compute nodes                                                                                                                | Yes       | Integer                  |
-| upstream_dns[]             | Upstream DNS servers(s), see (#upstream-dns-servers)                                                                                         | No        |                          |
-| openshift_logging[]        | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                        | No        |                          |
-| upstream_dns[]             | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                   | No        |                          |
-| openshift_storage[]        | List of storage definitions to be defined on OpenShift, see below for further explanation                                                    | Yes       |                          |
+| Property                        | Description                                                                                                                                  | Mandatory | Allowed values           |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------ |
+| name                            | Name of the OpenShift cluster                                                                                                                | Yes       |                          |
+| ocp_version                     | OpenShift version version, specified as `x.y.z`                                                                                              | Yes       | >= 4.6                   |
+| compute_flavour                 | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory                        | Yes       |                          |
+| cloud_native_toolkit            | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                                               | No        | True, False (default)    |
+| infrastructure                  | Infrastructure properties                                                                                                                    | Yes       |                          |
+| infrastructure.type             | Type of OpenShift cluster on AWS.                                                                                                            | Yes       | `rosa` or `self-managed` |
+| infrastructure.aws_region       | Region of AWS where cluster is deployed.                                                                                                     | Yes       |                          |
+| infrastructure.multi_zone       | Determines whether the OpenShift cluster is deployed across multiple availability zones. Default is True.                                    | No        | True (default), False    |
+| infrastructure.use_sts          | Determines whether AWS Security Token Service must be used. Default is False.                                                                | No        | True, False (default)    |
+| infrastructure.credentials_mode | Change the security requirement of the Cloud Credential Operator (COO). Default (omit) is automatically handled by CCO.                      | No        | Manual, Mint             |
+| infrastructure.machine_cdr      | Machine CIDR, for example 10.243.0.0/16.             | No        | CIDR                     |
+| infrastructure.subnet_ids       | Existing public and private subnet IDs in the VPC to be used for the OpenShift cluster.  Must be specified in combination with machine_cidr. | No        | Existing subnet IDs      |
+| compute_nodes                   | Total number of compute nodes                                                                                                                | Yes       | Integer                  |
+| upstream_dns[]                  | Upstream DNS servers(s), see (#upstream-dns-servers)                                                                                         | No        |                          |
+| openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                        | No        |                          |
+| upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                   | No        |                          |
+| openshift_storage[]             | List of storage definitions to be defined on OpenShift, see below for further explanation                                                    | Yes       |                          |
 
 When deploying the OpenShift cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
 ```
