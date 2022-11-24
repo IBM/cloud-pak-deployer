@@ -116,9 +116,10 @@ def oc_login():
 def get_deployer_status():
     result = {}
 
-    app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.out'))
+    app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.yaml'))
     try:
-        with open(status_dir + '/log/deployer-state.out', "r", encoding='UTF-8') as f:
+        with open(status_dir + '/log/deployer-state.yaml', "r", encoding='UTF-8') as f:
+            temp={}
             content = f.read()
             f.close()
             app.logger.info(content)
@@ -132,10 +133,7 @@ def get_deployer_status():
             if 'current-task' in temp:
                 result['last_step']=temp['current-task']
             if 'deployer-status' in temp:
-                if temp['deployer-status'] == 'ACTIVE':
-                    result['deployer_active']=True
-                else:
-                    result['deployer_active']=False
+                result['deployer_active']=temp['deployer-status']
     except FileNotFoundError:
         result={}
         app.logger.warning('Error while reading file'.format(result))
