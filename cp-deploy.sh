@@ -841,6 +841,26 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
   run_cmd+=" -e CPD_ACCEPT_LICENSES=${CPD_ACCEPT_LICENSES}"
 
+  # Add proxy servers if present in the current session
+  if [ ! -z "${http_proxy}" ];then
+      run_cmd+=" -e http_proxy=${http_proxy}"
+  fi
+  if [ ! -z "${HTTP_PROXY}" ];then
+      run_cmd+=" -e http_proxy=${HTTP_PROXY}"
+  fi
+  if [ ! -z "${https_proxy}" ];then
+      run_cmd+=" -e https_proxy=${https_proxy}"
+  fi
+  if [ ! -z "${HTTPS_PROXY}" ];then
+      run_cmd+=" -e https_proxy=${HTTPS_PROXY}"
+  fi
+  if [ ! -z "${no_proxy}" ];then
+      run_cmd+=" -e no_proxy=${no_proxy}"
+  fi
+  if [ ! -z "${NO_PROXY}" ];then
+      run_cmd+=" -e no_proxy=${NO_PROXY}"
+  fi
+
   # Handle extra variables
   if [ ${#arrExtraKey[@]} -ne 0 ];then
     for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
