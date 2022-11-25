@@ -1,4 +1,5 @@
 from flask import Flask, send_from_directory,request,make_response,send_file
+from flask_cors import CORS, cross_origin
 import sys
 import json
 import subprocess
@@ -8,6 +9,7 @@ from shutil import copyfile
 from pathlib import Path
 import re
 import glob
+import zipfile
 
 from logging.config import dictConfig
 
@@ -30,7 +32,8 @@ dictConfig(
     }
 )
 
-app = Flask(__name__,static_url_path='', static_folder='ww')
+app = Flask(__name__,static_url_path='')
+CORS(app)
 
 parent = Path(os.path.dirname(os.path.realpath(__file__))).parent
 app.logger.info('Parent path of python script: {}'.format(parent))
@@ -88,10 +91,33 @@ def deploy():
 
     return 'running'
 
-@app.route('/api/v1/download-log')
+@app.route('/api/v1/download-log',methods=["POST"])
 def downloadLog ():
-    log_path = status_dir + '/log/cloud-pak-deployer.log'
-    return send_file(log_path, as_attachment=True)
+    body = json.loads(request.get_data())
+    print(body, file=sys.stderr)
+
+    if 'deployerLog' not in body :
+       return make_response('Bad Request', 400)
+
+    deployerLog=body['deployerLog']
+
+    if deployerLog != "deployer-log" and deployerLog != "all-logs":
+       return make_response('Bad Request', 400)   
+
+    if deployerLog == "deployer-log":
+        log_path = status_dir + '/log/deployer-state.out'
+        return send_file(log_path, as_attachment=True)
+    
+    if deployerLog == "all-logs":
+        log_zip = '/tmp/logs.zip'
+
+        log_folder_path = status_dir + '/log/'
+        log_zip_file=zipfile.ZipFile(log_zip, 'w')
+        for f in os.listdir(log_folder_path):
+            log_zip_file.write(os.path.join(log_folder_path, f), f, zipfile.ZIP_DEFLATED)
+        log_zip_file.close()
+
+        return send_file(log_zip, as_attachment=True)
 
 
 @app.route('/api/v1/oc-login',methods=["POST"])

@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom';
 import './index.scss';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import setupAPIHost from './setupAPIHost';
+
+setupAPIHost();
 
 ReactDOM.render(
   <React.StrictMode>
