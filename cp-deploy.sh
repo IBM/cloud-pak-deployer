@@ -45,6 +45,7 @@ command_usage() {
   echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --skip-cp-install             Skip installation of the Cloud Pak and finish after configuring the OpenShift cluster (\$SKIP_CP_INSTALL)"
+  echo "  --cp-confirm-delete-instances Confirm provisioned instances of services (e.g. DataStage) identified for removal may be deleted. Deletion is skipped when not set. (\$CP_CONFIRM_DELETE_INSTANCES)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
@@ -87,6 +88,7 @@ if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CPD_SKIP_CP_INSTALL}" == "" ];then CPD_SKIP_CP_INSTALL=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
+if [ "${CP_CONFIRM_DELETE_INSTANCES}" == "" ];then CP_CONFIRM_DELETE_INSTANCES=false;fi
 if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
 if [ "${CPD_AIRGAP}" == "" ];then CPD_AIRGAP=false;fi
 if [ "${CPD_SKIP_MIRROR}" == "" ];then CPD_SKIP_MIRROR=false;fi
@@ -474,6 +476,14 @@ while (( "$#" )); do
     export CP_CONFIG_ONLY=true
     shift 1
     ;;   
+  --cp-confirm-delete-instances)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --cp-confirm-delete-instances is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CP_CONFIRM_DELETE_INSTANCES=true
+    shift 1
+    ;;   
   --check-only)
     if [[ "${SUBCOMMAND}" != "environment" ]];then
       echo "Error: --cp-config-only is not valid for $SUBCOMMAND subcommand."
@@ -834,6 +844,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
   run_cmd+=" -e CPD_SKIP_CP_INSTALL=${CPD_SKIP_CP_INSTALL}"
   run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
+  run_cmd+=" -e CP_CONFIRM_DELETE_INSTANCES=${CP_CONFIRM_DELETE_INSTANCES}"
   run_cmd+=" -e CHECK_ONLY=${CHECK_ONLY}"
   run_cmd+=" -e CPD_AIRGAP=${CPD_AIRGAP}"
   run_cmd+=" -e CPD_SKIP_MIRROR=${CPD_SKIP_MIRROR}"

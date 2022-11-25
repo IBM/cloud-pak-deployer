@@ -28,9 +28,15 @@
 - set_fact:
     _all_cpdedbinstance_instances: "{{ _all_cpdedbinstance_instances_output.stdout | from_json }}"
 
+- debug:
+    msg: "Flag 'cp_confirm_delete_instances' set to false. Provisioned CPDEdbInstance instances marked for removal will not be deleted."
+  when: cp_confirm_delete_instances | default (False) | bool == False
+
 #Loop through all CP Deployer managed CPDEdbInstance instance definitions
+#Requires --cpd-confirm-delete-instances flag to run
 - name: "Loop through each CPDEdbInstance instance for delete"
   include_tasks: delete-cpd-edb-instance.yml
   loop: "{{ _all_cpdedbinstance_instances['items'] | default([]) }}"
   loop_control:
     loop_var: _cpd_edb_instance
+  when: cp_confirm_delete_instances | default (False) | bool == True
