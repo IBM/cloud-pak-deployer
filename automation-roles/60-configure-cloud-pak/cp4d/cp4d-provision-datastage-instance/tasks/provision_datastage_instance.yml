@@ -8,11 +8,25 @@
 
 - set_fact:
     _ds_instance_name: "{{ _ds_instance.name }}"
+    _ds_instance_description: "{{ _ds_instance.description | default('') }}"
     _ds_instance_namespace: "{{ current_cp4d_cluster.project }}"
-    _ds_instance_size: "{{ _ds_instance.size }}"
+    _ds_instance_size: "{{ _ds_instance.size | default('small') | lower }}"
     _ds_instance_storage_class: "{{ _ds_instance.storage_class | default(ocp_storage_class_file) }}"
-    _ds_instance_storage_size_gb: "{{ _ds_instance.storage_size_gb }}Gi"
+    _ds_instance_storage_size_gb: "{{ _ds_instance.storage_size_gb | default('50') }}"
     _ds_instance_id: "{{ _ds_instance_id_output.stdout }}"
+
+- fail:
+    msg: "DataStage instance {{ _ds_instance_name }} has invalid value \"{{ _ds_instance_size }}\" for size property. Only {{ cp4d_datastage_size_options }} are supported."
+  when: _ds_instance_size not in cp4d_datastage_size_options
+
+- name: "Validate Storage Class {{ _ds_instance_storage_class }}"
+  shell: |
+    oc get sc | grep "^{{ _ds_instance_storage_class }}[[:space:]]" | wc -l
+  register: _current_ds_instance_storage_class
+
+- fail:
+    msg: "Storage Class {{ _ds_instance_storage_class }} configured in DataStage instance {{ _ds_instance_name }} is not available in OCP cluster."
+  when: _current_ds_instance_storage_class.stdout == "0"
 
 - name: "Validate if instance {{ _ds_instance_name }} already exists"
   shell: |
@@ -33,12 +47,12 @@
 
     - name: Create DataStage PXRuntime CRD yaml file
       template:
-        src: ds_instance_40.yaml.j2
-        dest: "{{ status_dir }}/cp4d/datastage-instance-40-cr.yaml"
+        src: ds_instance.yaml.j2
+        dest: "{{ status_dir }}/cp4d/datastage-instance-cr.yaml"
 
     - name: Provision PxRunTime {{ _ds_instance_name }} 
       shell: |
-        oc create -f {{ status_dir }}/cp4d/datastage-instance-40-cr.yaml
+        oc create -f {{ status_dir }}/cp4d/datastage-instance-cr.yaml
       register: _oc_create_ds
 
     - name: Wait for PxRuntime {{ _ds_instance_name }} deployment completes
