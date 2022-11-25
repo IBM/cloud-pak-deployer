@@ -230,8 +230,7 @@ const Infrastructure = ({cloudPlatform,
 
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"          
-         onChange={(value)=>{setCloudPlatform(value)}  
-         }
+         onChange={(value)=>{setCloudPlatform(value)}}
          defaultSelected={cloudPlatform}  
          valueSelected={cloudPlatform}  
          >
