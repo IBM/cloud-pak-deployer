@@ -35,6 +35,15 @@
   debug:
     var: _apply_olm_command
 
+- name: Starting background task to patch OLM artifacts in project {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ foundational_services_project }}-patch-olm.log
+  shell: |
+    {{ role_path }}/files/temp-patch-olm.sh \
+      {{ status_dir }} \
+      {{ foundational_services_project }}
+  async: 86400
+  poll: 0
+  register: _patch_olm
+
 - name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
   shell: |
     {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
@@ -52,6 +61,7 @@
     shell: |
       oc get sub -n {{ foundational_services_project }} \
         --no-headers \
+        --sort-by=.metadata.creationTimestamp \
         -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
     register: _subscription_state
   - fail:
