@@ -17,14 +17,16 @@ if [ -z "${CP4D_PROJECT}" ];then
 fi
 
 # Ask for final confirmation to delete the CP4D instance
-read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT} and Cloud Pak Foundational Services (y/N)? " -r
-case "${REPLY}" in 
-  y|Y)
-  ;;
-  * )
-  exit 99
-  ;;
-esac
+if [ -z "${CPD_CONFIRM_DELETE}" ];then
+    read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT} and Cloud Pak Foundational Services (y/N)? " -r
+    case "${REPLY}" in 
+    y|Y)
+    ;;
+    * )
+    exit 99
+    ;;
+    esac
+fi
 
 # Create temporary directory
 temp_dir=$(mktemp -d)
@@ -109,5 +111,10 @@ log "Deleting IBM catalog sources"
 oc delete catsrc -n openshift-marketplace \
     $(oc get catsrc -n openshift-marketplace \
     --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found
+
+log "Deleting IBM CRDs that don't have an instance anymore"
+for crd in $(oc get crd --no-headers | awk '{print $1}' | grep \.ibm);do
+    oc delete crd $crd
+done
 
 exit 0
