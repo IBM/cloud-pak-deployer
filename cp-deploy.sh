@@ -770,6 +770,11 @@ fi
 if ! $INSIDE_CONTAINER;then
   run_cmd="${CPD_CONTAINER_ENGINE} run"
 
+  # If CPD_CONTAINER_NAME has been specified, give the container this name
+  if [ ! -z $CPD_CONTAINER_NAME ];then
+    run_cmd+=" --name ${CPD_CONTAINER_NAME}"
+  fi
+
   # If running "environment" subcommand with apply or destroy, run as daemon
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
     run_cmd+=" -d"
