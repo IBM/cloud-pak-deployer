@@ -1,5 +1,4 @@
 from flask import Flask, send_from_directory,request,make_response,send_file
-from flask_cors import CORS, cross_origin
 import sys
 import json
 import subprocess
@@ -33,7 +32,6 @@ dictConfig(
 )
 
 app = Flask(__name__,static_url_path='')
-CORS(app)
 
 parent = Path(os.path.dirname(os.path.realpath(__file__))).parent
 app.logger.info('Parent path of python script: {}'.format(parent))
