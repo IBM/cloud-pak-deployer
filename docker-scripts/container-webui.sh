@@ -38,7 +38,7 @@ echo "Unpacking OpenShift client from ${oc_tar}..."
 tar xzf ${oc_tar} -C /usr/local/bin/
 
 echo "Starting Deployer web UI and backend service..."
-python3 webapp.py &
-python3 wizardUI.py 
+nginx
+python3 webapp.py
 
 exit 0
