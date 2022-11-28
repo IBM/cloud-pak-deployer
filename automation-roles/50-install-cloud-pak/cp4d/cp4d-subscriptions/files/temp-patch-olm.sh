@@ -46,7 +46,8 @@ while true;do
     if [[ "${csv}" == "" ]];then
       log "WARNING: Missing CSV for subscription ${sub}, checking age of subscription"
       sub_ts_epoch=$(date -d ${sub_ts} +%s)
-      if (( current_ts > (sub_ts_epoch + 120) ));then
+      # If the subscription is more than 5 minutes old and still no CSV assigned, recreate it
+      if (( current_ts > (sub_ts_epoch + 300) ));then
         operator_label=$(oc get sub -n ${fs_project} ${sub} -o jsonpath='{.metadata.labels}' | jq -r 'keys[]' | grep "operators.coreos.com")
         log "WARNING: Subscription ${sub} does not have a CSV, remediating..."
         oc get sub -n ${fs_project} ${sub} -o yaml > /tmp/${sub}.yaml
