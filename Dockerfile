@@ -18,6 +18,7 @@ RUN yum install -y yum-utils python38 python38-pip && \
     pip3 install jmespath pyyaml argparse python-benedict pyvmomi && \
     alternatives --set python /usr/bin/python3 && \
     yum install -y vault && \
+    yum install -y nginx && \
     yum clean all
 
 RUN ansible-galaxy collection install community.general community.crypto ansible.utils community.vmware
@@ -28,7 +29,9 @@ VOLUME ["/Data"]
 RUN mkdir -p /cloud-pak-deployer && \
     mkdir -p /Data
 
-COPY . /cloud-pak-deployer/
+
+COPY ./nginx.conf   /etc/nginx/
+COPY . /cloud-pak-deployer/ 
 
 ENV USER_UID=1001
 
