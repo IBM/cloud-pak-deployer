@@ -37,10 +37,15 @@
 - set_fact:
     _all_pxruntime_instances: "{{ _all_pxruntime_instances_output.stdout | from_json }}"
 
+- debug:
+    msg: "Flag 'confirm-destroy' set to false. Provisioned PxRuntime instances marked for removal will not be deleted."
+  when: confirm_destroy | default (False) | bool == False
+
 #Loop through all deployed datastage instance definitions
+# Requires --confirm-destroy flag to run
 - name: "Loop through each datastage instance for delete"
   include_tasks: delete_datastage_instance.yml
   loop: "{{ _all_pxruntime_instances['items'] | default([]) }}"
   loop_control:
     loop_var: _ds_instance
-
+  when: confirm_destroy | default (False) | bool == True
