@@ -15,8 +15,41 @@
     _ds_instance_storage_size_gb: "{{ _ds_instance.storage_size_gb | default('50') }}"
     _ds_instance_id: "{{ _ds_instance_id_output.stdout }}"
     _ds_instance_scale_px_compute: "{{ _ds_instance.scale_px_compute | default(omit) }}"
+    _ds_px_compute_replicas: "{{ _ds_instance.scale_px_compute.replicas | default(omit) }}"
+    _ds_px_compute_limit_cpu: "{{ _ds_instance.scale_px_compute.cpu_limit | default(omit) }}"
+    _ds_px_compute_limit_memory: "{{ _ds_instance.scale_px_compute.memory_limit | default(omit) }}"
+    _ds_px_compute_request_cpu: "{{ _ds_instance.scale_px_compute.cpu_request | default(omit) }}"
+    _ds_px_compute_request_memory: "{{ _ds_instance.scale_px_compute.memory_request | default(omit) }}"    
     _ds_instance_scale_px_runtime: "{{ _ds_instance.scale_px_runtime | default(omit) }}"
+    _ds_px_runtime_replicas: "{{ _ds_instance.scale_px_runtime.replicas | default(omit) }}"
+    _ds_px_runtime_limit_cpu: "{{ _ds_instance.scale_px_runtime.cpu_limit | default(omit) }}"
+    _ds_px_runtime_limit_memory: "{{ _ds_instance.scale_px_runtime.memory_limit | default(omit) }}"
+    _ds_px_runtime_request_cpu: "{{ _ds_instance.scale_px_runtime.cpu_request | default(omit) }}"
+    _ds_px_runtime_request_memory: "{{ _ds_instance.scale_px_runtime.memory_request | default(omit) }}"    
 
+- name: If custom PX Compute scale parameters are defined, confirm all parameters are populated
+  assert:
+    that: 
+      - _ds_px_compute_replicas is defined
+      - _ds_px_compute_limit_cpu is defined
+      - _ds_px_compute_limit_memory is defined
+      - _ds_px_compute_request_cpu is defined
+      - _ds_px_compute_request_memory is defined
+    fail_msg: "PxRuntime {{ _ds_instance_name }} has missing options for `scale_px_compute`. Ensure the properties replicas, \
+              cpu_limit, memory_limit, cpu_request and memory_request are defined"
+  when: _ds_instance_scale_px_compute is defined
+
+- name: If custom PX Runtime scale parameters are defined, confirm all parameters are populated
+  assert:
+    that: 
+      - _ds_px_runtime_replicas is defined
+      - _ds_px_runtime_limit_cpu is defined
+      - _ds_px_runtime_limit_memory is defined
+      - _ds_px_runtime_request_cpu is defined
+      - _ds_px_runtime_request_memory is defined
+    fail_msg: "PxRuntime {{ _ds_instance_name }} has missing `scale_px_runtime` options. Ensure the properties replicas \
+              cpu_limit, memory_limit, cpu_request memory_request are defined"
+  when: _ds_instance_scale_px_runtime is defined
 
 - fail:
     msg: "DataStage instance {{ _ds_instance_name }} has invalid value \"{{ _ds_instance_size }}\" for size property. Only {{ cp4d_datastage_size_options }} are supported."
@@ -89,19 +122,3 @@
 
     - debug:
         msg: "DataStage PxRuntime {{ _ds_instance_name }} deployed and running successfully..."
-
-- name: Custom scale PXRuntime px compute if defined
-  include_tasks: scale_ds_pxruntime.yml
-  vars:
-    _scale_ds_runtime: "{{ _ds_instance_scale_px_compute }}"
-    _scale_ds_runtime_type: "pxcompute"
-  when: _ds_instance_scale_px_compute is defined
-
-- name: Custom scale PXRuntime px runtime if defined
-  include_tasks: scale_ds_pxruntime.yml
-  vars:
-    _scale_ds_runtime: "{{ _ds_instance_scale_px_runtime }}"
-    _scale_ds_runtime_type: "pxruntime"
-  when: _ds_instance_scale_px_runtime is defined
-
-- fail:
