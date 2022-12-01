@@ -48,15 +48,30 @@ while true;do
       sub_ts_epoch=$(date -d ${sub_ts} +%s)
       # If the subscription is more than 5 minutes old and still no CSV assigned, recreate it
       if (( current_ts > (sub_ts_epoch + 300) ));then
+        diag_dir=$(mktemp -d -p ${status_dir}/log)
         operator_label=$(oc get sub -n ${fs_project} ${sub} -o jsonpath='{.metadata.labels}' | jq -r 'keys[]' | grep "operators.coreos.com")
-        log "WARNING: Subscription ${sub} does not have a CSV, remediating..."
-        oc get sub -n ${fs_project} ${sub} -o yaml > /tmp/${sub}.yaml
-        log "Deleting subscription ${sub}"
-        oc delete sub -n ${fs_project} ${sub}
-        log "Deleting CSV with label ${operator_label} in case it exists but did not get associated with subscription ${sub}"
-        oc delete csv -n ${fs_project} -l ${operator_label}
-        log "Recreating subscription ${sub}"
-        oc apply -f /tmp/${sub}.yaml
+        log "WARNING: Subscription ${sub} does not have a CSV, remediating. Diagnostics info in ${diag_dir}"
+        log "DIAG: Retrieving subscription definition ${sub} to ${diag_dir}/${sub}.yaml"
+        oc get sub -n ${fs_project} ${sub} -o yaml > ${diag_dir}/${sub}.yaml
+        log "DIAG: Retrieving CSV definition to ${diag_dir}/${sub}-csv.yaml"
+        oc get csv -n ${fs_project} -l ${operator_label} -o yaml > ${diag_dir}/${sub}-csv.yaml
+        log "DIAG: Retrieving install plans to ${diag_dir}/install-plans.yaml"
+        oc get ip -n ${fs_project} -o yaml > ${diag_dir}/install-plans.yaml
+        log "DIAG: Collecting OLM operator logs to ${diag_dir}"
+        oc logs -n openshift-operator-lifecycle-manager -l app=catalog-operator --timestamps > ${diag_dir}/catalog-operator.log
+        oc logs -n openshift-operator-lifecycle-manager -l app=olm-operator --timestamps > ${diag_dir}/olm-operator.log
+        # log "Deleting subscription ${sub}"
+        # oc delete sub -n ${fs_project} ${sub}
+        for csv in $(oc get csv -n ${fs_project} -l ${operator_label} -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}');do
+          for ip in $(oc get ip -n ${fs_project} --no-headers | grep ${csv} | awk '{print $1}');do
+            log "Deleting install plan $ip, associated with CSV ${csv}"
+            oc delete ip -n ${fs_project} $ip
+          done
+          log "Deleting CSV ${csv} which is not associated with subscription ${sub}"
+          oc delete csv -n ${fs_project} ${csv}
+        done
+        # log "Recreating subscription ${sub}"
+        # oc apply -f ${diag_dir}/${sub}.yaml
         # Break the current while loop, only recreate one subscription at a time
         break
       else
