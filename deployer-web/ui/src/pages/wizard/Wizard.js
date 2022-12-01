@@ -13,7 +13,7 @@ import fileDownload from 'js-file-download'
 const Wizard = () => {
 
    //wizard index
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [wizardError, setWizardError] = useState(true);
   const [ocLoginErr, setOcLoginErr] = useState(false)
 
@@ -61,7 +61,7 @@ const Wizard = () => {
 
   //deploy
   const [deployerStatus, setDeployerStatus] = useState(true)    //true or false
-  const [deployerPercentageCompleted, setDeployerPercentageCompleted] = useState('')
+  const [deployerPercentageCompleted, setDeployerPercentageCompleted] = useState(0)
   const [deployerStage, setDeployerStage] = useState('')
   const [deployerLastStep, setDeployerLastStep] = useState('')
 
@@ -73,6 +73,73 @@ const Wizard = () => {
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
   }
+
+  if (currentIndex === -1 ) {
+
+    var errorProps = () => ({
+      kind: 'error',
+      lowContrast: true,
+      role: 'error',
+      title: 'Get error to check if deployer is running or not. ',
+      hideCloseButton: false,
+    }); 
+  
+    var successProps = () => ({
+      kind: 'success',
+      lowContrast: true,
+      role: 'success',
+      title: 'IBM Cloud Pak deployment is running. ',
+      hideCloseButton: false,
+    });
+
+  } else {
+
+    var errorProps = () => ({
+      kind: 'error',
+      lowContrast: true,
+      role: 'error',
+      title: 'Get error to start IBM Cloud Pak deployment. ',
+      hideCloseButton: false,
+    }); 
+    
+    var successProps = () => ({
+      kind: 'success',
+      lowContrast: true,
+      role: 'success',
+      title: 'IBM Cloud Pak deployment was submitted successfully. ',
+      hideCloseButton: false,
+    });
+
+  }  
+
+  const isDeployerRunning = async() => {    
+
+    setLoadingDeployStatus(true)  
+    await axios.get('/api/v1/is-deployer-running').then(res =>{   
+      setLoadingDeployStatus(false)        
+     
+      if (res.data.code === 0) {
+        if (res.data.data.running) {
+          setDeployStart(true)  
+          setDeployErr(false) 
+          getDeployStatus()
+          refreshStatus()  
+          return
+        }
+        setCurrentIndex(0)
+      } else {
+        setDeployStart(true)  
+        setDeployErr(true)   
+      }
+       
+    }, err => {      
+      setLoadingDeployStatus(false)   
+      setDeployStart(true)  
+      setDeployErr(true)      
+      console.log(err)
+    });
+     
+  }  
 
   const testOcLoginCmd = async() => {
     let patt = /oc\s+login\s+/;    
@@ -128,7 +195,7 @@ const Wizard = () => {
       "region": IBMCloudSettings.region,
     }
     
-    setCurrentIndex(-1)
+    setCurrentIndex(10)
     await axios.post('/api/v1/deploy', body).then(res =>{
         setLoadingDeployStatus(false)    
         setDeployStart(true)  
@@ -143,22 +210,6 @@ const Wizard = () => {
         setDeployErr(true)
     });    
   }
-
-  const errorProps = () => ({
-    kind: 'error',
-    lowContrast: true,
-    role: 'error',
-    title: 'Get error to start IBM Cloud Pak deployment. ',
-    hideCloseButton: false,
-  }); 
-  
-  const successProps = () => ({
-    kind: 'success',
-    lowContrast: true,
-    role: 'success',
-    title: 'IBM Cloud Pak deployment was submitted successfully. ',
-    hideCloseButton: false,
-  });
 
   const getDeployStatus = async() => {
     if (isDeployErr)
@@ -189,13 +240,18 @@ const Wizard = () => {
       }else {
         fileDownload(res.data, "deployer-state.out")
       }       
-  }, err => {
-      console.log(err)        
-  });
-
+    }, err => {
+        console.log(err)        
+    });
   }
 
-  useEffect(() => {  
+  useEffect(()=>{
+    isDeployerRunning()
+
+  },[])
+
+  useEffect(() => { 
+    
     if (isDeployStart && !isDeployErr) {   
       if (!deployerStatus) {
         clearInterval(scheduledJob)
@@ -396,7 +452,6 @@ const Wizard = () => {
                                     cloudPlatform={cloudPlatform} 
                                     IBMCloudSettings={IBMCloudSettings}                                                                      
                                     AWSSettings={AWSSettings}
-                                    OCPSettings={OCPSettings}
                                     storage={storage} 
                                     CPDCartridgesData={CPDCartridgesData}
                                     setCPDCartridgesData={setCPDCartridgesData}
