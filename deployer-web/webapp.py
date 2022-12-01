@@ -73,7 +73,7 @@ def deploy():
     app.logger.info('oc login command: {}'.format(body['oc_login_command']))
 
     # Assemble the deploy command
-    deploy_command=['/root/feiye/ui/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
     deploy_command+=['env','apply']
     deploy_command+=['-e=env_id={}'.format(body['envId'])]
     deploy_command+=['-vs={}-oc-login={}'.format(openshift_name, body['oc_login_command'])]
