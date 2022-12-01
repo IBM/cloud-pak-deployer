@@ -129,20 +129,49 @@ def oc_login():
     pattern = r'oc(\s+)login(\s)(.*)'    
     isOcLoginCmd = re.match(pattern, oc_login_command)    
 
-    if isOcLoginCmd : 
-        result_code=os.system(oc_login_command)
+    if isOcLoginCmd:
+        if "--insecure-skip-tls-verify" in oc_login_command:
+            result_code=os.system(oc_login_command)
+        else:
+            result_code=os.system(oc_login_command + " --insecure-skip-tls-verify=true")
         result={"code": result_code}    
         return json.dumps(result)
     else:
         return make_response('Bad Request', 400) 
 
+
+@app.route('/api/v1/is-deployer-running',methods=["GET"])
+def is_deployer_running():
+    result = {
+        "code":-1,
+        "data":{},
+        "message":""
+    }
+    pid_path = status_dir + '/pid/container.id'
+    try:
+        with open(pid_path, "r", encoding='UTF-8') as f:
+            result['data'] = {"running": True}
+            result['message'] = '{} exists.'.format(pid_path)
+            result['code'] = 0
+    except FileNotFoundError:
+        result['code'] = 0
+        result['message'] = '{} not found.'.format(pid_path)
+    except PermissionError:
+        result['code'] = 401
+        result['message'] = "Permission Error."
+    except IOError:
+        result['code'] = 101
+        result['message'] = "IO Error."
+    return result
+
 @app.route('/api/v1/deployer-status',methods=["GET"])
 def get_deployer_status():
     result = {}
+    deploy_state_log_path = status_dir + '/log/deployer-state.out'
 
-    app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.out'))
+    app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
     try:
-        with open(status_dir + '/log/deployer-state.out', "r", encoding='UTF-8') as f:
+        with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
             temp={}
             content = f.read()
             f.close()
@@ -163,12 +192,12 @@ def get_deployer_status():
                     result['deployer_active']=False
     except FileNotFoundError:
         result={}
-        app.logger.warning('Error while reading file'.format(result))
+        app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
     except PermissionError:
         result={}
-        app.logger.warning('Permission error while reading file'.format(result))
+        app.logger.warning('Permission error while reading file {}'.format(deploy_state_log_path))
     except IOError:
-        app.logger.warning('IO Error while reading file'.format(result))
+        app.logger.warning('IO Error while reading file {}'.format(deploy_state_log_path))
     return result
 
 @app.route('/api/v1/configuration',methods=["GET"])
@@ -229,7 +258,7 @@ def check_configuration():
     except FileNotFoundError:
         result['code'] = 404
         result['message'] = "Configuration File is not found."
-        app.logger.warning('Error while reading file'.format(result))
+        app.logger.warning('Error while reading file {}'.format(generated_config_yaml_path))
     except PermissionError:
         result['code'] = 401
         result['message'] = "Permission Error."
@@ -242,9 +271,7 @@ def check_configuration():
 def getCartridges(cloudpak):
     if cloudpak not in ['cp4d', 'cp4i']:
        return make_response('Bad Request', 400)
-
     return loadYamlFile(cp_base_config_path+'/{}.yaml'.format(cloudpak))
-
 
 @app.route('/api/v1/logs',methods=["GET"])
 def getLogs():
@@ -267,33 +294,6 @@ def getRegion(cloud):
              break
    return json.dumps(ressult)
 
-def update_region(path, region):
-    lines=[]
-    newlines=[]
-    with open(path, 'r') as f1:
-       lines = f1.readlines()
-       for line in lines:
-          if 'ibm_cloud_region' in line:
-            line = f'ibm_cloud_region={region}'
-          if 'aws_region' in line:
-            line = f'aws_region={region}'
-          newlines.append(line)
-    with open(path, 'w') as w:
-         w.writelines(newlines)    
-
-def update_storage(path, storage):
-    content = ""
-    with open(path, 'r') as f1:
-        read_all = f1.read()
-        datas = yaml.safe_load_all(read_all)
-        for data in datas:
-            content=content+"---\n"
-            if 'openshift' in data.keys():
-                   data['openshift'][0]['openshift_storage']=storage
-            content=content+yaml.safe_dump(data)
-    with open(path, 'w') as f:
-        f.write(content)
-
 @app.route('/api/v1/storages/<cloud>',methods=["GET"])
 def getStorages(cloud):
     ocp_config=""
@@ -307,44 +307,18 @@ def getStorages(cloud):
             break
     return json.dumps(ocp_config)
 
-def update_cp4d_cartridges(path, cartridges, storage, cloudpak):
-    content=""
-    with open(path, 'r') as f1:
-        content = f1.read()
-        docs=yaml.safe_load_all(content)
-        for doc in docs:
-            if cloudpak in doc.keys():
-                doc[cloudpak][0]['cartridges']=cartridges
-                doc[cloudpak][0]['openshift_storage_name']=storage
-                content=yaml.safe_dump(doc)
-                content = '---\n'+content
-                break
-    with open(path, 'w') as f1:
-        f1.write(content)
-
-def update_cp4i_cartridges(path, cartridges, storage, cloudpak):
-    content=""
-    with open(path, 'r') as f1:
-        content = f1.read()
-        docs=yaml.safe_load_all(content)
-        for doc in docs:
-            if cloudpak in doc.keys():
-                doc[cloudpak][0]['instances']=cartridges
-                doc[cloudpak][0]['openshift_storage_name']=storage
-                content=yaml.safe_dump(doc)
-                content = '---\n'+content
-                break
-    with open(path, 'w') as f1:
-        f1.write(content)
-
 def loadYamlFile(path):
     result={}
     content=""
-    with open(path, 'r', encoding='UTF-8') as f1:
-        content=f1.read()
-        docs=yaml.safe_load_all(content)
-        for doc in docs:
-            result={**result, **doc}
+    try:
+        with open(path, 'r', encoding='UTF-8') as f1:
+            content=f1.read()
+            docs=yaml.safe_load_all(content)
+            for doc in docs:
+                result={**result, **doc}
+    except:
+        app.logger.error('Error while reading file {}'.format(path))
+        raise Exception('Error while reading file {}'.format(path))
     return result
 
 def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
@@ -371,8 +345,6 @@ def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
         result["config"]=f1.read()
         f1.close()
     return json.dumps(result) 
-
-
 
 @app.route('/api/v1/createConfig',methods=["POST"])
 def createConfig():
@@ -409,9 +381,6 @@ def createConfig():
 
     # Update for cp4d
     cp4d_selected=CP4DPlatform
-    # for cartridge in cp4d:
-    #     if 'state' in cartridge and cartridge['state']=='installed':
-    #         cp4d_selected=True
     if cp4d_selected:
         cp4d_config['cp4d'][0]['cartridges']=cp4d
         cp4d_config['cp4d'][0]['accept_licenses']=cp4dLicense
@@ -420,9 +389,6 @@ def createConfig():
         cp4d_config={}
     # Update for cp4i
     cp4i_selected=CP4IPlatform
-    # for instance in cp4i:
-    #     if 'state' in instance and instance['state']=='installed':
-    #         cp4i_selected=True
     if cp4i_selected:
         cp4i_config['cp4i'][0]['instances']=cp4i
         cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
@@ -466,11 +432,7 @@ def updateConfig():
             temp['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
 
         # app.logger.info("temp: {}".format(temp))
-
         cp4d_selected=CP4DPlatform
-        # for cartridge in cp4d_cartridges:
-        #     if 'state' in cartridge and cartridge['state']=='installed':
-        #         cp4d_selected=True
         if cp4d_selected:
             cp4d_config['cp4d']=temp['cp4d']
             cp4d_config['cp4d'][0]['cartridges']=cp4d_cartridges
@@ -479,9 +441,6 @@ def updateConfig():
         del temp['cp4d']
 
         cp4i_selected=CP4IPlatform
-        # for instance in cp4i_instances:
-        #     if 'state' in instance and instance['state']=='installed':
-        #         cp4i_selected=True
         if cp4i_selected:
             cp4i_config['cp4i']=temp['cp4i']
             cp4i_config['cp4i'][0]['instances']=cp4i_instances
