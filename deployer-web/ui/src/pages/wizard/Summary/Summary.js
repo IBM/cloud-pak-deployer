@@ -7,7 +7,6 @@ import yaml from 'js-yaml';
 const Summary = ({cloudPlatform, 
                   IBMCloudSettings, 
                   AWSSettings, 
-                  OCPSettings, 
                   storage, 
                   CPDCartridgesData, 
                   CPICartridgesData, 
@@ -19,9 +18,10 @@ const Summary = ({cloudPlatform,
                   cp4iVersion,
                   CP4DPlatformCheckBox,
                   CP4IPlatformCheckBox,
+                  summaryLoading,
+                  setSummaryLoading
                 }) => {
 
-    const [summaryLoading, setSummaryLoading] = useState(false)
   
     const [showErr, setShowErr] = useState(false)
     const [summaryInfo, setSummaryInfo] = useState("")  
