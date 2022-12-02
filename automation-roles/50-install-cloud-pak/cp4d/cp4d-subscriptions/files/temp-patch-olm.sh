@@ -35,6 +35,7 @@ while true;do
   log "----------"
 
   current_ts=$(date +%s)
+  diag_dir=${status_dir}/log/olm-diag-${current_ts}
 
   oc get sub -n ${fs_project} \
     --sort-by=.metadata.creationTimestamp \
@@ -48,9 +49,9 @@ while true;do
       sub_ts_epoch=$(date -d ${sub_ts} +%s)
       # If the subscription is more than 5 minutes old and still no CSV assigned, recreate it
       if (( current_ts > (sub_ts_epoch + 300) ));then
-        diag_dir=$(mktemp -d -p ${status_dir}/log)
         operator_label=$(oc get sub -n ${fs_project} ${sub} -o jsonpath='{.metadata.labels}' | jq -r 'keys[]' | grep "operators.coreos.com")
-        log "WARNING: Subscription ${sub} does not have a CSV, remediating. Diagnostics info in ${diag_dir}"
+        log "WARNING: Subscription ${sub} does not have a valid CSV, remediating. Diagnostics info in ${diag_dir}"
+        mkdir -p ${diag_dir}
         log "DIAG: Retrieving subscription definition ${sub} to ${diag_dir}/${sub}.yaml"
         oc get sub -n ${fs_project} ${sub} -o yaml > ${diag_dir}/${sub}.yaml
         log "DIAG: Retrieving CSV definition to ${diag_dir}/${sub}-csv.yaml"
@@ -62,6 +63,8 @@ while true;do
         oc logs -n openshift-operator-lifecycle-manager -l app=olm-operator --timestamps > ${diag_dir}/olm-operator.log
         # log "Deleting subscription ${sub}"
         # oc delete sub -n ${fs_project} ${sub}
+        log "Getting CSV with label ${operator_label}"
+        oc get csv -n ${fs_project} -l ${operator_label} -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'
         for csv in $(oc get csv -n ${fs_project} -l ${operator_label} -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}');do
           for ip in $(oc get ip -n ${fs_project} --no-headers | grep ${csv} | awk '{print $1}');do
             log "Deleting install plan $ip, associated with CSV ${csv}"
@@ -73,9 +76,8 @@ while true;do
         # log "Recreating subscription ${sub}"
         # oc apply -f ${diag_dir}/${sub}.yaml
         # Break the current while loop, only recreate one subscription at a time
-        break
       else
-        log "Subscription ${sub} will not (yet) be recreated"
+        log "Subscription ${sub} will not (yet) be remediated"
       fi
     fi
   done < ${sub_file}
