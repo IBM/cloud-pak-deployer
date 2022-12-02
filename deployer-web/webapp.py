@@ -1,17 +1,12 @@
 from flask import Flask, send_from_directory,request,make_response,send_file
-import sys
-import json
-import subprocess
-import os
-import yaml
+import sys, psutil, subprocess, os
+import json, yaml, re
 from shutil import copyfile
 from pathlib import Path
-import re
-import glob
-import zipfile
-
+import glob, zipfile
 from logging.config import dictConfig
 
+# Configure the logging
 dictConfig(
     {
         "version": 1,
@@ -167,6 +162,13 @@ def is_deployer_running():
 @app.route('/api/v1/deployer-status',methods=["GET"])
 def get_deployer_status():
     result = {}
+
+    # Check if the env apply process is active
+    result['deployer_active']=False
+    for proc in psutil.process_iter():
+        # app.logger.info(proc.cmdline())
+        if '/cloud-pak-deployer/cp-deploy.sh' in proc.cmdline():
+            result['deployer_active']=True
     deploy_state_log_path = status_dir + '/log/deployer-state.out'
 
     app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.yaml'))
@@ -179,14 +181,11 @@ def get_deployer_status():
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
-
             result['percentage_completed']=56
             if 'current-stage' in temp:
                 result['deployer_stage']=temp['current-stage']
             if 'current-task' in temp:
                 result['last_step']=temp['current-task']
-            if 'deployer-status' in temp:
-                result['deployer_active']=temp['deployer-status']
     except FileNotFoundError:
         result={}
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))

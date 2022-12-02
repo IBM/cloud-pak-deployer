@@ -9,7 +9,6 @@ export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\
 export PATH=$PATH:/cloud-pak-deployer
 
 cd /cloud-pak-deployer/deployer-web
-pip3 install -r requirements.txt > /tmp/pip_install.log
 
 # If CONFIG_DIR was not set, set it to the default
 if [ "${CONFIG_DIR}" == "" ];then
