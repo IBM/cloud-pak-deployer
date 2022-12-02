@@ -134,31 +134,6 @@ def oc_login():
     else:
         return make_response('Bad Request', 400) 
 
-
-@app.route('/api/v1/is-deployer-running',methods=["GET"])
-def is_deployer_running():
-    result = {
-        "code":-1,
-        "data":{},
-        "message":""
-    }
-    pid_path = status_dir + '/pid/container.id'
-    try:
-        with open(pid_path, "r", encoding='UTF-8') as f:
-            result['data'] = {"running": True}
-            result['message'] = '{} exists.'.format(pid_path)
-            result['code'] = 0
-    except FileNotFoundError:
-        result['code'] = 0
-        result['message'] = '{} not found.'.format(pid_path)
-    except PermissionError:
-        result['code'] = 401
-        result['message'] = "Permission Error."
-    except IOError:
-        result['code'] = 101
-        result['message'] = "IO Error."
-    return result
-
 @app.route('/api/v1/deployer-status',methods=["GET"])
 def get_deployer_status():
     result = {}
@@ -187,13 +162,13 @@ def get_deployer_status():
             if 'current-task' in temp:
                 result['last_step']=temp['current-task']
     except FileNotFoundError:
-        result={}
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
     except PermissionError:
-        result={}
         app.logger.warning('Permission error while reading file {}'.format(deploy_state_log_path))
     except IOError:
         app.logger.warning('IO Error while reading file {}'.format(deploy_state_log_path))
+    except:
+        app.logger.warning('internal server error')
     return result
 
 @app.route('/api/v1/configuration',methods=["GET"])
