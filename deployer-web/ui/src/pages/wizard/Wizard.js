@@ -13,9 +13,10 @@ import fileDownload from 'js-file-download'
 const Wizard = () => {
 
    //wizard index
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [wizardError, setWizardError] = useState(true);
   const [ocLoginErr, setOcLoginErr] = useState(false)
+  const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
   //DeployStart hidden wizard
   const [isDeployStart, setDeployStart] = useState(false);
@@ -59,6 +60,9 @@ const Wizard = () => {
   const [cp4dVersion, setCp4dVersion] = useState("")
   const [cp4iVersion, setCp4iVersion] = useState("")
 
+  //summary
+  const [summaryLoading, setSummaryLoading] = useState(false)
+
   //deploy
   const [deployerStatus, setDeployerStatus] = useState(true)    //true or false
   const [deployerPercentageCompleted, setDeployerPercentageCompleted] = useState(0)
@@ -66,80 +70,54 @@ const Wizard = () => {
   const [deployerLastStep, setDeployerLastStep] = useState('')
 
   const [scheduledJob, setScheduledJob] = useState(0)
-
   const [deployeyLog, setdeployeyLog] = useState('deployer-log')
 
   const clickPrevious = ()=> {
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
-  }
+  } 
 
-  if (currentIndex === -1 ) {
+  const errorProps = () => ({
+    kind: 'error',
+    lowContrast: true,
+    role: 'error',
+    title: 'Get error to start IBM Cloud Pak deployment. ',
+    hideCloseButton: false,
+  }); 
 
-    var errorProps = () => ({
-      kind: 'error',
-      lowContrast: true,
-      role: 'error',
-      title: 'Get error to check if deployer is running or not. ',
-      hideCloseButton: false,
-    }); 
-  
-    var successProps = () => ({
-      kind: 'success',
+
+  let successProps;
+  if (deployerStatus) {
+    successProps = () => ({
+      kind: 'info',
       lowContrast: true,
       role: 'success',
-      title: 'IBM Cloud Pak deployment is running. ',
+      title: 'IBM Cloud Pak Deployer is running. ',
       hideCloseButton: false,
     });
-
   } else {
-
-    var errorProps = () => ({
-      kind: 'error',
-      lowContrast: true,
-      role: 'error',
-      title: 'Get error to start IBM Cloud Pak deployment. ',
-      hideCloseButton: false,
-    }); 
-    
-    var successProps = () => ({
-      kind: 'success',
+    successProps = () => ({
+      kind: 'warning',
       lowContrast: true,
       role: 'success',
-      title: 'IBM Cloud Pak deployment was submitted successfully. ',
+      title: 'IBM Cloud Pak Deployer is Not running. ',
       hideCloseButton: false,
     });
+  }
+  
 
-  }  
-
-  const isDeployerRunning = async() => {    
-
-    setLoadingDeployStatus(true)  
-    await axios.get('/api/v1/is-deployer-running').then(res =>{   
-      setLoadingDeployStatus(false)        
-     
-      if (res.data.code === 0) {
-        if (res.data.data.running) {
-          setDeployStart(true)  
-          setDeployErr(false) 
-          getDeployStatus()
-          refreshStatus()  
-          return
-        }
-        setCurrentIndex(0)
-      } else {
-        setDeployStart(true)  
-        setDeployErr(true)   
-      }
-       
-    }, err => {      
-      setLoadingDeployStatus(false)   
-      setDeployStart(true)  
-      setDeployErr(true)      
-      console.log(err)
+  const checkDeployerStatus = async() => {
+    let result = 0;
+    await axios.get('/api/v1/deployer-status').then(res =>{
+      if (res.data.deployer_active===true) {
+        result = 1;
+      }      
+    }, err => {
+        console.log(err) 
+        result = -1;       
     });
-     
-  }  
+    return result
+  }
 
   const testOcLoginCmd = async() => {
     let patt = /oc\s+login\s+/;    
@@ -172,11 +150,31 @@ const Wizard = () => {
     if (currentIndex === 0 && cloudPlatform === "existing-ocp") {
       setLoadingDeployStatus(true) 
       let result=await testOcLoginCmd();
+
+      //test OC Login Cmd failure
       if (result!==0) {
         return
+      } else {
+       //test OC Login Cmd success
+        if (locked) {
+          let deployerStatus = await checkDeployerStatus();
+          if (deployerStatus===1){
+            setCheckDeployerStatusErr(false) 
+            setCurrentIndex(10)
+            setDeployStart(true)  
+            setDeployErr(false) 
+            getDeployStatus()
+            refreshStatus() 
+            return 
+          } 
+          if (deployerStatus===-1) {
+            setCheckDeployerStatusErr(true) 
+            return
+          }
+
+        }
       }
     }
-
     setWizardError(true)
     if (currentIndex <= 2)
       setCurrentIndex(currentIndex + 1)
@@ -214,7 +212,6 @@ const Wizard = () => {
   const getDeployStatus = async() => {
     if (isDeployErr)
       return 
-
     await axios.get('/api/v1/deployer-status').then(res =>{
         setDeployerStatus(res.data.deployer_active)
         setDeployerPercentageCompleted(res.data.percentage_completed)
@@ -245,13 +242,7 @@ const Wizard = () => {
     });
   }
 
-  useEffect(()=>{
-    isDeployerRunning()
-
-  },[])
-
-  useEffect(() => { 
-    
+  useEffect(() => {     
     if (isDeployStart && !isDeployErr) {   
       if (!deployerStatus) {
         clearInterval(scheduledJob)
@@ -314,7 +305,7 @@ const Wizard = () => {
           <div>
             <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
             {currentIndex === 3 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment}>Deploy</Button>
+              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading}>Deploy</Button>
               :
               <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
             }            
@@ -411,6 +402,7 @@ const Wizard = () => {
                                     setOcLoginCmdInvalid={setOcLoginCmdInvalid}
                                     envId={envId}
                                     setEnvId={setEnvId}
+                                    checkDeployerStatusErr={checkDeployerStatusErr}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 1 ? <Storage 
@@ -466,6 +458,8 @@ const Wizard = () => {
                                     envId={envId}
                                     CP4DPlatformCheckBox={CP4DPlatformCheckBox}
                                     CP4IPlatformCheckBox={CP4IPlatformCheckBox}
+                                    summaryLoading={summaryLoading}
+                                    setSummaryLoading={setSummaryLoading}
                               >
                               </Summary> : null}       
       </div> 
