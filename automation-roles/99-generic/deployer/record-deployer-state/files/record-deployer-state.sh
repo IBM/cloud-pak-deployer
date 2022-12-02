@@ -44,9 +44,7 @@ while true;do
   current_task=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
   log_state "current-task" "\"${current_task}\""
 
-  log_state "deployer-status" "ACTIVE"
-
-  mv -f ${temp_file} ${status_dir}/log/deployer-state.yaml
+  mv -f ${temp_file} ${status_dir}/log/deployer-state.out
 
   log "----------"
   log "Finished checks, sleeping for 10 seconds"
