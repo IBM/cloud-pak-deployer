@@ -10,9 +10,9 @@
   vars:
     _p_preview_script: True
 
-# - name: Show apply-olm command to create cartridge subscriptions
-#   debug:
-#     var: _apply_olm_command_script
+- name: Show apply-olm command to create cartridge subscriptions
+  debug:
+    var: _apply_olm_command_script
 
 - name: Generate preview script to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
   shell: |
@@ -25,6 +25,16 @@
     remote_src: True
     mode: u+rwx
 
+- name: Generate OLM utils command to create cartridge subscriptions
+  set_fact:
+    _apply_olm_command: "{{ lookup('template', 'apply-olm-cartridge-sub.j2') }}" 
+  vars:
+    _p_preview_script: False
+
+- name: Show apply-olm command to create cartridge subscriptions
+  debug:
+    var: _apply_olm_command
+
 - name: Starting background task to patch OLM artifacts in project {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ foundational_services_project }}-patch-olm.log
   shell: |
     {{ role_path }}/files/temp-patch-olm.sh \
@@ -34,8 +44,21 @@
   poll: 0
   register: _patch_olm
 
-- name: Create subscriptions one by one
-  include_tasks: cp4d-create-subscription.yml
-  loop: "{{ _cartridges_to_install }}"
-  loop_control:
-    loop_var: _current_cartridge
+- name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
+  shell: |
+    {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
+  failed_when: False
+  register: _apply_olm_result
+
+- name: Show subscriptions state if apply-olm failed
+  block:
+  - name: Retrieving state of all operators in project {{ foundational_services_project }}
+    shell: |
+      oc get sub -n {{ foundational_services_project }} \
+        --no-headers \
+        --sort-by=.metadata.creationTimestamp \
+        -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
+    register: _subscription_state
+  - fail:
+      msg: "{{ _subscription_state.stdout_lines }}"
+  when: _apply_olm_result.rc != 0
