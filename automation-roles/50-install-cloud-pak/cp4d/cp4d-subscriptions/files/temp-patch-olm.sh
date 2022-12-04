@@ -61,14 +61,14 @@ while true;do
       if [[ "${diag_dir}" == "" ]];then
         diag_dir=${status_dir}/log/olm-diag-${current_ts}
       fi
-      log "WARNING: Subscription ${sub} does not have a valid CSV, remediating. Diagnostics info in ${diag_dir}" 
+      log "WARNING: Subscription ${sub} does not have a valid CSV, remediating." 
     fi
   done < ${sub_file}
 
   # Start remediation for all subscriptions
   if [[ "${diag_dir}" != "" ]];then
-    log "WARNING: Remediating invalid subscriptions ${diag_dir}"
-    # Create diag dir and copy files into t
+    log "START OF REMEDIATION. Diagnostics info in ${diag_dir}"
+    # Create diag dir and copy files into it
     mkdir -p ${diag_dir}
     cp ${sub_file} ${diag_dir}/sub-diag.csv
     cp ${csv_file} ${diag_dir}/csv-diag.csv
@@ -108,7 +108,7 @@ while true;do
         sleep 60
       fi
     done < ${diag_dir}/sub-diag.csv
-    log "WARNING: END OF REMEDIATION"
+    log "END OF REMEDIATION"
   fi
 
   log "----------"
