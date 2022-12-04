@@ -86,7 +86,7 @@
         for i in `oc get pods -n {{ current_cp4d_cluster.project }} | grep ibm-nginx |  cut -f1 -d\\ `; do oc exec -n {{ current_cp4d_cluster.project }} ${i} -- /scripts/reload.sh; done
       register: _reload_nginx_pods_result
       until: _reload_nginx_pods_result.stdout.find('Custom ssl certificate files were found') != -1
-      retries: 10
+      retries: 20
       delay: 30  
       vars:
         ansible_callback_diy_runner_retry_msg: >-
