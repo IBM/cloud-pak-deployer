@@ -104,8 +104,15 @@ while true;do
       if [[ "${csv}" == "" ]];then
         log "Recreating subscription ${sub} from ${diag_dir}/sub-${sub}.yaml"
         oc apply -f ${diag_dir}/sub-${sub}.yaml
-        log "Sleeping for 60 seconds"
-        sleep 60
+        log "Waiting for subscription ${sub} to be associated with a CSV"
+        i=0
+        while [[ "$(oc get sub ${sub} -n ${fs_project} -o jsonpath={.status.installedCSV})" == "" ]] && [ $i -lt 120 ];do
+          sleep 1
+          (( i++ ))
+        done
+        if [ $i -ge 120 ];then
+          log "WARNING: Subscription ${sub} not remediated within 2 minutes !!"
+        fi
       fi
     done < ${diag_dir}/sub-diag.csv
     log "END OF REMEDIATION"
