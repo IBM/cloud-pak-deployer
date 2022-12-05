@@ -153,6 +153,8 @@ def get_deployer_status():
 
     app.logger.info('Retrieving state from {}'.format(status_dir + '/log/deployer-state.yaml'))
     try:
+        with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
+            temp={}
         with open(status_dir + '/log/deployer-state.yaml', "r", encoding='UTF-8') as f:
             temp={}
             content = f.read()
