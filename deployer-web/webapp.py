@@ -163,11 +163,12 @@ def get_deployer_status():
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
-            result['percentage_completed']=56
             if 'current-stage' in temp:
                 result['deployer_stage']=temp['current-stage']
             if 'current-task' in temp:
                 result['last_step']=temp['current-task']
+            if 'completed-percentage' in temp:
+                result['percentage_completed']=temp['completed-percentage']
     except FileNotFoundError:
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
     except PermissionError:
