@@ -31,6 +31,13 @@ while true;do
   current_task=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
   log_state "current-task" "\"${current_task}\""
 
+  if [[ $current_stage =~ (PLAY \[)([0-9]*) ]];then
+    completion_perc=${BASH_REMATCH[2]}
+  else
+    completion_perc=00
+  fi
+  log_state "completed-percentage" ${completion_perc}
+
   mv -f ${temp_file} ${status_dir}/log/deployer-state.out
 
   sleep 60
