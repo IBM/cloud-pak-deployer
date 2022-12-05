@@ -22,20 +22,7 @@ log_state() {
 
 temp_file=$(mktemp)
 
-log "----------"
-# Check if the connection to the OpenShift cluster is still valid
-# log "Info: Checking access to project default"
-# oc get project default
-# if [ $? -ne 0 ];then
-#   log "Error: Could not access project default. Has the OpenShift login token expired?"
-#   exit 99
-# fi
-
 while true;do
-  log "----------"
-  log "Checking state of the deployer process"
-  log "----------"
-
   rm -f ${temp_file}
 
   current_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
@@ -46,8 +33,6 @@ while true;do
 
   mv -f ${temp_file} ${status_dir}/log/deployer-state.out
 
-  log "----------"
-  log "Finished checks, sleeping for 1 minute"
   sleep 60
 done
 exit 0
