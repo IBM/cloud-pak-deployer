@@ -115,7 +115,7 @@ const CloudPak = ({CPDCartridgesData,
             fetchCloudPakIntegration() 
         }
       }  
-
+      // eslint-disable-next-line
     },[])
 
     useEffect(() => {

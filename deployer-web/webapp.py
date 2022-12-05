@@ -115,8 +115,12 @@ def downloadLog ():
 
 @app.route('/api/v1/oc-login',methods=["POST"])
 def oc_login():
+    result = {
+        "code":-1,
+        "error":"",
+    }
     body = json.loads(request.get_data())
-    print(body, file=sys.stderr)
+    #print(body, file=sys.stderr)
     env = {}
     oc_login_command=body['oc_login_command']
     oc_login_command = oc_login_command.strip()
@@ -125,11 +129,12 @@ def oc_login():
     isOcLoginCmd = re.match(pattern, oc_login_command)    
 
     if isOcLoginCmd:
-        if "--insecure-skip-tls-verify" in oc_login_command:
-            result_code=os.system(oc_login_command)
-        else:
-            result_code=os.system(oc_login_command + " --insecure-skip-tls-verify=true")
-        result={"code": result_code}    
+        proc = subprocess.Popen(oc_login_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        proc.stdin.write(b"n\n")
+        outputlog, errorlog = proc.communicate()     
+        result={"code": proc.returncode,"error": str(errorlog,  'utf-8')}   
+        proc.stdin.close()
+
         return json.dumps(result)
     else:
         return make_response('Bad Request', 400) 
