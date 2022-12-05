@@ -5,12 +5,7 @@
     --upgrade={%- if _upgrade_cp4d -%}true{%- else -%}false{%- endif %} \
     -v \
     --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
-    --components={% for c in _cartridges_to_install -%}
-{%- if (c.state | default('installed')) == 'installed' and not (c.separate_install | default(False | bool)) -%}
-{%- if not loop.first -%},{% endif -%}
-{{ c.olm_utils_name }}
-{%- endif -%}
-{%- endfor %} \
+    --components={{ _current_cp4d_cartridge.olm_utils_name }} \
 {% if _storage_type == "ocs" -%}
     --storage_vendor=ocs --file_storage_class={{ ocp_storage_class_file }} --block_storage_class={{ ocp_storage_class_block }} --storage_class={{ ocp_storage_class_file }}
 {%- elif _storage_type == "pwx" -%}
