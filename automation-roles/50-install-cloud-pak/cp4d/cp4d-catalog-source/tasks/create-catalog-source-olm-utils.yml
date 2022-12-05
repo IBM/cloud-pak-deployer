@@ -44,6 +44,20 @@
     regexp: '^  image: icr.io/cpopen/ibm-cpd-platform-operator-catalog@sha256:953403f1d7193fedb81186ec454fae3ea0852ef4c1929c3c56f12352189b1766'
     replace: '  image: icr.io/cpopen/ibm-cpd-platform-operator-catalog@sha256:54d3d7aff34444eb1991335831c18272ad217a6445f898e22f0b30f539b8c7cf'
 
+# TODO: Remove step once problem in olm-utils is fixed
+- name: Update script to fix invalid ws-pipelines create catalog source command
+  replace:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh"
+    regexp: 'ibm-ws-pipelines-6.0.0.tgz'
+    replace: 'ibm-ws-pipelines-6.0.0*.tgz'
+
+# TODO: Remove step once problem in olm-utils is fixed
+- name: Update script to fix invalid replication create catalog source command
+  replace:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh"
+    regexp: 'ibm-replication-4.6.0.tgz'
+    replace: 'ibm-replication-4.6.0*.tgz'
+
 - name: Run apply-olm command to create catalog sources
   block:
   - name: Generate OLM command to create catalog sources
