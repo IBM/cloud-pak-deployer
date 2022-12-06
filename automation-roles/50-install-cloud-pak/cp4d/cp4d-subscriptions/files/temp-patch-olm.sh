@@ -6,6 +6,7 @@
 
 status_dir=$1
 fs_project=$2
+cpd_project=$3
 
 exit_code=0
 
@@ -38,6 +39,7 @@ while true;do
 
   current_ts=$(date +%s)
 
+  log "Collecting OLM information"
   oc get sub -n ${fs_project} \
     --sort-by=.metadata.creationTimestamp \
     --no-headers \
@@ -53,20 +55,22 @@ while true;do
     -o jsonpath='{range .items[*]}{.metadata.name} {.spec.clusterServiceVersionNames}{"\n"}{end}' > ${ip_file}
 
   # Check if there are any subscriptions that don't have a CSV associated
+  log "INFO: Checking all subscriptions in OpenShift project ${fs_project}"
   diag_dir=""
   while IFS=, read -r sub sub_ts csv sub_state;do
-    log "Checking subscription ${sub}: created ${sub_ts}. CSV ${csv}, State ${sub_state}."
     sub_ts_epoch=$(date -d ${sub_ts} +%s)
     if [[ "${csv}" == "" ]] && (( current_ts > (sub_ts_epoch + 300) ));then
       if [[ "${diag_dir}" == "" ]];then
         diag_dir=${status_dir}/log/olm-diag-${current_ts}
       fi
-      log "WARNING: Subscription ${sub} does not have a valid CSV, remediating." 
+      log "WARNING: Subscription ${sub} does not have a valid CSV, will try to remediate." 
     fi
   done < ${sub_file}
 
   # Start remediation for all subscriptions
   if [[ "${diag_dir}" != "" ]];then
+    log "WARNING: Not all operators are correctly installed. All entries should have a CSV and have state AtLatestKnown"
+    cat ${sub_file} >> ${status_dir}/log/$fs_project-patch-olm.log
     log "START OF REMEDIATION. Diagnostics info in ${diag_dir}"
     # Create diag dir and copy files into it
     mkdir -p ${diag_dir}
@@ -81,7 +85,7 @@ while true;do
     # Delete all subscriptions that don't have a CSV
     while IFS=, read -r sub sub_ts csv sub_state;do
       if [[ "${csv}" == "" ]];then
-        log "WARNING: Exporting subscription ${sub} to ${diag_dir}/sub-${sub}.yaml and deleting"
+        log "DIAG: Exporting subscription ${sub} to ${diag_dir}/sub-${sub}.yaml and deleting"
         oc get sub -n ${fs_project} ${sub} -o yaml > ${diag_dir}/sub-${sub}.yaml
         oc delete sub -n ${fs_project} ${sub}
       fi
@@ -89,37 +93,41 @@ while true;do
     # Delete orphaned CSVs and their install plans
     while IFS=, read -r csv csv_ts;do
       if ! grep ${csv} ${sub_file};then
-        log "WARNING: Orphaned CSV ${csv} found, exporting to ${diag_dir}/csv-${csv}.yaml"
+        log "DIAG: Orphaned CSV ${csv} found, exporting to ${diag_dir}/csv-${csv}.yaml"
         oc get csv -n ${fs_project} ${csv} -o yaml > ${diag_dir}/csv-${csv}.yaml
         for ip in $(grep ${csv} ${diag_dir}/ip-diag.csv | awk '{print $1}');do
-          log "Deleting install plan $ip, associated with CSV ${csv}"
+          log "REMEDIATE: Deleting install plan $ip, associated with CSV ${csv}"
           oc delete ip -n ${fs_project} $ip --ignore-not-found
         done
-        log "Deleting orphaned CSV ${csv}"
+        log "REMEDIATE: Deleting orphaned CSV ${csv}"
         oc delete csv -n ${fs_project} ${csv} --ignore-not-found
       fi 
     done < ${diag_dir}/csv-diag.csv
-    # Recreating all deleted subscriptions
-    while IFS=, read -r sub sub_ts csv sub_state;do
-      if [[ "${csv}" == "" ]];then
-        log "Recreating subscription ${sub} from ${diag_dir}/sub-${sub}.yaml"
-        oc apply -f ${diag_dir}/sub-${sub}.yaml
-        log "Waiting for subscription ${sub} to be associated with a CSV"
-        i=0
-        while [[ "$(oc get sub ${sub} -n ${fs_project} -o jsonpath={.status.installedCSV})" == "" ]] && [ $i -lt 120 ];do
-          sleep 1
-          (( i++ ))
-        done
-        if [ $i -ge 120 ];then
-          log "WARNING: Subscription ${sub} not remediated within 2 minutes !!"
-        fi
-      fi
-    done < ${diag_dir}/sub-diag.csv
+    log "REMEDIATE: Re-running script to create subscriptions ${status_dir}/cp4d/${cpd_project}-apply-olm-cartridge-sub.sh, output in ${diag_dir}/${cpd_project}-apply-olm-cartridge-sub.log"
+    ${status_dir}/cp4d/${cpd_project}-apply-olm-cartridge-sub.sh >> ${diag_dir}/${cpd_project}-apply-olm-cartridge-sub.log
+    # # Recreating all deleted subscriptions
+    # while IFS=, read -r sub sub_ts csv sub_state;do
+    #   if [[ "${csv}" == "" ]];then
+    #     log "Recreating subscription ${sub} from ${diag_dir}/sub-${sub}.yaml"
+    #     oc apply -f ${diag_dir}/sub-${sub}.yaml
+    #     log "Waiting for subscription ${sub} to be associated with a CSV"
+    #     i=0
+    #     while [[ "$(oc get sub ${sub} -n ${fs_project} -o jsonpath={.status.installedCSV})" == "" ]] && [ $i -lt 120 ];do
+    #       sleep 1
+    #       (( i++ ))
+    #     done
+    #     if [ $i -ge 120 ];then
+    #       log "WARNING: Subscription ${sub} not remediated within 2 minutes !!"
+    #     fi
+    #   fi
+    # done < ${diag_dir}/sub-diag.csv
     log "END OF REMEDIATION"
+  else
+    log "INFO: Everything looks good"
   fi
 
   log "----------"
-  log "Finished checking OLM artifacts in project ${fs_project}"
+  log "Finished checking OLM artifacts in project ${fs_project}, sleeping for 60 seconds"
   log "----------"
   sleep 60
 
