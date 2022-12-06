@@ -16,3 +16,28 @@ spec:
   version: {{ _cp4d_ds_version.stdout }}
   zenControlPlaneNamespace: {{ _ds_instance_namespace }}
   description: {{ _ds_instance_description }}
+{% if _ds_instance_scale_px_compute is defined or _ds_instance_scale_px_runtime is defined %}  
+  scale:
+{% if _ds_instance_scale_px_compute is defined %}
+    pxcompute:
+      replicas: {{ _ds_px_compute_replicas }}
+      resources:
+        limits:
+          cpu: {{ _ds_px_compute_limit_cpu }}
+          memory: {{ _ds_px_compute_limit_memory}}
+        requests:
+          cpu: {{ _ds_px_compute_request_cpu }}
+          memory: {{ _ds_px_compute_request_memory }}  
+{% endif %}
+{% if _ds_instance_scale_px_runtime is defined %}          
+    pxruntime:
+      replicas: {{ _ds_px_runtime_replicas }}
+      resources:
+        limits:
+          cpu: {{ _ds_px_runtime_limit_cpu }}
+          memory: {{ _ds_px_runtime_limit_memory}}
+        requests:
+          cpu: {{ _ds_px_runtime_request_cpu }}
+          memory: {{ _ds_px_runtime_request_memory }}            
+{% endif %}
+{% endif %}
