@@ -131,8 +131,13 @@ def oc_login():
     if isOcLoginCmd:
         proc = subprocess.Popen(oc_login_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
         proc.stdin.write(b"n\n")
-        outputlog, errorlog = proc.communicate()     
-        result={"code": proc.returncode,"error": str(errorlog,  'utf-8')}   
+        outputlog, errorlog = proc.communicate()   
+
+        if  proc.returncode == 0: 
+            result["code"]=proc.returncode
+        else:
+            errors = str(errorlog,  'utf-8').split("\n")  
+            result={"code": proc.returncode,"error": errors[-2]}   
         proc.stdin.close()
 
         return json.dumps(result)
