@@ -76,6 +76,14 @@
           }}
   loop: "{{ _p_current_cp4d_cluster.cartridges }}"
 
+- set_fact:
+    _undefined_cartridges: "{{ _cartridges_with_olm_utils_name | rejectattr('olm_utils_name','defined') }}"
+
+- name: Fail if there were undefined cartridges found
+  fail:
+    msg: "Not all cartridges in the configuration are valid: {{ _undefined_cartridges }}"
+  when: _undefined_cartridges!=[]
+
 - name: Add versions details from olm-utils
   set_fact:
     _cartridges_to_install: >-

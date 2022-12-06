@@ -83,16 +83,8 @@
 
     - name: Reload the Cloud Pak for Data nginx pods
       shell: |
-        for i in `oc get pods -n {{ current_cp4d_cluster.project }} | grep ibm-nginx |  cut -f1 -d\\ `; do oc exec -n {{ current_cp4d_cluster.project }} ${i} -- /scripts/reload.sh; done
+        oc delete po -n {{ current_cp4d_cluster.project }} -l component=ibm-nginx
       register: _reload_nginx_pods_result
-      until: _reload_nginx_pods_result.stdout.find('Custom ssl certificate files were found') != -1
-      retries: 10
-      delay: 30  
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...         
 
 - name: Delete temporary directory 
   file:
