@@ -20,25 +20,37 @@ log_state() {
   printf "${1}: ${2}\n" | tee -a ${temp_file}
 }
 
+mkdir -p ${status_dir}/state
 temp_file=$(mktemp)
 
 while true;do
   rm -f ${temp_file}
 
   current_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
-  log_state "current-stage" "\"${current_stage}\""
+  log_state "current_stage" "\"${current_stage}\""
 
-  current_task=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
-  log_state "current-task" "\"${current_task}\""
+  last_step=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
+  log_state "last_step" "\"${last_step}\""
 
   if [[ $current_stage =~ (PLAY \[)([0-9]*) ]];then
     completion_perc=${BASH_REMATCH[2]}
   else
     completion_perc=00
   fi
-  log_state "completed-percentage" ${completion_perc}
+  log_state "percentage_completed" ${completion_perc}
 
-  mv -f ${temp_file} ${status_dir}/log/deployer-state.out
+  # Write service state (placeholder for now)
+  printf "service_state:\n" | tee -a ${temp_file}
+  printf "- service: cpd_platform\n" | tee -a ${temp_file}
+  printf "  state: Completed\n" | tee -a ${temp_file}
+  printf "- service: wml\n" | tee -a ${temp_file}
+  printf "  state: Catalog Source created\n" | tee -a ${temp_file}
+  printf "- service: wkc\n" | tee -a ${temp_file}
+  printf "  state: Operator installed\n" | tee -a ${temp_file}
+  printf "- service: ws\n" | tee -a ${temp_file}
+  printf "  state: In progress\n" | tee -a ${temp_file}
+
+  mv -f ${temp_file} ${status_dir}/state/deployer-state.out
 
   sleep 60
 done
