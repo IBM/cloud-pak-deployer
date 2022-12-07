@@ -17,7 +17,7 @@ log() {
 }
 
 log_state() {
-  printf "${1}: ${2}\n" | tee -a ${temp_file}
+  printf "%s: %s\n" "${1}" "${2}" | tee -a ${temp_file}
 }
 
 mkdir -p ${status_dir}/state
@@ -26,8 +26,8 @@ temp_file=$(mktemp)
 while true;do
   rm -f ${temp_file}
 
-  current_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
-  log_state "current_stage" "\"${current_stage}\""
+  deployer_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
+  log_state "deployer_stage" "\"${deployer_stage}\""
 
   last_step=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
   log_state "last_step" "\"${last_step}\""
@@ -40,15 +40,15 @@ while true;do
   log_state "percentage_completed" ${completion_perc}
 
   # Write service state (placeholder for now)
-  printf "service_state:\n" | tee -a ${temp_file}
-  printf "- service: cpd_platform\n" | tee -a ${temp_file}
-  printf "  state: Completed\n" | tee -a ${temp_file}
-  printf "- service: wml\n" | tee -a ${temp_file}
-  printf "  state: Catalog Source created\n" | tee -a ${temp_file}
-  printf "- service: wkc\n" | tee -a ${temp_file}
-  printf "  state: Operator installed\n" | tee -a ${temp_file}
-  printf "- service: ws\n" | tee -a ${temp_file}
-  printf "  state: In progress\n" | tee -a ${temp_file}
+  log_state "service_state" ""
+  log_state "- service" "cpd_platform"
+  log_state "  state" "Completed"
+  log_state "- service" "wml"
+  log_state "  state" "Catalog Source created"
+  log_state "- service" "wkc"
+  log_state "  state" "Operator installed"
+  log_state "- service" "ws"
+  log_state "  state" "In progress"
 
   mv -f ${temp_file} ${status_dir}/state/deployer-state.out
 
