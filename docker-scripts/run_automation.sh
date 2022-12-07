@@ -103,6 +103,10 @@ env|environment)
   fi
   # Make sure that the logs of the Ansible playbook are written to a log file
   mkdir -p ${STATUS_DIR}/log
+  if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ];then
+    tar czf ${STATUS_DIR}/log/cloud-pak-deployer-log-$(date +%s).tar.gz ${STATUS_DIR}/log/cloud-pak-deployer.log 2>/dev/null
+    rm -f ${STATUS_DIR}/log/cloud-pak-deployer.log
+  fi
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "Starting deployer" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "  Commit ID       : ${COMMIT_HASH}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
