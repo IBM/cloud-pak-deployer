@@ -3,11 +3,12 @@ import Infrastructure from './Infrastructure/Infrastructure';
 import Storage from './Storage/Storage';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
-import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, } from 'carbon-components-react';
+import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, RadioButtonGroup, RadioButton} from 'carbon-components-react';
 import ProgressBar from 'carbon-components-react/lib/components/ProgressBar'
 import Summary from './Summary/Summary';
 import axios from 'axios';
 import CloudPak from './CloudPak/CloudPak';
+import fileDownload from 'js-file-download'
 
 const Wizard = () => {
 
@@ -15,6 +16,7 @@ const Wizard = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [wizardError, setWizardError] = useState(true);
   const [ocLoginErr, setOcLoginErr] = useState(false)
+  const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
   //DeployStart hidden wizard
   const [isDeployStart, setDeployStart] = useState(false);
@@ -58,21 +60,66 @@ const Wizard = () => {
   const [cp4dVersion, setCp4dVersion] = useState("")
   const [cp4iVersion, setCp4iVersion] = useState("")
 
+  //summary
+  const [summaryLoading, setSummaryLoading] = useState(false)
+
   //deploy
-  const [deployerStatus, setDeployerStatus] = useState('')
-  const [deployerStage, setDeployerStage] = useState(0)
+  const [deployerStatus, setDeployerStatus] = useState(true)    //true or false
+  const [deployerPercentageCompleted, setDeployerPercentageCompleted] = useState(0)
+  const [deployerStage, setDeployerStage] = useState('')
   const [deployerLastStep, setDeployerLastStep] = useState('')
 
   const [scheduledJob, setScheduledJob] = useState(0)
-
+  const [deployeyLog, setdeployeyLog] = useState('deployer-log')
 
   const clickPrevious = ()=> {
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
+  } 
+
+  const errorProps = () => ({
+    kind: 'error',
+    lowContrast: true,
+    role: 'error',
+    title: 'Get error to start IBM Cloud Pak deployment. ',
+    hideCloseButton: false,
+  }); 
+
+
+  let successProps;
+  if (deployerStatus) {
+    successProps = () => ({
+      kind: 'info',
+      lowContrast: true,
+      role: 'success',
+      title: 'IBM Cloud Pak Deployer is running. ',
+      hideCloseButton: false,
+    });
+  } else {
+    successProps = () => ({
+      kind: 'warning',
+      lowContrast: true,
+      role: 'success',
+      title: 'IBM Cloud Pak Deployer is Not running. ',
+      hideCloseButton: false,
+    });
+  }
+  
+
+  const checkDeployerStatus = async() => {
+    let result = 0;
+    await axios.get('/api/v1/deployer-status').then(res =>{
+      if (res.data.deployer_active===true) {
+        result = 1;
+      }      
+    }, err => {
+        console.log(err) 
+        result = -1;       
+    });
+    return result
   }
 
   const testOcLoginCmd = async() => {
-
     let patt = /oc\s+login\s+/;    
     if (!patt.test(OCPSettings.ocLoginCmd.trim())) {
       setOcLoginCmdInvalid(true)
@@ -103,11 +150,31 @@ const Wizard = () => {
     if (currentIndex === 0 && cloudPlatform === "existing-ocp") {
       setLoadingDeployStatus(true) 
       let result=await testOcLoginCmd();
+
+      //test OC Login Cmd failure
       if (result!==0) {
         return
+      } else {
+       //test OC Login Cmd success
+        if (locked) {
+          let deployerStatus = await checkDeployerStatus();
+          if (deployerStatus===1){
+            setCheckDeployerStatusErr(false) 
+            setCurrentIndex(10)
+            setDeployStart(true)  
+            setDeployErr(false) 
+            getDeployStatus()
+            refreshStatus() 
+            return 
+          } 
+          if (deployerStatus===-1) {
+            setCheckDeployerStatusErr(true) 
+            return
+          }
+
+        }
       }
     }
-
     setWizardError(true)
     if (currentIndex <= 2)
       setCurrentIndex(currentIndex + 1)
@@ -126,7 +193,7 @@ const Wizard = () => {
       "region": IBMCloudSettings.region,
     }
     
-    setCurrentIndex(-1)
+    setCurrentIndex(10)
     await axios.post('/api/v1/deploy', body).then(res =>{
         setLoadingDeployStatus(false)    
         setDeployStart(true)  
@@ -142,28 +209,12 @@ const Wizard = () => {
     });    
   }
 
-  const errorProps = () => ({
-    kind: 'error',
-    lowContrast: true,
-    role: 'error',
-    title: 'Get error to start IBM Cloud Pak deployment. ',
-    hideCloseButton: false,
-  }); 
-  
-  const successProps = () => ({
-    kind: 'success',
-    lowContrast: true,
-    role: 'success',
-    title: 'IBM Cloud Pak deployment was submitted successfully. ',
-    hideCloseButton: false,
-  });
-
   const getDeployStatus = async() => {
     if (isDeployErr)
       return 
-
     await axios.get('/api/v1/deployer-status').then(res =>{
         setDeployerStatus(res.data.deployer_active)
+        setDeployerPercentageCompleted(res.data.percentage_completed)
         setDeployerStage(res.data.deployer_stage)
         setDeployerLastStep(res.data.last_step)
     }, err => {
@@ -177,9 +228,23 @@ const Wizard = () => {
       }, 5000))
   }
 
-  useEffect(() => {  
+  const downloadLog = async() => {
+    const body = {"deployerLog":deployeyLog}
+    const headers = {'Content-Type': 'application/json; application/octet-stream', responseType: 'blob'}
+    await axios.post('/api/v1/download-log', body, headers).then(res =>{
+      if (deployeyLog === 'all-logs') {
+        fileDownload(res.data, "logs.zip")
+      }else {
+        fileDownload(res.data, "deployer-state.out")
+      }       
+    }, err => {
+        console.log(err)        
+    });
+  }
+
+  useEffect(() => {     
     if (isDeployStart && !isDeployErr) {   
-      if (deployerStatus && deployerStatus.toLowerCase()==='inactive') {
+      if (!deployerStatus) {
         clearInterval(scheduledJob)
       }
     }
@@ -240,7 +305,7 @@ const Wizard = () => {
           <div>
             <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
             {currentIndex === 3 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment}>Deploy</Button>
+              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading}>Deploy</Button>
               :
               <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
             }            
@@ -266,22 +331,48 @@ const Wizard = () => {
 
                 <div className="deploy-key" >
                   <div>Deployer:</div>
-                  <div className="deploy-value">{deployerStatus}</div> 
+                  <div className="deploy-value">{deployerStatus?'ACTIVE':'INACTIVE'}</div> 
                 </div>
                 <div className="deploy-key" >
                   <div>Current Stage:</div>
-                  <div className="deploy-value">{deployerLastStep}</div> 
+                  <div className="deploy-value">{deployerStage}</div> 
                 </div>
                 <div className="deploy-key" >
-                  <div>Log:</div>
-                  <div className="deploy-value"><a href="/api/v1/download-log">Download</a></div> 
+                  <div>Current Task:</div>
+                  <div className="deploy-value">{deployerLastStep}</div> 
+                </div>
+                <div className="deploy-key">
+                  <div>Deployer Log:</div>
+                  <div className="deploy-value">
+                    <RadioButtonGroup
+                        //orientation="vertical"
+                        onChange={(value)=>{setdeployeyLog(value)}}
+                        legendText=""
+                        name="log-options-group"
+                        defaultSelected={deployeyLog}>
+                        <RadioButton
+                          labelText="Deployer Log Only"
+                          value="deployer-log"
+                          id="log-radio-1"
+                        />
+                        <RadioButton
+                          labelText="Deployer All Logs"
+                          value="all-logs"
+                          id="log-radio-2"
+                        />
+                      </RadioButtonGroup>
+                  </div> 
+                                                     
+                </div>
+                <div className="deploy-key" >
+                  <Button onClick={downloadLog}>Download</Button>
                 </div>
 
                 <div className="deploy-item">Deployer Progress:
                   <ProgressBar
                     label=""
                     helperText=""
-                    value={deployerStage}
+                    value={deployerPercentageCompleted}
                   />
                 </div>
               </div>        
@@ -311,6 +402,7 @@ const Wizard = () => {
                                     setOcLoginCmdInvalid={setOcLoginCmdInvalid}
                                     envId={envId}
                                     setEnvId={setEnvId}
+                                    checkDeployerStatusErr={checkDeployerStatusErr}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 1 ? <Storage 
@@ -352,7 +444,6 @@ const Wizard = () => {
                                     cloudPlatform={cloudPlatform} 
                                     IBMCloudSettings={IBMCloudSettings}                                                                      
                                     AWSSettings={AWSSettings}
-                                    OCPSettings={OCPSettings}
                                     storage={storage} 
                                     CPDCartridgesData={CPDCartridgesData}
                                     setCPDCartridgesData={setCPDCartridgesData}
@@ -367,6 +458,8 @@ const Wizard = () => {
                                     envId={envId}
                                     CP4DPlatformCheckBox={CP4DPlatformCheckBox}
                                     CP4IPlatformCheckBox={CP4IPlatformCheckBox}
+                                    summaryLoading={summaryLoading}
+                                    setSummaryLoading={setSummaryLoading}
                               >
                               </Summary> : null}       
       </div> 
