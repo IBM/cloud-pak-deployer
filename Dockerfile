@@ -13,11 +13,12 @@ USER 0
 RUN yum install -y yum-utils python38 python38-pip && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
-    yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute && \
+    yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
     pip3 install --upgrade pip && \
-    pip3 install jmespath pyyaml argparse python-benedict pyvmomi && \
+    pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
     alternatives --set python /usr/bin/python3 && \
     yum install -y vault && \
+    yum install -y nginx && \
     yum clean all
 
 RUN ansible-galaxy collection install community.general community.crypto ansible.utils community.vmware
@@ -28,7 +29,10 @@ VOLUME ["/Data"]
 RUN mkdir -p /cloud-pak-deployer && \
     mkdir -p /Data
 
+COPY ./nginx.conf   /etc/nginx/
 COPY . /cloud-pak-deployer/
+
+RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt
 
 ENV USER_UID=1001
 

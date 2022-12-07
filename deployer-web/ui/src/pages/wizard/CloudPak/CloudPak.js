@@ -35,7 +35,8 @@ const CloudPak = ({CPDCartridgesData,
     const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
 
-    useEffect(() => {
+    useEffect(()=>{
+
       const fetchCloudPakData =async () => {        
         await axios.get('/api/v1/cartridges/cp4d').then(res =>{   
             setLoadingCPD(false)  
@@ -74,9 +75,6 @@ const CloudPak = ({CPDCartridgesData,
             console.log(err)
         });         
       }  
-      
-      updateCP4DPlatformCheckBox(CPDCartridgesData)
-      updateCP4IPlatformCheckBox(CPICartridgesData)  
 
       if (locked) {
   
@@ -116,10 +114,14 @@ const CloudPak = ({CPDCartridgesData,
             setLoadingCPI(true)
             fetchCloudPakIntegration() 
         }
-      } 
+      }  
+      // eslint-disable-next-line
+    },[])
 
-
-      
+    useEffect(() => {
+      updateCP4DPlatformCheckBox(CPDCartridgesData)
+      updateCP4IPlatformCheckBox(CPICartridgesData)  
+     
       if (entitlementKey && (loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
         setWizardError(false)
       }
@@ -135,8 +137,7 @@ const CloudPak = ({CPDCartridgesData,
       role: 'error',
       title: 'Unable to get IBM Cloud Pak Configuration from server.',
       hideCloseButton: false,
-    });  
-    
+    });      
     
     const updateCP4DPlatformCheckBox = (data) => {
       let selectedItem = data.filter(item => item.state === "installed")  

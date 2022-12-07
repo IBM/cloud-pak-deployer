@@ -21,6 +21,7 @@ const Infrastructure = ({cloudPlatform,
                          setOcLoginCmdInvalid,
                          envId,
                          setEnvId,
+                         checkDeployerStatusErr,
                          }) => {
 
     //IBM Cloud
@@ -58,8 +59,7 @@ const Infrastructure = ({cloudPlatform,
           setLoadingConfiguration(false) 
           setLoadConfigurationErr(true)
           console.log(err)
-        });
-         
+        });         
       }      
 
       if(loadConfigurationErr) {
@@ -215,6 +215,15 @@ const Infrastructure = ({cloudPlatform,
       hideCloseButton: false,
     }); 
 
+
+    const checkDeployerStatuserrorProps = () => ({
+      kind: 'error',
+      lowContrast: true,
+      role: 'error',
+      title: 'Get error to check Deployer status. ',
+      hideCloseButton: false,
+    }); 
+
     return (
       <>
       { loadConfigurationErr && <InlineNotification className="cpd-error"
@@ -224,14 +233,17 @@ const Infrastructure = ({cloudPlatform,
       {ocLoginErr && <InlineNotification className="cpd-error"
           {...ocLoginErrorProps()}        
            />  }   
+      {/* oc login error */}
+      {checkDeployerStatusErr && <InlineNotification className="cpd-error"
+          {...checkDeployerStatuserrorProps()}        
+           />  }  
       {loadingConfiguration && <Loading /> }
       
       <div className="infra-title">Cloud Platform</div>        
 
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"          
-         onChange={(value)=>{setCloudPlatform(value)}  
-         }
+         onChange={(value)=>{setCloudPlatform(value)}}
          defaultSelected={cloudPlatform}  
          valueSelected={cloudPlatform}  
          >

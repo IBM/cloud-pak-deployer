@@ -879,7 +879,7 @@ if ! $INSIDE_CONTAINER;then
     run_cmd+=" -ti --entrypoint /cloud-pak-deployer/docker-scripts/env-command.sh"
   elif [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "wizard" ]];then
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/container-webui.sh"
-    run_cmd+=" -p 32080:32080"
+    run_cmd+=" -p 8080:8080"
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
