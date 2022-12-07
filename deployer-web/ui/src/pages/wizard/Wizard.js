@@ -54,6 +54,7 @@ const Wizard = () => {
   const [entitlementKey, setEntitlementKey] = useState('')
   const [CP4DPlatformCheckBox, setCP4DPlatformCheckBox] = useState(false)  
   const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
+  const [adminPassword, setAdminPassword] = useState('')
 
   const [cp4dLicense, setCp4dLicense] = useState(false)
   const [cp4iLicense, setCp4iLicense] = useState(false)
@@ -72,6 +73,8 @@ const Wizard = () => {
   const [scheduledJob, setScheduledJob] = useState(0)
   const [deployeyLog, setdeployeyLog] = useState('deployer-log')
 
+  const [saveConfigOnly,setSaveConfigOnly] = useState(false)
+
   const clickPrevious = ()=> {
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
@@ -84,27 +87,6 @@ const Wizard = () => {
     title: 'Get error to start IBM Cloud Pak deployment. ',
     hideCloseButton: false,
   }); 
-
-
-  let successProps;
-  if (deployerStatus) {
-    successProps = () => ({
-      kind: 'info',
-      lowContrast: true,
-      role: 'success',
-      title: 'IBM Cloud Pak Deployer is running. ',
-      hideCloseButton: false,
-    });
-  } else {
-    successProps = () => ({
-      kind: 'warning',
-      lowContrast: true,
-      role: 'success',
-      title: 'IBM Cloud Pak Deployer is Not running. ',
-      hideCloseButton: false,
-    });
-  }
-  
 
   const checkDeployerStatus = async() => {
     let result = 0;
@@ -171,7 +153,6 @@ const Wizard = () => {
             setCheckDeployerStatusErr(true) 
             return
           }
-
         }
       }
     }
@@ -299,15 +280,15 @@ const Wizard = () => {
         <div className='wizard-container__page-header'>
           <div className='wizard-container__page-header-title'>         
             <h2>Deploy Wizard</h2>
-            <div className='wizard-container__page-header-subtitle'>IBM Cloud Pak</div>                      
+            <div className='wizard-container__page-header-subtitle'>for IBM Cloud Pak</div>                      
           </div>
           { isDeployStart ? null: 
           <div>
-            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
+            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0 || saveConfigOnly}>Previous</Button>
             {currentIndex === 3 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading}>Deploy</Button>
+              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading || saveConfigOnly}>Deploy</Button>
               :
-              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
+              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError || saveConfigOnly}>Next</Button>
             }            
           </div>
           }          
@@ -322,10 +303,6 @@ const Wizard = () => {
               />  
               :
               <>
-              <InlineNotification className="deploy-error"
-                {...successProps()}        
-              />   
-
               <div>
                 <div className="deploy-status">Deployer Status:</div>
 
@@ -438,6 +415,16 @@ const Wizard = () => {
                                     CP4IPlatformCheckBox={CP4IPlatformCheckBox}
                                     setCP4DPlatformCheckBox={setCP4DPlatformCheckBox}
                                     setCP4IPlatformCheckBox={setCP4IPlatformCheckBox}
+                                    adminPassword={adminPassword}
+                                    setAdminPassword={setAdminPassword}
+                                    wizardError={wizardError}
+                                    saveConfigOnly={saveConfigOnly}
+                                    setSaveConfigOnly={setSaveConfigOnly}
+                                    cloudPlatform={cloudPlatform}
+                                    IBMCloudSettings={IBMCloudSettings}
+                                    AWSSettings={AWSSettings}
+                                    envId={envId}
+                                    storage={storage} 
                               >
                               </CloudPak> : null}    
         {currentIndex === 3 ? <Summary 
