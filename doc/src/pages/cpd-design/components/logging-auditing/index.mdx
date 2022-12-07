@@ -45,7 +45,7 @@ openshift_logging:
 
 Cloud Pak for Data and Foundational Services application logs are automatically picked up and forwarded to the `loki-application` logging destination and no additional configuration is needed.
 
-If you also want to activate audit logging for Cloud Pak for Data, you can do this by adding a `cp4d_audit_config` object to your configuration. With the below example, the Cloud Pak for Data audit logger is configured to write log records to the standard output (`stdout`) of the pods, after which they are forwarded to the `loki-audit` logging destination by a `ClusterLogForwarder` custom resource.
+If you also want to activate audit logging for Cloud Pak for Data, you can do this by adding a `cp4d_audit_config` object to your configuration. With the below example, the Cloud Pak for Data audit logger is configured to write log records to the standard output (`stdout`) of the pods, after which they are forwarded to the `loki-audit` logging destination by a `ClusterLogForwarder` custom resource. Optionally `labels` can be specified which are added to the `ClusterLogForwarder` custom resource pipeline entry.  
 
 ```
 cp4d_audit_config:
@@ -54,6 +54,8 @@ cp4d_audit_config:
   audit_output:
   - type: openshift-logging
     logging_name: loki-audit
+    labels:
+      cluster_name: "{{ env_id }}"    
 ```
 
 <InlineNotification kind="info">
