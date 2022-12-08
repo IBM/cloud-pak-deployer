@@ -64,6 +64,9 @@ def deploy():
     deployer_env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
     deployer_env['CONFIG_DIR']=config_dir
     deployer_env['STATUS_DIR']=status_dir
+    #Get admin password
+    #body['adminPassword']
+    
     app.logger.info('openshift name: {}'.format(openshift_name))
     app.logger.info('oc login command: {}'.format(body['oc_login_command']))
 
@@ -98,7 +101,7 @@ def downloadLog ():
        return make_response('Bad Request', 400)   
 
     if deployerLog == "deployer-log":
-        log_path = status_dir + '/log/deployer-state.out'
+        log_path = status_dir + '/log/cloud-pak-deployer.log'
         return send_file(log_path, as_attachment=True)
     
     if deployerLog == "all-logs":
@@ -154,7 +157,7 @@ def get_deployer_status():
         # app.logger.info(proc.cmdline())
         if '/cloud-pak-deployer/cp-deploy.sh' in proc.cmdline():
             result['deployer_active']=True
-    deploy_state_log_path = status_dir + '/log/deployer-state.out'
+    deploy_state_log_path = status_dir + '/state/deployer-state.out'
 
     app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
     try:
@@ -168,12 +171,14 @@ def get_deployer_status():
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
-            if 'current-stage' in temp:
-                result['deployer_stage']=temp['current-stage']
-            if 'current-task' in temp:
-                result['last_step']=temp['current-task']
-            if 'completed-percentage' in temp:
-                result['percentage_completed']=temp['completed-percentage']
+            if 'deployer_stage' in temp:
+                result['deployer_stage']=temp['deployer_stage']
+            if 'last_step' in temp:
+                result['last_step']=temp['last_step']
+            if 'percentage_completed' in temp:
+                result['percentage_completed']=temp['percentage_completed']
+            if 'service_state' in temp:
+                result['service_state']=temp['service_state']
     except FileNotFoundError:
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
     except PermissionError:
