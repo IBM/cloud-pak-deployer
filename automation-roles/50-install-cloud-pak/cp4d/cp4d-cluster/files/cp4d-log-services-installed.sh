@@ -23,6 +23,13 @@ log() {
   printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-cartridges-state.log
 }
 
+log_state() {
+  printf "%s: %s\n" "${1}" "${2}" | tee -a ${temp_file}
+}
+
+mkdir -p ${status_dir}/state
+temp_file=$(mktemp)
+
 log "----------"
 # Check if the connection to the OpenShift cluster is still valid
 log "Info: Checking access to project $project"
@@ -36,6 +43,10 @@ while true;do
   log "----------"
   log "Checking installation completion of cartridges"
   log "----------"
+
+  # Also write state into temp file
+  state_logged+false
+  log_state "service_state" ""
   for c in $(echo $cartridges | jq -r '.[].name');do
     # Check state of cartridge
     cartridge_state=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .state')
@@ -72,9 +83,21 @@ while true;do
     fi
 
     # Check if status is completed
+    state_logged=true
     cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
     log "Info: Status of $cr_cr object $cr_name is $cr_status"
+
+    # Log the state in the temp file
+    log_state "- service" "${cr_cartridge_name}"
+    log_state "  state" "${cr_status}"
   done
+
+  # If the state of any cartridge was logged, recorded into the cr-state.out file
+  if ${state_logged};then
+    cp -r ${temp_file} ${status_dir}/state/cp4d-${project}-cr-state.out
+  else
+    rm -f ${status_dir}/state/cp4d-${project}-cr-state.out
+  fi
   sleep 120
 done
 exit 0
