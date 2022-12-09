@@ -39,16 +39,10 @@ while true;do
   fi
   log_state "percentage_completed" ${completion_perc}
 
-  # Write service state (placeholder for now)
-  log_state "service_state" ""
-  log_state "- service" "cpd_platform"
-  log_state "  state" "Completed"
-  log_state "- service" "wml"
-  log_state "  state" "Catalog Source created"
-  log_state "- service" "wkc"
-  log_state "  state" "Operator installed"
-  log_state "- service" "ws"
-  log_state "  state" "In progress"
+  cp4d_state_file=$(ls ${status_dir}/state/cp4d-*-cr-state.out 2>/dev/null | head -n 1)
+  if [[ ! -z ${cp4d_state_file} ]];then
+    cat ${cp4d_state_file} >> ${temp_file}
+  fi
 
   mv -f ${temp_file} ${status_dir}/state/deployer-state.out
 
