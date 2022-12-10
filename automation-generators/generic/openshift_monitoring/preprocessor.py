@@ -12,6 +12,8 @@ import sys
 #   retention_period: 1y
 #   grafana_operator: enabled
 #   grafana_project: grafana
+#   labels:
+#     cluster_name: "{{ env_id }}"
 
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)

@@ -5,9 +5,15 @@ metadata:
   namespace: openshift-user-workload-monitoring
 data:
   config.yaml: |
-{% if ((_oc_remote_rewrite_url|length > 0) or (_oc_monitoring_persist_sc|length > 0) or (_oc_monitoring_retention_period|length > 0))  %}    
+{% if ((_oc_remote_rewrite_url|length > 0) or (_oc_monitoring_persist_sc|length > 0) or (_oc_monitoring_retention_period|length > 0) or (_p_openshift_monitoring.labels is defined))  %}    
     prometheus:
-{%- endif %}  
+{% endif %}
+{% if _p_openshift_monitoring.labels is defined %}
+      externalLabels:
+{% for _label in (_p_openshift_monitoring.labels | dict2items) %}
+        {{ _label.key }}: {{ _label.value }}
+{% endfor %}       
+{% endif %} 
 {% if _oc_monitoring_retention_period|length > 0 %}
       retention: {{ _oc_monitoring_retention_period }}
 {%- endif %} 

@@ -49,6 +49,9 @@
   shell: |
     {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
   failed_when: False
+  retries: 2
+  delay: 10
+  until: _apply_olm_result.rc==0
   register: _apply_olm_result
 
 - name: Show subscriptions state if apply-olm failed
@@ -61,5 +64,5 @@
         -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
     register: _subscription_state
   - fail:
-      msg: "{{ _subscription_state.stdout_lines }}"
+      msg: "Creation of the subscriptions failed (possible due to OLM issue): {{ _subscription_state.stdout_lines }}"
   when: _apply_olm_result.rc != 0

@@ -8,7 +8,7 @@ For monitoring of Cloud Pak for Data we make use of the OpenShift Monitoring fra
 
 ![Monitoring overview](cloud-pak-deployer-monitors.png)
 
-To deploy Cloud Pak for Data Monitors, its is mandatory to enable the OpenShift monitoring. OpenShift monitoring is activated via the `openshift_monitoring` object. For Cloud Pak for Data to be able to push its Prometheus metrics to OpenShift monitoring, the `user_worload` must be set to enabled. To make the openShift monitoring data persistent, the (optional) setting `pvc_storage_class` and `pvc_storage_size_gb` can be set. To enable Prometheus RemoteWrite, use the `remote_rewrite_url`. By default, the OpenShift Container Platform monitoring stack configures the retention time for Prometheus data to be 15 days. You can modify the retention time to change how soon the data is deleted using the optional `retention_period` property. The value is set with a number directly followed by ms (milliseconds), s (seconds), m (minutes), h (hours), d (days), w (weeks), or y (years).
+To deploy Cloud Pak for Data Monitors, its is mandatory to enable the OpenShift monitoring. OpenShift monitoring is activated via the `openshift_monitoring` object. For Cloud Pak for Data to be able to push its Prometheus metrics to OpenShift monitoring, the `user_worload` must be set to enabled. To make the openShift monitoring data persistent, the (optional) setting `pvc_storage_class` and `pvc_storage_size_gb` can be set. To enable Prometheus RemoteWrite, use the `remote_rewrite_url`. By default, the OpenShift Container Platform monitoring stack configures the retention time for Prometheus data to be 15 days. You can modify the retention time to change how soon the data is deleted using the optional `retention_period` property. The value is set with a number directly followed by ms (milliseconds), s (seconds), m (minutes), h (hours), d (days), w (weeks), or y (years). Optionally labels can be added using the `labels` configuration. This will add the provided labels as `externalLabels` to the `prometheus` of the user-workload-monitoring-config ConfigMap and to the `prometheusK8s` of the cluster-monitoring-config ConfigMap.
 
 Optionally it is possible to install the community operator of Grafana, which provides the ability to build your own Grafana Dashboards. The `grafana_project` specifies the OpenShift project in which Grafana is deployed. The installation of Grafana creates a default local administrative user with username `root` and password `secret`. Grafana can be accessed via the OpenShift Route that is exposed in the `grafana_project`.
 
@@ -22,6 +22,8 @@ openshift_monitoring:
   pvc_storage_size_gb: 100
   grafana_operator: enabled
   grafana_project: grafana
+  labels:
+    cluster_name: pluto-01
 ```
 
 The observations of Cloud Pak for Data are generated using the zen-watchdog component, which is part of the cpd_platform cartridge and therefore available on each instance of Cloud Pak for Data. Part of the zen-watchdog installation is a set of monitors which focus on the technical deployment of Cloud Pak for Data (e.g. running pods and bound Persistent Volume Claims (pvcs)).

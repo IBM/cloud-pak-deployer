@@ -9,6 +9,8 @@ import sys
 #   audit_output:
 #   - type: openshift-logging
 #     logging_name: loki-audit
+#     labels:
+#       cluster_name: "{{ env_id }}"
 
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
