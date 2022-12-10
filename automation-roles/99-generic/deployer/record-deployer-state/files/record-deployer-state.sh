@@ -32,8 +32,16 @@ while true;do
   last_step=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
   log_state "last_step" "\"${last_step}\""
 
-  if [[ $current_stage =~ (PLAY \[)([0-9]*) ]];then
-    completion_perc=${BASH_REMATCH[2]}
+  # Infer the completion percentage from the stage. If at the final stage (80), the percentage should be 100
+  if [[ $deployer_stage =~ (PLAY \[)([0-9]*) ]];then
+    stage_number=${BASH_REMATCH[2]}
+    # Before doing the percentage calculation, check that the outcome is numeric
+    number_regex='^[0-9]+$'
+    if [[ $stage_number =~ $number_regex ]] ; then
+      completion_perc=$(( stage_number  * 100 / 80 ))
+    else
+      completion_perc=0
+    fi
   else
     completion_perc=00
   fi
