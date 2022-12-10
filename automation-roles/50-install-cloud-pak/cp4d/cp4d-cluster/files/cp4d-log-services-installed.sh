@@ -76,15 +76,17 @@ while true;do
       continue
     fi
 
+    state_logged=true
+
     # Skip cartridge that don't have a CR yet
     oc get --namespace $project $cr_cr $cr_name
     if [ $? -ne 0 ];then
-      continue
+      cr_status="Configured"
+    else
+      # Check if status is completed
+      cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
     fi
-
-    # Check if status is completed
-    state_logged=true
-    cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
+    
     log "Info: Status of $cr_cr object $cr_name is $cr_status"
 
     # Log the state in the temp file
