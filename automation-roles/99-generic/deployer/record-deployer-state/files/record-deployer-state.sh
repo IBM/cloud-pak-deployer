@@ -54,6 +54,6 @@ while true;do
 
   mv -f ${temp_file} ${status_dir}/state/deployer-state.out
 
-  sleep 60
+  sleep 10
 done
 exit 0
