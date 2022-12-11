@@ -59,7 +59,7 @@ while true;do
       continue
     fi  
     
-    cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .name')
+    cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .Component_name')
     cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
     cr_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
     cr_status_attribute=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
@@ -81,7 +81,7 @@ while true;do
     # Skip cartridge that don't have a CR yet
     oc get --namespace $project $cr_cr $cr_name
     if [ $? -ne 0 ];then
-      cr_status="Configured"
+      cr_status="To be installed"
     else
       # Check if status is completed
       cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
