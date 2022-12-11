@@ -163,7 +163,7 @@ def get_deployer_status():
             result['deployer_active']=True
     deploy_state_log_path = status_dir + '/state/deployer-state.out'
 
-    app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
+    # app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
     try:
         with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
             temp={}
@@ -171,7 +171,7 @@ def get_deployer_status():
             temp={}
             content = f.read()
             f.close()
-            app.logger.info(content)
+            # app.logger.info(content)
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
