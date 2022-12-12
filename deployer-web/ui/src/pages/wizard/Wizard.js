@@ -3,7 +3,7 @@ import Infrastructure from './Infrastructure/Infrastructure';
 import Storage from './Storage/Storage';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
-import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, RadioButtonGroup, RadioButton} from 'carbon-components-react';
+import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, RadioButtonGroup, RadioButton, Table, TableHead, TableRow, TableBody, TableCell, TableHeader} from 'carbon-components-react';
 import ProgressBar from 'carbon-components-react/lib/components/ProgressBar'
 import Summary from './Summary/Summary';
 import axios from 'axios';
@@ -54,6 +54,7 @@ const Wizard = () => {
   const [entitlementKey, setEntitlementKey] = useState('')
   const [CP4DPlatformCheckBox, setCP4DPlatformCheckBox] = useState(false)  
   const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
+  const [adminPassword, setAdminPassword] = useState('')
 
   const [cp4dLicense, setCp4dLicense] = useState(false)
   const [cp4iLicense, setCp4iLicense] = useState(false)
@@ -72,6 +73,10 @@ const Wizard = () => {
   const [scheduledJob, setScheduledJob] = useState(0)
   const [deployeyLog, setdeployeyLog] = useState('deployer-log')
 
+  const [saveConfigOnly,setSaveConfigOnly] = useState(false)
+
+  const [deployState, setDeployState] = useState([])
+
   const clickPrevious = ()=> {
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
@@ -84,27 +89,6 @@ const Wizard = () => {
     title: 'Get error to start IBM Cloud Pak deployment. ',
     hideCloseButton: false,
   }); 
-
-
-  let successProps;
-  if (deployerStatus) {
-    successProps = () => ({
-      kind: 'info',
-      lowContrast: true,
-      role: 'success',
-      title: 'IBM Cloud Pak Deployer is running. ',
-      hideCloseButton: false,
-    });
-  } else {
-    successProps = () => ({
-      kind: 'warning',
-      lowContrast: true,
-      role: 'success',
-      title: 'IBM Cloud Pak Deployer is Not running. ',
-      hideCloseButton: false,
-    });
-  }
-  
 
   const checkDeployerStatus = async() => {
     let result = 0;
@@ -171,7 +155,6 @@ const Wizard = () => {
             setCheckDeployerStatusErr(true) 
             return
           }
-
         }
       }
     }
@@ -191,6 +174,7 @@ const Wizard = () => {
       "envId": envId,
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "region": IBMCloudSettings.region,
+      "adminPassword": adminPassword,
     }
     
     setCurrentIndex(10)
@@ -217,6 +201,9 @@ const Wizard = () => {
         setDeployerPercentageCompleted(res.data.percentage_completed)
         setDeployerStage(res.data.deployer_stage)
         setDeployerLastStep(res.data.last_step)
+        if(res.data.service_state) {
+          setDeployState(res.data.service_state)
+        }
     }, err => {
         console.log(err)        
     });
@@ -233,9 +220,9 @@ const Wizard = () => {
     const headers = {'Content-Type': 'application/json; application/octet-stream', responseType: 'blob'}
     await axios.post('/api/v1/download-log', body, headers).then(res =>{
       if (deployeyLog === 'all-logs') {
-        fileDownload(res.data, "logs.zip")
+        fileDownload(res.data, "cloud-pak-deployer-logs.zip")
       }else {
-        fileDownload(res.data, "deployer-state.out")
+        fileDownload(res.data, "cloud-pak-deployer.log")
       }       
     }, err => {
         console.log(err)        
@@ -292,6 +279,21 @@ const Wizard = () => {
     )
   }
 
+  const oneDimensionArray2twoDimensionArray = (baseArray)=>{
+    let len = baseArray.length;
+    let n = 9; 
+    let lineNum = len % n === 0 ? len / n : Math.floor( (len / n) + 1 );
+    let res = [];
+    for (let i = 0; i < lineNum; i++) {
+      let temp = baseArray.slice(i*n, i*n+n);
+      res.push(temp);
+    }
+    return res;
+  }
+
+  const headers = ['Service', 'State'];
+  const tables = oneDimensionArray2twoDimensionArray(deployState);
+
   return (
     <>
      <div className="wizard-container">
@@ -299,15 +301,15 @@ const Wizard = () => {
         <div className='wizard-container__page-header'>
           <div className='wizard-container__page-header-title'>         
             <h2>Deploy Wizard</h2>
-            <div className='wizard-container__page-header-subtitle'>IBM Cloud Pak</div>                      
+            <div className='wizard-container__page-header-subtitle'>for IBM Cloud Pak</div>                      
           </div>
           { isDeployStart ? null: 
           <div>
-            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
+            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0 || saveConfigOnly}>Previous</Button>
             {currentIndex === 3 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading}>Deploy</Button>
+              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading || saveConfigOnly}>Deploy</Button>
               :
-              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
+              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError || saveConfigOnly}>Next</Button>
             }            
           </div>
           }          
@@ -322,10 +324,6 @@ const Wizard = () => {
               />  
               :
               <>
-              <InlineNotification className="deploy-error"
-                {...successProps()}        
-              />   
-
               <div>
                 <div className="deploy-status">Deployer Status:</div>
 
@@ -375,6 +373,42 @@ const Wizard = () => {
                     value={deployerPercentageCompleted}
                   />
                 </div>
+                {deployState.length > 0 && 
+                    <div className="deploy-item">Deployer State:  
+                                  <div className="deploy-item__state">
+                                    {tables.map((table)=>(
+                                          
+                                          <div className="deploy-item__state-table">
+                                            <Table size="md" useZebraStyles={false}>
+                                              <TableHead>
+                                                <TableRow>
+                                                  {headers.map((header) => (
+                                                    <TableHeader id={header.key} key={header}>
+                                                      {header}
+                                                    </TableHeader>
+                                                  ))}
+                                                </TableRow>
+                                              </TableHead>
+                                              <TableBody>
+                                                {table.map((row) => (
+                                                  <TableRow key={row.id}>
+                                                    {Object.keys(row)
+                                                      .filter((key) => key !== 'id')
+                                                      .map((key) => {
+                                                        return <TableCell key={key}>{row[key]}</TableCell>;
+                                                      })}
+                                                  </TableRow>
+                                                ))}
+                                              </TableBody>
+                                            </Table>
+                                          </div>            
+                                    ))
+                                    }
+                                  </div>           
+                    </div>                
+                }
+
+
               </div>        
 
               </>
@@ -438,6 +472,16 @@ const Wizard = () => {
                                     CP4IPlatformCheckBox={CP4IPlatformCheckBox}
                                     setCP4DPlatformCheckBox={setCP4DPlatformCheckBox}
                                     setCP4IPlatformCheckBox={setCP4IPlatformCheckBox}
+                                    adminPassword={adminPassword}
+                                    setAdminPassword={setAdminPassword}
+                                    wizardError={wizardError}
+                                    saveConfigOnly={saveConfigOnly}
+                                    setSaveConfigOnly={setSaveConfigOnly}
+                                    cloudPlatform={cloudPlatform}
+                                    IBMCloudSettings={IBMCloudSettings}
+                                    AWSSettings={AWSSettings}
+                                    envId={envId}
+                                    storage={storage} 
                               >
                               </CloudPak> : null}    
         {currentIndex === 3 ? <Summary 

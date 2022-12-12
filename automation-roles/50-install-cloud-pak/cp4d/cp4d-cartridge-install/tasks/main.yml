@@ -21,24 +21,6 @@
   debug:
     var: _patch_db2u
 
-- name: Write cartridge information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
-  copy:
-    content: "{{ _cartridges_to_install | default([]) | to_json }}"
-    dest: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json"
-
-- name: Logging state of cartridges in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridge-state.log
-  shell: |
-    {{ role_path }}/files/log-services-installed.sh \
-      {{ status_dir }} \
-      {{ _p_current_cp4d_cluster.project }}
-  async: 86400
-  poll: 0
-  register: _log_services
-
-- name: Show details of background task to log cartridge state
-  debug:
-    var: _log_services
-
 # Set fact which is handled when testing install of all cartridges
 - set_fact:
     _cp4d_cartridges_installed_successfully: True

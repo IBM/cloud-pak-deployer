@@ -17,29 +17,43 @@ log() {
 }
 
 log_state() {
-  printf "${1}: ${2}\n" | tee -a ${temp_file}
+  printf "%s: %s\n" "${1}" "${2}" | tee -a ${temp_file}
 }
 
+mkdir -p ${status_dir}/state
 temp_file=$(mktemp)
 
 while true;do
   rm -f ${temp_file}
 
-  current_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
-  log_state "current-stage" "\"${current_stage}\""
+  deployer_stage=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'PLAY \[' | tail -1)
+  log_state "deployer_stage" "\"${deployer_stage}\""
 
-  current_task=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
-  log_state "current-task" "\"${current_task}\""
+  last_step=$(cat ${status_dir}/log/cloud-pak-deployer.log | grep -E 'TASK \[' | tail -1)
+  log_state "last_step" "\"${last_step}\""
 
-  if [[ $current_stage =~ (PLAY \[)([0-9]*) ]];then
-    completion_perc=${BASH_REMATCH[2]}
+  # Infer the completion percentage from the stage. If at the final stage (80), the percentage should be 100
+  if [[ $deployer_stage =~ (PLAY \[)([0-9]*) ]];then
+    stage_number=${BASH_REMATCH[2]}
+    # Before doing the percentage calculation, check that the outcome is numeric
+    number_regex='^[0-9]+$'
+    if [[ $stage_number =~ $number_regex ]] ; then
+      completion_perc=$(( stage_number  * 100 / 80 ))
+    else
+      completion_perc=0
+    fi
   else
     completion_perc=00
   fi
-  log_state "completed-percentage" ${completion_perc}
+  log_state "percentage_completed" ${completion_perc}
 
-  mv -f ${temp_file} ${status_dir}/log/deployer-state.out
+  cp4d_state_file=$(ls ${status_dir}/state/cp4d-*-cr-state.out 2>/dev/null | head -n 1)
+  if [[ ! -z ${cp4d_state_file} ]];then
+    cat ${cp4d_state_file} >> ${temp_file}
+  fi
 
-  sleep 60
+  mv -f ${temp_file} ${status_dir}/state/deployer-state.out
+
+  sleep 10
 done
 exit 0
