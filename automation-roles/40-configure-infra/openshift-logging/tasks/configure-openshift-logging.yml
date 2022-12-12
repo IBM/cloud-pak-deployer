@@ -109,6 +109,16 @@
     src: openshift-clusterlogforwarder-cr.j2
     dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-clusterlogforwarder-cr.yaml"
 
+- name: Get current ClusterLogForwarder 'instance', if it exists
+  shell: |
+    oc get ClusterLogForwarder -n openshift-logging | grep '^instance[[:space:]]' | wc -l
+  register: _current_clf_instance
+
+- name: Delete existing ClusterLogForwarder 'instance' if it exists
+  shell: |
+    oc delete ClusterLogForwarder instance -n openshift-logging
+  when: _current_clf_instance.stdout == "1"
+
 - name: Create ClusterLogForwarder instance
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-openshift-clusterlogforwarder-cr.yaml
