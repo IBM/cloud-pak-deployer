@@ -176,12 +176,14 @@
         - ca_artifacts_pod.rc==0
         - ca_artifacts_pod.stdout!=''
 
-    - name: Wait for a bit so that all Cognos Analytics containers are starting
-      pause:
-       seconds: 90
+    - when: ca_cp4d_version == "4.0"
+      block:
+        - name: Wait for a bit so that all Cognos Analytics containers are starting
+          pause:
+            seconds: 90
 
-    - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
-      shell: "oc delete pod -n {{ current_cp4d_cluster.project }} {{ ca_artifacts_pod.stdout }}"
+        - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
+          shell: "oc delete pod -n {{ current_cp4d_cluster.project }} {{ ca_artifacts_pod.stdout }}"
 
     - name: Cognos Analytics instance being provisioned
       debug:
