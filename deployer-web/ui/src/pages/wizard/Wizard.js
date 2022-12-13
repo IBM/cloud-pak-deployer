@@ -1,6 +1,7 @@
 import React from 'react';
 import Infrastructure from './Infrastructure/Infrastructure';
 import Storage from './Storage/Storage';
+import Selection from './Selection/Selection';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
 import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, RadioButtonGroup, RadioButton, Table, TableHead, TableRow, TableBody, TableCell, TableHeader} from 'carbon-components-react';
@@ -246,34 +247,41 @@ const Wizard = () => {
       <ProgressIndicator className="wizard-container__page-progress"
           vertical={false}
           currentIndex={currentIndex}
-          spaceEqually={false}>  
-
+          spaceEqually={false}> 
+          
           <ProgressStep
             onClick={() => setCurrentIndex(0)}
             current={currentIndex === 0}
-            label={'Infrastructure'}
+            label={'Selection'}
             description="Step 1"
           />
 
           <ProgressStep
             onClick={() => setCurrentIndex(1)}
             current={currentIndex === 1}
-            label={'Storage'}
+            label={'Infrastructure'}
             description="Step 2"
           />
 
           <ProgressStep
             onClick={() => setCurrentIndex(2)}
             current={currentIndex === 2}
-            label={'Cloud Pak'}
+            label={'Storage'}
             description="Step 3"
           />
 
           <ProgressStep
             onClick={() => setCurrentIndex(3)}
             current={currentIndex === 3}
-            label={'Summary'}
+            label={'Cloud Pak'}
             description="Step 4"
+          />
+
+          <ProgressStep
+            onClick={() => setCurrentIndex(4)}
+            current={currentIndex === 4}
+            label={'Summary'}
+            description="Step 5"
           />    
        </ProgressIndicator>  
     )
@@ -416,8 +424,30 @@ const Wizard = () => {
           //Wizard Process
           <DeployerProgressIndicator />                   
         } 
+        {currentIndex === 0 ? <Selection
+                            cloudPlatform={cloudPlatform} 
+                            setCloudPlatform={setCloudPlatform} 
+                            IBMCloudSettings={IBMCloudSettings}
+                            setIBMCloudSettings={setIBMCloudSettings}                                      
+                            AWSSettings={AWSSettings}
+                            setAWSSettings={setAWSSettings}
+                            OCPSettings={OCPSettings}
+                            setOCPSettings={setOCPSettings}                                    
+                            setWizardError={setWizardError}
+                            ocLoginErr={ocLoginErr}
+                            configuration={configuration}
+                            setConfiguration={setConfiguration}
+                            locked={locked}
+                            setLocked={setLocked}
+                            isOcLoginCmdInvalid={isOcLoginCmdInvalid}
+                            setOcLoginCmdInvalid={setOcLoginCmdInvalid}
+                            envId={envId}
+                            setEnvId={setEnvId}
+                            checkDeployerStatusErr={checkDeployerStatusErr}
+                      >
+                      </Selection> : null} 
       
-        {currentIndex === 0 ? <Infrastructure
+        {currentIndex === 1 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
                                     IBMCloudSettings={IBMCloudSettings}
@@ -439,7 +469,7 @@ const Wizard = () => {
                                     checkDeployerStatusErr={checkDeployerStatusErr}
                               >
                               </Infrastructure> : null} 
-        {currentIndex === 1 ? <Storage 
+        {currentIndex === 2 ? <Storage 
                                     cloudPlatform={cloudPlatform} 
                                     setStorage={setStorage} 
                                     storage={storage} 
@@ -450,7 +480,7 @@ const Wizard = () => {
                                     locked={locked}
                               >                                    
                               </Storage> : null}    
-        {currentIndex === 2 ? <CloudPak
+        {currentIndex === 3 ? <CloudPak
                                     entitlementKey={entitlementKey} 
                                     setEntitlementKey={setEntitlementKey}
                                     CPDCartridgesData={CPDCartridgesData}
@@ -484,7 +514,7 @@ const Wizard = () => {
                                     storage={storage} 
                               >
                               </CloudPak> : null}    
-        {currentIndex === 3 ? <Summary 
+        {currentIndex === 4 ? <Summary 
                                     cloudPlatform={cloudPlatform} 
                                     IBMCloudSettings={IBMCloudSettings}                                                                      
                                     AWSSettings={AWSSettings}

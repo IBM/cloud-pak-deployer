@@ -468,6 +468,27 @@ def saveConfig():
     ocp_config=config_data
 
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
-  
+
+@app.route('/api/v1/environment-variable',methods=["GET"])
+def environmentVariable():
+    result={}
+
+    if 'CPD_WIZARD_MODE' in os.environ:
+      result['CPD_WIZARD_MODE']=os.environ['CPD_WIZARD_MODE']
+    else:
+      result['CPD_WIZARD_MODE']=""
+
+    if 'STATUS_DIR' in os.environ:
+      result['STATUS_DIR']=os.environ['STATUS_DIR']
+    else:
+      result['STATUS_DIR']=""
+
+    if 'CONFIG_DIR' in os.environ:
+      result['CONFIG_DIR']=os.environ['CONFIG_DIR']
+    else:
+      result['CONFIG_DIR']=""
+    
+    return result
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port='32080', debug=False)    
