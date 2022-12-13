@@ -1,0 +1,32 @@
+---
+title: Cognos Analytics Instance
+---
+
+# Cognos Analytics Instance
+
+A Cognos Analytics instance can be defined by adding the `instances` section to the `cartridges` entry of catridige `ca`. The following example shows the configuration to define an instance.
+
+```
+cp4d:
+- project: cpd-instance
+  openshift_cluster_name: "{{ env_id }}"
+...
+  cartridges:
+  - name: ca
+    size: small
+    state: installed
+    instances:
+    - name: ca-instance
+      metastore_ref: ca-metastore
+```
+
+
+| Property | Description | Mandatory | 
+| -------- | ----------- | ---------- | 
+| name | Name of the instance | Yes |
+| metastore_ref | Name of the DB2 instance used for the Cognos Repository database | Yes |
+
+
+The Cognos Content Repository database can use an IBM Cloud Pak for Data DB2 OLTP instance. The Cloud Pak Deployer will first determine whether an existing DB2 OLTP existing with the name specified `metastore_ref`. If this is the case, this DB2 OLTP instance will be used and the database is prepared using the Cognos DB2 script prior to provisioning the Cognos instance.
+
+On IBM Cloud, when there is no DB2 OLTP instance found with the name specified in `metastore_ref`, a lookup to available DB2 services on the same IBM Cloud account is performed. If an existing DB2 Service exists with the name specified in `metastore_ref`, this DB2 Service is used as the Content Repository database. 
