@@ -38,6 +38,9 @@ export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
 case "$SUBCOMMAND" in
 env|environment)
+  # Clear state directory
+  mkdir -p ${STATUS_DIR}/state
+  rm -rf ${STATUS_DIR}/state/*
   # Set Ansible config file to use
   ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
   if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
