@@ -73,7 +73,13 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    ${CPD_CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+    while ${CPD_CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};do
+      ${CPD_CONTAINER_ENGINE} logs -f --tail 10 ${ACTIVE_CONTAINER_ID}
+      if [ $? -ne 0 ];then
+        break
+      fi
+      sleep 0.5
+    done
   else
     ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
   fi
