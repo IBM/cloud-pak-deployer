@@ -1,0 +1,58 @@
+---
+title: DataStage instances
+---
+
+# DB2 OLTP Instances
+
+DataStage instances can be defined by adding the `instances` section to the `cartridges` entry of catridige `datastage-ent-plus`. The following example shows the configuration to define an instance.
+
+DataStage, upon deployment, always creates a default instance called `ds-px-default`. This instance cannot be configured in the `instances` section. 
+
+```
+cp4d:
+- project: cpd-instance
+  openshift_cluster_name: "{{ env_id }}"
+...
+  cartridges:
+  - name: datastage-ent-plus
+    state: installed
+    instances:
+    - name: ds-instance
+      # Optional settings
+      description: "datastage ds-instance"
+      size: medium
+      storage_class: efs-nfs-client
+      storage_size_gb: 60
+      # Optional Custom Scale options
+      scale_px_runtime:
+        replicas: 2
+        cpu_request: 500m
+        cpu_limit: 2
+        memory_request: 2Gi
+        memory_limit: 4Gi
+      scale_px_compute:
+        replicas: 2
+        cpu_request: 1
+        cpu_limit: 3
+        memory_request: 4Gi
+        memory_limit: 12Gi   
+```
+
+| Property | Description | Mandatory | Allowed Values |
+| -------- | ----------- | ---------- | ------------- |
+| name | Name of the instance | Yes | |
+| description | Description of the instance | No | |
+| size | Size of the DataStage instance | No | small (default), medium, large |
+| storage_class | Override the default storage class | No |  |
+| storage_size_gb | Storage size allocated to the DataStage instance | No | numeric |
+
+Optionally, the default px_runtime and px_compute instances of the DataStage instance can be tweaked. Both `scale_px_runtime` and `scale_px_compute` must be specified when used, and all properties must be specified.
+
+| Property | Description | Mandatory | 
+| -------- | ----------- | ---------- | 
+| replicas | Number of replicas | Yes | 
+| cpu_request | CPU Request value | Yes |
+| memory_request | Memory Request value | Yes |
+| cpu_limit | CPU limit value | Yes |
+| memory_limit | Memory limit value | Yes |
+
