@@ -30,8 +30,7 @@ const Summary = ({cloudPlatform,
     
     const [editable, setEditable] = useState(false)
 
-    const createSummaryData = async () => {    
-
+    const createSummaryData = async () => { 
         let region=""    
         switch (cloudPlatform) {
             case "ibm-cloud":               
@@ -55,8 +54,7 @@ const Summary = ({cloudPlatform,
             "cp4iVersion":cp4iVersion,
             "CP4DPlatform":CP4DPlatformCheckBox,
             "CP4IPlatform":CP4IPlatformCheckBox,      
-        }     
-
+        }
         await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
             setSummaryLoading(false)          
             setSummaryInfo(res.data.config)
@@ -176,7 +174,7 @@ const Summary = ({cloudPlatform,
                 </div>
                 :
                 <div className="align-right">
-                    <Button onClick={clickEditBtn} className="wizard-container__page-header-button" disabled={showErr} >Edit</Button> 
+                    <Button onClick={clickEditBtn} className="wizard-container__page-header-button" disabled={showErr || summaryLoading} >Edit</Button> 
                 </div>            
             }          
 

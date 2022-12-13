@@ -57,13 +57,18 @@ def deploy():
                 global_env_id=doc['global_config']['env_id']
             if 'openshift' in doc.keys():
                 openshift_name=doc['openshift'][0]['name'].replace('{{ env_id }}',global_env_id)
-                break
+            if 'cp4d' in doc.keys():
+                cp4d_project=doc['cp4d'][0]['project'].replace('{{ env_id }}',global_env_id)
     deployer_env = os.environ.copy()
     if body['cloud']=='ibm-cloud':
       deployer_env['IBM_CLOUD_API_KEY']=body['env']['ibmCloudAPIKey']
     deployer_env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
     deployer_env['CONFIG_DIR']=config_dir
     deployer_env['STATUS_DIR']=status_dir
+    cp4d_admin_password=''
+    if 'adminPassword' in body and body['adminPassword']!='':
+        cp4d_admin_password=body['adminPassword']
+    
     app.logger.info('openshift name: {}'.format(openshift_name))
     app.logger.info('oc login command: {}'.format(body['oc_login_command']))
 
@@ -72,7 +77,9 @@ def deploy():
     deploy_command+=['env','apply']
     deploy_command+=['-e=env_id={}'.format(body['envId'])]
     deploy_command+=['-vs={}-oc-login={}'.format(openshift_name, body['oc_login_command'])]
-    deploy_command+=['-vvv']
+    if cp4d_admin_password!='':
+        deploy_command+=['-vs=cp4d_admin_{}_{}={}'.format(cp4d_project.replace('-','_'), openshift_name.replace('-','_'), cp4d_admin_password)]
+    deploy_command+=['-v']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
     log = open('/tmp/cp-deploy.log', 'a')
@@ -98,7 +105,7 @@ def downloadLog ():
        return make_response('Bad Request', 400)   
 
     if deployerLog == "deployer-log":
-        log_path = status_dir + '/log/deployer-state.out'
+        log_path = status_dir + '/log/cloud-pak-deployer.log'
         return send_file(log_path, as_attachment=True)
     
     if deployerLog == "all-logs":
@@ -154,9 +161,9 @@ def get_deployer_status():
         # app.logger.info(proc.cmdline())
         if '/cloud-pak-deployer/cp-deploy.sh' in proc.cmdline():
             result['deployer_active']=True
-    deploy_state_log_path = status_dir + '/log/deployer-state.out'
+    deploy_state_log_path = status_dir + '/state/deployer-state.out'
 
-    app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
+    # app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
     try:
         with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
             temp={}
@@ -164,16 +171,18 @@ def get_deployer_status():
             temp={}
             content = f.read()
             f.close()
-            app.logger.info(content)
+            # app.logger.info(content)
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
-            if 'current-stage' in temp:
-                result['deployer_stage']=temp['current-stage']
-            if 'current-task' in temp:
-                result['last_step']=temp['current-task']
-            if 'completed-percentage' in temp:
-                result['percentage_completed']=temp['completed-percentage']
+            if 'deployer_stage' in temp:
+                result['deployer_stage']=temp['deployer_stage']
+            if 'last_step' in temp:
+                result['last_step']=temp['last_step']
+            if 'percentage_completed' in temp:
+                result['percentage_completed']=temp['percentage_completed']
+            if 'service_state' in temp:
+                result['service_state']=temp['service_state']
     except FileNotFoundError:
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
     except PermissionError:
