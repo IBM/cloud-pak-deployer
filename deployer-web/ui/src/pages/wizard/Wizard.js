@@ -15,7 +15,7 @@ const Wizard = () => {
 
    //wizard index
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [wizardError, setWizardError] = useState(true);
+  const [wizardError, setWizardError] = useState(false);
   const [ocLoginErr, setOcLoginErr] = useState(false)
   const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
@@ -23,6 +23,10 @@ const Wizard = () => {
   const [isDeployStart, setDeployStart] = useState(false);
   const [isDeployErr, setDeployErr] = useState(false);
   const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
+
+  //Selection
+  const [selection, setSelection] = useState('Configure+Deploy')
+  const [cpdWizardMode, setCpdWizardMode] = useState('')
 
   //Infrastructure
   const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
@@ -83,6 +87,39 @@ const Wizard = () => {
        setCurrentIndex(currentIndex - 1)
   } 
 
+  const clickNext = async()=> {
+    if (currentIndex === 1 && cloudPlatform === "existing-ocp") {
+      setLoadingDeployStatus(true) 
+      let result=await testOcLoginCmd();
+
+      //test OC Login Cmd failure
+      if (result!==0) {
+        return
+      } else {
+       //test OC Login Cmd success
+        if (locked) {
+          let deployerStatus = await checkDeployerStatus();
+          if (deployerStatus===1){
+            setCheckDeployerStatusErr(false) 
+            setCurrentIndex(10)
+            setDeployStart(true)  
+            setDeployErr(false) 
+            getDeployStatus()
+            refreshStatus() 
+            return 
+          } 
+          if (deployerStatus===-1) {
+            setCheckDeployerStatusErr(true) 
+            return
+          }
+        }
+      }
+    }
+    setWizardError(true)
+    if (currentIndex <= 3)
+      setCurrentIndex(currentIndex + 1)
+  }
+
   const errorProps = () => ({
     kind: 'error',
     lowContrast: true,
@@ -131,38 +168,6 @@ const Wizard = () => {
     return result;
   }
 
-  const clickNext = async()=> {
-    if (currentIndex === 0 && cloudPlatform === "existing-ocp") {
-      setLoadingDeployStatus(true) 
-      let result=await testOcLoginCmd();
-
-      //test OC Login Cmd failure
-      if (result!==0) {
-        return
-      } else {
-       //test OC Login Cmd success
-        if (locked) {
-          let deployerStatus = await checkDeployerStatus();
-          if (deployerStatus===1){
-            setCheckDeployerStatusErr(false) 
-            setCurrentIndex(10)
-            setDeployStart(true)  
-            setDeployErr(false) 
-            getDeployStatus()
-            refreshStatus() 
-            return 
-          } 
-          if (deployerStatus===-1) {
-            setCheckDeployerStatusErr(true) 
-            return
-          }
-        }
-      }
-    }
-    setWizardError(true)
-    if (currentIndex <= 2)
-      setCurrentIndex(currentIndex + 1)
-  }
 
   const createDeployment = async () => {
     setLoadingDeployStatus(true)
@@ -314,7 +319,7 @@ const Wizard = () => {
           { isDeployStart ? null: 
           <div>
             <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0 || saveConfigOnly}>Previous</Button>
-            {currentIndex === 3 ?
+            {currentIndex === 4 ?
               <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading || saveConfigOnly}>Deploy</Button>
               :
               <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError || saveConfigOnly}>Next</Button>
@@ -425,25 +430,10 @@ const Wizard = () => {
           <DeployerProgressIndicator />                   
         } 
         {currentIndex === 0 ? <Selection
-                            cloudPlatform={cloudPlatform} 
-                            setCloudPlatform={setCloudPlatform} 
-                            IBMCloudSettings={IBMCloudSettings}
-                            setIBMCloudSettings={setIBMCloudSettings}                                      
-                            AWSSettings={AWSSettings}
-                            setAWSSettings={setAWSSettings}
-                            OCPSettings={OCPSettings}
-                            setOCPSettings={setOCPSettings}                                    
-                            setWizardError={setWizardError}
-                            ocLoginErr={ocLoginErr}
-                            configuration={configuration}
-                            setConfiguration={setConfiguration}
-                            locked={locked}
-                            setLocked={setLocked}
-                            isOcLoginCmdInvalid={isOcLoginCmdInvalid}
-                            setOcLoginCmdInvalid={setOcLoginCmdInvalid}
-                            envId={envId}
-                            setEnvId={setEnvId}
-                            checkDeployerStatusErr={checkDeployerStatusErr}
+                            setSelection={setSelection} 
+                            setCpdWizardMode={setCpdWizardMode}
+                            selection={selection}
+                            setCurrentIndex={setCurrentIndex}
                       >
                       </Selection> : null} 
       
@@ -467,6 +457,7 @@ const Wizard = () => {
                                     envId={envId}
                                     setEnvId={setEnvId}
                                     checkDeployerStatusErr={checkDeployerStatusErr}
+                                    cpdWizardMode={cpdWizardMode}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 2 ? <Storage 
@@ -512,6 +503,7 @@ const Wizard = () => {
                                     AWSSettings={AWSSettings}
                                     envId={envId}
                                     storage={storage} 
+                                    selection={selection}
                               >
                               </CloudPak> : null}    
         {currentIndex === 4 ? <Summary 

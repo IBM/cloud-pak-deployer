@@ -22,6 +22,7 @@ const Infrastructure = ({cloudPlatform,
                          envId,
                          setEnvId,
                          checkDeployerStatusErr,
+                         cpdWizardMode,
                          }) => {
 
     //IBM Cloud
@@ -241,6 +242,8 @@ const Infrastructure = ({cloudPlatform,
       
       <div className="infra-title">Cloud Platform</div>        
 
+
+      {cpdWizardMode!=="existing-ocp" && 
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"          
          onChange={(value)=>{setCloudPlatform(value)}}
@@ -251,7 +254,7 @@ const Infrastructure = ({cloudPlatform,
          <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="1" disabled={locked}/>
          <RadioButton labelText="AWS" value="aws" id="2" disabled={locked}/>
          <RadioButton labelText="vSphere" value="vsphere" id="3" disabled />         
-      </RadioButtonGroup>
+      </RadioButtonGroup> }
 
       {cloudPlatform === 'ibm-cloud' ?  
          <>                    
