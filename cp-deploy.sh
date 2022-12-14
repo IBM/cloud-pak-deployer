@@ -655,6 +655,14 @@ if [[ ! -z $VAULT_CERT_CERT_FILE && ! -f $VAULT_CERT_CERT_FILE ]];then
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
+# Add any vault secrets that have been specified as environment variables                                   #
+# --------------------------------------------------------------------------------------------------------- #
+if [[ "${CPD_OC_LOGIN}" != "" ]];then
+  arrVaultSecret+=("oc-login")
+  arrVaultSecretValue+=("${CPD_OC_LOGIN}")
+fi
+
+# --------------------------------------------------------------------------------------------------------- #
 # Build the VAULT_SECRETS environment variable                                                              #
 # --------------------------------------------------------------------------------------------------------- #
 VAULT_SECRETS=""
