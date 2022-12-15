@@ -9,7 +9,8 @@ import ProgressBar from 'carbon-components-react/lib/components/ProgressBar'
 import Summary from './Summary/Summary';
 import axios from 'axios';
 import CloudPak from './CloudPak/CloudPak';
-import fileDownload from 'js-file-download'
+import fileDownload from 'js-file-download';
+import yaml from 'js-yaml';
 
 const Wizard = () => {
 
@@ -68,6 +69,9 @@ const Wizard = () => {
 
   //summary
   const [summaryLoading, setSummaryLoading] = useState(false)
+  const [tempSummaryInfo, setTempSummaryInfo] = useState("") 
+  const [configInvalid, setConfigInvalid] = useState(false)  
+  const [showErr, setShowErr] = useState(false)
 
   //deploy
   const [deployerStatus, setDeployerStatus] = useState(true)    //true or false
@@ -78,17 +82,27 @@ const Wizard = () => {
   const [scheduledJob, setScheduledJob] = useState(0)
   const [deployeyLog, setdeployeyLog] = useState('deployer-log')
 
-  const [saveConfigOnly,setSaveConfigOnly] = useState(false)
-
   const [deployState, setDeployState] = useState([])
+  const [configDir, setConfigDir] = useState('')
+  const [statusDir, setStatusDir] = useState('')
+
+  const [saveConfig, setSaveConfig] = useState(false)
+
+  //For Private Registry  
+  const [registryHostname, setRegistryHostname] = useState('')
+  const [registryPort, setRegistryPort] = useState(443)
+  const [registryNS, setRegistryNS] = useState('')
+  const [registryUser, setRegistryUser] = useState('')
+  const [registryPassword, setRegistryPassword] = useState('')
 
   const clickPrevious = ()=> {
+    setWizardError(false)
     if (currentIndex >= 1)
        setCurrentIndex(currentIndex - 1)
   } 
 
   const clickNext = async()=> {
-    if (currentIndex === 1 && cloudPlatform === "existing-ocp") {
+    if (currentIndex === 1 && cloudPlatform === "existing-ocp" && selection !== "Configure+Download") {
       setLoadingDeployStatus(true) 
       let result=await testOcLoginCmd();
 
@@ -125,6 +139,14 @@ const Wizard = () => {
     lowContrast: true,
     role: 'error',
     title: 'Get error to start IBM Cloud Pak deployment. ',
+    hideCloseButton: false,
+  }); 
+
+  const successSaveConfigProps = () => ({
+    kind: 'success',
+    lowContrast: true,
+    role: 'success',
+    title: 'The configuration file is saved successfully!',
     hideCloseButton: false,
   }); 
 
@@ -168,8 +190,38 @@ const Wizard = () => {
     return result;
   }
 
+  const createSave = async () => {
+    setLoadingDeployStatus(true)
+    let body = {}
+    let result = {}
+        
+    try {                   
+        yaml.loadAll(tempSummaryInfo, function (doc) {
+            result = {...doc, ...result}
+        }); 
+        body['config'] = result 
+        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+          setLoadingDeployStatus(false)
+          setCurrentIndex(10)
+          setDeployStart(true)
+          setSaveConfig(true)
 
-  const createDeployment = async () => {
+          
+      }, err => {
+        setLoadingDeployStatus(false)
+        setShowErr(true)
+        console.log(err)
+          
+      });  
+
+    } catch (error) {
+        setLoadingDeployStatus(false)
+        setConfigInvalid(true)
+        console.error(error)
+    } 
+  }
+
+  const createDeployment = async() => {
     setLoadingDeployStatus(true)
     const body = {
       "env":{
@@ -181,8 +233,7 @@ const Wizard = () => {
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "region": IBMCloudSettings.region,
       "adminPassword": adminPassword,
-    }
-    
+    }    
     setCurrentIndex(10)
     await axios.post('/api/v1/deploy', body).then(res =>{
         setLoadingDeployStatus(false)    
@@ -307,6 +358,113 @@ const Wizard = () => {
   const headers = ['Service', 'State'];
   const tables = oneDimensionArray2twoDimensionArray(deployState);
 
+  const ActionBySelect = () => {
+    return (
+      <>
+        {selection==="Configure+Deploy" && <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading}>Deploy</Button>}
+        {selection==="Configure" && <Button className="wizard-container__page-header-button" onClick={createSave} disabled={summaryLoading}>Save</Button>}
+        {selection==="Configure+Download" && 
+          <>
+              <Button className="wizard-container__page-header-button" onClick={createSave} disabled={summaryLoading}>Download</Button>
+              <Button className="wizard-container__page-header-button" onClick={createSave} disabled={summaryLoading}>Mirror images</Button>
+          </>
+        }
+      </>
+    )
+  }
+
+  const DeployStats = () => {
+    return (
+      <>
+        <div>
+          <div className="deploy-status">Deployer Status:</div>
+
+          <div className="deploy-key" >
+            <div>Deployer:</div>
+            <div className="deploy-value">{deployerStatus?'ACTIVE':'INACTIVE'}</div> 
+          </div>
+          <div className="deploy-key" >
+            <div>Current Stage:</div>
+            <div className="deploy-value">{deployerStage}</div> 
+          </div>
+          <div className="deploy-key" >
+            <div>Current Task:</div>
+            <div className="deploy-value">{deployerLastStep}</div> 
+          </div>
+          <div className="deploy-key">
+            <div>Deployer Log:</div>
+            <div className="deploy-value">
+              <RadioButtonGroup
+                  //orientation="vertical"
+                  onChange={(value)=>{setdeployeyLog(value)}}
+                  legendText=""
+                  name="log-options-group"
+                  defaultSelected={deployeyLog}>
+                  <RadioButton
+                    labelText="Deployer Log Only"
+                    value="deployer-log"
+                    id="log-radio-1"
+                  />
+                  <RadioButton
+                    labelText="Deployer All Logs"
+                    value="all-logs"
+                    id="log-radio-2"
+                  />
+                </RadioButtonGroup>
+            </div> 
+                                              
+          </div>
+          <div className="deploy-key" >
+            <Button onClick={downloadLog}>Download</Button>
+          </div>
+
+          <div className="deploy-item">Deployer Progress:
+            <ProgressBar
+              label=""
+              helperText=""
+              value={deployerPercentageCompleted}
+            />
+          </div>
+          {deployState.length > 0 && 
+              <div className="deploy-item">Deployer State:  
+                <div className="deploy-item__state">
+                  {tables.map((table)=>(
+                        
+                        <div className="deploy-item__state-table">
+                          <Table size="md" useZebraStyles={false}>
+                            <TableHead>
+                              <TableRow>
+                                {headers.map((header) => (
+                                  <TableHeader id={header.key} key={header}>
+                                    {header}
+                                  </TableHeader>
+                                ))}
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {table.map((row) => (
+                                <TableRow key={row.id}>
+                                  {Object.keys(row)
+                                    .filter((key) => key !== 'id')
+                                    .map((key) => {
+                                      return <TableCell key={key}>{row[key]}</TableCell>;
+                                    })}
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>            
+                  ))
+                  }
+                </div>           
+              </div>                
+          }
+        </div>        
+      </>
+
+    )
+  }
+
   return (
     <>
      <div className="wizard-container">
@@ -318,11 +476,11 @@ const Wizard = () => {
           </div>
           { isDeployStart ? null: 
           <div>
-            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0 || saveConfigOnly}>Previous</Button>
+            <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
             {currentIndex === 4 ?
-              <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading || saveConfigOnly}>Deploy</Button>
+              <ActionBySelect />
               :
-              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError || saveConfigOnly}>Next</Button>
+              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
             }            
           </div>
           }          
@@ -336,95 +494,13 @@ const Wizard = () => {
                 {...errorProps()}        
               />  
               :
-              <>
               <div>
-                <div className="deploy-status">Deployer Status:</div>
-
-                <div className="deploy-key" >
-                  <div>Deployer:</div>
-                  <div className="deploy-value">{deployerStatus?'ACTIVE':'INACTIVE'}</div> 
-                </div>
-                <div className="deploy-key" >
-                  <div>Current Stage:</div>
-                  <div className="deploy-value">{deployerStage}</div> 
-                </div>
-                <div className="deploy-key" >
-                  <div>Current Task:</div>
-                  <div className="deploy-value">{deployerLastStep}</div> 
-                </div>
-                <div className="deploy-key">
-                  <div>Deployer Log:</div>
-                  <div className="deploy-value">
-                    <RadioButtonGroup
-                        //orientation="vertical"
-                        onChange={(value)=>{setdeployeyLog(value)}}
-                        legendText=""
-                        name="log-options-group"
-                        defaultSelected={deployeyLog}>
-                        <RadioButton
-                          labelText="Deployer Log Only"
-                          value="deployer-log"
-                          id="log-radio-1"
-                        />
-                        <RadioButton
-                          labelText="Deployer All Logs"
-                          value="all-logs"
-                          id="log-radio-2"
-                        />
-                      </RadioButtonGroup>
-                  </div> 
-                                                     
-                </div>
-                <div className="deploy-key" >
-                  <Button onClick={downloadLog}>Download</Button>
-                </div>
-
-                <div className="deploy-item">Deployer Progress:
-                  <ProgressBar
-                    label=""
-                    helperText=""
-                    value={deployerPercentageCompleted}
-                  />
-                </div>
-                {deployState.length > 0 && 
-                    <div className="deploy-item">Deployer State:  
-                                  <div className="deploy-item__state">
-                                    {tables.map((table)=>(
-                                          
-                                          <div className="deploy-item__state-table">
-                                            <Table size="md" useZebraStyles={false}>
-                                              <TableHead>
-                                                <TableRow>
-                                                  {headers.map((header) => (
-                                                    <TableHeader id={header.key} key={header}>
-                                                      {header}
-                                                    </TableHeader>
-                                                  ))}
-                                                </TableRow>
-                                              </TableHead>
-                                              <TableBody>
-                                                {table.map((row) => (
-                                                  <TableRow key={row.id}>
-                                                    {Object.keys(row)
-                                                      .filter((key) => key !== 'id')
-                                                      .map((key) => {
-                                                        return <TableCell key={key}>{row[key]}</TableCell>;
-                                                      })}
-                                                  </TableRow>
-                                                ))}
-                                              </TableBody>
-                                            </Table>
-                                          </div>            
-                                    ))
-                                    }
-                                  </div>           
-                    </div>                
+                { selection!=="Configure" && <DeployStats />}  
+                { selection==="Configure" &&  saveConfig  && <InlineNotification className="deploy-error"
+                  {...successSaveConfigProps()}        
+                  />  
                 }
-
-
-              </div>        
-
-              </>
+              </div>                       
           :
           //Wizard Process
           <DeployerProgressIndicator />                   
@@ -434,6 +510,8 @@ const Wizard = () => {
                             setCpdWizardMode={setCpdWizardMode}
                             selection={selection}
                             setCurrentIndex={setCurrentIndex}
+                            setConfigDir={setConfigDir}
+                            setStatusDir={setStatusDir}
                       >
                       </Selection> : null} 
       
@@ -458,6 +536,17 @@ const Wizard = () => {
                                     setEnvId={setEnvId}
                                     checkDeployerStatusErr={checkDeployerStatusErr}
                                     cpdWizardMode={cpdWizardMode}
+                                    selection={selection}
+                                    registryHostname={registryHostname}
+                                    setRegistryHostname={setRegistryHostname}
+                                    registryPort={registryPort}
+                                    setRegistryPort={setRegistryPort}
+                                    registryNS={registryNS}
+                                    setRegistryNS={setRegistryNS}
+                                    registryUser={registryUser}
+                                    setRegistryUser={setRegistryUser}
+                                    registryPassword={registryPassword}
+                                    setRegistryPassword={setRegistryPassword}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 2 ? <Storage 
@@ -495,15 +584,6 @@ const Wizard = () => {
                                     setCP4IPlatformCheckBox={setCP4IPlatformCheckBox}
                                     adminPassword={adminPassword}
                                     setAdminPassword={setAdminPassword}
-                                    wizardError={wizardError}
-                                    saveConfigOnly={saveConfigOnly}
-                                    setSaveConfigOnly={setSaveConfigOnly}
-                                    cloudPlatform={cloudPlatform}
-                                    IBMCloudSettings={IBMCloudSettings}
-                                    AWSSettings={AWSSettings}
-                                    envId={envId}
-                                    storage={storage} 
-                                    selection={selection}
                               >
                               </CloudPak> : null}    
         {currentIndex === 4 ? <Summary 
@@ -526,6 +606,14 @@ const Wizard = () => {
                                     CP4IPlatformCheckBox={CP4IPlatformCheckBox}
                                     summaryLoading={summaryLoading}
                                     setSummaryLoading={setSummaryLoading}
+                                    configDir={configDir}
+                                    statusDir={statusDir}
+                                    tempSummaryInfo={tempSummaryInfo}
+                                    setTempSummaryInfo={setTempSummaryInfo}
+                                    configInvalid={configInvalid}
+                                    setConfigInvalid={setConfigInvalid}
+                                    showErr={showErr}
+                                    setShowErr={setShowErr}
                               >
                               </Summary> : null}       
       </div> 

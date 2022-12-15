@@ -7,19 +7,27 @@ const Selection = ({setCpdWizardMode,
                     setSelection,
                     selection,
                     setCurrentIndex,
+                    setConfigDir,
+                    setStatusDir
                    }) => {
 
     const [loadingEnviromentVariables, setLoadingEnviromentVariables] = useState(false)
     const [loadEnviromentVariablesErr, setloadEnviromentVariablesErr] = useState(false) 
 
+    const selectOnChange = (e) =>{
+      setSelection(e)
+      if (e==="Configure") {
+        setCpdWizardMode("existing-ocp")
+      }
+    }
+
     const errorEnviromentVariablesProps = () => ({
       kind: 'error',
       lowContrast: true,
       role: 'error',
-      title: 'Unable to get Variables from server.',
+      title: 'Unable to get variables from server.',
       hideCloseButton: false,
     });
-
 
     useEffect(() => {        
       const getEnviromentVariables = async() => {
@@ -30,36 +38,40 @@ const Selection = ({setCpdWizardMode,
             setCpdWizardMode("existing-ocp")
             setSelection("Configure+Deploy")
             setCurrentIndex(1)
-
           }
-                
-          
+          if (res.data.CPD_WIZARD_MODE === "deploy") {
+            setCpdWizardMode("deploy")
+            setSelection("Configure+Deploy")
+            setCurrentIndex(1)
+          }
+          if (res.data.STATUS_DIR) {
+            setStatusDir(res.data.STATUS_DIR)
+          }
+          if (res.data.CONFIG_DIR) {
+            setConfigDir(res.data.CONFIG_DIR)
+          }       
         }, err => {
           setLoadingEnviromentVariables(false) 
           setloadEnviromentVariablesErr(true)
           console.log(err)
         });    
-
       }
       getEnviromentVariables();
       // eslint-disable-next-line
     }, []);
 
-
     return (
       <>
-
       { loadEnviromentVariablesErr && <InlineNotification className="cpd-error"
           {...errorEnviromentVariablesProps()}        
             /> } 
       
       {loadingEnviromentVariables && <Loading /> }
 
-      <div className="infra-title">Deployer Selection</div>        
-
+      <div className="infra-title">Select</div>     
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group" 
-         onChange={(value)=>{setSelection(value)}}
+         onChange={selectOnChange}
          defaultSelected={selection}  
          valueSelected={selection}         
          >
