@@ -23,6 +23,17 @@ const Infrastructure = ({cloudPlatform,
                          setEnvId,
                          checkDeployerStatusErr,
                          cpdWizardMode,
+                         selection,
+                         registryHostname,
+                         setRegistryHostname,
+                         registryPort,
+                         setRegistryPort,
+                         registryNS,
+                         setRegistryNS,
+                         registryUser,
+                         setRegistryUser,
+                         registryPassword,
+                         setRegistryPassword,
                          }) => {
 
     //IBM Cloud
@@ -40,6 +51,11 @@ const Infrastructure = ({cloudPlatform,
     
     //Existing OCP
     const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
+
+    const [isRegistryHostnameInvalid, setRegistryHostnameInvalid] = useState(false)  
+    const [isRegistryNSInvalid, setRegistryNSInvalid] = useState(false)
+    const [isRegistryUserInvalid, setRegistryUserInvalid] = useState(false)
+    const [isregistryPasswordInvalid, setregistryPasswordInvalid] = useState(false)   
 
     useEffect(() => {
       const getConfiguration = async() => {
@@ -71,26 +87,33 @@ const Infrastructure = ({cloudPlatform,
         getConfiguration()        
       }
 
-      switch (cloudPlatform) {
-        case "ibm-cloud": 
-          if (IBMCloudSettings.IBMAPIKey && envId && IBMCloudSettings.region ) {
-            setWizardError(false)
-          }
-          break; 
-        case "aws":
-          if (AWSSettings.accessKeyID && AWSSettings.secretAccessKey && AWSSettings.region && envId ) {
-            setWizardError(false)
-          }
-          break;
-        case "existing-ocp":
-          if (OCPSettings.ocLoginCmd && envId) {
-            setWizardError(false)
-          }
-          break;  
-        default:
+      if (selection!== "Configure+Download") {
+        switch (cloudPlatform) {
+          case "ibm-cloud": 
+            if (IBMCloudSettings.IBMAPIKey && envId && IBMCloudSettings.region ) {
+              setWizardError(false)
+            }
+            break; 
+          case "aws":
+            if (AWSSettings.accessKeyID && AWSSettings.secretAccessKey && AWSSettings.region && envId ) {
+              setWizardError(false)
+            }
+            break;
+          case "existing-ocp":
+            if (OCPSettings.ocLoginCmd && envId) {
+              setWizardError(false)
+            }
+            break;  
+          default:  
+        }  
+      } else {
+        if (registryHostname && registryHostname && registryUser && registryPassword) {
+          setWizardError(false)
+        }
+      }
 
-      }   // eslint-disable-next-line
-    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked, envId])
+ // eslint-disable-next-line
+    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked, envId, registryHostname, registryHostname, registryUser, registryPassword])
 
     const IBMCloudSettingsOnChange = (e) => {
       switch (e.target.id) {
@@ -200,6 +223,57 @@ const Infrastructure = ({cloudPlatform,
       }  
     }
 
+    const RegistryOnChange = (e) => {
+      switch (e.target.id) {
+        case "190":
+          setRegistryHostname(e.target.value)
+          if (e.target.value === '') {
+            setRegistryHostnameInvalid(true)
+            setWizardError(true)
+            return            
+          } else {
+            setRegistryHostnameInvalid(false)
+          }
+          break;
+        case "191":
+          setRegistryPort(e.target.value)
+          break;
+        case "192":
+          setRegistryNS(e.target.value)
+          if (e.target.value === '' ) {
+            setRegistryNSInvalid(true)
+            setWizardError(true)
+            return             
+          } else {
+            setRegistryNSInvalid(false)
+          }
+          break;
+        case "193":
+          setRegistryUser(e.target.value)
+          if(e.target.value==='') {
+            setRegistryUserInvalid(true)
+            setWizardError(true)
+            return  
+          } else {
+            setRegistryUserInvalid(false)
+          }
+          break;
+        case "194":
+          setRegistryPassword(e.target.value)
+          if (e.target.value==='') {
+            setregistryPasswordInvalid(true)
+            setWizardError(true)
+            return
+          } else {
+            setregistryPasswordInvalid(false)
+          }
+          break;
+        default:
+
+      }
+
+    } 
+
     const errorConfigurationProps = () => ({
       kind: 'error',
       lowContrast: true,
@@ -215,7 +289,6 @@ const Infrastructure = ({cloudPlatform,
       title: 'Error logging into the OpenShift cluster.',
       hideCloseButton: false,
     }); 
-
 
     const checkDeployerStatuserrorProps = () => ({
       kind: 'error',
@@ -243,7 +316,7 @@ const Infrastructure = ({cloudPlatform,
       <div className="infra-title">Cloud Platform</div>        
 
 
-      {cpdWizardMode!=="existing-ocp" && 
+      {cpdWizardMode!=="existing-ocp" && selection!=="Configure+Download" &&
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"          
          onChange={(value)=>{setCloudPlatform(value)}}
@@ -256,57 +329,89 @@ const Infrastructure = ({cloudPlatform,
          <RadioButton labelText="vSphere" value="vsphere" id="3" disabled />         
       </RadioButtonGroup> }
 
-      {cloudPlatform === 'ibm-cloud' ?  
-         <>                    
-          <div className="infra-container">
-            <div>
-              <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isIBMEnvIdInvalid} disabled={locked}/>
-            </div>  
-            <div>
-              <div className="infra-items">IBM Cloud API Key</div>
-              <PasswordInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud API Key" id="100" labelText="" value={IBMCloudSettings.IBMAPIKey} invalidText="IBM Cloud API Key can not be empty." invalid={isIBMAPIKeyInvalid}/>
-            </div>
-            <div>
-              <div className="infra-items">IBM Cloud Region</div>
-              <TextInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud Region" id="102" labelText="" value={IBMCloudSettings.region} invalidText="IBM Cloud Region can not be empty." invalid={isIBMregionInvalid}/>
-            </div> 
-          </div>        
-         </>  : null } 
-      {cloudPlatform === 'aws' ? 
+        { selection!=="Configure+Download" &&
+        <div>
+          {cloudPlatform === 'ibm-cloud' ?  
+            <>                    
+              <div className="infra-container">
+                <div>
+                  <div className="infra-items">Enviroment ID</div>
+                  <TextInput onChange={IBMCloudSettingsOnChange} placeholder="Environment ID" id="101" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isIBMEnvIdInvalid} disabled={locked}/>
+                </div>  
+                <div>
+                  <div className="infra-items">IBM Cloud API Key</div>
+                  <PasswordInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud API Key" id="100" labelText="" value={IBMCloudSettings.IBMAPIKey} invalidText="IBM Cloud API Key can not be empty." invalid={isIBMAPIKeyInvalid}/>
+                </div>
+                <div>
+                  <div className="infra-items">IBM Cloud Region</div>
+                  <TextInput onChange={IBMCloudSettingsOnChange} placeholder="IBM Cloud Region" id="102" labelText="" value={IBMCloudSettings.region} invalidText="IBM Cloud Region can not be empty." invalid={isIBMregionInvalid}/>
+                </div> 
+              </div>        
+            </>  : null } 
+          {cloudPlatform === 'aws' ? 
+              <>
+                <div className="infra-container">
+                  <div>
+                    <div className="infra-items">Enviroment ID</div>
+                    <TextInput onChange={AWSSettingsOnChange} placeholder="Environment ID" id="113" labelText="" value={envId} invalidText="Environment ID can not be empty."  invalid={isAWSEnvIdInvalid}/>
+                  </div> 
+                  <div>
+                    <div className="infra-items">AWS Access Key ID</div>
+                    <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Access Key" id="110" labelText="" value={AWSSettings.accessKeyID} invalidText="AWS Access Key ID can not be empty."  invalid={isAWSAccessKeyIDInvalid}/>
+                  </div>
+                  <div>
+                    <div className="infra-items">AWS Secret Access Key</div>
+                    <TextInput.PasswordInput onChange={AWSSettingsOnChange} placeholder="AWS Secret Access Key" id="111" labelText="" value={AWSSettings.secretAccessKey} invalidText="AWS Secret Access Key can not be empty."  invalid={isAWSSecretAccessKeyInvalid}/>
+                  </div>
+                  <div>
+                    <div className="infra-items">AWS Region</div>
+                    <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Region" id="112" labelText="" value={AWSSettings.region} invalidText="AWS region can not be empty."  invalid={isAWSregionInvalid}/>
+                  </div> 
+                </div>
+              </>: null}
+          {cloudPlatform === 'existing-ocp' ? 
+            <>
+              <div className="infra-container">
+              <div>
+                  <div className="infra-items">Enviroment ID</div>
+                  <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
+                  </div>
+              </div>
+                <div>
+                  <div className="infra-items">oc login command</div>
+                  <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
+                </div>
+            </> : null}
+        </div> }
+
+        { selection==="Configure+Download" &&
+        <div>     
           <>
             <div className="infra-container">
-              <div>
-                <div className="infra-items">Enviroment ID</div>
-                <TextInput onChange={AWSSettingsOnChange} placeholder="Environment ID" id="113" labelText="" value={envId} invalidText="Environment ID can not be empty."  invalid={isAWSEnvIdInvalid}/>
-              </div> 
-              <div>
-                <div className="infra-items">AWS Access Key ID</div>
-                <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Access Key" id="110" labelText="" value={AWSSettings.accessKeyID} invalidText="AWS Access Key ID can not be empty."  invalid={isAWSAccessKeyIDInvalid}/>
-              </div>
-              <div>
-                <div className="infra-items">AWS Secret Access Key</div>
-                <TextInput.PasswordInput onChange={AWSSettingsOnChange} placeholder="AWS Secret Access Key" id="111" labelText="" value={AWSSettings.secretAccessKey} invalidText="AWS Secret Access Key can not be empty."  invalid={isAWSSecretAccessKeyInvalid}/>
-              </div>
-              <div>
-                <div className="infra-items">AWS Region</div>
-                <TextInput onChange={AWSSettingsOnChange} placeholder="AWS Region" id="112" labelText="" value={AWSSettings.region} invalidText="AWS region can not be empty."  invalid={isAWSregionInvalid}/>
-              </div> 
-            </div>
-          </>: null}
-      {cloudPlatform === 'existing-ocp' ? 
-        <>
-          <div className="infra-container">
-           <div>
-              <div className="infra-items">Enviroment ID</div>
-              <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
-              </div>
-           </div>
-            <div>
-              <div className="infra-items">oc login command</div>
-              <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
-            </div>
-        </> : null}
+                <div>
+                  <div className="infra-items">Registry Host Name</div>
+                  <TextInput onChange={RegistryOnChange} placeholder="Registry Host Name" id="190" labelText="" value={registryHostname} invalidText="Registry Host Name can not be empty."  invalid={isRegistryHostnameInvalid} />
+                </div>
+                <div>
+                  <div className="infra-items">Registry Port</div>
+                  <TextInput onChange={RegistryOnChange} placeholder="Registry Port" id="191" labelText="If not specified, the default port 443 will be used." value={registryPort} />
+                </div>
+                <div>
+                  <div className="infra-items">Registry Namespace</div>
+                  <TextInput onChange={RegistryOnChange} placeholder="Registry Namespace" id="192" labelText="" value={registryNS} invalidText="Registry Namespace can not be empty." invalid={isRegistryNSInvalid}/>
+                </div>
+                <div>
+                  <div className="infra-items">Registry User</div>
+                  <TextInput onChange={RegistryOnChange} placeholder="Registry User" id="193" labelText="" value={registryUser} invalidText="Registry User can not be empty." invalid={isRegistryUserInvalid}/>
+                </div>
+                <div>
+                  <div className="infra-items">Registry Password</div>
+                  <PasswordInput onChange={RegistryOnChange} placeholder="Registry Password" id="194" labelText="" value={registryPassword} invalidText="Registry Password can not be empty." invalid={isregistryPasswordInvalid}/>
+                </div>
+            </div>            
+          </> 
+        </div> }
+
       </>
     );
   };

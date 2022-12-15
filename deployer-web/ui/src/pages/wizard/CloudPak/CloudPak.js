@@ -26,15 +26,6 @@ const CloudPak = ({CPDCartridgesData,
                   setCP4IPlatformCheckBox,
                   adminPassword,
                   setAdminPassword,
-                  wizardError,
-                  saveConfigOnly,
-                  setSaveConfigOnly,
-                  cloudPlatform,
-                  IBMCloudSettings,
-                  AWSSettings,
-                  envId,
-                  storage,
-                  selection
                 }) => {
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
@@ -244,62 +235,6 @@ const CloudPak = ({CPDCartridgesData,
       // eslint-disable-next-line
     }, [])
 
-    const createConfig = async () => { 
-        setLoadingCPD(true)
-        let region=""    
-        switch (cloudPlatform) {
-            case "ibm-cloud":               
-                region=IBMCloudSettings.region
-                break
-            case "aws":                
-                region=AWSSettings.region
-                break
-            default:
-        }  
-        let body = {
-            "envId": envId,
-            "cloud": cloudPlatform,
-            "region": region,
-            "storages": storage,
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,      
-        }
-        await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
-            setLoadingCPD(false)          
-            setSaveConfigOnly(true)
-        }, err => {
-            setLoadingCPD(false)       
-            console.log(err)
-        });          
-    } 
-  
-    const updateConfig = async () => {  
-        setLoadingCPD(true)
-        let body = {
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,   
-        }  
-        await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-          setLoadingCPD(false)          
-          setSaveConfigOnly(true)
-        }, err => {
-          setLoadingCPD(false)       
-          console.log(err)
-        });          
-    }
-
     const successProps = () => ({
       kind: 'success',
       lowContrast: true,
@@ -313,10 +248,6 @@ const CloudPak = ({CPDCartridgesData,
           { (loadingCPD ||loadingCPI) && <Loading /> }  
           { (loadCPDErr ||loadCPIErr) && <InlineNotification className="cpd-error"
               {...errorProps()}        
-            /> 
-          }
-          { saveConfigOnly && <InlineNotification className="cpd-error"
-              {...successProps()}        
             /> 
           }
           <div className="cloud-pak">   
@@ -405,16 +336,6 @@ const CloudPak = ({CPDCartridgesData,
 
             </div>
             </div> 
-            {selection === "Configure" &&         
-            <div className="cpd-button">              
-              { locked ?              
-              <div>
-                <Button onClick={updateConfig} disabled={wizardError ||saveConfigOnly}>Save Configuration</Button> 
-              </div>:
-              <div>
-                <Button onClick={createConfig} disabled={wizardError ||saveConfigOnly}>Generate Configuration</Button> 
-              </div> }              
-            </div> }
           </div>   
      
         </>
