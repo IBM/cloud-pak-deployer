@@ -1,4 +1,4 @@
-import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,Button} from 'carbon-components-react';
+import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput} from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
@@ -234,14 +234,6 @@ const CloudPak = ({CPDCartridgesData,
       } 
       // eslint-disable-next-line
     }, [])
-
-    const successProps = () => ({
-      kind: 'success',
-      lowContrast: true,
-      role: 'success',
-      title: 'Configuration Saved. The deployer wizard is over.',
-      hideCloseButton: false,
-    });
 
     return (
         <>  
