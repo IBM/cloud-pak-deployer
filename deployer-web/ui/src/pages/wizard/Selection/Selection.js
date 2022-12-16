@@ -38,6 +38,7 @@ const Selection = ({setCpdWizardMode,
             setCpdWizardMode("existing-ocp")
             setSelection("Configure+Deploy")
             setCurrentIndex(1)
+            //platform will be existing-ocp
           }
           if (res.data.CPD_WIZARD_MODE === "deploy") {
             setCpdWizardMode("deploy")

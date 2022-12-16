@@ -133,7 +133,7 @@ const Summary = ({cloudPlatform,
         let body = {}
         let result = {}
             
-        try {                   
+        try {                
             yaml.loadAll(tempSummaryInfo, function (doc) {
                 result = {...doc, ...result}
             }); 
