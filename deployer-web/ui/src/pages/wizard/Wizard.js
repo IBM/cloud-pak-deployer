@@ -190,37 +190,6 @@ const Wizard = () => {
     return result;
   }
 
-  const createSave = async () => {
-    setLoadingDeployStatus(true)
-    let body = {}
-    let result = {}
-        
-    try {                   
-        yaml.loadAll(tempSummaryInfo, function (doc) {
-            result = {...doc, ...result}
-        }); 
-        body['config'] = result 
-        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-          setLoadingDeployStatus(false)
-          setCurrentIndex(10)
-          setDeployStart(true)
-          setSaveConfig(true)
-
-          
-      }, err => {
-        setLoadingDeployStatus(false)
-        setShowErr(true)
-        console.log(err)
-          
-      });  
-
-    } catch (error) {
-        setLoadingDeployStatus(false)
-        setConfigInvalid(true)
-        console.error(error)
-    } 
-  }
-
   const createDeployment = async() => {
     setLoadingDeployStatus(true)
     const body = {
@@ -248,6 +217,40 @@ const Wizard = () => {
         setDeployStart(true)
         setDeployErr(true)
     });    
+  }
+
+  const createSaveDeloyment = async () => {
+    setLoadingDeployStatus(true)
+    let body = {}
+    let result = {}
+        
+    try {                   
+        yaml.loadAll(tempSummaryInfo, function (doc) {
+            result = {...doc, ...result}
+        }); 
+        body['config'] = result 
+        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+          setLoadingDeployStatus(false)
+          setCurrentIndex(10)
+          setDeployStart(true)
+          setSaveConfig(true)
+
+          if (selection==="Configure+Deploy") {
+            createDeployment();
+          }
+
+          
+      }, err => {
+        setLoadingDeployStatus(false)
+        setShowErr(true)
+        console.log(err)          
+      });  
+
+    } catch (error) {
+        setLoadingDeployStatus(false)
+        setConfigInvalid(true)
+        console.error(error)
+    } 
   }
 
   const getDeployStatus = async() => {
@@ -361,12 +364,12 @@ const Wizard = () => {
   const ActionBySelect = () => {
     return (
       <>
-        {selection==="Configure+Deploy" && <Button className="wizard-container__page-header-button" onClick={createDeployment} disabled={summaryLoading}>Deploy</Button>}
-        {selection==="Configure" && <Button className="wizard-container__page-header-button" onClick={createSave} disabled={summaryLoading}>Save</Button>}
+        {selection==="Configure+Deploy" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Deploy</Button>}
+        {selection==="Configure" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Save</Button>}
         {selection==="Configure+Download" && 
           <>
-              <Button className="wizard-container__page-header-button" onClick={createSave} disabled={summaryLoading}>Download</Button>
-              <Button className="wizard-container__page-header-button" onClick={createSave} disabled={summaryLoading}>Mirror images</Button>
+              <Button className="wizard-container__page-header-button"  disabled={summaryLoading}>Download</Button>
+              <Button className="wizard-container__page-header-button"  disabled={summaryLoading}>Mirror images</Button>
           </>
         }
       </>

@@ -107,7 +107,7 @@ const Infrastructure = ({cloudPlatform,
           default:  
         }  
       } else {
-        if (registryHostname && registryHostname && registryUser && registryPassword) {
+        if (registryHostname && registryHostname && registryUser && registryPassword && envId) {
           setWizardError(false)
         }
       }
@@ -269,9 +269,7 @@ const Infrastructure = ({cloudPlatform,
           }
           break;
         default:
-
       }
-
     } 
 
     const errorConfigurationProps = () => ({
@@ -313,10 +311,9 @@ const Infrastructure = ({cloudPlatform,
            />  }  
       {loadingConfiguration && <Loading /> }
       
-      <div className="infra-title">Cloud Platform</div>        
-
-
       {cpdWizardMode!=="existing-ocp" && selection!=="Configure+Download" &&
+      <>
+      <div className="infra-title">Cloud Platform</div>      
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"          
          onChange={(value)=>{setCloudPlatform(value)}}
@@ -327,8 +324,8 @@ const Infrastructure = ({cloudPlatform,
          <RadioButton labelText="IBM Cloud" value="ibm-cloud" id="1" disabled={locked}/>
          <RadioButton labelText="AWS" value="aws" id="2" disabled={locked}/>
          <RadioButton labelText="vSphere" value="vsphere" id="3" disabled />         
-      </RadioButtonGroup> }
-
+      </RadioButtonGroup></> }
+      
         { selection!=="Configure+Download" &&
         <div>
           {cloudPlatform === 'ibm-cloud' ?  
@@ -372,11 +369,11 @@ const Infrastructure = ({cloudPlatform,
           {cloudPlatform === 'existing-ocp' ? 
             <>
               <div className="infra-container">
-              <div>
-                  <div className="infra-items">Enviroment ID</div>
-                  <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
+                  <div>
+                    <div className="infra-items">Enviroment ID</div>
+                    <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
                   </div>
-              </div>
+                </div>
                 <div>
                   <div className="infra-items">oc login command</div>
                   <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
@@ -384,10 +381,14 @@ const Infrastructure = ({cloudPlatform,
             </> : null}
         </div> }
 
-        { selection==="Configure+Download" &&
-        <div>     
+        { selection==="Configure+Download" &&     
           <>
             <div className="infra-container">
+                <div>
+                  <div className="infra-items">Enviroment ID</div>
+                  <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
+                </div>
+
                 <div>
                   <div className="infra-items">Registry Host Name</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Host Name" id="190" labelText="" value={registryHostname} invalidText="Registry Host Name can not be empty."  invalid={isRegistryHostnameInvalid} />
@@ -409,8 +410,7 @@ const Infrastructure = ({cloudPlatform,
                   <PasswordInput onChange={RegistryOnChange} placeholder="Registry Password" id="194" labelText="" value={registryPassword} invalidText="Registry Password can not be empty." invalid={isregistryPasswordInvalid}/>
                 </div>
             </div>            
-          </> 
-        </div> }
+          </>  }
 
       </>
     );
