@@ -1,6 +1,9 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 
+#
+# Functions
+#
 get_logtime() {
   echo $(date "+%Y-%m-%d %H:%M:%S")
 }
@@ -10,12 +13,27 @@ log() {
   printf "[${LOG_TIME}] ${1}\n" | tee -a ${temp_dir}/$fs_project-olm-fix.log
 }
 
+#
+# Initialization
+#
 fs_project=ibm-common-services
 temp_dir=$(mktemp -d)
 sub_file=${temp_dir}/sub.csv
 csv_file=${temp_dir}/csv.csv
 ip_file=${temp_dir}/ip.csv
 
+
+#
+# Checks
+#
+# Checking for command jq to exist. This is required to parse the json output to recreate the subscriptions.
+if ! command -v jq &> /dev/null;then
+  echo "The jq command is required for this script. Please install first."
+fi
+
+#
+# Body
+#
 echo "Temporary directory with logs and output files: ${temp_dir}"
 
 while true;do
@@ -43,6 +61,7 @@ while true;do
 
   cat ${sub_file}
   
+  # Check if any subscriptions older than 2 minutes still don't have a CSV
   while IFS=, read -r sub sub_ts csv sub_state;do
     sub_ts_epoch=$(date -d ${sub_ts} +%s)
     if [[ "${csv}" == "" ]] && (( current_ts > (sub_ts_epoch + 120) ));then
