@@ -1,0 +1,12 @@
+---
+- block:
+  - name: Show cartridge installation options
+    debug:
+      msg: "{{ _current_cp4d_cartridge.installation_options | to_json }}"
+  - name: Set cartridge installation options for cartridge {{ _current_cp4d_cartridge.name }}
+    shell: |
+      oc patch {{ _current_cp4d_cartridge.CR_Kind }} {{ _current_cp4d_cartridge.CR_Name }}  \
+      -n {{ _p_current_cp4d_cluster.project }} \ 
+      --type merge \
+      -p '{"spec": {{ _current_cp4d_cartridge.installation_options | to_json }} }'
+  when: (_current_cp4d_cartridge.installation_options | default({})) != {}

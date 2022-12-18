@@ -1,0 +1,30 @@
+---
+- name: Validate mandatory variables for OpenShift Advanced Data Protection
+  assert:
+    that:
+      - _p_openshift_cluster is defined
+
+- block:
+  - name: Create project openshift-adp if it doesn't exist
+    shell: |
+      oc create ns openshift-adp || true
+      oc annotate namespace openshift-adp openshift.io/node-selector="" --overwrite
+
+  - name: Retrieve default channel for redhad-oadp-operator manifest
+    shell:
+      oc get packagemanifest redhat-oadp-operator -o jsonpath='{.status.defaultChannel}'
+    register: _oadp_packagemanifest
+
+  - set_fact:
+      _oadp_channel: "{{ _oadp_packagemanifest.stdout }}"
+
+  - name: Generate operator subscription for Advanced Data Protection into "{{ status_dir }}/openshift/openshift-adp-sub.yaml"
+    template:
+      src: openshift-adp-sub.j2
+      dest: "{{ status_dir }}/openshift/openshift-adp-sub.yaml"
+
+  - name: Apply yaml for Advanced Data Protection subscription
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/openshift-adp-sub.yaml
+
+  when: (_p_openshift_cluster.oadp | default(False) | bool)
