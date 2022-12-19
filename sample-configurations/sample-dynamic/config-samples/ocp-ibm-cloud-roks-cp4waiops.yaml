@@ -1,0 +1,95 @@
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#       __________  __ ___       _____    ________            
+#      / ____/ __ \/ // / |     / /   |  /  _/ __ \____  _____
+#     / /   / /_/ / // /| | /| / / /| |  / // / / / __ \/ ___/
+#    / /___/ ____/__  __/ |/ |/ / ___ |_/ // /_/ / /_/ (__  ) 
+#    \____/_/      /_/  |__/|__/_/  |_/___/\____/ .___/____/  
+#                                              /_/            
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------"
+#  Installing CP4WAIOPS
+#
+#  CloudPak for Watson AIOps
+#
+#  ©2022 nikh@ch.ibm.com
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Installs:
+#
+#  - IBM Operator
+#  - AI Manager
+#  - AI Manager Demo Content
+#     - OpenLDAP & Register with AI Manager
+#     - RobotShop Demo App
+#     - Demo Service Account 
+#     - AWX (Open Source Ansible Tower) with preloaded Playbooks
+#     - Disables ASM Service match rule 
+#     - Train Models
+#       - Create Training Definitions (TG, LAD, CR, SI. MET, Turn off RSA) 
+#       - Create Training Data (LAD, SNOW, MET) 
+#       - Train Models (TG, LAD, CR, SI, MET) 
+#     - Topology
+#       - Create K8s Observer
+#       - Create ASM merge rules
+#       - Load ASM merge Topology
+#       - Create AI Manager Application
+#     - Creates valid certificate for Ingress (Slack) 
+#     - External Routes (Flink, Topology, ...)
+#     - Disables ASM Service match rule 
+#     - Create Policy Creation for Stories and Runbooks 
+#  - Event Manager
+#  - Event Manager Demo Content
+#    - Topology
+#      - Create ASM merge rules
+#      - Load ASM merge Topology
+#      - Create AI Manager Application
+#  - Turbonomic
+#  - Turbonomic Demo Content
+#     - Demo User
+#     - RobotShop Demo App with synthetic metric
+#     - Instana target (if Instana is installed - you have to enter the API Token Manually)
+#     - Groups for vCenter and RobotShop
+#     - Groups for licensing
+#     - Resource Hogs
+#  - Instana
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+---
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS INSTANCES
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+global_config:
+  environment_name: cp4waiops
+  cloud_platform: existing-ocp
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS Pull Registires
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  entitled_registry: cp.icr.io
+  entitled_registry_user: cp
+  catalog_image: icr.io/cpopen/ibm-operator-catalog:latest
+  create_cards: true
+  create_ocp_items: true
+
+
+openshift:
+- name: "mycluster"
+  ocp_version: "4.10"
+  cluster_name: "mycluster"
+  domain_name: example.com
+  openshift_storage:
+  - storage_name: ibm-cloud-storage
+    storage_type: custom
+# Use file storate class provided as part of ROKS cluster
+    ocp_storage_class_file: automatic
+    ocp_storage_class_block: automatic
+    #ocp_storage_class_file: ibmc-file-gold-gid
+    #ocp_storage_class_block: ibmc-block-gold
+

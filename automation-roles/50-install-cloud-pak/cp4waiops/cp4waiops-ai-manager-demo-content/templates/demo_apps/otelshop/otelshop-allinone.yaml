@@ -1,0 +1,1062 @@
+
+
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-all-egress-and-ingress
+  namespace: otel-shop
+spec:
+  podSelector: {}
+  ingress:
+    - {}
+  egress:
+    - {}
+  policyTypes:
+    - Egress
+    - Ingress
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: default-otel-shop-admin
+subjects:
+  - kind: ServiceAccount
+    name: otel-shop
+    namespace: otel-shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: default-otel-shop-default-admin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: otel-shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: otel-shop-quota
+spec:
+  hard:
+    limits.cpu: 4
+    requests.cpu: 2
+    limits.memory: 5Gi
+    requests.memory: 3Gi
+    pods: 20
+---
+# Source: otel-shop/templates/podsecuritypolicy.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: otel-shop
+spec:
+  allowPrivilegeEscalation: false
+  fsGroup:
+    rule: RunAsAny
+  privileged: false
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  allowedCapabilities:
+  - 'NET_ADMIN'
+  volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - secret
+  - projected
+---
+# Source: otel-shop/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-shop
+  namespace: otel-shop
+---
+# Source: otel-shop/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-shop
+rules:
+- apiGroups:
+  - policy
+  resourceNames:
+  - otel-shop
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+---
+# Source: otel-shop/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-shop
+subjects:
+- kind: ServiceAccount
+  name: otel-shop
+  namespace: otel-shop
+---
+# Source: otel-shop/templates/cart-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-cart
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: otel-shop-cart
+---
+# Source: otel-shop/templates/catalogue-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: otel-shop-catalogue
+  name: otel-shop-catalogue
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: otel-shop-catalogue
+---
+# Source: otel-shop/templates/dispatch-service.yaml
+# dispatch just listens to a message queue
+# it does not expose any ports
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-dispatch
+  labels:
+    service: otel-shop-dispatch
+spec:
+  clusterIP: None
+  ports:
+  - name: headless
+    port: 55555
+    targetPort: 0
+  selector:
+    service: otel-shop-dispatch
+---
+# Source: otel-shop/templates/front-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-front
+  labels:
+    service: otel-shop-front
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    service: otel-shop-front
+  
+  type: LoadBalancer
+---
+# Source: otel-shop/templates/mongodb-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: otel-shop-mongodb
+  name: otel-shop-mongodb
+spec:
+  ports:
+  - name: mongo
+    port: 27017
+    targetPort: 27017
+  selector:
+    service: otel-shop-mongodb
+---
+# Source: otel-shop/templates/mysql-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: otel-shop-mysql
+  name: otel-shop-mysql
+spec:
+  ports:
+  - name: otel-shop-mysql
+    port: 3306
+    targetPort: 3306
+  selector:
+    service: otel-shop-mysql
+---
+# Source: otel-shop/templates/payment-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-payment
+  labels:
+    service: otel-shop-payment
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: otel-shop-payment
+---
+# Source: otel-shop/templates/rabbitmq-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-rabbitmq
+  labels:
+    service: otel-shop-rabbitmq
+spec:
+  ports:
+  - name: tcp-amqp
+    port: 5672
+    targetPort: 5672
+  - name: http-management
+    port: 15672
+    targetPort: 15672
+  - name: tcp-epmd
+    port: 4369
+    targetPort: 4369
+  selector:
+    service: otel-shop-rabbitmq
+---
+# Source: otel-shop/templates/ratings-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-ratings
+  labels:
+    service: otel-shop-ratings
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    service: otel-shop-ratings
+---
+# Source: otel-shop/templates/redis-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: otel-shop-redis
+  name: otel-shop-redis
+spec:
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  selector:
+    service: otel-shop-redis
+---
+# Source: otel-shop/templates/shipping-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-shipping
+  labels:
+    service: otel-shop-shipping
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: otel-shop-shipping
+---
+# Source: otel-shop/templates/user-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-user
+  labels:
+    service: otel-shop-user
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: otel-shop-user
+---
+# Source: otel-shop/templates/web-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-shop-web
+  labels:
+    service: otel-shop-web
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: otel-shop-web
+  
+  type: LoadBalancer
+---
+# Source: otel-shop/templates/cart-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-cart
+  labels:
+    service: otel-shop-cart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-cart
+  template:
+    metadata:
+      labels:
+        service: otel-shop-cart
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-cart
+        image: instanacedricziel/otel-shop-cart:0.1.79
+        imagePullPolicy: Always
+        env:
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: $(INSTANA_AGENT_HOST):4317
+          - name: OTEL_SERVICE_NAME
+            value: otel-shop-catalogue
+          - name: REDIS_URL
+            value: redis://otel-shop-redis
+          - name: CATALOGUE_HOST
+            value: otel-shop-catalogue
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+---
+# Source: otel-shop/templates/catalogue-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-catalogue
+  labels:
+    service: otel-shop-catalogue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-catalogue
+  template:
+    metadata:
+      labels:
+        service: otel-shop-catalogue
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-catalogue
+        image: instanacedricziel/otel-shop-catalogue:0.1.79
+        imagePullPolicy: Always
+        env:
+        - name: INSTANA_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: $(INSTANA_AGENT_HOST):4317
+        - name: OTEL_SERVICE_NAME
+          value: otel-shop-catalogue
+        - name: MONGO_URL
+          value: 'mongodb://otel-shop-mongodb:27017/users'
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/dispatch-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-dispatch
+  labels:
+    service: otel-shop-dispatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-dispatch
+  template:
+    metadata:
+      labels:
+        service: otel-shop-dispatch
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-dispatch
+        image: instanacedricziel/otel-shop-dispatch:0.1.79
+        imagePullPolicy: Always
+        env:
+        - name: AMQP_HOST
+          value: otel-shop-rabbitmq
+        - name: INSTANA_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: $(INSTANA_AGENT_HOST):4317
+        - name: OTEL_SERVICE_NAME
+          value: otel-shop-dispatch
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/front-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-front
+  labels:
+    service: otel-shop-front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-front
+  template:
+    metadata:
+      labels:
+        service: otel-shop-front
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-front
+        image: instanacedricziel/otel-shop-front:0.1.79
+        imagePullPolicy: Always
+        env:
+        - name: WEB_HOST
+          value: otel-shop-web
+        - name: CATALOGUE_HOST
+          value: otel-shop-catalogue
+        - name: CART_HOST
+          value: otel-shop-cart
+        - name: PAYMENT_HOST
+          value: otel-shop-payment
+        - name: SHIPPING_HOST
+          value: otel-shop-shipping
+        - name: RATINGS_HOST
+          value: otel-shop-ratings
+        - name: USER_HOST
+          value: otel-shop-user
+        - name: INSTANA_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: $(INSTANA_AGENT_HOST):4317
+        - name: OTEL_SERVICE_NAME
+          value: otel-shop-front
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/load-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-load
+  labels:
+    service: otel-shop-load
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-load
+  template:
+    metadata:
+      labels:
+        service: otel-shop-load
+    spec:
+      containers:
+      - name: otel-shop-load
+        env:
+          - name: INSTANA_DISABLE_AUTO_INSTR
+            value: '1'
+          - name: HOST
+            value: "http://otel-shop-front/"
+          - name: NUM_CLIENTS
+            value: "15"
+          - name: SILENT
+            value: "1"
+          - name: ERROR
+            value: "0"
+        image: instanacedricziel/otel-shop-load:0.1.79
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+---
+# Source: otel-shop/templates/mongodb-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-mongodb
+  labels:
+    service: otel-shop-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-mongodb
+  template:
+    metadata:
+      labels:
+        service: otel-shop-mongodb
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-mongodb
+        image: instanacedricziel/otel-shop-mongodb:0.1.79
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 27017
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/payment-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-payment
+  labels:
+    service: otel-shop-payment
+    stage: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-payment
+      stage: prod
+  template:
+    metadata:
+      labels:
+        service: otel-shop-payment
+        stage: prod
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-payment
+        image: instanacedricziel/otel-shop-payment:0.1.79
+        imagePullPolicy: Always
+        # agent networking access
+        env:
+          - name: INSTANA_DISABLE_AUTO_INSTR
+            value: '1'
+          - name: AMQP_HOST
+            value: otel-shop-rabbitmq
+          - name: CART_HOST
+            value: otel-shop-cart
+          - name: USER_HOST
+            value: otel-shop-user
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: http://$(INSTANA_AGENT_HOST):4317
+          - name: OTEL_SERVICE_NAME
+            value: otel-shop-payment
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/rabbitmq-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-rabbitmq
+  labels:
+    service: otel-shop-rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-rabbitmq
+  template:
+    metadata:
+      labels:
+        service: otel-shop-rabbitmq
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-rabbitmq
+        image: rabbitmq:3.7-management-alpine
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+        resources:
+          limits:
+            cpu: 200m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/ratings-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-ratings
+  labels:
+    service: otel-shop-ratings
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-ratings
+  template:
+    metadata:
+      labels:
+        service: otel-shop-ratings
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-ratings
+        image: instanacedricziel/otel-shop-ratings:0.1.79
+        imagePullPolicy: Always
+        env:
+          - name: CATALOGUE_URL
+            value: http://otel-shop-catalogue:8080
+          - name: PDO_URL
+            value: 'mysql:host=otel-shop-mysql;dbname=ratings;charset=utf8mb4'
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: OTEL_EXPORTER_OTLP_ENDPOINT
+            value: $(INSTANA_AGENT_HOST):4317
+          - name: OTEL_SERVICE_NAME
+            value: otel-shop-ratings
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/shipping-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-shipping
+  labels:
+    service: otel-shop-shipping
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-shipping
+  template:
+    metadata:
+      labels:
+        service: otel-shop-shipping
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-shipping
+        image: instanacedricziel/otel-shop-shipping:0.1.79
+        imagePullPolicy: Always
+        env:
+        - name: INSTANA_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: http://$(INSTANA_AGENT_HOST):4317
+        - name: OTEL_SERVICE_NAME
+          value: otel-shop-shipping
+        - name: OTEL_TRACES_SAMPLER
+          value: always_on
+        - name: CART_ENDPOINT
+          value: otel-shop-cart:8080
+        - name: DB_HOST
+          value: otel-shop-mysql
+        ports:
+        - containerPort: 8080
+        # it's Java it needs lots of memory
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1000Mi
+          requests:
+            cpu: 100m
+            memory: 500Mi
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/user-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-user
+  labels:
+    service: otel-shop-user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-user
+  template:
+    metadata:
+      labels:
+        service: otel-shop-user
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-user
+        image: instanacedricziel/otel-shop-user:0.1.79
+        imagePullPolicy: Always
+        env:
+        - name: INSTANA_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: $(INSTANA_AGENT_HOST):4317
+        - name: OTEL_SERVICE_NAME
+          value: otel-shop-user
+        - name: MONGO_URL
+          value: 'mongodb://otel-shop-mongodb:27017/users'
+        - name: REDIS_URL
+          value: redis://otel-shop-redis
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /health-check
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/web-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-shop-web
+  labels:
+    service: otel-shop-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-web
+  template:
+    metadata:
+      labels:
+        service: otel-shop-web
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-web
+        image: instanacedricziel/otel-shop-web:0.1.79
+        imagePullPolicy: Always
+        env:
+        - name: INSTANA_AGENT_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: $(INSTANA_AGENT_HOST):4317
+        - name: OTEL_SERVICE_NAME
+          value: otel-shop-web
+        - name: INSTANA_EUM_KEY
+          value: os3KrF7QQTe3AI3hefypRQ
+        - name: INSTANA_EUM_REPORTING_URL
+          value: http://159.122.143.166:2999/
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: otel-shop/templates/mysql-statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: otel-shop-mysql
+spec:
+  replicas: 1
+  serviceName: otel-shop-mysql
+  selector:
+    matchLabels:
+      service: otel-shop-mysql
+  template:
+    metadata:
+      labels:
+        service: otel-shop-mysql
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-mysql
+        image: instanacedricziel/otel-shop-mysql-db:0.1.56
+        imagePullPolicy: Always
+        args:
+          - "--ignore-db-dir=lost+found"
+        # added for Istio
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        ports:
+        - containerPort: 3306
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 700Mi
+        volumeMounts:
+            - name: otel-shop-mysql-data
+              mountPath: /var/lib/mysql
+        livenessProbe:
+          exec:
+            command:
+            - bash
+            - "-c"
+            - |
+              mysqladmin -uratings -piloveit ping &> /dev/null
+      restartPolicy: Always
+  volumeClaimTemplates:
+    - metadata:
+        name: otel-shop-mysql-data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Source: otel-shop/templates/redis-statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    service: otel-shop-redis
+  name: otel-shop-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: otel-shop-redis
+  serviceName: otel-shop-redis
+  template:
+    metadata:
+      labels:
+        service: otel-shop-redis
+    spec:
+      
+      serviceAccountName: otel-shop
+      
+      containers:
+      - name: otel-shop-redis
+        image: redis:4.0.6
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+          - name: data
+            mountPath: /mnt/redis
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        
+        resources:
+          requests:
+            storage: 1Gi
+---
+# Source: otel-shop/templates/front-service.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: otel-shop-front
+spec:
+  to:
+    kind: Service
+    name: otel-shop-front
+---
+# Source: otel-shop/templates/web-service.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: otel-shop-web
+spec:
+  to:
+    kind: Service
+    name: otel-shop-web

@@ -1,0 +1,256 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Connection Details
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE TEMPLATES AND APPS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Ai Manager Application"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🕦 TOPOLOGY -  Wait for Topology Route to become ready
+  shell: |
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+    export TOPO_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-file-observer -o jsonpath={.spec.host})
+    ROUTE_RESPONSE=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups" --insecure -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' -H 'content-type: application/json')
+    echo $ROUTE_RESPONSE
+  register: route_response
+  until: ("<title>Error 401 Unauthorized</title>" in route_response.stdout)
+  retries: 500
+  delay: 15      
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# WAIOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 TOPOLOGY - CREATE TOPOLOGY TEMPLATES
+  shell: |
+    set -x
+        
+    echo "Create Custom Topology - Create Template"
+    
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+
+
+    # Get Credentials
+    export EVTMGR_REST_USR=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    export TOPO_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-file-observer -o jsonpath={.spec.host})
+    export JOB_ID=robot-shop-topology
+
+    echo "    URL: $TOPO_ROUTE"
+    echo "    LOGIN: $LOGIN"
+
+    export TEMPLATE_ID=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .name == "robot-shop-template")|._id'| tail -1)
+
+    echo "    TEMPLATE_ID: $TEMPLATE_ID"
+
+    if [[ $TEMPLATE_ID == "" ]];
+    then
+      echo "  Create Template"
+      curl -X "POST" "$TOPO_ROUTE/1.0/topology/groups" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d '  {
+
+          "_correlationEnabled": "true",
+          "iconId": "application",
+          "vertexType": "group",
+          "groupTokens": [
+              "namespace:robot-shop"
+          ],
+          "correlatable": "true",
+          "name": "robot-shop-template",
+          "entityTypes": [
+              "completeGroup",
+              "namespace"
+          ],
+          "tags": [
+              "robot-shop-template"
+          ]
+      }'
+    else
+      echo "  Recreate Template"
+            curl -X "DELETE" "$TOPO_ROUTE/1.0/topology/groups/$TEMPLATE_ID" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'
+
+      
+      curl -X "POST" "$TOPO_ROUTE/1.0/topology/groups" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d '  {
+
+          "_correlationEnabled": "true",
+          "iconId": "application",
+          "vertexType": "group",
+          "groupTokens": [
+              "namespace:robot-shop"
+          ],
+          "correlatable": "true",
+          "name": "robot-shop-template",
+          "entityTypes": [
+              "completeGroup",
+              "namespace"
+          ],
+          "tags": [
+              "robot-shop-template"
+          ]
+      }'
+
+    fi
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1
+
+
+
+- name:   🚀 TOPOLOGY - CREATE TOPOLOGY APPS
+  shell: |
+    set -x
+        
+    echo "Create Custom Topology - Create App"
+    
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+
+
+    # Get Credentials
+    export EVTMGR_REST_USR=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    export TOPO_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-file-observer -o jsonpath={.spec.host})
+    export JOB_ID=robot-shop-topology
+
+    echo "    URL: $TOPO_ROUTE"
+    echo "    LOGIN: $LOGIN"
+
+    export APP_ID=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop")|._id'| tail -1)
+
+    echo "    APP_ID: $APP_ID"
+
+
+    if [[ $APP_ID == "" ]];
+    then    
+      echo "  Creating Application"
+      curl -X "POST" "$TOPO_ROUTE/1.0/topology/groups" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d '  {
+          "keyIndexName": "robot-shop",
+          "_correlationEnabled": "true",
+          "iconId": "application",
+          "vertexType": "group",
+          "correlatable": "true",
+          "name": "robot-shop",
+          "entityTypes": [
+              "waiopsApplication"
+          ]
+      }'
+    else
+      echo "  Application already exists"
+    fi
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1
+
+- name:   🚀 TOPOLOGY - CREATE APPLICATION MEMBERS
+  shell: |
+    set -x
+
+    echo "Create Custom Topology - Add Members to App"
+
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+
+
+    export EVTMGR_REST_USR=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+
+    export TOPO_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-topology -o jsonpath={.spec.host})
+
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    echo "    URL: $TOPO_ROUTE/1.0/rest-observer/rest/resources"
+    echo "    LOGIN: $LOGIN"
+
+    export APP_ID=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop")|._id'| tail -1)
+    export TEMPLATE_ID=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .name == "robot-shop-template")|._id'| tail -1)
+    export K8S_OBS_ID=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop::kubernetes::namespace::robot-shop")|._id'| tail -1)
+    #export K8S_OBS_ID=$(curl -X "GET" "$TOPO_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop")|._id'| tail -1)
+
+    echo "    APP_ID:     "$APP_ID
+    echo "    TEMPLATE_ID:"$TEMPLATE_ID
+    echo "    K8S_OBS_ID: "$K8S_OBS_ID
+ 
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------
+    # # CREATE EDGES
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------
+    
+    echo "  Add K8s Observer"
+    if [[ $K8S_OBS_ID == "" ]];
+    then  
+      echo "    No K8s Observer defined"
+    else
+      curl -X "POST" "$TOPO_ROUTE/1.0/topology/groups/$APP_ID/members" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d "{
+        \"_id\": \"$K8S_OBS_ID\"
+      }"
+    fi 
+
+    echo "  Add Template (File Observer)"
+    curl -X "POST" "$TOPO_ROUTE/1.0/topology/groups/$APP_ID/members" --insecure \
+    -u $LOGIN \
+    -H 'Content-Type: application/json' \
+    -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+    -d "{
+      \"_id\": \"$TEMPLATE_ID\"
+    }"
+
+
+
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1
