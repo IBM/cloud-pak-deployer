@@ -1,0 +1,127 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Connection Details
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE MERGE RULE
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Topology Merge Rules"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🕦 TOPOLOGY -  Wait for Merge Route to become ready
+  shell: |
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+    export MERGE_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-merge -o jsonpath={.spec.host})
+    ROUTE_RESPONSE=$(curl -X "GET" "$MERGE_ROUTE/1.0/merge/rules" --insecure -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' -H 'content-type: application/json')
+    echo $ROUTE_RESPONSE
+  register: route_response
+  until: ("<title>Error 401 Unauthorized</title>" in route_response.stdout)
+  retries: 500
+  delay: 15      
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# WAIOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 TOPOLOGY - CREATE MERGE RULES
+  shell: |
+    set -x
+    
+    echo "Create Rules - Starting..."
+    
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+
+    export EVTMGR_REST_USR=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    export MERGE_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-merge -o jsonpath={.spec.host})
+
+
+    echo "    URL: $MERGE_ROUTE/1.0/merge/"
+    echo "    LOGIN: $LOGIN"
+
+
+
+    echo "  Create Match RULE..."
+    curl -X "POST" "$MERGE_ROUTE/1.0/merge/rules" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN \
+        -d $'{
+        "name": "MatchTokenDeployName",
+        "ruleType": "matchTokensRule",
+        "entityTypes": ["deployment"],
+        "tokens": ["name"],
+        "ruleStatus": "enabled",
+        "observers": ["*"],
+        "providers": ["*"]
+    }'
+
+    echo "  Create Merge RULE..."
+    curl -X "POST" "$MERGE_ROUTE/1.0/merge/rules" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN \
+        -d $'{
+        "name": "MergeTokenDeployName",
+        "ruleType": "mergeRule",
+        "entityTypes": ["deployment"],
+        "tokens": ["name"],
+        "ruleStatus": "enabled",
+        "observers": ["*"],
+        "providers": ["*"]
+    }'
+
+
+
+    echo "  Disable RULE k8ServiceName..."
+
+    export RULE_ID=$(curl "$MERGE_ROUTE/1.0/merge/rules?ruleType=matchTokensRule&_filter=name=k8ServiceName&_include_count=false&_field=*" -s --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -u $LOGIN| jq -r "._items[0]._id")
+
+
+
+    curl -XPUT "$MERGE_ROUTE/1.0/merge/rules/$RULE_ID" -s --insecure \
+        --header 'Content-Type: application/json' \
+        --header 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -u $LOGIN \
+        -d '{
+          "name": "k8ServiceName",
+          "keyIndexName": "k8ServiceName",
+          "ruleType": "matchTokensRule",
+          "entityTypes": [
+            "service"
+          ],
+          "tokens": [
+            "name"
+          ],
+          "ruleStatus": "disabled",
+          
+          "observers": [
+            "kubernetes-observer"
+          ],
+          "providers": [
+            "*"
+          ]
+        }' 
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+
+

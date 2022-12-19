@@ -1,0 +1,108 @@
+apiVersion: instana.io/v1beta2
+kind: Core
+metadata:
+  namespace: instana-core
+  name: instana-core
+spec:
+  # set resource profile: small, medium, large, xlarge, xxlarge
+  resoureProfile: medium
+  # Base domain for Instana
+  baseDomain: {{BASE_DOMAIN}}
+  # Host and port for the agent acceptor, usually a subdomain of the base domain
+  agentAcceptorConfig:
+    host: agent.{{BASE_DOMAIN}}
+    port: 443
+  # dockerRegistryURI: containers.instana.io
+  # URL for downloading the GeoLite2 geo-location data file
+  # geoDbUrl:
+  # Depending on your cluster setup, you may need to specify an image pull secret.
+  imagePullSecrets:
+    - name: instana-registry
+  # Datastore configs
+  datastoreConfigs:
+    featureFlags: 
+#      - name:  feature.beeinstana.infra.metrics.enabled
+#        enabled: true
+      - name:  feature.infra.metrics.widget.enabled 
+        enabled: true
+      - name:  feature.infra.explore.presentation.enabled 
+        enabled: true
+      - name: feature.logging.enabled
+        enabled: true
+#    beeInstanaConfig:
+#      hosts:
+#        - 70.85.21.15
+    cassandraConfigs:
+      - hosts:
+          - cassandra-service.instana-datastores.svc
+        ports:
+          - name: tcp
+            port: 9042
+        schemas:
+          - spans
+          - metrics
+          - profiles
+    clickhouseConfigs:
+      - hosts:
+          - clickhouse-service.instana-datastores.svc
+        clusterName: local
+        ports:
+          - name: tcp
+            port: 9000
+          - name: http
+            port: 8123
+        schemas:
+          - application
+          - logs
+    cockroachdbConfigs:
+      - hosts:
+          - cockroachdb-service.instana-datastores.svc
+        ports:
+          - name: tcp
+            port: 26257
+        schemas:
+          - butlerdb
+          - tenantdb
+          - sales
+    elasticsearchConfig:
+      hosts:
+        - elasticsearch-service.instana-datastores.svc
+      clusterName: onprem_onprem
+      ports:
+        - name: tcp
+          port: 9300
+        - name: http
+          port: 9200
+      schemas:
+        - metadata_ng
+    kafkaConfig:
+      hosts:
+        - kafka-service.instana-datastores.svc
+  # Use one of smtpConfig or sesConfig
+  emailConfig:
+    smtpConfig:
+      from: smtp@example.com
+      host: smtp.example.com
+      port: 465
+      useSSL: true
+  # Use one of objectStorageConfig or pvcConfig
+  rawSpansStorageConfig:
+    pvcConfig:
+      accessModes:
+        - ReadWriteMany
+      resources:
+        requests:
+          storage: 100Gi
+      storageClassName: {{ WAIOPS_STORAGE_CLASS_FILE }}
+  enableNetworkPolicies: false
+  properties:
+    - name: retention.metrics.rollup5
+      value: "86400"
+    - name: retention.metrics.rollup60
+      value: "2678400"
+    - name: retention.metrics.rollup300
+      value: "8035200"
+    - name: retention.metrics.rollup3600
+      value: "34214400"
+    - name: config.appdata.shortterm.retention.days
+      value: "7"

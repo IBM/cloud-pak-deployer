@@ -1,0 +1,110 @@
+
+- name: 🛰️  START - RUN ALL TRAININGS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Run All Trainings"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name: 🚀 TRAINING RUN - RUN TRAINING ALL
+  shell: |
+    set -x
+    
+    pwd
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Create Analysis Definiton: Temporal Grouping"
+    export FILE_NAME=create-analysis-TG.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Run Analysis: Temporal Grouping"
+    export FILE_NAME=run-analysis-TG.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Create Analysis Definiton: Change Risk"
+    export FILE_NAME=create-analysis-CR.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Create Analysis Definiton: Similar Incidents"
+    export FILE_NAME=create-analysis-SI.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Run Analysis: Change Risk"
+    export FILE_NAME=run-analysis-CR.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Run Analysis: Similar Incidents"
+    export FILE_NAME=run-analysis-SI.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Turn off RSA - Log Anomaly Statistical Baseline"
+    export FILE_NAME=deactivate-analysis-RSA.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Create Data Set: Log Anomaly Detection"
+    echo "     "	
+    echo "      📥 Launch Query for file: create-dataset-LAD.graphql"	
+    echo "     "
+    QUERY="$(cat ../tools/02_training/training-definitions/create-dataset-LAD.graphql)"
+    JSON_QUERY=$(echo "${QUERY}" | jq -sR '{"operationName": null, "variables": {}, "query": .}')
+    export result=$(curl -XPOST "https://$ROUTE/graphql" -k -s -H 'Content-Type: application/json' -d "${JSON_QUERY}")
+    export DATA_SET_ID=$(echo $result| jq -r ".data.createDataSet.dataSetId")
+    echo "      🔎 Result: "
+    echo "       "$result|jq ".data" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Create Analysis Definiton: Log Anomaly Detection"
+    echo "     "	
+    echo "      📥 Launch Query for file: create-analysis-LAD.graphql"	
+    echo "     "
+    QUERY_TMPL="$(cat ../tools/02_training/training-definitions/create-analysis-LAD.graphql)"
+    QUERY=$(echo $QUERY_TMPL | sed "s/<DATA_SET_ID>/$DATA_SET_ID/g")
+    JSON_QUERY=$(echo "${QUERY}" | jq -sR '{"operationName": null, "variables": {}, "query": .}')
+    export result=$(curl -XPOST "https://$ROUTE/graphql" -k -s -H 'Content-Type: application/json' -d "${JSON_QUERY}")
+    echo "      🔎 Result: "
+    echo "       "$result|jq ".data" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+
+    echo "  ***************************************************************************************************************************************************"
+    echo "   🛠️   Run Analysis: Log Anomaly Detection"
+    export FILE_NAME=run-analysis-LAD.graphql
+    ../tools/02_training/scripts/execute-graphql.sh
+
+
+
+  register: output_string
+  ignore_errors: true
+- name: LOGIN -          🔐 WAIOPS
+  debug: 
+    var: output_string.stdout_lines
+  #when: PRINT_LOGINS == true
+    #verbosity: 2
+

@@ -1,0 +1,34 @@
+spec:
+  collection:
+    logs:
+      fluentd: {}
+      type: fluentd
+  curation:
+    curator:
+      schedule: 30 3 * * *
+    type: curator
+  logStore:
+    elasticsearch:
+      nodeCount: 3
+      proxy:
+        resources:
+          limits:
+            memory: 256Mi
+          requests:
+            memory: 256Mi
+      redundancyPolicy: SingleRedundancy
+      resources:
+        requests:
+          memory: 8Gi
+      storage:
+        size: 40G
+        #storageClassName: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    retentionPolicy:
+      application:
+        maxAge: 10d
+    type: elasticsearch
+  managementState: Unmanaged
+  visualization:
+    kibana:
+      replicas: 1
+    type: kibana

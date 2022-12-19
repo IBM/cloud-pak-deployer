@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cockroachdb
+  name: cockroachdb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cockroachdb
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: cockroachdb
+    spec:
+      serviceAccountName: instana-datastore-sa
+      imagePullSecrets:
+      - name: instana-pullsecret
+      containers:
+      - image: containers.instana.io/instana/release/product/cockroachdb:21.1.7_v0.36.0
+        name: cockroachdb
+        resources:
+          limits:
+            cpu: '8'
+            memory: 16Gi
+          requests:
+            cpu: '512m'
+            memory: 1Gi
+        ports:
+          - containerPort: 26257
+        env:
+          - name: LISTEN_ADDR
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        # command:
+        #   - sh
+        #   - -c 
+        #   - "/opt/instana/cockroachdb/cockroach start-single-node --store=/mnt/data --log-dir=/mnt/logs --temp-dir=/tmp --port=26257 --http-addr=127.0.0.1:7005 --listen-addr=localhost --insecure --cache=512MiB --max-sql-memory=512Mib"
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - mountPath: /mnt/data
+            name: cockroach-data
+          - mountPath: /mnt/logs
+            name: cockroach-logs
+      volumes:
+        - name: cockroach-data
+          persistentVolumeClaim:
+            claimName: cockroach-data
+        - name: cockroach-logs
+          persistentVolumeClaim:
+            claimName: cockroach-logs
+status: {}

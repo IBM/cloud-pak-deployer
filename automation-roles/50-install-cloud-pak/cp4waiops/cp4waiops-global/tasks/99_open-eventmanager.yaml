@@ -1,0 +1,63 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Open Doc
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name: Log
+  shell: |
+    export MESSAGE=" 🌏 Open EventManager"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+- name: 🌏 EVENT MANAGER - Get EVENT MANAGER LOGINS
+  shell: |
+    export ROUTE=$(oc get route -n {{ current_cp4waiops_cluster.project }}  evtmanager-ibm-hdm-common-ui -o jsonpath={.spec.host})
+    echo ""
+    echo "            🌏 URL:           https://$ROUTE"
+    echo "            🧑 User:          smadmin"
+    echo "            🔐 Password:      $(oc get secret -n {{ current_cp4waiops_cluster.project }}  evtmanager-was-secret -o jsonpath='{.data.WAS_PASSWORD}'| base64 --decode && echo)"
+    echo ""
+    echo ""
+    export URL=https://$ROUTE
+    if [ -x "$(command -v open)" ]; then
+      open $URL
+    else 
+      if [ -x "$(command -v firefox)" ]; then
+        firefox $URL
+      else 
+        if [ -x "$(command -v google-chrome)" ]; then
+          google-chrome $URL
+        fi
+      fi
+    fi
+  ignore_errors: true
+  register: LOGINS
+
+
+- name: 🟣 EVENT MANAGER - EVENT MANAGER LOGINS
+  debug: 
+    var: LOGINS.stdout_lines
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for Event Manager to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "      📥 Event Manager"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo ""  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "            🌏 URL:           https://$(oc get route -n {{ current_cp4waiops_cluster.project }}  evtmanager-ibm-hdm-common-ui -o jsonpath={.spec.host})"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "            🧑 User:          smadmin"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "            🔐 Password:      $(oc get secret -n {{ current_cp4waiops_cluster.project }}  evtmanager-was-secret -o jsonpath='{.data.WAS_PASSWORD}'| base64 --decode && echo)"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+
+  ignore_errors: true

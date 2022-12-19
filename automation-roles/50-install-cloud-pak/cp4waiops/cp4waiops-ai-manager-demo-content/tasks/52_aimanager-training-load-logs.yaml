@@ -1,0 +1,32 @@
+
+- name: 🛰️  START - LOAD LOG TRAINING DATA
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Load LAD Training Data into ElasticSearch"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+- name: 📥 TRAINING LOAD LAD - CREATE CLUSTERROLE
+  community.kubernetes.k8s:
+    state: present
+    namespace: default
+    src: ./templates/training/default-clusterrole.yaml
+    
+
+- name: 📥 TRAINING LOAD LAD - LOAD ELASTICSEARCH LOG DATA 
+  community.kubernetes.k8s:
+    state: present
+    namespace: turbonomic
+    template: ./templates/training/load-job-logs.j2
+

@@ -1,0 +1,27 @@
+spec:
+  template:
+    spec:
+      containers:
+        - name: aiops-topology-search
+          readinessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7081
+              scheme: HTTPS
+            initialDelaySeconds: 60
+            timeoutSeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          terminationMessagePath: /dev/termination-log
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: 7081
+              scheme: HTTPS
+            initialDelaySeconds: 120
+            timeoutSeconds: 3
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 60
+
