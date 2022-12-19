@@ -1,0 +1,50 @@
+
+- name: 🛰️  START - CREATE SNOW ANALYSIS DEFINITIONS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create SNOW Training Definition"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+- name: 🚀 TRAINING CREATE SNOW - CREATE SNOW CONFIGURATION
+  shell: |
+    set -x
+    export ROUTE=""
+
+    pwd
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Analysis Definiton: Change Risk"
+    export FILE_NAME=create-analysis-CR{{current_cp4waiops_feature.training_suffix | default("") }}.graphql
+    export FILE_PATH="{{role_path}}/templates/training/training-definitions/"
+    {{role_path}}/templates/training/scripts/execute-graphql.sh
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Analysis Definiton: Similar Incidents"
+    export FILE_NAME=create-analysis-SI{{current_cp4waiops_feature.training_suffix | default("") }}.graphql
+    export FILE_PATH="{{role_path}}/templates/training/training-definitions/"
+    {{role_path}}/templates/training/scripts/execute-graphql.sh
+
+
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+
+
+- name: 🟣 TRAINING CREATE SNOW - RESULT
+  debug: 
+    var: output_string.stdout_lines
+    #verbosity: 1

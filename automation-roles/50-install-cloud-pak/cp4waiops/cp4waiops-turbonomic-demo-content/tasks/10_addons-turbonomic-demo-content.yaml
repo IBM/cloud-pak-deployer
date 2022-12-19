@@ -1,0 +1,736 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic Demo Content
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - INSTALL TURBONOMIC
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing TURBONOMIC Demo Content"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name: 🚀 TURBONOMIC - Get ROUTE
+  shell: |
+    export TURBO_URL=$(oc get route -n turbonomic api -o jsonpath={.spec.host})
+    echo $TURBO_URL
+  ignore_errors: true
+  register: output
+        
+- name: 🚀 TURBONOMIC - Set ROUTE - {{ output.stdout_lines }} 
+  set_fact: TURBO_URL={{ output.stdout_lines[0] }} 
+
+
+- name: 🚀 TURBONOMIC - Init Admin
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Initialization"
+    export TURBO_PASSWORD={{current_cp4waiops_feature.turbo_password}}
+    export TURBO_URL={{TURBO_URL}}
+
+    result=$(curl -XPOST -s -k -c /tmp/cookies -H 'accept: application/json' "https://{{TURBO_URL}}/api/v3/initAdmin" -d "username=administrator&password=$TURBO_PASSWORD")
+    echo $result
+    result=$(curl -XPOST -s -k -c /tmp/cookies -H 'accept: application/json' "https://{{TURBO_URL}}/api/v3/login?disable_hateoas=true" -d "username=administrator&password=$TURBO_PASSWORD")
+    echo $result
+
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    ##verbosity: 1
+        
+
+
+
+
+- name: 🚀 TURBONOMIC - Login
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Initialization"
+    export TURBO_PASSWORD={{current_cp4waiops_feature.turbo_password}}
+    export TURBO_URL={{TURBO_URL}}
+
+    while [[ `curl -XPOST -s -k -c /tmp/cookies -H 'accept: application/json' "https://{{TURBO_URL}}/api/v3/login?hateoas=true" -d "username=administrator&password=$TURBO_PASSWORD"` =~ "InvalidCredentialsException" ]]
+    do
+      echo "Waiting for Turbo Init"
+      sleep 15
+    done
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+        
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# LOAD LICENSE IF PROVIDED
+# --------------------------------------------------------------------------------------------------------
+- name: 🚀 TURBONOMIC - Add License if provided
+  shell: |
+    export TURBO_URL={{TURBO_URL}}
+
+    echo "{{current_cp4waiops_feature.turbo_license | default("NONE") }}" > /tmp/license.lic
+    #cat /tmp/license.lic
+    
+    result=$(curl -XPOST -k -s -b /tmp/cookies -H 'Content-Type: multipart/form-data;'  -H 'accept: application/json' "https://$TURBO_URL/api/v3/licenses" -F 'file=@/tmp/license.lic')
+    echo $result
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.turbo_license | default("NONE") != "NONE"
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.turbo_license | default("NONE") != "NONE"
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# CREATE DEMO USER
+# --------------------------------------------------------------------------------------------------------
+
+
+- name: 🚀 TURBONOMIC - Create demo User
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Create demo User"
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/users" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '  {
+      "displayName": "Demo User",
+        "username": "{{current_cp4waiops_feature.demo_user}}",
+        "password": "{{current_cp4waiops_feature.demo_password}}",
+        "roles": [
+          {
+            "name": "ADMINISTRATOR"
+          }
+        ],
+        "loginProvider": "Local",
+        "type": "DedicatedCustomer",
+        "showSharedUserSC": false
+      }
+      ')
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.create_user == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.create_user == true
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# CREATE GROUPS
+# --------------------------------------------------------------------------------------------------------
+- name: 🚀 TURBONOMIC - Create Group vSphere VMs
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Create demo User"
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/groups" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '  
+      {
+        "displayName": "vSphere VMs",
+        "className": "Group",
+        "groupType": "VirtualMachine",
+        "environmentType": "ONPREM",
+        "isStatic": false,
+        "logicalOperator": "AND",
+        "criteriaList": [
+          {
+            "expVal": "vCenter",
+            "expType": "EQ",
+            "filterType": "vmByTargetType",
+            "caseSensitive": false,
+            "entityType": null,
+            "singleLine": false
+          }
+        ],
+        "temporary": false,
+        "memberTypes": [
+          "VirtualMachine"
+        ],
+        "entityTypes": [
+          "VirtualMachine"
+        ],
+        "groupOrigin": "USER",
+        "groupClassName": "GroupApiDTO"
+      }
+    
+      ')
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.group_vcenter_vms == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.group_vcenter_vms == true
+
+
+
+
+
+- name: 🚀 TURBONOMIC - Create Group RobotShop AppComponents
+  shell: |
+    result=$(curl -s -k -X 'POST' \
+      "https://{{TURBO_URL}}/api/v3/groups" -b /tmp/cookies\
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '  
+      {
+        "displayName": "RobotShop AppComponents",
+        "className": "Group",
+        "groupType": "ApplicationComponent",
+        "severity": "NORMAL",
+        "environmentType": "HYBRID",
+        "isStatic": false,
+        "logicalOperator": "AND",
+        "criteriaList": [
+          {
+            "expVal": ".*robot.*",
+            "expType": "RXEQ",
+            "filterType": "appCompsByName",
+            "caseSensitive": false,
+            "entityType": null,
+            "singleLine": false
+          }
+        ],
+        "temporary": false,
+        "cloudType": "UNKNOWN",
+        "memberTypes": [
+          "ApplicationComponent"
+        ],
+        "entityTypes": [
+          "ApplicationComponent"
+        ],
+        "groupOrigin": "USER",
+        "groupClassName": "GroupApiDTO"
+      }
+      ')
+
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.group_robotshop == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.group_robotshop == true
+
+
+
+
+
+- name: 🚀 TURBONOMIC - Create Licensing Groups
+  shell: |
+    result=$(curl -s -k -X 'POST' \
+      "https://{{TURBO_URL}}/api/v3/groups" -b /tmp/cookies\
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d ' {
+        "displayName": "_DB_LICENSED_HOST",
+        "className": "Group",
+        "groupType": "PhysicalMachine",
+        "severity": "CRITICAL",
+        "environmentType": "ONPREM",
+        "isStatic": false,
+        "logicalOperator": "AND",
+        "criteriaList": [
+          {
+            "expVal": "192.168.10.87",
+            "expType": "RXEQ",
+            "filterType": "pmsByName",
+            "caseSensitive": false,
+            "entityType": null,
+            "singleLine": false
+          }
+        ],
+        "temporary": false,
+        "cloudType": "UNKNOWN",
+        "memberTypes": [
+          "PhysicalMachine"
+        ],
+        "entityTypes": [
+          "PhysicalMachine"
+        ],
+        "groupOrigin": "USER",
+        "groupClassName": "GroupApiDTO"
+      }
+      
+      ')
+
+    echo $result|jq -r ".displayName"| sed 's/^/     /'
+    export sellerUuid=$(echo $result|jq -r ".uuid")
+    echo "sellerUuid: $sellerUuid"
+    echo ""
+
+
+
+    result=$(curl -s -k -X 'POST' \
+      "https://{{TURBO_URL}}/api/v3/groups" -b /tmp/cookies\
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -d '   {
+        "displayName": "_DB_VMs",
+        "className": "Group",
+        "groupType": "VirtualMachine",
+        "severity": "NORMAL",
+        "environmentType": "HYBRID",
+        "isStatic": false,
+        "logicalOperator": "AND",
+        "criteriaList": [
+          {
+            "expVal": ".*mysql.*|.*demo.*|.*backend.*",
+            "expType": "RXEQ",
+            "filterType": "vmsByName",
+            "caseSensitive": false,
+            "entityType": null,
+            "singleLine": false
+          }
+        ],
+        "temporary": false,
+        "cloudType": "HYBRID",
+        "memberTypes": [
+          "VirtualMachine"
+        ],
+        "entityTypes": [
+          "VirtualMachine"
+        ],
+        "groupOrigin": "USER",
+        "groupClassName": "GroupApiDTO"
+      }
+      ')
+
+    echo $result|jq -r ".displayName"| sed 's/^/     /'
+    export buyerUuid=$(echo $result|jq -r ".uuid")
+    echo "buyerUuid: $buyerUuid"
+    echo ""
+
+
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 🚀 Creating License Policy"
+    echo "      sellerUuid: $sellerUuid"
+    echo "      buyerUuid: $buyerUuid"
+
+
+
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/markets/777777/policies" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '
+    {
+      "policyName": "_DB_LICENSE",
+      "type": "BIND_TO_GROUP_AND_LICENSE",
+      "sellerUuid": "'$sellerUuid'",
+      "buyerUuid": "'$buyerUuid'",
+      "mergeUuids": [
+      
+      ],
+      "mergeType": "Cluster",
+      "capacity": 4,
+      "enabled": true,
+      "providerEntityType": "Application"
+    }')
+
+    echo $result|jq -r ".displayName"| sed 's/^/     /'
+    echo ""
+
+
+
+
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/markets/777777/policies" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '
+    {
+      "policyName": "_DB_PLACE",
+      "type": "AT_MOST_N_BOUND",
+      "capacity": 4,
+      "sellerUuid": "'$sellerUuid'",
+      "buyerUuid": "'$buyerUuid'",
+      "mergeUuids": [
+      
+      ],
+      "mergeType": "Cluster",
+      "capacity": 4,
+      "enabled": true,
+      "providerEntityType": "Application"
+    }')
+
+    echo $result|jq -r ".displayName"| sed 's/^/     /'
+    echo ""
+
+
+
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.group_licensing == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.group_licensing == true
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# CREATE TARGETS
+# --------------------------------------------------------------------------------------------------------
+
+
+- name: 🚀 TURBONOMIC - Create Instana Target
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Create Instana Target"
+    INSTANA_IP=$(oc get route -n instana-core dev-aiops -o jsonpath={.spec.host})
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/targets" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '{
+        "uuid": "74709474070544",
+        "displayName": "159.122.143.166",
+        "category": "Applications and Databases",
+        "inputFields": [
+          {
+            "name": "apiToken",
+            "value": "ChangeMe"
+          },
+          {
+            "name": "address",
+            "value": "'$INSTANA_IP'"
+          },
+          {
+            "name": "collectVmMetrics",
+            "value": "false"
+          }
+        ],
+        "type": "Instana",
+        "readonly": false
+      }')
+
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.target_instana == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.target_instana == true
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# DEPLOY DIF METRICS ROBOTSHOP
+# --------------------------------------------------------------------------------------------------------
+
+
+- name: 🚀 TURBONOMIC - Create RobotShop BusinessApp
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Create demo User"
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/topologydefinitions" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '  
+    {
+      "uuid": "285815442727328",
+      "displayName": "RobotShop",
+      "contextBased": true,
+      "entityType": "BusinessApplication",
+      "entityDefinitionData": {
+        "manualConnectionData": {
+          "Service": {
+            "dynamicConnectionCriteria": [{
+              "expVal": ".*robot.*",
+              "expType": "RXEQ",
+              "filterType": "servicesByName",
+              "caseSensitive": false,
+              "entityType": null,
+              "singleLine": false
+            }]
+          },
+          "Container": {
+            "dynamicConnectionCriteria": [{
+              "expVal": "robot-shop",
+              "expType": "EQ",
+              "filterType": "containersByNamespace",
+              "caseSensitive": false,
+              "entityType": null,
+              "singleLine": false
+            }]
+          },
+          "VirtualMachine": {
+            "dynamicConnectionCriteria": [{
+              "expVal": ".*demo.*",
+              "expType": "RXEQ",
+              "filterType": "vmsByName",
+              "caseSensitive": false,
+              "entityType": null,
+              "singleLine": false
+            }]
+          },
+          "ContainerPod": {
+            "dynamicConnectionCriteria": [{
+              "expVal": "robot-shop",
+              "expType": "EQ",
+              "filterType": "containerPodsByNamespace",
+              "caseSensitive": false,
+              "entityType": null,
+              "singleLine": false
+            }]
+          },
+          "ApplicationComponent": {
+            "dynamicConnectionCriteria": [{
+              "expVal": "*.robot.*",
+              "expType": "RXEQ",
+              "filterType": "appCompsByName",
+              "caseSensitive": false,
+              "entityType": null,
+              "singleLine": false
+            }]
+          }
+        }
+      }
+    }
+
+      ')
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.metrics_dif == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.metrics_dif == true
+
+
+
+- name: 🚀 TURBONOMIC - Deploy Synthetic Metrics Server for DIF
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 🚀 Deploy Synthetic Metrics Server for DIF"
+    oc apply -f ./roles/cp4waiops-turbonomic-demo-content/templates/create-data-ingestion.yaml
+    echo ""
+    echo ""
+    export robotshopUUID=$(curl -XGET -s -k "https://{{TURBO_URL}}/api/v3/topologydefinitions" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json'|jq -r '.[]|select(.displayName=="RobotShop").uuid')
+    echo "  🌏 Synthetic Metric URL: http://turbo-dif-service.default:3000/businessApplication/RobotShop/$robotshopUUID"
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.metrics_dif == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.metrics_dif == true
+
+
+
+
+- name: 🚀 TURBONOMIC - Create SyntheticMetricsHelloWorld
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Create Hello Metrics"
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/targets" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '{
+        "uuid": "74709421524256",
+        "displayName": "SyntheticMetricsHelloWorld",
+        "category": "Custom",
+        "inputFields": [
+          {
+            "name": "Name",
+            "value": "Hello"
+          },
+          {
+            "name": "targetIdentifier",
+            "value": "http://turbo-metrics-dif-service.turbonomic:3000/helloworld"
+          }
+        ],
+        "type": "DataIngestionFramework-Turbonomic",
+        "readonly": false
+      }')
+
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.metrics_dif == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.metrics_dif == true
+
+
+
+
+- name: 🚀 TURBONOMIC - Create SyntheticMetricsRobotShop
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 📥 Create RobotShop Metrics"
+    export robotshopUUID=$(curl -XGET -s -k "https://{{TURBO_URL}}/api/v3/topologydefinitions" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json'|jq -r '.[]|select(.displayName=="RobotShop").uuid')
+
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/targets" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '{
+        "uuid": "74709422922224",
+        "displayName": "SyntheticMetricsRobotShop",
+        "category": "Custom",
+        "inputFields": [
+          {
+            "name": "Name",
+            "value": "RobotShop"
+          },
+          {
+            "name": "targetIdentifier",
+            "value": "http://turbo-metrics-dif-service.turbonomic:3000/businessApplication/RobotShop/'$robotshopUUID'"
+          }
+        ],
+        "type": "DataIngestionFramework-Turbonomic",
+        "readonly": false
+        }
+      }')
+
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.metrics_dif == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.metrics_dif == true
+
+
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# DEPLOY MEMORY AND CPU HOGS
+# --------------------------------------------------------------------------------------------------------
+
+- name: 🚀 TURBONOMIC - Deploy Memory and CPU Hogs
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 🚀 Deploy Memory and CPU Hogs"
+    oc apply  -f ./roles/cp4waiops-turbonomic-demo-content/templates/prime_numbers-deploy.yaml
+    oc apply  -f ./roles/cp4waiops-turbonomic-demo-content/templates/memory_grabber.yaml
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.resource_hogs == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.resource_hogs == true
+
+
+
+
+# --------------------------------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------------------------------
+# WEBHOOKS
+# --------------------------------------------------------------------------------------------------------
+
+- name: 🚀 TURBONOMIC - Sample Webhook
+  shell: |
+    echo "------------------------------------------------------------------------------------------------------------------------------"
+    echo " 🚀 Deploy Sample Webhook"
+
+    result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/workflows" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d ' {
+        "displayName": "My_WebHook",
+        "className": "Workflow",
+        "description": "My First Webhook",
+        "discoveredBy":
+        {
+            "readonly": false
+        },
+       "type": "WEBHOOK",
+       "typeSpecificDetails": {
+       "url": "http://ibm.com",
+          "method": "POST",
+          "template": "My Webhook Template -- DATA: Action Details: $action.details",
+          "type": "WebhookApiDTO"
+       }
+    }')
+
+    echo $result
+    echo ""
+    echo ""
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+  when: current_cp4waiops_feature.metrics_dif == true
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+  when: current_cp4waiops_feature.metrics_dif == true
+
+
+

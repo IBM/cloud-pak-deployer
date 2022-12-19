@@ -1,0 +1,183 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Connection Details
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE TEMPLATES AND APPS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Ai Manager Application"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+- name: 🚀 TOPOLOGY - 🚀 CREATE APPLICATION
+  shell: |
+    set -x
+
+    echo "Create Custom Topology - Add Members to App"
+
+
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export EVTMGR_REST_USR=$(oc get secret aiops-topology-asm-credentials -n $WAIOPS_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret aiops-topology-asm-credentials -n $WAIOPS_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+
+    export TOPO_MGT_ROUTE="https://"$(oc get route -n $WAIOPS_NAMESPACE topology-manage -o jsonpath={.spec.host})
+
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    echo "    URL: $TOPO_MGT_ROUTE/1.0/rest-observer/rest/resources"
+    echo "    LOGIN: $LOGIN"
+
+    export APP_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Drobot-shop-app" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
+    export TEMPLATE_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Drobot-shop-template" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
+    export K8S_OBS_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop::kubernetes::namespace::robot-shop")|._id'| tail -1)
+    #export K8S_OBS_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop")|._id'| tail -1)
+
+    echo "    APP_ID:     "$APP_ID
+    echo "    TEMPLATE_ID:"$TEMPLATE_ID
+    echo "    K8S_OBS_ID: "$K8S_OBS_ID
+ 
+    echo "Create Custom Topology - Create App"
+
+    if [[ $APP_ID == "" ]];
+    then    
+      echo "  Creating Application"
+      curl -X "POST" "$TOPO_MGT_ROUTE/1.0/topology/groups" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d '  {
+          "keyIndexName": "robot-shop-app",
+          "_correlationEnabled": "true",
+          "iconId": "application",
+          "businessCriticality": "Platinum",
+          "vertexType": "group",
+          "correlatable": "true",
+          "disruptionCostPerMin": "1000",
+          "name": "robot-shop",
+          "entityTypes": [
+              "waiopsApplication"
+          ]
+      }'
+    else
+      echo "  Application already exists"
+    fi
+
+    export APP_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Drobot-shop-app" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
+    echo "    APP_ID:     "$APP_ID
+
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------
+    # # CREATE EDGES
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------
+    if [[ $K8S_OBS_ID == "" ]];
+    then  
+      echo "    No K8s Observer defined"
+    else
+      echo "  Add K8s Observer Resources"
+      curl -X "POST" "$TOPO_MGT_ROUTE/1.0/topology/groups/$APP_ID/members" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d "{
+        \"_id\": \"$K8S_OBS_ID\"
+      }"
+    fi
+
+    echo "  Add Template (File Observer) Resources"
+    curl -X "POST" "$TOPO_MGT_ROUTE/1.0/topology/groups/$APP_ID/members" --insecure \
+    -u $LOGIN \
+    -H 'Content-Type: application/json' \
+    -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+    -d "{
+      \"_id\": \"$TEMPLATE_ID\"
+    }"
+
+
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------
+    # # RE-RUN K8s Observer
+    # # -------------------------------------------------------------------------------------------------------------------------------------------------
+
+    export AIO_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE aimanager-aio-controller -o jsonpath={.spec.host})
+
+    echo "        Namespace:          $WAIOPS_NAMESPACE"
+    echo "        AIO_PLATFORM_ROUTE: $AIO_PLATFORM_ROUTE"
+    echo ""
+
+    echo "       🛠️   Getting ZEN Token"
+
+    ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+    ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+    LOGIN_USER=admin
+    LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+    ZEN_LOGIN_RESPONSE=$(
+    curl -k \
+    -H 'Content-Type: application/json' \
+    -XPOST \
+    "${ZEN_LOGIN_URL}" \
+    -d '{
+        "username": "'"${LOGIN_USER}"'",
+        "password": "'"${LOGIN_PASSWORD}"'"
+    }' 2> /dev/null
+    )
+
+    ZEN_LOGIN_MESSAGE=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .message)
+
+    if [ "${ZEN_LOGIN_MESSAGE}" != "success" ]; then
+        echo "Login failed: ${ZEN_LOGIN_MESSAGE}"
+
+    fi
+
+    ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+    # echo "${ZEN_TOKEN}"
+
+
+    echo "Getting local K8s API"
+
+    API_TOKEN=$(oc -n default get secret $(oc get secret -n default |grep -m1 demo-admin-token|awk '{print$1}') -o jsonpath='{.data.token}'|base64 --decode)
+    API_URL=$(oc status|grep -m1 "In project"|awk '{print$6}')
+    API_SERVER=$(echo $API_URL| cut -d ":" -f 2| tr -d '/')
+    API_PORT=$(echo $API_URL| cut -d ":" -f 3)
+
+    echo "            🌏 API URL:               $API_URL"
+    echo "            🌏 API SERVER:            $API_SERVER"
+    echo "            🌏 API PORT:              $API_PORT"
+    echo "            🔐 API Token:             $API_TOKEN"
+
+
+
+    echo "Sucessfully logged in" 
+    echo ""
+    echo "Running K8S OBSERVER"
+
+    curl -X 'POST' --insecure \
+      "https://$AIO_PLATFORM_ROUTE/v1/observer/runjob/robot-shop" \
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -H "authorization: Bearer $ZEN_TOKEN"  \
+
+
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1

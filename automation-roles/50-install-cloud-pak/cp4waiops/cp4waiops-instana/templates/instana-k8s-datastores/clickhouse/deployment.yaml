@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: clickhouse
+  name: clickhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      serviceAccount: instana-datastore-sa
+      securityContext:
+        fsGroup: 2000
+      imagePullSecrets:
+      - name: instana-pullsecret
+      containers:
+      - image: containers.instana.io/instana/release/product/clickhouse:22.3.12.19_v0.48.0
+        name: clickhouse
+        resources:
+          limits:
+            cpu: '8'
+            memory: 16Gi
+          requests:
+            cpu: '512m'
+            memory: 1Gi
+        env:
+          - name: ZOOKEEPER_HOST
+            value: zookeeper-service
+        ports:
+          - containerPort: 9000
+            name: clickhouse-9000
+          - containerPort: 8123
+            name: clickhouse-8123
+        volumeMounts:
+          - mountPath: /mnt/data
+            name: clickhouse-data
+          - mountPath: /mnt/logs
+            name: clickhouse-logs
+        securityContext:
+          runAsUser: 0
+          privileged: true
+      volumes:
+        - name: clickhouse-logs
+          persistentVolumeClaim:
+            claimName: clickhouse-logs      
+        - name: clickhouse-data
+          persistentVolumeClaim:
+            claimName: clickhouse-data
+status: {}

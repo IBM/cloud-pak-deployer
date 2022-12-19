@@ -1,0 +1,851 @@
+---
+# Source: robot-shop/templates/web-service.yaml
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: web
+spec:
+  to:
+    kind: Service
+    name: web
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: robotshop
+  namespace: robot-shop
+spec:
+  to:
+    kind: Service
+    name: web
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None
+---
+# Source: robot-shop/templates/podsecuritypolicy.yaml
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: robot-shop
+spec:
+  allowPrivilegeEscalation: false
+  fsGroup:
+    rule: RunAsAny
+  privileged: false
+  runAsUser:
+    rule: RunAsAny
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  allowedCapabilities:
+  - 'NET_ADMIN'
+  volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - secret
+  - projected
+---
+# Source: robot-shop/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: robot-shop
+  namespace: robot-shop
+---
+# Source: robot-shop/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: robot-shop
+rules:
+- apiGroups:
+  - policy
+  resourceNames:
+  - robot-shop
+  resources:
+  - podsecuritypolicies
+  verbs:
+  - use
+---
+# Source: robot-shop/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: robot-shop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: robot-shop
+subjects:
+- kind: ServiceAccount
+  name: robot-shop
+  namespace: robot-shop
+---
+# Source: robot-shop/templates/cart-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: cart
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: cart
+---
+# Source: robot-shop/templates/catalogue-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: robot-shop
+    service: catalogue
+  name: catalogue
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: catalogue
+---
+# Source: robot-shop/templates/dispatch-service.yaml
+# dispatch just listens to a message queue
+# it does not expose any ports
+apiVersion: v1
+kind: Service
+metadata:
+  name: dispatch
+  labels:
+    app: robot-shop
+    service: dispatch
+spec:
+  clusterIP: None
+  ports:
+  - name: headless
+    port: 55555
+    targetPort: 0
+  selector:
+    service: dispatch
+---
+# Source: robot-shop/templates/mongodb-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: robot-shop
+    service: mongodb
+  name: mongodb
+spec:
+  ports:
+  - name: mongo
+    port: 27017
+    targetPort: 27017
+  selector:
+    service: mongodb
+---
+# Source: robot-shop/templates/mysql-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: robot-shop
+    service: mysql
+  name: mysql
+spec:
+  ports:
+  - name: mysql
+    port: 3306
+    targetPort: 3306
+  selector:
+    service: mysql
+---
+# Source: robot-shop/templates/payment-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment
+  labels:
+    app: robot-shop
+    service: payment
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: payment
+---
+# Source: robot-shop/templates/rabbitmq-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+  labels:
+    app: robot-shop
+    service: rabbitmq
+spec:
+  ports:
+  - name: tcp-amqp
+    port: 5672
+    targetPort: 5672
+  - name: http-management
+    port: 15672
+    targetPort: 15672
+  - name: tcp-epmd
+    port: 4369
+    targetPort: 4369
+  selector:
+    service: rabbitmq
+---
+# Source: robot-shop/templates/ratings-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: ratings
+  labels:
+    app: robot-shop
+    service: ratings
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  selector:
+    service: ratings
+---
+# Source: robot-shop/templates/redis-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: robot-shop
+    service: redis
+  name: redis
+spec:
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  selector:
+    service: redis
+---
+# Source: robot-shop/templates/shipping-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipping
+  labels:
+    app: robot-shop
+    service: shipping
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: shipping
+---
+# Source: robot-shop/templates/user-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: user
+  labels:
+    app: robot-shop
+    service: user
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: user
+---
+# Source: robot-shop/templates/web-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels:
+    app: robot-shop
+    service: web
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  selector:
+    service: web
+  
+  type: NodePort
+---
+# Source: robot-shop/templates/cart-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cart
+  labels:
+    app: robot-shop
+    version: v1
+    service: cart
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: cart
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: cart
+    spec:
+      containers:
+      - name: cart
+        image: robotshop/rs-cart:latest
+        imagePullPolicy: IfNotPresent
+        # agent networking access
+        env:
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+---
+# Source: robot-shop/templates/catalogue-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogue
+  labels:
+    app: robot-shop
+    version: v1
+    service: catalogue
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: catalogue
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: catalogue
+    spec:
+      containers:
+      - name: catalogue
+        image: robotshop/rs-catalogue:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/dispatch-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dispatch
+  labels:
+    app: robot-shop
+    version: v1
+    service: dispatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: dispatch
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: dispatch
+    spec:
+      
+      containers:
+      - name: dispatch
+        image: robotshop/rs-dispatch:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          # agent networking access
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/mongodb-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mongodb
+  labels:
+    app: robot-shop
+    version: v1
+    service: mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: mongodb
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: mongodb
+    spec:
+      
+      containers:
+      - name: mongodb
+        image: robotshop/rs-mongodb:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 27017
+        resources:
+          limits:
+            cpu: 200m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/mysql-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  labels:
+    app: robot-shop
+    version: v1
+    service: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: mysql
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: mysql
+    spec:
+      
+      containers:
+      - name: mysql
+        image: robotshop/rs-mysql-db:latest
+        imagePullPolicy: IfNotPresent
+        # added for Istio
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]
+        ports:
+        - containerPort: 3306
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1024Mi
+          requests:
+            cpu: 100m
+            memory: 700Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/payment-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment
+  labels:
+    app: robot-shop
+    version: v1
+    service: payment
+    stage: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: payment
+      stage: prod
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: payment
+        stage: prod
+    spec:
+      
+      containers:
+      - name: payment
+        image: robotshop/rs-payment:latest
+        imagePullPolicy: IfNotPresent
+        # agent networking access
+        env:
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/rabbitmq-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+  labels:
+    app: robot-shop
+    version: v1
+    service: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: rabbitmq
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: rabbitmq
+    spec:
+      
+      containers:
+      - name: rabbitmq
+        image: rabbitmq:3.7-management-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5672
+        - containerPort: 15672
+        resources:
+          limits:
+            cpu: 200m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/ratings-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings
+  labels:
+    app: robot-shop
+    version: v2
+    service: ratings
+    stage: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v2
+      service: ratings
+      stage: prod
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v2
+        service: ratings
+        stage: prod
+    spec:
+      
+      containers:
+      - name: ratings
+        image: robotshop/rs-ratings:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /_health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/shipping-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipping
+  labels:
+    app: robot-shop
+    version: v1
+    service: shipping
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: shipping
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: shipping
+    spec:
+      
+      containers:
+      - name: shipping
+        image: robotshop/rs-shipping:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        # it's Java it needs lots of memory
+        resources:
+          limits:
+            cpu: 1600m
+            memory: 6000Mi
+          requests:
+            cpu: 1200m
+            memory: 500Mi
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 300
+          successThreshold: 1
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/user-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user
+  labels:
+    app: robot-shop
+    version: v1
+    service: user
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: user
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: user
+    spec:
+      
+      containers:
+      - name: user
+        image: robotshop/rs-user:latest
+        imagePullPolicy: IfNotPresent
+        env:
+          # agent networking access
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/web-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    app: robot-shop
+    version: v1
+    service: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: web
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: web
+    spec:
+      
+      containers:
+      - name: web
+        image: robotshop/rs-web:latest
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: INSTANA_EUM_KEY
+          value: xxxxxxxxx
+        - name: INSTANA_EUM_REPORTING_URL
+          value: https://eum-eu-west-1.instana.io        
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+---
+# Source: robot-shop/templates/redis-statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: robot-shop
+    version: v1
+    service: redis
+  name: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: redis
+  serviceName: redis
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: redis
+    spec:
+      
+      containers:
+      - name: redis
+        image: redis:4.0.6
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+          - name: data
+            mountPath: /mnt/redis
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ "ReadWriteOnce" ]
+        
+        resources:
+          requests:
+            storage: 1Gi

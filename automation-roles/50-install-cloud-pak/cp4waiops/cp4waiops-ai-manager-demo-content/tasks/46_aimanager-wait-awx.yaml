@@ -1,0 +1,73 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Waiting for CP4WAIOPS installation to finish
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for AWX to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for awx Namespace to be ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🕦 CHECK -  Wait for pods in namespace awx ready
+  shell: |
+    NUM_PODS=$(oc get pods -n awx| grep awx|grep 4/4 | wc -l| tr -d ' ')
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int == 1
+  retries: 50
+  delay: 15
+
+
+
+- name: 🕦 CHECK -  Wait for awx UI to become ready
+  shell: |
+    export AWX_ROUTE=$(oc get route -n awx awx -o jsonpath={.spec.host})
+    export AWX_URL=$(echo "https://$AWX_ROUTE")
+
+    READY=$(curl -s $AWX_URL|grep "Application is not available")
+    echo $READY
+  register: ready
+  until:  ("Application is not available" not in ready.stdout)
+  retries: 50
+  delay: 15
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" ✅ AWX is ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing AWX"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "              📥 AWX Login:"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo ""  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🌏 URL:      https://$(oc get route -n awx awx -o jsonpath={.spec.host})"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🧑 User:     admin"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🔐 Password: $(oc -n awx get secret awx-admin-password -o jsonpath='{.data.password}' | base64 --decode && echo)"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name: 🚀 AWX - Adapt service account (you can ignore errors in this step)
+  shell: |
+    oc create clusterrolebinding awx-default --clusterrole=cluster-admin --serviceaccount=awx:default>/dev/null 2>/dev/null
+  ignore_errors: true
+
+

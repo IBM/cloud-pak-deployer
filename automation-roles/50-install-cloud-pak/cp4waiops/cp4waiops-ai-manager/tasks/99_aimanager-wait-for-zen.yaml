@@ -1,0 +1,54 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Zen in Common Services being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Zen in Common Services
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for Zen to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for AutomationUIConfig ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 CHECK -  Wait for Zen AutomationUIConfig being ready (this might take some time)
+  shell: oc get AutomationUIConfig -n {{ current_cp4waiops_cluster.project }} iaf-system  | grep True|grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+- name: 🕦 CHECK -  Wait for Zen Ansible Script zen_ready.stdout in namespace ibm-common-services (this might take some time - up to 30 minutes)
+  shell: |
+    ZEN_LOGS=$(oc logs $(oc get po -n ibm-common-services|grep ibm-zen-operator|awk '{print$1}') -n ibm-common-services|grep -i -E "ok=2|ok=3|ok=4|ok=5|ok=6|ok=7")
+    echo $ZEN_LOGS
+  register: zen_ready
+  until: ("ok" in zen_ready.stdout)
+  retries: 500
+  delay: 15
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" ✅ Zen is ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+

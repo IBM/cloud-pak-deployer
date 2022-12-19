@@ -1,0 +1,287 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Open Doc
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🌏 Update AI Manager Cards"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+- name: 🌏 ZEN CARDS - Update Cards
+  block:
+  - name:  🌏 ZEN CARDS - Getting ZEN TOKEN
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+      export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+
+      ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+      ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+      LOGIN_USER=admin
+      LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+      ZEN_LOGIN_RESPONSE=$(
+      curl -k \
+      -H 'Content-Type: application/json' \
+      -XPOST \
+      "${ZEN_LOGIN_URL}" \
+      -d '{
+              "username": "'"${LOGIN_USER}"'",
+              "password": "'"${LOGIN_PASSWORD}"'"
+      }' 2> /dev/null
+      )
+
+      ZEN_LOGIN_MESSAGE=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .message)
+
+      if [ "${ZEN_LOGIN_MESSAGE}" != "success" ]; then
+      echo "Login failed: ${ZEN_LOGIN_MESSAGE}" 1>&2
+
+      exit 2
+      fi
+
+      ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+      echo "${ZEN_TOKEN}"
+    ignore_errors: true
+    register: output   
+  - name: 🚀 ZEN CARDS - Set ZEN_TOKEN
+    set_fact: ZEN_TOKEN={{ output.stdout_lines[0] }} 
+  - name: 🟣  DEBUG
+    debug:
+      var: ZEN_TOKEN
+      verbosity: 1
+          
+
+
+
+
+
+  - name:  🧻 ZEN CARDS - Delete All Custom Cards
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+      curl -X "DELETE" -k "https://$ROUTE/zen-data/v1/custom_cards/welcomecard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json"
+      curl -X "DELETE" -k "https://$ROUTE/zen-data/v1/custom_cards/aiopscard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json"
+      curl -X "DELETE" -k "https://$ROUTE/zen-data/v1/custom_cards/appscard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json"
+      curl -X "DELETE" -k "https://$ROUTE/zen-data/v1/custom_cards/systemcard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json"
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+      verbosity: 1
+          
+
+
+
+  - name:  🌏 ZEN CARDS - Create Card WELCOME
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+      demoURL=$(oc get routes -n $WAIOPS_NAMESPACE-demo-ui $WAIOPS_NAMESPACE-demo-ui  -o jsonpath="{['spec']['host']}")
+      demoToken=$(oc get cm -n $WAIOPS_NAMESPACE-demo-ui $WAIOPS_NAMESPACE-demo-ui-config -o jsonpath='{.data.TOKEN}')
+
+      export ROWS=""
+
+      if [[ $demoURL =~ "demo-ui" ]]; then
+      echo "DemoUI Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$demoURL'", "label": "🚀  Get started with the DemoUI ", "sub_text": "Token/Password: '$demoToken'"},'
+      fi
+      ROWS=$ROWS'{"drilldown_url":  " ", "label": " ", "sub_text": " "},'
+
+      ROWS=$ROWS'{"drilldown_url":  "https://github.com/niklaushirt/cp4waiops-deployer#-demo-installation", "label": "Created with CP4WAIOps-Deployer", "sub_text": "Built with 🤍 by Niklaus Hirt"},'
+
+      PAYLOAD='{ "permissions": ["administrator"],  "window_open_target": "_blank",  "order": 1, "title": "🚀   Getting Started", "template_type": "text_list", "data": { "text_list_data": { "rows": [ { "drilldown_url": "", "label": "🐥 Welcome to the {{global_config.environment_name | default("Demo")}} Environment", "sub_text": "" }, '$ROWS' { "drilldown_url": "", "label": " ", "sub_text": " " } ] } } } '
+      echo "PAYLOAD:"$PAYLOAD
+      echo "ENV:{{global_config.environment_name | default("Demo")}}"
+
+      export result=$(curl -X "PUT" -k "https://$ROUTE/zen-data/v1/custom_cards/welcomecard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json" -d "$PAYLOAD")
+      echo "      🔎 Result: "
+      echo "       "$result
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+      verbosity: 1
+          
+
+
+  - name:  🌏 ZEN CARDS - Create Card AIOPS APPS
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+      export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+
+      instanaURL=$(oc get routes -n instana-core dev-aiops -o jsonpath={.spec.host})
+      turboURL=$(oc get route -n turbonomic api -o jsonpath={.spec.host})
+      evtMgrURL=$(oc get route -n $EVTMGR_NAMESPACE  evtmanager-ibm-hdm-common-ui -o jsonpath={.spec.host})
+      evtMgrPwd=$(oc get secret -n $EVTMGR_NAMESPACE  evtmanager-was-secret -o jsonpath='{.data.WAS_PASSWORD}'| base64 --decode && echo)
+
+      export ROWS=""
+
+      if [[ $instanaURL =~ "dev-aiops" ]]; then
+      echo "Instana Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$instanaURL'/#/applications", "label": "→   Instana", "sub_text": " "},'
+      ROWS=$ROWS'{"drilldown_url":  "", "label": "", "sub_text": "User: admin@instana.local - Password: P4ssw0rd! "},'
+      fi
+      if [[ $turboURL =~ "api-turbonomic" ]]; then
+      echo "Turbonomic Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$turboURL'", "label": "→   Turbonomic", "sub_text": " "},'
+      ROWS=$ROWS'{"drilldown_url":  "", "label": "", "sub_text": "User: administrator - Password: P4ssw0rd! "},'
+      fi
+      if [[ $evtMgrURL =~ "evt" ]]; then
+      echo "EventManager Present "
+      ROWS=$ROWS'{"drilldown_url":  "https://'$evtMgrURL'", "label": "→  EventManager", "sub_text": " "},'
+      ROWS=$ROWS'{"drilldown_url":  "", "label": "", "sub_text": "User: smadmin - Password: '$evtMgrPwd' "},'
+      fi
+
+      ROWS=$ROWS'{"drilldown_url":  "", "label": "Select your IBM AIOps Application above.", "sub_text": ""}'
+
+      PAYLOAD='{ "permissions": ["administrator"], "window_open_target": "_blank", "order": 2, "title": "🟣   IBM Automation - AIOps", "template_type": "text_list", "data": { "text_list_data": { "rows": [ '$ROWS' ] } }}'
+      echo "PAYLOAD:"$PAYLOAD
+
+      echo "curl -X \"PUT\" -k \"https://$ROUTE/zen-data/v1/custom_cards/aiopscard\" -H \"Authorization: Bearer {{ZEN_TOKEN}}\" -H \"Content-Type: application/json\" -d \"$PAYLOAD\""
+
+      export result=$(curl -X "PUT" -k "https://$ROUTE/zen-data/v1/custom_cards/aiopscard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json" -d "$PAYLOAD")
+      echo "      🔎 Result: "
+      echo "       "$result
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+      verbosity: 1
+             
+
+
+
+
+
+
+  - name:  🌏 ZEN CARDS - Create Card DEMO
+    shell: |
+      echo "       🛠️   Get Route"
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+
+
+      appURL=$(oc get routes -n robot-shop robotshop  -o jsonpath="{['spec']['host']}")
+      ldapURL=$(oc get route -n openldap admin -o jsonpath={.spec.host})
+      awxUrl=$(oc get route -n awx awx -o jsonpath={.spec.host})
+      awxPwd=$(oc -n awx get secret awx-admin-password -o jsonpath='{.data.password}' | base64 --decode && echo)
+
+
+
+      export ROWS=""
+
+      if [[ $appURL =~ "robot-shop" ]]; then
+      echo "RobotShop Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$appURL'", "label": "→  RobotShop", "sub_text": " "},'
+      fi
+      if [[ $ldapURL =~ "openldap" ]]; then
+      echo "LDAP Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$ldapURL'", "label": "→  LDAP", "sub_text": " "},'
+      ROWS=$ROWS'{"drilldown_url":  "", "label": " ", "sub_text": "User: cn=admin,dc=ibm,dc=com - Password: P4ssw0rd! "},'
+      fi
+      if [[ $awxUrl =~ "awx" ]]; then
+      echo "AWX Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$awxUrl'", "label": "→  Ansible Tower", "sub_text": " "},'
+      ROWS=$ROWS'{"drilldown_url":  "", "label": " ", "sub_text": "User: admin - Password: '$awxPwd' "},'
+      fi
+
+
+
+      ROWS=$ROWS'{"drilldown_url":  "", "label": "Select your app above.", "sub_text": ""}'
+
+
+      PAYLOAD='{ "permissions": ["administrator"], "window_open_target": "_blank", "order": 3, "title": "🔵   Demo Apps", "template_type": "text_list", "data": { "text_list_data": { "rows": [ '$ROWS' ] } }}'
+      echo "PAYLOAD:"$PAYLOAD
+
+      curl -X "PUT" -k "https://$ROUTE/zen-data/v1/custom_cards/appscard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json" -d "$PAYLOAD"
+
+      export result=$(curl -X "PUT" -k "https://$ROUTE/zen-data/v1/custom_cards/appscard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json" -d "$PAYLOAD")
+      echo "      🔎 Result: "
+      echo "       "$result
+
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+      verbosity: 1
+          
+
+
+
+
+  - name:  🌏 ZEN CARDS - Create Card SYSTEM
+    shell: |
+      echo "       🛠️   Get Route"
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
+
+      jobURL=$(oc get routes -n $WAIOPS_NAMESPACE job-manager  -o jsonpath="{['spec']['host']}")
+      jobPolicyURL=$(oc get routes -n $WAIOPS_NAMESPACE job-manager-policy  -o jsonpath="{['spec']['host']}")
+      sparkURL=$(oc get routes -n $WAIOPS_NAMESPACE sparkadmin  -o jsonpath="{['spec']['host']}")
+      ocpURL=$(oc get route -n openshift-console console -o jsonpath={.spec.host})
+
+
+      export ROWS=""
+
+      if [[ $jobURL =~ "job-manager" ]]; then
+      echo "DemoUI Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$jobURL'", "label": "→ Flink Task Manager - Ingestion", "sub_text": " "},'
+      fi
+      if [[ $jobPolicyURL =~ "job-manager" ]]; then
+      echo "RobotShop Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$jobPolicyURL'", "label": "→ Flink Task Manager - Policy Framework", "sub_text": " "},'
+      fi
+      if [[ $sparkURL =~ "sparkadmin" ]]; then
+      echo "LDAP Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$sparkURL'", "label": "→ Spark Master", "sub_text": " "},'
+      fi
+      if [[ $ocpURL =~ "openshift" ]]; then
+      echo "OCP Present"
+      ROWS=$ROWS'{"drilldown_url":  "https://'$ocpURL'", "label": "→ Openshift Console", "sub_text": " "},'
+      fi
+
+      ROWS=$ROWS'{"drilldown_url":  "", "label": "Internal System Links", "sub_text": ""}'
+
+
+      PAYLOAD='{ "permissions": ["administrator"], "window_open_target": "_blank", "order": 4, "title": "🧰   System Links", "template_type": "text_list", "data": { "text_list_data": { "rows": [ '$ROWS' ] } }}'
+      echo "PAYLOAD:"$PAYLOAD
+
+      curl -X "PUT" -k "https://$ROUTE/zen-data/v1/custom_cards/systemcard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json" -d "$PAYLOAD"
+
+      export result=$(curl -X "PUT" -k "https://$ROUTE/zen-data/v1/custom_cards/systemcard" -H "Authorization: Bearer {{ZEN_TOKEN}}" -H "Content-Type: application/json" -d "$PAYLOAD")
+      echo "      🔎 Result: "
+      echo "       "$result
+
+
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+      verbosity: 1
+
+  when: global_config.create_cards | default(true) == true  
+

@@ -1,0 +1,155 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patches
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE INSTANA CONNECTION^
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Instana Connection"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🌏 CONNECTIONS - Create Instana Connection
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    oc create route passthrough -n $WAIOPS_NAMESPACE --service aimanager-aio-controller
+
+
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    CLUSTER_NAME=${CLUSTER_FQDN##*console.}
+
+    BASE_DOMAIN="$CLUSTER_NAME"
+    echo $BASE_DOMAIN
+    
+
+
+
+    export AI_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE ai-platform-api  -o jsonpath={.spec.host})
+    export AIO_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE aimanager-aio-controller -o jsonpath={.spec.host})
+
+
+
+    echo "        Namespace:          $WAIOPS_NAMESPACE"
+    echo "        AI_PLATFORM_ROUTE:  $AI_PLATFORM_ROUTE"
+    echo "        AIO_PLATFORM_ROUTE: $AIO_PLATFORM_ROUTE"
+    echo ""
+
+    echo "       🛠️   Getting ZEN Token"
+
+
+    ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+    ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+    LOGIN_USER=admin
+    LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+    ZEN_LOGIN_RESPONSE=$(
+    curl -k \
+    -H 'Content-Type: application/json' \
+    -XPOST \
+    "${ZEN_LOGIN_URL}" \
+    -d '{
+        "username": "'"${LOGIN_USER}"'",
+        "password": "'"${LOGIN_PASSWORD}"'"
+    }' 2> /dev/null
+    )
+
+    ZEN_LOGIN_MESSAGE=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .message)
+
+    if [ "${ZEN_LOGIN_MESSAGE}" != "success" ]; then
+        echo "Login failed: ${ZEN_LOGIN_MESSAGE}"
+
+    fi
+
+    ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+    #echo "${ZEN_TOKEN}"
+    #echo "        AI_PLATFORM_ROUTE:  $ZEN_TOKEN"
+
+    echo "Sucessfully logged in" 
+    echo ""
+
+
+    export result=$(curl -X 'POST' --insecure \
+    "https://$AIO_PLATFORM_ROUTE/v3/connections" \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+      -H "authorization: Bearer $ZEN_TOKEN"  \
+    -d '
+     {
+    "aiopsedge_id": "null",
+    "application_group_id": "1000",
+    "application_id": "1000",
+    "connection_config": {
+      "deploymentType": "local",
+      "endpoint": "https://dev-aiops.'$BASE_DOMAIN'/",
+      "connection_type": "instana",
+      "creator_user_name": "",
+      "metric": {
+        "collect_live_data_flow": true,
+        "plugin_selection_option": "[{\"kubernetesCluster\":[\"nodes.MemoryPressure.True\"]},{\"kubernetesDeployment\":[\"duration\"]},{\"kubernetesNode\":[\"required_cpu\",\"required_mem_percentage\",\"required_mem\",\"required_cpu_percentage\",\"allocatedPods\"]},{\"kubernetesPod\":[\"cpuRequests\",\"container_count\",\"memoryRequests\",\"restartCount\"]}]",
+        "enable_metric_flow": true,
+        "aggregation_interval": 5
+      },
+      "topology": {
+        "time_window": 86400,
+        "connection_interval": 60,
+        "enable_topology_flow": true,
+        "import_app_perspectives_as_aiops_apps": true,
+        "white_list_pattern": [
+          ".*"
+        ]
+      },
+      "api_token": "changeme",
+      "display_name": "Instana",
+      "event": {
+        "enable_event_flow": true,
+        "types": [
+          "incident",
+          "issue",
+          "change"
+        ]
+      }
+    },
+    "connection_id": "3e9648cf-79a0-4f4a-9e84-79f6e94e37ea",
+    "connection_type": "instana",
+    "connection_updated_at": "2022-11-15T18:47:07.853425Z",
+    "created_at": "Instana",
+    "created_by": "null",
+    "data_flow": false,
+    "datasource_type": "events",
+    "global_id": "814178722954674177",
+    "mapping": {},
+    "name": "Instana"
+    }')
+
+    echo $result | jq -r '.connection_id'
+    export connection_id=$(echo $result | jq -r '.connection_id')
+
+    echo "Enabling Flow"
+    export result=$(curl -X 'PUT' --insecure "https://$AIO_PLATFORM_ROUTE/v3/connections/$connection_id/enable" -H 'accept: application/json' -H 'Content-Type: application/json' -H "authorization: Bearer $ZEN_TOKEN")
+    echo $result
+
+
+  ignore_errors: true
+  register: output_string
+  args:
+    executable: /bin/bash
+  
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1
+
+
+

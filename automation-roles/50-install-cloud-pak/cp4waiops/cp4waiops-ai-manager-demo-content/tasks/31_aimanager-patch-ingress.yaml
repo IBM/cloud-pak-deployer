@@ -1,0 +1,162 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patching some stuff
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+- name: 🛰️  START - PATCH INGRESS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create valid Ingress Certificates"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+   
+
+- name: 🌏 NETWORK - CHECK Ingress already patched
+  shell: |
+    set -x
+
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    SECRET_COUNT=$(oc get AutomationUIConfig -n $WAIOPS_NAMESPACE -oyaml|grep 'secretName: external-tls-secret'|wc -l|tr -d ' ')
+    if [ $SECRET_COUNT -gt 0 ]; then
+      echo "true"
+    else
+      echo "false"
+    fi
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+    
+  
+- name: 🌏 NETWORK - DEBUG Ingress already patched
+  debug: 
+    var: output_string.stdout_lines
+    #verbosity: 2
+
+- name: 🌏 NETWORK - ☑️ CHECK Ingress already patched
+  set_fact: INGRESS_PATCHED={{output_string.stdout_lines[0]}}
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Adapt Slack Welcome Message
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 NETWORK - Wait for Slack Pod Ready
+  shell:  |
+          export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+          oc wait --namespace="$WAIOPS_NAMESPACE" --for=condition=Ready pods $(oc get po -n "$WAIOPS_NAMESPACE"|grep "aimanager-aio-chatops-slack-integrator"|awk '{print$1}') --timeout=600s
+  ignore_errors: true  
+  register: slack_ready
+
+
+- name: 🌏 NETWORK - Patch NetworkPolicy
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    cat <<EOF | oc apply -f -
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: allow-all-egress-and-ingress
+      annotations:
+        argocd.argoproj.io/sync-wave: "3"
+      namespace: $WAIOPS_NAMESPACE
+    spec:
+      egress:
+      - {}
+      ingress:
+      - {}
+      podSelector: {}
+      policyTypes:
+      - Egress
+      - Ingress
+    EOF
+  when: INGRESS_PATCHED==false
+  register: network_patch
+  ignore_errors: true
+
+
+- name: 🌏 CERTIFICATES - Patch AutomationUIConfig and Nginx Certificates
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    oc project $WAIOPS_NAMESPACE
+    PROJECT_CP4WAIOPS=$WAIOPS_NAMESPACE
+
+    AUTO_UI_INSTANCE=$(oc get AutomationUIConfig -n ${PROJECT_CP4WAIOPS} --no-headers -o custom-columns=":metadata.name")
+
+    ingress_pod=$(oc get secrets -n openshift-ingress | grep tls | grep -v router-metrics-certs-default | awk '{print $1}')
+
+    oc get secret -n openshift-ingress ${ingress_pod} -o jsonpath='{.data.tls\.crt}'  | base64 -d > cert.crt
+    oc get secret -n openshift-ingress ${ingress_pod} -o jsonpath='{.data.tls\.key}' | base64 -d > cert.key
+
+    oc get secret -n ${PROJECT_CP4WAIOPS} external-tls-secret -o yaml > external-tls-secret.yaml
+
+    oc patch AutomationUIConfig ${AUTO_UI_INSTANCE} -n ${PROJECT_CP4WAIOPS} --type merge --patch '{"spec": {"tls": {"caSecret": {"key":"ca.crt", "secretName": "external-tls-secret"}, "certificateSecret": { "secretName": "external-tls-secret"}}}}'
+
+    oc create secret generic -n ${PROJECT_CP4WAIOPS} external-tls-secret --from-file=cert.crt=cert.crt --from-file=cert.key=cert.key -o yaml --dry-run=client | oc apply -f -
+
+    REPLICAS=$(oc get Deployment/ibm-nginx -n ${PROJECT_CP4WAIOPS} -o jsonpath='{.spec.replicas}')
+    echo "Scale to 0"
+    oc scale Deployment/ibm-nginx --replicas=0 -n ${PROJECT_CP4WAIOPS}
+    sleep 3
+    echo "Scale to $REPLICAS"
+    oc scale Deployment/ibm-nginx --replicas=${REPLICAS} -n ${PROJECT_CP4WAIOPS}
+
+  when: INGRESS_PATCHED==false
+  register: certificate_patch
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+
+- name: 🟢 DEBUG - Patch AutomationUIConfig Certificates
+  debug: 
+    var: certificate_patch
+    #verbosity: 2
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for nginx Pods
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: CERTIFICATES -           🕦 Wait for nginx coming back up
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    oc get po -n $WAIOPS_NAMESPACE | grep nginx|grep -v ibm-nginx-tester|grep -v setup-nginx-job |grep "1/1"|grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "2"
+  retries: 50
+  delay: 15
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for AutomationUIConfig ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+# - name: CERTIFICATES -         🕦 Wait for AutomationUIConfig being ready (this might take several minutes)
+#   shell: oc get AutomationUIConfig -n $WAIOPS_NAMESPACE iaf-system  | grep True|grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout == "1"
+#   retries: 500
+#   delay: 15
+
+
+- name: SLACK -                  🩹 Patch Slack Welcome Message
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    oc set env -n $WAIOPS_NAMESPACE deployment/$(oc get deploy -n $WAIOPS_NAMESPACE -l app.kubernetes.io/component=chatops-slack-integrator -o jsonpath='{.items[*].metadata.name }') SLACK_WELCOME_COMMAND_NAME=/welcome
+    oc delete pod $(oc get po -n $WAIOPS_NAMESPACE|grep slack|awk '{print$1}') -n $WAIOPS_NAMESPACE --grace-period 0 --force
+  ignore_errors: true
+
+

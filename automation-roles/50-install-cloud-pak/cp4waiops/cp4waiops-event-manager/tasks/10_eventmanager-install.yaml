@@ -1,0 +1,125 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Netcool Operations Insight
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Get Config File
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - INSTALL EVENT MANAGER
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: 🚀 EVENTMANAGER - Installation Parameters"
+  debug:
+    msg:
+    - "** CP4WAIOPS Event Manager Installation Parameters ***********************************************************************"
+    - " Event Manager Namespace:           {{current_cp4waiops_cluster.project}}"
+    - ""
+
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Checks
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name:   🔐 INIT CHECKS - Check Entitlement provided
+  fail: msg="Please provide IBM Entitlement Pull Secret Key/Token (Get it from here https://myibm.ibm.com/products-services/containerlibrary)"
+  when: "cp_entitlement_key is not defined"
+
+- name:   🔐 INIT CHECKS - Check Entitlement provided
+  fail: msg="Please provide IBM Entitlement Pull Secret Key/Token (Get it from here https://myibm.ibm.com/products-services/containerlibrary)"
+  when: '"<REGISTRY_TOKEN>" in cp_entitlement_key'
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Login
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name: 🚀 EVENTMANAGER - Get Cluster FQDN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    echo ${CLUSTER_FQDN##*console.}
+  register: CLUSTER_NAME
+
+- name: 🚀 EVENTMANAGER - Set Global Cluster Name={{ CLUSTER_NAME.stdout_lines[0] }} 
+  set_fact: CLUSTER_NAME_GLOBAL={{ CLUSTER_NAME.stdout_lines[0] }} 
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Netcool Operations Insight
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create Namespace 
+- name: 🚀 EVENTMANAGER - Create EventManager namespace {{current_cp4waiops_cluster.project}}
+  community.kubernetes.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{current_cp4waiops_cluster.project}}"
+    state: present
+
+
+
+- name: 🚀 EVENTMANAGER - Create Pull Secret for {{current_cp4waiops_cluster.project}} Namespace (you can ignore errors if it already exists)
+  shell: |
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}>/dev/null 2>/dev/null
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}>/dev/null 2>/dev/null
+  ignore_errors: true
+
+
+
+
+# Create EventManager Catalog
+- name: 🚀 EVENTMANAGER - Install Catalog
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/eventmanager/1_cat-ibm-eventmanager.j2
+
+
+
+# Create EventManager Operator Group
+- name: 🚀 EVENTMANAGER - Install Operator Group
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/eventmanager/2_group-ibm-eventmanager.j2
+
+
+# Create EventManager Subscription
+- name: 🚀 EVENTMANAGER - Install Subscription
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/eventmanager/3_sub-ibm-eventmanager.j2
+
+
+- name: CHECK -              🕦 Wait for CSV to become ready
+  shell: |
+    CSV_READY=$(oc get csv -n {{current_cp4waiops_cluster.project}} | grep "Event Manager")
+    echo $CSV_READY
+  register: resource_ready
+  until: ("Succeeded" in resource_ready.stdout)
+  retries: 500
+  delay: 15
+
+
+# Create EventManager Instance
+- name: 🚀 EVENTMANAGER - Install EventManager
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/eventmanager/4_eventmanager-install-template.j2
+
+
+
+
+
+
+
+

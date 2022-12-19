@@ -1,0 +1,29 @@
+
+
+- name: 🛰️  START - LOAD METRIC TRAINING DATA
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Load Metric Training Data into Cassandra"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 📥 TRAINING LOAD METRIC - CREATE CLUSTERROLE
+  community.kubernetes.k8s:
+    state: present
+    namespace: default
+    src: ./templates/training/default-clusterrole.yaml
+    
+
+- name: 📥 TRAINING LOAD METRIC - LOAD CASSANDRA METRIC DATA 
+  community.kubernetes.k8s:
+    state: present
+    namespace: default
+    template: ./templates/training/load-job-metric.j2
+  

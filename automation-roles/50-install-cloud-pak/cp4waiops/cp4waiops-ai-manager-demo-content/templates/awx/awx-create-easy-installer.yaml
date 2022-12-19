@@ -1,0 +1,47 @@
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: installer-default-default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cp4waiops-installer
+  namespace: default
+  labels:
+      app: cp4waiops-installer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cp4waiops-installer
+  template:
+    metadata:
+      labels:
+        app: cp4waiops-installer
+    spec:
+      containers:
+      - image: niklaushirt/cp4waiops-installer:1.5
+        imagePullPolicy: Always
+        name: installer
+        command:
+        ports:
+        - containerPort: 22
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "50Mi"
+          limits:
+            cpu: "250m"
+            memory: "250Mi"
+        env:
+          - name: INSTALL_REPO
+            value : "https://github.com/niklaushirt/aiops-install-awx-33.git"
