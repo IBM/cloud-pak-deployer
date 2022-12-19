@@ -1,0 +1,23 @@
+---
+# Log in using oc login command
+- block:
+  - name: Login to OpenShift cluster if oc login command was found in secret {{ _p_openshift_cluster_name }}-oc-login
+    shell: |
+      {{ _oc_login_cluster }}
+  - name: Rename current context to {{ _p_openshift_cluster_name }}
+    shell: |
+      oc config delete-context {{ _p_openshift_cluster_name }} || true
+      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+  when: _oc_login_cluster != ''
+
+- block:
+  - name: Login to OpenShift cluster if oc login command was found in secret oc-login
+    shell: |
+      {{ _oc_login_generic }}
+  - name: Rename current context to {{ _p_openshift_cluster_name }}
+    shell: |
+      oc config delete-context {{ _p_openshift_cluster_name }} || true
+      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+  when: 
+  - _oc_login_generic != ''
+  - _oc_login_cluster == ''
