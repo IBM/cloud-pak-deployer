@@ -1,0 +1,73 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Demo Apps
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install RobotShop
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🛰️  START - INSTALL DEMO APPS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing Demo Apps"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 📺 DEMO APPS - Check RobotShop
+  shell: |
+    oc get namespace --ignore-not-found robot-shop
+  ignore_errors: true
+  register: OBJECT_EXISTS
+
+
+
+
+- name: 📺 DEMO APPS - Install RobotShop
+  block:
+  - name: DEMO APPS -              🚀 Create robot-shop namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: "robot-shop"
+      state: present
+    #when: INSTALL_DEMO_APPS == true
+
+  - name: 📺 DEMO APPS - Create robot-shop service account
+    shell: |
+      oc adm policy add-scc-to-user privileged -n robot-shop -z robot-shop
+      oc create clusterrolebinding default-robotinfo1-admin --clusterrole=cluster-admin --serviceaccount=robot-shop:robot-shop
+      oc adm policy add-scc-to-user privileged -n robot-shop -z default                                
+      oc create clusterrolebinding default-robotinfo2-admin --clusterrole=cluster-admin --serviceaccount=robot-shop:default
+    ignore_errors: true
+    register: demo_robot_shop
+    #when: INSTALL_DEMO_APPS == true
+              
+
+  - name: 📺 DEMO APPS - Create robot-shop application
+    community.kubernetes.k8s:
+      state: present
+      namespace: robot-shop
+      src: ./templates/demo_apps/robotshop/robot-all-in-one.yaml
+    #when: INSTALL_DEMO_APPS == true
+
+  - name: 📺 DEMO APPS - Create robot-shop load generation
+    community.kubernetes.k8s:
+      state: present
+      namespace: robot-shop
+      src: ./templates/demo_apps/robotshop/load-deployment.yaml
+    #when: INSTALL_DEMO_APPS == true
+  when: OBJECT_EXISTS.stdout|length == 0
+
+
+
+
+

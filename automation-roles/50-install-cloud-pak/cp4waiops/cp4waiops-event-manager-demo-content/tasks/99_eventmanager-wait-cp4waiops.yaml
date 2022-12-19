@@ -1,0 +1,43 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Waiting for CP4WAIOPS Event Manager installation to finish
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for Event Manager to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for EventManager Namespace to be ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🕦 CHECK -  Wait for more than >{{evtmgr_ns_min_pods_final}} pods in namespace {{current_cp4waiops_cluster.project}}
+  shell: |
+    NUM_PODS=$(oc get po -n {{current_cp4waiops_cluster.project}} |grep Running| wc -l)
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > {{evtmgr_ns_min_pods_final}}
+  retries: 500
+  delay: 15
+
+
+- name: 🕦 CHECK -  Wait for WEBGUI to become ready
+  shell: |
+    WEBGUI_PODS=$(oc get po -n {{current_cp4waiops_cluster.project}} | grep evtmanager-webgui-0)
+    echo $WEBGUI_PODS
+  register: kubectl_webgui_pods
+  until: ("2/2" in kubectl_webgui_pods.stdout)
+  retries: 500
+  delay: 15
+
+
+

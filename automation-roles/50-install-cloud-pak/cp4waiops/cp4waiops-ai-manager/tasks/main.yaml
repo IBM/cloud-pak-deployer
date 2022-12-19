@@ -1,0 +1,246 @@
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#       __________  __ ___       _____    ________            
+#      / ____/ __ \/ // / |     / /   |  /  _/ __ \____  _____
+#     / /   / /_/ / // /| | /| / / /| |  / // / / / __ \/ ___/
+#    / /___/ ____/__  __/ |/ |/ / ___ |_/ // /_/ / /_/ (__  ) 
+#    \____/_/      /_/  |__/|__/_/  |_/___/\____/ .___/____/  
+#                                              /_/            
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------"
+#  Installing CP4WAIOPS
+#
+#  CloudPak for Watson AIOps
+#
+#  ©2022 nikh@ch.ibm.com
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Installs:
+#
+#  - WAIOPS Operator
+#  - AI Manager
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+ 
+
+
+- name: ✴️ ✴️ ✴️ INSTALLATION MODULE START - {{current_cp4waiops_feature.kind}}
+  debug: 
+    msg: 
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "                                                                                                                                                   "
+    - "      � CloudPak for Watson AIOps - INSTALLING {{current_cp4waiops_feature.kind}} "
+    - "                                                                                                                                                   "
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+
+
+
+
+- name:  🟣 INITIALIZATION - Installation Parameters"
+  debug:
+    msg:
+    - "***********************************************************************************************"
+    - " 🚀 Installing {{current_cp4waiops_feature.kind}}"
+    - "***********************************************************************************************"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 STORAGE"
+    - "     💾 Installation Options for SPECIFIC MODULE {{ current_cp4waiops_feature.kind}}"
+    - "        Storage Class File Override:             {{ current_cp4waiops_feature.storage_class_file | default('no override') }}"
+    - "        Storage Class Block Override:            {{ current_cp4waiops_feature.storage_class_block | default('no override') }}"
+    - "        Storage Class InfraManagement:           {{ current_cp4waiops_feature.storage_class_file | default('no override') }}"
+    - ""
+    - "     💾 Installation Options from GLOBAL"
+    - "        Storage Class File Override:             {{ all_config.openshift[0].openshift_storage[0].ocp_storage_class_file  | default('not defined') }}"
+    - "        Storage Class Block Override:            {{ all_config.openshift[0].openshift_storage[0].ocp_storage_class_block  | default('not defined') }}"
+    - "        Storage Class InfraManagement:           {{ all_config.openshift[0].openshift_storage[0].ocp_storage_class_file  | default('not defined') }}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 CONFIG"
+    - "     ✅ Installation Name:                        {{current_cp4waiops_feature.waiops_name}}"
+    - "     🔎 AIManager Size:                           {{current_cp4waiops_feature.waiops_size}}"
+    - "     🔽 Custom Siting File:                       {{current_cp4waiops_feature.custom_size_file}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 VERSION "
+    - "     🚀 Subscription Channel:                     {{current_cp4waiops_feature.subscription_channel}}"
+    - "     🔽 Freeze the Catalog Image Version:         {{current_cp4waiops_feature.freeze_catalog}}"
+    - "     ✅ Install with CASE:                        {{current_cp4waiops_feature.case_install}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "***********************************************************************************************"
+
+- name: 🟣 Installing {{current_cp4waiops_feature.kind}} with the following configuration
+  debug:
+    var: current_cp4waiops_feature
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INITIALIZATION
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Placeholder for customization
+- name: 📥 Init Custom Hook
+  include_tasks: 00_init-custom-hook.yaml
+
+# Initialize Logging
+- name: 📥 Init Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/01_init-logging.yaml"
+    
+- name: 📥 Checks
+  include_tasks: 02_init_checks.yaml
+# Start block
+- name: 📥 Start Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/90-log-start.yaml"
+
+# Run Prerequisites
+- name: 📥 Initialization
+  include_tasks: 03_init-initialization.yaml
+  
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# TEST
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# - name: 📥  Create Routes
+#   include_tasks: 30_aimanager-create-routes.yaml
+
+# # Update AI Manager Cards
+# - name: 📥 Update AI Manager Cards
+#   include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_update_cards.yaml"
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# TEST
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+
+
+
+
+- name: 📥 Get Storage Class
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/05_init-get-storage-class.yaml"
+
+
+- name: 📥 AI Manager Prerequisites 
+  include_tasks: 06_aimanager-prerequisites.yaml
+      
+
+# Install CP4WAIOPS Operator
+- name: 📥 AI Manager Custom Hook
+  include_tasks: 08_aimanager-custom-hook.yaml
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL CATALOG with YAML FILE
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥 Install AI Manager Catalog - Classic Way (skipped if CASE selected)
+  include_tasks: 10_aimanager-catalog.yaml
+  when: current_cp4waiops_feature.case_install==false
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL CATALOG with CASE FILE
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥 Install AI Manager Catalog - Save Case File (this can take some time - skipped if not selected)
+  include_role:
+    name: cp4waiops-case-save
+  when: current_cp4waiops_feature.case_install==true
+
+
+- name: 📥 Install AI Manager Catalog - Create CatalogSources from Case File (this can take some time - skipped if not selected)
+  include_role:
+    name: cp4waiops-case-catalog-source
+  when: current_cp4waiops_feature.case_install==true
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL AI MANAGER
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥 Install AI Manager Operator
+  include_tasks: 11_aimanager-operator.yaml
+
+
+# Install CP4WAIOPS Instance
+- name: 📥 Install AI Manager Instance
+  include_tasks: 12_aimanager-install.yaml
+      
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# WAIT FOR INSTALLATION READY
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Wait for Common Services being completely installed
+- name: 📥 Wait for CommonServices
+  include_tasks: 99_aimanager-wait-common-services.yaml
+- name: 📥 Wait for Zen Initialisation
+  include_tasks: 99_aimanager-wait-for-zen.yaml
+      
+
+# Patching Topology Deployment
+- name: 📥 Patch Topology
+  include_tasks: 20_aimanager-patch-topology.yaml
+
+
+# Wait for CP4WAIOPS being completely installed
+- name: 📥 Wait for AI Manager
+  include_tasks: 99_aimanager-wait-cp4waiops.yaml
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create Openshift WebConsole Menu Item
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 📥  Create AI Manager Openshift WebConsole Menu Item
+  include_tasks: 91_aimanager-create-ocp-menu.yaml
+  when: global_config.create_ocp_items | default(true) == true  
+
+# Update AI Manager Cards
+- name: 📥 Update AI Manager Cards
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_update_cards.yaml"
+
+  
+# Access and documentaiton
+- name: 📥 Get all logins
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/90_core-get-all-logins.yaml"
+
+
+
+- name: 📥 Open AI Manager
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_open-aimanager.yaml"
+
+
+- name: 📥 Open Documentation
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_open-doc.yaml"
+
+
+
+- name: 📥 End Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/91-log-end.yaml"
+
+
+
+
+
+
+- name: ✅ INSTALLATION MODULE DONE - {{current_cp4waiops_feature.kind}}
+  debug: 
+    msg: 
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "                                                                                                                                                   "
+    - "       ✅ CloudPak for Watson AIOps - DONE INSTALLING {{current_cp4waiops_feature.kind}}                                                                                 "
+    - "                                                                                                                                                   "
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"

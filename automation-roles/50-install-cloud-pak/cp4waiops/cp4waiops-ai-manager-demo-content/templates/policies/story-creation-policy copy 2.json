@@ -1,0 +1,180 @@
+{
+  "id": "story-creation",
+  "metadata": {
+    "labels": {
+      "ibm.com/aiops/uitemplate": "alert:createstory",
+      "ibm.com/is-default": "false"
+    },
+    "name": "DEMO Story creation policy for all alerts",
+    "description": "Created by Nicks scripts",
+    "createdBy": {
+      "id": "demo",
+      "type": "user"
+    }
+  },
+  "state": "enabled",
+  "executionPriority": 50,
+  "spec": {
+    "trigger": {
+      "entityId": "alert",
+      "triggerId": "aiops.ibm.com/trigger/alert-created"
+    },
+    "actions": [{
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match priority alerts",
+        "condition": "{{ alert.severity }} == 2",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 4,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": null,
+              "team": null
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match priority alerts",
+        "condition": "{{ alert.severity }} == 3",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 3,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": "demo",
+              "team": "All users"
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match priority alerts",
+        "condition": "{{ alert.severity }} == 4",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 2,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": "demo",
+              "team": "All users"
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match high priority alerts",
+        "condition": "{{ alert.severity }} >= 5",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 1,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": "demo",
+              "team": "All users"
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }]
+  }
+}

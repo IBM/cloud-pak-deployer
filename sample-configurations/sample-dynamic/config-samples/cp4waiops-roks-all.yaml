@@ -1,0 +1,389 @@
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#       __________  __ ___       _____    ________            
+#      / ____/ __ \/ // / |     / /   |  /  _/ __ \____  _____
+#     / /   / /_/ / // /| | /| / / /| |  / // / / / __ \/ ___/
+#    / /___/ ____/__  __/ |/ |/ / ___ |_/ // /_/ / /_/ (__  ) 
+#    \____/_/      /_/  |__/|__/_/  |_/___/\____/ .___/____/  
+#                                              /_/            
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------"
+#  Installing CP4WAIOPS
+#
+#  CloudPak for Watson AIOps
+#
+#  ©2022 nikh@ch.ibm.com
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Installs:
+#
+#  - IBM Operator
+#  - AI Manager
+#  - AI Manager Demo Content
+#     - OpenLDAP & Register with AI Manager
+#     - RobotShop Demo App
+#     - Demo Service Account 
+#     - AWX (Open Source Ansible Tower) with preloaded Playbooks
+#     - Disables ASM Service match rule 
+#     - Train Models
+#       - Create Training Definitions (TG, LAD, CR, SI. MET, Turn off RSA) 
+#       - Create Training Data (LAD, SNOW, MET) 
+#       - Train Models (TG, LAD, CR, SI, MET) 
+#     - Topology
+#       - Create K8s Observer
+#       - Create ASM merge rules
+#       - Load ASM merge Topology
+#       - Create AI Manager Application
+#     - Creates valid certificate for Ingress (Slack) 
+#     - External Routes (Flink, Topology, ...)
+#     - Disables ASM Service match rule 
+#     - Create Policy Creation for Stories and Runbooks 
+#  - Event Manager
+#  - Event Manager Demo Content
+#    - Topology
+#      - Create ASM merge rules
+#      - Load ASM merge Topology
+#      - Create AI Manager Application
+#  - Turbonomic
+#  - Turbonomic Demo Content
+#     - Demo User
+#     - RobotShop Demo App with synthetic metric
+#     - Instana target (if Instana is installed - you have to enter the API Token Manually)
+#     - Groups for vCenter and RobotShop
+#     - Groups for licensing
+#     - Resource Hogs
+#  - Instana
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+---
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS INSTANCES
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+
+
+
+cp4waiops:
+- project: cp4waiops
+  instances:
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS AI Manager
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-aimanager
+    kind: AIManager
+    install: true
+
+    # current_cp4waiops_feature
+    # CP4WAIOPS Size of the install (small: PoC/Demo, tall: Production)
+    waiops_size: small
+    # Custom Sizing File (waiops_size must be set to "custom")
+    custom_size_file: none    # Name of the CP4WAIOPS instance
+    # Name of the CP4WAIOPS instance
+    waiops_name: ibm-cp-watson-aiops
+    # Version of the catalog subscription
+    subscription_channel: v3.6
+    # Freeze the version of the Catalog image by patching CatalogSource
+    freeze_catalog: false
+
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    #storage_class_file: automatic
+    #storage_class_block: automatic
+
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Install with CASE Files
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    case_install: false
+    case_github_url: "https://github.com/IBM/cloud-pak/raw/master/repo/case"
+    case_name: ibm-cp-waiops
+    case_version: 1.4.1
+    case_inventory_setup: cpwaiopsSetup
+
+
+
+
+
+
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS AI Manager Demo Content
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-aimanager-demo-content
+    kind: AIManagerDemoContent
+    install: true
+
+
+    # ---------------------------------------------------------------------
+    # TRAINING
+    # Train the Models based on pre-canned content
+
+    training_create_training_temporal: true
+
+    training_load_data_logs: true
+    training_create_training_logs: true
+    training_run_training_logs: true
+
+    training_load_data_snow: true
+    training_create_training_snow: true
+    training_run_training_snow: true
+
+    training_load_data_metrics: true
+    training_create_training_metrics: true
+    training_run_training_metrics: true
+
+    training_data_url: https://github.com/niklaushirt/
+    training_data_repo: cp4waiops-trainingdata
+
+
+    # ---------------------------------------------------------------------
+    # TOPOLOGY
+    # Install RobotShop Application
+    install_robotshop: true
+    # Install RobotShop K8s Observer
+    install_robotshop_observer: true
+    # Create Topology
+    create_topology_templates: true
+    create_topology_apps: true
+    # Create RobotShop overlay topology
+    install_robotshop_topology: true
+
+
+    # ---------------------------------------------------------------------
+    # RUNBOOKS
+    # Install AWX and create Runbooks
+    install_awx: true
+    load_awx_playbooks: true
+    integrate_awx_aimanager: true
+    load_aimanager_runbooks: true
+    create_runbook_policy: true
+
+
+    # ---------------------------------------------------------------------
+    # Demo UI
+    install_demo_ui: true
+    demoui_slack_url: https://app.slack.com/client/T0DBLALE5/C03MYASSZ2Q
+    # demoui_slack_url: https://aiops-fry2953.slack.com/x-p1624757694871-3716524482480-3705437209041/messages/C01JZLFJFMJ
+    demoui_slack_user: ibmaiopsdemo@gmail.com
+    demoui_slack_pwd: P4ssw0rd!
+    demoui_admin_mode: "true"
+    demoui_simulation_mode: "true"
+
+    demoui_aimanager_demo_user: demo
+    demoui_aimanager_demo_pwd: P4ssw0rd!
+
+
+    # ---------------------------------------------------------------------
+    # LDAP
+    install_ldap: true
+    # ldap domain
+    ldap_domain: ibm.com
+    # ldap base
+    ldap_base: dc=ibm,dc=com
+    # ldap admin password
+    ldap_admin_password: P4ssw0rd!
+    # ldap namespace
+    ldap_namespace: openldap
+    # ldap namespace
+    ldap_register: true
+
+    # ---------------------------------------------------------------------
+    # MISC PARAMETERS (you should not modify those)
+    # Create external routes (needed to create demo content)
+    create_external_routes: true
+
+    # Create a valid ingress certificate (needed for Slack integration)
+    create_valid_ingress_certificate: true
+
+    # Create Policy for Story Creation
+    create_story_policy: true
+
+    # Create Kafka connection for Log inception (needed to create log anomalies in the demo environment)
+    create_log_connection: true
+
+    # Create Service Account
+    create_account: true
+
+
+
+    # ---------------------------------------------------------------------
+    # OUTPUT
+    # Print all logins
+    print_logins: true
+    # Open the relevant Web UIs
+    open_web_ui: true
+
+
+
+
+
+- project: cp4waiops-evtmgr
+  instances:
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS Event Manager
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-eventmanager
+    kind: EventManager
+    install: true
+    # Version of the catalog subscription
+    subscription_channel: v1.10
+    starting_csv: noi.v1.7.0
+    noi_version: 1.6.6
+
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    #storage_class_file: automatic
+    #storage_class_block: automatic
+    
+
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS Event Manager Demo Content
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-eventmanager
+    kind: EventManagerDemoContent
+    install: true
+
+
+
+
+- project: cp4waiops-infra
+  instances:
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS Infrastructure Management
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-infrastructure-management
+    kind: InfrastructureManagement
+    install: false
+    # Version of the catalog subscription
+    subscription_channel: v3.5
+    #subscription_channel: 3.4-dev
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    #storage_class_file: automatic
+    #storage_class_block: automatic
+    
+
+
+
+- project: cp4waiops-addons
+  instances:
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS ELK
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-elk
+    kind: ELK
+    install: false
+
+
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS INSTANA
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-instana
+    kind: Instana
+    install: true
+
+    # ---------------------------------------------------------------------
+    # INSTANA LICENSE
+    sales_key: 'NONE'
+    agent_key: 'NONE'
+
+    # ---------------------------------------------------------------------
+    # INSTANA ADMIN LOGIN
+    initial_admin_user: "admin@instana.local"
+    initial_admin_pass: 'P4ssw0rd!'
+    
+    # ---------------------------------------------------------------------
+    # INSTALL INSTANA AGENT
+    install_agent: true
+
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # INTEGRATIONS
+    integrate_aimanager: true
+    #integrate_turbonomic: true
+    
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes Override for this Instance (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    #storage_class_file: automatic
+    #storage_class_block: automatic
+
+    
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  # CP4WAIOPS TURBONOMIC
+  # --------------------------------------------------------------------------------------------------------------------------------------
+  - name: cp4waiops-turbonomic
+    kind: Turbonomic
+    install: true
+    turbo_version: 8.6.6
+
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    # Storage Classes (see comment below)
+    # --------------------------------------------------------------------------------------------------------------------------------------
+    #storage_class_file: automatic
+    #storage_class_block: automatic
+
+
+  - name: cp4waiops-turbonomic-demo-content
+    kind: TurbonomicDemoContent
+    install: true
+    turbo_password: P4ssw0rd!
+    # ---------------------------------------------------------------------
+    # Create Demo User
+    create_user: false
+    demo_user: demo
+    demo_password: P4ssw0rd!
+    # ---------------------------------------------------------------------
+    # Create Groups
+    group_vcenter_vms: true
+    group_robotshop: true
+    group_licensing: true
+
+    # ---------------------------------------------------------------------
+    # Create Targets
+    target_instana: true
+    # ---------------------------------------------------------------------
+    # Create Memory and CPU hogs
+    resource_hogs: true
+    # ---------------------------------------------------------------------
+    # Create Metrics server, DIF integration and RobotShop BuisnessApp
+    metrics_dif: true
+    
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS USAGE
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# CP4WAIOPS Storage Classes
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+# Override the Storage Class auto detection (not_configured, ibmc-file-gold-gid, rook-cephfs, nfs-client, ...)
+#storage_class_file: automatic
+#storage_class_file: ibmc-file-gold-gid               # ROKS
+#storage_class_file: ocs-storagecluster-cephfs        # ODF
+#storage_class_file: ibmc-vpc-block-10iops-tier       # IBM VPC
+#storage_class_file: rook-cephfs                      # FYRE
+#storage_class_file: nfs-client                       # TEC
+
+#storage_class_block: automatic
+#storage_class_block: ibmc-block-gold                 # ROKS
+#storage_class_block: ocs-storagecluster-ceph-rbd     # ODF
+#storage_class_block: ibmc-vpc-block-10iops-tier      # IBM VPC
+#storage_class_block: rook-cephfs                     # FYRE
+#storage_class_block: nfs-client                      # TEC
+
+
+
+

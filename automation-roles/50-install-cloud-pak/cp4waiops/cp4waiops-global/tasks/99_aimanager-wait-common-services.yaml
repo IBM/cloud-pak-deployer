@@ -1,0 +1,49 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Common Services being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for Common Services to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Common Services
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🕦 CHECK -  Wait for more than >{{ cs_ns_min_pods }} pods in namespace ibm-common-services (this might take some time)
+  shell: |
+    NUM_PODS=$(oc get po -n ibm-common-services |grep Running| wc -l)
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > cs_ns_min_pods
+  retries: 150
+  delay: 15
+
+
+
+
+- name: 🕦 CHECK -  Wait for ibm-common-services to become ready (this might take some time)
+  shell: oc get po -n ibm-common-services | grep -v Running |grep -v Completed | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 150
+  delay: 15
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" ✅ Common Services is ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true

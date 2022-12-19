@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: zookeeper
+  name: zookeeper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: zookeeper
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: zookeeper
+    spec:
+      serviceAccountName: instana-datastore-sa
+      imagePullSecrets:
+      - name: instana-pullsecret
+      containers:
+      - image: containers.instana.io/instana/release/product/zookeeper:3.7.1_v0.40.0
+        name: zookeeper
+        resources:
+          limits:
+            cpu: '8'
+            memory: 16Gi
+          requests:
+            cpu: '2'
+            memory: 4Gi
+        ports:
+          - containerPort: 2181
+        volumeMounts:
+          - mountPath: /mnt/logs
+            name: zookeeper-logs
+        securityContext:
+          runAsUser: 0
+      volumes:
+        - name: zookeeper-logs
+          persistentVolumeClaim:
+            claimName: zookeeper-logs
+status: {}

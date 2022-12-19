@@ -1,0 +1,39 @@
+apiVersion: v1                     
+kind: Namespace
+metadata:
+  name: cp4waiops-tools
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: primecalc-deployment
+  namespace: cp4waiops-tools
+  labels:
+    app: primecalc
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: primecalc
+  template:
+    metadata:
+      labels:
+        app: primecalc
+    spec:
+      containers:
+      - name: primecalc
+        image: niklaushirt/prime_numbers:0.2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 400m
+            memory: 100Mi
+          requests:
+            cpu: 200m
+            memory: 50Mi
+        command: ['sh', '-c', 'node index.js']
+

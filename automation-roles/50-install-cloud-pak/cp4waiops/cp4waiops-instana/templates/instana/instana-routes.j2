@@ -1,0 +1,65 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: acceptor
+  namespace: instana-core
+spec:
+  host: agent.{{BASE_DOMAIN}}
+  port:
+    targetPort: 8600
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: passthrough
+  to:
+    kind: Service
+    name: acceptor
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: gateway
+  namespace: instana-core
+spec:
+  host: instana.{{BASE_DOMAIN}}
+  port:
+    targetPort: https
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: passthrough
+  to:
+    kind: Service
+    name: gateway
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dev-aiops
+  namespace: instana-core
+spec:
+  host: dev-aiops.{{BASE_DOMAIN}}
+  port:
+    targetPort: 8443
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: passthrough
+  to:
+    kind: Service
+    name: gateway
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: eum
+  namespace: instana-core
+spec:
+  host: eum.{{BASE_DOMAIN}}
+  to:
+    kind: Service
+    name: eum-acceptor
+    weight: 100
+  port:
+    targetPort: http-service
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None

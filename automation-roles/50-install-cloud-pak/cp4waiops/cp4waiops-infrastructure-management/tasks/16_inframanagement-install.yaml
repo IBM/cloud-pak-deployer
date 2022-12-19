@@ -1,0 +1,216 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install CP4WAIOPS PREREQUISITES
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - AI MANAGER INFRASTRUCTURE AUTOMATION
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: 🚀 INFRA MGT - WRITE TO LOGFILE
+  shell: |
+    export MESSAGE="Installing CP4WAIOPS Infrastructure Automation"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+
+# Create Namespace 
+- name: 🚀 INFRA MGT - Create CP4WAIOPS Infra namespace {{ current_cp4waiops_cluster.project }}
+  community.kubernetes.k8s:
+    api_version: v1
+    kind: Namespace
+    name: "{{ current_cp4waiops_cluster.project }}"
+    state: present
+  ignore_errors: true
+
+
+- name: 🚀 INFRA MGT - Create Pull Secret
+  shell: |
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-marketplace
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-operators
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-marketplace
+    oc create secret docker-registry 'ibm-entitlement-key' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace=openshift-operators
+    oc create secret docker-registry 'ibm-management-pull-secret' --docker-server={{ global_config.entitled_registry }} --docker-username={{ global_config.entitled_registry_user }} --docker-password={{ cp_entitlement_key }} --namespace={{ current_cp4waiops_cluster.project }}
+  ignore_errors: true
+
+
+
+
+
+
+
+
+
+# Create IBM Operator Catalog
+- name: 🚀 INFRA MGT - Install IBM Operator Catalog
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/infra-automation/1_cat-ibm-operator.j2
+
+
+# Create IBM AIOps Catalog
+# - name: 🚀 INFRA MGT - Install IBM AIOps Catalog
+#   community.kubernetes.k8s:
+#     state: present
+#     template: ./templates/infra-automation/2_cat-ibm-aiops.j2
+
+
+# Create IBM AIOps Operator Group
+- name: 🚀 INFRA MGT - Install Operator Group
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/infra-automation/2_opgroup-ibm-aiops.j2
+
+
+# Create IBM AIOps Subscription
+- name: 🚀 INFRA MGT - Install Subscription
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/infra-automation/3_sub-ibm-aiops-infra.j2
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for CSV being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 INFRA MGT - Wait for number of CSVs to be running
+  shell: oc get csv -n {{ current_cp4waiops_cluster.project }}| grep "IBM"|grep "Succeeded"| wc -l|tr -d ' '
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout > "6"
+  retries: 500
+  delay: 15
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for CSV being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 INFRA MGT - Wait for CSVs to become ready
+  shell: oc get csv -n {{ current_cp4waiops_cluster.project }}|grep -v "Succeeded" | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+# Create IBM AIOps Subscription
+- name: 🚀 INFRA MGT - Create IA Config
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/infra-automation/4_iaconfig-aiops-infra.j2
+
+
+- name: 🚀 INFRA MGT - Patch Service Account
+  shell: |
+    oc patch -n {{ current_cp4waiops_cluster.project }} serviceaccount ibm-infra-management-install-operator -p '{"imagePullSecrets": [{"name": "ibm-entitlement-key"}]}'
+  ignore_errors: true
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Common Services
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🕦 INFRA MGT - Wait for more than >{{ cs_ns_min_pods }} pods in namespace ibm-common-services (this might take some time)
+  shell: |
+    NUM_PODS=$(oc get po -n ibm-common-services | wc -l)
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > cs_ns_min_pods
+  retries: 500
+  delay: 15
+
+
+
+
+- name: 🕦 INFRA MGT - Wait for ibm-common-services to become ready (this might take some time)
+  shell: oc get po -n ibm-common-services | grep -v Running |grep -v Completed | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for serviceaccount being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 INFRA MGT - Wait for IA CONFIG to become ready
+  shell: oc get iaconfigs.aiops.ibm.com -A --no-headers| grep -c "Running"
+  register: kubectl_get_sa
+  until: kubectl_get_sa.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+- name: 🚀 INFRA MGT - Get Cluster FQDN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    echo ${CLUSTER_FQDN##*console.}
+  register: CLUSTER_NAME
+
+
+- name: 🚀 INFRA MGT - Set Infrastructure Management Route={{ CLUSTER_NAME.stdout }} 
+  set_fact: INFRA_NAME=inframgmtinstall.{{ CLUSTER_NAME.stdout }} 
+
+
+
+
+# Create Infrastructure Management
+- name: 🚀 INFRA MGT - Install Infrastructure Management with {{ INFRA_NAME }}
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/infra-automation/5_iminstall.j2
+
+
+
+
+
+- name: 🚀 INFRA MGT - WRITE TO LOGFILE
+  shell: |
+    export MESSAGE=" 🕦 Wait for IA CONFIG to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🕦 CHECK -  Wait for Infrastructure Management to be ready (this might take some time)
+  shell: |
+    NUM_PODS=$(oc get po -n {{ current_cp4waiops_cluster.project }} |grep Running| wc -l)
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > 54
+  retries: 500
+  delay: 15
+
+
+- name: 🕦 CHECK -  Wait for all Pods in {{ current_cp4waiops_cluster.project }} to become ready (this might take some time)
+  shell: oc get po -n {{ current_cp4waiops_cluster.project }} | grep -v Completed | grep -v Error |grep "0/" |wc -l| tr -d ' '
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "0"
+  retries: 500
+  delay: 15
+
+
+
+- name: 🚀 INFRA MGT - WRITE TO LOGFILE
+  shell: |
+    export MESSAGE=" ✅  IA CONFIG is ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
