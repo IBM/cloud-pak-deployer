@@ -49,6 +49,23 @@
     - "***************************************************************************************************************************************************"
     - "***************************************************************************************************************************************************"
 
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Check Login
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name:   🚀 INITIALIZATION - Get Cluster FQDN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    echo ${CLUSTER_FQDN##*console.}
+  register: CLUSTER_NAME
+
+
+- name:   🚀 INITIALIZATION - Check Cluster Connectivity
+  fail: msg="You must be logged in to the server!"
+  when: CLUSTER_NAME.stdout==""
+
 
 
 - name: 🟣 Installing {{current_cp4waiops_feature.kind}} with the following configuration
@@ -77,15 +94,98 @@
 
 
 
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Check Encrypted Licenses
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name: Get Licenses 
+  block:
+
+  - name: 💾 SET sales_key from Config File - {{current_cp4waiops_feature.sales_key }} 
+    set_fact: current_sales_key=current_cp4waiops_feature.sales_key
+
+
+  - name: 💾 SET sales_key from  Config File  - {{current_cp4waiops_feature.agent_key }} 
+    set_fact: current_agent_key=current_cp4waiops_feature.agent_key
+
+
+
+- name: Decrypt Licenses 
+  block:
+  - name: Create Token File
+    shell: |
+      echo {{global_config.license_token}} > /tmp/pwd.yaml
+    ignore_errors: true
+
+
+  - name: Get License from Vault
+    shell: |
+      OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+      if [ "${OS}" == "darwin" ]; then
+            echo "MAC"
+            LICENSE_FILE=$(pwd)"/roles/cp4waiops-instana/vars/lic.yaml"
+      else
+            LICENSE_FILE="{{role_path}}/vars/lic.yaml"
+      fi    
+      echo $LICENSE_FILE
+      ansible-vault decrypt --vault-password-file /tmp/pwd.yaml --output /tmp/license.yaml "$LICENSE_FILE"
+    register: OUTPUT
+    ignore_errors: true
+
+
+  - name: Include License from Vault
+    ansible.builtin.include_vars:
+      file: /tmp/license.yaml
+      name: licenses
+    ignore_errors: true
+
+  - name: Cleanup
+    shell: |
+      rm /tmp/pwd.yaml
+      rm /tmp/license.yaml
+    ignore_errors: true
+
+      
+  - name: 💾 SET sales_key from Vault
+    set_fact: current_sales_key={{licenses.sales_key }} 
+
+  - name: 💾 SET agent_key from Vault
+    set_fact: current_agent_key={{licenses.agent_key }} 
+
+
+
+
+  when: global_config.license_token is defined 
+
+
+
+
 - name:  🟣 Check Sales and Agent Key"
   debug:
     msg:
     - "** Missing License Information ***********************************************************************"
-    - " Sales Key:      {{ current_cp4waiops_feature.sales_key}}"
-    - " Agent Key:      {{ current_cp4waiops_feature.agent_key}}"
+    - " Sales Key:      {{ current_sales_key}}"
+    - " Agent Key:      {{ current_agent_key}}"
     - "❌ Skipping installation...."
     - ""
-  when: current_cp4waiops_feature.sales_key == "NONE" or current_cp4waiops_feature.agent_key == "NONE"
+  when: current_sales_key == "NONE" or current_agent_key == "NONE"
+
+
+
+
+- name:  🟢 Sales and Agent Key - OK"
+  debug:
+    msg:
+    - "** License Information ***********************************************************************"
+    - " Turbo License:      {{ current_turbo_license}}"
+    - " ✅ OK...."
+    - ""
+    #verbosity: 2
+  when: current_sales_key != "NONE" or current_agent_key != "NONE"
+
+
 
 
 - name: Install Instana if sales and agent key provided
@@ -178,7 +278,7 @@
   # CHECKS
   # ---------------------------------------------------------------------------------------------------------------------------------------------------"
 
-  when: current_cp4waiops_feature.sales_key != "NONE" and current_cp4waiops_feature.agent_key != "NONE"
+  when: current_sales_key != "NONE" and current_agent_key != "NONE"
   ignore_errors: true
 
 

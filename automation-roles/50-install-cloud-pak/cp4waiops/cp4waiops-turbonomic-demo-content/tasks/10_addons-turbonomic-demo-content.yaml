@@ -93,7 +93,7 @@
   shell: |
     export TURBO_URL={{TURBO_URL}}
 
-    echo "{{current_cp4waiops_feature.turbo_license | default("NONE") }}" > /tmp/license.lic
+    echo "{{current_turbo_license | default("NONE") }}" > /tmp/license.lic
     #cat /tmp/license.lic
     
     result=$(curl -XPOST -k -s -b /tmp/cookies -H 'Content-Type: multipart/form-data;'  -H 'accept: application/json' "https://$TURBO_URL/api/v3/licenses" -F 'file=@/tmp/license.lic')
@@ -102,12 +102,12 @@
   register: output
   args:
     executable: /bin/bash
-  when: current_cp4waiops_feature.turbo_license | default("NONE") != "NONE"
+  when: current_turbo_license | default("NONE") != "NONE"
 - name: 🟣  DEBUG
   debug:
     var: output.stdout_lines
-    #verbosity: 1
-  when: current_cp4waiops_feature.turbo_license | default("NONE") != "NONE"
+    verbosity: 2
+  when: current_turbo_license | default("NONE") != "NONE"
 
 
 
