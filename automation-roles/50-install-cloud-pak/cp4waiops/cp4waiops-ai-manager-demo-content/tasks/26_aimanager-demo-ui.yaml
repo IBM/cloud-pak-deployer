@@ -37,6 +37,25 @@
   ignore_errors: true
 
 
+
+- name: 🚀 DEMO-UI - Set Demo UI Password from instance configuration
+  set_fact: current_demoui_aimanager_demo_pwd={{current_cp4waiops_feature.demoui_aimanager_demo_pwd | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 DEMO-UI - Set Demo UI Password from global configuration
+  set_fact: current_demoui_aimanager_demo_pwd={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  DEMO-UI -  Demo UI Password {{current_demoui_aimanager_demo_pwd}}
+  debug:
+    var: current_demoui_aimanager_demo_pwd
+
+
+
+
+
 - name: 🚀 DEMO-UI - Create CP4WAIOPS Demo UI Configuration
   community.kubernetes.k8s:
     state: present
