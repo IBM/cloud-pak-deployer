@@ -39,12 +39,20 @@ const Selection = ({setCpdWizardMode,
             setSelection("Configure+Deploy")
             setCurrentIndex(1)
             //platform will be existing-ocp
-          }
-          if (res.data.CPD_WIZARD_MODE === "deploy") {
+          }else if (res.data.CPD_WIZARD_MODE === "deploy") {
             setCpdWizardMode("deploy")
             setSelection("Configure+Deploy")
             setCurrentIndex(1)
+          } else if (res.data.CPD_WIZARD_MODE === "download") {
+            setCpdWizardMode("download")
+            setSelection("Configure+Download")
+            setCurrentIndex(1)
+          } else if (res.data.CPD_WIZARD_MODE === "configure") {
+            setCpdWizardMode("configure")
+            setSelection("Configure")
+            setCurrentIndex(1)
           }
+
           if (res.data.STATUS_DIR) {
             setStatusDir(res.data.STATUS_DIR)
           }
