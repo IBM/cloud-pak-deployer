@@ -52,10 +52,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
         # Check for cp4waiops:     
 
-        # Check that version matches x.y.z pattern
-        if not re.match(r"[0-9]+\.[0-9]\.[0-9]+",str(ge['cp4i_version'])):
-            g.appendError(msg="cp4i_version must be in the format of x.y.z, for example 2021.4.1")
-
         # If air-gapped install, image registry name must be specified
         if str_to_bool(os.environ.get('CPD_AIRGAP')):
             if 'image_registry_name' not in ge:
