@@ -15,6 +15,12 @@
   vars:
     query: >-
       [?storage_name=='{{ _p_openshift_storage_name }}']
+  when: (_p_openshift_storage_name | default('')) != ''
+
+# Default to the first storage definition found if no storage name passed
+- set_fact:
+    _selected_openshift_storage: "{{ _openshift_storage | first | default({}) }}"
+  when: (_p_openshift_storage_name | default('')) == ''
 
 - name: Fail if the storage information for the passed storage name cannot be found
   fail:
@@ -71,6 +77,10 @@
    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2') }}"
   when: _storage_type == 'aws-elastic'
 
+- set_fact:
+    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ibmc-file-gold-gid') }}"
+    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ibmc-block-gold') }}"
+  when: _storage_type == 'ibm-classic-storage'
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
