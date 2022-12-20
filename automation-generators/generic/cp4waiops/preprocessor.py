@@ -63,10 +63,10 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         else:
             accept_licenses=False
         # Check if licenses were accepted if cluster must not be destroyed
-        if os.environ.get('ACTION') != 'destroy':
-            if not accept_licenses:
-                if not str_to_bool(os.environ.get('CPD_ACCEPT_LICENSES')):
-                    g.appendError(msg="You must accept licenses by specifying accept_licenses: True or by using the --accept-all-licenses command line flag")
+        # if os.environ.get('ACTION') != 'destroy':
+        #     if not accept_licenses:
+        #         if not str_to_bool(os.environ.get('CPD_ACCEPT_LICENSES')):
+        #             g.appendError(msg="You must accept licenses by specifying accept_licenses: True or by using the --accept-all-licenses command line flag")
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name
