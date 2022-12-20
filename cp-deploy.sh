@@ -73,7 +73,13 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    ${CPD_CONTAINER_ENGINE} logs -f ${ACTIVE_CONTAINER_ID}
+    while ${CPD_CONTAINER_ENGINE} ps --no-trunc 2>/dev/null | grep -q ${ACTIVE_CONTAINER_ID};do
+      ${CPD_CONTAINER_ENGINE} logs -f --tail 10 ${ACTIVE_CONTAINER_ID}
+      if [ $? -ne 0 ];then
+        break
+      fi
+      sleep 0.5
+    done
   else
     ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
   fi
@@ -649,6 +655,14 @@ if [[ ! -z $VAULT_CERT_CERT_FILE && ! -f $VAULT_CERT_CERT_FILE ]];then
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
+# Add any vault secrets that have been specified as environment variables                                   #
+# --------------------------------------------------------------------------------------------------------- #
+if [[ "${CPD_OC_LOGIN}" != "" ]];then
+  arrVaultSecret+=("oc-login")
+  arrVaultSecretValue+=("${CPD_OC_LOGIN}")
+fi
+
+# --------------------------------------------------------------------------------------------------------- #
 # Build the VAULT_SECRETS environment variable                                                              #
 # --------------------------------------------------------------------------------------------------------- #
 VAULT_SECRETS=""
@@ -845,6 +859,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
   run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
   run_cmd+=" -e CPD_ACCEPT_LICENSES=${CPD_ACCEPT_LICENSES}"
+  run_cmd+=" -e CPD_WIZARD_MODE=${CPD_WIZARD_MODE}"
 
   # Add proxy servers if present in the current session
   if [ ! -z "${http_proxy}" ];then

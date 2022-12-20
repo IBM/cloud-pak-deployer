@@ -60,16 +60,18 @@ export CONFIG_DIR=$HOME/cpd-config
 
 ### Store the OpenShift login command or configuration
 
-Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. There are 2 methods for passing the login credentials of your OpenShift cluster(s) as vault secrets:
-- oc login command
-- kubeconfig file
+Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. There are multiple methods for passing the login credentials of your OpenShift cluster(s) to the deployer process:
+- Generic `oc login` command
+- Specific `oc login` command(s)
+- `kubeconfig` file
 
-Regardless of which authentication option you choose, the deployer will retrieve this secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret of your choice.
+Regardless of which authentication option you choose, the deployer will retrieve the secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret of your choice.
 
-#### Option 1: store the `oc login` command
-This is the most straightforward option. For most OpenShift installations, you can retrieve the `oc login` command from the console. Go to the console and click on your user at the top right of the page to get the login command. Typically this command looks something like this: `oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3`
+For most OpenShift installations, you can retrieve the `oc login` command with a temporary token from the OpenShift console. Go to the OpenShift console and click on your user at the top right of the page to get the login command. Typically this command looks something like this: `oc login --server=https://api.pluto-01.coc.ibm.com:6443 --token=sha256~NQUUMroU4B6q_GTBAMS18Y3EIba1KHnJ08L2rBHvTHA`
 
-**Optional**: If your cluster's API service certificate is not signed by a known certificate authority, you may have to add the `--insecure-skip-tls-verify` flag to the `oc login` command. If you have the OpenShift client `oc` on the server running the deployer, you can test that you can login to the cluster.
+Before passing the `oc login` command or the `kubeconfig` file, make sure you can login to your cluster using the command or the config file. If the cluster's API server has a self-signed certificate, make sure you specify the `--insecure-skip-tls-verify` flag for the `oc login` command.
+
+Example:
 ```
 oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify
 ```
@@ -83,6 +85,23 @@ You have access to 65 projects, the list has been suppressed. You can list all p
 Using project "default".
 ```
 
+#### Option 1: specify the generic `oc login` command
+This is the most straightforward option if you only have 1 OpenShift cluster in your configuration.
+
+Set the environment variable for the `oc login` command
+```
+export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
+```
+
+<InlineNotification kind="info">
+  Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
+</InlineNotification>
+
+When the deployer is run, it automatically sets the `oc-login` vault secret to the specified `oc login` command. When logging in to OpenShift, the deployer first checks if there is a specific `oc login` secret for the cluster in question (see option 2). If there is not, it will default to the generic `oc-login` secret (option 1).
+
+#### Option 2: store the specific `oc login` command(s)
+Use this option if you have multiple OpenShift clusters configured in th deployer configuration.
+
 Store the login command in secret `<cluster name>-oc-login`
 ```
 ./cp-deploy.sh vault set \
@@ -94,7 +113,7 @@ Store the login command in secret `<cluster name>-oc-login`
   Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
 </InlineNotification>
 
-#### Option 2: store the kubeconfig file
+#### Option 3: store the kubeconfig file
 If you already have a "kubeconfig" file that holds the credentials of your cluster, you can use this, otherwise:
 - Log in to OpenShift as a cluster administrator using your method of choice
 - Locate the Kubernetes config file. If you have logged in with the OpenShift client, this is typically `~/.kube/config`
