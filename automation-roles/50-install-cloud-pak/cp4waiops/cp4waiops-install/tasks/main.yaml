@@ -37,12 +37,11 @@
     verbosity: 1
 
 # Get OpenShift cluster associated with this CP4WAIOPS project
-- name: 🛠️  Get Openshift Config
-  set_fact:
-    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+- name: Get OpenShift definition to use for {{ current_cp4waiops_cluster.project }}
+  include_role: 
+    name: get-openshift-cluster
   vars:
-    query: >-
-      [?name=='{{ current_cp4waiops_cluster.openshift_cluster_name }}']
+    _p_openshift_cluster_name: "{{ current_cp4waiops_cluster.openshift_cluster_name | default('') }}"
 - name: 🟡🟡🟡  Show Openshift Config
   debug:
     var: _current_openshift_cluster
@@ -53,8 +52,8 @@
   include_role: 
     name: get-openshift-storage
   vars:
-    _p_openshift_cluster_name: "{{ current_cp4waiops_cluster.openshift_cluster_name }}"
-    _p_openshift_storage_name: "{{ current_cp4waiops_cluster.openshift_storage_name }}"
+    _p_openshift_cluster_name: "{{ _current_openshift_cluster }}"
+    _p_openshift_storage_name: "{{ current_cp4waiops_cluster.openshift_storage_name | default('') }}"
 
 # Loop over all instances
 - name: MAIN LOOP   🚀 Deploy Cloud Pak for Watson AIOps Assets - Loop over Instances for {{current_cp4waiops_cluster.project}}
