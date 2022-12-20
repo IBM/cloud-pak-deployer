@@ -24,6 +24,23 @@
 
 
 
+- name: 🚀 INSTANA - Set INSTANA Password from instance configuration
+  set_fact: current_admin_pass={{current_cp4waiops_feature.initial_admin_pass  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 INSTANA - Set INSTANA Password from global configuration
+  set_fact: current_admin_pass={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  LDAP -  INSTANA Password {{current_admin_pass}}
+  debug:
+    var: current_admin_pass
+
+
+
+
 - name: 🚀 INSTANA - Check cert-manager
   shell: |
     CERT_MANAGER_CRD=$(oc get customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io|grep "certificates.cert-manager.io"|wc -l|tr -d ' ') 
@@ -254,7 +271,7 @@
     echo "license: $LICENSE_STRING" > config.yaml
     echo "agentKeys:" >> config.yaml
     echo "  - {{current_cp4waiops_feature.agent_key}}" >> config.yaml
-    echo "initialAdminPassword: {{current_cp4waiops_feature.initial_admin_pass}}" >> config.yaml
+    echo "initialAdminPassword: {{current_admin_pass}}" >> config.yaml
     echo "initialAdminUser: {{current_cp4waiops_feature.initial_admin_user}}" >> config.yaml
 
     oc -n instana-units delete secret  aiops-dev
