@@ -15,13 +15,13 @@ import yaml from 'js-yaml';
 const Wizard = () => {
 
    //wizard index
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [wizardError, setWizardError] = useState(false);
   const [ocLoginErr, setOcLoginErr] = useState(false)
   const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
   //DeployStart hidden wizard
-  const [isDeployStart, setDeployStart] = useState(false);
+  const [isDeployStart, setDeployStart] = useState(true);
   const [isDeployErr, setDeployErr] = useState(false);
   const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
 
@@ -94,6 +94,7 @@ const Wizard = () => {
   const [registryNS, setRegistryNS] = useState('')
   const [registryUser, setRegistryUser] = useState('')
   const [registryPassword, setRegistryPassword] = useState('')
+  const [portable, setPortable] = useState(false)
 
   const clickPrevious = ()=> {
     setWizardError(false)
@@ -366,12 +367,7 @@ const Wizard = () => {
       <>
         {selection==="Configure+Deploy" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Deploy</Button>}
         {selection==="Configure" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Save</Button>}
-        {selection==="Configure+Download" && 
-          <>
-              <Button className="wizard-container__page-header-button"  disabled={summaryLoading}>Download</Button>
-              <Button className="wizard-container__page-header-button"  disabled={summaryLoading}>Mirror images</Button>
-          </>
-        }
+        {selection==="Configure+Download" && <Button className="wizard-container__page-header-button"  disabled={summaryLoading}>Mirror</Button> }
       </>
     )
   }
@@ -382,8 +378,13 @@ const Wizard = () => {
         <div>
           <div className="deploy-status">Deployer Status:</div>
 
+          {!deployerStatus && <div className="deploy-key" >
+            <div>Completion state:</div>
+            <div className="deploy-value">To be replaced</div> 
+          </div>}          
+
           <div className="deploy-key" >
-            <div>Deployer:</div>
+            <div>State:</div>
             <div className="deploy-value">{deployerStatus?'ACTIVE':'INACTIVE'}</div> 
           </div>
           <div className="deploy-key" >
@@ -550,6 +551,8 @@ const Wizard = () => {
                                     setRegistryUser={setRegistryUser}
                                     registryPassword={registryPassword}
                                     setRegistryPassword={setRegistryPassword}
+                                    portable={portable}
+                                    setPortable={setPortable}
                               >
                               </Infrastructure> : null} 
         {currentIndex === 2 ? <Storage 

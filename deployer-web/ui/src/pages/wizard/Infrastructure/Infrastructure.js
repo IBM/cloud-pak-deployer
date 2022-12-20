@@ -1,5 +1,5 @@
 import axios from "axios";
-import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput  } from "carbon-components-react";
+import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "carbon-components-react";
 import { useEffect, useState } from "react";
 import './Infrastructure.scss'
 
@@ -34,6 +34,8 @@ const Infrastructure = ({cloudPlatform,
                          setRegistryUser,
                          registryPassword,
                          setRegistryPassword,
+                         portable,
+                         setPortable
                          }) => {
 
     //IBM Cloud
@@ -385,28 +387,37 @@ const Infrastructure = ({cloudPlatform,
           <>
             <div className="infra-container">
                 <div>
-                  <div className="infra-items">Enviroment ID</div>
+                  <div className="infra-items-1">Enviroment ID</div>
                   <TextInput onChange={OCPSettingsOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
                 </div>
 
                 <div>
-                  <div className="infra-items">Registry Host Name</div>
+                  <div className="infra-items-1">
+                    <legend>Registry Option </legend>                    
+                    <Checkbox labelText="Portable" onChange={(value)=>{setPortable(value)}} id="portable-registry" key="portable-registry" checked={portable}/> 
+                    <div className="infra-items-1-tips">Note: If this checkbox is checked, the private registry host name and the user and password are optional.</div>
+                    
+                  </div>
+                </div>
+
+                <div>
+                  <div className="infra-items-1">Registry Host Name</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Host Name" id="190" labelText="" value={registryHostname} invalidText="Registry Host Name can not be empty."  invalid={isRegistryHostnameInvalid} />
                 </div>
                 <div>
-                  <div className="infra-items">Registry Port</div>
+                  <div className="infra-items-1">Registry Port</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Port" id="191" labelText="If not specified, the default port 443 will be used." value={registryPort} />
                 </div>
                 <div>
-                  <div className="infra-items">Registry Namespace</div>
+                  <div className="infra-items-1">Registry Namespace</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Namespace" id="192" labelText="" value={registryNS} invalidText="Registry Namespace can not be empty." invalid={isRegistryNSInvalid}/>
                 </div>
                 <div>
-                  <div className="infra-items">Registry User</div>
+                  <div className="infra-items-1">Registry User</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry User" id="193" labelText="" value={registryUser} invalidText="Registry User can not be empty." invalid={isRegistryUserInvalid}/>
                 </div>
                 <div>
-                  <div className="infra-items">Registry Password</div>
+                  <div className="infra-items-1">Registry Password</div>
                   <PasswordInput onChange={RegistryOnChange} placeholder="Registry Password" id="194" labelText="" value={registryPassword} invalidText="Registry Password can not be empty." invalid={isregistryPasswordInvalid}/>
                 </div>
             </div>            
