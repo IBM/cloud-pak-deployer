@@ -1,21 +1,19 @@
 ---
-- name: Get oc login command OpenShift cluster {{ _p_openshift_cluster_name }}
+- name: Get oc login command for OpenShift cluster {{ _p_openshift_cluster_name }} from secret {{ _p_openshift_cluster_name }}-oc-login
   include_role: 
     name: vault-get-secret
   vars:
     secret_name: "{{ _p_openshift_cluster_name }}-oc-login"
     secret_group: "{{ environment_name }}"
-    _p_secret_variable: _oc_login
+    _p_secret_variable: _oc_login_cluster
 
-- block:
-  - name: Login to OpenShift cluster if oc login command was found
-    shell: |
-      {{ _oc_login }}
-  - name: Rename current context to {{ _p_openshift_cluster_name }}
-    shell: |
-      oc config delete-context {{ _p_openshift_cluster_name }} || true
-      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
-  when: _oc_login != ''
+- name: Get generic oc login command from vault secret oc-login
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "oc-login"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _oc_login_generic
 
 - name: Get {{ _p_openshift_cluster_name }}-kubeconfig secret for OpenShift cluster
   include_role: 
@@ -23,8 +21,7 @@
   vars:
     secret_name: "{{ _p_openshift_cluster_name }}-kubeconfig"
     secret_group: "{{ environment_name }}"
-    secret_file: "{{ status_dir }}/openshift/kubeconfig"
-  when: secret_value == ''
+    _p_secret_variable: _kubeconfig_cluster
 
 - name: Get generic kubeconfig secret if {{ _p_openshift_cluster_name }}-kubeconfig does not exist
   include_role: 
@@ -32,18 +29,66 @@
   vars:
     secret_name: "kubeconfig"
     secret_group: "{{ environment_name }}"
-    secret_file: "{{ status_dir }}/openshift/kubeconfig"
-  when: secret_value == ''
+    _p_secret_variable: _kubeconfig_generic
+
+- name: Check if the container is running as an OpenShift ServiceAccount
+  shell: |
+    oc whoami
+  failed_when: False
+  register: _oc_whoami
 
 - name: Fail if none of the OpenShift connection secrets were found
   fail:
     msg: >
       One of the secrets
-      {{ _p_openshift_cluster_name }}-oc-login, {{ _p_openshift_cluster_name }}-kubeconfig or kubeconfig
-      is required to connect to OpenShift: 
+      {{ _p_openshift_cluster_name }}-oc-login, oc-login, {{ _p_openshift_cluster_name }}-kubeconfig or kubeconfig
+      is required to connect to OpenShift, or deployer must run in an OpenShift pod using a service accouunt with cluster-admin permissions.
   when: 
-  - _oc_login == ''
-  - secret_value == ''
+  - _oc_login_cluster == ''
+  - _oc_login_generic == ''
+  - _kubeconfig_cluster == ''
+  - _kubeconfig_generic == ''
+  - _oc_whoami.rc != 0 or not ((_oc_whoami.stdout | default('')) is search('system:serviceaccount'))
 
-- include_tasks: existing-ocp-check-kubeconfig.yml
-  when: _oc_login == ''
+# Log in using oc login command
+- block:
+  - name: Login to OpenShift cluster if oc login command was found in secret {{ _p_openshift_cluster_name }}-oc-login
+    shell: |
+      {{ _oc_login_cluster }}
+  - name: Rename current context to {{ _p_openshift_cluster_name }}
+    shell: |
+      oc config delete-context {{ _p_openshift_cluster_name }} || true
+      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+  when: _oc_login_cluster != ''
+
+- block:
+  - name: Login to OpenShift cluster if oc login command was found in secret oc-login
+    shell: |
+      {{ _oc_login_generic }}
+  - name: Rename current context to {{ _p_openshift_cluster_name }}
+    shell: |
+      oc config delete-context {{ _p_openshift_cluster_name }} || true
+      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+  when: 
+  - _oc_login_generic != ''
+  - _oc_login_cluster == ''
+
+# Log in using oc login
+- include_tasks: existing-ocp-login-oc-login.yml
+  when: _oc_login_generic != '' or _oc_login_cluster == ''
+
+# Log in using kubeconfig
+- include_tasks: existing-ocp-login-kubeconfig.yml
+  when:
+  - _oc_login_generic == ''
+  - _oc_login_cluster == ''
+  - _kubeconfig_cluster != '' or _kubeconfig_generic != ''
+
+# Log in using serviceaccount token
+- include_tasks: existing-ocp-login-serviceaccount.yml
+  when:
+  - _oc_login_generic == ''
+  - _oc_login_cluster == ''
+  - _kubeconfig_cluster == '' 
+  - _kubeconfig_generic == ''
+  - _oc_whoami.rc == 0
