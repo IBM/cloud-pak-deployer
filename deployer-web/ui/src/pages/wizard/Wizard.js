@@ -15,13 +15,13 @@ import yaml from 'js-yaml';
 const Wizard = () => {
 
    //wizard index
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [wizardError, setWizardError] = useState(false);
   const [ocLoginErr, setOcLoginErr] = useState(false)
   const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
   //DeployStart hidden wizard
-  const [isDeployStart, setDeployStart] = useState(true);
+  const [isDeployStart, setDeployStart] = useState(false);
   const [isDeployErr, setDeployErr] = useState(false);
   const [loadingDeployStatus, setLoadingDeployStatus] = useState(false)
 

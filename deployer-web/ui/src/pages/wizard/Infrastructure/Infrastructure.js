@@ -109,13 +109,20 @@ const Infrastructure = ({cloudPlatform,
           default:  
         }  
       } else {
-        if (registryHostname && registryHostname && registryUser && registryPassword && envId) {
-          setWizardError(false)
-        }
+        if (portable) {
+          if (envId) {
+            setWizardError(false)
+          }
+        } else {
+          if (registryHostname && registryHostname && registryUser && registryPassword && envId) {
+            setWizardError(false)
+          } else {
+            setWizardError(true)
+          }
+        }        
       }
-
- // eslint-disable-next-line
-    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked, envId, registryHostname, registryHostname, registryUser, registryPassword])
+    // eslint-disable-next-line
+    },[cloudPlatform, IBMCloudSettings, AWSSettings, OCPSettings, configuration, locked, envId, registryHostname, registryHostname, registryUser, registryPassword, portable])
 
     const IBMCloudSettingsOnChange = (e) => {
       switch (e.target.id) {
@@ -229,6 +236,9 @@ const Infrastructure = ({cloudPlatform,
       switch (e.target.id) {
         case "190":
           setRegistryHostname(e.target.value)
+          if (portable) {
+            return
+          }
           if (e.target.value === '') {
             setRegistryHostnameInvalid(true)
             setWizardError(true)
@@ -242,6 +252,9 @@ const Infrastructure = ({cloudPlatform,
           break;
         case "192":
           setRegistryNS(e.target.value)
+          if (portable) {
+            return
+          }
           if (e.target.value === '' ) {
             setRegistryNSInvalid(true)
             setWizardError(true)
@@ -252,6 +265,9 @@ const Infrastructure = ({cloudPlatform,
           break;
         case "193":
           setRegistryUser(e.target.value)
+          if (portable) {
+            return
+          }
           if(e.target.value==='') {
             setRegistryUserInvalid(true)
             setWizardError(true)
@@ -262,6 +278,9 @@ const Infrastructure = ({cloudPlatform,
           break;
         case "194":
           setRegistryPassword(e.target.value)
+          if (portable) {
+            return
+          }
           if (e.target.value==='') {
             setregistryPasswordInvalid(true)
             setWizardError(true)
