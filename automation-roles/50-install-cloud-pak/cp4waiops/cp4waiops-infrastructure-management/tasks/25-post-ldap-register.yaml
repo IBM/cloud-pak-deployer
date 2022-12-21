@@ -17,7 +17,7 @@
 
 - name: Log
   shell: |
-    export MESSAGE="Register LDAP Users"
+    export MESSAGE="Integrate AIManager with LDAP"
     export currentDate=$(date +%Y-%m-%d_%H:%M)
     echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
     echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
@@ -29,6 +29,38 @@
 # Get Cluster FQDN
 # --------------------------------------------------------------------------------------------------------------------------------------
 # *************************************************************************************************************************************************
+
+
+- name: 🚀 LDAPREGISTER - Set LDAP ADMIN Password from instance configuration
+  set_fact: current_ldap_admin_password={{current_cp4waiops_feature.ldap_admin_password  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 LDAPREGISTER - Set LDAP ADMIN Password from global configuration
+  set_fact: current_ldap_admin_password={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  LDAPREGISTER -  Demo UI Password {{current_ldap_admin_password}}
+  debug:
+    var: current_ldap_admin_password
+
+
+- name: 🚀 LDAPREGISTER - Set LDAP USERS Password from instance configuration
+  set_fact: current_ldap_user_password={{current_cp4waiops_feature.ldap_user_password  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 LDAPREGISTER - Set LDAP USERS Password from global configuration
+  set_fact: current_ldap_user_password={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  LDAPREGISTER -  Demo UI Password {{current_ldap_user_password}}
+  debug:
+    var: current_ldap_user_password
+
+
 
 - name: 🚀 LDAPREGISTER - Get Cluster FQDN
   shell: |
@@ -63,7 +95,7 @@
 - name: 🟣  OUTPUT
   debug: 
     var: LOGIN.stdout_lines
-    #verbosity: 2
+    verbosity: 1
 
 
 - name: 🚀 LDAPREGISTER - Check already registered
@@ -75,19 +107,26 @@
     var: LDAPS.stdout_lines
     #verbosity: 2
 
+- name: Log
+  shell: |
+    export MESSAGE="   Register OpenLDAP Server"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
 
 - name: 🚀 LDAPREGISTER - Create LDAP Integration
   block:
   - name: 🚀 LDAPREGISTER -           📥 Register LDAP Server
     shell:         
-      #echo 'cloudctl iam ldap-create "LDAP" --basedn "{{ LDAP_BASE }}" --server "ldap://openldap.default:389" --binddn "cn=admin,{{ LDAP_BASE }}" --binddn-password "{{ LDAP_ADMIN_PASSWORD }}" -t "Custom" --group-filter "(&(cn=%v)(objectclass=groupOfUniqueNames))" --group-id-map "*:cn" --group-member-id-map "groupOfUniqueNames:uniqueMember" --user-filter "(&(uid=%v)(objectclass=Person))" --user-id-map "*:uid"'
-      cloudctl iam ldap-create "LDAP" --basedn {{ current_cp4waiops_feature.ldap_base }} --server ldap://openldap.default:389 --binddn cn=admin,{{ current_cp4waiops_feature.ldap_base }} --binddn-password {{ current_cp4waiops_feature.ldap_admin_password }} -t "Custom" --group-filter "(&(cn=%v)(objectclass=groupOfUniqueNames))" --group-id-map "*:cn" --group-member-id-map "groupOfUniqueNames:uniqueMember" --user-filter "(&(uid=%v)(objectclass=Person))" --user-id-map "*:uid"
+      #echo 'cloudctl iam ldap-create "LDAP" --basedn "{{ LDAP_BASE }}" --server "ldap://openldap.default:389" --binddn "cn=admin,{{ LDAP_BASE }}" --binddn-password "{{ current_ldap_admin_password }}" -t "Custom" --group-filter "(&(cn=%v)(objectclass=groupOfUniqueNames))" --group-id-map "*:cn" --group-member-id-map "groupOfUniqueNames:uniqueMember" --user-filter "(&(uid=%v)(objectclass=Person))" --user-id-map "*:uid"'
+      cloudctl iam ldap-create "LDAP" --basedn {{ current_cp4waiops_feature.ldap_base }} --server ldap://openldap.{{ current_cp4waiops_feature.ldap_namespace }}:389 --binddn cn=admin,{{ current_cp4waiops_feature.ldap_base }} --binddn-password {{ current_ldap_admin_password }} -t "Custom" --group-filter "(&(cn=%v)(objectclass=groupOfUniqueNames))" --group-id-map "*:cn" --group-member-id-map "groupOfUniqueNames:uniqueMember" --user-filter "(&(uid=%v)(objectclass=Person))" --user-id-map "*:uid"
     ignore_errors: true
     register: LOGIN
   - name: 🟣  OUTPUT
     debug: 
       var: LOGIN.stdout_lines
-      #verbosity: 2
+      verbosity: 1
 
   # - name: LDAPREGISTER -           📥 Get Team ID
   #   shell:         
@@ -123,13 +162,20 @@
 
 
 
+- name: Log
+  shell: |
+    export MESSAGE="   Create Users and Groups"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
 
 
 - name: 🚀 LDAPREGISTER - CREATE AI Manager Groups and Users
   shell: |
     set -x
     
-    export WAIOPS_NAMESPACE=$(oc get po -A|grep infrastructure-automation-operator |awk '{print$1}')
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
     echo "       🛠️   Get Route"
     export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
     echo "        Route: $ROUTE"
@@ -168,25 +214,149 @@
 
     echo ""
 
-
     echo "***************************************************************************************************************************************************"
-    echo "   🛠️   Create Demo Group"
+    echo "   🛠️   Create Demo Admin Role"
     echo "     "	
-    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v2/groups" \
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/role" \
       -H "Authorization: bearer $ZEN_TOKEN" \
       -H 'Content-Type: application/json; charset=utf-8' \
       -d '{
-      "account_id": 1000,
-            "name": "demo",
-      "description": "demo",
-      "role_identifiers": [
-        "zen_administrator_role"
-      ]
+            "role_name": "Demo Admin",
+          "description": "Demo Admin",
+          "permissions": [
+            "administrator",
+            "can_provision",
+            "secure_tunnel_network",
+            "secure_tunnel_port_forwarding",
+            "secure_tunnel_connector_install",
+            "secure_tunnel_create_template",
+            "secure_tunnel_renew_cert",
+            "secure_tunnel_view_audit_log",
+            "waiops_manage_integrations",
+            "waiops_view_integrations",
+            "waiops_view_topologies",
+            "waiops_manage_topology_templates",
+            "waiops_manage_topology_comments",
+            "waiops_manage_applications",
+            "waiops_manage_business_context",
+            "waiops_manage_topology_tools",
+            "waiops_manage_topology_presentation",
+            "waiops_manage_topology_rules",
+            "waiops_manage_advanced_topology_settings",
+            "waiops_view_aimodels_status",
+            "waiops_manage_aimodels",
+            "waiops_view_operational_policies",
+            "waiops_manage_runbooks",
+            "waiops_use_runbooks",
+            "waiops_author_runbooks",
+            "waiops_administer_runbooks",
+            "waiops_view_operational_data",
+            "waiops_edit_operational_policies",
+            "waiops_delete_operational_policies",
+            "waiops_use_insights_dashboard"
+          ]
     }')
     echo "      🔎 Result: "
     echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    export demo_admin_id=$(echo $result|jq -r ".id")
+    echo "       Demo Admin Role ID: $demo_admin_id" | sed 's/^/          /'
+
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Demo_Viewer Role"
     echo "     "	
-    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/role" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+            "role_name": "Demo Viewer",
+          "description": "Demo Viewer",
+            "permissions": [
+              "waiops_view_aimodels_status",
+              "waiops_view_topologies",
+              "waiops_view_operational_data",
+              "waiops_use_insights_dashboard",
+              "waiops_view_integrations",
+              "waiops_view_operational_policies",
+              "view_platform_health",
+              "waiops_manage_topology_comments",
+              "waiops_manage_applications",
+              "waiops_use_runbooks"
+            ]
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    export demo_viewer_id=$(echo $result|jq -r ".id")
+    echo "       Demo Viewer Role ID: $demo_viewer_id" | sed 's/^/          /'
+
+
+
+    # echo "***************************************************************************************************************************************************"
+    # echo "   🛠️   Create Demo Admin Group"
+    # echo "     "	
+    # export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v2/groups" \
+    #   -H "Authorization: bearer $ZEN_TOKEN" \
+    #   -H 'Content-Type: application/json; charset=utf-8' \
+    #   -d '{
+    #   "account_id": 1000,
+    #         "name": "Demo Admin Group",
+    #   "description": "Demo Admin Group",
+    #   "role_identifiers": [
+    #     "'$demo_admin_id'"
+    #   ]
+    # }')
+    # echo "      🔎 Result: "
+    # echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    # echo "     "	
+    # echo "     "	
+
+    # echo "***************************************************************************************************************************************************"
+    # echo "   🛠️   Create Demo Viewer Group"
+    # echo "     "	
+    # export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v2/groups" \
+    #   -H "Authorization: bearer $ZEN_TOKEN" \
+    #   -H 'Content-Type: application/json; charset=utf-8' \
+    #   -d '{
+    #   "account_id": 1000,
+    #         "name": "Demo Viewer Group",
+    #   "description": "Demo Viewer Group",
+    #   "role_identifiers": [
+    #     "'$demo_viewer_id'"
+    #   ]
+    # }')
+    # echo "      🔎 Result: "
+    # echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    # echo "     "	
+    # echo "     "	
+
+
+
+
+    # echo "***************************************************************************************************************************************************"
+    # echo "   🛠️   Create Demo Viewer Member"
+    # echo "     "	
+    # export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v2/groups/10002/members" \
+    #   -H "Authorization: bearer $ZEN_TOKEN" \
+    #   -H 'Content-Type: application/json; charset=utf-8' \
+    #   -d '{
+    #       "ldap_groups": [
+    #         "demo"
+    #       ],
+    #       "user_identifiers": [
+    #         0
+    #       ]
+    #     }')
+    # echo "      🔎 Result: "
+    # echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    # echo "     "	
+    # echo "     "	
+
+
+
+
+
+
 
     echo "***************************************************************************************************************************************************"
     echo "   🛠️   Create Demo User"
@@ -210,6 +380,152 @@
     echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
     echo "     "	
     echo "     "	
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Nik User"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/user" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+    "username": "nik",
+    "user_roles": ["zen_administrator_role"],
+    "displayName": "nik",
+    "password": "P4ssw0rd!",
+    "email": "nik@ibm.com",
+    "approval_status": "approved",
+    "permissions": ["administrator"],
+     "misc": {
+        "dark_mode": true
+      }
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Dev User"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/user" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+    "username": "dev",
+    "user_roles": ["iaf-automation-operator"],
+    "displayName": "dev",
+    "password": "P4ssw0rd!",
+    "email": "dev@ibm.com",
+    "approval_status": "approved",
+    "permissions": [],
+     "misc": {
+        "dark_mode": true
+      }
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Test User"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/user" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+    "username": "test",
+    "user_roles": ["iaf-automation-operator"],
+    "groups": ["demo"],
+    "displayName": "test",
+    "password": "P4ssw0rd!",
+    "email": "test@ibm.com",
+    "approval_status": "approved",
+    "permissions": [],
+     "misc": {
+        "dark_mode": true
+      }
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create Prod User"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/user" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+    "username": "prod",
+    "user_roles": ["iaf-automation-operator"],
+    "displayName": "prod",
+    "password": "P4ssw0rd!",
+    "email": "prod@ibm.com",
+    "approval_status": "approved",
+    "permissions": [
+    "waiops_view_aimodels_status",
+    "waiops_view_topologies",
+    "waiops_view_operational_data",
+    "waiops_use_insights_dashboard",
+    "waiops_view_integrations",
+    "waiops_view_operational_policies",
+    "view_platform_health",
+    "waiops_use_runbooks"
+    ] ,
+     "misc": {
+        "dark_mode": true
+      }
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+    echo "***************************************************************************************************************************************************"
+    echo "   🛠️   Create SRE1 User"
+    echo "     "	
+    export result=$(curl -X "POST" -k "https://$ROUTE/usermgmt/v1/user" \
+      -H "Authorization: bearer $ZEN_TOKEN" \
+      -H 'Content-Type: application/json; charset=utf-8' \
+      -d '{
+    "username": "sre1",
+    "user_roles": ["iaf-automation-operator"],
+    "displayName": "sre1",
+    "password": "P4ssw0rd!",
+    "email": "sre1@ibm.com",
+    "approval_status": "approved",
+    "permissions": [],
+     "misc": {
+        "dark_mode": true
+      }
+    }')
+    echo "      🔎 Result: "
+    echo "       "$result|jq "._messageCode_" | sed 's/^/          /'
+    echo "     "	
+    echo "     "	
+
+
+    # "user_roles": [
+    #     "zen_administrator_role",
+    #     "zen_service_administrator_role",
+    #     "iaf-automation-admin",
+    #     "iaf-automation-analyst",
+    #     "iaf-automation-developer",
+    #     "iaf-automation-operator",
+    #     "zen_user_role"
+    #   ]
+
+
   register: output_string
   ignore_errors: true
   args:
@@ -218,7 +534,8 @@
 - name: 🟣  OUTPUT
   debug: 
     var: output_string.stdout_lines
-  #when: PRINT_LOGINS == true
+    verbosity: 1
+
 
 
 
