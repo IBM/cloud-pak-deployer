@@ -24,6 +24,39 @@
 
 
 
+
+- name: 🚀 LDAP - Set LDAP ADMIN Password from instance configuration
+  set_fact: current_ldap_admin_password={{current_cp4waiops_feature.ldap_admin_password  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 LDAP - Set LDAP ADMIN Password from global configuration
+  set_fact: current_ldap_admin_password={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  LDAP -  Demo UI Password {{current_ldap_admin_password}}
+  debug:
+    var: current_ldap_admin_password
+
+
+- name: 🚀 LDAP - Set LDAP USERS Password from instance configuration
+  set_fact: current_ldap_user_password={{current_cp4waiops_feature.ldap_user_password  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 LDAP - Set LDAP USERS Password from global configuration
+  set_fact: current_ldap_user_password={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  LDAP -  Demo UI Password {{current_ldap_user_password}}
+  debug:
+    var: current_ldap_user_password
+
+
+
+
 # - name: ADDONS -             ❎ Remove old OpenLDAP
 #   community.kubernetes.k8s:
 #     state: absent

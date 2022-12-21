@@ -23,6 +23,37 @@
   ignore_errors: true
 
 
+- name: 🚀 TURBONOMIC - Set ADMIN Password from instance configuration
+  set_fact: current_admin_pass={{current_cp4waiops_feature.turbo_admin_password  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 TURBONOMIC - Set ADMIN Password from global configuration
+  set_fact: current_admin_pass={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  TURBONOMIC -  ADMIN Password {{current_admin_pass}}
+  debug:
+    var: current_admin_pass
+
+
+- name: 🚀 TURBONOMIC - Set DEMO Password from instance configuration
+  set_fact: current_demo_pass={{current_cp4waiops_feature.turbo_demo_password  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 TURBONOMIC - Set DEMO Password from global configuration
+  set_fact: current_demo_pass={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  TURBONOMIC -  DEMO Password {{current_demo_pass}}
+  debug:
+    var: current_demo_pass
+
+
+
 
 - name: 🚀 TURBONOMIC - Get ROUTE
   shell: |
@@ -39,7 +70,7 @@
   shell: |
     echo "------------------------------------------------------------------------------------------------------------------------------"
     echo " 📥 Initialization"
-    export TURBO_PASSWORD={{current_cp4waiops_feature.turbo_password}}
+    export TURBO_PASSWORD={{current_admin_pass}}
     export TURBO_URL={{TURBO_URL}}
 
     result=$(curl -XPOST -s -k -c /tmp/cookies -H 'accept: application/json' "https://{{TURBO_URL}}/api/v3/initAdmin" -d "username=administrator&password=$TURBO_PASSWORD")
@@ -64,7 +95,7 @@
   shell: |
     echo "------------------------------------------------------------------------------------------------------------------------------"
     echo " 📥 Initialization"
-    export TURBO_PASSWORD={{current_cp4waiops_feature.turbo_password}}
+    export TURBO_PASSWORD={{current_admin_pass}}
     export TURBO_URL={{TURBO_URL}}
 
     while [[ `curl -XPOST -s -k -c /tmp/cookies -H 'accept: application/json' "https://{{TURBO_URL}}/api/v3/login?hateoas=true" -d "username=administrator&password=$TURBO_PASSWORD"` =~ "InvalidCredentialsException" ]]
@@ -93,21 +124,22 @@
   shell: |
     export TURBO_URL={{TURBO_URL}}
 
-    echo "{{current_cp4waiops_feature.turbo_license | default("NONE") }}" > /tmp/license.lic
+    echo "{{current_turbo_license | default("NONE") }}" > /tmp/license.lic
     #cat /tmp/license.lic
     
-    result=$(curl -XPOST -k -s -b /tmp/cookies -H 'Content-Type: multipart/form-data;'  -H 'accept: application/json' "https://$TURBO_URL/api/v3/licenses" -F 'file=@/tmp/license.lic')
+    result=$(curl -XPOST -k -b /tmp/cookies -H 'Content-Type: multipart/form-data'  -H 'accept: application/json' "https://$TURBO_URL/api/v3/licenses?dryRun=false" -F 'file=@/tmp/license.lic')
+ 
     echo $result
   ignore_errors: true
   register: output
   args:
     executable: /bin/bash
-  when: current_cp4waiops_feature.turbo_license | default("NONE") != "NONE"
+  when: current_turbo_license | default("NONE") != "NONE"
 - name: 🟣  DEBUG
   debug:
     var: output.stdout_lines
-    #verbosity: 1
-  when: current_cp4waiops_feature.turbo_license | default("NONE") != "NONE"
+    verbosity: 2
+  when: current_turbo_license | default("NONE") != "NONE"
 
 
 
@@ -126,7 +158,7 @@
     result=$(curl -XPOST -s -k "https://{{TURBO_URL}}/api/v3/users" -b /tmp/cookies  -H 'Content-Type: application/json;' -H 'accept: application/json' -d '  {
       "displayName": "Demo User",
         "username": "{{current_cp4waiops_feature.demo_user}}",
-        "password": "{{current_cp4waiops_feature.demo_password}}",
+        "password": "{{current_demo_pass}}",
         "roles": [
           {
             "name": "ADMINISTRATOR"
