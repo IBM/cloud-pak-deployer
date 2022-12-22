@@ -107,7 +107,6 @@ cp4i:
   openshift_cluster_name: {{ env_id }}
   openshift_storage_name: nfs-rook-ceph
   cp4i_version: 2021.4.1
-  use_case_files: True
   accept_licenses: False
   use_top_level_operator: False
   top_level_operator_channel: v1.5
@@ -328,13 +327,237 @@ When the installation is completed, you will find the **admin** user password in
 | case_version               | CASE version           | 1.7.0 |
 
 ## `cp4waiops`
-Defines the Cloud Pak for Watson AIOps installation to be configured on the OpenShift cluster(s).
+Defines the Cloud Pak for Watson AIOps installation to be configured on the OpenShift cluster(s). The following instances can be installed by the deployer:
+* AI Manager
+* Event Manager
+* Turbonomic
+* Instana
+* Infrastructure management
+* ELK stack (ElasticSearch, Logstash, Kibana)
 
-*Only small size deployments of v3.3 are currently supported.*
+Aside from the base install, the deployer can also install ready-to-use demos for each of the instances
 
 ```
 cp4waiops:
 
+- project: cp4waiops
+  openshift_cluster_name: "{{ env_id }}"
+  openshift_storage_name: auto-storage
+  accept_licenses: False
+ 
+  instances:
+  - name: cp4waiops-aimanager
+    kind: AIManager
+    install: true
+  ...
 ```
 
-TO BE COMPLETED
+## Main properties
+
+The following properties are defined on the project level:
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| project                         | The name of the OpenShift project that will be created and used for the installation of the defined instances. | Yes  | |
+| openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. | No, only if mutiple OpenShift clusters defined | Existing `openshift` cluster |
+| openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). | No, inferred from openshift->openshift_storage | |
+| accept_licenses | Set to `True` to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | True, False |
+
+## Service instances
+The project that is specified at the `cp4waiops` level defines the OpenShift project into which the instances of each of the services will be installed. Below is a list of instance "kinds" that can be installed. For every "service instance" there can also be a "demo content" entry to prepare the demo content for the capability.
+
+### AI Manager
+
+```
+  instances:
+  - name: cp4waiops-aimanager
+    kind: AIManager
+    install: true
+
+    waiops_size: small
+    custom_size_file: none
+    waiops_name: ibm-cp-watson-aiops
+    subscription_channel: v3.6
+    freeze_catalog: false
+```
+
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | AIManager      |
+| install             | Must the service be installed? | Yes | true, false |
+| waiops_size         | Size of the install            | Yes | small, tall, custom |
+| custom_size_file    | Name of the file holding the custom sizes if `waiops_size` is `custom` | No | |
+| waiops_name         | Name of the CP4WAIOPS instance | Yes | |
+| subscription_channel | Subscription channel of the operator | Yes | |
+| freeze_catalog      | Freeze the version of the catalog source? | Yes | false, true |
+| case_install        | Must AI manager be installed via case files? | No | false, true |
+| case_github_url     | GitHub URL to download case file | Yes if `case_install` is `true` | |
+| case_name           | Name of the case file          | Yes if `case_install` is `true` | |
+| case_version        | Version of the case file to download | Yes if `case_install` is `true` | |
+| case_inventory_setup | Case file operation to run for this service | Yes if `case_install` is `true` | cpwaiopsSetup |
+
+### AI Manager - Demo Content
+
+```
+  instances:
+  - name: cp4waiops-aimanager-demo-content
+    kind: AIManagerDemoContent
+    install: true
+    ...
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | AIManagerDemoContent      |
+| install             | Must the content be installed? | Yes | true, false |
+
+See sample config for remainder of properties.
+
+### Event Manager
+
+```
+  instances:
+  - name: cp4waiops-eventmanager
+    kind: EventManager
+    install: true
+    subscription_channel: v1.11
+    starting_csv: noi.v1.7.0
+    noi_version: 1.6.6
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | EventManager      |
+| install             | Must the service be installed? | Yes | true, false |
+| subscription_channel | Subscription channel of the operator | Yes | |
+| starting_csv        | Starting Cluster Server Version | Yes | |
+| noi_version         | Version of noi | Yes | |
+
+### Event Manager Demo Content
+
+```
+  instances:
+  - name: cp4waiops-eventmanager
+    kind: EventManagerDemoContent
+    install: true
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | EventManagerDemoContent     |
+| install             | Must the content be installed? | Yes | true, false |
+
+### Infrastructure Management
+
+```
+  instances:
+  - name: cp4waiops-infrastructure-management
+    kind: InfrastructureManagement
+    install: false
+    subscription_channel: v3.5
+```
+
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | InfrastructureManagement      |
+| install             | Must the service be installed? | Yes | true, false |
+| subscription_channel | Subscription channel of the operator | Yes | |
+
+
+### ELK stack
+ElasticSearch, Logstash and Kibana stack.
+
+```
+  instances:
+  - name: cp4waiops-elk
+    kind: ELK
+    install: false
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | ELK      |
+| install             | Must the service be installed? | Yes | true, false |
+
+### Instana
+
+```
+  instances:
+  - name: cp4waiops-instana
+    kind: Instana
+    install: true
+
+    sales_key: 'NONE'
+    agent_key: 'NONE'
+
+    instana_admin_user: "admin@instana.local"
+    #instana_admin_pass: 'P4ssw0rd!'
+    
+    install_agent: true
+
+    integrate_aimanager: true
+    #integrate_turbonomic: true
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | Instana      |
+| install             | Must the service be installed? | Yes | true, false |
+| sales_key           | License key to be configured   | No | |
+| agent_key           | License key for agent to be configured   | No | |
+| instana_admin_user  | Instana admin user to be configured | Yes | |
+| instana_admin_pass  | Instana admin user password to be set (if different from global password) | No | |
+| install_agent       | Must the Instana agent be installed? | Yes | true, false |
+| integrate_aimanager | Must Instana be integrated with AI Manager? | Yes | true, false |
+| integrate_turbonomic | Must Instana be integrated with Turbonomic? | No | true, false |
+
+### Turbonomic
+
+```
+  instances:
+  - name: cp4waiops-turbonomic
+    kind: Turbonomic
+    install: true
+    turbo_version: 8.7.0
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | Turbonomic      |
+| install             | Must the service be installed? | Yes | true, false |
+| turbo_version       | Version of Trubonomic to install | Yes | |
+
+### Turbonomic Demo Content
+
+```
+  instances:
+  - name: cp4waiops-turbonomic-demo-content
+    kind: TurbonomicDemoContent
+    install: true
+    #turbo_admin_password: P4ssw0rd!
+    create_user: false
+    demo_user: demo
+    #turbo_demo_password: P4ssw0rd!
+```
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| name                | Unique name within the cluster using only lowercase alphanumerics and "-" | Yes | |
+| kind                | Service kind to install        | Yes       | TurbonomicDemoContent     |
+| install             | Must the content be installed? | Yes | true, false |
+| turbo_admin_pass    | Turbonomic admin user password to be set (if different from global password) | No | |
+| create_user         | Must the demo user be created? | No | false, true |
+| demo_user           | Name of the demo user | No | |
+| turbo_demo_password | Demo user password if different from global password | No | |
+
+See sample config for remainder of properties.
