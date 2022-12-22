@@ -45,6 +45,30 @@ generated_config_yaml_path = ""
 def index():
     return send_from_directory(app.static_folder,'index.html')
 
+@app.route('/api/v1/mirror',methods=["POST"])
+def mirror():
+    body = json.loads(request.get_data())  
+    if 'envId' not in body or 'entitlementKey' not in body:
+        return make_response('Bad Request', 400)
+
+    deployer_env = os.environ.copy()
+    # Assemble the mirror command
+    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command+=['env','download']
+    deploy_command+=['-e=env_id={}'.format(body['envId'])]
+    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(body['entitlementKey'])]
+
+    deploy_command+=['-v']
+    
+    log = open('/tmp/cp-mirror.log', 'a')
+    process = subprocess.Popen(deploy_command, 
+                    stdout=log,
+                    stderr=log,
+                    universal_newlines=True,
+                    env=deployer_env)
+
+    return 'running'
+
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
     body = json.loads(request.get_data())
