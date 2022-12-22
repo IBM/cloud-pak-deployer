@@ -220,6 +220,28 @@ const Wizard = () => {
     });    
   }
 
+  const createDownload = async() => {
+    setLoadingDeployStatus(true)
+    const body = {  
+      "entitlementKey": entitlementKey,     
+      "envId": envId,     
+    }    
+    setCurrentIndex(10)
+    await axios.post('/api/v1/mirror', body).then(res =>{
+        setLoadingDeployStatus(false)    
+        setDeployStart(true)  
+        setDeployErr(false)
+        getDeployStatus()
+        refreshStatus()        
+  
+    }, err => {
+        setLoadingDeployStatus(false)    
+        console.log(err)
+        setDeployStart(true)
+        setDeployErr(true)
+    });    
+  }
+
   const createSaveDeloyment = async () => {
     setLoadingDeployStatus(true)
     let body = {}
@@ -238,8 +260,9 @@ const Wizard = () => {
 
           if (selection==="Configure+Deploy") {
             createDeployment();
+          } else if (selection==="Configure+Download") {
+            createDownload();
           }
-
           
       }, err => {
         setLoadingDeployStatus(false)
@@ -367,7 +390,7 @@ const Wizard = () => {
       <>
         {selection==="Configure+Deploy" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Deploy</Button>}
         {selection==="Configure" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Save</Button>}
-        {selection==="Configure+Download" && <Button className="wizard-container__page-header-button"  disabled={summaryLoading}>Mirror</Button> }
+        {selection==="Configure+Download" && <Button className="wizard-container__page-header-button" onClick={createSaveDeloyment} disabled={summaryLoading}>Mirror</Button> }
       </>
     )
   }
