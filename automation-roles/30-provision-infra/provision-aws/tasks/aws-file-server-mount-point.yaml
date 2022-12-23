@@ -8,6 +8,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
   register: _aws_describe_mount_target
 
 # If mount target doesn't exist, create it
@@ -21,5 +22,6 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
   register: _aws_create_mount_target
   when: (_aws_describe_mount_target.stdout | from_json) == []
