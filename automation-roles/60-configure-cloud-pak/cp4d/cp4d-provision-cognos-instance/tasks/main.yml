@@ -6,8 +6,8 @@
         msg: "Variable cp4d_ca_provision_cognos_instance set to {{ cp4d_ca_provision_cognos_instance }}, ending play provision_cognos_instance"
 
 - set_fact:
-    ca_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
-    ca_cp4d_version: "{{ current_cp4d_cluster.cp4d_version[:3] }}"
+    _ca_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(query_cartridge)|first }}"
+    _ca_cp4d_version: "{{ current_cp4d_cluster.cp4d_version[:3] }}"
   vars:
     #cartridge_name: "cognos_analytics"
     cartridge_name: "ca"
@@ -18,31 +18,30 @@
 
   - name: Show Cognos Analytics cartridge
     debug:
-      var: ca_cartridge
+      var: _ca_cartridge
 
   - set_fact:
-      cp4d_cognos_instance_tshirt_size: "{{ ca_cartridge.size | default ('small') }}"
+      _cp4d_cognos_instance_tshirt_size: "{{ _ca_cartridge.size | default ('small') }}"
 
   - fail:
-      msg: "Cognos Analytics size can be small, medium or large. {{ cp4d_cognos_instance_tshirt_size }} is not supported."
+      msg: "Cognos Analytics size can be small, medium or large. {{ _cp4d_cognos_instance_tshirt_size }} is not supported."
     when: | 
-      not (cp4d_cognos_instance_tshirt_size == "small" or
-           cp4d_cognos_instance_tshirt_size == "medium" or
-           cp4d_cognos_instance_tshirt_size == "large")
+      not (_cp4d_cognos_instance_tshirt_size == "small" or
+           _cp4d_cognos_instance_tshirt_size == "medium" or
+           _cp4d_cognos_instance_tshirt_size == "large")
 
   - name: Show number of instances in Cognos Analytics cartridge
     debug:
-      msg: "{{ ca_cartridge.instances | length }}"
+      msg: "{{ _ca_cartridge.instances | length }}"
 
   - name: Provision each Cognos instance from the Cognos cartridge specification
     include_tasks: provision_cognos_instance.yml
-    loop: "{{ ca_cartridge.instances | default([]) }}"
+    loop: "{{ _ca_cartridge.instances | default([]) }}"
     loop_control:
-      loop_var: cognos_instance
-    when: ca_cartridge.instances | length > 0
+      loop_var: _cognos_instance
+    when: _ca_cartridge.instances | length > 0
 
   when: 
-    - not ca_cartridge == ""
-    - ca_cartridge.instances is defined
+    - not _ca_cartridge == ""
+    - _ca_cartridge.instances is defined
     - cp4d_ca_provision_cognos_instance == true
-
