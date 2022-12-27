@@ -205,6 +205,10 @@ def get_deployer_status():
                 result['last_step']=temp['last_step']
             if 'percentage_completed' in temp:
                 result['percentage_completed']=temp['percentage_completed']
+            if 'completion_state' in temp:
+                result['completion_state']=temp['completion_state']
+            if 'current_image' in temp:
+                result['current_image']=temp['current_image']
             if 'service_state' in temp:
                 result['service_state']=temp['service_state']
     except FileNotFoundError:
