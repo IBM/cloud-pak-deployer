@@ -80,6 +80,7 @@ const Wizard = () => {
   const [deployerLastStep, setDeployerLastStep] = useState('')
   const [deployerCompletionState, setDeployerCompletionState ] = useState('')
   const [deployerCurrentImage, setDeployerCurrentImage] = useState('')
+  const [deployerImageNumber, setDeployerImageNumber] = useState('')
 
   const [scheduledJob, setScheduledJob] = useState(0)
   const [deployeyLog, setdeployeyLog] = useState('deployer-log')
@@ -310,8 +311,11 @@ const Wizard = () => {
         if(res.data.completion_state) {
           setDeployerCompletionState(res.data.completion_state)
         }
-        if(res.data.current_image){
-          setDeployerCurrentImage(res.data.current_image)
+        if(res.data.mirror_current_image){
+          setDeployerCurrentImage(res.data.mirror_current_image)
+        }
+        if(res.data.mirror_number_images){
+          setDeployerImageNumber(res.data.mirror_number_images)
         }
     }, err => {
         console.log(err)        
@@ -449,6 +453,11 @@ const Wizard = () => {
           {deployerCurrentImage && <div className="deploy-key" >
             <div>Current Image:</div>
             <div className="deploy-value">{deployerCurrentImage}</div> 
+          </div>}
+
+          {deployerImageNumber && <div className="deploy-key" >
+            <div>Mirror Images Number:</div>
+            <div className="deploy-value">{deployerImageNumber}</div> 
           </div>}
           
           
