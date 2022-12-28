@@ -207,8 +207,10 @@ def get_deployer_status():
                 result['percentage_completed']=temp['percentage_completed']
             if 'completion_state' in temp:
                 result['completion_state']=temp['completion_state']
-            if 'current_image' in temp:
-                result['current_image']=temp['current_image']
+            if 'mirror_current_image' in temp:
+                result['mirror_current_image']=temp['mirror_current_image']
+            if 'mirror_number_images' in temp:
+                result['mirror_number_images']=temp['mirror_number_images']
             if 'service_state' in temp:
                 result['service_state']=temp['service_state']
     except FileNotFoundError:
@@ -500,6 +502,11 @@ def saveConfig():
 @app.route('/api/v1/environment-variable',methods=["GET"])
 def environmentVariable():
     result={}
+
+    if 'CPD_WIZARD_PAGE_TITLE' in os.environ:
+      result['CPD_WIZARD_PAGE_TITLE']=os.environ['CPD_WIZARD_PAGE_TITLE']
+    else:
+      result['CPD_WIZARD_PAGE_TITLE']="Cloud Pak Deployer"
 
     if 'CPD_WIZARD_MODE' in os.environ:
       result['CPD_WIZARD_MODE']=os.environ['CPD_WIZARD_MODE']
