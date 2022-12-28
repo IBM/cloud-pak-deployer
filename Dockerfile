@@ -32,7 +32,7 @@ RUN mkdir -p /cloud-pak-deployer && \
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
 
-RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt
+RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
 ENV USER_UID=1001
 
