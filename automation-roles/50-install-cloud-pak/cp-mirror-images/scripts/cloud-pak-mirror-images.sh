@@ -1195,7 +1195,7 @@ do_image_mirror_case_images() {
     images_count=$(wc -l "${OC_TMP_IMAGE_MAP}" | awk '{ print $1 }')
     map_files="${OC_TMP_IMAGE_MAP}"
 
-    echo "[INFO] Found ${images_count} images"
+    echo "[INFO] Total image count: ${images_count}"
 
     # Remove ppc64le and s390x images
     # sed -i "/ppc64le/d" ${OC_TMP_IMAGE_MAP}
@@ -1243,6 +1243,11 @@ do_image_mirror_case_images() {
 
     for map_file in ${map_files}; do
         echo "[INFO] Mirroring ${map_file}"
+        echo "[STATE] Total image count: ${images_count}"
+        current_image=$(head -1 ${map_file} | cut -d= -f1)
+        echo "[STATE] Current image: ${current_image}"
+        image_number=$(grep -n ${current_image} ${OC_TMP_IMAGE_MAP} | cut -d: -f1)
+        echo "[STATE] Image number: ${image_number}"
         oc_cmd="time oc image mirror -a ${AUTH_JSON} -f \"${map_file}\" --filter-by-os '.*' --insecure ${DRY_RUN}"
         echo "${oc_cmd}"
         eval ${oc_cmd}
@@ -1256,6 +1261,10 @@ do_image_mirror_case_images() {
             while read in; do
                 src_image=$(echo $in | cut -d= -f1)
                 tgt_image=$(echo $in | cut -d= -f2)
+                current_image=${src_image}
+                echo "[STATE] Current image: ${current_image}"
+                image_number=$(grep -n ${current_image} ${OC_TMP_IMAGE_MAP})
+                echo "[STATE] Image number: ${image_number}"
                 skopeo_cmd="skopeo copy --all --authfile ${AUTH_JSON} --dest-tls-verify=false --src-tls-verify=false docker://${src_image} docker://${tgt_image}" ;
                 echo "${skopeo_cmd}"
                 eval ${skopeo_cmd}
@@ -1269,6 +1278,7 @@ do_image_mirror_case_images() {
             done < ${map_file}
         fi
     done
+    echo "[STATE] Image number: ${images_count}"
 
     # oc_cmd="time oc image mirror -a \"${XDG_RUNTIME_DIR}/containers/auth.json\" -f \"${OC_TMP_IMAGE_MAP}_ibmcom\" --filter-by-os '.*' --insecure ${DRY_RUN}"
     # echo "${oc_cmd}"

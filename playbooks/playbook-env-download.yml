@@ -1,5 +1,5 @@
 ---
-- name: Download all assets for air-gapped install
+- name: 10 - Download validate
   hosts: localhost
   connection: local
   become: True
@@ -11,8 +11,10 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-
   - block:
+    - name: Record deployer state
+      include_role:
+        name: record-deployer-state
 
     - name: Load global config
       include_role:
@@ -47,7 +49,21 @@
         secret_payload: "{{ cp_entitlement_key }}"
       when: 
       - (cp_entitlement_key | default("")) != ""
+    when: not (cpd_check_only | default(False) | bool)
 
+- name: 20 - Download CLIs and case files
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
+
+  tasks:
+  - block:
     - name: Download CLIs
       include_role:
         name: download-cli
@@ -64,8 +80,22 @@
       loop: "{{ all_config.cp4d | default([]) }}"
       loop_control:
         loop_var: _p_current_cp4d_cluster
+    when: not (cpd_check_only | default(False) | bool)
 
 
+- name: 30 - Mirror images
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
+
+  tasks:
+  - block:
     # Mirror images to portable or private registry
     - block:
       - name: Get IBM Entitled Registry key
