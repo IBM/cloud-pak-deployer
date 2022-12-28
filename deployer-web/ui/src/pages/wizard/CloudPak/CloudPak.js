@@ -32,8 +32,6 @@ const CloudPak = ({CPDCartridgesData,
     const [loadingCPI, setLoadingCPI] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
 
-    const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
-
     const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
 
@@ -121,7 +119,7 @@ const CloudPak = ({CPDCartridgesData,
       updateCP4DPlatformCheckBox(CPDCartridgesData)
       updateCP4IPlatformCheckBox(CPICartridgesData)  
      
-      if (entitlementKey && (loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
+      if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
         setWizardError(false)
       }
       else {
@@ -183,15 +181,7 @@ const CloudPak = ({CPDCartridgesData,
     }
 
     const entitlementKeyOnChange = (e) => {
-      setEntitlementKey(e.target.value);
-      if (e.target.value === '') {
-        setEntitlementKeyInvalid(true)
-        setWizardError(true)
-        return
-      } else {
-        setEntitlementKeyInvalid(false)
-      }
-      setWizardError(false)     
+      setEntitlementKey(e.target.value);    
     }
 
     const adminPaswordOnChnage = (e) => {
@@ -248,7 +238,7 @@ const CloudPak = ({CPDCartridgesData,
             {/* Entitlement */}
               <div>
               <div className="cloud-pak-items">Entitlement key</div>
-              <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} invalidText="Entitlement key can not be empty." invalid={isEntitlementKeyInvalid}/>
+              <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} />
             </div> 
 
             <div>
