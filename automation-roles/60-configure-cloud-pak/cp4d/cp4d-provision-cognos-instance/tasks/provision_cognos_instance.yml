@@ -98,6 +98,50 @@
           register: create_cognos_connection_result
       when: "cp4d_cognos_db2_content_repo|length == 0"
 
+    - name: Get the Global platform connection for '{{ cp4d_platform_connection_name }}'
+      shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials&entity.name={{ cp4d_platform_connection_name }}'"
+      register: cp4d_cognos_db2_platform_connection_result
+
+    - set_fact:
+        cp4d_cognos_db2_platform_connection: "{{ cp4d_cognos_db2_platform_connection_result.stdout | from_json }}"
+
+    - name: Get the Connection Id of Global Platform connection '{{ cp4d_platform_connection_name }}'
+      set_fact:
+        cp4d_cognos_db2_platform_connection_id_list: "{{ cp4d_cognos_db2_platform_connection.resources|json_query(query) }}"
+      vars:
+        query: "[?entity.name=='{{ cp4d_platform_connection_name }}'].metadata.asset_id"    
+
+    - fail:
+        msg: "No Global platform connection with name {{ cp4d_platform_connection_name }} available"
+      when: "cp4d_cognos_db2_platform_connection_id_list|length != 1"
+
+    - set_fact:
+        cp4d_cognos_db2_platform_connection_id: "{{ cp4d_cognos_db2_platform_connection_id_list | first }}"
+   
+    - name: Confirm the Datasource connection {{ cp4d_platform_connection_name }} is valid
+      uri:
+        body_format: json
+        body: '{}'
+        return_content: yes
+        method: PUT
+        url: "https://{{ cp4d_url.stdout }}/v2/connections/{{ cp4d_cognos_db2_platform_connection_id }}/actions/test?catalog_id={{ cp4d_catalog.catalogs[0].metadata.guid }}"
+        headers:
+          Authorization: "Bearer {{ cp4d_login.token }}"
+          Content-Type: "application/json"
+          Accept: "application/json"
+      register: test_global_platform_connection_result
+      failed_when: false
+
+    - when: test_global_platform_connection_result.status != 200
+      block:
+        - debug:
+            msg: "{{ test_global_platform_connection_result }}"
+
+        - fail:
+            msg: "Test connection to Global Platform connection {{ cp4d_platform_connection_name }} failed. Unable to provision Cognos instance. \
+                  Validate the Global Platform connection properties, or delete the global platform connection so the Deployer will re-create it. \
+                  \n Returned Error Message: \n\n {{ test_global_platform_connection_result.content }}"
+
     - name: Obtain Cognos Analytics version
       shell:
         oc get caservice -n {{ current_cp4d_cluster.project }} ca-addon-cr -o jsonpath='{.spec.version}'
