@@ -48,8 +48,15 @@ def index():
 @app.route('/api/v1/mirror',methods=["POST"])
 def mirror():
     body = json.loads(request.get_data())  
-    if 'envId' not in body or 'entitlementKey' not in body:
+    if 'envId' not in body or 'entitlementKey' not in body or 'registry' not in body:
         return make_response('Bad Request', 400)
+
+    print(body['registry']['portable'])
+    print(body['registry']['registryHostname'])
+    print(body['registry']['registryPort'])
+    print(body['registry']['registryNS'])
+    print(body['registry']['registryUser'])
+    print(body['registry']['registryPassword'])
 
     deployer_env = os.environ.copy()
     # Assemble the mirror command
@@ -60,10 +67,7 @@ def mirror():
 
     deploy_command+=['-v']
     
-    log = open('/tmp/cp-mirror.log', 'a')
     process = subprocess.Popen(deploy_command, 
-                    stdout=log,
-                    stderr=log,
                     universal_newlines=True,
                     env=deployer_env)
 
@@ -106,10 +110,7 @@ def deploy():
     deploy_command+=['-v']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
-    log = open('/tmp/cp-deploy.log', 'a')
     process = subprocess.Popen(deploy_command, 
-                    stdout=log,
-                    stderr=log,
                     universal_newlines=True,
                     env=deployer_env)
 
@@ -518,5 +519,18 @@ def environmentVariable():
     
     return result
 
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 if __name__ == '__main__':
+    print("""
+IBM Cloud Pak Deployer Wizard is started.
+Please access the below URL for the web console:
+******************************************************************************
+Summary
+ * Web console HTTPS URL:
+   https://<host machine>:8080  
+******************************************************************************
+    """)
     app.run(host='0.0.0.0', port='32080', debug=False)    

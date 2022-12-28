@@ -78,6 +78,8 @@ const Wizard = () => {
   const [deployerPercentageCompleted, setDeployerPercentageCompleted] = useState(0)
   const [deployerStage, setDeployerStage] = useState('')
   const [deployerLastStep, setDeployerLastStep] = useState('')
+  const [deployerCompletionState, setDeployerCompletionState ] = useState('')
+  const [deployerCurrentImage, setDeployerCurrentImage] = useState('')
 
   const [scheduledJob, setScheduledJob] = useState(0)
   const [deployeyLog, setdeployeyLog] = useState('deployer-log')
@@ -224,7 +226,15 @@ const Wizard = () => {
     setLoadingDeployStatus(true)
     const body = {  
       "entitlementKey": entitlementKey,     
-      "envId": envId,     
+      "envId": envId,  
+      "registry": {
+        "portable": portable,
+        "registryHostname": registryHostname,
+        "registryPort": registryPort,
+        "registryNS": registryNS,
+        "registryUser": registryUser,
+        "registryPassword": registryPassword,
+      }
     }    
     setCurrentIndex(10)
     await axios.post('/api/v1/mirror', body).then(res =>{
@@ -282,11 +292,26 @@ const Wizard = () => {
       return 
     await axios.get('/api/v1/deployer-status').then(res =>{
         setDeployerStatus(res.data.deployer_active)
-        setDeployerPercentageCompleted(res.data.percentage_completed)
-        setDeployerStage(res.data.deployer_stage)
-        setDeployerLastStep(res.data.last_step)
+        if(res.data.deployer_active) {
+          setDeployerPercentageCompleted(res.data.percentage_completed)
+        } else {
+          setDeployerPercentageCompleted(100)
+        }        
+
+        if(res.data.deployer_stage) {
+          setDeployerStage(res.data.deployer_stage)
+        }
+        if(res.data.last_step) {
+          setDeployerLastStep(res.data.last_step)
+        }
         if(res.data.service_state) {
           setDeployState(res.data.service_state)
+        }
+        if(res.data.completion_state) {
+          setDeployerCompletionState(res.data.completion_state)
+        }
+        if(res.data.current_image){
+          setDeployerCurrentImage(res.data.current_image)
         }
     }, err => {
         console.log(err)        
@@ -403,21 +428,30 @@ const Wizard = () => {
 
           {!deployerStatus && <div className="deploy-key" >
             <div>Completion state:</div>
-            <div className="deploy-value">To be replaced</div> 
+            <div className="deploy-value">{deployerCompletionState}</div> 
           </div>}          
-
+        
           <div className="deploy-key" >
             <div>State:</div>
             <div className="deploy-value">{deployerStatus?'ACTIVE':'INACTIVE'}</div> 
           </div>
-          <div className="deploy-key" >
+
+          {deployerStage && <div className="deploy-key" >
             <div>Current Stage:</div>
             <div className="deploy-value">{deployerStage}</div> 
-          </div>
-          <div className="deploy-key" >
+          </div>}
+
+          {deployerLastStep && <div className="deploy-key" >
             <div>Current Task:</div>
             <div className="deploy-value">{deployerLastStep}</div> 
-          </div>
+          </div>}
+
+          {deployerCurrentImage && <div className="deploy-key" >
+            <div>Current Image:</div>
+            <div className="deploy-value">{deployerCurrentImage}</div> 
+          </div>}
+          
+          
           <div className="deploy-key">
             <div>Deployer Log:</div>
             <div className="deploy-value">
