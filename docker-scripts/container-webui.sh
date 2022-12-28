@@ -36,6 +36,10 @@ fi
 echo "Unpacking OpenShift client from ${oc_tar}..."
 tar xzf ${oc_tar} -C /usr/local/bin/
 
+# Clear the state directory
+mkdir -p ${STATUS_DIR}/state
+rm -rf ${STATUS_DIR}/state/*
+
 echo "Starting Deployer web UI and backend service..."
 nginx
 python3 webapp.py
