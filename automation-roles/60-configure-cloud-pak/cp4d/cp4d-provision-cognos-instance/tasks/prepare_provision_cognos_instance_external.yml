@@ -1,44 +1,50 @@
 ---
 - name: Show Db2 SaaS service used for Cognos Analytics metasttore
   debug:
-    msg: "Using Db2 SAAS service {{ cognos_instance.metastore_ref }} for Cognos Analytics {{ cognos_instance.name }} metastore database"
+    msg: "Using Db2 SAAS service {{ _cognos_instance.metastore_ref }} for Cognos Analytics {{ _cognos_instance.name }} metastore database"
 
 - set_fact:
-    ca_metastore_credentials_name: "{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ cognos_instance.name| replace('-','_') }}_ca"
-    cp4d_ca_db2_service_key_name: "svc_crd_cp4d_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ cognos_instance.name| replace('-','_') }}"
+    _ca_metastore_credentials_name: "{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ _cognos_instance.name| replace('-','_') }}_ca"
+    _cp4d_ca_db2_service_key_name: "svc_crd_cp4d_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ _cognos_instance.name| replace('-','_') }}"
 
-- name: Check availability of DB2 service instance {{ cognos_instance.metastore_ref }}
-  shell: "ibmcloud resource service-instance {{ cognos_instance.metastore_ref }}"
+- name: Check availability of DB2 service instance {{ _cognos_instance.metastore_ref }}
+  shell: |
+    ibmcloud resource service-instance {{ _cognos_instance.metastore_ref }}
 
-- name: Check availability of DB2 service key {{ ca_metastore_credentials_name }} for service instance {{ cognos_instance.metastore_ref }}
-  shell: "ibmcloud resource service-keys --instance-name {{ cognos_instance.metastore_ref }} | grep {{ ca_metastore_credentials_name }} | wc -l"
-  register: db2_service_key_lookup_result
+- name: Check availability of DB2 service key {{ _ca_metastore_credentials_name }} for service instance {{ _cognos_instance.metastore_ref }}
+  shell: |
+    ibmcloud resource service-keys \
+      --instance-name {{ _cognos_instance.metastore_ref }} | grep {{ _ca_metastore_credentials_name }} | wc -l
+  register: _db2_service_key_lookup_result
 
-- when: "not db2_service_key_lookup_result.stdout == '0'"
-  name: "{{ ca_metastore_credentials_name }} already exists"
-  fail: msg="The DB service instance {{ cognos_instance.metastore_ref }} already contains DB2 service key {{ ca_metastore_credentials_name }}. Ensure this database is not used by a different CA instance. Delete the DB2 service key and re-run."
+- when: "not _db2_service_key_lookup_result.stdout == '0'"
+  name: "{{ _ca_metastore_credentials_name }} already exists"
+  fail: msg="The DB service instance {{ _cognos_instance.metastore_ref }} already contains DB2 service key {{ _ca_metastore_credentials_name }}. Ensure this database is not used by a different CA instance. Delete the DB2 service key and re-run."
   
-- name: Create DB2 service key {{ cp4d_ca_db2_service_key_name }} if not available
-  shell: "ibmcloud resource service-key-create {{ cp4d_ca_db2_service_key_name }} --instance-name {{ cognos_instance.metastore_ref }}"
+- name: Create DB2 service key {{ _cp4d_ca_db2_service_key_name }} if not available
+  shell: |
+    ibmcloud resource service-key-create {{ _cp4d_ca_db2_service_key_name }} \
+      --instance-name {{ _cognos_instance.metastore_ref }}"
 
-- name: Get DB2 service key {{ cp4d_ca_db2_service_key_name }}
-  shell: "ibmcloud resource service-key {{ cp4d_ca_db2_service_key_name }} --output json"
-  register: db2_service_key_json
+- name: Get DB2 service key {{ _cp4d_ca_db2_service_key_name }}
+  shell: |
+    ibmcloud resource service-key {{ _cp4d_ca_db2_service_key_name }} --output json"
+  register: _db2_service_key_json
 
 - template:
     src: cognos_service_credentials.json.j2
-    dest: "{{ cp4d_automation_temp_dir.path }}/cognos_connection.json"
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_connection.json"
 - include_vars:
-    file: "{{ cp4d_automation_temp_dir.path }}/cognos_connection.json"
-    name: db2_service_key
+    file: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_connection.json"
+    name: _db2_service_key
 
 - set_fact:
-    db2_instance_name: "{{ cognos_instance.metastore_ref }}"
-    db2_instance_host: "{{ db2_service_key.hostname }}"
-    db2_instance_port: "{{ db2_service_key.port }}"
-    db2_instance_dbname: "{{ db2_service_key.database }}"
-    db2_instance_user_name: "{{ db2_service_key.username }}"
-    db2_instance_password: "{{ db2_service_key.password }}"
-    cp4d_platform_connection_name: "{{ cognos_instance.metastore_ref }}-connection"
+    _db2_instance_name: "{{ _cognos_instance.metastore_ref }}"
+    _db2_instance_host: "{{ _db2_service_key.hostname }}"
+    _db2_instance_port: "{{ _db2_service_key.port }}"
+    _db2_instance_dbname: "{{ _db2_service_key.database }}"
+    _db2_instance_user_name: "{{ _db2_service_key.username }}"
+    _db2_instance_password: "{{ _db2_service_key.password }}"
+    _cp4d_platform_connection_name: "{{ _cognos_instance.metastore_ref }}-connection"
 
 
