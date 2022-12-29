@@ -1,0 +1,124 @@
+apiVersion: noi.ibm.com/v1beta1
+kind: NOI
+metadata:
+  namespace: {{current_cp4waiops_cluster.project}}
+  name: evtmanager
+spec:
+  license:
+    accept: true
+  advanced:
+    antiAffinity: false
+    imagePullPolicy: IfNotPresent
+    imagePullRepository: cp.icr.io/cp/noi
+    ignoreReady: false
+    instanceId: iaf-zen-cpdservice
+    serviceInstanceName: iaf-zen-cpdservice
+    serviceNamespace: {{current_cp4waiops_cluster.project}}
+    storage:
+      storageClassName: {{ WAIOPS_STORAGE_CLASS_FILE }}
+  zen:
+    ignoreReady: false
+    instanceId: iaf-zen-cpdservice
+    #serviceInstanceName: iaf-zen-cpdservice
+    #serviceNamespace: cp4waiops
+    serviceInstanceName: iaf-zen-cpdservice
+    storage:
+      storageClassName: '{{ WAIOPS_STORAGE_CLASS_FILE }}'
+  ldap:
+    port: '389'
+    mode: standalone
+    userFilter: 'uid=%s,ou=users'
+    bindDN: 'cn=admin,dc=mycluster,dc=icp'
+    sslPort: '636'
+    url: 'ldap://localhost:389'
+    suffix: 'dc=mycluster,dc=icp'
+    groupFilter: 'cn=%s,ou=groups'
+    baseDN: 'dc=mycluster,dc=icp'
+    storageSize: 1Gi
+    serverType: CUSTOM
+    storageClass: {{ WAIOPS_STORAGE_CLASS_FILE }}
+  backupRestore:
+    enableAnalyticsBackups: false
+  topology:
+    enable: false
+    storageClassElasticTopology: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeElasticTopology: 75Gi
+    storageSizeFileObserver: 5Gi
+    storageClassFileObserver: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    iafCartridgeRequirementsName: ''   # cp4waiops-cartridge
+    appDisco:
+      enabled: false
+      scaleSSS: '1'
+      tlsSecret: ''
+      dbsecret: ''
+      db2database: taddm
+      dburl: ''
+      certSecret: ''
+      db2archuser: archuser
+      secure: false
+      scaleDS: '1'
+      db2user: db2inst1
+      dbport: '50000'
+    observers:
+      docker: false
+      taddm: false
+      servicenow: true
+      ibmcloud: false
+      alm: false
+      contrail: false
+      cienablueplanet: false
+      kubernetes: true
+      bigfixinventory: false
+      junipercso: false
+      dns: false
+      itnm: false
+      ansibleawx: false
+      ciscoaci: false
+      azure: false
+      rancher: false
+      newrelic: false
+      vmvcenter: true
+      rest: true
+      appdynamics: false
+      jenkins: false
+      zabbix: false
+      file: true
+      googlecloud: false
+      dynatrace: false
+      aws: false
+      openstack: false
+      vmwarensx: false
+    netDisco: false
+  version: {{current_cp4waiops_feature.noi_version}}
+  entitlementSecret: ibm-entitlement-key
+  clusterDomain: ''
+  integrations:
+    humio:
+      repository: ''
+      url: ''
+  persistence:
+    storageSizeNCOBackup: 5Gi
+    enabled: true
+    storageSizeNCOPrimary: 5Gi
+    storageClassNCOPrimary: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeImpactServer: 5Gi
+    storageClassImpactServer: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageClassKafka: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeKafka: 50Gi
+    storageClassCassandraBackup: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeCassandraBackup: 50Gi
+    storageClassZookeeper: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageClassCouchdb: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeZookeeper: 5Gi
+    storageSizeCouchdb: 20Gi
+    storageClassCassandraData: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeCassandraData: 50Gi
+    storageClassDB2: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageClassElastic: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeDB2: 5Gi
+    storageClassImpactGUI: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageSizeImpactGUI: 5Gi
+    storageSizeElastic: 75Gi
+    storageClassNCOBackup: {{ WAIOPS_STORAGE_CLASS_FILE }}
+    storageClassMinio: {{ WAIOPS_STORAGE_CLASS_FILE }}
+  deploymentType: trial

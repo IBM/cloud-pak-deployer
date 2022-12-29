@@ -1,0 +1,12 @@
+# Retrieve the openshift definition for the passed OpenShift name
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?name=='{{ _p_openshift_cluster_name }}']
+  when: (_p_openshift_cluster_name | default('')) != ''
+
+# Default to the first OpenShift definition if no cluster name was passed
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | first }}"
+  when: (_p_openshift_cluster_name | default('')) == ''

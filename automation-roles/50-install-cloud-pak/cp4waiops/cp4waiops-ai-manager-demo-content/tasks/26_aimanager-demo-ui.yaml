@@ -1,0 +1,107 @@
+---
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Generic Event Webhook 
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - AIOPS DEMO UI
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create DEMO UI"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name: 🚀 DEMO-UI - Delete old instance (ignore errors))
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    oc delete deployment -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui --ignore-not-found
+    oc delete job -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-create-config --ignore-not-found
+    oc delete job -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-create-config-events --ignore-not-found
+    oc delete job -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-create-config-logs --ignore-not-found
+    oc delete job -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-create-config-metrics --ignore-not-found
+    oc delete cm -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-config --ignore-not-found
+    oc delete cm -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-config-events --ignore-not-found
+    oc delete cm -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-config-logs --ignore-not-found
+    oc delete cm -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-config-metrics --ignore-not-found
+  register: CERT_ELEMENT
+  ignore_errors: true
+
+
+
+- name: 🚀 DEMO-UI - Set Demo UI Password from instance configuration
+  set_fact: current_demoui_aimanager_demo_pwd={{current_cp4waiops_feature.demoui_aimanager_demo_pwd | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 DEMO-UI - Set Demo UI Password from global configuration
+  set_fact: current_demoui_aimanager_demo_pwd={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  DEMO-UI -  Demo UI Password {{current_demoui_aimanager_demo_pwd}}
+  debug:
+    var: current_demoui_aimanager_demo_pwd
+
+
+
+
+
+- name: 🚀 DEMO-UI - Create CP4WAIOPS Demo UI Configuration
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/waiops-demo-ui/create-cp4waiops-demo-cm.j2
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Demo UI Configuration being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 DEMO-UI - Wait for Demo UI Configuration being ready
+  shell: |   
+          export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+          oc get cm -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-config --ignore-not-found --no-headers|grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+- name: 🚀 DEMO-UI - Create CP4WAIOPS Demo UI Deployment
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/waiops-demo-ui/create-cp4waiops-demo-deploy.j2
+
+
+# Wait for Demo UI being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 DEMO-UI - Wait for Demo UI being ready
+  shell: | 
+            export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+            oc get pod -n $WAIOPS_NAMESPACE-demo-ui |grep cp4waiops-demo-ui|grep "1/1"|grep -v "Terminating"|grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 50
+  delay: 15
+
+
+
+- name: Log
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export MESSAGE="Installing DEMO UI"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "              📥 DEMO UI Login:"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo ""  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🌏 URL:      http://$(oc get route -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui -o jsonpath={.spec.host})"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🔐 Token:    $(oc get cm -n $WAIOPS_NAMESPACE-demo-ui cp4waiops-demo-ui-config -o jsonpath='{.data.TOKEN}' && echo)"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+

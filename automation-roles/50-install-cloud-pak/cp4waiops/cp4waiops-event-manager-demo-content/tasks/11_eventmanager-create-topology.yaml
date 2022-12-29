@@ -1,0 +1,129 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Connection Details
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - LOAD OVERLAY MERGE TOPOLOGY 
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+  
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+  #when: PRINT_LOGINS == true
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Load Robotshop overlay Topology"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# WAIOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 TOPOLOGY - COPY OVERLAY TOPOLOGY TO POD
+  shell: |
+    set -x
+
+    echo "Create Custom Topology - Copy Topology to File Observer"
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+
+    # Get FILE_OBSERVER_POD
+    FILE_OBSERVER_POD=$(oc get po -n $EVTMGR_NAMESPACE -l app.kubernetes.io/instance=evtmanager-topology,app.kubernetes.io/name=file-observer -o jsonpath='{.items[0].metadata.name}')
+
+    LOAD_FILE_NAME="robot-shop-file.txt"
+    FILE_OBSERVER_CAP="{{role_path}}/templates/topology/$LOAD_FILE_NAME"
+    TARGET_FILE_PATH="/opt/ibm/netcool/asm/data/file-observer/${LOAD_FILE_NAME}"
+    echo "  Copying capture file [${FILE_OBSERVER_CAP}] to file observer pod [${FILE_OBSERVER_POD}]"
+    oc cp -n $EVTMGR_NAMESPACE ${FILE_OBSERVER_CAP} ${FILE_OBSERVER_POD}:${TARGET_FILE_PATH}
+
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+  #when: PRINT_LOGINS == true
+    #verbosity: 2
+
+
+
+
+- name: 🕦 TOPOLOGY -  Wait for File Observer Route to become ready
+  shell: |
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+    export TOPO_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-file-observer -o jsonpath={.spec.host})
+    ROUTE_RESPONSE=$(curl -X "GET" "$TOPO_ROUTE/1.0/file-observer/jobs" --insecure -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' -H 'content-type: application/json')
+    echo $ROUTE_RESPONSE
+  register: route_response
+  until: ("<title>Error 401 Unauthorized</title>" in route_response.stdout)
+  retries: 500
+  delay: 15      
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# WAIOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 TOPOLOGY - CREATE OVERLAY TOPOLOGY
+  shell: |
+    set -x
+    
+    echo "Create Custom Topology - Create File Observer Job"
+
+    export EVTMGR_NAMESPACE=$(oc get po -A|grep noi-operator |awk '{print$1}')
+
+    LOAD_FILE_NAME="robot-shop-file.txt"
+    TARGET_FILE_PATH="/opt/ibm/netcool/asm/data/file-observer/${LOAD_FILE_NAME}"
+
+    # Get Credentials
+    export EVTMGR_REST_USR=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret evtmanager-topology-asm-credentials -n $EVTMGR_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    export TOPO_ROUTE="https://"$(oc get route -n $EVTMGR_NAMESPACE evtmanager-topology-file-observer -o jsonpath={.spec.host})
+    export JOB_ID=robot-shop-topology
+
+    echo "Create File Observer Job"
+    echo "  URL: $TOPO_ROUTE"
+    echo "  LOGIN: $LOGIN"
+
+
+    # Get FILE_OBSERVER JOB
+    curl -X "POST" "$TOPO_ROUTE/1.0/file-observer/jobs" --insecure \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -H "accept: application/json" \
+      -H "Content-Type: application/json" \
+      -u $LOGIN \
+      -d "{
+      \"unique_id\": \"${JOB_ID}\",
+      \"description\": \"Automatically created by Nicks scripts\",
+      \"parameters\": {
+          \"file\": \"${TARGET_FILE_PATH}\"
+          }
+      }"
+
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+  
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+  #when: PRINT_LOGINS == true
+    #verbosity: 2
+

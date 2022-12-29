@@ -1,0 +1,131 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patches
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE KAFKA CONNECTIONS FOR INCEPTION
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Kafka Connections for Inception"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🌏 CONNECTIONS - Create KAFKA Connections for Inception
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    oc create route passthrough -n $WAIOPS_NAMESPACE --service aimanager-aio-controller
+
+
+    export AI_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE ai-platform-api  -o jsonpath={.spec.host})
+    export AIO_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE aimanager-aio-controller -o jsonpath={.spec.host})
+
+
+
+    echo "        Namespace:          $WAIOPS_NAMESPACE"
+    echo "        AI_PLATFORM_ROUTE:  $AI_PLATFORM_ROUTE"
+    echo "        AIO_PLATFORM_ROUTE: $AIO_PLATFORM_ROUTE"
+    echo ""
+
+    echo "       🛠️   Getting ZEN Token"
+
+
+    ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+    ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+    LOGIN_USER=admin
+    LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+    ZEN_LOGIN_RESPONSE=$(
+    curl -k \
+    -H 'Content-Type: application/json' \
+    -XPOST \
+    "${ZEN_LOGIN_URL}" \
+    -d '{
+        "username": "'"${LOGIN_USER}"'",
+        "password": "'"${LOGIN_PASSWORD}"'"
+    }' 2> /dev/null
+    )
+
+    ZEN_LOGIN_MESSAGE=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .message)
+
+    if [ "${ZEN_LOGIN_MESSAGE}" != "success" ]; then
+        echo "Login failed: ${ZEN_LOGIN_MESSAGE}"
+
+    fi
+
+    ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+    #echo "${ZEN_TOKEN}"
+    #echo "        AI_PLATFORM_ROUTE:  $ZEN_TOKEN"
+
+    echo "Sucessfully logged in" 
+    echo ""
+
+
+    export result=$(curl -X 'POST' --insecure \
+    "https://$AIO_PLATFORM_ROUTE/v3/connections" \
+    -H 'accept: application/json' \
+    -H 'Content-Type: application/json' \
+      -H "authorization: Bearer $ZEN_TOKEN"  \
+    -d '
+    {
+      "application_group_id": "1000",
+      "application_id": "1000",
+      "connection_config": {
+        "data_flow": true,
+        "collection_mode": "inference",
+        "json_option": "none",
+        "connection_type": "kafka",
+        "creator_user_name": "",
+        "description": "Automatically created by Nicks scripts",
+        "topic": "cp4waiops-cartridge-logs-elk-iuacrepx",
+        "base_parallelism": 5,
+        "num_partitions": 1,
+        "display_name": "ELKInception",
+        "json_option": "none",
+        "logs_per_second": 2000
+      },
+      "connection_type": "kafka",
+      "connection_updated_at": "2021-07-26T15:18:25.43602Z",
+      "datasource_type": "logs",
+        "data_flow": true,
+        "mapping": {
+          "codec": "elk",
+          "message_field": "message",
+          "log_entity_types": "clusterName, kubernetes.container_image_id, kubernetes.host, kubernetes.container_name, kubernetes.pod_name",
+          "instance_id_field": "kubernetes.container_name",
+          "rolling_time": 10,
+          "timestamp_field": "@timestamp"
+        },
+      "request_action": "create"
+    }')
+
+    echo $result | jq -r '.connection_id'
+    export connection_id=$(echo $result | jq -r '.connection_id')
+
+    echo "Enabling Flow"
+    export result=$(curl -X 'PUT' --insecure "https://$AIO_PLATFORM_ROUTE/v3/connections/$connection_id/enable" -H 'accept: application/json' -H 'Content-Type: application/json' -H "authorization: Bearer $ZEN_TOKEN")
+    echo $result
+
+
+  ignore_errors: true
+  when: create_external_routes == true
+  register: output_string
+  args:
+    executable: /bin/bash
+  
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1
+
+
+

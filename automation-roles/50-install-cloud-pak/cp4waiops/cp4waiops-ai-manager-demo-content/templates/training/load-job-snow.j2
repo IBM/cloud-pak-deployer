@@ -1,0 +1,56 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-snow-indexes
+  namespace: default
+spec:
+  serviceAccountName: demo-admin
+  template:
+    spec:
+      containers:
+        - name: load
+          image: niklaushirt/cp4waiops-tools:2.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "150m"
+            limits:
+              memory: "1256Mi"
+              cpu: "1200m"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              #!/bin/bash
+              #set -x
+
+              echo "*****************************************************************************************************************************"
+              echo " ✅ STARTING: Load service now training files"
+              echo "*****************************************************************************************************************************"
+
+              export TRAINING_REPO={{ current_cp4waiops_feature.training_data_url }}{{ current_cp4waiops_feature.training_data_repo }}.git
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    📥 Downloading service now training files from $TRAINING_REPO"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              git clone $TRAINING_REPO
+
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    🚀 Starting Data Load"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              cd {{ current_cp4waiops_feature.training_data_repo }}
+              ./training/robotshop-load-snow-for-training.sh
+
+              echo "*****************************************************************************************************************************"
+              echo " ✅ DONE"
+              echo "*****************************************************************************************************************************"
+
+          env:
+            - name: INDEX_OVERWRITE
+              value : "false"
+            - name: VERSION
+              value : "3.3"
+      restartPolicy: Never
+
+  backoffLimit: 4
