@@ -504,10 +504,10 @@ def saveConfig():
 def environmentVariable():
     result={}
 
-    if 'REACT_APP_CPD_WIZARD_PAGE_TITLE' in os.environ:
-      result['REACT_APP_CPD_WIZARD_PAGE_TITLE']=os.environ['REACT_APP_CPD_WIZARD_PAGE_TITLE']
+    if 'CPD_WIZARD_PAGE_TITLE' in os.environ:
+      result['CPD_WIZARD_PAGE_TITLE']=os.environ['CPD_WIZARD_PAGE_TITLE']
     else:
-      result['REACT_APP_CPD_WIZARD_PAGE_TITLE']="Cloud Pak Deployer"
+      result['CPD_WIZARD_PAGE_TITLE']="Cloud Pak Deployer"
 
     if 'CPD_WIZARD_MODE' in os.environ:
       result['CPD_WIZARD_MODE']=os.environ['CPD_WIZARD_MODE']
