@@ -12,7 +12,9 @@ import CloudPak from './CloudPak/CloudPak';
 import fileDownload from 'js-file-download';
 import yaml from 'js-yaml';
 
-const Wizard = () => {
+const Wizard = ({setHeaderTitle,
+                 headerTitle
+                }) => {
 
    //wizard index
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -582,6 +584,8 @@ const Wizard = () => {
                             setCurrentIndex={setCurrentIndex}
                             setConfigDir={setConfigDir}
                             setStatusDir={setStatusDir}
+                            setHeaderTitle={setHeaderTitle}
+                            headerTitle={headerTitle}
                       >
                       </Selection> : null} 
       

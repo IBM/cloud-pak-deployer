@@ -5,15 +5,16 @@ import {
   HeaderGlobalBar,
 } from 'carbon-components-react';
 
-let headerTitle = process.env.REACT_APP_CPD_WIZARD_PAGE_TITLE  || "Cloud Pak Deployer"
+const CPDeployerHeader = ({headerTitle}) => {
 
-const CPDeployerHeader = () => (
-  <Header aria-label="Cloud Pak Deployer">
-    <HeaderName href="/" prefix="">
-    {headerTitle}
-    </HeaderName>        
-    <HeaderGlobalBar />
-  </Header>
-);
+  return (
+    <Header aria-label={headerTitle}>
+      <HeaderName href="/" prefix="">
+        {headerTitle}
+      </HeaderName>        
+      <HeaderGlobalBar />
+    </Header>
+  )
+}
 
 export default CPDeployerHeader;

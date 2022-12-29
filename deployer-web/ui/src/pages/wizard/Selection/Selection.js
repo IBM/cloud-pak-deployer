@@ -8,7 +8,10 @@ const Selection = ({setCpdWizardMode,
                     selection,
                     setCurrentIndex,
                     setConfigDir,
-                    setStatusDir
+                    setStatusDir,
+                    setHeaderTitle,
+                    headerTitle
+
                    }) => {
 
     const [loadingEnviromentVariables, setLoadingEnviromentVariables] = useState(false)
@@ -53,6 +56,9 @@ const Selection = ({setCpdWizardMode,
             setCurrentIndex(1)
           }
 
+          if (res.data.CPD_WIZARD_PAGE_TITLE && res.data.CPD_WIZARD_PAGE_TITLE !== headerTitle) {
+            setHeaderTitle(res.data.CPD_WIZARD_PAGE_TITLE)
+          }
           if (res.data.STATUS_DIR) {
             setStatusDir(res.data.STATUS_DIR)
           }
