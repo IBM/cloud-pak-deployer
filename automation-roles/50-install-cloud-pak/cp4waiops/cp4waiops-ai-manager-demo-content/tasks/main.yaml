@@ -1,0 +1,483 @@
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#       __________  __ ___       _____    ________            
+#      / ____/ __ \/ // / |     / /   |  /  _/ __ \____  _____
+#     / /   / /_/ / // /| | /| / / /| |  / // / / / __ \/ ___/
+#    / /___/ ____/__  __/ |/ |/ / ___ |_/ // /_/ / /_/ (__  ) 
+#    \____/_/      /_/  |__/|__/_/  |_/___/\____/ .___/____/  
+#                                              /_/            
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------"
+#  Installing CP4WAIOPS
+#
+#  CloudPak for Watson AIOps
+#
+#  ©2022 nikh@ch.ibm.com
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Installs:
+#
+#  - OpenLDAP & Register with AI Manager
+#  - RobotShop Demo App
+#  - Demo Service Account 
+#  - AWX (Open Source Ansible Tower) with preloaded Playbooks
+#  - Disables ASM Service match rule 
+#  - Train Models
+#    - Create Training Definitions (TG, LAD, CR, SI. Turn off RSA) 
+#    - Create Training Data (LAD, SNOW) 
+#    - Train Models (TG, LAD, CR, SI) 
+#  - Topology
+#    - Create K8s Observer
+#    - Create ASM merge rules
+#    - Load ASM merge Topology
+#    - Create AI Manager Application
+#  - Creates valid certificate for Ingress (Slack) 
+#  - External Routes (Flink, Topology, ...)
+#  - Disables ASM Service match rule 
+#  - Create Policy Creation for Stories and Runbooks 
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+ 
+
+- name: ✴️ ✴️ ✴️ INSTALLATION MODULE START - {{current_cp4waiops_feature.kind}}
+  debug: 
+    msg: 
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "                                                                                                                                                   "
+    - "      🚀 CloudPak for Watson AIOps - INSTALLING {{current_cp4waiops_feature.kind}}                                                                                          "
+    - "                                                                                                                                                   "
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INITIALIZATION
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Initialize Logging
+- name: 📥  Init Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/01_init-logging.yaml"
+    
+
+
+- name:  🟣 INITIALIZATION - Installation Parameters"
+  debug:
+    msg:
+    - "***********************************************************************************************"
+    - " 🚀 Installing {{current_cp4waiops_feature.kind}}"
+    - "***********************************************************************************************"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 STORAGE"
+    - "     💾 Installation Options for SPECIFIC MODULE {{ current_cp4waiops_feature.kind}}"
+    - "        Storage Class File Override:             {{ current_cp4waiops_feature.storage_class_file | default('no override') }}"
+    - "        Storage Class Block Override:            {{ current_cp4waiops_feature.storage_class_block | default('no override') }}"
+    - "        Storage Class InfraManagement:           {{ current_cp4waiops_feature.storage_class_file | default('no override') }}"
+    - ""
+    - "     💾 Installation Options from GLOBAL"
+    - "        Storage Class File Override:             {{ ocp_storage_class_file | default('not defined') }}"
+    - "        Storage Class Block Override:            {{ ocp_storage_class_block | default('not defined') }}"
+    - "        Storage Class InfraManagement:           {{ ocp_storage_class_file | default('not defined') }}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  🌏 GLOBAL CONFIG"
+    - "      🔐 Global Password for all Instances:       {{ global_config.global_password  | default('not defined') }}"
+    - "      📝 Create App Menu Items in OCP:            {{ global_config.create_ocp_items  | default('not defined') }}"
+    - "      📝 Create Welcome Cards in AI Manager:      {{ global_config.create_cards  | default('not defined') }}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 TRAINING"
+    - "     ✅ Create Training for Temp Grouping:        {{current_cp4waiops_feature.training_create_training_temporal}}"
+    - "     🔽 Load Data for Log Anomaly:                {{current_cp4waiops_feature.training_load_data_logs}}"
+    - "     ✅ Create Training for Log Anomaly:          {{current_cp4waiops_feature.training_create_training_logs}}"
+    - "     🚀 Run Training for Log Anomaly:             {{current_cp4waiops_feature.training_run_training_logs}}"
+    - "     🔽 Load Data for Metric Anomaly:             {{current_cp4waiops_feature.training_load_data_logs}}"
+    - "     ✅ Create Training for Metric Anomaly:       {{current_cp4waiops_feature.training_create_training_metrics}}"
+    - "     🚀 Run Training for Metric Anomaly:          {{current_cp4waiops_feature.training_run_training_metrics}}"
+    - "     🔽 Load Data for Similar Incidents:          {{current_cp4waiops_feature.training_load_data_logs}}"
+    - "     ✅ Create Training for Similar Incidents:    {{current_cp4waiops_feature.training_create_training_snow}}"
+    - "     🚀 Run Training for Similar Incidents:       {{current_cp4waiops_feature.training_run_training_snow}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 TOPOLOGY"
+    - "     🈸 Install RobotShop Application:            {{current_cp4waiops_feature.install_robotshop}}"
+    - "     🛠️ Create RobotShop overlay topology:         {{current_cp4waiops_feature.install_robotshop_topology}}"
+    - "     🛠️ Create RobotShop K8s Observer:             {{current_cp4waiops_feature.install_robotshop_observer}}"
+    - "     🛠️ Create RobotShop Templates:                {{current_cp4waiops_feature.create_topology_templates}}"
+    - "     🈸 Create RobotShop App:                     {{current_cp4waiops_feature.create_topology_apps}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 RUNBOOKS"
+    - "     ✅ Install AWX:                              {{current_cp4waiops_feature.install_awx}}"
+    - "     ✅ Load AWX Playbooks:                       {{current_cp4waiops_feature.load_awx_playbooks}}"
+    - "     ✅ Integrate AWX and AI Manager:             {{current_cp4waiops_feature.integrate_awx_aimanager}}"
+    - "     ✅ Load AI Manager Runbooks:                 {{current_cp4waiops_feature.load_aimanager_runbooks}}"
+    - "     ✅ Create Runbook Policy:                    {{current_cp4waiops_feature.create_runbook_policy}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 DEMO UI"
+    - "     ✅ Install Demo UI:                          {{current_cp4waiops_feature.install_demo_ui}}"
+    - "     🌏 Slack URL:                                {{current_cp4waiops_feature.demoui_slack_url}}"
+    - "     👩‍💻 Slack User:                               {{current_cp4waiops_feature.demoui_slack_user}}"
+    - "     🔐 Slack Password:                           {{current_cp4waiops_feature.demoui_slack_pwd}}"
+    - "     👩‍💻 AI Manager Demo User:                     {{current_cp4waiops_feature.demoui_aimanager_demo_user}}"
+    - "     🔐 AI Manager Demo Password (global override): {{current_cp4waiops_feature.demoui_aimanager_demo_pwd | default('not defined')}}"
+    - "     ❗ Admin Mode:                               {{current_cp4waiops_feature.demoui_admin_mode}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 OUTPUT"
+    - "     🔐 Pring Logins:                             {{current_cp4waiops_feature.print_logins}}"
+    - "     🌏 Open Web UIs:                             {{current_cp4waiops_feature.open_web_ui}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 LDAP"
+    - "     ✅ LDAP Install:                             {{current_cp4waiops_feature.install_ldap}}"
+    - "     🌏 LDAP Domain:                              {{current_cp4waiops_feature.ldap_domain}}"
+    - "     🌏 LDAP Base:                                {{current_cp4waiops_feature.ldap_base}}"
+    - "     🔐 LDAP Admin Password (global override):    {{current_cp4waiops_feature.ldap_admin_password  | default('not defined')}}"
+    - "     🔐 LDAP Users Password (global override):    {{current_cp4waiops_feature.ldap_user_password  | default('not defined')}}"
+    - "     🚀 LDAP Register:                            {{current_cp4waiops_feature.ldap_register}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 MISC PARAMETERS"
+    - "     🌏 Create external routes:                   {{current_cp4waiops_feature.create_external_routes}}"
+    - "     🛠️ Create a valid ingress cert:               {{current_cp4waiops_feature.create_valid_ingress_certificate}}"
+    - "     🛠️ Create Policy for Story Creation:          {{current_cp4waiops_feature.create_story_policy}}"
+    - "     🛠️ Create Kafka Log connection:               {{current_cp4waiops_feature.create_log_connection}}"
+    - "     🛠️ Create Service Account:                    {{current_cp4waiops_feature.create_account}}"
+    - "-----------------------------------------------------------------------------------------------"
+    - "***********************************************************************************************"
+    - "-----------------------------------------------------------------------------------------------"
+    - "  📥 CONFIG"
+    - "  {{ current_cp4waiops_feature}}"
+    - "***********************************************************************************************"
+    - "***********************************************************************************************"
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Delete lingering Pods before check for install
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🚀 Delete lingering Pods before check for reinstall
+  shell: |
+    oc delete pod $(oc get po -n {{ current_cp4waiops_cluster.project }}|grep ContainerStatusUnknown|awk '{print$1}'):-notfound -n {{ current_cp4waiops_cluster.project }} --ignore-not-found
+  register: kubectl_get_pods
+  ignore_errors: true
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CHECK FOR INSTALLATION READY
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Check that CP4WAIOPS has been completely installed
+- name: 📥  Wait for AI MAnager to be Ready
+  include_tasks: 99_aimanager-wait-cp4waiops.yaml
+
+- name: 📥  Start Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/90-log-start.yaml"
+
+
+- name: 📥 Get Storage Class
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/05_init-get-storage-class.yaml"
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL ADDONS
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Install OpenLDAP
+- name: 📥  Install LDAP
+  include_tasks: 21_addons-ldap.yaml
+  when: current_cp4waiops_feature.install_ldap == true
+
+# Create Service Account and USER
+- name: 📥  Create Service Account
+  include_tasks: 22_addons-user.yaml
+  when: current_cp4waiops_feature.create_account == true
+
+# Create Demo Apps (Robot-Shop)
+- name: 📥  Create Demo Apps 
+  include_tasks: 23_addons-demoapps.yaml
+  when: current_cp4waiops_feature.install_robotshop == true
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE ROUTES
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥  Create Routes
+  include_tasks: 30_aimanager-create-routes.yaml
+  when: current_cp4waiops_feature.create_external_routes == true
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# LOAD MODEL TRAINING DATA ahead of time
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Load data
+- name: 📥  Load Data SNOW
+  include_tasks: 51_aimanager-training-load-snow.yaml
+  when: current_cp4waiops_feature.training_load_data_snow == true
+
+- name: 📥  Load Data LOGS
+  include_tasks: 52_aimanager-training-load-logs.yaml
+  when: current_cp4waiops_feature.training_load_data_logs == true
+
+- name: 📥  Load Data METRICS
+  include_tasks: 53_aimanager-training-load-metric.yaml
+  when: current_cp4waiops_feature.training_load_data_metrics == true
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE TOPOLOGY (part 1)
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥  Create Topology Observers
+  include_tasks: 41_aimanager-create-observers.yaml
+  when: current_cp4waiops_feature.install_robotshop_observer == true
+
+- name: 📥  Load Topology Merge Rules
+  include_tasks: 42_aimanager-load-topology-merge.yaml
+  when: current_cp4waiops_feature.install_robotshop_topology == true
+
+- name: 📥  Create Overlay Topology
+  include_tasks: 43_aimanager-create-topology.yaml
+  when: current_cp4waiops_feature.install_robotshop_topology == true
+
+- name: 📥  Disable Topology Match Rules
+  include_tasks: 44_aimanager-disable-match-token-rule.yaml
+  when: current_cp4waiops_feature.install_robotshop_topology == true
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# INSTALL AWX while training data is loading   
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥  Install AWX
+  include_tasks: 24_addons-awx.yaml   
+  when: current_cp4waiops_feature.install_awx == true
+  
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE TOPOLOGY (part 2)
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥  Create Topology Templates
+  include_tasks: 45_aimanager-create-aiops-application-templates.yaml
+  when: current_cp4waiops_feature.create_topology_templates == true
+
+- name: 📥  Create Topology Application
+  include_tasks: 45_aimanager-create-aiops-application.yaml
+  when: current_cp4waiops_feature.create_topology_apps == true
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# POSTINSTALL TASKS
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Register LDAP Users
+- name: 📥  Register LDAP Server
+  include_tasks: 25-post-ldap-register.yaml
+  when: current_cp4waiops_feature.install_ldap == true and current_cp4waiops_feature.ldap_register == true
+# Create valid certificate for Ingress (for Slack)
+- name: 📥  Create valid certificate for Ingress
+  include_tasks: 31_aimanager-patch-ingress.yaml
+  when: current_cp4waiops_feature.create_valid_ingress_certificate == true
+
+
+
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE RUNBOOKS
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Create Runbooks    
+- name: 📥  Wait for AWX to be ready
+  include_tasks: 46_aimanager-wait-awx.yaml
+  when: current_cp4waiops_feature.install_awx == true
+
+- name: 📥  Load Demo Playbooks
+  include_tasks: 48_aimanager-load-awx-playbooks-for-demo.yaml
+  when: current_cp4waiops_feature.load_awx_playbooks == true 
+
+- name: 📥  Create AWX Connection
+  include_tasks: 47_aimanager-create-awx-connection.yaml
+  when: current_cp4waiops_feature.integrate_awx_aimanager == true
+
+# Load Demo Runbooks into AI Manager
+- name: 📥  Load Demo Runbooks
+  include_tasks: 49_aimanager-load-runbooks-for-demo.yaml
+  when: current_cp4waiops_feature.load_aimanager_runbooks == true
+
+
+
+
+
+# Restart Anomaly Pods to make anomaly detection workk
+    #- role: 89_aimanager-reset-anomaly-detection
+
+
+
+
+
+ 
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE MODEL TRAINING
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Create Training definitions
+- name: 📥  Check if Models exist
+  include_tasks: 54_aimanager-training-check-exists.yaml
+
+- name: 📥  Create Training Temporal Grouping
+  include_tasks: 55_aimanager-training-create-tg-configuration.yaml
+  when: current_cp4waiops_feature.training_create_training_temporal and TRAINING_EXISTS==false
+
+- name: 📥  Create Training Metrics
+  include_tasks: 56_aimanager-training-create-metric-configuration.yaml
+  when: current_cp4waiops_feature.training_create_training_metrics == true and TRAINING_EXISTS==false
+
+- name: 📥  Create Training SNOW 
+  include_tasks: 57_aimanager-training-create-snow-configuration.yaml
+  when: current_cp4waiops_feature.training_create_training_snow == true and TRAINING_EXISTS==false
+
+- name: 📥  Create Training Logs
+  include_tasks: 58_aimanager-training-create-logs-configuration.yaml
+  when: current_cp4waiops_feature.training_create_training_logs == true and TRAINING_EXISTS==false
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Create Policies
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Create Story Creation and Runbook Policies
+- name: 📥  Create Story Creation Policy
+  include_tasks: 50_aimanager-create-policies-stories.yaml
+  when: current_cp4waiops_feature.create_story_policy == true
+
+- name: 📥  Create Runbook Trigger Policy
+  include_tasks: 50_aimanager-create-policies-runbooks.yaml
+  when: current_cp4waiops_feature.create_runbook_policy == true
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# RUN MODEL TRAINING
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Train models
+- name: 📥  Wait for Trainingdata to finish loading
+  include_tasks: 60_aimanager-training-load-wait.yaml
+  when: (current_cp4waiops_feature.training_load_data_logs == true or current_cp4waiops_feature.training_load_data_snow == true or current_cp4waiops_feature.training_load_data_metrics == true) and TRAINING_EXISTS==false
+
+- name: 📥  Run SNOW Training
+  include_tasks: 61_aimanager-training-run-snow.yaml
+  when: current_cp4waiops_feature.training_run_training_snow == true and TRAINING_EXISTS==false
+
+- name: 📥  Run LAD Training
+  include_tasks: 62_aimanager-training-run-logs.yaml
+  when: current_cp4waiops_feature.training_run_training_logs == true and TRAINING_EXISTS==false
+
+- name: 📥  Run METRICS Training
+  include_tasks: 63_aimanager-training-run-metric.yaml
+  when: current_cp4waiops_feature.training_run_training_metrics == true and TRAINING_EXISTS==false
+      
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE CONNECTIONS FOR INCEPTION
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Create Kafka Connections
+- name: 📥   Create Kafka ELK connection
+  include_tasks: 65_aimanager-create-kafka-connections.yaml
+  when: current_cp4waiops_feature.create_log_connection == true
+
+
+
+
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# CREATE DEMO UI APP
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+- name: 📥  Install Demo UI
+  include_tasks: 26_aimanager-demo-ui.yaml
+  when: current_cp4waiops_feature.install_demo_ui == true
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Delete lingering Luigi Pods 
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   ⚠️ HACK - Delete lingering Luigi Pods  (hack 3.5)
+  shell: |
+    oc delete pod $(oc get po -n {{ current_cp4waiops_cluster.project }}|grep ImagePullBackOff|awk '{print$1}'):-notfound -n {{ current_cp4waiops_cluster.project }} --ignore-not-found
+  register: kubectl_get_pods
+  ignore_errors: true
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create Openshift WebConsole Menu Item
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 📥  Create Demo UI Openshift WebConsole Demo Menu Item
+  include_tasks: 91_aimanager-create-ocp-demo-menu.yaml
+  when: global_config.create_ocp_items | default(true) == true  
+
+- name: 📥  Create Demo UI Openshift WebConsole Additional Menu Item
+  include_tasks: 91_aimanager-create-ocp-tools-menu.yaml
+  when: global_config.create_ocp_items | default(true) == true  
+
+# Update AI Manager Cards
+- name: 📥 Update AI Manager Cards
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_update_cards.yaml"
+
+
+
+# Access and documentaiton
+- name: 📥  Get all logins
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/90_core-get-all-logins.yaml"
+  when: current_cp4waiops_feature.print_logins == true
+
+
+
+- name: 📥  Open AI Manager
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_open-aimanager.yaml"
+  when: current_cp4waiops_feature.open_web_ui == true
+
+- name: 📥  Open Demo UI
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_open-demoui.yaml"
+  when: current_cp4waiops_feature.open_web_ui == true
+
+
+- name: 📥  Open Documentation
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_open-doc.yaml"
+  when: current_cp4waiops_feature.open_web_ui == true
+
+
+
+- name: 📥  End Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/91-log-end.yaml"
+
+
+
+
+
+- name:  ✅ INSTALLATION MODULE DONE - {{current_cp4waiops_feature.kind}}
+  debug: 
+    msg:  
+
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "                                                                                                                                                   "
+    - "       ✅ CloudPak for Watson AIOps - DONE INSTALLING {{current_cp4waiops_feature.kind}}                                                                                 "
+    - "                                                                                                                                                   "
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"

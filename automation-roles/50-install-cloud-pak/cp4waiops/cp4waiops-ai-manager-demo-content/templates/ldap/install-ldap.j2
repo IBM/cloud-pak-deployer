@@ -1,0 +1,401 @@
+---
+# Source: openldap/templates/openldap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: openldap-seedusers
+  namespace: default
+data:
+  seedusers.ldif: |    
+    dn: ou=Groups,dc=ibm,dc=com
+    changetype: add
+    objectclass: organizationalUnit
+    ou: Groups
+    
+    # Add People OU
+    dn: ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: organizationalUnit
+    ou: People
+    
+    # Add users
+    dn: uid=demo,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: demo
+    displayname: demo
+    sn: demo
+    cn: demo
+    mail: demo@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=dev,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: dev
+    displayname: dev
+    sn: dev
+    cn: dev
+    mail: dev@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=test,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: test
+    displayname: test
+    sn: test
+    cn: test
+    mail: test@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=prod,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: prod
+    displayname: prod
+    sn: prod
+    cn: prod
+    mail: prod@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+
+    
+    dn: uid=nik,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: nik
+    displayname: NiklausHirt
+    sn: nik
+    cn: nik
+    mail: nik@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=sre1,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: sre1
+    displayname: sre1
+    sn: sre1
+    cn: sre1
+    mail: sre1@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=sre2,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: sre2
+    displayname: sre2
+    sn: sre2
+    cn: sre2
+    mail: sre2@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    
+    
+    dn: uid=icpuser,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: icpuser
+    displayname: icpuser
+    sn: icpuser
+    cn: icpuser
+    mail: icpuser@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=icpadmin,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: icpadmin
+    displayname: icpadmin
+    sn: icpadmin
+    cn: icpadmin
+    mail: icpadmin@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=unityadmin,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: unityadmin
+    displayname: unityadmin
+    sn: unityadmin
+    cn: unityadmin
+    mail: unityadmin@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    dn: uid=impactadmin,ou=People,dc=ibm,dc=com
+    changetype: add
+    objectclass: inetOrgPerson
+    objectclass: organizationalPerson
+    objectclass: person
+    objectclass: top
+    uid: impactadmin
+    displayname: impactadmin
+    sn: impactadmin
+    cn: impactadmin
+    mail: impactadmin@ibm.com
+    userpassword: {{current_ldap_user_password}}
+    
+    
+    
+    # Create user group
+    dn: cn=demo,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: demo
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    owner: cn=admin,dc=ibm,dc=com
+    uniquemember: uid=demo,ou=People,dc=ibm,dc=com
+    uniquemember: uid=dev,ou=People,dc=ibm,dc=com
+    uniquemember: uid=prod,ou=People,dc=ibm,dc=com
+    uniquemember: uid=test,ou=People,dc=ibm,dc=com
+    uniquemember: uid=nik,ou=People,dc=ibm,dc=com
+    
+    # Create user group
+    dn: cn=dev,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: dev
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    owner: cn=admin,dc=ibm,dc=com
+    uniquemember: uid=dev,ou=People,dc=ibm,dc=com
+    
+    # Create user group
+    dn: cn=test,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: test
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    owner: cn=admin,dc=ibm,dc=com
+    uniquemember: uid=test,ou=People,dc=ibm,dc=com
+    
+    # Create user group
+    dn: cn=prod,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: prod
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    owner: cn=admin,dc=ibm,dc=com
+    uniquemember: uid=prod,ou=People,dc=ibm,dc=com
+    
+    
+    dn: cn=icpadmins,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: icpadmins
+    owner: uid=icpadmin,ou=People,dc=ibm,dc=com
+    description: ICP Admins group
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    uniquemember: uid=icpadmin,ou=People,dc=ibm,dc=com
+    
+    dn: cn=icpusers,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: icpusers
+    owner: uid=icpuser,ou=People,dc=ibm,dc=com
+    description: ICP Users group
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    uniquemember: uid=icpuser,ou=People,dc=ibm,dc=com
+    uniquemember: uid=icpadmin,ou=People,dc=ibm,dc=com
+    
+    dn: cn=unityadmins,ou=Groups,dc=ibm,dc=com
+    changetype: add
+    cn: unityadmins
+    owner: uid=unityadmin,ou=People,dc=ibm,dc=com
+    description: Unity Admins group
+    objectclass: groupOfUniqueNames
+    objectclass: top
+    uniquemember: uid=unityadmin,ou=People,dc=ibm,dc=com
+---
+# Source: openldap/templates/openldap.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: openldap
+  name: openldap
+  namespace: default
+spec:
+  ports:
+    - port: 389
+      targetPort: 389
+      nodePort: 32314
+  type: NodePort
+  selector:
+    app: openldap
+---
+# Source: openldap/templates/phpldapadmin.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap-admin
+  namespace: default
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 31080
+  selector:
+    app: openldap-admin
+---
+# Source: openldap/templates/openldap.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openldap
+  namespace: default
+  labels:
+    app: openldap
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap
+  template:
+    metadata:
+      labels:
+        app: openldap
+    spec:
+      initContainers:
+        - name: init-copy
+          image: busybox
+          command: ['sh','-c','cp /config-map/* /config-storage; ls -lrt /config-storage']
+          volumeMounts:
+          - name: openldap-seedusers
+            mountPath: /config-map
+          - name: config-storage
+            mountPath: /config-storage
+      containers:
+        - name: openldap
+          image: osixia/openldap:1.3.0
+          args: ["--loglevel", "debug"]
+          volumeMounts:
+            - name: config-storage
+              mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
+            - name: ldap-certs
+              mountPath: /container/service/slapd/assets/certs
+          ports:
+            - containerPort: 389
+            - containerPort: 636
+          env:
+            - name: LDAP_LOG_LEVEL
+              value: "256"
+            - name: LDAP_ORGANISATION
+              value: "demo"
+            - name: LDAP_DOMAIN
+              value: "{{ current_cp4waiops_feature.ldap_domain }}"
+            - name: LDAP_ADMIN_PASSWORD
+              value: "{{ current_ldap_admin_password }}"
+            - name: LDAP_REMOVE_CONFIG_AFTER_SETUP
+              value: "false"
+      volumes:
+        - name: config-storage
+          emptyDir: {}
+        - name: ldap-certs
+          emptyDir: {}
+        - name: openldap-seedusers
+          configMap:
+            name: openldap-seedusers
+---
+# Source: openldap/templates/phpldapadmin.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openldap-admin
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: openldap-admin
+  template:
+    metadata:
+      labels:
+        app: openldap-admin
+    spec:
+      containers:
+      - name: openldap-admin
+        image: docker.io/osixia/phpldapadmin:0.7.0
+        ports:
+          - containerPort: 80
+        env:
+        - name: PHPLDAPADMIN_HTTPS
+          value: "false"
+        - name: PHPLDAPADMIN_LDAP_HOSTS
+          value: "openldap"
+---
+# Source: openldap/templates/openldap.yaml
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: openldap
+  namespace: default
+  labels:
+    app: openldap
+spec:
+  to:
+    kind: Service
+    name: openldap
+    weight: 100
+  wildcardPolicy: None
+---
+# Source: openldap/templates/phpldapadmin.yaml
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: openldap-admin
+  namespace: default
+spec:
+  to:
+    kind: Service
+    name: openldap-admin
+    weight: 100
+  wildcardPolicy: None
+---
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: admin
+  namespace: openldap
+spec:
+  to:
+    kind: Service
+    name: openldap-admin
+    weight: 100
+  port:
+    targetPort: 80
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Allow
+  wildcardPolicy: None

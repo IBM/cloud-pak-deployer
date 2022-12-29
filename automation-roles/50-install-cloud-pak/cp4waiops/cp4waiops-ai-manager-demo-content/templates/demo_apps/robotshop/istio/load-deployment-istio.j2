@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: load
+  namespace: robot-shop
+  labels:
+    service: load
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v1
+      service: load
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v1
+        service: load
+    spec:
+      containers:
+      - name: load
+        env:
+          - name: HOST
+            value: {{ ISTIO_INGRESSGATEWAY }}
+          - name: NUM_CLIENTS
+            value: "15"
+          - name: SILENT
+            value: "1"
+          - name: ERROR
+            value: "0"
+        image: robotshop/rs-load:latest
+        resources:
+          limits:
+            cpu: 500m
+            memory: 500Mi
+          requests:
+            cpu: 100m
+            memory: 100Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: load
+  namespace: robot-shop
+spec:
+  ports:
+    - name: load
+      protocol: TCP
+      port: 80
+      targetPort: 80
+  selector:
+    service: load
+  type: ClusterIP
+  sessionAffinity: None

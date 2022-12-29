@@ -1,0 +1,264 @@
+{
+  "id": "story-creation",
+  "metadata": {
+    "labels": {
+      "ibm.com/aiops/uitemplate": "alert:createstory",
+      "ibm.com/is-default": "false"
+    },
+    "name": "DEMO Story creation policy for all alerts5",
+    "description": "Created by Nicks scripts",
+    "createdBy": {
+      "id": "demo",
+      "type": "user"
+    }
+  },
+  "state": "enabled",
+  "executionPriority": 50,
+  "spec": {
+    "triggers": [{
+      "entityId": "alert",
+      "triggerId": "aiops.ibm.com/trigger/alert-created"
+  }, {
+      "entityId": "alert",
+      "triggerId": "aiops.ibm.com/trigger/alert-updated",
+      "arguments": {
+          "condition": "{{prevAlert.eventCount}} != {{alert.eventCount}}"
+      }
+  }],
+    "actions": [{
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match low priority alerts",
+        "condition": "{{ alert.severity }} == 1 and ({{alert.sender.name}} != \"Log Anomaly\"",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 5,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": null,
+              "team": null
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match priority alerts",
+        "condition": "{{ alert.severity }} == 2 and ({{alert.sender.name}} != \"Log Anomaly\"",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 4,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": null,
+              "team": null
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match priority alerts",
+        "condition": "{{ alert.severity }} == 3 and ({{alert.sender.name}} != \"Log Anomaly\"",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 3,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": null,
+              "team": null
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match priority alerts",
+        "condition": "{{ alert.severity }} == 4 and ({{alert.sender.name}} != \"Log Anomaly\"",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 2,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": null,
+              "team": null
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    }, {
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+        "name": "Match high priority alerts",
+        "condition": "{{ alert.severity }} >= 5 and ({{alert.sender.name}} != \"Log Anomaly\"",
+        "then": [{
+          "actionId": "aiops.ibm.com/action/internal/stories/derive",
+          "arguments": {
+            "entity": {
+              "$variable": "alert"
+            },
+            "priority": 1,
+            "retentionDays": 30,
+            "title": {
+              "$template": "{{ alert.summary }}"
+            },
+            "description": {
+              "$template": "{{ alert.summary }}"
+            },
+            "holdoffSec": 0,
+            "notification": [{
+              "type": "slack",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }, {
+              "type": "msteams",
+              "name": "AIOPSSystemDefault",
+              "details": {}
+            }],
+            "assignment": {
+              "owner": null,
+              "team": null
+            },
+            "addRelatedAlerts": {
+              "update": false
+            }
+          }
+        }]
+      }
+    },{
+      "actionId": "aiops.ibm.com/action/internal/conditional",
+      "arguments": {
+          "name": "Match Log Errors",
+          "condition": "({{alert.sender.name}} == \"Log Anomaly\") and ({{contains alert.details \"Unknown_error\"}})",
+          "then": [{
+                      "actionId": "aiops.ibm.com/action/internal/stories/derive",
+                      "arguments": {
+                          "entity": {
+                              "$variable": "alert"
+                          },
+                          "priority": 1,
+                          "retentionDays": 30,
+                          "title": {
+                              "$template": "{{ alert.summary }}"
+                          },
+                          "description": {
+                              "$template": "{{ alert.summary }}"
+                          },
+                          "holdoffSec": 0,
+                          "notification": [{
+                              "type": "slack",
+                              "name": "AIOPSSystemDefault",
+                              "details": {}
+                          }, {
+                              "type": "msteams",
+                              "name": "AIOPSSystemDefault",
+                              "details": {}
+                          }],
+                          "assignment": {
+                              "owner": null,
+                              "team": null
+                          },
+                          "addRelatedAlerts": {
+                              "update": false
+                          }
+                      }
+                  }]
+      }
+  }]
+  }
+}

@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: cp4waiops
+  namespace: openshift-gitops
+spec:
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  destinations:
+    - namespace: '*'
+      server: '*'
+  sourceRepos:
+    - '*'
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cp4waiops-installer
+  namespace: openshift-gitops
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/niklaushirt/aiops-install-gitops-33'
+    path: charts/0_installer/installer
+    targetRevision: 
+    helm:
+      parameters:
+        - name: version
+          value: '1.0'
+        - name: activeBranch
+          value: main
+  destination:
+    server: 'https://kubernetes.default.svc'
+    namespace: cp4waiops
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

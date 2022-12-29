@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-new
+  labels:
+    app: robot-shop
+    version: v2
+    service: payment
+    stage: prod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v2
+      service: payment
+      stage: prod
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v2
+        service: payment
+        stage: prod
+    spec:
+      
+      containers:
+      - name: payment
+        image: robotshop/rs-payment-fix:latest
+        imagePullPolicy: IfNotPresent
+        # agent networking access
+        env:
+          - name: INSTANA_AGENT_HOST
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+      restartPolicy: Always

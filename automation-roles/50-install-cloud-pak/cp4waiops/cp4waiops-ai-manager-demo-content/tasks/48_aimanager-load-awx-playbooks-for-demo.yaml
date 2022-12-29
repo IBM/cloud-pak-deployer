@@ -1,0 +1,328 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create Gateway
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+- name: 🛰️  START - LOAD AWX RUNBOOKS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Load Templates into AWX"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🚀 AWX - Get AWX URL
+  shell: |
+    export AWX_ROUTE=$(oc get route -n awx awx -o jsonpath={.spec.host})
+    export AWX_URL=$(echo "https://$AWX_ROUTE")
+    echo $AWX_URL
+  ignore_errors: true
+  register: ACT_AWX_URL
+
+
+- name: 🚀 AWX - Set Fact AWX_URL {{ ACT_AWX_URL.stdout }} 
+  set_fact: AWX_URL={{ ACT_AWX_URL.stdout }} 
+
+
+- name: 🚀 AWX - Get AWX Password
+  shell: |
+    export ADMIN_PASSWORD=$(oc -n awx get secret awx-admin-password -o jsonpath='{.data.password}' | base64 --decode && echo)
+    echo $ADMIN_PASSWORD
+  ignore_errors: true
+  register: ACT_AWX_PWD
+
+
+- name: 🚀 AWX - Set Fact AWX_PWD {{ ACT_AWX_PWD.stdout }} 
+  set_fact: AWX_PWD={{ ACT_AWX_PWD.stdout }} 
+
+
+
+- name: 🚀 AWX - Create AWX Execution Environment
+  shell: |
+    export RUNNER_IMAGE=niklaushirt/cp4waiops-awx:0.1.4
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/execution_environments/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+      "name": "CP4WAIOPS Execution Environment",
+      "description": "CP4WAIOPS Execution Environment",
+      "organization": null,
+      "image": "'$RUNNER_IMAGE'",
+      "credential": null,
+      "pull": "missing"
+    }')
+
+    if [[ $result =~ " already exists" ]];
+    then
+        export EXENV_ID=$(curl -X "GET" -s "{{ AWX_URL }}/api/v2/execution_environments/" -u "admin:{{ AWX_PWD }}" --insecure|jq -c '.results[]| select( .name == "CP4WAIOPS Execution Environment")|.id')
+    else
+        export EXENV_ID=$(echo $result|jq ".id")
+        sleep 60
+    fi 
+    echo "$EXENV_ID"
+  ignore_errors: true
+  register: EXENV_ID
+  args:
+    executable: /bin/bash
+
+
+
+
+
+- name: 🚀 AWX - Set Fact EXENV_ID {{ EXENV_ID.stdout }} 
+  set_fact: EXENV_ID={{ EXENV_ID.stdout }} 
+
+
+
+
+- name: 🚀 AWX - Create AWX Project
+  shell: |
+    export AWX_REPO=https://github.com/niklaushirt/ansible-demo
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/projects/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+        "name": "CP4WAIOPS Runbooks",
+        "description": "CP4WAIOPS Runbooks",
+        "local_path": "",
+        "scm_type": "git",
+        "scm_url": "'$AWX_REPO'",
+        "scm_branch": "",
+        "scm_refspec": "",
+        "scm_clean": false,
+        "scm_track_submodules": false,
+        "scm_delete_on_update": false,
+        "credential": null,
+        "timeout": 0,
+        "organization": 1,
+        "scm_update_on_launch": false,
+        "scm_update_cache_timeout": 0,
+        "allow_override": false,
+        "default_environment": null
+    }')
+
+    if [[ $result =~ " already exists" ]];
+    then
+        export PROJECT_ID=$(curl -X "GET" -s "{{ AWX_URL }}/api/v2/projects/" -u "admin:{{ AWX_PWD }}" --insecure|jq -c '.results[]| select( .name == "CP4WAIOPS Runbooks")|.id')
+    else
+        export PROJECT_ID=$(echo $result|jq ".id")
+    fi
+    #sleep 60
+    echo "$PROJECT_ID"
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+- name: 🚀 AWX - Set Fact AWX_PROJECT_ID {{ AWX_RESULT.stdout }} 
+  set_fact: AWX_PROJECT_ID={{ AWX_RESULT.stdout }} 
+
+
+
+
+- name: 🟣 AWX - AWX Project Stuck
+  debug:
+    msg:
+    - "*************************************************************************"
+    - " If you get stuck on the next step (Wait for AWX Project - for 5 or more iterations)."
+    - " Login to AWX and re-synch the Project"
+    - "*************************************************************************"
+    - "   AWX URL:           {{AWX_URL}}"
+    - "   AWX User:          admin"
+    - "   AWX Password:      {{AWX_PWD}}"
+    - "*************************************************************************"
+    - "*************************************************************************"
+    verbosity: 1
+
+
+
+
+- name: 🚀 AWX - Set Fact AWX_PROJECT_ID {{ AWX_RESULT.stdout }} 
+  set_fact: AWX_PROJECT_ID={{ AWX_RESULT.stdout }} 
+
+
+- name: 🚀 AWX - Hack sync AWX Project
+  shell: |
+    export AWX_REPO=https://github.com/niklaushirt/ansible-demo
+    export result=$(curl -X "GET" -s "{{ AWX_URL }}/api/v2/projects/{{ AWX_PROJECT_ID }}/update" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json')
+
+    if [[ $result =~ " already exists" ]];
+    then
+        export PROJECT_ID=$(curl -X "GET" -s "{{ AWX_URL }}/api/v2/projects/" -u "admin:{{ AWX_PWD }}" --insecure|jq -c '.results[]| select( .name == "CP4WAIOPS Runbooks")|.id')
+    else
+        export PROJECT_ID=$(echo $result|jq ".id")
+    fi
+    #sleep 60
+    echo "$PROJECT_ID"
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+
+- name: 🚀 AWX - Wait for AWX Project
+  shell: |
+    #sleep 60
+    export STATUS=$(curl -X "GET" -s "{{ AWX_URL }}/api/v2/projects/" -u "admin:{{ AWX_PWD }}" --insecure|jq -c -r '.results[]| select( .name == "CP4WAIOPS Runbooks")|.status')
+    echo "$STATUS"
+  ignore_errors: true
+  register: STATUS
+  until: STATUS.stdout == "successful"
+  retries: 10
+  delay: 15
+
+
+
+- name: 🚀 AWX - Set Fact Project Status - {{ STATUS.stdout }} 
+  set_fact: STATUS={{ STATUS.stdout }} 
+
+
+
+
+- name: 🚀 AWX - Create AWX Inventory (Project is {{STATUS}})
+  shell: |
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/inventories/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+      "name": "CP4WAIOPS Runbooks",
+      "description": "CP4WAIOPS Runbooks",
+      "organization": 1,
+      "project": '{{AWX_PROJECT_ID}}',
+      "kind": "",
+      "host_filter": null,
+      "variables": ""
+    }')
+
+    if [[ $result =~ " already exists" ]];
+    then
+        export INVENTORY_ID=$(curl -X "GET" -s "{{ AWX_URL }}/api/v2/inventories/" -u "admin:{{ AWX_PWD }}" --insecure|jq -c '.results[]| select( .name == "CP4WAIOPS Runbooks")|.id')
+    else
+        export INVENTORY_ID=$(echo $result|tr -d '\n'|jq ".id")
+        sleep 15
+    fi
+    echo "$INVENTORY_ID"
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+- name: 🚀 AWX - Set Fact AWX_INVENTORY_ID {{ AWX_RESULT.stdout }} 
+  set_fact: AWX_INVENTORY_ID={{ AWX_RESULT.stdout }} 
+
+
+
+
+
+- name: 🚀 AWX - Create AWX Template Mitigate Robotshop Ratings Outage
+  shell: |
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/job_templates/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+      "name": "CP4WAIOPS Mitigate Robotshop Ratings Outage",
+      "description": "Mitigate Robotshop Ratings Outage",
+      "job_type": "run",
+      "inventory": {{AWX_INVENTORY_ID}},
+      "project": {{AWX_PROJECT_ID}},
+      "playbook": "cp4waiops/robotshop-restart/start-ratings.yaml",
+      "scm_branch": "",
+      "extra_vars": "",
+      "ask_variables_on_launch": true,
+      "extra_vars": "PROVIDE: my_k8s_apiurl and my_k8s_apikey",
+      "execution_environment": {{EXENV_ID}}
+    }')
+
+    echo $result
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+
+
+- name: 🚀 AWX - Create AWX Template Create Robotshop Ratings Outage
+  shell: |
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/job_templates/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+      "name": "CP4WAIOPS Create Robotshop Ratings Outage",
+      "description": "Create Robotshop Ratings Outage",
+      "job_type": "run",
+      "inventory": {{AWX_INVENTORY_ID}},
+      "project": {{AWX_PROJECT_ID}},
+      "playbook": "cp4waiops/robotshop-restart/stop-ratings.yaml",
+      "scm_branch": "",
+      "extra_vars": "",
+      "ask_variables_on_launch": true,
+      "extra_vars": "PROVIDE: my_k8s_apiurl and my_k8s_apikey",
+      "execution_environment": {{EXENV_ID}}
+    }')
+
+    echo $result
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+
+- name: 🚀 AWX - Create AWX Template Start Robotshop Ratings
+  shell: |
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/job_templates/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+      "name": "CP4WAIOPS Start Robotshop Ratings",
+      "description": "Start Robotshop Ratings",
+      "job_type": "run",
+      "inventory": {{AWX_INVENTORY_ID}},
+      "project": {{AWX_PROJECT_ID}},
+      "playbook": "cp4waiops/robotshop-restart/restart-ratings-start.yaml",
+      "scm_branch": "",
+      "extra_vars": "",
+      "ask_variables_on_launch": true,
+      "extra_vars": "PROVIDE: my_k8s_apiurl and my_k8s_apikey",
+      "execution_environment": {{EXENV_ID}}
+    }')
+
+    echo $result
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+
+
+- name: 🚀 AWX - Create AWX Template Stop Robotshop Ratings
+  shell: |
+    export result=$(curl -X "POST" -s "{{ AWX_URL }}/api/v2/job_templates/" -u "admin:{{ AWX_PWD }}" --insecure \
+    -H 'content-type: application/json' \
+    -d $'{
+      "name": "CP4WAIOPS Stop Robotshop Ratings",
+      "description": "Stop Robotshop Ratings",
+      "job_type": "run",
+      "inventory": {{AWX_INVENTORY_ID}},
+      "project": {{AWX_PROJECT_ID}},
+      "playbook": "cp4waiops/robotshop-restart/restart-ratings-stop.yaml",
+      "scm_branch": "",
+      "extra_vars": "",
+      "ask_variables_on_launch": true,
+      "extra_vars": "PROVIDE: my_k8s_apiurl and my_k8s_apikey",
+      "execution_environment": {{EXENV_ID}}
+    }')
+
+    echo $result
+  ignore_errors: true
+  register: AWX_RESULT
+  args:
+    executable: /bin/bash
+
+
+
+

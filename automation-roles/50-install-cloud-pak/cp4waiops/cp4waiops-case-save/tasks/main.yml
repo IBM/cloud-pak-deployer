@@ -1,0 +1,39 @@
+---
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Save CASE Files
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+
+- name: 🛰️  START - CASE SAVE
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+- name: Log
+  shell: |
+    export MESSAGE="Saving CASE Files"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+
+    
+- set_fact:
+    _case_dir: "{{ status_dir | default('temp_status') }}/cp4waiops/case"
+
+- name: 📥 Create directory {{ _case_dir }} for case files
+  file:
+    path: "{{ _case_dir }}"
+    state: directory
+
+- name: 📥 Show current Cloud Pak for Watson AIOps cluster
+  debug:
+    var: _p_current_cp4wa_cluster
+
+- include_tasks: download-case-online.yml

@@ -1,0 +1,170 @@
+apiVersion: consoleui.aiops.ibm.com/v1
+kind: InsightsUI
+metadata:
+  name: insightsui-instance
+  namespace: {{ current_cp4waiops_cluster.project }}
+spec:
+  license:
+    accept: true
+  size: small
+  version: 1.0.0
+  elasticSearch:
+    bindingSecret: ibm-cp-watson-aiops-elastic-secret
+  kafka:
+    bindingSecret: ibm-cp-watson-aiops-kafka-secret
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aiops-insights-ui-datarouting
+  namespace: {{ current_cp4waiops_cluster.project }}
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: common-datarouting
+      app.kubernetes.io/instance: aiops
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: common-datarouting
+        app.kubernetes.io/instance: aiops
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: common-datarouting
+                  app.kubernetes.io/instance: aiops
+              topologyKey: kubernetes.io/hostname
+            weight: 50
+      containers:
+      - env:
+        - name: ELASTICSEARCH_BINDING
+          value: /home/node/binding/elasticsearch
+        - name: KAFKA_BROKERS
+          valueFrom:
+            secretKeyRef:
+              key: bootstrapServers
+              name: ibm-cp-watson-aiops-kafka-secret
+        - name: KAFKA_SASL_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: ibm-cp-watson-aiops-kafka-secret
+        - name: KAFKA_SASL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: ibm-cp-watson-aiops-kafka-secret
+        - name: KAFKA_SSL_CA
+          valueFrom:
+            secretKeyRef:
+              key: caCertificate
+              name: ibm-cp-watson-aiops-kafka-secret
+        - name: PIPELINES
+          value: es-story-archive
+        - name: LOGLEVEL
+          value: info
+        - name: LOGSTASH_SHARDS
+          value: "1"
+        - name: LOGSTASH_REPLICAS
+          value: "0"
+        - name: KAFKA_TOPICPREFIX
+          value: cp4waiops-cartridge.
+        - name: KAFKA_SSL_ENABLED
+          value: "true"
+        - name: KAFKA_SASL_MECHANISM
+          valueFrom:
+            secretKeyRef:
+              key: authMechanism
+              name: ibm-cp-watson-aiops-kafka-secret
+        image: {{DATAROUTER_IMAGE}}
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 60
+          periodSeconds: 60
+          successThreshold: 1
+          timeoutSeconds: 20
+        name: logstash
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        readinessProbe:
+          failureThreshold: 1
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          successThreshold: 1
+          timeoutSeconds: 20
+        resources:
+          limits:
+            cpu: "1"
+            ephemeral-storage: 200Mi
+            memory: 2800Mi
+          requests:
+            cpu: 200m
+            ephemeral-storage: 50Mi
+            memory: 1400Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /home/node/binding/elasticsearch
+          name: elasticsearch-binding
+          readOnly: true
+        - mountPath: /home/node/tls/kafka
+          name: kafka-ca
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+      serviceAccount: aiops-insights-ui
+      serviceAccountName: aiops-insights-ui
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: elasticsearch-binding
+        secret:
+          defaultMode: 292
+          secretName: ibm-cp-watson-aiops-elastic-secret
+      - name: kafka-ca
+        secret:
+          defaultMode: 292
+          items:
+          - key: caCertificate
+            path: ca.crt
+          secretName: ibm-cp-watson-aiops-kafka-secret

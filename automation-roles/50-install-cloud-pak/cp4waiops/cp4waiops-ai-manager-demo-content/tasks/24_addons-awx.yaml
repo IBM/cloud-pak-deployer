@@ -1,0 +1,40 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install AWX (open source Ansible Tower)
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install AWX
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create AWX
+
+- name: 🛰️  START - INSTALL AWX
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing AWX"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+  
+- name: 🚀 AWX - Create AWX Operator
+  community.kubernetes.k8s:
+    state: present
+    namespace: awx
+    src: ./templates/awx/operator-install.yaml
+  
+- name: 🚀 AWX - Create AWX Instance (while waiting for CP4WAIOPS Installation to progress)
+  community.kubernetes.k8s:
+    state: present
+    namespace: awx
+    src: ./templates/awx/awx-deploy-cr.yml
+
+
