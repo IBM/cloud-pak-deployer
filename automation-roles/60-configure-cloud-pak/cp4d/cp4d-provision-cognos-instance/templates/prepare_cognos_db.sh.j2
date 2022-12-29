@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Catalogue Db2 instance
-db_catalog --add {{ db2_service_key.hostname }}:{{ db2_service_key.port }} --alias BLUDB --ssl
+db_catalog --add {{ _db2_service_key.hostname }}:{{ _db2_service_key.port }} --alias BLUDB --ssl
 
 # Try to connect to Db2
 success=0
 for i in {1..30}; do 
   printf "Attempt $1: try connecting to Db2 instance {{ db2_service_key.hostname }}:{{ db2_service_key.port }}\n"
-  db2 connect to BLUDB USER {{ db2_service_key.username }} USING {{ db2_service_key.password }}
+  db2 connect to BLUDB USER {{ _db2_service_key.username }} USING {{ _db2_service_key.password }}
   if [ $? -eq 0 ];then
     success=1
     break
@@ -15,7 +15,7 @@ for i in {1..30}; do
   sleep 10
 done
 if [ $success -ne 1 ];then
-  printf "Connection to Db2 {{ db2_service_key.hostname }}:{{ db2_service_key.port }} failed\n"
+  printf "Connection to Db2 {{ _db2_service_key.hostname }}:{{ _db2_service_key.port }} failed\n"
   exit 2
 fi
 
@@ -28,5 +28,5 @@ db2 CREATE SYSTEM TEMPORARY TABLESPACE TSN_SYS_CMDB IN DATABASE PARTITION GROUP 
 db2 CREATE USER TEMPORARY TABLESPACE TSN_USR_CMDB IN DATABASE PARTITION GROUP IBMDEFAULTGROUP PAGESIZE 8K BUFFERPOOL CMDB_08KBP;
 db2 CREATE REGULAR TABLESPACE TSN_REG_CMDB IN DATABASE PARTITION GROUP IBMDEFAULTGROUP PAGESIZE 8K BUFFERPOOL CMDB_08KBP;
 # db2 DROP TABLESPACE USERSPACE1;
-db2 CREATE SCHEMA {{ db2_service_key.username }} AUTHORIZATION {{ db2_service_key.username }};
+db2 CREATE SCHEMA {{ _db2_service_key.username }} AUTHORIZATION {{ _db2_service_key.username }};
 db2 ALTER BUFFERPOOL ibmdefaultbp size 49800
