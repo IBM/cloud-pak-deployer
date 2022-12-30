@@ -1,0 +1,26 @@
+- name: 🛰️  START - RESET ANOMALY DETECTION
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Reset Anomaly Detection Pods"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name: 🚀 ANOMALY DETECTION - RESET ANOMALY DETECTION
+  shell: |
+    set -x
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    
+
+    oc delete pod $(oc get po -n $WAIOPS_NAMESPACE|grep anomaly|awk '{print$1}') -n $WAIOPS_NAMESPACE
+
+  register: output_string
+  ignore_errors: true

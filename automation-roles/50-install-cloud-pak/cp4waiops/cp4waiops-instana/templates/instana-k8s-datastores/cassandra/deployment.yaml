@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: cassandra
+  name: cassandra
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cassandra
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: cassandra
+    spec:
+      serviceAccountName: instana-datastore-sa
+      imagePullSecrets:
+      - name: instana-pullsecret
+      containers:
+      - image: containers.instana.io/instana/release/product/cassandra:4.0.3_v0.46.0
+        name: cassandra
+        ports:
+          - containerPort: 9042
+        env:
+          - name: CASSANDRA_LISTEN_ADDRESS
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        resources:
+          limits:
+            cpu: '8'
+            memory: 16Gi
+          requests:
+            cpu: '512m'
+            memory: 1Gi
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - mountPath: /mnt/data
+            name: cassandra-data
+      volumes:
+        - name: cassandra-data
+          persistentVolumeClaim:
+            claimName: cassandra-data
+status: {}

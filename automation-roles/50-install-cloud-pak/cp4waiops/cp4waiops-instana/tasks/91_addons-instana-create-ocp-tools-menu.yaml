@@ -1,0 +1,47 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patching some stuff
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+- name: 🛰️  START - OCP MENU
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create Openshift WebConsole Menu Item"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+   
+
+
+
+
+- name: 🌏 OCP MENU - Create Openshift WebConsole Menu Item - Instana
+  shell: |
+    appURL=$(oc get routes -n instana-core dev-aiops  -o jsonpath="{['spec']['host']}")|| true
+
+    cat <<EOF | oc apply -f -
+      apiVersion: console.openshift.io/v1
+      kind: ConsoleLink
+      metadata:
+        name: cp4waiops-instana
+      spec:
+        applicationMenu:
+          imageURL: >-
+            https://raw.githubusercontent.com/niklaushirt/cp4waiops-deployer/main/doc/pics/icons/navaid--ndb.svg
+          section: CP4WAIOps Addons
+        href: >-
+          https://$appURL
+        location: ApplicationMenu
+        text: Instana
+    EOF
+  ignore_errors: true
+

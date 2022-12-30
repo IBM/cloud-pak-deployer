@@ -1,0 +1,89 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - INSTALL INSTANA AGENT
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing INSTANA AGENT"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+- name: 🚀 INSTANA AGENT - Get BASE_DOMAIN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    CLUSTER_NAME=${CLUSTER_FQDN##*console.}
+
+
+    #BASE_DOMAIN="dev-aiops-instana-core.$CLUSTER_NAME"
+    BASE_DOMAIN="$CLUSTER_NAME"
+    echo $BASE_DOMAIN
+    
+  ignore_errors: true
+  register: output
+        
+- name: 🚀 INSTANA AGENT - Set BASE_DOMAIN - {{ output.stdout_lines }} 
+  set_fact: BASE_DOMAIN={{ output.stdout_lines[0] }} 
+
+
+
+
+
+- name: 🚀 INSTANA AGENT - Create Namespace
+  shell: |
+    oc create ns instana-agent
+    oc adm policy add-scc-to-user privileged -z instana-agent
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    #verbosity: 1
+
+
+
+
+- name: 🚀 INSTANA AGENT - Create Subscription
+  community.kubernetes.k8s:
+    namespace: instana-agent
+    state: present
+    template: ./templates/instana-agent/instana-agent-sub.yaml
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Core CR being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTANA - Wait for Instana Agent Operator to become ready
+  shell: oc get csv -n openshift-operators|grep "instana-agent-operator"|grep "Succeeded"|wc -l| tr -d ' '
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+- name: 🚀 INSTANA AGENT - Create Agent
+  community.kubernetes.k8s:
+    namespace: instana-agent
+    state: present
+    template: ./templates/instana-agent/instana-agent-cr.j2
+
+

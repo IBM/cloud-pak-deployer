@@ -12,6 +12,9 @@ nfs_server:
 openshift:
 - name: "{{ env_id }}"
   ocp_version: 4.10.34
+  domain_name: example.com
+  control_plane_flavour: m4.xlarge
+  control_plane_nodes: 3
   compute_flavour: m5.4xlarge
   compute_nodes: 3
   infrastructure:
@@ -20,11 +23,15 @@ openshift:
     use_sts: False
     multi_zone: False
     private_only: False
+    # CIDR of OpenShift nodes when deploying in existing VPC
     machine_cidr: 10.2.1.0/24
+    # Existing subnets when deploying in existing VPC
     subnet_ids:
     - subnet-06bbef28f585a0dd3
     - subnet-0ea5ac344c0fbadf5
     hosted_zone_id: Z08291873MCIC4TMIK4UP
+    # Optional attribute if you want to use a different AWS AMI to boot the OpenShift nodes
+    ami_id: ami-09249dd86b1933dd5
   openshift_storage:
   - storage_name: "{{ env_id }}-elastic"
     storage_type: aws-elastic

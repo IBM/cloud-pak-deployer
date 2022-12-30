@@ -1,0 +1,306 @@
+
+
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#       __________  __ ___       _____    ________            
+#      / ____/ __ \/ // / |     / /   |  /  _/ __ \____  _____
+#     / /   / /_/ / // /| | /| / / /| |  / // / / / __ \/ ___/
+#    / /___/ ____/__  __/ |/ |/ / ___ |_/ // /_/ / /_/ (__  ) 
+#    \____/_/      /_/  |__/|__/_/  |_/___/\____/ .___/____/  
+#                                              /_/            
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------------------------------------------------"
+#  Installing CP4WAIOPS
+#
+#  CloudPak for Watson AIOps
+#
+#  ©2022 nikh@ch.ibm.com
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# Installs:
+#
+#  - Turbonomic
+#  - Turbonomic Demo Content
+#     - Demo User
+#     - RobotShop Demo App with synthetic metric
+#     - Instana target (if Instana is installed - you have to enter the API Token Manually)
+#     - Groups for vCenter and RobotShop
+#     - Groups for licensing
+#     - Resource Hogs
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+# ---------------------------------------------------------------------------------------------------------------------------------------------------"
+ 
+ 
+ 
+- name: ✴️ ✴️ ✴️ INSTALLATION MODULE START - {{current_cp4waiops_feature.kind}}
+  debug: 
+    msg: 
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "                                                                                                                                                   "
+    - "      🚀 CloudPak for Watson AIOps - INSTALLING {{current_cp4waiops_feature.kind}}                                                                                          "
+    - "                                                                                                                                                   "
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Check Login
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name:   🚀 INITIALIZATION - Get Cluster FQDN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    echo ${CLUSTER_FQDN##*console.}
+  register: CLUSTER_NAME
+
+
+- name:   🚀 INITIALIZATION - Check Cluster Connectivity
+  fail: msg="You must be logged in to the server!"
+  when: CLUSTER_NAME.stdout==""
+
+
+
+- name: 🟣 Installing {{current_cp4waiops_feature.kind}} with the following configuration
+  debug:
+    var: current_cp4waiops_feature
+
+
+- name:  🟣 Storage Class Parameters - SPECIFIC INSTANCE"
+  debug:
+    msg:
+    - "** Installation Options for SPECIFIC INSTANCE ***********************************************************************"
+    - " Storage Class File Override:      {{ current_cp4waiops_feature.storage_class_file}}"
+    - " Storage Class Block Override:     {{ current_cp4waiops_feature.storage_class_block}}"
+    - ""
+  when: current_cp4waiops_feature.storage_class_file is defined
+
+
+- name:  🟣 Storage Class Parameters - GLOBAL"
+  debug:
+    msg:
+    - "** Installation Options from GLOBAL ***********************************************************************"
+    - " Storage Class File Override:      {{ ocp_storage_class_file }}"
+    - " Storage Class Block Override:     {{ ocp_storage_class_block }}"
+    - ""
+  when: current_cp4waiops_feature.storage_class_file is not defined and ocp_storage_class_file is defined
+
+
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Check Encrypted Licenses
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name: Get Licenses 
+  block:
+
+  - name: 💾 SET sales_key from Config File - {{current_cp4waiops_feature.sales_key | default("NONE")}} 
+    set_fact: current_sales_key={{current_cp4waiops_feature.sales_key| default("NONE")}}
+
+
+  - name: 💾 SET agent_key from  Config File  - {{current_cp4waiops_feature.agent_key | default("NONE")}} 
+    set_fact: current_agent_key={{current_cp4waiops_feature.agent_key| default("NONE")}}
+
+
+
+- name: Decrypt Licenses 
+  block:
+  - name: Create Token File
+    shell: |
+      echo {{global_config.license_token}} > /tmp/pwd.yaml
+    ignore_errors: true
+
+
+  - name: Get License from Vault
+    shell: |
+      OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+      if [ "${OS}" == "darwin" ]; then
+            echo "MAC"
+            LICENSE_FILE=$(pwd)"/roles/cp4waiops-instana/vars/lic.yaml"
+      else
+            LICENSE_FILE="{{role_path}}/vars/lic.yaml"
+      fi    
+      echo $LICENSE_FILE
+      ansible-vault decrypt --vault-password-file /tmp/pwd.yaml --output /tmp/license.yaml "$LICENSE_FILE"
+    register: OUTPUT
+    ignore_errors: true
+
+
+  - name: Include License from Vault
+    ansible.builtin.include_vars:
+      file: /tmp/license.yaml
+      name: licenses
+    ignore_errors: true
+
+  - name: Cleanup
+    shell: |
+      rm /tmp/pwd.yaml
+      rm /tmp/license.yaml
+    ignore_errors: true
+
+      
+  - name: 💾 SET sales_key from Vault
+    set_fact: current_sales_key={{licenses.sales_key }} 
+
+  - name: 💾 SET agent_key from Vault
+    set_fact: current_agent_key={{licenses.agent_key }} 
+
+
+
+
+  when: global_config.license_token is defined 
+
+
+
+
+- name:  🟣 Check Sales and Agent Key"
+  debug:
+    msg:
+    - "** Missing License Information ***********************************************************************"
+    - " Sales Key:      {{ current_sales_key}}"
+    - " Agent Key:      {{ current_agent_key}}"
+    - "❌ Skipping installation...."
+    - ""
+  when: current_sales_key == "NONE" or current_agent_key == "NONE"
+
+
+
+
+- name:  🟢 Sales and Agent Key - OK"
+  debug:
+    msg:
+    - "** License Information ***********************************************************************"
+    - " Sales Key:      {{ current_sales_key}}"
+    - " Agent Key:      {{ current_agent_key}}"
+    - " ✅ OK...."
+    - ""
+    #verbosity: 2
+  when: current_sales_key != "NONE" or current_agent_key != "NONE"
+
+
+
+
+- name: Install Instana if sales and agent key provided
+  block:
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------------"
+  # INITIALIZATION
+  # ---------------------------------------------------------------------------------------------------------------------------------------------------"
+  # Placeholder for customization
+  - name: 📥 Init Custom Hook
+    include_tasks: 00_init-custom-hook.yaml
+
+  # Initialize Logging
+  - name: 📥 Init Logging
+    include_tasks: "{{role_path}}/../cp4waiops-global/tasks/01_init-logging.yaml"
+
+  - name: 📥 Get Storage Class
+    include_tasks: "{{role_path}}/../cp4waiops-global/tasks/05_init-get-storage-class.yaml"
+
+    
+  # Start block
+  - name: 📥 Start Logging
+    include_tasks: "{{role_path}}/../cp4waiops-global/tasks/90-log-start.yaml"
+
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------------"
+  # INSTALL INSTANA
+  # ---------------------------------------------------------------------------------------------------------------------------------------------------"
+  # Install INSTANA
+  - name: 📥 Install Instana
+    include_tasks: 10_addons-instana.yaml
+
+
+  # Install INSTANA AGENT
+  - name: 📥 Install Instana Agent
+    include_tasks: 11_addons-instana-agent.yaml
+    when: current_cp4waiops_feature.install_agent == true
+
+
+  # Install INSTANA AIManager Connection
+  - name: 📥 Install AIManager to Instana Connection
+    include_tasks: 12_addons-instana-create-connections.yaml
+    when: current_cp4waiops_feature.integrate_aimanager == true
+
+
+  - name: 📥 Restart Demo UI
+    include_tasks: 21_addons-instana-restart-demoui.yaml
+
+
+  - name: 📥 Install OCP Menu Item
+    include_tasks: 91_addons-instana-create-ocp-tools-menu.yaml
+    when: global_config.create_ocp_items | default(true) == true  
+
+  # Update AI Manager Cards
+  - name: 📥 Update AI Manager Cards
+    include_tasks: "{{role_path}}/../cp4waiops-global/tasks/99_update_cards.yaml"
+
+
+  - name: 🌏 INSTANA - LOGINS
+    shell: |
+      export DEMOUI_ROUTE=$(oc get routes -n instana-core dev-aiops  -o jsonpath="{['spec']['host']}")
+      echo "                🌏 URL:       http://$DEMOUI_ROUTE"
+      echo ""
+      echo "                🧑‍🦳 USER:      {{current_cp4waiops_feature.instana_admin_user}}"
+      echo "                🔐 LOGIN:     {{current_cp4waiops_feature.instana_admin_pass  | default('using global')}}"
+    ignore_errors: true
+    register: LOGINS
+
+
+  - name: 🌏 INSTANA - LOGINS
+    debug: 
+      var: LOGINS.stdout_lines
+
+  - name: Log
+    shell: |
+      export MESSAGE=" 🌏 INSTANA - LOGINS"
+      export currentDate=$(date +%Y-%m-%d_%H:%M)
+      echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+      appURL=$(oc get routes -n instana-core dev-aiops  -o jsonpath="{['spec']['host']}")|| true
+      echo "            📥 Demo UI:"     >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "    "   >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "                🌏 URL:           http://$appURL/"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "                🧑‍🦳 USER:          {{current_cp4waiops_feature.instana_admin_user}}"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "                🔐 PASSWORD:      {{current_cp4waiops_feature.instana_admin_pass| default('using global')}}"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+      echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    ignore_errors: true
+  # ---------------------------------------------------------------------------------------------------------------------------------------------------"
+  # CHECKS
+  # ---------------------------------------------------------------------------------------------------------------------------------------------------"
+
+  when: current_sales_key != "NONE" and current_agent_key != "NONE"
+  ignore_errors: true
+
+
+- name: 📥 End Logging
+  include_tasks: "{{role_path}}/../cp4waiops-global/tasks/91-log-end.yaml"
+
+
+
+
+
+- name: ✅ INSTALLATION MODULE DONE - {{current_cp4waiops_feature.kind}}
+  debug: 
+    msg:  
+
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "                                                                                                                                                   "
+    - "       ✅ CloudPak for Watson AIOps - DONE INSTALLING {{current_cp4waiops_feature.kind}}                                                                                 "
+    - "                                                                                                                                                   "
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"
+    - "***************************************************************************************************************************************************"

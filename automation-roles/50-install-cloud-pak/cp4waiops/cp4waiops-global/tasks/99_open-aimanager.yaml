@@ -1,0 +1,64 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Open Doc
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+- name: Log
+  shell: |
+    export MESSAGE=" 🌏 Open AIManager"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+- name: 🌏 AI MANAGER - Get AI MANAGER LOGINS
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export AIMANAGER_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath={.spec.host})
+    echo "                🌏 URL:      https://$AIMANAGER_ROUTE"
+    echo ""
+    echo "                🧑 User:     $(oc -n ibm-common-services get secret platform-auth-idp-credentials -o jsonpath='{.data.admin_username}' | base64 --decode && echo)"
+    echo "                🔐 Password: $(oc -n ibm-common-services get secret platform-auth-idp-credentials -o jsonpath='{.data.admin_password}' | base64 --decode)"
+
+    export URL=https://$AIMANAGER_ROUTE
+    if [ -x "$(command -v open)" ]; then
+      open $URL
+    else 
+      if [ -x "$(command -v firefox)" ]; then
+        firefox $URL
+      else 
+        if [ -x "$(command -v google-chrome)" ]; then
+          google-chrome $URL
+        fi
+      fi
+    fi
+  ignore_errors: true
+  register: LOGINS
+
+
+- name: 🌏 AI MANAGER - AI MANAGER LOGINS
+  debug: 
+    var: LOGINS.stdout_lines
+
+
+- name: Log
+  shell: |
+    export MESSAGE=" 🕦 Wait for AI Manager to become ready"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "              📥 AI Manager Login:"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🌏 URL:      https://$(oc get route -n {{ current_cp4waiops_cluster.project }} cpd -o jsonpath={.spec.host})"  >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🧑 User:     $(oc -n ibm-common-services get secret platform-auth-idp-credentials -o jsonpath='{.data.admin_username}' | base64 --decode && echo)" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "                🔐 Password: $(oc -n ibm-common-services get secret platform-auth-idp-credentials -o jsonpath='{.data.admin_password}' | base64 --decode)" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+
+  ignore_errors: true

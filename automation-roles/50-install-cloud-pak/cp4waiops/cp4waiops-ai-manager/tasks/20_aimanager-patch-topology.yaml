@@ -1,0 +1,111 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patches
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - PATCH TOPOLOGY
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Patching Topology Deployment"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patch Ingress
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🩹 PATCH - Patch Ingress policy-group
+  shell: oc patch namespace default --type=json -p '[{"op":"add","path":"/metadata/labels","value":{"network.openshift.io/policy-group":"ingress"}}]'
+  register: ingress_patched
+
+
+# - name: 🩹 PATCH - Patch AIOpsAnalyticsOrchestrator Pull Secret
+#   shell: oc patch AIOpsAnalyticsOrchestrator aiops -n {{ current_cp4waiops_cluster.project }} --type merge  --patch-file ./templates/waiops/patches/analytics-pull-patch.yaml
+#   ignore_errors: true
+#   register: irorchestrator_patched
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Cassandra Pod
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 PATCH - Wait for Cassandra Pod to become available - this can take up to 45 minutes (hack)
+  shell: oc get po -n {{ current_cp4waiops_cluster.project }} | grep aiops-topology-cassandra-0| grep 1/1| grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+  
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Topology Pods
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 PATCH - Wait for Topology Pods to become available - this can take up to 45 minutes (hack)
+  shell: oc get po -n {{ current_cp4waiops_cluster.project }} | grep aiops-topology-merge| grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patch Topology Pods
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🩹 PATCH - Patch aiops-topology-merge (hack)
+  shell: oc patch deployment aiops-topology-merge -n {{ current_cp4waiops_cluster.project }} --patch-file "{{role_path}}/templates/waiops/patches/aiops-topology-merge-patch.yaml"
+  ignore_errors: true
+
+
+- name: 🩹 PATCH - Patch aiops-topology-search (hack)
+  shell: oc patch deployment aiops-topology-search -n {{ current_cp4waiops_cluster.project }} --patch-file "{{role_path}}/templates/waiops/patches/aiops-topology-search-patch.yaml"
+  ignore_errors: true
+
+
+- name: 🩹 PATCH - Patch aiops-topology-status (hack)
+  shell: oc patch deployment aiops-topology-status -n {{ current_cp4waiops_cluster.project }} --patch-file "{{role_path}}/templates/waiops/patches/aiops-topology-status-patch.yaml"
+  ignore_errors: true
+
+
+- name: 🩹 PATCH - Patch aiops-topology-layout (hack)
+  shell: oc patch deployment aiops-topology-layout -n {{ current_cp4waiops_cluster.project }} --patch-file "{{role_path}}/templates/waiops/patches/aiops-topology-layout-patch.yaml"
+  ignore_errors: true
+
+
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# # Wait for IR Analytics Pods
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# - name: HACK    -             🕦 Wait for IR Analytics Pods to become available - this can take up to 45 minutes (hack)
+#   shell: oc get po -n {{ current_cp4waiops_cluster.project }} | grep aiops-ir-analytics-|grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout > "4"
+#   retries: 500
+#   delay: 15
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Delete ImgPull error pods
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🩹 PATCH - Delete Pods with ImgPull Error  
+  shell: |
+        errorPods=$(oc get po -n {{ current_cp4waiops_cluster.project }}|grep ImagePull|awk '{print$1}')
+        if [[ ! $errorPods == "" ]]; then
+          echo "Refreshing Pods"
+          oc delete pod --ignore-not-found $(oc get po -n {{ current_cp4waiops_cluster.project }}|grep ImagePull|awk '{print$1}') -n {{ current_cp4waiops_cluster.project }}>/dev/null 2>/dev/null
+        fi
+
+
+  ignore_errors: true
