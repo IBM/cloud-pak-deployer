@@ -1,0 +1,130 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install ELK Stack on OCP
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install ELK Stack on OCP
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - INSTALL ELK
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing ELK"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🚀 ELK - Create Elasticsearch
+  community.kubernetes.k8s:
+    state: present
+    namespace: turbonomic
+    template: ./templates/elk/1_elasticsearch.j2
+  
+
+- name: 🚀 ELK - Create ELK Operator
+  community.kubernetes.k8s:
+    state: present
+    namespace: turbonomic
+    template: ./templates/elk/2_logging.j2
+  
+- name: 🕦 ELK - Pause for 30 seconds for Operator to settle
+  pause:
+    seconds: 30
+
+
+- name: 🕦 ELK - Wait for operators
+  shell: oc get csv -n openshift-logging|grep "Succeeded" | wc -l|tr -d ' '
+  register: kubectl_csv
+  until: kubectl_csv.stdout|int > 1
+  retries: 500
+  delay: 15
+
+
+- name: 🚀 ELK - Create ELK Instance
+  community.kubernetes.k8s:
+    state: present
+    namespace: turbonomic
+    template: ./templates/elk/3_logging-cr.j2
+ 
+    
+  
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for openshift-logging Namespace to be ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🕦 ELK - Wait for >10 pods in namespace openshift-logging
+  shell: oc get po -n openshift-logging | wc -l
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > 10
+  retries: 500
+  delay: 15
+
+
+- name: 🕦 ELK - Wait for openshift-logging to become ready
+  shell: oc get po -n openshift-logging | grep -v Running |grep -v Completed|grep -v Error | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+# - name: 🚀 ELK - Patch ELK Instance
+#   shell: |
+#     oc patch ClusterLogging instance -n openshift-logging --patch "$(cat ./templates/elk/4_logging-patch.yaml)"  --type=merge
+#     #In order to create Filter to only ingest robot-shop logs
+#     oc delete cm fluentd -n openshift-logging
+#     oc apply -f ./templates/elk/5_fluentd-configmap.yaml
+#     oc delete pods -n openshift-logging -l component=collector  
+#   ignore_errors: true
+
+    
+- name: 🚀 ELK - Create Elasticsearch Route
+  shell: |
+    rm admin-ca
+    oc delete route  elasticsearch -n openshift-logging
+    oc extract secret/elasticsearch -n openshift-logging --to=. --keys=admin-ca --confirm
+    oc create route reencrypt elasticsearch -n openshift-logging --service=elasticsearch --port=elasticsearch --dest-ca-cert=admin-ca
+    rm admin-ca  
+        
+
+
+- name: 🚀 ELK - Output Elasticsearch Connection Details
+  shell: |
+    token=$(oc sa get-token cluster-logging-operator -n openshift-logging)
+    routeES=`oc get route elasticsearch -o jsonpath={.spec.host} -n openshift-logging`
+    routeKIBANA=`oc get route kibana -o jsonpath={.spec.host} -n openshift-logging`
+    echo "***************************************************************************************************************************************************"
+    echo "***************************************************************************************************************************************************"
+    echo "  "
+    echo "  🔎  Parameter for OCP ElasticSearch Integration "
+    echo "  "
+    echo "           🌏 ELK service URL             : https://$routeES/app*"
+    echo "           🔐 Authentication type         : Token"
+    echo "           🔐 Token                       : $token"
+    echo "  "
+    echo "           🌏 Kibana URL                  : https://$routeKIBANA"
+    echo "           🚪 Kibana port                 : 443"
+    echo "           🗺️  Mapping                     : "
+    echo "{ "
+    echo "  \"codec\": \"elk\","
+    echo "  \"message_field\": \"message\","
+    echo "  \"log_entity_types\": \"kubernetes.container_image_id, kubernetes.host, kubernetes.pod_name, kubernetes.namespace_name\","
+    echo "  \"instance_id_field\": \"kubernetes.container_name\","
+    echo "  \"rolling_time\": 10,"
+    echo "  \"timestamp_field\": \"@timestamp\""
+    echo "}"
+    echo "  "
+  register: output
+- name: 🚀 ELK - Output Elasticsearch Connection Details
+  debug: 
+    var: output.stdout_lines
+    #verbosity: 1
+

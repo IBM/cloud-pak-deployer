@@ -1,0 +1,679 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install Turbonomic
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+- name: 🛰️  START - INSTALL INSTANA
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing INSTANA"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name: 🚀 INSTANA - Set INSTANA Password from instance configuration
+  set_fact: current_admin_pass={{current_cp4waiops_feature.instana_admin_pass  | default('P4ssw0rd!')}}
+  when: global_config.global_password is undefined or global_config.global_password=="NONE"
+
+
+- name: 🚀 INSTANA - Set INSTANA Password from global configuration
+  set_fact: current_admin_pass={{global_config.global_password}}
+  when: global_config.global_password is defined and global_config.global_password!="NONE"
+
+
+- name: 🟣  INSTANA -  INSTANA Password {{current_admin_pass}}
+  debug:
+    var: current_admin_pass
+
+
+
+
+- name: 🚀 INSTANA - Check cert-manager
+  shell: |
+    CERT_MANAGER_CRD=$(oc get customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io|grep "certificates.cert-manager.io"|wc -l|tr -d ' ') 
+    echo $CERT_MANAGER_CRD
+  ignore_errors: true
+  register: cert_check
+
+- name: 🚀 INSTANA - Fail cert-manager
+  fail: msg="You need a cert-manager running. You can install it with kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.0/cert-manager.yaml"
+  when: cert_check.stdout == "0"
+  ignore_errors: false
+
+
+- name: 🚀 INSTANA - Install Kubectl Instana Plugin
+  shell: |
+    if [ -x "$(command -v kubectl-instana)" ]; then
+        echo "Kubectl Instana Plugin already installed"
+    else
+        OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+        echo "Installing Kubectl Instana Plugin for $OS"
+        if [ "${OS}" == "darwin" ]; then
+              wget https://self-hosted.instana.io/kubectl/kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+              tar xfvz kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+              sudo mv kubectl-instana /usr/local/bin/kubectl-instana
+              rm kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+        else
+            wget https://self-hosted.instana.io/kubectl/kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+            tar xfvz kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+            mv kubectl-instana /usr/local/bin/kubectl-instana
+            rm kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+        fi
+    fi
+    if [ -x "$(command -v kubectl-instana)" ]; then
+        /usr/local/bin/kubectl-instana -v
+        echo "✅ Kubectl Instana Plugin installed"
+    else
+        echo "❗❗❗ Kubectl Instana Plugin NOT installed. ERROR!!!!!"
+    fi
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+
+
+
+- name: 🚀 INSTANA - Get BASE_DOMAIN
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    CLUSTER_NAME=${CLUSTER_FQDN##*console.}
+
+
+    #BASE_DOMAIN="dev-aiops-instana-core.$CLUSTER_NAME"
+    BASE_DOMAIN="$CLUSTER_NAME"
+    echo $BASE_DOMAIN
+    
+  ignore_errors: true
+  register: output
+        
+- name: 🚀 INSTANA - Set BASE_DOMAIN - {{ output.stdout_lines }} 
+  set_fact: BASE_DOMAIN={{ output.stdout_lines[0] }} 
+
+
+
+
+- name: 🚀 INSTANA - Create Namespaces
+  shell: |
+    # namespaces
+    # operator
+    oc create ns instana-operator
+    oc -n instana-operator adm policy add-scc-to-user privileged -z instana-selfhosted-operator
+    oc -n instana-operator adm policy add-cluster-role-to-user cluster-admin -z instana-selfhosted-operator
+    #core
+    oc create ns instana-core
+    oc label ns instana-core app.kubernetes.io/name=instana-core
+    oc -n instana-core adm policy add-scc-to-user anyuid -z default
+    oc -n instana-core adm policy add-scc-to-user anyuid -z instana-core
+    #units
+    oc create ns instana-units
+    oc label ns instana-units app.kubernetes.io/name=instana-units
+    oc -n instana-units adm policy add-scc-to-user anyuid -z default
+    #datastores
+    oc create ns instana-datastores
+    oc label ns instana-datastores app.kubernetes.io/name=instana-datastores
+    oc -n instana-datastores adm policy add-scc-to-user anyuid -z default;
+  ignore_errors: true
+  register: output
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+- name: 🚀 INSTANA - Create Operator Secret
+  shell: |
+    oc -n instana-operator delete secret instana-registry --ignore-not-found
+    oc -n instana-operator create secret docker-registry instana-registry \
+        --docker-username=_ \
+        --docker-password={{current_agent_key}} \
+        --docker-server=containers.instana.io    
+
+  ignore_errors: true
+  register: output
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+- name: 🚀 INSTANA - Create Operator
+  shell: |
+    #switch project
+    oc project instana-operator
+
+    sleep 15
+
+    oc create clusterrolebinding instana-operator-admin --clusterrole=cluster-admin --serviceaccount=instana-operator:instana-operator
+
+
+    # deploy operator
+    oc -n instana-operator secrets link instana-operator instana-registry --for=pull
+    oc -n instana-operator secrets link instana-operator-webhook instana-registry --for=pull
+
+
+    kubectl instana operator apply --namespace=instana-operator
+
+
+    # if [ ! $SKIP_TLS == 'true' ]; then
+    #   # Create the key (requires input)
+    #   openssl genrsa -aes128 -out key.pem 2048
+
+    #   # Create the certificate
+    #   openssl req -new -x509 -key key.pem -out cert.pem -days 365
+
+    #   # Combine the two into a single file
+    #   cat key.pem cert.pem > sp.pem
+      
+    # fi
+
+    # create secret
+    #oc -n instana-core create secret generic instana-service-provider --from-file=sp.pem --from-literal=sp.key.pass=instana
+
+    # create core secrets
+
+    oc -n instana-core create secret docker-registry instana-registry\
+        --docker-username=_ \
+        --docker-password={{current_agent_key}} \
+        --docker-server=containers.instana.io
+
+    oc -n instana-core label secret instana-registry app.kubernetes.io/name=instana
+
+    # create units secrets
+
+    oc -n instana-units create secret docker-registry instana-registry\
+        --docker-username=_ \
+        --docker-password={{current_agent_key}} \
+        --docker-server=containers.instana.io
+
+    oc -n instana-units label secret instana-registry app.kubernetes.io/name=instana
+
+    #get license
+    kubectl instana license download --sales-key {{current_sales_key}}
+    oc annotate namespace instana-datastores scheduler.alpha.kubernetes.io/defaultTolerations-
+    oc annotate namespace instana-datastores openshift.io/node-selector-
+
+    kubectl patch -n instana-operator serviceaccount instana-operator-webhook -p '{"imagePullSecrets": [{"name": "instana-registry"}]}'
+    kubectl patch -n instana-operator serviceaccount instana-operator -p '{"imagePullSecrets": [{"name": "instana-registry"}]}'
+
+
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+- name: 🚀 INSTANA - Create TLS Ingress Secrets
+  shell: |
+    oc -n instana-core delete secret  instana-tls
+    openssl req -x509 -newkey rsa:2048 -keyout tls.key -out tls.crt -days 365 -nodes -subj "/O=IBM/CN=*.containers.appdomain.cloud" -addext "subjectAltName = DNS:{{BASE_DOMAIN}}"
+    oc -n instana-core create secret tls instana-tls --cert=./tls.crt --key=./tls.key
+    oc -n instana-core label secret instana-tls app.kubernetes.io/name=instana
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+- name: 🚀 INSTANA - Get Config File
+  ansible.builtin.template:
+    src: ./templates/instana/instana-config.j2
+    dest: ./config.yaml
+
+
+- name: 🚀 INSTANA - Create Config
+  shell: |
+    #prep core resources
+    #local directory must exist
+    cat ./config.yaml
+    oc -n instana-core delete secret instana-core
+    oc -n instana-core create secret generic instana-core --namespace instana-core --from-file=./config.yaml
+  ignore_errors: true
+  register: output
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+- name: 🚀 INSTANA - Create License
+  shell: |
+    cat ./config.yaml
+    #create dev unit secret
+    export LICENSE_STRING=$(cat license.json | sed -e 's/\[//g' -e 's/\"//g' -e 's/\]//g')
+    echo "license: $LICENSE_STRING" > config.yaml
+    echo "agentKeys:" >> config.yaml
+    echo "  - {{current_agent_key}}" >> config.yaml
+    echo "initialAdminPassword: {{current_admin_pass}}" >> config.yaml
+    echo "initialAdminUser: {{current_cp4waiops_feature.instana_admin_user}}" >> config.yaml
+
+    oc -n instana-units delete secret  aiops-dev
+    oc -n instana-units create secret generic aiops-dev --from-file=./config.yaml
+    cat ./config.yaml
+
+    # rm -f config.yaml
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/clickhouse/deployment.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/clickhouse/service.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/clickhouse/pvc.j2
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/zookeeper/service.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/zookeeper/pvc.j2
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/zookeeper/deployment.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/common/datastores_sa.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/common/datastores_ns.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/common/datastores_crb.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/kafka/deployment.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/kafka/service.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/kafka/pvc.j2
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/cassandra/deployment.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/cassandra/service.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/cassandra/pvc.j2
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/cockroachdb/deployment.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/cockroachdb/service.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/cockroachdb/pvc.j2
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/elasticsearch/deployment.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/elasticsearch/service.yaml
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana-k8s-datastores/elasticsearch/pvc.j2
+
+
+
+
+- name: 🚀 INSTANA - Create Backend Datastores
+  shell: |
+    #create datastores
+    oc project instana-datastores
+
+    #set the images for this version
+    CASSANDRA_IMAGE=''
+    CLICKHOUSE_IMAGE=''
+    ELASTICSEARCH_IMAGE=''
+    KAFKA_IMAGE=''
+    ZOOKEEPER_IMAGE=''
+    POSTGRES_IMAGE=''
+    AGG_IMAGE=''
+    COCKROACH_IMAGE=''
+    DATASTORE_IMAGES=$(kubectl instana db-images | sed s/'\/k8s'/''/g)
+
+    for i in $DATASTORE_IMAGES; do 
+      if [ ! $(echo $i | grep cassandra) == '' ]; then
+        CASSANDRA_IMAGE=$i
+      elif [ ! $(echo $i | grep clickhouse) == '' ]; then
+        CLICKHOUSE_IMAGE=$i
+      elif [ ! $(echo $i | grep elasticsearch) == '' ]; then
+        ELASTICSEARCH_IMAGE=$i
+      elif [ ! $(echo $i | grep kafka) == '' ]; then
+        KAFKA_IMAGE=$i
+      elif [ ! $(echo $i | grep zookeeper) == '' ]; then
+        ZOOKEEPER_IMAGE=$i
+      elif [ ! $(echo $i | grep postgres) == '' ]; then
+        POSTGRES_IMAGE=$i
+      elif [ ! $(echo $i | grep aggregator) == '' ]; then
+        AGG_IMAGE=$i
+      elif [ ! $(echo $i | grep cockroach) == '' ]; then
+        COCKROACH_IMAGE=$i
+      else
+        echo "Missing statement for $i"
+      fi
+    done
+
+
+    echo "CASSANDRA_IMAGE:      $CASSANDRA_IMAGE"
+    echo "CLICKHOUSE_IMAGE:     $CLICKHOUSE_IMAGE"
+    echo "ELASTICSEARCH_IMAGE:  $ELASTICSEARCH_IMAGE"
+    echo "KAFKA_IMAGE:          $KAFKA_IMAGE"
+    echo "ZOOKEEPER_IMAGE:      $ZOOKEEPER_IMAGE"
+    echo "POSTGRES_IMAGE:       $POSTGRES_IMAGE"
+    echo "AGG_IMAGE:            $AGG_IMAGE"
+    echo "COCKROACH_IMAGE:      $COCKROACH_IMAGE"
+
+
+    #prep for datastores
+    #instana-docker-port directory should be here
+    oc delete secret instana-pullsecret
+    oc create secret docker-registry instana-pullsecret --docker-server=containers.instana.io --docker-username="_" --docker-password={{current_agent_key}}
+    oc -n instana-datastores secrets link default instana-pullsecret --for=pull
+    oc -n instana-datastores secrets link instana-datastore-sa instana-pullsecret --for=pull
+    oc adm policy add-scc-to-user privileged instana-datastore-sa -n instana-datastores
+
+    #deploy datastores from the YAMLs, replacing with the images
+    oc -n instana-datastores set image deployment/zookeeper zookeeper=$ZOOKEEPER_IMAGE
+    oc -n instana-datastores set image deployment/kafka kafka=$KAFKA_IMAGE
+    oc -n instana-datastores set image deployment/clickhouse clickhouse=$CLICKHOUSE_IMAGE
+    oc -n instana-datastores set image deployment/cockroachdb cockroachdb=$COCKROACH_IMAGE
+    oc -n instana-datastores set image deployment/elasticsearch elasticsearch=$ELASTICSEARCH_IMAGE
+    oc -n instana-datastores set image deployment/cassandra cassandra=$CASSANDRA_IMAGE
+
+
+    oc annotate namespace instana-datastores scheduler.alpha.kubernetes.io/defaultTolerations-
+    oc annotate namespace instana-datastores openshift.io/node-selector-
+
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for DataStores being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+# - name: 🚀 INSTANA - Hack for Affinity (waiting 120 seconds)
+#   shell: |
+#     oc annotate namespace instana-datastores openshift.io/node-selector-
+#     oc delete pod $(oc -n instana-datastores get pods| grep 'Pending'|awk '{print$1}') -n instana-datastores --ignore-not-found
+#     sleep 120
+#     oc annotate namespace instana-datastores openshift.io/node-selector-
+#     oc delete pod $(oc -n instana-datastores get pods| grep 'Pending'|awk '{print$1}') -n instana-datastores --ignore-not-found
+#   ignore_errors: true
+#   register: output
+# - name: 🟣  DEBUG
+#   debug:
+#     var: output.stdout_lines
+#     verbosity: 1
+
+
+
+# - name:   🕦 INSTANA - Wait for DataStores to become ready
+#   shell: oc -n instana-datastores get pods| grep '1/1' | grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout > "5"
+#   retries: 500
+#   delay: 15
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for DataStores being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTANA - Wait for DataStores to become ready
+  shell: |
+    while [ `oc -n instana-datastores get pods| grep '1/1' | grep -c ""` -lt 6 ]
+    do
+      oc annotate namespace instana-datastores openshift.io/node-selector-
+      oc delete pod $(oc -n instana-datastores get pods| grep 'Pending'|awk '{print$1}') -n instana-datastores --ignore-not-found
+      sleep 15
+    done
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+
+# - name: 🚀 INSTANA - Hack for Stuck Operators (waiting 30 seconds)
+#   shell: |
+#     oc delete pod $(oc -n instana-operator get pods --no-headers| grep -v 'Running' |awk '{print$1}') -n instana-operator --ignore-not-found
+#     sleep 10
+#     oc delete pod $(oc -n instana-operator get pods --no-headers| grep -v 'Running' |awk '{print$1}') -n instana-operator --ignore-not-found
+#     sleep 10
+#     oc delete pod $(oc -n instana-operator get pods --no-headers| grep -v 'Running' |awk '{print$1}') -n instana-operator --ignore-not-found
+#     sleep 10
+#   ignore_errors: true
+#   register: output
+# - name: 🟣  DEBUG
+#   debug:
+#     var: output.stdout_lines
+#     verbosity: 1
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Operator being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+# - name:   🕦 INSTANA - Wait for Operator to become ready
+#   shell: oc -n instana-operator get pods -l app.kubernetes.io/component=webhook| grep '1/1' | grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout == "1"
+#   retries: 500
+#   delay: 15
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Operator being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTANA - Wait for Operator to become ready
+  shell: |
+    while [ `oc -n instana-operator get pods| grep '1/1' | grep -c ""` -lt 2 ]
+    do
+      kubectl patch -n instana-operator serviceaccount instana-operator-webhook -p '{"imagePullSecrets": [{"name": "instana-registry"}]}'
+      kubectl patch -n instana-operator serviceaccount instana-operator -p '{"imagePullSecrets": [{"name": "instana-registry"}]}'
+      oc delete pod $(oc -n instana-operator get pods --no-headers| grep -v 'Running' |awk '{print$1}') -n instana-operator --ignore-not-found
+      sleep 30
+    done
+  ignore_errors: true
+  register: output
+  args:
+    executable: /bin/bash
+- name: 🟣  DEBUG
+  debug:
+    var: output.stdout_lines
+    verbosity: 1
+
+
+
+
+
+- name: 🚀 INSTANA - Create Instana Core Instance
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/instana/instana-core.j2
+
+
+    
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Core CR being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTANA - Wait for Core Instance to become ready
+  shell: oc -n instana-core get core instana-core -o=custom-columns=STATUS:.status.status --no-headers
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "Ready"
+  retries: 500
+  delay: 15
+
+
+- name: 🚀 INSTANA - Create Instana Unit Instance
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/instana/instana-unit.j2
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Unit CR being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTANA - Wait for Unit Instance to become ready
+  shell: oc -n instana-units get unit aiops-dev -o=custom-columns=STATUS:.status.status --no-headers
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "Ready"
+  retries: 500
+  delay: 15
+
+
+- name: 🚀 INSTANA - Create Routes
+  community.kubernetes.k8s:
+    namespace: instana-datastores
+    state: present
+    template: ./templates/instana/instana-routes.j2
+
+
+
+
+
+
+
+
+
+
+
+
+
+

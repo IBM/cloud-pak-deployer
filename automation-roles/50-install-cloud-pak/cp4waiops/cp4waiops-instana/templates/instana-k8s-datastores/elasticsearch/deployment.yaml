@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: elasticsearch
+  name: elasticsearch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      serviceAccountName: instana-datastore-sa
+      securityContext:
+        fsGroup: 2000
+      imagePullSecrets:
+      - name: instana-pullsecret
+      containers:
+      - image: containers.instana.io/instana/release/product/elasticsearch:7.16.3_v0.41.0
+        name: elasticsearch
+        env:
+          - name: LISTEN_ADDR
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+        ports:
+          - containerPort: 9200
+            name: elastic-9200
+          - containerPort: 9300
+            name: elastic-9300
+        resources:
+          limits:
+            cpu: '8'
+            memory: 16Gi
+          requests:
+            cpu: '512m'
+            memory: 1Gi
+        volumeMounts:
+          - mountPath: /mnt/data
+            name: es-data
+      volumes:
+        - name: es-data
+          persistentVolumeClaim:
+            claimName: es-data

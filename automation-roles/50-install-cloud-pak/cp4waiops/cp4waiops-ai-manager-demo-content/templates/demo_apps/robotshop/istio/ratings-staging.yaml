@@ -1,0 +1,51 @@
+# Source: robot-shop/templates/ratings-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ratings-test
+  labels:
+    app: robot-shop
+    version: v2
+    service: ratings
+    stage: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: robot-shop
+      version: v2
+      service: ratings
+      stage: test
+  template:
+    metadata:
+      annotations:
+        sidecar.istio.io/inject: "true"
+      labels:
+        app: robot-shop
+        version: v2
+        service: ratings
+        stage: test
+    spec:
+      
+      containers:
+      - name: ratings
+        image: robotshop/rs-ratings:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            cpu: 200m
+            memory: 100Mi
+          requests:
+            cpu: 100m
+            memory: 50Mi
+        readinessProbe:
+          httpGet:
+            path: /_health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      restartPolicy: Always

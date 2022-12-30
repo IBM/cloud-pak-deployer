@@ -1,0 +1,32 @@
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: robotshop-gateway
+spec:
+  selector:
+    istio: ingressgateway # default Istio controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: robotshop-web-vs
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - robotshop-gateway
+  http:
+  # default route
+  - route:
+    - destination:
+        host: web.robot-shop.svc.cluster.local
+        port:
+          number: 8080

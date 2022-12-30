@@ -1,0 +1,87 @@
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: load-log-indexes-test
+  namespace: default
+spec:
+  serviceAccountName: demo-admin
+  template:
+    spec:
+      containers:
+        - name: load
+          image: niklaushirt/cp4waiops-tools:2.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "150m"
+            limits:
+              memory: "1256Mi"
+              cpu: "1200m"
+          command:
+            - /bin/sh
+            - -c
+            - |
+              #!/bin/bash
+              # set -x
+              
+              export Green='\033[0;32m'        # Green
+
+
+              echo "*****************************************************************************************************************************"
+              echo " ✅ ${Green}STARTING: Load log anomaly training files"
+              echo "*****************************************************************************************************************************"
+
+
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    🚀 Initializing"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              export APP_NAME=robot-shop
+              export INDEX_TYPE=logs
+
+              export WAIOPS_NAMESPACE=$(oc get po -A|grep aimanager-operator |awk '{print$1}')
+
+
+
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    📥 Downloading log anomaly training files"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              export REPO=https://github.com/niklaushirt/waiops-training-data.git
+              git clone $REPO
+              
+
+
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    📦 Uncompressing log anomaly training files"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              cd waiops-training-data/robot-shop/$VERSION/logs
+              cat ELK_ROBOTSHOP_7DAYS.zip.* > temp.zip
+              unzip temp.zip
+
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    🌏 Starting port formward"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              while true; do oc port-forward statefulset/iaf-system-elasticsearch-es-aiops 9200; done>/dev/null 2>&1&
+
+
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "    🚀 Loading log anomaly training files"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              echo "     ⏱  This will take some time (up to 45 minutes)"
+              echo "   ------------------------------------------------------------------------------------------------------------------------------"
+              cd /waiops-training-data
+              ./training/scripts/load-es-index.sh
+
+              echo "*****************************************************************************************************************************"
+              echo " ✅ DONE"
+              echo "*****************************************************************************************************************************"
+
+          env:
+            - name: INDEX_OVERWRITE
+              value : "false"
+            - name: VERSION
+              value : "v3.4.1"
+      restartPolicy: Never
+
+  backoffLimit: 4

@@ -1,0 +1,32 @@
+apiVersion: v1                     
+kind: Namespace
+metadata:
+  name: cp4waiops-tools
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-grabber
+  namespace: cp4waiops-tools
+spec:
+  selector:
+    matchLabels:
+      run: memory-grabber
+  replicas: 10
+  template:
+    metadata:
+      labels:
+        run: memory-grabber
+    spec:
+      containers:
+      - name: memory-grabber
+        image: niklaushirt/memory_grabber:0.2
+        resources:
+          limits:
+            cpu: 200m
+            memory: 1500Mi
+          requests:
+            cpu: 100m
+            memory: 1000Mi
+        ports:
+        - containerPort: 8080        

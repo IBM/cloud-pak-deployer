@@ -1,0 +1,356 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patches
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE ROUTES
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create External Routes"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patch Ingress
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🚀 ROUTES - Patch Ingress policy-group
+  shell: oc patch namespace default --type=json -p '[{"op":"add","path":"/metadata/labels","value":{"network.openshift.io/policy-group":"ingress"}}]'
+  register: ingress_patched
+
+
+# - name: HACK    -             🩹 Patch AIOpsAnalyticsOrchestrator Pull Secret
+#   shell: oc patch AIOpsAnalyticsOrchestrator aiops -n $WAIOPS_NAMESPACE --type merge  --patch-file ./templates/waiops/patches/analytics-pull-patch.yaml
+#   ignore_errors: true
+#   register: irorchestrator_patched
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create Topology Routes
+# --------------------------------------------------------------------------------------------------------------------------------------
+# - name: 🚀 ROUTES - Check Topology Routes
+#   shell: |
+#     export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+#     oc get route --ignore-not-found -n $WAIOPS_NAMESPACE topology-merge
+#   ignore_errors: true
+#   register: OBJECT_EXISTS
+
+
+
+- name: 🚀 ROUTES - Create External Routes
+  block:
+  - name: 🚀 ROUTES - Create Topology Route - topology-merge
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route topology-merge -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route passthrough topology-merge -n $WAIOPS_NAMESPACE --insecure-policy="Redirect" --service=aiops-topology-merge --port=https-merge-api
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+  - name: 🚀 ROUTES - Create Topology Route - topology-rest
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route topology-rest -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route passthrough topology-rest -n $WAIOPS_NAMESPACE --insecure-policy="Redirect" --service=aiops-topology-rest-observer --port=https-rest-observer-admin
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+  - name: 🚀 ROUTES - Create Topology Route - topology-file
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route topology-file -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route passthrough topology-file -n $WAIOPS_NAMESPACE --insecure-policy="Redirect" --service=aiops-topology-file-observer --port=https-file-observer-admin
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+  - name: 🚀 ROUTES - Create Topology Route - topology-manage
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route topology-manage -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route passthrough topology-manage -n $WAIOPS_NAMESPACE --service=aiops-topology-topology --port=https-topology-api
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+  - name: 🚀 ROUTES - Create Topology Route - topology-file-api
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route topology-file-api -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route reencrypt topology-file-api -n $WAIOPS_NAMESPACE --service=aiops-topology-file-observer --port=https-file-observer-api
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+  #when: OBJECT_EXISTS.stdout|length == 0
+
+
+
+
+  - name: 🚀 ROUTES - Create external Flink Job Manager Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route job-manager -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route edge job-manager -n $WAIOPS_NAMESPACE --service=cp4waiops-eventprocessor-eve-29ee-ep-jobmanager --port=ui
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+  
+  - name: 🚀 ROUTES - Create external Flink Policy Job Manager Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route job-manager-policy -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route edge job-manager-policy -n $WAIOPS_NAMESPACE --service=aiops-ir-lifecycle-eventprocessor-ep-jobmanager --port=ui
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+
+
+
+
+  - name: 🚀 ROUTES - Create external AI Manager API Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route ai-platform-api -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route passthrough ai-platform-api -n $WAIOPS_NAMESPACE  --service=aimanager-aio-ai-platform-api-server --port=4000 --insecure-policy=Redirect --wildcard-policy=None
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+
+  - name: 🚀 ROUTES - Create external Datalayer API Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route datalayer-api -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route reencrypt datalayer-api -n $WAIOPS_NAMESPACE  --service=aiops-ir-core-ncodl-api --port=secure-port --insecure-policy=Redirect --wildcard-policy=None
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+
+  - name: 🚀 ROUTES - Create external AIO Controller Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route aimanager-aio-controller -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route passthrough aimanager-aio-controller -n $WAIOPS_NAMESPACE  --service=aimanager-aio-controller
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+
+  - name: 🚀 ROUTES - Enable Swagger on external Datalayer API Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route aiops-ir-core-ncodl-api -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc set env deploy -n $WAIOPS_NAMESPACE aiops-ir-core-ncodl-api ENABLE_SWAGGER_UI="true" 
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+  - name: 🚀 ROUTES - Create Spark Master UI Route 
+    shell: |
+      export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+      existing=$(oc get route sparkadmin -n $WAIOPS_NAMESPACE --no-headers|awk '{print$1}')
+      if [[ $existing == "" ]]; then
+        echo "Create Route"
+        oc create route edge sparkadmin -n $WAIOPS_NAMESPACE  --service=aiops-ir-analytics-spark-master
+        oc expose svc aiops-ir-analytics-spark-master -n $WAIOPS_NAMESPACE --name spark
+      fi
+    ignore_errors: true
+    register: output
+    args:
+      executable: /bin/bash
+  - name: 🟣  DEBUG
+    debug:
+      var: output.stdout_lines
+
+
+
+
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# # Wait for Cassandra Pod
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# - name: HACK    -             🕦 Wait for Cassandra Pod to become available - this can take up to 45 minutes (hack)
+#   shell: oc get po -n $WAIOPS_NAMESPACE | grep aiops-topology-cassandra-0| grep 1/1| grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout == "1"
+#   retries: 500
+#   delay: 15
+
+
+
+  
+
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# # Wait for Topology Pods
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# - name: HACK    -             🕦 Wait for Topology Pods to become available - this can take up to 45 minutes (hack)
+#   shell: oc get po -n $WAIOPS_NAMESPACE | grep aiops-topology-merge| grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout == "1"
+#   retries: 500
+#   delay: 15
+
+
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# # Patch Topology Pods
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# - name: HACK    -             🩹 Patch aiops-topology-merge (hack)
+#   shell: oc patch deployment aiops-topology-merge -n $WAIOPS_NAMESPACE --patch-file ./templates/waiops/patches/aiops-topology-merge-patch.yaml
+#   ignore_errors: true
+
+
+# - name: HACK    -             🩹 Patch aiops-topology-search (hack)
+#   shell: oc patch deployment aiops-topology-search -n $WAIOPS_NAMESPACE --patch-file ./templates/waiops/patches/aiops-topology-search-patch.yaml
+#   ignore_errors: true
+
+
+# - name: HACK    -             🩹 Patch aiops-topology-status (hack)
+#   shell: oc patch deployment aiops-topology-status -n $WAIOPS_NAMESPACE --patch-file ./templates/waiops/patches/aiops-topology-status-patch.yaml
+#   ignore_errors: true
+
+
+# - name: HACK    -             🩹 Patch aiops-topology-layout (hack)
+#   shell: oc patch deployment aiops-topology-layout -n $WAIOPS_NAMESPACE --patch-file ./templates/waiops/patches/aiops-topology-layout-patch.yaml
+#   ignore_errors: true
+
+
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# # Wait for IR Analytics Pods
+# # --------------------------------------------------------------------------------------------------------------------------------------
+# - name: HACK    -             🕦 Wait for IR Analytics Pods to become available - this can take up to 45 minutes (hack)
+#   shell: oc get po -n $WAIOPS_NAMESPACE | grep aiops-ir-analytics-|grep -c ""
+#   register: kubectl_get_pods
+#   until: kubectl_get_pods.stdout > "4"
+#   retries: 500
+#   delay: 15
+
+  when: current_cp4waiops_feature.create_external_routes == true
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Delete ImgPull error pods
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🚀 ROUTES - Delete Pods with ImgPull Error  
+  shell: |
+        export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    
+        errorPods=$(oc get po -n $WAIOPS_NAMESPACE|grep ImagePull|awk '{print$1}')
+        if [[ ! $errorPods == "" ]]; then
+          echo "Refreshing Pods"
+          oc delete pod --ignore-not-found $(oc get po -n $WAIOPS_NAMESPACE|grep ImagePull|awk '{print$1}') -n $WAIOPS_NAMESPACE
+        fi
+
+
+  ignore_errors: true

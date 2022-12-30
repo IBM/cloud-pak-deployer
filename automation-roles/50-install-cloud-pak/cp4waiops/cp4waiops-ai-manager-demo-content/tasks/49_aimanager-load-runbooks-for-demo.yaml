@@ -1,0 +1,284 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Create Gateway
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+## RUNBOOKS Duplicate
+
+- name: 🛰️  START - INSTALL AI MANAGER RUNBOOKS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Load AI Manager Runbooks"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+- name: 🚀 AWX - Get ZEN TOKEN
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+    ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+    LOGIN_USER=admin
+    LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+    ZEN_LOGIN_RESPONSE=$(
+    curl -k \
+    -H 'Content-Type: application/json' \
+    -XPOST \
+    "${ZEN_LOGIN_URL}" \
+    -d '{
+          "username": "'"${LOGIN_USER}"'",
+          "password": "'"${LOGIN_PASSWORD}"'"
+    }' 2> /dev/null
+    )
+
+    ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+    echo $ZEN_TOKEN
+  ignore_errors: true
+  register: ACT_ZEN_TOKEN
+  args:
+    executable: /bin/bash
+
+
+- name: 🚀 AWX - Set Fact ZEN_TOKEN
+  set_fact: ZEN_TOKEN={{ ACT_ZEN_TOKEN.stdout }} 
+
+
+
+
+
+- name: 🚀 AWX - Create WAIOPS Runbook - Mitigate RobotShop Problem
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export ZEN_TOKEN={{ZEN_TOKEN}}
+    export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath={.spec.host})
+    export DEMO_TOKEN=$(oc -n default get secret $(oc get secret -n default |grep -m1 demo-admin-token|awk '{print$1}') -o jsonpath='{.data.token}'|base64 --decode)
+    export DEMO_URL=$(oc status|grep -m1 "In project"|awk '{print$6}')
+
+
+
+    export result=$(curl -X "GET" -k "https://$ROUTE/aiops/api/story-manager/rba/v1/runbooks?publish=true" \
+        -H "Authorization: bearer $ZEN_TOKEN" \
+        -H 'Content-Type: application/json; charset=utf-8'|grep "Mitigate RobotShop Problem"|wc -l|tr -d ' ')
+
+    if [[ $result == "0" ]]; then
+
+      export PAYLOAD=$(echo "{
+              \"tags\": [],
+              \"steps\": [
+                {
+                  \"mappings\": [
+                    {
+                      \"parameterMappingType\": \"parameter\",
+                      \"parameterValue\": \"clusterCredentials\",
+                      \"automationParameterName\": \"extraVariables\"
+                    }
+                  ],
+                  \"number\": 1,
+                  \"title\": \"\",
+                  \"automationId\": \"AWX:job:CP4WAIOPS Mitigate Robotshop Ratings Outage\",
+                  \"type\": \"automation\"
+                }
+              ],
+              \"name\": \"Mitigate RobotShop Problem\",
+              \"description\": \"Mitigate RobotShop Problem\",
+              \"parameters\": [
+                {
+                  \"minLength\": 0,
+                  \"format\": \"multiline\",
+                  \"name\": \"clusterCredentials\",
+                        \"default\": \"{ \\\"my_k8s_apiurl\\\": \\\"$DEMO_URL\\\", \\\"my_k8s_apikey\\\": \\\"$DEMO_TOKEN\\\" }\",
+                  \"description\": \"Cluster Credentials encoded as JSON..\",
+                  \"type\": \"string\"
+                }
+              ]
+          }")
+
+      echo $PAYLOAD>/tmp/runbook.json
+
+      
+      export result=$(curl -X "POST" -k "https://$ROUTE/aiops/api/story-manager/rba/v1/runbooks?publish=true" \
+          -H "Authorization: bearer $ZEN_TOKEN" \
+          -H 'Content-Type: application/json; charset=utf-8' \
+          -d @/tmp/runbook.json)
+
+
+      rm /tmp/runbook.json
+    else 
+      export result="Already exists"
+    fi 
+
+
+    echo "$result"
+  ignore_errors: true
+  register: RBA_RESULT
+  args:
+    executable: /bin/bash
+
+
+
+- name: 🚀 AWX - Create WAIOPS Runbook - Create RobotShop Problem
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export ZEN_TOKEN={{ZEN_TOKEN}}
+    export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath={.spec.host})
+    export DEMO_TOKEN=$(oc -n default get secret $(oc get secret -n default |grep -m1 demo-admin-token|awk '{print$1}') -o jsonpath='{.data.token}'|base64 --decode)
+    export DEMO_URL=$(oc status|grep -m1 "In project"|awk '{print$6}')
+
+    export result=$(curl -X "GET" -k "https://$ROUTE/aiops/api/story-manager/rba/v1/runbooks?publish=true" \
+    -H "Authorization: bearer $ZEN_TOKEN" \
+    -H 'Content-Type: application/json; charset=utf-8'|grep "Create RobotShop Problem"|wc -l|tr -d ' ')
+
+    if [[ $result == "0" ]]; then
+      export PAYLOAD=$(echo "{
+              \"tags\": [],
+              \"steps\": [
+                {
+                  \"mappings\": [
+                    {
+                      \"parameterMappingType\": \"parameter\",
+                      \"parameterValue\": \"clusterCredentials\",
+                      \"automationParameterName\": \"extraVariables\"
+                    }
+                  ],
+                  \"number\": 1,
+                  \"title\": \"\",
+                  \"automationId\": \"AWX:job:CP4WAIOPS Create Robotshop Ratings Outage\",
+                  \"type\": \"automation\"
+                }
+              ],
+              \"name\": \"Create RobotShop Problem\",
+              \"description\": \"Create RobotShop Problem\",
+              \"parameters\": [
+                {
+                  \"minLength\": 0,
+                  \"format\": \"multiline\",
+                  \"name\": \"clusterCredentials\",
+                        \"default\": \"{ \\\"my_k8s_apiurl\\\": \\\"$DEMO_URL\\\", \\\"my_k8s_apikey\\\": \\\"$DEMO_TOKEN\\\" }\",
+                  \"description\": \"Cluster Credentials encoded as JSON..\",
+                  \"type\": \"string\"
+                }
+              ]
+          }")
+
+      echo $PAYLOAD>/tmp/runbook.json
+
+      
+      export result=$(curl -X "POST" -k "https://$ROUTE/aiops/api/story-manager/rba/v1/runbooks?publish=true" \
+          -H "Authorization: bearer $ZEN_TOKEN" \
+          -H 'Content-Type: application/json; charset=utf-8' \
+          -d @/tmp/runbook.json)
+
+
+      rm /tmp/runbook.json
+    else 
+      export result="Already exists"
+    fi 
+
+    echo "$result"
+  ignore_errors: true
+  register: RBA_RESULT
+  args:
+    executable: /bin/bash
+
+
+
+
+- name: 🚀 AWX - Create WAIOPS Runbook - Recycle RobotShop Problem
+  shell: |
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    export ZEN_TOKEN={{ZEN_TOKEN}}
+    export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath={.spec.host})
+    export DEMO_TOKEN=$(oc -n default get secret $(oc get secret -n default |grep -m1 demo-admin-token|awk '{print$1}') -o jsonpath='{.data.token}'|base64 --decode)
+    export DEMO_URL=$(oc status|grep -m1 "In project"|awk '{print$6}')
+
+    export result=$(curl -X "GET" -k "https://$ROUTE/aiops/api/story-manager/rba/v1/runbooks?publish=true" \
+    -H "Authorization: bearer $ZEN_TOKEN" \
+    -H 'Content-Type: application/json; charset=utf-8'|grep "Restart RobotShop Ratings"|wc -l|tr -d ' ')
+
+    if [[ $result == "0" ]]; then
+
+      export PAYLOAD=$(echo "{
+              \"tags\": [],
+              \"steps\": [
+                {
+                  \"mappings\": [
+                    {
+                      \"parameterMappingType\": \"parameter\",
+                      \"parameterValue\": \"clusterCredentials\",
+                      \"automationParameterName\": \"extraVariables\"
+                    }
+                  ],
+                  \"number\": 1,
+                  \"title\": \"\",
+                  \"automationId\": \"AWX:job:CP4WAIOPS Stop Robotshop Ratings\",
+                  \"type\": \"automation\"
+                },
+                {
+                  \"mappings\": [
+                    {
+                      \"parameterMappingType\": \"parameter\",
+                      \"parameterValue\": \"clusterCredentials\",
+                      \"automationParameterName\": \"extraVariables\"
+                    }
+                  ],
+                  \"number\": 2,
+                  \"title\": \"\",
+                  \"automationId\": \"AWX:job:CP4WAIOPS Start Robotshop Ratings\",
+                  \"type\": \"automation\"
+                }
+              ],
+              \"name\": \"Restart RobotShop Ratings\",
+              \"description\": \"Restart Ratings service after MySQL outage\",
+              \"parameters\": [
+                {
+                  \"minLength\": 0,
+                  \"format\": \"multiline\",
+                  \"name\": \"clusterCredentials\",
+                        \"default\": \"{ \\\"my_k8s_apiurl\\\": \\\"$DEMO_URL\\\", \\\"my_k8s_apikey\\\": \\\"$DEMO_TOKEN\\\" }\",
+                  \"description\": \"Cluster Credentials encoded as JSON..\",
+                  \"type\": \"string\"
+                }
+              ]
+          }")
+
+      echo $PAYLOAD>/tmp/runbook.json
+
+      
+      export result=$(curl -X "POST" -k "https://$ROUTE/aiops/api/story-manager/rba/v1/runbooks?publish=true" \
+          -H "Authorization: bearer $ZEN_TOKEN" \
+          -H 'Content-Type: application/json; charset=utf-8' \
+          -d @/tmp/runbook.json)
+
+
+      rm /tmp/runbook.json
+    else 
+      export result="Already exists"
+    fi 
+    echo "$result"
+  ignore_errors: true
+  register: RBA_RESULT
+  args:
+    executable: /bin/bash
+
+
+
+
+
+# - name: 🟣 OUTPUT
+#   debug: 
+#     var: RBA_RESULT.stdout_lines
+
+
+
+
+

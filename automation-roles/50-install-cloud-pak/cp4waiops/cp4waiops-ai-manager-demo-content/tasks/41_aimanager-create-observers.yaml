@@ -1,0 +1,158 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Connection Details
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - CREATE OBSERVERS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Create K8s observer"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🚀 TOPOLOGY - CREATE K8S OBSERVER
+  shell: |
+    set -x
+
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+    echo "Creating K8s Observer"
+    oc create route passthrough -n $WAIOPS_NAMESPACE --service aimanager-aio-controller --port extport
+
+
+    export AI_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE ai-platform-api  -o jsonpath={.spec.host})
+    export AIO_PLATFORM_ROUTE=$(oc get route -n $WAIOPS_NAMESPACE aimanager-aio-controller -o jsonpath={.spec.host})
+
+    echo "        Namespace:          $WAIOPS_NAMESPACE"
+    echo "        AI_PLATFORM_ROUTE:  $AI_PLATFORM_ROUTE"
+    echo "        AIO_PLATFORM_ROUTE: $AIO_PLATFORM_ROUTE"
+    echo ""
+
+    echo "       🛠️   Getting ZEN Token"
+
+    ZEN_API_HOST=$(oc get route -n $WAIOPS_NAMESPACE cpd -o jsonpath='{.spec.host}')
+    ZEN_LOGIN_URL="https://${ZEN_API_HOST}/v1/preauth/signin"
+    LOGIN_USER=admin
+    LOGIN_PASSWORD="$(oc get secret admin-user-details -n $WAIOPS_NAMESPACE -o jsonpath='{ .data.initial_admin_password }' | base64 --decode)"
+
+    ZEN_LOGIN_RESPONSE=$(
+    curl -k \
+    -H 'Content-Type: application/json' \
+    -XPOST \
+    "${ZEN_LOGIN_URL}" \
+    -d '{
+        "username": "'"${LOGIN_USER}"'",
+        "password": "'"${LOGIN_PASSWORD}"'"
+    }' 2> /dev/null
+    )
+
+    ZEN_LOGIN_MESSAGE=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .message)
+
+    if [ "${ZEN_LOGIN_MESSAGE}" != "success" ]; then
+        echo "Login failed: ${ZEN_LOGIN_MESSAGE}"
+
+    fi
+
+    ZEN_TOKEN=$(echo "${ZEN_LOGIN_RESPONSE}" | jq -r .token)
+    # echo "${ZEN_TOKEN}"
+    # echo "        AI_PLATFORM_ROUTE:  $ZEN_TOKEN"
+
+
+    echo "Getting local K8s API"
+
+    API_TOKEN=$(oc -n default get secret $(oc get secret -n default |grep -m1 demo-admin-token|awk '{print$1}') -o jsonpath='{.data.token}'|base64 --decode)
+    API_URL=$(oc status|grep -m1 "In project"|awk '{print$6}')
+    API_SERVER=$(echo $API_URL| cut -d ":" -f 2| tr -d '/')
+    API_PORT=$(echo $API_URL| cut -d ":" -f 3)
+
+    echo "            🌏 API URL:               $API_URL"
+    echo "            🌏 API SERVER:            $API_SERVER"
+    echo "            🌏 API PORT:              $API_PORT"
+    echo "            🔐 API Token:             $API_TOKEN"
+
+
+
+    echo "Sucessfully logged in" 
+    echo ""
+    echo "Creating OBSERVER"
+
+    curl -X 'POST' --insecure \
+      "https://$AIO_PLATFORM_ROUTE/v1/observer/connections?connection_id=robot-shop" \
+      -H 'accept: application/json' \
+      -H 'Content-Type: application/json' \
+      -H "authorization: Bearer $ZEN_TOKEN"  \
+      -d "
+      {
+          \"connection_config\": {
+              \"job_type\": \"load\",
+              \"observer_parameters\": {
+                  \"parameters\": {
+                      \"trust_all_certificate\": true,
+                      \"ssl_hostname_validation\": true,
+                      \"hide_terminated_pods\": true,
+                      \"namespaceGroupParameters\": {
+                          \"correlate\": true
+                      },
+                      \"data_center\": \"robot-shop\",
+                      \"token\": \"$API_TOKEN\",
+                      \"master_ip\": \"$API_SERVER\",
+                      \"api_port\": \"$API_PORT\",
+                      \"connect_read_timeout_ms\": \"5000\",
+                      \"namespace\": \"robot-shop\"
+                  },
+                  \"scheduleRequest\": false,
+                  \"unique_id\": \"demo-robot-shop\",
+                  \"description\": \"Automatically created by Nicks scripts\"
+              }
+          },
+          \"connection_type\": \"kubernetes_observer\",
+          \"datasource_type\": \"topology\"
+        }"
+
+
+    # curl -X 'POST' --insecure \
+    #   "https://$AIO_PLATFORM_ROUTE/v1/observer/connections?connection_id=robot-shop" \
+    #   -H 'accept: application/json' \
+    #   -H 'Content-Type: application/json' \
+    #     -H "authorization: Bearer $ZEN_TOKEN"  \
+    #   -d '{ 
+    #   "connection_config": { 
+    #     "job_type": "local", 
+    #     "observer_parameters": { 
+    #       "parameters": { 
+    #         "hide_terminated_pods": true, 
+    #         "namespaceGroupParameters": { 
+    #           "correlate": true 
+    #         }, 
+    #         "data_center": "robot-shop", 
+    #         "namespace": "robot-shop" 
+    #       }, 
+    #       "scheduleRequest": false, 
+    #       "unique_id": "mariapp-robot-shop", 
+    #       "description": "Automatically created by Nicks scripts" 
+    #     } 
+    #   }, 
+    #   "connection_type": "kubernetes_observer", 
+    #   "datasource_type": "topology" 
+    # }'
+
+
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    #verbosity: 2
+

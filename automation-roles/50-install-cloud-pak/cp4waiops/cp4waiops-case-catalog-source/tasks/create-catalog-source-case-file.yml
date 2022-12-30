@@ -1,0 +1,17 @@
+---
+- set_fact:
+    _case_dir: "{{ status_dir  | default('temp_status') }}/cp4waiops/case"
+
+# Install catalog
+- name: 📥 Compose cloudctl install-catalog command for case file
+  set_fact:
+    _install_catalog_command: "{{ lookup('template','install-catalog-command.j2') }}"
+
+- name: 📥 Show install-catalog command that will be used
+  debug:
+    var: _install_catalog_command
+
+- name: 🚀 Run cloudctl install-catalog for case file
+  shell: |
+    {{ _install_catalog_command }}
+  

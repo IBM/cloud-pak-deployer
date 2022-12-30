@@ -1,0 +1,88 @@
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Install GITOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+
+- name: 🛰️  START - GITOPS
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Installing GITOPS Instance"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+- name:  🚀 GITOPS INSTALL - Install GITOPS Subscription
+  community.kubernetes.k8s:
+    state: present
+    template: './templates/1-gitops_sub.j2'
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for Operator to become ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:  🚀 GITOPS INSTALL - 🕦 Wait for Operator to become ready
+  shell: oc get -n openshift-operators pod --no-headers|grep "gitops"|grep "1/1"| grep -c ""
+  register: kubectl_get_sa
+  until: kubectl_get_sa.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+
+
+- name:  🚀 GITOPS INSTALL - Install GITOPS
+  community.kubernetes.k8s:
+    state: present
+    template: './templates/2-gitops_install.j2'
+
+
+
+
+
+
+- name: 🕦 CHECK -  Wait for more than >7 pods in namespace openshift-gitops (this might take some time)
+  shell: |
+    NUM_PODS=$(oc get po -n openshift-gitops |grep Running|grep "1/1"|wc -l|tr -d ' ')
+    echo $NUM_PODS
+  register: kubectl_num_pods
+  until: kubectl_num_pods.stdout|int > 7
+  retries: 500
+  delay: 15
+
+
+- name: 🔐 GITOPS INSTALL - LOGIN INFOS
+  shell: |
+    echo "🌏 URL:      https://"$(oc get routes -n openshift-gitops openshift-gitops-server  -o jsonpath="{['spec']['host']}")
+    echo "🧔 User:     admin"
+    echo "🔐 Password: "$(oc get secret -n openshift-gitops openshift-gitops-cluster -ojson|jq -r '.data."admin.password"')
+  register: access
+
+
+- name: 🟣 OUTPUT
+  debug: 
+    var: access.stdout_lines
+    #verbosity: 1
+
+
+- name:  🚀 GITOPS INSTALL - Install MAIN MODULE
+  community.kubernetes.k8s:
+    state: present
+    template: './templates/3-gitops-installer.j2'
+
+
+
+
+
+
+

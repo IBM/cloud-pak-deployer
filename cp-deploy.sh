@@ -656,10 +656,25 @@ fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Add any vault secrets that have been specified as environment variables                                   #
+# This must only be done when env subcommand is specified                                                   #
 # --------------------------------------------------------------------------------------------------------- #
-if [[ "${CPD_OC_LOGIN}" != "" ]];then
-  arrVaultSecret+=("oc-login")
-  arrVaultSecretValue+=("${CPD_OC_LOGIN}")
+if [[ "${SUBCOMMAND}" == "environment" ]];then
+  if [[ "${CPD_OC_LOGIN}" != "" ]];then
+    arrVaultSecret+=("oc-login")
+    arrVaultSecretValue+=("${CPD_OC_LOGIN}")
+  fi
+  if [[ "${AWS_ACCESS_KEY_ID}" != "" ]];then
+    arrVaultSecret+=("aws-access-key")
+    arrVaultSecretValue+=("${AWS_ACCESS_KEY_ID}")
+  fi
+  if [[ "${AWS_SECRET_ACCESS_KEY}" != "" ]];then
+    arrVaultSecret+=("aws-secret-access-key")
+    arrVaultSecretValue+=("${AWS_SECRET_ACCESS_KEY}")
+  fi
+  if [[ "${ROSA_LOGIN_TOKEN}" != "" ]];then
+    arrVaultSecret+=("rosa-login-token")
+    arrVaultSecretValue+=("${ROSA_LOGIN_TOKEN}")
+  fi
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -879,6 +894,11 @@ if ! $INSIDE_CONTAINER;then
   fi
   if [ ! -z "${NO_PROXY}" ];then
       run_cmd+=" -e no_proxy=${NO_PROXY}"
+  fi
+
+  # Add AWS session token if available in current session
+  if [ ! -z "${AWS_SESSION_TOKEN}" ];then
+      run_cmd+=" -e AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN}"
   fi
 
   # Handle extra variables

@@ -1,0 +1,93 @@
+
+
+# *************************************************************************************************************************************************
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Patching ASM
+# --------------------------------------------------------------------------------------------------------------------------------------
+# *************************************************************************************************************************************************
+    
+
+- name: 🛰️  START - DISABLE SERVICE MATCH TOKEN RULE
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Disable match token rules"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+      
+
+      
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Disable Match Token RULE for Services
+# --------------------------------------------------------------------------------------------------------------------------------------
+
+
+- name: 🚀 TOPOLOGY - Disable Match Token RULE for Services
+  shell: |
+    CLUSTER_ROUTE=$(oc get routes console -n openshift-console | tail -n 1 2>&1 ) 
+    CLUSTER_FQDN=$( echo $CLUSTER_ROUTE | awk '{print $2}')
+    CLUSTER_NAME=${CLUSTER_FQDN##*console.}
+
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    export EVTMGR_REST_USR=$(oc get secret aiops-topology-asm-credentials -n $WAIOPS_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret aiops-topology-asm-credentials -n $WAIOPS_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    oc delete route  topology-merge -n $WAIOPS_NAMESPACE
+    oc create route reencrypt topology-merge -n $WAIOPS_NAMESPACE --insecure-policy="Redirect" --service=aiops-topology-merge --port=https-merge-api
+
+
+    echo "URL: https://topology-merge-$WAIOPS_NAMESPACE.$CLUSTER_NAME/1.0/merge/"
+    echo "LOGIN: $LOGIN"
+
+
+    echo "Wait 5 seconds"
+    sleep 5
+
+    echo "Disable Match Token RULE for Services..."
+
+    export result=$(curl -X "GET" "https://topology-merge-$WAIOPS_NAMESPACE.$CLUSTER_NAME/1.0/merge/rules?_filter=name%3Dk8ServiceName&ruleType=matchTokensRule" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN)
+    export ruleIDs=$(echo $result| jq "._items")
+
+    export ruleID=$(echo $ruleIDs| jq -r ".[0]._id")
+
+    curl -X "POST" "https://topology-merge-$WAIOPS_NAMESPACE.$CLUSTER_NAME/1.0/merge/rules/$ruleID/?ruleType=matchTokensRule" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN \
+        -d '{"ruleStatus": "disabled"}'
+
+
+
+    echo "Disable Match Token RULE for Instana Services..."
+
+    export result=$(curl -X "GET" "https://topology-merge-$WAIOPS_NAMESPACE.$CLUSTER_NAME/1.0/merge/rules?_filter=name%3Dinstana-observer-events-kubernetes-service&ruleType=matchTokensRule" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN)
+    export ruleIDs=$(echo $result| jq "._items")
+
+    export ruleID=$(echo $ruleIDs| jq -r ".[0]._id")
+
+    curl -X "POST" "https://topology-merge-$WAIOPS_NAMESPACE.$CLUSTER_NAME/1.0/merge/rules/$ruleID/?ruleType=matchTokensRule" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN \
+        -d '{"ruleStatus": "disabled"}'
+
+  register: network_patch
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+
+
