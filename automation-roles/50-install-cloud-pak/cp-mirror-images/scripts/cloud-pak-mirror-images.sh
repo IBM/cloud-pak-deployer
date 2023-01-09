@@ -146,7 +146,7 @@ do_image_mirror() {
     parse_image_mirror_arguments "$@"
 
     # temporary image mapping file
-    CUR_TS=$(date "+%Y%m%d%M%S")
+    CUR_TS=$(date "+%Y%m%d%H%M%S")
     OC_TMP_DIR=${LOG_DIR}/${OC_TMP_PREFIX}_image_mapping_${CUR_TS}
     mkdir -p ${OC_TMP_DIR}
     OC_TMP_IMAGE_MAP=${OC_TMP_DIR}/airgap_image_mapping
