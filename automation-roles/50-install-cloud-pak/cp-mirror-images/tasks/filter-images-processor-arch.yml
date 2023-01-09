@@ -1,0 +1,14 @@
+---
+- name: List directories under {{ _p_case_dir }}
+  find:
+    paths: "{{ _p_case_dir }}"
+    file_type: directory
+  register: _case_directories
+
+- name: Filter images not matching processor architecture {{ _p_processor_arch }}
+  shell: |
+    python3 /opt/ansible/ansible-play/roles/utils/files/image-csv-trim.py \
+      {{ _case_dir }} {{ _p_processor_arch }}
+  loop: "{{ _case_directories.files | default([]) }}"
+  loop_control:
+    loop_var: _case_dir
