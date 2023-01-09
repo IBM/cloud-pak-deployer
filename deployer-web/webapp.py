@@ -45,6 +45,34 @@ generated_config_yaml_path = ""
 def index():
     return send_from_directory(app.static_folder,'index.html')
 
+@app.route('/api/v1/mirror',methods=["POST"])
+def mirror():
+    body = json.loads(request.get_data())  
+    if 'envId' not in body or 'entitlementKey' not in body or 'registry' not in body:
+        return make_response('Bad Request', 400)
+
+    print(body['registry']['portable'])
+    print(body['registry']['registryHostname'])
+    print(body['registry']['registryPort'])
+    print(body['registry']['registryNS'])
+    print(body['registry']['registryUser'])
+    print(body['registry']['registryPassword'])
+
+    deployer_env = os.environ.copy()
+    # Assemble the mirror command
+    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command+=['env','download']
+    deploy_command+=['-e=env_id={}'.format(body['envId'])]
+    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(body['entitlementKey'])]
+
+    deploy_command+=['-v']
+    
+    process = subprocess.Popen(deploy_command, 
+                    universal_newlines=True,
+                    env=deployer_env)
+
+    return 'running'
+
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
     body = json.loads(request.get_data())
@@ -82,10 +110,7 @@ def deploy():
     deploy_command+=['-v']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
-    log = open('/tmp/cp-deploy.log', 'a')
     process = subprocess.Popen(deploy_command, 
-                    stdout=log,
-                    stderr=log,
                     universal_newlines=True,
                     env=deployer_env)
 
@@ -181,6 +206,12 @@ def get_deployer_status():
                 result['last_step']=temp['last_step']
             if 'percentage_completed' in temp:
                 result['percentage_completed']=temp['percentage_completed']
+            if 'completion_state' in temp:
+                result['completion_state']=temp['completion_state']
+            if 'mirror_current_image' in temp:
+                result['mirror_current_image']=temp['mirror_current_image']
+            if 'mirror_number_images' in temp:
+                result['mirror_number_images']=temp['mirror_number_images']
             if 'service_state' in temp:
                 result['service_state']=temp['service_state']
     except FileNotFoundError:
@@ -468,6 +499,45 @@ def saveConfig():
     ocp_config=config_data
 
     return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
-  
+
+@app.route('/api/v1/environment-variable',methods=["GET"])
+def environmentVariable():
+    result={}
+
+    if 'CPD_WIZARD_PAGE_TITLE' in os.environ:
+      result['CPD_WIZARD_PAGE_TITLE']=os.environ['CPD_WIZARD_PAGE_TITLE']
+    else:
+      result['CPD_WIZARD_PAGE_TITLE']="Cloud Pak Deployer"
+
+    if 'CPD_WIZARD_MODE' in os.environ:
+      result['CPD_WIZARD_MODE']=os.environ['CPD_WIZARD_MODE']
+    else:
+      result['CPD_WIZARD_MODE']=""
+
+    if 'STATUS_DIR' in os.environ:
+      result['STATUS_DIR']=os.environ['STATUS_DIR']
+    else:
+      result['STATUS_DIR']=""
+
+    if 'CONFIG_DIR' in os.environ:
+      result['CONFIG_DIR']=os.environ['CONFIG_DIR']
+    else:
+      result['CONFIG_DIR']=""
+    
+    return result
+
+import logging
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 if __name__ == '__main__':
+    print("""
+IBM Cloud Pak Deployer Wizard is started.
+Please access the below URL for the web console:
+******************************************************************************
+Summary
+ * Web console HTTPS URL:
+   https://<host machine>:8080  
+******************************************************************************
+    """)
     app.run(host='0.0.0.0', port='32080', debug=False)    

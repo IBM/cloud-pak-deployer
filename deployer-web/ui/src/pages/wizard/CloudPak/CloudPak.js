@@ -1,4 +1,4 @@
-import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,Button} from 'carbon-components-react';
+import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput} from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
@@ -26,21 +26,11 @@ const CloudPak = ({CPDCartridgesData,
                   setCP4IPlatformCheckBox,
                   adminPassword,
                   setAdminPassword,
-                  wizardError,
-                  saveConfigOnly,
-                  setSaveConfigOnly,
-                  cloudPlatform,
-                  IBMCloudSettings,
-                  AWSSettings,
-                  envId,
-                  storage
                 }) => {
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadingCPI, setLoadingCPI] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
-
-    const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
 
     const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
@@ -129,7 +119,7 @@ const CloudPak = ({CPDCartridgesData,
       updateCP4DPlatformCheckBox(CPDCartridgesData)
       updateCP4IPlatformCheckBox(CPICartridgesData)  
      
-      if (entitlementKey && (loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
+      if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
         setWizardError(false)
       }
       else {
@@ -191,15 +181,7 @@ const CloudPak = ({CPDCartridgesData,
     }
 
     const entitlementKeyOnChange = (e) => {
-      setEntitlementKey(e.target.value);
-      if (e.target.value === '') {
-        setEntitlementKeyInvalid(true)
-        setWizardError(true)
-        return
-      } else {
-        setEntitlementKeyInvalid(false)
-      }
-      setWizardError(false)     
+      setEntitlementKey(e.target.value);    
     }
 
     const adminPaswordOnChnage = (e) => {
@@ -243,70 +225,6 @@ const CloudPak = ({CPDCartridgesData,
       // eslint-disable-next-line
     }, [])
 
-    const createConfig = async () => { 
-        setLoadingCPD(true)
-        let region=""    
-        switch (cloudPlatform) {
-            case "ibm-cloud":               
-                region=IBMCloudSettings.region
-                break
-            case "aws":                
-                region=AWSSettings.region
-                break
-            default:
-        }  
-        let body = {
-            "envId": envId,
-            "cloud": cloudPlatform,
-            "region": region,
-            "storages": storage,
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,      
-        }
-        await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
-            setLoadingCPD(false)          
-            setSaveConfigOnly(true)
-        }, err => {
-            setLoadingCPD(false)       
-            console.log(err)
-        });          
-    } 
-  
-    const updateConfig = async () => {  
-        setLoadingCPD(true)
-        let body = {
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,   
-        }  
-        await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-          setLoadingCPD(false)          
-          setSaveConfigOnly(true)
-        }, err => {
-          setLoadingCPD(false)       
-          console.log(err)
-        });          
-    }
-
-    const successProps = () => ({
-      kind: 'success',
-      lowContrast: true,
-      role: 'success',
-      title: 'Configuration Saved. The deployer wizard is over.',
-      hideCloseButton: false,
-    });
-
     return (
         <>  
           { (loadingCPD ||loadingCPI) && <Loading /> }  
@@ -314,104 +232,92 @@ const CloudPak = ({CPDCartridgesData,
               {...errorProps()}        
             /> 
           }
-          { saveConfigOnly && <InlineNotification className="cpd-error"
-              {...successProps()}        
-            /> 
-          }
-          <div>             
-            <div className="cpd-button">
-              { locked ? 
-              <div>
-                <Button onClick={updateConfig} disabled={wizardError ||saveConfigOnly}>Save Configuration</Button> 
-              </div>:
-              <div>
-                <Button onClick={createConfig} disabled={wizardError ||saveConfigOnly}>Generate Configuration</Button> 
-              </div> }
-            </div> 
+          <div className="cloud-pak">   
+
             <div className='cpd-container'> 
             {/* Entitlement */}
+              <div>
+              <div className="cloud-pak-items">Entitlement key</div>
+              <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} />
+            </div> 
+
             <div>
-  <div className="cloud-pak-items">Entitlement key</div>
-  <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} invalidText="Entitlement key can not be empty." invalid={isEntitlementKeyInvalid}/>
-</div> 
+              <div className="cloud-pak-items">Admin Password</div>
+              <PasswordInput onChange={adminPaswordOnChnage} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
+            </div> 
 
-<div>
-  <div className="cloud-pak-items">Admin Password</div>
-  <PasswordInput onChange={adminPaswordOnChnage} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
-</div> 
+            {/* CP4D */}
+            <div>
+              <div className="cloud-pak-items">IBM Cloud Pak</div>
+              {/* CP4D */}
+              <div>
+                
+                <Accordion>                
+                  <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>                
+                    
+                    <div className="cpd-version">
+                      <div className="item">Version:</div>
+                      <TextInput placeholder="version" onChange={cp4dVersionOnChange} id="cp4d-version" labelText="" value={cp4dVersion} invalidText="Version can not be empty." invalid={cp4dVersionInvalid}/>
+                    </div>
 
-{/* CP4D */}
-<div>
-  <div className="cloud-pak-items">IBM Cloud Pak</div>
-  {/* CP4D */}
-  <div>
-    
-    <Accordion>                
-       <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>                
-        
-        <div className="cpd-version">
-          <div className="item">Version:</div>
-          <TextInput placeholder="version" onChange={cp4dVersionOnChange} id="cp4d-version" labelText="" value={cp4dVersion} invalidText="Version can not be empty." invalid={cp4dVersionInvalid}/>
-        </div>
+                    <div className="cpd-license">
+                      <div className="item">Licenses:</div>
+                      <Checkbox onClick={()=>(setCp4dLicense((cp4dLicense)=>(!cp4dLicense)))} labelText="Accept Licenses" id="cp4d-license" key="cp4d-license" checked={cp4dLicense} />
+                    </div>
 
-        <div className="cpd-license">
-          <div className="item">Licenses:</div>
-          <Checkbox onClick={()=>(setCp4dLicense((cp4dLicense)=>(!cp4dLicense)))} labelText="Accept Licenses" id="cp4d-license" key="cp4d-license" checked={cp4dLicense} />
-        </div>
+                    <div className="cpd-cartridges">
+                      <div className="item">Cartridges:</div>
+                    </div>
 
-        <div className="cpd-cartridges">
-          <div className="item">Cartridges:</div>
-        </div>
+                    <Checkbox onClick={()=>(setCP4DPlatformCheckBox((CP4DPlatformCheckBox)=>(!CP4DPlatformCheckBox)))} labelText="IBM Cloud Pak for Data Platform" id="cp4d-platform" key="cp4d-platform" checked={CP4DPlatformCheckBox} />
+                    { CPDCartridgesData.map((item)=>{
+                      if (item.state) {
+                        return (
+                          <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />                
+                        )  
+                      }
+                      return null        
+                    }) } 
+                  
+                  </AccordionItem>
+                </Accordion> 
+              </div>
 
-        <Checkbox onClick={()=>(setCP4DPlatformCheckBox((CP4DPlatformCheckBox)=>(!CP4DPlatformCheckBox)))} labelText="IBM Cloud Pak for Data Platform" id="cp4d-platform" key="cp4d-platform" checked={CP4DPlatformCheckBox} />
-        { CPDCartridgesData.map((item)=>{
-          if (item.state) {
-            return (
-              <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />                
-            )  
-          }
-          return null        
-        }) } 
-       
-      </AccordionItem>
-    </Accordion> 
-  </div>
+            {/* CP4I */}          
+            <div>
+                <Accordion>                
+                  <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
+                    <div className="cpd-version">
+                      <div className="item">Version:</div>
+                      <TextInput placeholder="version" onChange={cp4iVersionOnChange} id="cp4i-version" value={cp4iVersion} labelText="" invalidText="Version can not be empty." invalid={cp4iVersionInvalid} />
+                    </div>
 
-{/* CP4I */}          
-<div>
-    <Accordion>                
-      <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
-        <div className="cpd-version">
-          <div className="item">Version:</div>
-          <TextInput placeholder="version" onChange={cp4iVersionOnChange} id="cp4i-version" value={cp4iVersion} labelText="" invalidText="Version can not be empty." invalid={cp4iVersionInvalid} />
-        </div>
+                    <div className="cpd-license">
+                      <div className="item">Licenses:</div>
+                      <Checkbox onClick={()=>(setCp4iLicense((cp4iLicense)=>(!cp4iLicense)))}  labelText="Accept Licenses" id="cp4i-license" key="cp4i-license" checked={cp4iLicense}/>
+                    </div>
 
-        <div className="cpd-license">
-          <div className="item">Licenses:</div>
-          <Checkbox onClick={()=>(setCp4iLicense((cp4iLicense)=>(!cp4iLicense)))}  labelText="Accept Licenses" id="cp4i-license" key="cp4i-license" checked={cp4iLicense}/>
-        </div>
+                    <div className="cpd-cartridges">
+                      <div className="item">Cartridges:</div>
+                    </div>
 
-        <div className="cpd-cartridges">
-          <div className="item">Cartridges:</div>
-        </div>
+                    <Checkbox onClick={()=>(setCP4IPlatformCheckBox((CP4IPlatformCheckBox)=>(!CP4IPlatformCheckBox)))} labelText="IBM Cloud Pak for Integration Platform" id="cp4i-platform" key="cp4i-platform" checked={CP4IPlatformCheckBox} />
 
-        <Checkbox onClick={()=>(setCP4IPlatformCheckBox((CP4IPlatformCheckBox)=>(!CP4IPlatformCheckBox)))} labelText="IBM Cloud Pak for Integration Platform" id="cp4i-platform" key="cp4i-platform" checked={CP4IPlatformCheckBox} />
+                    { CPICartridgesData.map((item)=>{
+                      if (item.state) {
+                        return (
+                          <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />                
+                        )  
+                      }
+                      return null        
+                    }) } 
+                    
+                  </AccordionItem>
+                </Accordion> 
+              </div>
 
-        { CPICartridgesData.map((item)=>{
-          if (item.state) {
-            return (
-              <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />                
-            )  
-          }
-          return null        
-        }) } 
-        
-      </AccordionItem>
-    </Accordion> 
-  </div>
-
-</div>
-  </div> 
+            </div>
+            </div> 
           </div>   
      
         </>

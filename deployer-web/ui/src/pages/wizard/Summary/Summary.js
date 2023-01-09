@@ -19,15 +19,19 @@ const Summary = ({cloudPlatform,
                   CP4DPlatformCheckBox,
                   CP4IPlatformCheckBox,
                   summaryLoading,
-                  setSummaryLoading
+                  setSummaryLoading,
+                  configDir,
+                  statusDir,
+                  tempSummaryInfo,
+                  setTempSummaryInfo,
+                  configInvalid,
+                  setConfigInvalid,
+                  showErr,
+                  setShowErr
                 }) => {
 
-  
-    const [showErr, setShowErr] = useState(false)
-    const [summaryInfo, setSummaryInfo] = useState("")  
-    const [tempSummaryInfo, setTempSummaryInfo] = useState("") 
-    const [configInvalid, setConfigInvalid] = useState(false)  
     
+    const [summaryInfo, setSummaryInfo] = useState("")      
     const [editable, setEditable] = useState(false)
 
     const createSummaryData = async () => { 
@@ -63,9 +67,8 @@ const Summary = ({cloudPlatform,
             setSummaryLoading(false)  
             setShowErr(true)
             console.log(err)
-        }); 
-           
-    } 
+        });            
+    }
     
     const updateSummaryData = async () => {  
         let body = {
@@ -118,7 +121,7 @@ const Summary = ({cloudPlatform,
         kind: 'error',
         lowContrast: true,
         role: 'error',
-        title: 'Unable to load deployment configuration from server.',
+        title: 'Failed to save configuration in the server.',
         hideCloseButton: false,
     });  
     
@@ -130,7 +133,7 @@ const Summary = ({cloudPlatform,
         let body = {}
         let result = {}
             
-        try {                   
+        try {                
             yaml.loadAll(tempSummaryInfo, function (doc) {
                 result = {...doc, ...result}
             }); 
@@ -163,6 +166,15 @@ const Summary = ({cloudPlatform,
                     {...errorProps()}        
                 />           
             }
+
+            <div className="directory">
+                <div className="item">Configuration Directory:</div>
+                <CodeSnippet type="single">{configDir}</CodeSnippet>
+            </div>
+            <div className="directory">
+                <div className="item">Status Directory:</div>
+                <CodeSnippet type="single">{statusDir}</CodeSnippet>
+            </div>
             {editable ? 
                 <div className="flex-right">
                     <div >
@@ -184,7 +196,7 @@ const Summary = ({cloudPlatform,
                         {
                             summaryLoading ? <InlineLoading />: 
                                 editable ? 
-                                <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Please do not remove three dashes (---), which is used to separate different documents.">
+                                <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="">
                                 </TextArea>
                                 :
                                 <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={40}>
