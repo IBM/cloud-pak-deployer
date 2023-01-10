@@ -41,7 +41,7 @@ NAMESPACE_ACTION_VALUE=
 OC_TMP_PREFIX="airgap"
 
 # temporary image mapping file split size
-OC_TMP_IMAGE_MAP_SPLIT_SIZE=100
+OC_TMP_IMAGE_MAP_SPLIT_SIZE=20
 
 # script directory
 SCRIPT_DIR=`dirname "$0"`
@@ -246,6 +246,7 @@ do_image_mirror_case_images() {
         fi
     done
     echo "[STATE] Image number: ${images_count}"
+    echo "[STATE] Finished mirroring images"
 
 }
 
@@ -532,7 +533,7 @@ print_image_mirror_usage() {
     echo "   --auth string                  auth.json file name to use for authentication to the registry"
     echo "   --from-registry string         Mirror the images from a private registry"
     echo "   --to-registry string           Mirror the images to another private registry"
-    echo "   --split-size int               Mirror the images in batches with a given split size. Default is 100"
+    echo "   --split-size int               Mirror the images in batches with a given split size. Default is 20"
     echo "   --show-registries              Print the registries that would be used"
     echo "   --show-registries-namespaces   Print the registries and namespaces that would be used"
     echo "   --dry-run                      Print the actions that would be taken"   
