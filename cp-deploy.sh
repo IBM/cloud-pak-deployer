@@ -874,6 +874,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
   run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
   run_cmd+=" -e CPD_ACCEPT_LICENSES=${CPD_ACCEPT_LICENSES}"
+  run_cmd+=" -e CPD_WIZARD_MODE=${CPD_WIZARD_MODE}"
 
   # Add proxy servers if present in the current session
   if [ ! -z "${http_proxy}" ];then

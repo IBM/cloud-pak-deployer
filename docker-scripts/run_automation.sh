@@ -110,6 +110,8 @@ env|environment)
     tar czf ${STATUS_DIR}/log/cloud-pak-deployer-log-$(date +%s).tar.gz ${STATUS_DIR}/log/cloud-pak-deployer.log 2>/dev/null
     rm -f ${STATUS_DIR}/log/cloud-pak-deployer.log
   fi
+  # Also delete mirror images log to not confuse state reporting
+  rm -f ${STATUS_DIR}/log/cloud-pak-mirror-images.log
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "Starting deployer" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "  Commit ID       : ${COMMIT_HASH}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
