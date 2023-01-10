@@ -5,13 +5,16 @@ import {
   HeaderGlobalBar,
 } from 'carbon-components-react';
 
-const CPDeployerHeader = () => (
-  <Header aria-label="Cloud Pak Deployer">
-    <HeaderName href="/">
-    Cloud Pak Deployer
-    </HeaderName>        
-    <HeaderGlobalBar />
-  </Header>
-);
+const CPDeployerHeader = ({headerTitle}) => {
+
+  return (
+    <Header aria-label={headerTitle}>
+      <HeaderName href="/" prefix="">
+        {headerTitle}
+      </HeaderName>        
+      <HeaderGlobalBar />
+    </Header>
+  )
+}
 
 export default CPDeployerHeader;
