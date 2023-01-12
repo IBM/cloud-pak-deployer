@@ -184,8 +184,8 @@ def get_deployer_status():
     result['deployer_active']=False
     for proc in psutil.process_iter():
         # app.logger.info(proc.cmdline())
-        if '/cloud-pak-deployer/cp-deploy.sh env apply' in proc.cmdline() or \
-            '/cloud-pak-deployer/cp-deploy.sh env download' in proc.cmdline():
+        if '/cloud-pak-deployer/cp-deploy.sh' in proc.cmdline() and \
+            'env' in proc.cmdline() and ('apply' in proc.cmdline() or 'download' in proc.cmdline()):
             result['deployer_active']=True
     deploy_state_log_path = status_dir + '/state/deployer-state.out'
 
