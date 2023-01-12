@@ -39,9 +39,13 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg='Attribute cloud_native_toolkit must be either true or false if specified. Default is false.')
        
         # Check infrastructure attributes
-        if 'infrastructure' in ge and 'type' in ge['infrastructure']:
-            if ge['infrastructure']['type'] not in ['ibm-roks','aws-self-managed','aws-rosa','azure-aro','vsphere','standard','detect']:
-               g.appendError(msg='infrastructure.type must be ibm-roks, aws-self-managed, aws-rosa, azure-aro, vsphere, standard or detect')
+        if 'infrastructure' in ge:
+            if 'type' in ge['infrastructure']:
+                if ge['infrastructure']['type'] not in ['ibm-roks','aws-self-managed','aws-rosa','azure-aro','vsphere','standard','detect']:
+                    g.appendError(msg='infrastructure.type must be ibm-roks, aws-self-managed, aws-rosa, azure-aro, vsphere, standard or detect')
+            if 'processor_architecture' in ge['infrastructure']:
+                if ge['infrastructure']['processor_architecture'] not in ['amd64','ppc64le','s390x']:
+                    g.appendError(msg='infrastructure.processor_architecture must be amd64, ppc64le or s390x')
 
         # Check upstream DNS server
         if 'upstream_dns' in ge:
