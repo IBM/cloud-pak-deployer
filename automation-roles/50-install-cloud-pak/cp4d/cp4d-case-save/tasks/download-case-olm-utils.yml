@@ -37,6 +37,9 @@
     regexp: '^oc patch(.*)'
     replace: '#REMOVED: oc patch\1'
 
+# TODO: In the case of saving case files the apply-olm is only run when no upgrade is done. This is due to a defect
+# in apply-olm where it tries to connect to the cluster even if only case files are saved. Once the defect is resolved
+# this code could be changed to run apply-olm or the script based on _sequential_install
 - name: Run apply-olm command to download case files
   block:
   - name: Generate OLM command to save case files
@@ -47,9 +50,9 @@
   - name: Run apply-olm command to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-case-save.log 2>&1
-  when: _sequential_install
+  when: _upgrade_cp4d
 
 - name: Run shell script to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh >> {{ status_dir }}/log/apply-olm-case-save.log 2>&1
-  when: not _sequential_install
+  when: not _upgrade_cp4d
