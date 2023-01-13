@@ -1,14 +1,7 @@
 # Running deployer wizard as a pod for existing OpenShift cluster
 
-## Collect cluster credentials
-* Cluster: ...
-* OpenShift admin user: `kubeadmin`
-* Password: ...
-
-## Login to cluster
-```
-oc login ... --insecure-skip-tls-verify
-```
+## Log in to the OpenShift cluster
+Log is as a cluster administrator to be able to run the deployer with the correct permissions.
 
 ## Prepare the deployer project
 ```
@@ -36,41 +29,35 @@ spec:
     local: true
 EOF
 
-cat << EOF | oc apply -f -
+cat << EOF | oc create -f -
+kind: Build
 apiVersion: build.openshift.io/v1
-kind: BuildConfig
 metadata:
-  name: cloud-pak-deployer-bc
+  generateName: cloud-pak-deployer-bc-
   namespace: cloud-pak-deployer
 spec:
+  serviceAccount: builder
   source:
     type: Git
     git:
-      uri: https://github.com/IBM/cloud-pak-deployer
-      ref: ui
+      uri: 'https://github.com/IBM/cloud-pak-deployer'
+      ref: wizard
   strategy:
-    type: Docker                      
+    type: Docker
+    dockerStrategy: {}
   output:
     to:
       kind: ImageStreamTag
-      name: cloud-pak-deployer:latest
+      name: 'cloud-pak-deployer:latest'
+    pushSecret:
+      name: builder-dockercfg-kzz4v
+  triggeredBy:
+    - message: Manually triggered
 EOF
-
-  oc delete build -n cloud-pak-deployer -l buildconfig=cloud-pak-deployer-bc
-  oc start-build -n cloud-pak-deployer bc/cloud-pak-deployer-bc
-
-echo "Wait for image to be built and pushed to internal registry..."
-while ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest 2>/dev/null;do
-  sleep 1
-done
-
-fi
 ```
 
-## Start the deployer wizard pod
+## Start the deployer wizard
 ```
-export DEPLOYER_SC=managed-nfs-storage
-
 cat << EOF | oc apply -f -
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -82,8 +69,7 @@ spec:
   - ReadWriteMany
   resources:
     requests:
-      storage: 10Gi
-  storageClassName: $DEPLOYER_SC
+      storage: 1Gi
 EOF
 
 cat << EOF | oc apply -f -
@@ -98,7 +84,6 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: $DEPLOYER_SC
 EOF
 
 cat << EOF | oc apply -f -
@@ -125,13 +110,17 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         ports:
-        - containerPort: 32080
+        - containerPort: 8080
           protocol: TCP
         env:
         - name: CONFIG_DIR
           value: /Data/cpd-config
         - name: STATUS_DIR
           value: /Data/cpd-status
+#        - name: CPD_WIZARD_PAGE_TITLE
+#          value: "ITZ Demo powered by Cloud Pak Deployer"
+#        - name: CPD_WIZARD_MODE
+#          value: existing-ocp
         volumeMounts:
         - name: config-volume
           mountPath: /Data/cpd-config
@@ -166,7 +155,7 @@ spec:
     app: cloud-pak-deployer-wizard
   ports:
   - nodePort: 0
-    port: 32080            
+    port: 8080            
     protocol: TCP
 EOF
 
@@ -174,15 +163,15 @@ cat << EOF | oc apply -f -
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: cloud-pak-deployer-wizard-svc
-  namespace: cloud-pak-deployer
+  name: cloud-pak-deployer-wizard
 spec:
-  port:
-    targetPort: 32080
+  tls:
+    termination: edge
   to:
     kind: Service
     name: cloud-pak-deployer-wizard-svc
-    weight: 100
+    weight: null
 EOF
 ```
 
+Now you can access the deployer wizard using the route created in teh `cloud-pak-deployer` project.
