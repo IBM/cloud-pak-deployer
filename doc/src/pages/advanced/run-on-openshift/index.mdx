@@ -1,17 +1,5 @@
 # Running deployer as a pod for existing OpenShift cluster
 
-## Collect cluster credentials
-* Cluster: ...
-* OpenShift admin user: `kubeadmin`
-* Password: ...
-
-## Login to cluster
-```
-oc login ... --insecure-skip-tls-verify
-```
-
-Keep the login command, you will need it later to set the vault secret the deployer will use.
-
 ## Create configuration
 ```
 export CONFIG_DIR=$HOME/cpd-config && mkdir -p $CONFIG_DIR/config
@@ -188,6 +176,9 @@ cp4d:
 EOF
 ```
 
+## Log in to the OpenShift cluster
+Log is as a cluster administrator to be able to run the deployer with the correct permissions.
+
 ## Prepare the deployer project
 ```
 oc new-project cloud-pak-deployer 
@@ -234,15 +225,31 @@ spec:
       name: cloud-pak-deployer:latest
 EOF
 
-  oc delete build -n cloud-pak-deployer -l buildconfig=cloud-pak-deployer-bc
-  oc start-build -n cloud-pak-deployer bc/cloud-pak-deployer-bc
-
-echo "Wait for image to be built and pushed to internal registry..."
-while ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest 2>/dev/null;do
-  sleep 1
-done
-
-fi
+cat << EOF | oc create -f -
+kind: Build
+apiVersion: build.openshift.io/v1
+metadata:
+  generateName: cloud-pak-deployer-bc-
+  namespace: cloud-pak-deployer
+spec:
+  serviceAccount: builder
+  source:
+    type: Git
+    git:
+      uri: 'https://github.com/IBM/cloud-pak-deployer'
+      ref: main
+  strategy:
+    type: Docker
+    dockerStrategy: {}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: 'cloud-pak-deployer:latest'
+    pushSecret:
+      name: builder-dockercfg-kzz4v
+  triggeredBy:
+    - message: Manually triggered
+EOF
 ```
 
 ## Set configuration
@@ -254,7 +261,6 @@ oc set data -n cloud-pak-deployer cm/cloud-pak-deployer-config \
   
 ## Start the deployer job
 ```
-export DEPLOYER_SC=your_storage_class
 export CP_ENTITLEMENT_KEY=your_entitlement_key
 
 cat << EOF | oc apply -f -
@@ -269,7 +275,6 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: ${DEPLOYER_SC}
 EOF
 
 cat << EOF | oc apply -f -
