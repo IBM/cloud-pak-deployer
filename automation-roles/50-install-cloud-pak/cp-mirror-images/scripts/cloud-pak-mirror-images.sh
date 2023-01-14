@@ -504,9 +504,9 @@ process_case_csv_file() {
 # Process all the CASE images CSV files found in the CASE archive directory
 #
 process_case_archive_dir() {
-    echo "[INFO] Processing CASE archive directory: ${CASE_ARCHIVE_DIR}"
+    echo "[INFO] Processing list with images: ${CASE_ARCHIVE_DIR}/deployer-filtered-images.csv"
     # Process all existing CSVs
-    for csv_file in $(find ${CASE_ARCHIVE_DIR} -name '*-images.csv'); do
+    for csv_file in $(find ${CASE_ARCHIVE_DIR} -name 'deployer-filtered-images.csv'); do
         process_case_csv_file "${csv_file}"
     done
 }
