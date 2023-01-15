@@ -15,10 +15,7 @@ oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
 
 ## Build deployer image and push to the internal registry
 Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.
-
 ```
-if ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest --no-headers 2> /dev/null;then 
-
 cat << EOF | oc apply -f -
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -41,7 +38,7 @@ spec:
     type: Git
     git:
       uri: 'https://github.com/IBM/cloud-pak-deployer'
-      ref: wizard
+      ref: main
   strategy:
     type: Docker
     dockerStrategy: {}
@@ -49,11 +46,14 @@ spec:
     to:
       kind: ImageStreamTag
       name: 'cloud-pak-deployer:latest'
-    pushSecret:
-      name: builder-dockercfg-kzz4v
   triggeredBy:
     - message: Manually triggered
 EOF
+```
+
+Now, wait until the deployer image has been built.
+```
+oc get build -n cloud-pak-deployer -w
 ```
 
 ## Start the deployer wizard
@@ -117,8 +117,8 @@ spec:
           value: /Data/cpd-config
         - name: STATUS_DIR
           value: /Data/cpd-status
-#        - name: CPD_WIZARD_PAGE_TITLE
-#          value: "ITZ Demo powered by Cloud Pak Deployer"
+        - name: CPD_WIZARD_PAGE_TITLE
+          value: "Cloud Pak Deployer"
 #        - name: CPD_WIZARD_MODE
 #          value: existing-ocp
         volumeMounts:

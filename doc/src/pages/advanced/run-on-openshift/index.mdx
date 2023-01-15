@@ -193,8 +193,6 @@ oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
 Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.
 
 ```
-if ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest --no-headers 2> /dev/null;then 
-
 cat << EOF | oc apply -f -
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -203,26 +201,6 @@ metadata:
 spec:
   lookupPolicy:
     local: true
-EOF
-
-cat << EOF | oc apply -f -
-apiVersion: build.openshift.io/v1
-kind: BuildConfig
-metadata:
-  name: cloud-pak-deployer-bc
-  namespace: cloud-pak-deployer
-spec:
-  source:
-    type: Git
-    git:
-      uri: https://github.com/IBM/cloud-pak-deployer
-      ref: main
-  strategy:
-    type: Docker                      
-  output:
-    to:
-      kind: ImageStreamTag
-      name: cloud-pak-deployer:latest
 EOF
 
 cat << EOF | oc create -f -
@@ -237,7 +215,7 @@ spec:
     type: Git
     git:
       uri: 'https://github.com/IBM/cloud-pak-deployer'
-      ref: main
+      ref: wizard
   strategy:
     type: Docker
     dockerStrategy: {}
@@ -245,11 +223,14 @@ spec:
     to:
       kind: ImageStreamTag
       name: 'cloud-pak-deployer:latest'
-    pushSecret:
-      name: builder-dockercfg-kzz4v
   triggeredBy:
     - message: Manually triggered
 EOF
+```
+
+Now, wait until the deployer image has been built.
+```
+oc get build -n cloud-pak-deployer -w
 ```
 
 ## Set configuration
@@ -329,6 +310,61 @@ spec:
           claimName: cloud-pak-deployer-status        
 EOF
 ```
+
+## Optional: start debug job
+The debug job can be useful if you want to access the status directory of the deployer if the deployer job has failed.
+```
+cat << EOF | oc apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: cloud-pak-deployer-debug
+  name: cloud-pak-deployer-debug
+  namespace: cloud-pak-deployer
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
+  template:
+    metadata:
+      name: cloud-pak-deployer-debug
+      labels:
+        app: cloud-pak-deployer-debug
+    spec:
+      containers:
+      - name: cloud-pak-deployer-debug
+        image: cloud-pak-deployer:latest
+        imagePullPolicy: Always
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
+        volumeMounts:
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
+        command: ["/bin/sh","-xc"]
+        args: 
+          - sleep infinity
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 0
+      serviceAccountName: cloud-pak-deployer-sa
+      volumes:
+      - name: config-volume
+        configMap:
+          name: cloud-pak-deployer-config
+      - name: status-volume
+        persistentVolumeClaim:
+          claimName: cloud-pak-deployer-status        
+EOF
+```
+
 
 ## Follow the logs of the deployment
 ```
