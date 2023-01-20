@@ -24,11 +24,32 @@
       include_role:
         name: load-vault-config
 
+    - name: Load vault config
+      include_role:
+        name: load-vault-config
+
+    - set_fact:
+        secret_group: "{{ secret_group_param }}"
+
+    - set_fact:
+        secret_group: "{{ environment_name }}"
+      when: secret_group_param | default("") == ""
+
     - name: Merge configuration
       include_role:
         name: merge-config
       vars:
         path_to_config_dir: "{{ config_dir }}"
+
+    - set_fact:
+        _vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
+
+    - name: Set vault secrets if specified
+      include_role:
+        name: vault-set-secret
+      vars:
+        _p_vault_secrets: "{{ _vault_secrets }}"
+      when: _vault_secrets != ""
         
     - name: Validate variables
       include_role:
