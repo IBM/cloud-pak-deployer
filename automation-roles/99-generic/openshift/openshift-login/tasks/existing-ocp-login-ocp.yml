@@ -31,11 +31,20 @@
     secret_group: "{{ environment_name }}"
     _p_secret_variable: _kubeconfig_generic
 
+- tempfile:
+    state: file
+  register: _oc_whoami_kubeconfig
+
+# Override the KUBECONFIG variable to a non-existing file to make sure the service account is returned
+# Otherwise, if an expired token is in the KUBECONFIG file, the oc whoami command just return the
+# "error: You must be logged in to the server (Unauthorized) message"
 - name: Check if the container is running as an OpenShift ServiceAccount
   shell: |
     oc whoami
   failed_when: False
   register: _oc_whoami
+  environment:
+    KUBECONFIG: "{{ _oc_whoami_kubeconfig.path }}"
 
 - name: Fail if none of the OpenShift connection secrets were found
   fail:
