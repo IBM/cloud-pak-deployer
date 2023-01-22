@@ -28,7 +28,7 @@ For more information on acquiring or specifying a domain on AWS, you can refer t
 
 ## Obtain the AWS IAM credentials
 
-You will need an **Access Key ID** and **Secret Access Key** for the deployer to setup self-managed OpenShift cluster on AWS.
+If you can use your permanent security credentials for the AWS account, you will need an **Access Key ID** and **Secret Access Key** for the deployer to setup an OpenShift cluster on AWS. 
 
 - Go to https://aws.amazon.com/
 - Login to the AWS console
@@ -36,6 +36,16 @@ You will need an **Access Key ID** and **Secret Access Key** for the deployer to
 - Select **Security credentials**. You can also reach this screen via https://console.aws.amazon.com/iam/home?region=us-east-2#/security_credentials.
 - If you do not yet have an access key (or you no longer have the associated secret), create an access key
 - Store your **Access Key ID** and **Secret Access Key** in safe place
+
+## Alternative: Using temporary AWS security credentials
+
+If your account uses temporary security credentials for AWS resources, you must use the **Access Key ID**, **Secret Access Key** and **Session Token** associated with your temporary credentials. 
+
+For more information about using temporary security credentials, see https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html.
+
+The temporary credentials must be issued for an IAM role that has sufficient permissions to provision the infrastructure and all other components. More information about required permissions can be found here: https://docs.openshift.com/container-platform/4.10/authentication/managing_cloud_provider_credentials/cco-mode-sts.html#sts-mode-create-aws-resources-ccoctl.
+
+If the `openshift` configuration has the `infrastructure.credentials_mode` set to `Manual`, Cloud Pak Deployer will automatically configure and run the Cloud Credential Operator utility.
 
 ## Acquire an OpenShift pull secret
 
@@ -68,7 +78,7 @@ export AWS_SECRET_ACCESS_KEY=your_secret_access_key
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-Optional: If your user does not have permanent administrator access but using temporary credentials, you can set the `AWS_SESSION_TOKEN` to be used for the AWS CLI. This session token will then be added to the environment variables of the deployer container.
+Optional: If you want to use the temporary security credentials, you must set the `AWS_SESSION_TOKEN` to be used for the AWS CLI. This session token will then be added to the environment variables of the deployer container. 
 ```
 export AWS_SESSION_TOKEN=your_session_token
 ```
