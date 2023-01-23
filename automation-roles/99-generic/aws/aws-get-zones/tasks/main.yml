@@ -1,0 +1,23 @@
+---
+#
+# This role returns the availability zones of the specified region (optionally limited by subnets)
+# Either all the region's availability zones are returned, or the availability zones associated
+# with the specified subnet IDs, only if _p_subnet_ids is not empty ([])
+#
+
+- name: Check that required variables are set
+  assert:
+    quiet: true
+    that:
+      - _p_aws_region is defined
+      - _p_subnet_ids is defined
+    fail_msg: "All 3 parameters: _p_aws_region, _p_subnet_ids and _p_multi_zone must be set to retrieve availability zones."
+
+- include_tasks: aws-get-region-zones.yml
+  when: _p_subnet_ids == []
+
+- include_tasks: aws-get-subnet-zones.yml
+  when: _p_subnet_ids != []
+
+- debug:
+    var: _aws_zones
