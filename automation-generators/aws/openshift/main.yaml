@@ -15,30 +15,12 @@
 
 # Only run generators for self-managed OpenShift on AWS
 - block:
-  - name: Gather information about all availabily zones for the region {{ _openshift_config.infrastructure.aws_region }}
-    shell: |
-      aws ec2 describe-availability-zones \
-        --region {{ _openshift_config.infrastructure.aws_region }} 
-    environment:
-      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
-      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-      AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
-    register: _aws_azs
-  
-  - fail:
-      msg: "Failed to gather information about all availability zones the region {{ _openshift_config.infrastructure.aws_region }}"
-    when: _aws_azs.rc != 0
-
-  - set_fact:
-      _aws_azs: "{{ _aws_azs.stdout | from_json }}"
-
-  - set_fact:
-      _aws_zones: "[ '{{ _aws_azs.AvailabilityZones[0].ZoneName }}' , '{{ _aws_azs.AvailabilityZones[1].ZoneName }}',  '{{ _aws_azs.AvailabilityZones[2].ZoneName }}' ]"
-    when: _openshift_config.infrastructure.multi_zone == True
-
-  - set_fact:
-      _aws_zones: "[ '{{ _aws_azs.AvailabilityZones[0].ZoneName }}' ]"
-    when: _openshift_config.infrastructure.multi_zone == False
+  - include_role:
+      name: aws-get-zones
+    vars:
+      _p_aws_region: "{{ _openshift_config.infrastructure.aws_region }}"
+      _p_subnet_ids: "{{ _openshift_config.infrastructure.subnet_ids | default([]) }}"
+      _p_multi_zone: "{{ _openshift_config.infrastructure.multi_zone | default(True) }}"
 
   - name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
     file:
@@ -59,3 +41,5 @@
       secret_file: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml"
 
   when: _openshift_config.infrastructure.type == 'self-managed' and not (cpd_check_only | default(False) | bool)
+
+# - fail:
