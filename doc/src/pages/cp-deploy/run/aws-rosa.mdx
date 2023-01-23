@@ -48,7 +48,24 @@ If your account uses temporary security credentials for AWS resources, you must 
 
 For more information about using temporary security credentials, see https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html.
 
-The temporary credentials must be issued for an IAM role that has sufficient permissions to provision the infrastructure and all other components. More information about required permissions for ROSA cluster can be found here: https://docs.openshift.com/rosa/rosa_planning/rosa-sts-aws-prereqs.html#rosa-sts-aws-prereqs
+The temporary credentials must be issued for an IAM role that has sufficient permissions to provision the infrastructure and all other components. More information about required permissions for ROSA cluster can be found here: https://docs.openshift.com/rosa/rosa_planning/rosa-sts-aws-prereqs.html#rosa-sts-aws-prereqs.
+
+An example on how to retrieve the temporary credentials for a user-defined role:
+```
+printf "\nexport AWS_ACCESS_KEY_ID=%s\nexport AWS_SECRET_ACCESS_KEY=%s\nexport AWS_SESSION_TOKEN=%s\n" $(aws sts assume-role \
+--role-arn arn:aws:iam::678256850452:role/ocp-sts-role \
+--role-session-name OCPInstall \
+--query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+--output text)
+```
+
+Thie would return something like the below, which you can then paste into the session running the deployer.
+```output
+export AWS_ACCESS_KEY_ID=ASIA4WFUAA63FRBPI6AW
+export AWS_SECRET_ACCESS_KEY=jtLX5x4MfAl+8/YuWi9NCnPFCklTMddlWTlV9xGQ
+export AWS_SESSION_TOKEN=IQoJb3JpZ2luX2ZjEGcaDGV1LWNlbnRyYWwtMSJHMEUCIQCOXh8FTFjy3nr271nXwAs+BcMPeSbO7Ws3vDMWT4vurgIgZeIo+3MVCQNXdRCF0CiOxqOpiSF/M+qnhu0JycG2v4MqoAWI0P//////////ARAAGgw4NzIyNTU4NTA0MjIiDBeo2UVaII1Y08wFvCr0Ad+dCzx1YwYFe9EcwgrCAcSHOVGrT9+3PvTf1rIeaiSkAR9hQRPXgvTF2wRUCS9DwLlKK/uCB3jTv8tX9LD2BU37ybaUkO6qOhI2kFvs/8DtSvqLiYH82XQT1y/jAuG+zgvGRNoPPQ2FsC9uqLSe5UybTOKJl6iTJkxYQx5FPcP7Jb2WU8gzXSayMe94KrO8ekYbU5+7eMWefXC8qK9R3o+0dCs9/AFynrE8pzpwwokSj0LKt4CYpth21UE+W88xg7L6PkKvF8piuW4tDwRQl+xCkUahu+qZJVsKr7dnVwxGUGBC+XAGdVOmoeLrpx2aIycClH0wn9y4ngY6nQFYE8R5+fM3q9iVS0MVFqDMVs2/1pHDy7WrwcAB9Pb3EYJ7I8jszL700YDaG4JXa+QQAuhY54buLYhvYlUJ/IENjkYYgAyLhnCdgmKXxcZazeVVv0Bf43E5+bcuolc/V6/O1/XzqG2Ml9wnhUvoc80y9to4kXG6AUeEE17+A0kVW46cvuObnNOD8sO1gPUen/x4oZt8tVYNgxqvabfq
+```
+
 
 You must set the `infrastructure.use_sts` to `True` in the `openshift` configuration if you need to use the temporary security credentials. Cloud Pak Deployer will then run the `rosa create cluster` command with the appropriate flag.
 
