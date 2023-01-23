@@ -1,16 +1,12 @@
+---
+title: Running deployer as a pod for existing OpenShift cluster
+tabs:
+  [
+    "Run deployer on OpenShift",
+    "Run deployer wizard on OpenShift",
+  ]
+---
 # Running deployer as a pod for existing OpenShift cluster
-
-## Collect cluster credentials
-* Cluster: ...
-* OpenShift admin user: `kubeadmin`
-* Password: ...
-
-## Login to cluster
-```
-oc login ... --insecure-skip-tls-verify
-```
-
-Keep the login command, you will need it later to set the vault secret the deployer will use.
 
 ## Create configuration
 ```
@@ -188,6 +184,9 @@ cp4d:
 EOF
 ```
 
+## Log in to the OpenShift cluster
+Log is as a cluster administrator to be able to run the deployer with the correct permissions.
+
 ## Prepare the deployer project
 ```
 oc new-project cloud-pak-deployer 
@@ -202,8 +201,6 @@ oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
 Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.
 
 ```
-if ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest --no-headers 2> /dev/null;then 
-
 cat << EOF | oc apply -f -
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -214,35 +211,34 @@ spec:
     local: true
 EOF
 
-cat << EOF | oc apply -f -
+cat << EOF | oc create -f -
+kind: Build
 apiVersion: build.openshift.io/v1
-kind: BuildConfig
 metadata:
-  name: cloud-pak-deployer-bc
+  generateName: cloud-pak-deployer-bc-
   namespace: cloud-pak-deployer
 spec:
+  serviceAccount: builder
   source:
     type: Git
     git:
-      uri: https://github.com/IBM/cloud-pak-deployer
-      ref: main
+      uri: 'https://github.com/IBM/cloud-pak-deployer'
+      ref: wizard
   strategy:
-    type: Docker                      
+    type: Docker
+    dockerStrategy: {}
   output:
     to:
       kind: ImageStreamTag
-      name: cloud-pak-deployer:latest
+      name: 'cloud-pak-deployer:latest'
+  triggeredBy:
+    - message: Manually triggered
 EOF
+```
 
-  oc delete build -n cloud-pak-deployer -l buildconfig=cloud-pak-deployer-bc
-  oc start-build -n cloud-pak-deployer bc/cloud-pak-deployer-bc
-
-echo "Wait for image to be built and pushed to internal registry..."
-while ! oc get istag -n cloud-pak-deployer cloud-pak-deployer:latest 2>/dev/null;do
-  sleep 1
-done
-
-fi
+Now, wait until the deployer image has been built.
+```
+oc get build -n cloud-pak-deployer -w
 ```
 
 ## Set configuration
@@ -254,7 +250,6 @@ oc set data -n cloud-pak-deployer cm/cloud-pak-deployer-config \
   
 ## Start the deployer job
 ```
-export DEPLOYER_SC=your_storage_class
 export CP_ENTITLEMENT_KEY=your_entitlement_key
 
 cat << EOF | oc apply -f -
@@ -269,7 +264,6 @@ spec:
   resources:
     requests:
       storage: 10Gi
-  storageClassName: ${DEPLOYER_SC}
 EOF
 
 cat << EOF | oc apply -f -
@@ -324,6 +318,61 @@ spec:
           claimName: cloud-pak-deployer-status        
 EOF
 ```
+
+## Optional: start debug job
+The debug job can be useful if you want to access the status directory of the deployer if the deployer job has failed.
+```
+cat << EOF | oc apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: cloud-pak-deployer-debug
+  name: cloud-pak-deployer-debug
+  namespace: cloud-pak-deployer
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
+  template:
+    metadata:
+      name: cloud-pak-deployer-debug
+      labels:
+        app: cloud-pak-deployer-debug
+    spec:
+      containers:
+      - name: cloud-pak-deployer-debug
+        image: cloud-pak-deployer:latest
+        imagePullPolicy: Always
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
+        volumeMounts:
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
+        command: ["/bin/sh","-xc"]
+        args: 
+          - sleep infinity
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 0
+      serviceAccountName: cloud-pak-deployer-sa
+      volumes:
+      - name: config-volume
+        configMap:
+          name: cloud-pak-deployer-config
+      - name: status-volume
+        persistentVolumeClaim:
+          claimName: cloud-pak-deployer-status        
+EOF
+```
+
 
 ## Follow the logs of the deployment
 ```
