@@ -1,5 +1,5 @@
-{% if current_openshift_cluster.infrastructure.multi_zone == True %}
 {% for _zone in _aws_zones %}
+---
 apiVersion: machine.openshift.io/v1beta1
 kind: MachineSet
 metadata:
@@ -8,78 +8,15 @@ metadata:
   name: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _zone }}
   namespace: openshift-machine-api
 spec:
+{% if current_openshift_cluster.infrastructure.multi_zone == True %}
+  # Single machine per zone
   replicas: 1
-  selector:
-    matchLabels:
-      machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
-      machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _zone }} 
-  template:
-    metadata:
-      labels:
-        machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
-        machine.openshift.io/cluster-api-machine-role: worker 
-        machine.openshift.io/cluster-api-machine-type: worker 
-        machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _zone }}
-    spec:
-      metadata:
-        labels:
-          node-role.kubernetes.io/worker: ""
-          node-role.kubernetes.io/infra: ""
-          cluster.ocs.openshift.io/openshift-storage: ""
-      taints:
-      - effect: NoSchedule
-        key: node.ocs.openshift.io/storage
-        value: "true"
-      providerSpec:
-        value:
-          ami:
-            id: {{ _image_details.id }} 
-          apiVersion: awsproviderconfig.openshift.io/v1beta1
-          blockDevices:
-            - ebs:
-                iops: 0
-                volumeSize: 120
-                volumeType: gp2
-          credentialsSecret:
-            name: aws-cloud-credentials
-          deviceIndex: 0
-          iamInstanceProfile:
-            id: {{ _infrastructure_id }}-worker-profile 
-          instanceType: m5.4xlarge
-          kind: AWSMachineProviderConfig
-          placement:
-            availabilityZone: {{ _zone }}
-            region: {{ aws_region }}
-          securityGroups:
-            - filters:
-                - name: tag:Name
-                  values:
-                    - {{ _infrastructure_id }}-worker-sg 
-          subnet:
-            filters:
-              - name: tag:Name
-                values:
-                  - {{ _infrastructure_id }}-private-{{ _zone }} 
-          tags:
-            - name: kubernetes.io/cluster/{{ _infrastructure_id }} 
-              value: owned
-          userDataSecret:
-            name: worker-user-data
----
-{% endfor %}
+{% else %}
+  # 3 machines for a single zone
+  replicas: 3
 {% endif %}
 
-{% if current_openshift_cluster.infrastructure.multi_zone == False %}
-{% for _zone in _aws_zones %}
-apiVersion: machine.openshift.io/v1beta1
-kind: MachineSet
-metadata:
-  labels:
-    machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
-  name: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _zone }}
-  namespace: openshift-machine-api
-spec:
-  replicas: 3
+
   selector:
     matchLabels:
       machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
@@ -104,7 +41,7 @@ spec:
       providerSpec:
         value:
           ami:
-            id: {{ _image_details.id }} 
+            id: {{ _ami_id }} 
           apiVersion: awsproviderconfig.openshift.io/v1beta1
           blockDevices:
             - ebs:
@@ -136,6 +73,4 @@ spec:
               value: owned
           userDataSecret:
             name: worker-user-data
----
 {% endfor %}
-{% endif %}
