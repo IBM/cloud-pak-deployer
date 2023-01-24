@@ -32,8 +32,13 @@ compute:
 
 networking:
   clusterNetwork:
+{% if generator.attributes.infrastructure.openshift_cluster_network_cidr is defined  %}
+  - cidr: {{ generator.attributes.infrastructure.openshift_cluster_network_cidr }}
+    hostPrefix: 23
+{% else %}
   - cidr: 10.128.0.0/14
     hostPrefix: 23
+{% endif %}
 {% if generator.attributes.infrastructure.machine_cidr is defined  %}
   machineNetwork:
   - cidr: {{ generator.attributes.infrastructure.machine_cidr }}
