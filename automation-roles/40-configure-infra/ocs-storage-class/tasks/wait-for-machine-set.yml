@@ -1,15 +1,18 @@
 ---
-- name: Get number of compute nodes in machine set {{ machine_set_name }}
+- set_fact:
+    _machine_set_name: "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zone }}"
+
+- name: Get number of compute nodes in machine set {{ _machine_set_name }}
   shell: |
     oc get machineset -n openshift-machine-api \
-      {{ machine_set_name }} \
+      {{ _machine_set_name }} \
       -o jsonpath='{.status.replicas}'
   register: _machineset_replicas
 
 - name: Wait for {{ _machineset_replicas.stdout }} machines to be added to the cluster and become available
   shell: |
     oc get machineset -n openshift-machine-api \
-      {{ machine_set_name }}  \
+      {{ _machine_set_name }}  \
       -o jsonpath='{.status.availableReplicas}'
   register: _available_replicas
   retries: 120
