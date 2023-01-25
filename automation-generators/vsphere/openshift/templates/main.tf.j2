@@ -43,5 +43,18 @@ compute:
       osDisk:
         diskSizeGB: {{ _compute_vm_config.boot_disk_size_gb }}
 
+networking:
+  clusterNetwork:
+{% if generator.attributes.infrastructure.openshift_cluster_network_cidr is defined  %}
+  - cidr: {{ generator.attributes.infrastructure.openshift_cluster_network_cidr }}
+    hostPrefix: 23
+{% else %}
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+{% endif %}
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+
 pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
 sshKey: '{{ _ocp_ssh_pub_key }}'
