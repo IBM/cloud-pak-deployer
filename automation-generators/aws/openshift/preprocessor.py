@@ -97,6 +97,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             if "storage_type" in os and os['storage_type'] not in ['ocs','aws-elastic']:
                 g.appendError(msg='storage_type must be ocs or aws-elastic')
             if "storage_type" in os and os['storage_type']=='ocs':
+                if "credentials_mode" in ge['infrastructure']:
+                    g.appendError(msg='Installation of ODF using temporary cloud credentials (credentials_mode property) is not supported. Please choose elastic storage or install using permanent credentials.')
                 if "ocs_storage_label" not in os:
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
                 if "ocs_storage_size_gb" not in os:
