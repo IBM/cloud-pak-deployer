@@ -1,0 +1,12 @@
+---
+- name: Gather information about all availabily zones for subnets {{ _p_aws_subnet_ids }}
+  shell: |
+    {{ lookup('template', 'aws-get-subnet-zones.j2') }} 
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+  register: _aws_subnet_azs
+
+- set_fact:
+    _aws_zones: "{{ _aws_subnet_azs.stdout | from_json | unique }}"

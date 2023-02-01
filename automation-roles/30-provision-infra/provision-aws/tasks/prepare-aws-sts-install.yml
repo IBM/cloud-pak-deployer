@@ -1,0 +1,102 @@
+---
+- name: Get release image name
+  shell: |
+    openshift-install version | awk '/release image/ {print $3}'
+  register: _release_image
+
+- name: Get Cloud Credential Operator image name
+  shell: |
+    oc adm release info --image-for='cloud-credential-operator' {{ _release_image.stdout }}
+  register: _cco_image
+
+- name: Create temporary directory {{ status_dir }}/tmp/ccotmp
+  file:
+    path: "{{ status_dir }}/tmp/ccotmp"
+    state: directory
+
+- name: Retrieve pull secret from vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-pullsecret"
+    secret_group: "{{ environment_name }}" 
+    secret_file: "{{ status_dir }}/tmp/ccotmp/ocp_pullsecret.json"
+
+- name: Extract ccoctl from image {{ _cco_image.stdout }}
+  shell: |
+    oc image extract {{ _cco_image.stdout }} \
+      --file="/usr/bin/ccoctl" \
+      -a {{ status_dir }}/tmp/ccotmp/ocp_pullsecret.json
+  args:
+    chdir: "{{ status_dir }}/tmp/ccotmp"
+
+- name: Make ccoctl executable
+  file:
+    path: "{{ status_dir }}/tmp/ccotmp/ccoctl"
+    mode: u+rwx,g+rx,o+rx
+
+- name: Create key pair
+  shell: |
+    {{ status_dir }}/tmp/ccotmp/ccoctl aws create-key-pair
+  args:
+    chdir: "{{ status_dir }}/tmp/ccotmp"
+
+- name: Create AWS identity provider
+  shell: |
+    {{ status_dir }}/tmp/ccotmp/ccoctl aws create-identity-provider \
+      --name={{ _current_openshift_cluster.name }} \
+      --region={{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --public-key-file={{ status_dir }}/tmp/ccotmp/serviceaccount-signer.public 2>&1
+  args:
+    chdir: "{{ status_dir }}/tmp/ccotmp"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+  register: _create_identity_provider
+
+- name: Extract identity provider ARN
+  set_fact:
+    _identity_provider_arn: "{{ _create_identity_provider.stdout | regex_search('arn:aws:.*') }}"
+
+- name: Extract credential requests
+  shell: |
+    oc adm release extract \
+      --credentials-requests --cloud=aws \
+      --to={{ status_dir }}/tmp/ccotmp/credrequests \
+      --from={{ _release_image.stdout }}
+
+- name: Create IAM roles
+  shell: |
+    {{ status_dir }}/tmp/ccotmp/ccoctl aws create-iam-roles \
+      --name={{ _current_openshift_cluster.name }} \
+      --region={{ _current_openshift_cluster.infrastructure.aws_region }} \
+      --credentials-requests-dir={{ status_dir }}/tmp/ccotmp/credrequests \
+      --identity-provider-arn={{ _identity_provider_arn }}
+  args:
+    chdir: "{{ status_dir }}/tmp/ccotmp"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+
+- name: Create OpenShift installer manifests
+  shell: |
+    openshift-install create manifests \
+      --dir={{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+
+- name: Copy Cloud Credential Operator manifests to OpenShift install directory
+  copy:
+    src: "{{ status_dir }}/tmp/ccotmp/manifests/"
+    dest: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/manifests/"
+    remote_src: True
+
+- name: Copy Cloud Credential Operator TLS files to OpenShift install directory
+  copy:
+    src: "{{ status_dir }}/tmp/ccotmp/tls"
+    dest: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/"
+    remote_src: True

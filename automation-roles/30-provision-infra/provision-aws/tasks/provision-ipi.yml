@@ -20,6 +20,9 @@
       name: openshift-download-installer
     vars:
       _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+  - include_tasks: prepare-aws-sts-install.yml
+    when: (_current_openshift_cluster.infrastructure.credentials_mode | default('')) == 'Manual'
       
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
     shell:
