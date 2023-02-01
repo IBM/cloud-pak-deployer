@@ -13,14 +13,17 @@
 
 - name: Retrieve image details
   shell: |
-    oc -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.ami}{"\n"}' get machineset/{{ _infrastructure_id }}-worker-{{ aws_region }}a
+    oc get machineset -n openshift-machine-api -o jsonpath='{range .items[0]}{.spec.template.spec.providerSpec.value.ami.id}{end}'
   register: _get_image_details
 
 - set_fact:
-    _image_details: "{{ _get_image_details.stdout }}"
+    _ami_id: "{{ _get_image_details.stdout }}"
 
 - debug:
-    var: _image_details
+    var: _ami_id
+
+- debug:
+    var: _aws_zones
 
 - name: Generate MachineSet file {{status_dir}}/openshift/aws-ipi-ocs-machineset.yaml
   template:
@@ -32,21 +35,9 @@
 
 - name: Wait for machine sets
   include_tasks: wait-for-machine-set.yml
-  with_items:
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[0] }}"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[1] }}"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[2] }}"
+  with_items: "{{ _aws_zones }}"
   loop_control:
-    loop_var: machine_set_name
-  when: current_openshift_cluster.infrastructure.multi_zone == True
-
-- name: Wait for machine sets
-  include_tasks: wait-for-machine-set.yml
-  with_items:
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ _aws_zones[0] }}"
-  loop_control:
-    loop_var: machine_set_name
-  when: current_openshift_cluster.infrastructure.multi_zone == False
+    loop_var: _aws_zone
 
 - name: Create openshift-storage OpenShift project
   shell: |
