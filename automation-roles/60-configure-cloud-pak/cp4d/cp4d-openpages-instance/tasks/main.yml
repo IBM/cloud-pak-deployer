@@ -1,0 +1,40 @@
+---
+- set_fact:
+    _openpages_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(_query_cartridge)|first }}"
+  vars:
+    _query_cartridge: "[?name=='openpages']"  
+
+- when: "not _openpages_cartridge.instances is defined"
+  block:
+    - name: "Skip provision of OpenPages instance"
+      debug:
+        msg: "Cartridge openpages has no instances specified, skipping provisioning OpenPages instance"
+
+- when: _openpages_cartridge.instances is defined
+  block:
+    - name: "Loop through each openpages instance"
+      include_tasks: provision_openpages_instance.yml
+      loop: "{{ _openpages_cartridge.instances | default([]) }}"
+      loop_control:
+        loop_var: _openpages_instance
+
+- name: Get all current OpenPages (OpenPagesInstance) instances
+  shell: |
+    oc get OpenPagesInstance -n {{ current_cp4d_cluster.project }} -o json
+  register: _all_openpages_instances_output
+
+- set_fact:
+    _all_openpages_instances: "{{ _all_openpages_instances_output.stdout | from_json }}"
+
+- debug:
+    msg: "Flag 'confirm-destroy' set to false. Provisioned OpenPagesInstance marked for removal will not be deleted."
+  when: confirm_destroy | default (False) | bool == False
+
+#Loop through all deployed OpenPages instance definitions
+# Requires --confirm-destroy flag to run
+- name: "Loop through each openpages instance for delete"
+  include_tasks: delete_openpages_instance.yml
+  loop: "{{ _all_openpages_instances['items'] | default([]) }}"
+  loop_control:
+    loop_var: _openpages_instance
+  when: confirm_destroy | default (False) | bool == True
