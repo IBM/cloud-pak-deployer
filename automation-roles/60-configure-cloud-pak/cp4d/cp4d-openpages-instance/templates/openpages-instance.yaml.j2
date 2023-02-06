@@ -1,0 +1,29 @@
+apiVersion: openpages.cpd.ibm.com/v1 
+kind: OpenPagesInstance 
+metadata: 
+  name: "{{ _openpages_instance_name }}"
+  namespace: "{{ _openpages_instance_namespace }}"
+  annotations: 
+    "ansible.sdk.operatorframework.io/verbosity": "3" 
+  labels: 
+    app.kubernetes.io/name: openpages 
+    app.kubernetes.io/instance: {{ _openpages_instance_name }}
+    app.kubernetes.io/version: "{{ _openpages_version }}" 
+    app.kubernetes.io/managed-by: ibm-cpd-openpages-operator 
+spec: 
+  zenControlPlaneNamespace: "{{ _openpages_instance_namespace }}"
+  description: "OpenPages instance"  
+  version: "{{ _openpages_version }}"
+  autoScaleConfig: true
+  shutdown: "false"
+  metadata: 
+    databaseType: internal
+    blockStorageClass: {{ ocp_storage_class_block }}
+    fileStorageClass: {{ ocp_storage_class_file }}
+    dbSecretName: ""
+    dedicatedDbNodes: false 
+    dbNodeLabelValue: ""  
+    scaleConfig: "{{ _openpages_instance_size }}"
+    enableIntegrationWithCognos: false
+  license: 
+    accept: true
