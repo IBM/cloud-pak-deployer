@@ -1,0 +1,23 @@
+---
+- set_fact:
+    _get_current_cr_version: {}
+
+- name: Retrieve current {{ _current_cartridge_details.CR_Kind }} in OpenShift project {{ _p_current_cp4d_cluster.project }}
+  shell: |
+    oc get {{ _current_cartridge_details.CR_Kind }} \
+      -n {{ _p_current_cp4d_cluster.project }} \
+      {{ _current_cartridge_details.CR_Name }} \
+      -o jsonpath='{.spec.version}'
+  failed_when: False
+  register: _get_current_cr_version
+  when:
+  - (_current_cartridge_details.CR_Kind | default('')) != ''
+  - (_current_cartridge_details.CR_Name | default('')) != ''
+
+- name: Determine if CP4D must be upgraded based on cartridge {{ _current_cartridge_details.CR_Kind }}
+  set_fact:
+    _upgrade_cp4d: True
+  when:
+  - (_get_current_cr_version.rc | default(0)) == 0
+  - (_get_current_cr_version.stdout | default('')) != ''
+  - (_get_current_cr_version.stdout | default('')) != _current_cartridge_details.CR_Version
