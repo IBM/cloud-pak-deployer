@@ -1,0 +1,213 @@
+# https://www.ibm.com/docs/en/netcoolomnibus/8?topic=aiops-deploying-generic-webhook-probe
+
+- name: 🛰️  START - INSTALL WEBHOOK PROBE
+  debug: 
+    msg="{{ lookup('pipe','date +%d.%m.%Y---%H:%M:%S') }}"
+
+
+
+- name: Log
+  shell: |
+    export MESSAGE="Install Webhook Probe"
+    export currentDate=$(date +%Y-%m-%d_%H:%M)
+    echo "---------------------------------------------------------------------------------------------------------------------------------------------------" >> ../install_{{current_cp4waiops_feature.kind}}.log
+    echo $currentDate" - "$MESSAGE  >> ../install_{{current_cp4waiops_feature.kind}}.log
+  ignore_errors: true
+
+
+
+
+
+
+
+
+- name: 🚀 INSTALL PROBE - Install Webhook Probe Subscription
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/probe/1_probe-subscription.j2
+
+
+
+- name: 🚀 INSTALL PROBE - Install Probe Rules File
+  community.kubernetes.k8s:
+    state: present
+    template: ./templates/probe/2_generic-probe-rules.j2
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for CSV being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTALL PROBE - Wait for Subscription to become ready
+  shell: oc get csv -n {{ current_cp4waiops_cluster.project }}|grep netcool-integrations-operator|grep "Succeeded"| grep -v ibm-watson-aiops-ui-operator | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+
+
+- name: 🚀 INSTALL PROBE - INSTALL PROBE
+  shell: |
+    set -x
+    export PROBE_INSTANCE_NAME=generic-probe
+
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+
+    export IRC_INSTANCE=$(oc get issueresolutioncore -n $WAIOPS_NAMESPACE -o custom-columns=name:metadata.name --no-headers)
+
+    export IRC_PRIMARY_OBJECTSERVER_SVC=$IRC_INSTANCE-ir-core-ncoprimary
+    export IRC_BACKUP_OBJECTSERVER_SVC=$IRC_INSTANCE-ir-core-ncobackup
+    export IRC_PRIMARY_OBJECTSERVER_PORT=$(oc get svc -n $WAIOPS_NAMESPACE $IRC_PRIMARY_OBJECTSERVER_SVC -o jsonpath='{.spec.ports[?(@.name=="primary-tds-port")].port}')
+    export IRC_BACKUP_OBJECTSERVER_PORT=$(oc get svc -n $WAIOPS_NAMESPACE $IRC_BACKUP_OBJECTSERVER_SVC -o jsonpath='{.spec.ports[?(@.name=="backup-tds-port")].port}')
+    export IRC_OMNI_USERNAME=aiopsprobe
+    export IRC_OMNI_PASSWORD=$(oc get secret -n $WAIOPS_NAMESPACE $IRC_INSTANCE-ir-core-omni-secret -o jsonpath='{.data.OMNIBUS_PROBE_PASSWORD}' | base64 --decode && echo)
+
+    oc extract secret/$IRC_INSTANCE-ir-core-ncoprimary-tls -n $WAIOPS_NAMESPACE --to=. --keys=tls.crt
+
+
+    echo "IRC_INSTANCE:$IRC_INSTANCE"
+    echo "IRC_PRIMARY_OBJECTSERVER_SVC:$IRC_PRIMARY_OBJECTSERVER_SVC"
+    echo "IRC_BACKUP_OBJECTSERVER_SVC:$IRC_BACKUP_OBJECTSERVER_SVC"
+    echo "IRC_PRIMARY_OBJECTSERVER_PORT:$IRC_INSTIRC_PRIMARY_OBJECTSERVER_PORTANCE"
+    echo "IRC_BACKUP_OBJECTSERVER_PORT:$IRC_BACKUP_OBJECTSERVER_PORT"
+    echo "IRC_OMNI_USERNAME:$IRC_OMNI_USERNAME"
+    echo "IRC_OMNI_PASSWORD:$IRC_OMNI_PASSWORD"
+
+
+    oc project cp4waiops
+
+
+
+    export PROBE_OMNI_SECRET=noi-probe-secret
+    oc create secret generic $PROBE_OMNI_SECRET \
+    --from-literal=AuthUserName=$IRC_OMNI_USERNAME \
+    --from-literal=AuthPassword=$IRC_OMNI_PASSWORD
+
+
+    export PROBE_AUTH_SECRET=turbonomic-probe-client-basic-auth
+    oc create secret generic $PROBE_AUTH_SECRET --from-literal=serverBasicAuthenticationUsername=administrator  --from-literal=serverBasicAuthenticationPassword=P4ssw0rd!
+
+
+
+    cat <<EOF | oc apply -n $WAIOPS_NAMESPACE -f -
+    apiVersion: operators.coreos.com/v1alpha1
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: probe-allow-objectserver
+      namespace: ${WAIOPS_NAMESPACE}
+    spec:
+      ingress:
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: noi-integrations
+        ports:
+          - protocol: TCP
+            port: 4100
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: ${IRC_INSTANCE}
+          app.kubernetes.io/managed-by: ir-core-operator
+          app.kubernetes.io/name: IssueResolutionCore
+      policyTypes:
+      - Ingress
+    EOF
+
+
+    cat <<EOF | oc apply -n $WAIOPS_NAMESPACE -f -
+    apiVersion: probes.integrations.noi.ibm.com/v1
+    kind: WebhookProbe
+    metadata:
+      name: ${PROBE_INSTANCE_NAME}
+      labels:
+        app.kubernetes.io/name: ${PROBE_INSTANCE_NAME}
+        app.kubernetes.io/managed-by: netcool-integrations-operator
+        app.kubernetes.io/instance: ${PROBE_INSTANCE_NAME}
+      namespace: ${NAMESPACE}
+    spec:
+      helmValues:
+        global:
+          image:
+            secretName: ibm-entitlement-key
+          serviceAccountName: default
+          enableNetworkPolicy: true
+        netcool:
+          backupHost: '${IRC_BACKUP_OBJECTSERVER_SVC}.${WAIOPS_NAMESPACE}.svc'
+          backupPort: ${IRC_BACKUP_OBJECTSERVER_PORT}
+          backupServer: 'AGGB'
+          connectionMode: SSLAndAuth
+          primaryHost: '${IRC_PRIMARY_OBJECTSERVER_SVC}.${WAIOPS_NAMESPACE}.svc'
+          primaryPort: ${IRC_PRIMARY_OBJECTSERVER_PORT}
+          primaryServer: 'AGGP'
+          secretName: '${PROBE_OMNI_SECRET}'
+        probe:
+          jsonParserConfig:
+            notification:
+              jsonNestedHeader: ''
+              jsonNestedPayload: ''
+              messageDepth: 3
+              messageHeader: ''
+              messagePayload: json
+          integration: generic
+          enableTransportDebugLog: false
+          messageLevel: debug
+          rulesConfigmap: generic-probe-rules
+        ingress:
+          enabled: true
+          host: ''
+        arch: amd64
+        webhook:
+          uri: /probe
+          serverBasicAuthenticationCredentialsSecretName: '${PROBE_AUTH_SECRET}'
+          tls:
+            enabled: true
+            secretName: ''
+      license:
+        accept: true
+      version: 3.1.0
+    EOF
+
+
+  register: output_string
+  ignore_errors: true
+- name: 🟣  DEBUG
+  debug:
+    var: output_string.stdout_lines
+    verbosity: 1
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# Wait for CSV being ready
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name:   🕦 INSTALL PROBE - Wait for Probe to become ready
+  shell: oc get pod -n {{ current_cp4waiops_cluster.project }}|grep generic-probe|grep "1/1" | grep -c ""
+  register: kubectl_get_pods
+  until: kubectl_get_pods.stdout == "1"
+  retries: 500
+  delay: 15
+
+
+
+
+
+- name: 🌏 INSTALL PROBE - GET PROBE URL
+  shell: |
+    set -x
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    export PROBE_WEBHOOK_URL="https://"$(oc get routes generic-probe-mb-webhook -n $WAIOPS_NAMESPACE -o=jsonpath='{.status.ingress[0].host}{"\n"}')"/probe"
+
+    echo "$PROBE_WEBHOOK_URL"
+  register: output_string
+  ignore_errors: true
+- name: 🟣  DEBUG
+  debug:
+    var: output_string.stdout_lines
+
