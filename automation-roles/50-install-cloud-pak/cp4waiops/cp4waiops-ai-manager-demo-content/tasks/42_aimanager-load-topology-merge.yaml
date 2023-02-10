@@ -177,7 +177,7 @@
     echo "  Wait 5 seconds"
     sleep 5
 
-    echo "  Create Match RULE..."
+    echo "  Create Match RULE... MatchTokenDeployName"
     curl -X "POST" "$MERGE_ROUTE/1.0/merge/rules" --insecure \
         -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
         -H 'content-type: application/json' \
@@ -192,7 +192,7 @@
         "providers": ["*"]
     }'
 
-    echo "  Create Merge RULE..."
+    echo "  Create Merge RULE... MergeTokenDeployName"
     curl -X "POST" "$MERGE_ROUTE/1.0/merge/rules" --insecure \
         -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
         -H 'content-type: application/json' \
@@ -207,7 +207,20 @@
         "providers": ["*"]
     }'
 
-
+    echo "  Create Match RULE... MergeTokenDeployName"
+    curl -X "POST" "$MERGE_ROUTE/1.0/merge/rules" --insecure \
+        -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+        -H 'content-type: application/json' \
+        -u $LOGIN \
+        -d $'{
+        "name": "MatchTokenNetworkinterfacesID",
+        "ruleType": "mergeRule",
+        "entityTypes": ["networkinterface"],
+        "tokens": ["uniqueId"],
+        "ruleStatus": "enabled",
+        "observers": ["*"],
+        "providers": ["*"]
+    }'
 
     echo "  Disable RULE k8ServiceName..."
 
