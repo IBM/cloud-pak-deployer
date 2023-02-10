@@ -1,11 +1,11 @@
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#       __________  __ ___       _____    ________            
-#      / ____/ __ \/ // / |     / /   |  /  _/ __ \____  _____
-#     / /   / /_/ / // /| | /| / / /| |  / // / / / __ \/ ___/
-#    / /___/ ____/__  __/ |/ |/ / ___ |_/ // /_/ / /_/ (__  ) 
-#    \____/_/      /_/  |__/|__/_/  |_/___/\____/ .___/____/  
-#                                              /_/            
+#         ________  __  ___     ___    ________       
+#        /  _/ __ )/  |/  /    /   |  /  _/ __ \____  _____
+#        / // __  / /|_/ /    / /| |  / // / / / __ \/ ___/
+#      _/ // /_/ / /  / /    / ___ |_/ // /_/ / /_/ (__  ) 
+#     /___/_____/_/  /_/    /_/  |_/___/\____/ .___/____/  
+#                                           /_/
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------------------------------------------------------------------"
@@ -35,24 +35,6 @@
   debug:
     var: global_config
     verbosity: 1
-
-- set_fact:
-    _cpd_accept_licenses: "False"
-
-- set_fact:
-    _cpd_accept_licenses: "True"
-  when: (cpd_accept_licenses | default(False) | bool) or (current_cp4waiops_cluster.accept_licenses | default(False) | bool)
-
-- debug:
-    var: _cpd_accept_licenses
-
-- name: Fail if licenses were not accepted
-  fail:
-    msg: "You must accept the licenses, either in the cp4waiops object with accept_licenses: True, or in the global_config object with accept_all_licenses: True or by specifying --accept-all-licenses at the command line"
-  when: 
-  - not (cpd_accept_licenses | default(False) | bool)
-  - not (global_config.accept_all_licenses | default(False) | bool)
-  - not (current_cp4waiops_cluster.accept_licenses | default(False) | bool)
 
 # Get OpenShift cluster associated with this CP4WAIOPS project
 - name: Get OpenShift definition to use for {{ current_cp4waiops_cluster.project }}
