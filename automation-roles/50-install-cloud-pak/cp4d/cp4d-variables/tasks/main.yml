@@ -14,40 +14,6 @@
     _cartridges_with_olm_utils_name: []
     _cartridges_to_install: []
     _cartridge_dependencies: []
-    _upgrade_cp4d: False
-
-- name: Retrieve previous configuration from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "{{ environment_name }}-all-config"
-    secret_group: "{{ environment_name }}"
-    _p_secret_variable: _previous_all_config
-
-- name: Get cp4d object from previous configuration
-  set_fact:
-    _previous_cp4d: "{{ _previous_all_config.cp4d | default([]) | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?project=='{{ _p_current_cp4d_cluster.project }}']
-  
-- name: Retrieve current Ibmcpd CR from OpenShift project {{ _p_current_cp4d_cluster.project }}
-  shell: |
-    oc get Ibmcpd -n {{ _p_current_cp4d_cluster.project }} ibmcpd-cr
-  failed_when: False
-  register: _get_ibmcpd
-
-- name: Determine if CP4D must be upgraded
-  set_fact:
-    _upgrade_cp4d: True
-  when:
-  - _get_ibmcpd.rc==0
-  - (_previous_cp4d.cp4d_version | default('')) != ''
-  - _previous_cp4d.cp4d_version != _p_current_cp4d_cluster.cp4d_version
-
-- name: Show if upgrade of CP4D in project {{ _p_current_cp4d_cluster.project }} must be done
-  debug:
-    var: _upgrade_cp4d
 
 - name: Obtain versions of case files and cartridges
   include_tasks: list-components-olm-utils.yml
@@ -113,6 +79,23 @@
 - set_fact:
     _cartridges_to_install: >-
       {{ _tmp_cartridges + _dp_cartridge }}
+
+- set_fact:
+    _upgrade_cp4d: False
+
+- name: Determine if CP4D must be upgraded
+  include_tasks: check-cp4d-upgrade.yml
+  loop_control:
+    loop_var: _current_cartridge_details
+  when: 
+  - (_current_cartridge_details.state | default('installed')) == 'installed'
+  - (_current_cartridge_details.CR_Kind | default('')) != ''
+  - (_current_cartridge_details.CR_Kind | default('')) != '--'
+  loop: "{{ _cartridges_to_install }}"
+
+- name: Show if upgrade of CP4D in project {{ _p_current_cp4d_cluster.project }} must be done
+  debug:
+    var: _upgrade_cp4d
 
 - set_fact:
     _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
