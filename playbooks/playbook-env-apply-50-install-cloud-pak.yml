@@ -18,6 +18,13 @@
       name: cp4d-cluster-delete
     when: not (cpd_skip_cp_install | bool)
 
+  - name: Install Cloud Pak for Business Automation
+    include_role:
+      name: cp4ba-cluster
+    loop: "{{ all_config.cp4ba | default([]) }}"
+    loop_control:
+      loop_var: current_cp4ba_cluster
+
   - name: Install Cloud Pak for Data
     include_role:
       name: cp4d-cluster
