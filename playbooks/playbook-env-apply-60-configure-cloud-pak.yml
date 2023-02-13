@@ -13,6 +13,13 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
+  - name: Configure Cloud Pak for Business Automation
+    include_role:
+      name: cp4ba-cluster-configure
+    loop: "{{ all_config.cp4ba | default([]) }}"
+    loop_control:
+      loop_var: current_cp4ba_cluster  
+  
   - name: Configure Cloud Pak for Data
     include_role:
       name: cp4d-cluster-configure
