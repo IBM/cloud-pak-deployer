@@ -13,14 +13,16 @@ openshift:
   cluster_name: "{{ env_id }}"
   domain_name: ocp410.tec.uk.ibm.com
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
+  - storage_name: rook-ceph
+    storage_type: custom
+    ocp_storage_class_file: rook-cephfs
+    ocp_storage_class_block: rook-ceph-block
 
 cp4i:
 - project: cp4i
   openshift_cluster_name: "{{ env_id }}"
-  cp4i_version: 2022.2.1-0
-  accept_licenses: false
+  cp4i_version: 2022.4.1-0
+  accept_licenses: true
  
   instances:
 
@@ -40,7 +42,7 @@ cp4i:
     state: removed
 
   - type: event-streams
-    state: removed
+    state: installed
   
   - type: high-speed-transfer-server
     state: removed
