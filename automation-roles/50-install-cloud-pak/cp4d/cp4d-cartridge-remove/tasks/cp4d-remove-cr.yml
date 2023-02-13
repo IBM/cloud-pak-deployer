@@ -4,6 +4,9 @@
     msg: "Will not delete cartridge {{ _current_cartridge_cr.name }}. Destroy was not confirmed with --confirm-destroy parameter"
   when: (confirm_destroy | default(False) | bool) != True
 
+- name: Delete instances of {{ _current_cartridge_cr.name }}
+  include_tasks: cp4d-delete-cr-instances.yml
+
 - name: Removing cartridge {{ _current_cartridge_cr.name }}
   shell: |
     oc delete {{ _current_cartridge_cr.cr_cr }} --namespace {{ _p_current_cp4d_cluster.project }} --all
