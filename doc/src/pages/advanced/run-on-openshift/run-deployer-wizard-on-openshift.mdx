@@ -1,72 +1,62 @@
 ---
-title: Running deployer wizard as a pod for existing OpenShift cluster
+title: Run deployer wizard on OpenShift
 tabs:
   [
-    "Run deployer on OpenShift",
+    "Run deployer on OpenShift using console",
+    "Build image and run deployer on OpenShift",
     "Run deployer wizard on OpenShift",
   ]
 ---
-# Running deployer wizard as a pod for existing OpenShift cluster
+# Run deployer wizard on OpenShift
 
 ## Log in to the OpenShift cluster
 Log is as a cluster administrator to be able to run the deployer with the correct permissions.
 
-## Prepare the deployer project
+## Prepare the deployer project and the storage
+* Go to the OpenShift console
+* Click the "+" sign at the top of the page
+* Paste the follliwng block (exactly into the window)
 ```
-oc new-project cloud-pak-deployer 
-
-oc project cloud-pak-deployer
-oc create serviceaccount cloud-pak-deployer-sa
-oc adm policy add-scc-to-user privileged -z cloud-pak-deployer-sa
-oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
-```
-
-## Build deployer image and push to the internal registry
-Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.
-```
-cat << EOF | oc apply -f -
-apiVersion: image.openshift.io/v1
-kind: ImageStream
+---
+apiVersion: v1
+kind: Namespace
 metadata:
+  creationTimestamp: null
   name: cloud-pak-deployer
-spec:
-  lookupPolicy:
-    local: true
-EOF
-
-cat << EOF | oc create -f -
-kind: Build
-apiVersion: build.openshift.io/v1
+---
+apiVersion: v1
+kind: ServiceAccount
 metadata:
-  generateName: cloud-pak-deployer-bc-
+  name: cloud-pak-deployer-sa
   namespace: cloud-pak-deployer
-spec:
-  serviceAccount: builder
-  source:
-    type: Git
-    git:
-      uri: 'https://github.com/IBM/cloud-pak-deployer'
-      ref: main
-  strategy:
-    type: Docker
-    dockerStrategy: {}
-  output:
-    to:
-      kind: ImageStreamTag
-      name: 'cloud-pak-deployer:latest'
-  triggeredBy:
-    - message: Manually triggered
-EOF
-```
-
-Now, wait until the deployer image has been built.
-```
-oc get build -n cloud-pak-deployer -w
-```
-
-## Start the deployer wizard
-```
-cat << EOF | oc apply -f -
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: system:openshift:scc:privileged
+  namespace: cloud-pak-deployer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:privileged
+subjects:
+- kind: ServiceAccount
+  name: cloud-pak-deployer-sa
+  namespace: cloud-pak-deployer
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cloud-pak-deployer-cluster-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: cloud-pak-deployer-sa
+  namespace: cloud-pak-deployer
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -78,9 +68,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
-EOF
-
-cat << EOF | oc apply -f -
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -92,9 +80,13 @@ spec:
   resources:
     requests:
       storage: 10Gi
-EOF
+```
 
-cat << EOF | oc apply -f -
+## Run the deployer wizard and expose route
+* Go to the OpenShift console
+* Click the "+" sign at the top of the page
+* Paste the following block (exactly into the window)
+```
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -113,7 +105,7 @@ spec:
     spec:
       containers:
       - name: cloud-pak-deployer
-        image: cloud-pak-deployer:latest
+        image: quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
         imagePullPolicy: Always
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
@@ -147,12 +139,7 @@ spec:
       - name: status-volume
         persistentVolumeClaim:
           claimName: cloud-pak-deployer-status        
-EOF
-```
-
-## Expose the service and create the route
-```
-cat << EOF | oc apply -f -
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -165,9 +152,7 @@ spec:
   - nodePort: 0
     port: 8080            
     protocol: TCP
-EOF
-
-cat << EOF | oc apply -f -
+---
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
@@ -179,7 +164,10 @@ spec:
     kind: Service
     name: cloud-pak-deployer-wizard-svc
     weight: null
-EOF
 ```
 
-Now you can access the deployer wizard using the route created in teh `cloud-pak-deployer` project.
+## Open the wizard
+Now you can access the deployer wizard using the route created in the `cloud-pak-deployer` project.
+* Open the OpenShift console
+* Go to Networking --> Routes
+* Click the Cloud Pak Deployer wizard route
