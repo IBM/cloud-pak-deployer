@@ -1,0 +1,38 @@
+---
+- set_fact:
+    _dv_instance_name: "{{ _dv_instance.display_name }}"
+    _dv_instance_id: "{{ _dv_instance.id }}"
+    _dv_cartridge_listed: {}
+    _delete_dv_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration
+- block:
+  - set_fact:
+      _dv_cartridge_listed: "{{ _dv_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _dv_instance_name }}']" 
+    when: _dv_cartridge.instances is defined
+  - set_fact:
+      _delete_dv_instance: True
+    when: _dv_cartridge_listed == {} or (_dv_cartridge.state | default('installed')) == 'removed'
+  when: (_p_delete_all_instances | default(False)) == False
+
+- name: Fail if Data Virtualization instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Flag --confirm-destroy was set to False, will not delete Data Virtualization instance {{ _dv_instance_name }}"
+  when:
+  - _delete_dv_instance | bool
+  - confirm_destroy | default (False) | bool == False
+
+- name: "Deleting Data Virtualization instance {{ _dv_instance_name }}"
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_addon_type }}&display_name={{ _dv_instance.name }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _dv_instance_delete_result
+  when: _delete_dv_instance | bool
