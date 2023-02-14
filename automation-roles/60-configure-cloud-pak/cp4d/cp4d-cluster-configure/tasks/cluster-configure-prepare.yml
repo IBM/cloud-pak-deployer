@@ -8,25 +8,19 @@
   vars:
     secret_name: "{{ cp4d_admin_password_vault_key_name }}"
     secret_group: "{{ environment_name }}"
-
-- name: Keep admin password
-  set_fact:
-    _cp4d_login_password: "{{ secret_value }}"
+    _p_secret_variable: _cp4d_login_password
 
 - name: Error if no secret value is returned
   fail: msg="Unable to acquire secret value for {{ cp4d_admin_password_vault_key_name }} from group {{ environment_name }}"
-  when: "secret_value==''"
+  when: "_cp4d_login_password==''"
 
 - name: Login to Cloud Pak for Data instance {{ current_cp4d_cluster.project }} using password in OpenShift secret
   include_role:
     name: cp4d-login
   vars:
     _p_cp4d_project: "{{ current_cp4d_cluster.project }}"
-    _p_cp4d_user: "{{ cp4d_login_username }}"
+    _p_cp4d_user: "{{ _v_cp4d_login_username }}"
     _p_cp4d_password: "{{ _cp4d_login_password }}"
-
-- set_fact:
-    cp4d_login: "{{ _cp4d_login_result.json }}"
 
 - debug:
     msg: "Flag 'confirm-destroy' set to true. Provisioned CP4D instances marked for removal will be deleted."
