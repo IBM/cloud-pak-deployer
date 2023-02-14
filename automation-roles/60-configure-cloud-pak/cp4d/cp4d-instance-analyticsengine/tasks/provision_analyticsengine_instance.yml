@@ -1,0 +1,136 @@
+---
+- name: Show analytics engine instance
+  debug:
+    var: _ae_instance
+
+- name: Check if the Analytics Engine instance is already running
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_ae_instance_addon_type }}&display_name={{ _ae_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _ae_instance_lookup_result
+
+- name: Determine if Analytics Engine instance already exists
+  debug:
+    msg: "AnalyticsEngine instance {{ _ae_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
+  when: _ae_instance_lookup_result.json.total_count != 0
+
+- when: _ae_instance_lookup_result_json.total_count == 0
+  block:
+  - name: Obtain AnalyticsEngine version
+    shell:
+      oc get analyticsengine -n {{ current_cp4d_cluster.project }} analyticsengine-sample -o jsonpath='{.spec.version}'
+    register: _ae_version
+
+  - name: Prepare AnalyticsEngine storage instance {{ _ae_instance.name }}-storage json file
+    template:
+      src: analyticsengine_storage_instance_40.json.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-analyticsengine_storage_instance_40.json"
+
+  - name: Prepare AnalyticsEngine instance {{ _ae_instance.name }} json file
+    template:
+      src: _ae_instance_40.json.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-ae_instance_40.json"
+
+  - name: Create AnalyticsEngine storage instance {{ _ae_instance.name }}
+    shell: |
+      curl -v -k \
+        -H 'Authorization: Bearer {{ cp4d_login.token }}' \
+        -H 'Content-Type: application/json' \
+        -X POST \
+        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-analyticsengine_storage_instance_40.json
+    register: _create_analyticsengine_storage_instance_result
+
+  - set_fact:
+      _create_analyticsengine_storage_instance_result_json: "{{ _create_analyticsengine_storage_instance_result.stdout | from_json }}"
+
+  - name: Create AnalyticsEngine instance {{ _ae_instance.name }}
+    shell: |
+      curl -v -k \
+        -H 'Authorization: Bearer {{ cp4d_login.token }}' \
+        -H 'Content-Type: application/json' \
+        -X POST \
+        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-ae_instance_40.json
+    register: _create_ae_instance_result
+
+  - set_fact:
+      _create_ae_instance_result_json: "{{ _create_ae_instance_result.stdout | from_json }}"
+
+  - name: Show analytics engine storage instance result
+    debug:
+      var: _create_analyticsengine_storage_instance_result_json
+
+  - name: Show analytics engine instance result
+    debug:
+      var: _create_ae_instance_result_json
+
+  - set_fact:
+      _analyticsengine_storage_id: "{{ _create_analyticsengine_storage_instance_result_json.id }}"
+      _analyticsengine_id: "{{ _create_ae_instance_result_json.id }}"
+
+  - name: Waiting for Analytics Engine Storage instance {{ _ae_instance.name }} to complete its provisioning
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _analyticsengine_storage_id }}?include_service_status=true'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ cp4d_login.token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _ae_storage_instance_lookup_result
+    until: _ae_storage_instance_lookup_result.json.services_status == "RUNNING"
+    retries: 60
+    delay: 30
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+  - name: Waiting for Analytics Engine Storage instance {{ _ae_instance.name }} to complete its provisioning
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _analyticsengine_storage_id }}?include_service_status=true'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ cp4d_login.token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _ae_storage_instance_lookup_result
+    until: _ae_storage_instance_lookup_result.json.services_status == "RUNNING"
+    retries: 60
+    delay: 30
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+  - name: Waiting for Analytics Engine instance {{ _ae_instance.name }} to complete its provisioning
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _analyticsengine_id }}?include_service_status=true'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ cp4d_login.token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _ae_instance_lookup_result
+    until: _ae_instance_lookup_result.json.services_status == "RUNNING"
+    retries: 60
+    delay: 30
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
