@@ -2,25 +2,29 @@
 - set_fact:
     _openpages_instance_name: "{{ _openpages_instance.metadata.name }}"
     _openpages_cartridge_listed: {}
+    _delete_openpages_instance: False
 
 # If not all instances must be deleted, check if instance still in the configuration
-- set_fact:
-    _openpages_cartridge_listed: "{{ _openpages_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
-  vars:
-    _query_instance: "[?name=='{{ _openpages_instance_name }}']" 
-  when: 
-  - _openpages_cartridge.instances is defined
-  - (_p_delete_all_instances | default(False)) == False
+- block:
+  - set_fact:
+      _openpages_cartridge_listed: "{{ _openpages_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _openpages_instance_name }}']" 
+    when: _openpages_cartridge.instances is defined
+  - set_fact:
+      _delete_openpages_instance: True
+    when: _openpages_cartridge_listed == {}
+  when: (_p_delete_all_instances | default(False)) == False
 
 - name: Fail if OpenPages instance will be deleted and destroy is not confirmed
   fail:
     msg: "Flag --confirm-destroy was set to False, will not delete Openpages instance {{ _openpages_instance_name }}"
   when:
-  - _openpages_cartridge_listed == {}
+  - _delete_openpages_instance | bool
   - confirm_destroy | default (False) | bool == False
 
 - name: "Deleting OpenPagesInstance {{ _openpages_instance_name }}"
   shell: |
     oc delete OpenPagesInstance -n {{ current_cp4d_cluster.project }} \
       {{ _openpages_instance_name }} --ignore-not-found
-  when: _openpages_cartridge_listed == {}
+  when: _delete_openpages_instance | bool

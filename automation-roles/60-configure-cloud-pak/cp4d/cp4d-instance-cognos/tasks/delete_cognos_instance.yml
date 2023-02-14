@@ -1,0 +1,33 @@
+---
+- set_fact:
+    _cognos_instance_name: "{{ _cognos_instance.display_name }}"
+    _cognos_instance_id: "{{ _cognos_instance.id }}"
+    _cognos_cartridge_listed: {}
+    _delete_cognos_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration
+- block:
+  - set_fact:
+      _cognos_cartridge_listed: "{{ _ca_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _cognos_instance_name }}']" 
+    when: _ca_cartridge.instances is defined
+  - set_fact:
+      _delete_cognos_instance: True
+    when: _cognos_cartridge_listed == {} or (_ca_cartridge.state | default('installed')) == 'removed'
+  when: (_p_delete_all_instances | default(False)) == False
+
+- name: Fail if Cognos Analytics instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Flag --confirm-destroy was set to False, will not delete Cognos Analytics instance {{ _cognos_instance_name }}"
+  when:
+  - _delete_cognos_instance | bool
+  - confirm_destroy | default (False) | bool == False
+
+- fail:
+
+- name: "Deleting Cognos Analytics instance {{ _cognos_instance_name }}"
+  shell: |
+    oc delete CAServiceInstance -n {{ current_cp4d_cluster.project }} \
+      ca{{ _cognos_instance_id }}-cr --ignore-not-found
+  when: _delete_cognos_instance | bool

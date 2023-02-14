@@ -114,25 +114,9 @@
       - ( _db2_instance.state | default("installed") ) == "installed"
 
     # Cartridge: cognos_analytics
-    - set_fact:
-        _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "ca"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - set_fact:
-        _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "cognos_analytics"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-      when: _ca_instance == {}
-
-    - name: Provision Cognos instances
+    - name: Provision or remove Cognos Analytics instances
       include_role:
-        name: cp4d-provision-cognos-instance
-      when: 
-      - _ca_instance != {} 
-      - ( _ca_instance.state | default("installed") ) == "installed"
+        name: cp4d-instance-cognos
 
     # Cartridge: DV
     - set_fact:
@@ -199,7 +183,7 @@
 
     - name: Provision OpenPages instances
       include_role:
-        name: cp4d-openpages-instance
+        name: cp4d-instance-openpages
       when: 
       - _openpages_instance != {} 
       - ( _openpages_instance.state | default("installed") ) == "installed"

@@ -3,6 +3,13 @@
   debug:
     msg: "{{ _cognos_instance }}"
 
+- set_fact:
+    _cp4d_cognos_instance_tshirt_size: "{{ _cognos_instance.size | default ('small') }}"
+
+- fail:
+    msg: "Cognos Analytics size can be small, medium or large. {{ _cp4d_cognos_instance_tshirt_size }} is not supported."
+  when: _cp4d_cognos_instance_tshirt_size not in ['small','medium','large']
+
 - name: Check if the Cognos Analytics instance is already running
   uri:
     url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&display_name={{ _cognos_instance.name }}'
@@ -129,21 +136,6 @@
           template:
             src: cognos_connection.json.j2
             dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cp4d_platform_connection_name }}-connection.json"
-
-        # NOT IMPLEMENTED - Cannot pass file contents as JSON via uri module
-        # - name: Create platform connection {{ _cp4d_platform_connection_name }}
-        #   uri:
-        #     url: 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}'
-        #     method: POST
-        #     headers:
-        #       Content-Type: application/json
-        #       Authorization: "Bearer {{ cp4d_login.token }}"
-        #     body: "{{ lookup('file',status_dir+'/cp4d/'+current_cp4d_cluster.project+'-'+_cp4d_platform_connection_name+'-connection.json') | to_json }}"
-        #     body_format: json
-        #     return_content: yes
-        #     validate_certs: no
-        #     status_code: 200
-        #   register: _create_cognos_connection_result
 
         - name: Create Datasource connection {{ _cp4d_platform_connection_name }}
           shell: |
