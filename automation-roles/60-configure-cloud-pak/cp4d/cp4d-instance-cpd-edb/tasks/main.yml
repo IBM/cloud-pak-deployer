@@ -1,0 +1,35 @@
+---
+- set_fact:
+    _cpd_edb_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "edb_cp4d"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show EnterpriseDB cartridge
+  debug:
+    var: _cpd_edb_cartridge
+
+- name: Loop through each EnterpriseDB instance to provision
+  block:
+  - name: EnterpriseDB instance from the cartridge specification
+    include_tasks: provision-cpd-edb-instance.yml
+    loop: "{{ _cpd_edb_cartridge.instances | default([]) }}"
+    loop_control:
+      loop_var: _cpd_edb_instance
+  when: 
+  - _cpd_edb_cartridge.instances is defined
+  - (_p_delete_all_instances | default(False)) == False
+
+- name: Get all current Cloud Pak Deployer managed instances of CPDEdbInstance
+  shell: |
+    oc get CPDEdbInstance -n {{ current_cp4d_cluster.project }} -o json -l managedByCpDeployer=yes
+  register: _all_cpdedbinstance_instances_output
+
+- set_fact:
+    _all_cpdedbinstance_instances: "{{ _all_cpdedbinstance_instances_output.stdout | from_json }}"
+
+- name: "Loop through each CPDEdbInstance instance for delete"
+  include_tasks: delete-cpd-edb-instance.yml
+  loop: "{{ _all_cpdedbinstance_instances['items'] | default([]) }}"
+  loop_control:
+    loop_var: _cpd_edb_instance

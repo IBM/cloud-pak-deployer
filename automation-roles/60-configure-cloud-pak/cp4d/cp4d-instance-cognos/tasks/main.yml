@@ -1,7 +1,6 @@
 ---
 - debug:
     var: _cartridges_to_install
-- fail:
 
 - set_fact:
     _ca_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
@@ -21,7 +20,8 @@
     loop: "{{ _ca_cartridge.instances | default([]) }}"
     loop_control:
       loop_var: _cognos_instance
-  when: 
+  when:
+  - (_ca_cartridge.state | default('installed')) == 'installed'
   - _ca_cartridge.instances is defined
   - (_p_delete_all_instances | default(False)) == False
 
