@@ -20,16 +20,20 @@
   - _cpd_edb_cartridge.instances is defined
   - (_p_delete_all_instances | default(False)) == False
 
-- name: Get all current Cloud Pak Deployer managed instances of CPDEdbInstance
-  shell: |
-    oc get CPDEdbInstance -n {{ current_cp4d_cluster.project }} -o json -l managedByCpDeployer=yes
-  register: _all_cpdedbinstance_instances_output
-
-- set_fact:
-    _all_cpdedbinstance_instances: "{{ _all_cpdedbinstance_instances_output.stdout | from_json }}"
+- name: Get all current EnterpriseDB instances
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_edb_instance_addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _all_cpdedbinstance_instances
 
 - name: "Loop through each CPDEdbInstance instance for delete"
   include_tasks: delete-cpd-edb-instance.yml
-  loop: "{{ _all_cpdedbinstance_instances['items'] | default([]) }}"
+  loop: "{{ _all_cpdedbinstance_instances['service_instances'] | default([]) }}"
   loop_control:
     loop_var: _cpd_edb_instance
