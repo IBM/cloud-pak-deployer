@@ -1,0 +1,59 @@
+---
+cp4ba:
+- project: cp4ba
+  openshift_cluster_name: "{{ env_id }}"
+  version: 22.0.2
+  accept_licenses: False
+  # openldap_enabled: true 
+  patterns:
+    foundation: # Foundation pattern, always true - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation
+      optional_components:
+        bas: true # Business Automation Studio (BAS) 
+        bai: true # Business Automation Insights (BAI)
+        ae: true # Application Engine (AE)
+    decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
+      install: true
+      optional_components:
+        decision_center: true # Decison Center (ODM)
+        decision_runner: true # Decison Runner (ODM)
+        decision_server_runtime: true # Decison Server (ODM)
+    decisions_ads: # Automation Decision Services (ADS) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads
+      install: true
+      optional_components:
+        ads_designer: true # Designer (ADS)
+        ads_runtime: true # Runtime (ADS)
+    content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
+      install: true
+      optional_components:
+        cmis: true # Content Management Interoperability Services (FNCM - CMIS)
+        css: true # Content Search Services (FNCM - CSS)
+        es: true # External Share (FNCM - ES)
+        tm: true # Task Manager (FNCM - TM)
+        ier: true # IBM Enterprise Records (FNCM - IER)
+        icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
+    application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
+      install: true
+      optional_components:
+        app_designer: true # App Designer (BAA)
+        ae_data_persistence: true # App Engine data persistence (BAA)
+    document_processing: # Automation Document Processing (ADP) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__adp
+      install: true
+      optional_components: 
+        document_processing_designer: true # Designer (ADP)
+        document_processing_runtime: false # Runtime (ADP) - Currently not implemented
+    workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
+      install: true
+      optional_components:
+        baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
+    workstreams: # Automation Workstream Services (IAWS)
+      install: false # Always false in this tool - this feature is not implemented
+  
+    document_processing_custom: # This will be merged with the generated CR file when document_processing is installed. Use with caution.
+      spec:
+        ca_configuration:
+          # GPU config as described on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=resource-configuring-document-processing
+          deeplearning:
+            gpu_enabled: false
+            nodelabel_key: nvidia.com/gpu.present
+            nodelabel_value: "true"
+            
