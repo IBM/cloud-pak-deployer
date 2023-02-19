@@ -2,56 +2,44 @@
 - set_fact:
     _ds_instance_name: "{{ _ds_instance.metadata.name }}"
     _ds_cartridge_listed: {}
+    _delete_ds_instance: False
 
-- set_fact:
-    _ds_cartridge_listed: "{{ _ds_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
-  vars:
-    _query_instance: "[?name=='{{ _ds_instance_name }}']" 
-  when: _ds_cartridge.instances is defined
+# If not all instances must be deleted, check if instance still in the configuration and not default DS instance
+- block:
+  - set_fact:
+      _ds_cartridge_listed: "{{ _datastage_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _ds_instance_name }}']" 
+    when: _datastage_cartridge.instances is defined
+  - set_fact:
+      _delete_ds_instance: True
+    when: 
+    - _ds_cartridge_listed == {} or (_datastage_cartridge.state | default('installed')) == 'removed'
+    - _ds_instance_name != 'ds-px-default'
+  when: (_p_delete_all_instances | default(False)) == False
 
-- when:
-    - _ds_cartridge_listed == {}
-    - not _ds_instance_name == "ds-px-default"
-  block:
+- name: Fail if DataStage instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Flag --confirm-destroy was set to False, will not delete DataStage instance {{ _ds_instance_name }}"
+  when:
+  - _delete_ds_instance | bool
+  - confirm_destroy | default (False) | bool == False
 
-      - debug:
-          msg: "DataStage instance {{ _ds_instance_name }} is not available in the Cloud Pak Deployer configuration file. Destroying instance..."
+- name: Wait for PxRuntime {{ _ds_instance_name }} deployment completes
+  shell: |
+    oc delete pxruntime "{{ _ds_instance_name }}" -n {{ current_cp4d_cluster.project }}
+  register: _ds_delete_result
+  when: _delete_ds_instance | bool
 
-      - name: "Get PxRuntime Id for {{ _ds_instance_name }}"
-        shell: |
-          oc get PxRuntime -n {{ current_cp4d_cluster.project }} {{ _ds_instance_name }} -o=json | jq -r '.spec.zenServiceInstanceId' 
-        register: _px_runtime_id
-      
-      - fail:
-          msg: "Unable to acquire Service Instance Id of PxRuntime {{ _ds_instance_name }}"
-        when: _px_runtime_id == ''
-      
-      - name: "Destroy PxRuntime {{ _ds_instance_name }}"
-        shell: |
-          oc delete PxRuntime -n {{ current_cp4d_cluster.project }} {{ _ds_instance_name }}
-
-      - name: Wait 30 seconds for the cleanup to complete
-        pause:
-          seconds: 30
-
-      - name: "Validate if PxRuntime {{ _ds_instance_name }} with Id {{ _px_runtime_id.stdout }} is still in status DEPROVISIONED"
-        shell: |
-          curl -s -k \
-            -H 'Authorization: Bearer {{ _cp4d_login_result.json.token }}' \
-            -H 'Content-Type: application/json' \
-            -X GET https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _px_runtime_id.stdout }}/?include_service_status=true
-        register: _validate_for_delete_pxruntime
-
-      - when: _validate_for_delete_pxruntime.stdout.find('"provision_status":"DEPROVISIONED"') != -1
-        name: Remove the PxRuntime from CP4D {{ _ds_instance_name }} with Id {{ _px_runtime_id.stdout }}
-        shell: |
-          curl -s -k \
-            -H 'Authorization: Bearer {{ _cp4d_login_result.json.token }}' \
-            -H 'Content-Type: application/json' \
-            -X DELETE https://{{ cp4d_url.stdout }}/zen-data-ui/v3/service_instances/{{_px_runtime_id.stdout }}
-        register: _delete_pxruntime
-
-
-
-
-      
+# - name: "Deleting DataStage instance {{ _ds_instance_name }}"
+#   uri:
+#     url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _ds_instance_id }}'
+#     method: DELETE
+#     headers:
+#       Content-Type: application/json
+#       Authorization: "Bearer {{ cp4d_login.token }}"
+#     return_content: yes
+#     validate_certs: no
+#     status_code: 202
+#   register: _ds_delete_result
+#   when: _delete_ds_instance | bool
