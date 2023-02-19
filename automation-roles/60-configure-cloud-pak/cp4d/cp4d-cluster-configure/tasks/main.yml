@@ -97,40 +97,41 @@
 - name: Loop through all cartridges for instance configuration
   when: "current_cp4d_cluster.cartridges is defined"
   block:
-    # Cartridge: db2oltp
-    - name: Provision Db2 OLTP instances
+    # First provision DB2 OLTP instance(s) and wait for it to cpmplete
+    - name: Provision or remove Db2 OLTP instances
       include_role:
         name: cp4d-instance-db2oltp
-
-    # Cartridge: cognos_analytics
-    - name: Provision or remove Cognos Analytics instances
+    - name: Wait for Db2 OLTP instances to be provisioned
       include_role:
-        name: cp4d-instance-cognos
+        name: cp4d-instance-db2oltp
+      vars:
+        _p_wait_instances: True
 
-    # Cartridge: Data virtualization
-    - name: Provision Data Virtualization instances
+    # Now provision remainder of the cartridge instances
+    - name: Provision or remove {{ item }} instances
       include_role:
-        name: cp4d-instance-dv
+        name: cp4d-instance-{{ item }}
+      loop:
+        - analyticsengine
+        - cognos
+        - cpd-edb
+        - datastage
+        - dv
+        - openpages
 
-    # Cartridge: AnalyticsEngine
-    - name: Provision Analytics Engine instances
+    # Wait for provisioning to complete
+    - name: Wait for provisioning of {{ item }} instances to complete
       include_role:
-        name: cp4d-instance-analyticsengine
-
-    # Cartridge: DataStage
-    - name: Provision DataStage instances
-      include_role:
-        name: cp4d-instance-datastage
-
-    # Cartridge: CPD EDB
-    - name: Provision CPD EDB instances
-      include_role:
-        name: cp4d-instance-cpd-edb
-
-    # Cartridge: OpenPages
-    - name: Provision OpenPages instances
-      include_role:
-        name: cp4d-instance-openpages
+        name: cp4d-instance-{{ item }}
+      vars:
+        _p_wait_instances: True
+      loop:
+        - analyticsengine
+        - cognos
+        - cpd-edb
+        - datastage
+        - dv
+        - openpages
 
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"
