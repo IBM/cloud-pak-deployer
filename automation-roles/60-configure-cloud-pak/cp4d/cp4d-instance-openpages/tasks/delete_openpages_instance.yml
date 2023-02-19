@@ -1,6 +1,7 @@
 ---
 - set_fact:
-    _openpages_instance_name: "{{ _openpages_instance.metadata.name }}"
+    _openpages_instance_name: "{{ _openpages_instance.display_name }}"
+    _openpages_instance_id: "{{ _openpages_instance.id }}"
     _openpages_cartridge_listed: {}
     _delete_openpages_instance: False
 
@@ -23,8 +24,15 @@
   - _delete_openpages_instance | bool
   - confirm_destroy | default (False) | bool == False
 
-- name: "Deleting OpenPagesInstance {{ _openpages_instance_name }}"
-  shell: |
-    oc delete OpenPagesInstance -n {{ current_cp4d_cluster.project }} \
-      {{ _openpages_instance_name }} --ignore-not-found
+- name: "Deleting OpenPages instance {{ _openpages_instance_name }}"
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _openpages_instance_id }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 202
+  register: _openpages_instance_delete_result
   when: _delete_openpages_instance | bool

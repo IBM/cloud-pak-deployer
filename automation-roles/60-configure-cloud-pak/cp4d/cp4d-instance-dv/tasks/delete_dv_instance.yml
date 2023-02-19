@@ -24,15 +24,15 @@
   - _delete_dv_instance | bool
   - confirm_destroy | default (False) | bool == False
 
-- name: "Deleting Data Virtualization instance {{ _dv_instance_name }}"
+- name: "Deleting OpenPages instance {{ _dv_instance_name }}"
   uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_addon_type }}&display_name={{ _dv_instance.name }}'
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _dv_instance_id }}'
     method: DELETE
     headers:
       Content-Type: application/json
       Authorization: "Bearer {{ cp4d_login.token }}"
     return_content: yes
     validate_certs: no
-    status_code: 200
+    status_code: 202
   register: _dv_instance_delete_result
   when: _delete_dv_instance | bool
