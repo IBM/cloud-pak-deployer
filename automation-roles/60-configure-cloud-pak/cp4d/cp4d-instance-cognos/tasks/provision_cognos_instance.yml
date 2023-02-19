@@ -51,15 +51,11 @@
 
     - when: _db2_lookup_result.json.total_count == 1
       block:
-        - name: "Prepare Cognos instance creation using internally provisioned Db2 OLTP instance {{ _cognos_instance.metastore_ref }}"
+        - name: "Prepare Cognos instance creation using provisioned Db2 OLTP instance {{ _cognos_instance.metastore_ref }}"
           include_tasks: prepare_provision_cognos_instance_internal.yml
 
         - set_fact:
             _internal_db2_instance_id: "{{ _db2_lookup_result.json.service_instances[0].id }}"
-
-    - name: "Prepare Cognos instance creation using external Db2 service {{ _cognos_instance.metastore_ref }}"
-      include_tasks: prepare_provision_cognos_instance_external.yml
-      when: _db2_lookup_result.json.total_count == 0
 
     - name: Get the list of catalogs to extract the Platform assets catalog ID
       uri:
