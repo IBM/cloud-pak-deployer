@@ -3,9 +3,9 @@
   debug:
     msg: "{{ _ds_instance }}"
 
-- name: Wait for PxRuntime {{ _ds_instance_name }} deployment completes
+- name: Wait for PxRuntime {{ _ds_instance.name }} deployment completes
   shell: |
-    oc get pxruntime "{{ _ds_instance.name }}" -n {{ current_cp4d_cluster.project }} --output json | jq -r '.status.dsStatus' | grep -i 'completed' | wc -l 
+    oc get pxruntime {{ _ds_instance.name }} -n {{ current_cp4d_cluster.project }} --output json | jq -r '.status.dsStatus' | grep -i 'completed' | wc -l 
   register: _deployed_datastage_service
   retries: 30
   delay: 60

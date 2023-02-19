@@ -3,18 +3,18 @@
   debug:
     msg: "{{ _ds_instance }}"
 
-- name: Check if the DataStage instance {{ _ds_instance_name }} is already running
+- name: Check if the DataStage instance {{ _ds_instance.name }} is already running
   shell: |
-    oc get pxruntime "{{ _ds_instance.name }}" -n {{ current_cp4d_cluster.project }} --no-headers | wc -l
+    oc get pxruntime {{ _ds_instance.name }} -n {{ current_cp4d_cluster.project }} --no-headers | wc -l
   failed_when: False
   register: _ds_instance_lookup_result
 
 - name: Determine if DataStage instance already exists
   debug:
     msg: "DataStage instance {{ _ds_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
-  when: _ds_instance_lookup_result.stdout != 0
+  when: (_ds_instance_lookup_result.stdout | int) != 0
 
-- when: _ds_instance_lookup_result.stdout == 0
+- when: (_ds_instance_lookup_result.stdout | int) == 0
   block:
 
   - name: Generate DataStage runtime ID
