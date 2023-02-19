@@ -1,51 +1,47 @@
 ---
 - set_fact:
-    _ds_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(_query_cartridge)|first }}"
+    _datastage_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
   vars:
-    _query_cartridge: "[?name=='datastage-ent-plus']"  
+    cartridge_name: "datastage_ent_plus"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
 
-- when: "not _ds_cartridge.instances is defined"
+- name: Show DataStage cartridge
+  debug:
+    var: _datastage_cartridge
+
+- name: Loop through each DataStage instance to provision
   block:
-    - name: "Skip provision DataStage instance"
-      debug:
-        msg: "Cartridge datastage has no instances specified, skipping provisioning DataStage instance"
+  - name: Provision DataStage instance from the cartridge specification
+    include_tasks: provision_datastage_instance.yml
+    loop: "{{ _datastage_cartridge.instances | default([]) }}"
+    loop_control:
+      loop_var: _ds_instance
+  when: 
+  - _datastage_cartridge != {}
+  - (_datastage_cartridge.state | default('installed')) == 'installed'
+  - _datastage_cartridge.instances is defined
+  - (_p_delete_all_instances | default(False)) == False
 
-- when: _ds_cartridge.instances is defined
-  block:
-  
-    - name: "Get the current CP4D User owner_id"
-      shell: "curl -s -k -H 'Authorization: Bearer {{ _cp4d_login_result.json.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/me'"
-      register: _cp4d_user_details
+- block:
+  - set_fact:
+      _all_ds_instances: []
+  - name: Get all current DataStage instances
+    shell: |
+      oc get pxruntime -n {{ current_cp4d_cluster.project }} -o json
+    failed_when: False
+    register: _all_ds_instances_output
+  - set_fact:
+      _all_ds_instances: "{{ (_all_ds_instances_output.stdout | from_json)['items'] }}"
+    when: _all_ds_instances_output.rc == 0
+  - debug:
+      var: _all_ds_instances
+  when:
+  - _datastage_cartridge != {}
+  - (_datastage_cartridge.state | default('installed')) == 'installed'
 
-    - set_fact:
-        _cp4d_user_details_json: "{{ _cp4d_user_details.stdout | from_json }}"
-
-    - set_fact:
-        _cp4d_user_owner_id: "{{ _cp4d_user_details_json.UserInfo.uid }}"
-
-    #Loop through all datastage instance definitions
-    - name: "Loop through each datastage instance"
-      include_tasks: provision_datastage_instance.yml
-      loop: "{{ _ds_cartridge.instances | default([]) }}"
-      loop_control:
-        loop_var: _ds_instance
-
-- name: Get all current DataStage (pxruntime) instances
-  shell: oc get pxruntime -n {{ current_cp4d_cluster.project }} -o json
-  register: _all_pxruntime_instances_output
-
-- set_fact:
-    _all_pxruntime_instances: "{{ _all_pxruntime_instances_output.stdout | from_json }}"
-
-- debug:
-    msg: "Flag 'confirm-destroy' set to false. Provisioned PxRuntime instances marked for removal will not be deleted."
-  when: confirm_destroy | default (False) | bool == False
-
-#Loop through all deployed datastage instance definitions
-# Requires --confirm-destroy flag to run
-- name: "Loop through each datastage instance for delete"
+# Loop through all deployed DataStage instance definitions to check if instance no longer exists in the config
+- name: Loop through each DataStage instance to check if it must be deleted
   include_tasks: delete_datastage_instance.yml
-  loop: "{{ _all_pxruntime_instances['items'] | default([]) }}"
+  loop: "{{ _all_ds_instances | default([]) }}"
   loop_control:
     loop_var: _ds_instance
-  when: confirm_destroy | default (False) | bool == True
