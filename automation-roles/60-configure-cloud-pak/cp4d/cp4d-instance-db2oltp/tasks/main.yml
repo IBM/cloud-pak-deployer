@@ -9,34 +9,24 @@
   debug:
     var: _db2_cartridge
 
-- name: Loop through each Db2 OLTP instance to provision
-  block:
-  - name: Provision Db2 OLTP instance from the cartridge specification
-    include_tasks: provision_db2_instance.yml
-    loop: "{{ _db2_cartridge.instances | default([]) }}"
-    loop_control:
-      loop_var: _db2_instance
-  when: 
+- set_fact:
+    _configured_db2_instances: []
+- set_fact:
+    _configured_db2_instances: "{{ _db2_cartridge.instances | default([] )}}"
+  when:
   - _db2_cartridge != {}
   - (_db2_cartridge.state | default('installed')) == 'installed'
-  - _db2_cartridge.instances is defined
+
+- include_tasks: provision_db2_instances.yml
+  when:
   - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
 
-- name: Get all current Db2 OLTP instances
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2oltp_instance_addon_type }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _all_db2_instances
+- include_tasks: delete_db2_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
 
-# Loop through all deployed Db2 OLTP instance definitions to check if instance no longer exists in the config
-- name: Loop through each Db2 OLTP instance to check if it must be deleted
-  include_tasks: delete_db2_instance.yml
-  loop: "{{ _all_db2_instances.json.service_instances | default([]) }}"
-  loop_control:
-    loop_var: _db2_instance
+- include_tasks: wait_db2_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

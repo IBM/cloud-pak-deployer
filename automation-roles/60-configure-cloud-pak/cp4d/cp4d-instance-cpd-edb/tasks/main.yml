@@ -9,33 +9,24 @@
   debug:
     var: _cpd_edb_cartridge
 
-- name: Loop through each EnterpriseDB instance to provision
-  block:
-  - name: EnterpriseDB instance from the cartridge specification
-    include_tasks: provision-cpd-edb-instance.yml
-    loop: "{{ _cpd_edb_cartridge.instances | default([]) }}"
-    loop_control:
-      loop_var: _cpd_edb_instance
-  when: 
+- set_fact:
+    _configured_cpd_edb_instances: []
+- set_fact:
+    _configured_cpd_edb_instances: "{{ _cpd_edb_cartridge.instances | default([] )}}"
+  when:
   - _cpd_edb_cartridge != {}
   - (_cpd_edb_cartridge.state | default('installed')) == 'installed'
-  - _cpd_edb_cartridge.instances is defined
+
+- include_tasks: provision-cpd-edb-instances.yml
+  when:
   - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
 
-- name: Get all current EnterpriseDB instances
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_edb_instance_addon_type }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _all_cpdedbinstance_instances
+- include_tasks: delete-cpd-edb-instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
 
-- name: "Loop through each CPDEdbInstance instance for delete"
-  include_tasks: delete-cpd-edb-instance.yml
-  loop: "{{ _all_cpdedbinstance_instances['service_instances'] | default([]) }}"
-  loop_control:
-    loop_var: _cpd_edb_instance
+- include_tasks: wait-cpd-edb-instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

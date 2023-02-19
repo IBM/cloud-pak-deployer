@@ -311,25 +311,6 @@
       debug:
         msg: "Cognos Analytics instance being provisioned. ID: {{ _cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
-    - name: "Wait for Cognos Analytics to finish its provisioning, starting all {{ _cognos_instance_pods_count }} CA pods"
-      shell: |
-        oc get po -n {{ current_cp4d_cluster.project }} | grep ^ca{{ _cognos_instance_create_result_json.id }} | grep "1/1\|2/2" | grep "Running" | wc -l
-      register: _ca_provision_complete
-      retries: 140
-      delay: 30
-      until:
-        - _ca_provision_complete.rc==0
-        - _ca_provision_complete.stdout==_cognos_instance_pods_count
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-
-    - name: Cognos Analytics instance provisioning completed
-      debug:
-        msg: "Cognos Analytics instance provisioning completed. ID: {{ _cognos_instance_create_result_json.id }}"
-
     - name: Label DB2 STS when using internal metastore
       shell: |
         oc label sts \

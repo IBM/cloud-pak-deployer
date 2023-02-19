@@ -9,39 +9,24 @@
   debug:
     var: _datastage_cartridge
 
-- name: Loop through each DataStage instance to provision
-  block:
-  - name: Provision DataStage instance from the cartridge specification
-    include_tasks: provision_datastage_instance.yml
-    loop: "{{ _datastage_cartridge.instances | default([]) }}"
-    loop_control:
-      loop_var: _ds_instance
-  when: 
-  - _datastage_cartridge != {}
-  - (_datastage_cartridge.state | default('installed')) == 'installed'
-  - _datastage_cartridge.instances is defined
-  - (_p_delete_all_instances | default(False)) == False
-
-- block:
-  - set_fact:
-      _all_ds_instances: []
-  - name: Get all current DataStage instances
-    shell: |
-      oc get pxruntime -n {{ current_cp4d_cluster.project }} -o json
-    failed_when: False
-    register: _all_ds_instances_output
-  - set_fact:
-      _all_ds_instances: "{{ (_all_ds_instances_output.stdout | from_json)['items'] }}"
-    when: _all_ds_instances_output.rc == 0
-  - debug:
-      var: _all_ds_instances
+- set_fact:
+    _configured_ds_instances: []
+- set_fact:
+    _configured_ds_instances: "{{ _datastage_cartridge.instances | default([] )}}"
   when:
   - _datastage_cartridge != {}
   - (_datastage_cartridge.state | default('installed')) == 'installed'
 
-# Loop through all deployed DataStage instance definitions to check if instance no longer exists in the config
-- name: Loop through each DataStage instance to check if it must be deleted
-  include_tasks: delete_datastage_instance.yml
-  loop: "{{ _all_ds_instances | default([]) }}"
-  loop_control:
-    loop_var: _ds_instance
+- include_tasks: provision_datastage_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_datastage_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_datastage_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

@@ -46,22 +46,3 @@
 
     - debug:
         var: _openpages_instance_create_result
-
-    - name: Wait for OpenPages instances {{ _openpages_instance_name }} to become ready
-      shell: |
-        oc get OpenPagesInstance \
-          --namespace {{ current_cp4d_cluster.project }} \
-          {{ _openpages_instance_name }} \
-          -o jsonpath="{.status.openpagesStatus}"
-      register: _openpages_instance_status
-      retries: 120
-      delay: 60
-      until: _openpages_instance_status.stdout == "Completed"
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-
-    - debug:
-        msg: "OpenPages instance {{ _openpages_instance_name }} deployed and running successfully..."
