@@ -1,0 +1,39 @@
+---
+- name: Show EnterpriseDB instance information
+  debug:
+    var: _cpd_edb_instance
+
+- name: Retrieve running EnterpriseDB instance
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_edb_instance_addon_type }}&display_name={{ _cpd_edb_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cpd_edb_instance_lookup_result
+
+- set_fact:
+    _cpd_edb_instance_id: "{{ (_cpd_edb_instance_lookup_result.json.service_instances | first).id }}"
+
+- name: Waiting for EnterpriseDB instance {{ _cpd_edb_instance.name }} to complete its provisioning
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _cpd_edb_instance_id }}?include_service_status=true'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cpd_edb_instance_lookup_result
+  until: _cpd_edb_instance_lookup_result.json.services_status == "RUNNING"
+  retries: 60
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

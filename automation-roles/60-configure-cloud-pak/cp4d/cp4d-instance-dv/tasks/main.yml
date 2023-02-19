@@ -9,39 +9,24 @@
   debug:
     var: _dv_cartridge
 
-- name: "Fail if more than 1 Data Virtualization instance specified"
-  fail:
-    msg: "Cartridge DV can only have 1 instance, found {{ _dv_cartridge.instances | length }}"
-  when: (_dv_cartridge.instances | default([]) | length) != 1
-
-- name: Loop through each Data Virtualization instance to provision
-  block:
-  - name: Provision Data Virtualization instance from the DV cartridge specification
-    include_tasks: provision_dv_instance.yml
-    loop: "{{ _dv_cartridge.instances | default([]) }}"
-    loop_control:
-      loop_var: _dv_instance
+- set_fact:
+    _configured_dv_instances: []
+- set_fact:
+    _configured_dv_instances: "{{ _dv_cartridge.instances | default([] )}}"
   when:
   - _dv_cartridge != {}
   - (_dv_cartridge.state | default('installed')) == 'installed'
-  - _dv_cartridge.instances is defined
+
+- include_tasks: provision_dv_instances.yml
+  when:
   - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
 
-- name: Get all current Data virtualization instances
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_addon_type }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _all_dv_instances
+- include_tasks: delete_dv_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
 
-# Loop through all deployed Data Virtualization instance definitions to check if instance no longer exists in the config
-- name: Loop through each Data Virtualization instance to check if it must be deleted
-  include_tasks: delete_dv_instance.yml
-  loop: "{{ _all_dv_instances['service_instances'] | default([]) }}"
-  loop_control:
-    loop_var: _dv_instance
+- include_tasks: wait_dv_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

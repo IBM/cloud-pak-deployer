@@ -26,28 +26,11 @@
 
 - when: _cpd_edb_instance_lookup_result.stdout == "0"
   block:
+  - name: Create CPD EDB Instance CRD yaml file
+    template:
+      src: cpd-edb-instance.j2
+      dest: "{{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml"
 
-    - name: Create CPD EDB Instance CRD yaml file
-      template:
-        src: cpd-edb-instance.j2
-        dest: "{{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml"
-
-    - name: Provision CPDEdbInstance {{ _cpd_edb_instance_name }} 
-      shell: |
-        oc create -f {{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml
-
-    - name: Wait for CPDEdbInstance {{ _cpd_edb_instance_name }} deployment completes
-      shell: |
-        oc get CPDEdbInstance "{{ _cpd_edb_instance_name }}" -n {{ _cpd_edb_instance_namespace }} --output json | jq -r '.status.edbStatus' | grep -i 'completed' | wc -l 
-      register: _deployed_cpd_edb_instance
-      retries: 30
-      delay: 60
-      until: _deployed_cpd_edb_instance.stdout == "1"
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-
-    - debug:
-        msg: "CP4D CPDEdbInstance {{ _cpd_edb_instance_name }} deployed and running successfully..."
+  - name: Provision CPDEdbInstance {{ _cpd_edb_instance_name }} 
+    shell: |
+      oc create -f {{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml
