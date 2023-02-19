@@ -21,6 +21,7 @@
     loop_control:
       loop_var: _cognos_instance
   when:
+  - _ca_cartridge != {}
   - (_ca_cartridge.state | default('installed')) == 'installed'
   - _ca_cartridge.instances is defined
   - (_p_delete_all_instances | default(False)) == False
@@ -40,6 +41,6 @@
 # Loop through all deployed Cognos Analytics instance definitions to check if instance no longer exists in the config
 - name: Loop through each Cognos Analytics instance to check if it must be deleted
   include_tasks: delete_cognos_instance.yml
-  loop: "{{ _all_cognos_instances['service_instances'] | default([]) }}"
+  loop: "{{ _all_cognos_instances.json.service_instances | default([]) }}"
   loop_control:
     loop_var: _cognos_instance
