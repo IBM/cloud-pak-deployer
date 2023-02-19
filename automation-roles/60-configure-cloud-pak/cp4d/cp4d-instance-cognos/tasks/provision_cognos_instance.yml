@@ -281,31 +281,31 @@
     - set_fact:
         _cognos_instance_create_result_json: "{{ _cognos_instance_create_result.stdout | from_json }}"
 
-    - name: Wait until Cognos Analytics artifacts pod has started and is ready
-      shell: |
-        oc get po \
-          -n {{ current_cp4d_cluster.project }} \
-          -l app.kubernetes.io/component=ca-artifacts \
-          --no-headers \
-          -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
-      register: _ca_artifacts_pod
-      retries: 60
-      delay: 10
-      until:
-        - _ca_artifacts_pod.rc==0
-        - _ca_artifacts_pod.stdout!=''
-
     - when: _ca_cp4d_version == "4.0"
       block:
-        - name: Wait for a bit so that all Cognos Analytics containers are starting
-          pause:
-            seconds: 90
+      - name: Wait until Cognos Analytics artifacts pod has started and is ready
+        shell: |
+          oc get po \
+            -n {{ current_cp4d_cluster.project }} \
+            -l app.kubernetes.io/component=ca-artifacts \
+            --no-headers \
+            -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
+        register: _ca_artifacts_pod
+        retries: 60
+        delay: 10
+        until:
+          - _ca_artifacts_pod.rc==0
+          - _ca_artifacts_pod.stdout!=''
 
-        - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
-          shell: |
-            oc delete pod \
-              -n {{ current_cp4d_cluster.project }} \
-              {{ _ca_artifacts_pod.stdout }}
+      - name: Wait for a bit so that all Cognos Analytics containers are starting
+        pause:
+          seconds: 90
+
+      - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
+        shell: |
+          oc delete pod \
+            -n {{ current_cp4d_cluster.project }} \
+            {{ _ca_artifacts_pod.stdout }}
 
     - name: Cognos Analytics instance being provisioned
       debug:
