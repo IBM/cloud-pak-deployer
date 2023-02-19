@@ -9,32 +9,24 @@
   debug:
     var: _analyticsengine_cartridge
 
-- name: Loop through each Analytics Engine instance to provision
-  block:
-  - name: Provision Analytics Engine instance from the cartridge specification
-    include_tasks: provision_analyticsengine_instance.yml
-    loop: "{{ _analyticsengine_cartridge.instances | default([]) }}"
-    loop_control:
-      loop_var: _ae_instance
-  when: 
-  - _analyticsengine_cartridge.instances is defined
+- set_fact:
+    _configured_ae_instances: []
+- set_fact:
+    _configured_ae_instances: "{{ _analyticsengine_cartridge.instances | default([] )}}"
+  when:
+  - _analyticsengine_cartridge != {}
+  - (_analyticsengine_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_analyticsengine_instances.yml
+  when:
   - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
 
-- name: Get all current Analytics Engine instances
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_analyticsengine_instance_addon_type }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _all_ae_instances
+- include_tasks: delete_analyticsengine_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
 
-# Loop through all deployed Analytics Engine instance definitions to check if instance no longer exists in the config
-- name: Loop through each Analytics Engine instance to check if it must be deleted
-  include_tasks: delete_ae_instance.yml
-  loop: "{{ _all_ae_instances['service_instances'] | default([]) }}"
-  loop_control:
-    loop_var: _ae_instance
+- include_tasks: wait_analyticsengine_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
