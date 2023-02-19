@@ -25,7 +25,14 @@
   - confirm_destroy | default (False) | bool == False
 
 - name: "Deleting Cognos Analytics instance {{ _cognos_instance_name }}"
-  shell: |
-    oc delete CAServiceInstance -n {{ current_cp4d_cluster.project }} \
-      ca{{ _cognos_instance_id }}-cr --ignore-not-found
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _cognos_instance_id }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 202
+  register: _cognos_instance_delete_result
   when: _delete_cognos_instance | bool
