@@ -1,8 +1,8 @@
 ---
 - set_fact:
-    _openpages_cartridge: "{{ current_cp4d_cluster.cartridges|json_query(_query_cartridge) | first | default({}) }}"
+    _openpages_cartridge: "{{ _cartridges_to_install | json_query(_query_cartridge) | first | default({}) }}"
   vars:
-    _query_cartridge: "[?name=='openpages']"  
+    _query_cartridge: "[?olm_utils_name=='openpages']"  
 
 - block:
   - name: Loop through each openpages instance to provision
@@ -10,21 +10,27 @@
     loop: "{{ _openpages_cartridge.instances | default([]) }}"
     loop_control:
       loop_var: _openpages_instance
-  when: 
+  when:
+  - _openpages_cartridge != {}
+  - (_openpages_cartridge.state | default('installed')) == 'installed'
   - _openpages_cartridge.instances is defined
   - (_p_delete_all_instances | default(False)) == False
 
-- name: Get all current OpenPages (OpenPagesInstance) instances
-  shell: |
-    oc get OpenPagesInstance -n {{ current_cp4d_cluster.project }} -o json
-  register: _all_openpages_instances_output
-
-- set_fact:
-    _all_openpages_instances: "{{ _all_openpages_instances_output.stdout | from_json }}"
+- name: Get all current OpenPages Engine instances
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _all_openpages_instances
 
 # Loop through all deployed OpenPages instance definitions to check if instance no longer exists in the config
 - name: Loop through each OpenPages instance to check if it must be deleted
   include_tasks: delete_openpages_instance.yml
-  loop: "{{ _all_openpages_instances['items'] | default([]) }}"
+  loop: "{{ _all_openpages_instances.json['service_instances'] | default([]) }}"
   loop_control:
     loop_var: _openpages_instance

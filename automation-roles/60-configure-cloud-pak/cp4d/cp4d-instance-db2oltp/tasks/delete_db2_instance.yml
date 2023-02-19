@@ -26,13 +26,13 @@
 
 - name: "Deleting Db2 OLTP instance {{ _db2_instance_name }}"
   uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2_addon_type }}&display_name={{ _db2_instance.name }}'
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _db2_instance_id }}'
     method: DELETE
     headers:
       Content-Type: application/json
       Authorization: "Bearer {{ cp4d_login.token }}"
     return_content: yes
     validate_certs: no
-    status_code: 200
+    status_code: 202
   register: _db2_instance_delete_result
   when: _delete_db2_instance | bool
