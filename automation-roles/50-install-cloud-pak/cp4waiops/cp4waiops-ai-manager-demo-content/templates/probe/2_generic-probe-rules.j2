@@ -1,0 +1,160 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: generic-probe-rules
+  namespace: {{ current_cp4waiops_cluster.project }}
+data:
+  message_bus.rules: >-
+
+    ########################################################################
+
+    #
+
+    #   Licensed Materials - Property of IBM
+
+    #   "Restricted Materials of IBM"
+
+    #
+
+    #   5724-S44
+
+    #
+
+    #   (C) Copyright IBM Corp. 2022
+
+    #
+
+    #   IBM Tivoli Netcool/OMNIbus Probe for Message Bus
+
+    #
+
+    ########################################################################
+
+    #
+
+    # Probe rules for AIManager Demo
+
+    #
+
+    # Version History:
+
+    #    Version 1.0 - Initial Version
+
+    #
+
+    ########################################################################
+
+
+    if( match( @Manager, "ProbeWatch" ) )
+
+    {
+      #
+      # This section deals with internal probe events
+      #
+      switch(@Summary)
+      {
+          case "Running ...":
+            @Severity = 1  # Clear (1 is actually indeterminate, but needed for auto deletion of active)
+            @AlertGroup = "Generic Webhook"
+            @Type = 2      # Clear (Resolution)
+          case "Going Down ...":
+            @Severity = 5  # Critical
+            @AlertGroup = "Generic Webhook"
+            @Type = 1
+          default:
+            @Severity = 2  # Warning
+            @Type = 1      # Problem
+            @AlertGroup = "Generic Webhook"
+      }
+      @AlertKey = @Agent
+      @Summary = @Agent + " probe on " + @Node + ": " + @Summary
+    }
+
+    else
+
+    {
+        #
+        # This section deals with Custom alerts
+        #
+        log(DEBUG, "<<<<< Entering... Custom rules >>>>>")
+        
+        # SENDER NAME
+        @Manager = $(sender.name) + " - Webhook"
+        @Class = 89210
+
+        # SENDER SERVICE
+        @Agent = $(sender.sourceId)
+      
+        @AlertKey = $(id)
+
+        # TYPE
+        @AlertGroup = $(type.classification) + " - " + $actionType
+
+        # RESOURCE
+        @Node = $(resource.name)
+        @NodeAlias = @Node
+
+        @ExpireTime = $(expirySeconds)
+        
+        # URL
+        #@Url = $(links.url)
+
+        # SUMMARY
+        @Summary = $summary
+        @ExtendedAttr = nvp_add($*)
+        @Identifier = @Node + " " + @AlertKey + " " + @AlertGroup + " " + @Type + " " + @Agent + " " + @Manager
+
+
+
+        # SEVERITY
+        $severity_caps = upper($(severity))
+        switch($severity_caps)
+        {
+            case "UNKNOWN":
+              @Severity = 1
+              @Type = 1
+            case "MINOR":
+              @Severity = 3
+              @Type = 1
+            case "MAJOR":
+              @Severity = 4
+              @Type = 1
+            case "CRITICAL":
+              @Severity = 5
+              @Type = 1
+            default:
+              @Severity = 1
+              @Type = 0
+        }
+
+
+        # Handle CLEAR events. They are based on the action state
+        $actionstate_caps = upper($actionState)
+        switch($actionstate_caps)
+        {
+            case "SUCCEEDED":
+              @Type = 2
+              @Severity = 1
+            case "CLEARED":
+              @Type = 2
+              @Severity = 1
+            default:
+        }
+
+        # For test webhook events, set it to expire fast
+        # if (match($actionID,"-1"))
+        # {
+        #   @Type = 13  # Informational
+        #   @ExpireTime = 300
+        # }
+        # foreach (e in $* )
+        # {
+        #   if ( nmatch( e, "target.vendorIds" ) )
+        #   {
+        #     @NodeAlias = $e
+        #     break
+        #   }
+        # }
+        log(DEBUG, "<<<<< Done... Custom rules >>>>>")
+
+    }
