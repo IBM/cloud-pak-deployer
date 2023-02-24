@@ -44,11 +44,13 @@
 
     export APP_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Drobot-shop-app" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
     export TEMPLATE_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Drobot-shop-template" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
+    export TEMPLATE_NET_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=name%3Dnetwork-template" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
     export K8S_OBS_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop::kubernetes::namespace::robot-shop")|._id'| tail -1)
     #export K8S_OBS_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]| select( .keyIndexName == "robot-shop")|._id'| tail -1)
 
     echo "    APP_ID:     "$APP_ID
     echo "    TEMPLATE_ID:"$TEMPLATE_ID
+    echo "    TEMPLATE_NET_ID:"$TEMPLATE_NET_ID
     echo "    K8S_OBS_ID: "$K8S_OBS_ID
  
     echo "Create Custom Topology - Create App"
@@ -106,6 +108,14 @@
       \"_id\": \"$TEMPLATE_ID\"
     }"
 
+    echo "  Add Template (Network) Resources"
+    curl -X "POST" "$TOPO_MGT_ROUTE/1.0/topology/groups/$APP_ID/members" --insecure \
+    -u $LOGIN \
+    -H 'Content-Type: application/json' \
+    -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+    -d "{
+      \"_id\": \"$TEMPLATE_NET_ID\"
+    }"
 
     # # -------------------------------------------------------------------------------------------------------------------------------------------------
     # # RE-RUN K8s Observer
@@ -170,6 +180,12 @@
       -H 'Content-Type: application/json' \
       -H "authorization: Bearer $ZEN_TOKEN"  \
 
+
+    # curl -X 'POST' --insecure \
+    #   "https://$AIO_PLATFORM_ROUTE/v1/observer/runjob/robot-shop-topology" \
+    #   -H 'accept: application/json' \
+    #   -H 'Content-Type: application/json' \
+    #   -H "authorization: Bearer $ZEN_TOKEN"  \
 
 
   register: output_string

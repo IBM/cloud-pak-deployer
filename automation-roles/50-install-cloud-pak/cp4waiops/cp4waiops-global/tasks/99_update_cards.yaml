@@ -143,7 +143,7 @@
         export ROUTE=$(oc get route -n $WAIOPS_NAMESPACE cpd  -o jsonpath={.spec.host})          
 
         instanaURL=$(oc get routes -n instana-core dev-aiops -o jsonpath={.spec.host})
-        turboURL=$(oc get route -n turbonomic api -o jsonpath={.spec.host})
+        turboURL=$(oc get route -n turbonomic nginx -o jsonpath={.spec.host})
         evtMgrURL=$(oc get route -n $EVTMGR_NAMESPACE  evtmanager-ibm-hdm-common-ui -o jsonpath={.spec.host})
         evtMgrPwd=$(oc get secret -n $EVTMGR_NAMESPACE  evtmanager-was-secret -o jsonpath='{.data.WAS_PASSWORD}'| base64 --decode && echo)
 
@@ -154,7 +154,7 @@
         ROWS=$ROWS'{"drilldown_url":  "https://'$instanaURL'/#/applications", "label": "→   Instana", "sub_text": " "},'
         ROWS=$ROWS'{"drilldown_url":  "", "label": "", "sub_text": "User: admin@instana.local - Password: P4ssw0rd! "},'
         fi
-        if [[ $turboURL =~ "api-turbonomic" ]]; then
+        if [[ $turboURL =~ "-turbonomic" ]]; then
         echo "Turbonomic Present"
         ROWS=$ROWS'{"drilldown_url":  "https://'$turboURL'", "label": "→   Turbonomic", "sub_text": " "},'
         ROWS=$ROWS'{"drilldown_url":  "", "label": "", "sub_text": "User: administrator - Password: P4ssw0rd! "},'
