@@ -44,7 +44,7 @@ log "Delete all Custom Resources except the base ones"
 while read -r line;do
     read -r CR CR_NAME <<< "${line}"
     case $CR in
-        ZenService|Ibmcpd|CommonService|OperandRequest)
+        ZenService|Ibmcpd|CommonService|OperandRequest|ResourcePlan)
         ;;
         *)
         log "Deleting $CR $CR_NAME"
@@ -72,7 +72,7 @@ log "Delete remaining Custom Resources"
 while read -r line;do
     read -r CR CR_NAME <<< "${line}"
     case $CR in
-        Ibmcpd|CommonService|OperandRequest)
+        Ibmcpd|CommonService|OperandRequest|ResourcePlan)
         log "Deleting $CR $CR_NAME"
         oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false --ignore-not-found
         oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
@@ -106,6 +106,7 @@ oc delete ns ${CP4D_PROJECT}
 log "Deleting everything in the ibm-common-services project"
 oc project ibm-common-services
 oc delete CommonService  -n ibm-common-services common-service --ignore-not-found
+oc delete Scheduling -n ibm-common-services --all --ignore-not-found
 oc delete sub -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
 oc delete csv -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
 
