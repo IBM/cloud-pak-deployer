@@ -17,6 +17,10 @@
     when: _ae_cartridge_listed == {}
   when: (_p_delete_all_instances | default(False)) == False
 
+- set_fact:
+    _delete_ae_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
 - name: Fail if Analytics Engine instance will be deleted and destroy is not confirmed
   fail:
     msg: "Flag --confirm-destroy was set to False, will not delete Analytics Engine instance {{ _ae_instance_name }}"
@@ -56,6 +60,50 @@
     return_content: yes
     validate_certs: no
   register: _ae_instance_storage_delete_result
+  when: 
+  - _delete_ae_instance | bool
+  - _ae_instance_storage != {}
+
+- name: Wait until Analytics Engine instance {{ _ae_instance_name }} has been deleted
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _ae_instance_id }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 404
+  register: _ae_instance_exists
+  until: _ae_instance_exists.status == 404
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: _delete_ae_instance | bool
+
+- name: Wait until Analytics Engine storage instance {{ _ae_instance_name }} has been deleted
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _ae_instance_storage.id }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 404
+  register: _ae_storage_instance_exists
+  until: _ae_storage_instance_exists.status == 404
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
   when: 
   - _delete_ae_instance | bool
   - _ae_instance_storage != {}

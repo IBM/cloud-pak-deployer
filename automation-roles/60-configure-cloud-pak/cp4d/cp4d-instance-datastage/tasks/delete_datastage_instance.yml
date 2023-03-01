@@ -18,6 +18,10 @@
     - _ds_instance_name != 'ds-px-default'
   when: (_p_delete_all_instances | default(False)) == False
 
+- set_fact:
+    _delete_ds_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
 - name: Fail if DataStage instance will be deleted and destroy is not confirmed
   fail:
     msg: "Flag --confirm-destroy was set to False, will not delete DataStage instance {{ _ds_instance_name }}"
@@ -25,7 +29,7 @@
   - _delete_ds_instance | bool
   - confirm_destroy | default (False) | bool == False
 
-- name: Wait for PxRuntime {{ _ds_instance_name }} deployment completes
+- name: Delete DataStage instance {{ _ds_instance_name }}
   shell: |
     oc delete pxruntime "{{ _ds_instance_name }}" -n {{ current_cp4d_cluster.project }}
   register: _ds_delete_result
