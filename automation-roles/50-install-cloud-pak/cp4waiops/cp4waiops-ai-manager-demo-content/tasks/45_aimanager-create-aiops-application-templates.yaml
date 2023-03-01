@@ -121,3 +121,101 @@
   debug: 
     var: output_string.stdout_lines
     verbosity: 1
+
+
+
+
+
+# --------------------------------------------------------------------------------------------------------------------------------------
+# WAIOPS
+# --------------------------------------------------------------------------------------------------------------------------------------
+- name: 🚀 TOPOLOGY - CREATE TOPOLOGY TEMPLATES NETWORK
+  shell: |
+    set -x
+        
+    echo "Create Custom Topology - Create Template"
+    export WAIOPS_NAMESPACE=$(oc get po -A|grep aiops-orchestrator-controller |awk '{print$1}')
+
+    export EVTMGR_REST_USR=$(oc get secret aiops-topology-asm-credentials -n $WAIOPS_NAMESPACE -o jsonpath='{.data.username}' | base64 --decode)
+    export EVTMGR_REST_PWD=$(oc get secret aiops-topology-asm-credentials -n $WAIOPS_NAMESPACE -o jsonpath='{.data.password}' | base64 --decode)
+    oc create route passthrough topology-manage -n $WAIOPS_NAMESPACE --service=aiops-topology-topology --port=https-topology-api
+    export TOPO_MGT_ROUTE="https://"$(oc get route -n $WAIOPS_NAMESPACE topology-manage -o jsonpath={.spec.host})
+
+ 
+    export LOGIN="$EVTMGR_REST_USR:$EVTMGR_REST_PWD"
+
+    echo "    URL: $TOPO_MGT_ROUTE/1.0/rest-observer/rest/resources"
+    echo "    LOGIN: $LOGIN"
+
+    export APP_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Drobot-shop-app" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
+    export TEMPLATE_ID=$(curl -X "GET" "$TOPO_MGT_ROUTE/1.0/topology/groups?_field=*&_filter=keyIndexName%3Dnetwork-template" --insecure -u $LOGIN -H 'Content-Type: application/json' -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'|jq -r -c '._items[]|._id'| tail -1)
+
+    echo "    APP_ID: $APP_ID"
+    echo "    TEMPLATE_ID: $TEMPLATE_ID"
+
+    if [[ $TEMPLATE_ID == "" ]];
+    then
+      echo "  Create Template"
+      curl -X "POST" "$TOPO_MGT_ROUTE/1.0/topology/groups" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d '  {
+        "_correlationEnabled": "true",
+        "iconId": "network",
+        "vertexType": "group",
+        "groupTokens": [
+          "namespace:robot-shop"
+        ],
+        "correlatable": "true",
+        "name": "network-template",
+        "entityTypes": [
+          "completeGroup",
+          "network"
+        ],
+        "tags": [
+          "network-template"
+        ]
+      }'
+    else
+      echo "  Recreate Template"
+      curl -X "DELETE" "$TOPO_MGT_ROUTE/1.0/topology/groups/$TEMPLATE_ID" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255'
+
+      
+      curl -X "POST" "$TOPO_MGT_ROUTE/1.0/topology/groups" --insecure \
+      -u $LOGIN \
+      -H 'Content-Type: application/json' \
+      -H 'X-TenantID: cfd95b7e-3bc7-4006-a4a8-a73a79c71255' \
+      -d ' {
+        "_correlationEnabled": "true",
+        "iconId": "network",
+        "vertexType": "group",
+        "groupTokens": [
+          "namespace:robot-shop"
+        ],
+        "correlatable": "true",
+        "name": "network-template",
+        "entityTypes": [
+          "completeGroup",
+          "network"
+        ],
+        "tags": [
+          "network-template"
+        ]
+      }'
+
+    fi
+
+  
+  register: output_string
+  ignore_errors: true
+  args:
+    executable: /bin/bash
+
+- name: 🟣  OUTPUT
+  debug: 
+    var: output_string.stdout_lines
+    verbosity: 1

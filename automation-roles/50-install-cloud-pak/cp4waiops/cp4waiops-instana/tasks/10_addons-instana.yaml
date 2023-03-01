@@ -62,15 +62,15 @@
         OS=$(uname -s | tr '[:upper:]' '[:lower:]')
         echo "Installing Kubectl Instana Plugin for $OS"
         if [ "${OS}" == "darwin" ]; then
-              wget https://self-hosted.instana.io/kubectl/kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
-              tar xfvz kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+              wget https://self-hosted.instana.io/kubectl/kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("241-0") }}.tar.gz
+              tar xfvz kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("241-0") }}.tar.gz
               sudo mv kubectl-instana /usr/local/bin/kubectl-instana
-              rm kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+              rm kubectl-instana-darwin_amd64-release-{{current_cp4waiops_feature.version | default("241-0") }}.tar.gz
         else
-            wget https://self-hosted.instana.io/kubectl/kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
-            tar xfvz kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+            wget https://self-hosted.instana.io/kubectl/kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("241-0") }}.tar.gz
+            tar xfvz kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("241-0") }}.tar.gz
             mv kubectl-instana /usr/local/bin/kubectl-instana
-            rm kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("235-5") }}.tar.gz
+            rm kubectl-instana-linux_amd64-release-{{current_cp4waiops_feature.version | default("241-0") }}.tar.gz
         fi
     fi
     if [ -x "$(command -v kubectl-instana)" ]; then
@@ -140,7 +140,6 @@
 
 - name: 🚀 INSTANA - Create Operator Secret
   shell: |
-    oc -n instana-operator delete secret instana-registry --ignore-not-found
     oc -n instana-operator create secret docker-registry instana-registry \
         --docker-username=_ \
         --docker-password={{current_agent_key}} \
@@ -253,7 +252,6 @@
     #prep core resources
     #local directory must exist
     cat ./config.yaml
-    oc -n instana-core delete secret instana-core
     oc -n instana-core create secret generic instana-core --namespace instana-core --from-file=./config.yaml
   ignore_errors: true
   register: output
@@ -274,7 +272,6 @@
     echo "initialAdminPassword: {{current_admin_pass}}" >> config.yaml
     echo "initialAdminUser: {{current_cp4waiops_feature.instana_admin_user}}" >> config.yaml
 
-    oc -n instana-units delete secret  aiops-dev
     oc -n instana-units create secret generic aiops-dev --from-file=./config.yaml
     cat ./config.yaml
 
@@ -497,12 +494,12 @@
     oc adm policy add-scc-to-user privileged instana-datastore-sa -n instana-datastores
 
     #deploy datastores from the YAMLs, replacing with the images
-    oc -n instana-datastores set image deployment/zookeeper zookeeper=$ZOOKEEPER_IMAGE
-    oc -n instana-datastores set image deployment/kafka kafka=$KAFKA_IMAGE
-    oc -n instana-datastores set image deployment/clickhouse clickhouse=$CLICKHOUSE_IMAGE
-    oc -n instana-datastores set image deployment/cockroachdb cockroachdb=$COCKROACH_IMAGE
-    oc -n instana-datastores set image deployment/elasticsearch elasticsearch=$ELASTICSEARCH_IMAGE
-    oc -n instana-datastores set image deployment/cassandra cassandra=$CASSANDRA_IMAGE
+    # oc -n instana-datastores set image deployment/zookeeper zookeeper=$ZOOKEEPER_IMAGE
+    # oc -n instana-datastores set image deployment/kafka kafka=$KAFKA_IMAGE
+    # oc -n instana-datastores set image deployment/clickhouse clickhouse=$CLICKHOUSE_IMAGE
+    # oc -n instana-datastores set image deployment/cockroachdb cockroachdb=$COCKROACH_IMAGE
+    # oc -n instana-datastores set image deployment/elasticsearch elasticsearch=$ELASTICSEARCH_IMAGE
+    # oc -n instana-datastores set image deployment/cassandra cassandra=$CASSANDRA_IMAGE
 
 
     oc annotate namespace instana-datastores scheduler.alpha.kubernetes.io/defaultTolerations-
@@ -634,7 +631,7 @@
 # Wait for Core CR being ready
 # --------------------------------------------------------------------------------------------------------------------------------------
 - name:   🕦 INSTANA - Wait for Core Instance to become ready
-  shell: oc -n instana-core get core instana-core -o=custom-columns=STATUS:.status.status --no-headers
+  shell: oc -n instana-core get core instana-core -o=custom-columns=STATUS:.status.componentsStatus --no-headers
   register: kubectl_get_pods
   until: kubectl_get_pods.stdout == "Ready"
   retries: 500
@@ -651,7 +648,7 @@
 # Wait for Unit CR being ready
 # --------------------------------------------------------------------------------------------------------------------------------------
 - name:   🕦 INSTANA - Wait for Unit Instance to become ready
-  shell: oc -n instana-units get unit aiops-dev -o=custom-columns=STATUS:.status.status --no-headers
+  shell: oc -n instana-units get unit aiops-dev -o=custom-columns=STATUS:.status.componentsStatus --no-headers
   register: kubectl_get_pods
   until: kubectl_get_pods.stdout == "Ready"
   retries: 500
