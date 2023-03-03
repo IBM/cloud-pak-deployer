@@ -1,7 +1,7 @@
 ---
 # Check if the scheduler must be installed
 - set_fact:
-    _scheduler: "{{ _cartridges_to_install | json_query(query) | first | default({}) }}"
+    _scheduler: "{{ _p_current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?name=='scheduler']
@@ -11,9 +11,6 @@
 
 - name: Install scheduling service
   block:
-
-  - include_tasks: install-scheduler.yml
-    when: not (_p_current_cp4d_cluster.olm_utils | default(False) | bool)
 
   - include_tasks: install-scheduler-olm-utils.yml
     when: (_p_current_cp4d_cluster.olm_utils | default(False) | bool)

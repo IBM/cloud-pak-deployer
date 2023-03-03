@@ -1,0 +1,48 @@
+---
+- debug:
+    msg: "{{ _openpages_instance }}"
+
+- set_fact:
+    _openpages_instance_name: "{{ _openpages_instance.name }}"
+    _openpages_instance_description: "{{ _openpages_instance.description | default('') }}"
+    _openpages_instance_namespace: "{{ current_cp4d_cluster.project }}"
+    _openpages_instance_size: "{{ _openpages_instance.size | default('small') | lower }}"
+
+- fail:
+    msg: "OpenPages instance {{ _openpages_instance_name }} has invalid value \"{{ _openpages_instance_size }}\" for size property. Only {{ cp4d_openpages_instance_size_options }} are supported."
+  when: _openpages_instance_size not in cp4d_openpages_instance_size_options
+
+- name: "Validate if instance {{ _openpages_instance_name }} already exists"
+  shell: |
+    oc get OpenPagesInstance --no-headers \
+      -n {{ current_cp4d_cluster.project }} | grep "^{{ _openpages_instance_name }}[[:space:]]" | wc -l
+  register: _current_openpages_instance
+
+- when: not _current_openpages_instance.stdout == "0"
+  debug:
+    msg: "OpenPages instance {{ _openpages_instance_name }} already created. Skipping provision..."
+
+- when: _current_openpages_instance.stdout == "0"
+  block:
+
+    - name: Get current OpenPages version
+      shell: |
+        oc get OpenPagesService -n {{ current_cp4d_cluster.project }} openpagesservice-cr \
+          -o jsonpath='{.spec.version}'
+      register: _openpages_version_output
+
+    - set_fact:
+        _openpages_version: "{{ _openpages_version_output.stdout }}"
+
+    - name: Create OpenPages instance yaml file
+      template:
+        src: openpages-instance.yaml.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _openpages_instance_name }}-openpages.yaml"
+
+    - name: Create OpenPages instance {{ _openpages_instance_name }}
+      shell: |
+        oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _openpages_instance_name }}-openpages.yaml"
+      register: _openpages_instance_create_result
+
+    - debug:
+        var: _openpages_instance_create_result

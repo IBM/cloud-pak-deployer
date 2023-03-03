@@ -3,6 +3,11 @@
   debug:
     msg: "Handling configuration for CP4D cluster {{ current_cp4d_cluster.project }}"
 
+- include_role:
+    name: cp4d-variables
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
 - set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
@@ -92,117 +97,41 @@
 - name: Loop through all cartridges for instance configuration
   when: "current_cp4d_cluster.cartridges is defined"
   block:
-    # Cartridge: db2oltp
-    - set_fact:
-        _db2_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "db2"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - set_fact:
-        _db2_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "db2oltp"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"
-      when: _db2_instance == {}   
-
-    - name: Provision Db2 OLTP instances
+    # First provision DB2 OLTP instance(s) and wait for it to cpmplete
+    - name: Provision or remove Db2 OLTP instances
       include_role:
-        name: cp4d-provision-db2oltp-instance
-      when: 
-      - _db2_instance != {} 
-      - ( _db2_instance.state | default("installed") ) == "installed"
-
-    # Cartridge: cognos_analytics
-    - set_fact:
-        _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "ca"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - set_fact:
-        _ca_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "cognos_analytics"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-      when: _ca_instance == {}
-
-    - name: Provision Cognos instances
+        name: cp4d-instance-db2oltp
+    - name: Wait for Db2 OLTP instances to be provisioned
       include_role:
-        name: cp4d-provision-cognos-instance
-      when: 
-      - _ca_instance != {} 
-      - ( _ca_instance.state | default("installed") ) == "installed"
-
-    # Cartridge: DV
-    - set_fact:
-        _dv_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+        name: cp4d-instance-db2oltp
       vars:
-        cartridge_name: "dv"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
+        _p_wait_instances: True
 
-    - name: Provision Data Virtualization instances
+    # Now provision remainder of the cartridge instances
+    - name: Provision or remove {{ item }} instances
       include_role:
-        name: cp4d-provision-dv-instance
-      when: 
-      - _dv_instance != {} 
-      - ( _dv_instance.state | default("installed") ) == "installed"
+        name: cp4d-instance-{{ item }}
+      loop:
+        - analyticsengine
+        - cognos
+        - cpd-edb
+        - datastage
+        - dv
+        - openpages
 
-    # Cartridge: AnalyticsEngine
-    - set_fact:
-        _ae_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+    # Wait for provisioning to complete
+    - name: Wait for provisioning of {{ item }} instances to complete
+      include_role:
+        name: cp4d-instance-{{ item }}
       vars:
-        cartridge_name: "analyticsengine"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - name: Provision Analytics Engine instances
-      include_role:
-        name: cp4d-provision-analyticsengine-instance
-      when: 
-      - _ae_instance != {} 
-      - ( _ae_instance.state | default("installed") ) == "installed"
-
-    # Cartridge: DataStage
-    - set_fact:
-        _datastage_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "datastage-ent-plus"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - name: Provision DataStage instances
-      include_role:
-        name: cp4d-provision-datastage-instance
-      when: 
-      - _datastage_instance != {} 
-      - ( _datastage_instance.state | default("installed") ) == "installed"
-
-    # Cartridge: CPD EDB
-    - set_fact:
-        _cpd_edb_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "edb_cp4d"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - name: Provision CPD EDB instances
-      include_role:
-        name: cp4d-provision-cpd-edb-instance
-      when: 
-      - _cpd_edb_instance != {} 
-      - ( _cpd_edb_instance.state | default("installed") ) == "installed"
-
-    # Cartridge: OpenPages
-    - set_fact:
-        _openpages_instance: "{{ current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
-      vars:
-        cartridge_name: "openpages"
-        query_cartridge: "[?name=='{{ cartridge_name }}']"    
-
-    - name: Provision OpenPages instances
-      include_role:
-        name: cp4d-openpages-instance
-      when: 
-      - _openpages_instance != {} 
-      - ( _openpages_instance.state | default("installed") ) == "installed"
+        _p_wait_instances: True
+      loop:
+        - analyticsengine
+        - cognos
+        - cpd-edb
+        - datastage
+        - dv
+        - openpages
 
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"

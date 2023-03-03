@@ -1,0 +1,17 @@
+---
+- name: Show current DataStage instance
+  debug:
+    msg: "{{ _ds_instance }}"
+
+- name: Wait for PxRuntime {{ _ds_instance.name }} deployment completes
+  shell: |
+    oc get pxruntime {{ _ds_instance.name }} -n {{ current_cp4d_cluster.project }} --output json | jq -r '.status.dsStatus' | grep -i 'completed' | wc -l 
+  register: _deployed_datastage_service
+  retries: 30
+  delay: 60
+  until: _deployed_datastage_service.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
