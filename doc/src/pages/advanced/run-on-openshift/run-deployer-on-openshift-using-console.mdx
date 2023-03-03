@@ -88,7 +88,7 @@ stringData:
     YOUR_ENTITLEMENT_KEY
 ```
 
-## Configure the Cloud Paks and service to be deployer
+## Configure the Cloud Paks and service to be deployed
 * Update the configuration below to match what you want to deploy, do not change indent
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
@@ -181,6 +181,10 @@ data:
         - name: data-virtualization
         state: removed
 
+      - name: factsheet
+        size: small
+        state: removed
+
       - name: hadoop
         size: small
         state: removed
@@ -233,6 +237,12 @@ data:
       - name: wkc
         size: small
         state: removed
+        installation_options:
+          install_wkc_core_only: True
+          enableKnowledgeGraph: False
+          enableDataQuality: False
+          enableFactSheet: False
+          enableMANTA: False
 
       - name: wml
         size: small
@@ -245,6 +255,9 @@ data:
 
       - name: wsl
         state: installed
+
+      - name: ws-pipelines
+        state: removed
 ```
 
 ## Run the deployer
@@ -367,3 +380,11 @@ spec:
 * Select `cloud-pak-deployer` as the project at the top of the page
 * Click the deployer pod
 * Click logs
+
+## Re-run deployer when failed or if you want to update the configuration
+If the deployer has failed or if you want to make changes to the configuration after the successful run, you can do the following:
+* Open the OpenShift console
+* Go to Workloads --> Jobs
+* Delete the `cloud-pak-deployer` job including dependent assets. This will delete the job and also running/completed pod
+* Make changes to the `cloud-pak-deployer-config` Config Map by going to Workloads --> ConfigMaps
+* [Re-run the deployer](#run-the-deployer)

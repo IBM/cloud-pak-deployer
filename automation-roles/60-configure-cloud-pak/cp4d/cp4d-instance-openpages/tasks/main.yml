@@ -1,0 +1,31 @@
+---
+- set_fact:
+    _openpages_cartridge: "{{ _cartridges_to_install | json_query(_query_cartridge) | first | default({}) }}"
+  vars:
+    _query_cartridge: "[?olm_utils_name=='openpages']"
+
+- name: Show OpenPages cartridge
+  debug:
+    var: _openpages_cartridge
+
+- set_fact:
+    _configured_openpages_instances: []
+- set_fact:
+    _configured_openpages_instances: "{{ _openpages_cartridge.instances | default([] )}}"
+  when:
+  - _openpages_cartridge != {}
+  - (_openpages_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_openpages_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_openpages_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_openpages_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

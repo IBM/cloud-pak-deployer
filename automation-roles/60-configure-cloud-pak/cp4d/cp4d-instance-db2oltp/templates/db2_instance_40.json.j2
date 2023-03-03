@@ -1,0 +1,244 @@
+{
+   "addon_type":"db2oltp",
+   "display_name":"{{ _db2_instance.name }}",
+   "namespace":"{{ current_cp4d_cluster.project }}",
+   "addon_version":"{{ _db2_version }}",
+   "create_arguments":{
+      "resources":{
+         "cpu":"0.5",
+         "memory":"4.0"
+      },
+      "parameters":{
+         
+      },
+      "description":"Db2 {{ _db2_version }}",
+      "metadata":{
+         "api-console":[
+            
+         ],
+         "repositories": {{ _db2_repositories }},
+         "api-database-status":{
+            "label":"api-database-status",
+            "scripts":[
+               "/tools/status/icp4dstatus.sh"
+            ],
+            "value":"db2oltp-api"
+         },
+         "table-org":"COLUMN",
+         "set-kernel-params":true,
+         "chart":"{{ _db2_chart }}",
+         "user":"bluadmin",
+{% if _storage_type == 'pwx' %}
+         "database-configuration": {"registry": {"DB2_4K_DEVICE_SUPPORT": "ON"}},
+{% endif %}
+         "database-name":"BLUDB",
+         "display-name":"{{ _db2_instance.name }}",
+         "name":"Db2",
+         "version":"{{ _db2_version }}",
+         "console-port":8443,
+         "jdbc-port":50000,
+         "secure-jdbc-port":50001,
+         "type":"db2oltp",
+         "architecture":"x86_64",
+         "namespace":"{{ current_cp4d_cluster.project }}",
+         "cpu":0.5,
+         "mem":4,
+         "dedicated":false,
+         "node-label-value":"database-db2oltp",
+         "hadr":null,
+{% if _storage_type != 'pwx' %}
+         "support-4k":false,
+{% else %}
+         "support-4k":true,
+{% endif %}
+         "support-hostpath-in-chart":false,
+         "selected-storage-option":[
+            {
+               "dbstorage":"metaStorage",
+               "description":"System storage contains the information used by the database management system to manage and configure the database.",
+               "label":"System storage",
+               "objectStorageTypes":null,
+               "storage":"metadata"
+            },
+            {
+               "dbstorage":"dataStorage",
+               "description":"User storage defines the location for your database data.",
+               "enableStorageClassAccessMode":true,
+               "label":"User storage",
+               "objectStorageTypes":null,
+               "storage":"shared"
+            },
+            {
+               "dbstorage":"backupStorage",
+               "description":"Backup storage defines the location for your backup data.",
+               "label":"Backup storage",
+               "objectStorageTypes":null,
+               "showClaims":"all",
+               "storage":"shared"
+            },
+            {
+               "dbstorage":"transactionLogsStorage",
+               "description":"Transaction logs storage defines the location for your transaction logs data.",
+               "enable":true,
+               "label":"Transaction logs storage",
+               "objectStorageTypes":null,
+               "storage":"shared"
+            }
+         ],
+         "api-external-console":null,
+         "console-url":"console/",
+         "mem-unit":"GiB",
+         "constraint":"hard",
+         "worker-node":1,
+         "icon":"IBM",
+         "additional-menu-options":[
+            
+         ],
+         "connectivity-url":[
+            {
+               "id":"jdbc",
+               "label":"JDBC Connection URL"
+            }
+         ],
+         "api-database-jdbc":{
+            "label":"api-database-jdbc",
+            "value":"-db2u-engn-svc"
+         },
+         "monitoring-check-detail":[
+            {
+               "percentage-completed":5,
+               "remaining-mins-left":5,
+               "stage-info":[
+                  {
+                     "completed-state":"true",
+                     "formation-state":"OK",
+                     "formation-suffix":"instdb",
+                     "formation-type":"Job",
+                     "pod-label":"api-progress",
+                     "pod-type-check":"LABEL",
+                     "pod-value":"db2oltp-api",
+                     "state-type-check":"INIT_READINESS"
+                  }
+               ],
+               "stage-name":"Preparing the compute nodes",
+               "stage-number":1
+            },
+            {
+               "percentage-completed":30,
+               "remaining-mins-left":4,
+               "stage-info":[
+                  {
+                     "completed-state":"true",
+                     "formation-state":"Converging",
+                     "formation-suffix":"restore-morph",
+                     "formation-type":"Job",
+                     "pod-label":"api-progress",
+                     "pod-type-check":"LABEL",
+                     "pod-value":"db2oltp-api",
+                     "state-type-check":"CONTAINERS_READINESS"
+                  }
+               ],
+               "stage-name":"Configuring the database services",
+               "stage-number":2
+            },
+            {
+               "percentage-completed":60,
+               "remaining-mins-left":2,
+               "stage-info":[
+                  {
+                     "completed-state":"true",
+                     "formation-state":"OK",
+                     "formation-suffix":"restore-morph",
+                     "formation-type":"Job",
+                     "pod-name":"-ibm-unified-console-api",
+                     "pod-type-check":"NAME",
+                     "state-type-check":"CONTAINERS_READINESS"
+                  }
+               ],
+               "stage-name":"Starting the database",
+               "stage-number":3
+            }
+         ],
+         "storage-configmap-name":"db2oltp-storage-configmap",
+         "mln-count":1,
+         "database-page-size":16384,
+         "storage-class":[
+{% if _storage_type != 'pwx' %}
+            {
+               "label":"metaStorage",
+               "name":"{{ ocp_storage_class_file }}"
+            },
+            {
+               "label":"dataStorage",
+               "name":"{{ ocp_storage_class_block }}"
+            },
+            {
+               "label":"backupStorage",
+               "name":"{{ ocp_storage_class_file }}"
+            },
+            {
+               "label":"transactionLogsStorage",
+               "name":"{{ ocp_storage_class_block }}"
+            }
+{% else %}
+            {
+               "label":"metaStorage",
+               "name":"portworx-db2-rwx-sc"
+            },
+            {
+               "label":"dataStorage",
+               "name":"portworx-db2-rwo-sc"
+            },
+            {
+               "label":"backupStorage",
+               "name":"portworx-db2-rwx-sc"
+            },
+            {
+               "label":"transactionLogsStorage",
+               "name":"portworx-db2-rwo-sc"
+            }
+{% endif %}
+         ],
+         "size":[
+            {
+               "label":"metaStorage",
+               "value": {{ _db2_instance.metadata_size_gb }}
+            },
+            {
+               "label":"dataStorage",
+               "value": {{ _db2_instance.data_size_gb }}
+            },
+            {
+               "label":"backupStorage",
+               "value": {{ _db2_instance.backup_size_gb }}
+            },
+            {
+               "label":"transactionLogsStorage",
+               "value": {{ _db2_instance.transactionlog_size_gb }}
+            }
+         ],
+         "storage-class-access-mode":[
+            {
+               "label":"metaStorage",
+               "name":"ReadWriteMany"
+            },
+            {
+               "label":"dataStorage",
+               "name":"ReadWriteOnce"
+            },
+            {
+               "label":"backupStorage",
+               "name":"ReadWriteMany"
+            },
+            {
+               "label":"transactionLogsStorage",
+               "name":"ReadWriteMany"
+            }
+         ]
+      },
+      "owner_username":""
+   },
+   "transientFields":{
+      
+   }
+}

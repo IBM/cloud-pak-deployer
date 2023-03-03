@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _dv_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "dv"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Data Virtualization cartridge
+  debug:
+    var: _dv_cartridge
+
+- set_fact:
+    _configured_dv_instances: []
+- set_fact:
+    _configured_dv_instances: "{{ _dv_cartridge.instances | default([] )}}"
+  when:
+  - _dv_cartridge != {}
+  - (_dv_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_dv_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_dv_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_dv_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

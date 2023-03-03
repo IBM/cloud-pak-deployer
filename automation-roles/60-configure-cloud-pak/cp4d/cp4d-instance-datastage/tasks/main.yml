@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _datastage_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "datastage_ent_plus"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show DataStage cartridge
+  debug:
+    var: _datastage_cartridge
+
+- set_fact:
+    _configured_ds_instances: []
+- set_fact:
+    _configured_ds_instances: "{{ _datastage_cartridge.instances | default([] )}}"
+  when:
+  - _datastage_cartridge != {}
+  - (_datastage_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_datastage_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_datastage_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_datastage_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

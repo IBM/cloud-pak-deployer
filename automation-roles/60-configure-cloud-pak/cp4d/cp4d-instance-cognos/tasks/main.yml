@@ -1,0 +1,33 @@
+---
+- set_fact:
+    _ca_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+    _ca_cp4d_version: "{{ current_cp4d_cluster.cp4d_version[:3] }}"
+  vars:
+    cartridge_name: "cognos_analytics"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Cognos Analytics cartridge
+  debug:
+    var: _ca_cartridge
+
+- set_fact:
+    _configured_ca_instances: []
+- set_fact:
+    _configured_ca_instances: "{{ _ca_cartridge.instances | default([] )}}"
+  when:
+  - _ca_cartridge != {}
+  - (_ca_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_cognos_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_cognos_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_cognos_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

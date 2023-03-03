@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _db2_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "db2oltp"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Db2 OLTP cartridge
+  debug:
+    var: _db2_cartridge
+
+- set_fact:
+    _configured_db2_instances: []
+- set_fact:
+    _configured_db2_instances: "{{ _db2_cartridge.instances | default([] )}}"
+  when:
+  - _db2_cartridge != {}
+  - (_db2_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_db2_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_db2_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_db2_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
