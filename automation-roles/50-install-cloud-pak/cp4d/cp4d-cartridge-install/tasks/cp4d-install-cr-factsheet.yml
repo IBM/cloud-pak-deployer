@@ -8,15 +8,10 @@
     path: /tmp/work
     state: directory
 
-- name: Write license type to /tmp/work/replication-install-options.yml
-  copy:
-    content: "license_type: {{ _current_cp4d_cartridge.license }}"
-    dest: "/tmp/work/replication-install-options.yml"
-
 # Always generate the preview script to log what will be done
 - name: "Generate command preview script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}"
   set_fact:
-    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-replication.j2') }}"
+    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-factsheet.j2') }}"
   vars:
     _p_preview_script: True 
 
@@ -28,10 +23,10 @@
   shell: |
     {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-replication.sh
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-factsheet.sh
   copy:
     src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-replication.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-factsheet.sh"
     remote_src: True
     mode: u+rwx
 
@@ -39,12 +34,12 @@
   block:
   - name: Generate apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}
     set_fact:
-      _apply_cr_command: "{{ lookup('template', 'apply-cr-replication.j2') }}"
+      _apply_cr_command: "{{ lookup('template', 'apply-cr-factsheet.j2') }}"
     vars:
       _p_preview_script: False
   - name: Run apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
     shell: |
-      {{ _apply_cr_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
+      {{ _apply_cr_command }} >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
     register: _install_cartridges_result
     failed_when: False
   - name: Fail if there was an error installing the cartridge {{ _current_cp4d_cartridge.olm_utils_name }} using apply-cr
@@ -60,5 +55,5 @@
 
 - name: Run shell script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
   shell: |
-    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-replication.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dp.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
   when: not _sequential_install
