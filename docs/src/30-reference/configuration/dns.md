@@ -1,0 +1,22 @@
+# Upstream DNS servers for OpenShift
+
+When deploying OpenShift in a private network, one may want to reach additional private network services by their host name. Examples could be a database server, Hadoop cluster or an LDAP server.  OpenShift provides a DNS operator which deploys and manages CoreDNS which takes care of name resolution for pods running inside the container platform, also known as DNS forwarding.
+
+If the services that need to be reachable our registered on public DNS servers, you typically do not have to configure upstream DNS servers.
+
+The upstream DNS used for a particular OpenShift cluster is configured like this:
+```
+openshift:
+- name: sample
+...
+  upstream_dns:
+  - name: sample-dns
+    zones:
+    - example.com
+    dns_servers:
+    - 172.31.2.73:53
+```
+
+Any host name of which the domain ends with `example.com` will be resolved using private DNS server `172.31.2.73:53`. Typically the private DNS server have one or more upstream DNS servers configured to resolve public services such as `ibm.com`.
+
+For more info on configuring upstream DNS servers check the [Upstream DNS](/30-reference/configuration/openshift#upstream-dns-servers).

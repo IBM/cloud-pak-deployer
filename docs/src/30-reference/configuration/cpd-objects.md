@@ -1,0 +1,43 @@
+# Configuration objects
+
+All objects used by the Cloud Pak Deployer are defined in a yaml format in files in the `config` directory. You can create a single yaml file holding all objects, or group objects in individual yaml files. At deployment time, all yaml files in the `config` directory are merged.
+
+To make it easier to navigate the different object types, they have been groups in different tabs. You can also use the index below to find the definitions.
+
+### [Vault](vault)
+* [Vault configuration](vault)
+
+### [Infrastructure object types](infrastructure)
+* Provider
+* Resource groups
+* Virtual Private Clouds (VPCs)
+* Security groups
+* Security rules
+* Address prefixes
+* Subnets
+* Floating ips
+* Virtual Server Instances (VSIs)
+* NFS Servers
+* SSH keys
+* Transit Gateways
+
+### [OpenShift object types](openshift)
+* [roks](openshift#openshift)
+
+### [Cloud Paks and related object types](cloud-paks)
+* [Cloud Pak for Data - cp4d](cloud-paks#cp4d)
+* [Cloud Pak for Integration - cp4d](cloud-paks#cp4i)
+* [Cloud Pak for Watson AIOps - cp4d](cloud-paks#cp4waiops)
+* [Image registry](cloud-paks#image_registry)
+
+### [Cloud Pak for Data Cartridges object types](cartridges)
+* [Cloud Pak for Data Control Plane - cpd_platform](cartridges#cpd_platform)
+* [Cloud Pak for Data Cognos Analytics - ca](cartridges#ca)
+* [Cloud Pak for Data Db2 OLTP - db2oltp](cartridges#db2oltp)
+* [Cloud Pak for Data Watson Studio - ws](cartridges#ws)
+* [Cloud Pak for Data Watson Machine Learning - wml](cartridges#wml)
+
+### [Configuration object types](configuration)
+
+### [Other object types](other)
+* [Global configuration](other#global_config)
