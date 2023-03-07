@@ -14,6 +14,7 @@ When provisioning on IBM Cloud ROKS, a CA-signed certificate for the ingress sub
 
 ### Configure identity and access management
 For Cloud Pak for Data you can configure:
+
 * SAML for Single Sign-on. When specified in the `cp4d_saml_config` object, the deployer configures the user management pods to redirect logins to the identity provider (idP) of choice.
 * LDAP configuration. LDAP can be used both for authentication (if no SSO has been configured) and for access management by mapping LDAP groups to Cloud Pak for Data user groups. Specify the LDAP or LDAPS properties in the `cp4d_ldap_config` object so that the deployer configures it for Cloud Pak for Data. If SAML has been configured for authentication, the configured LDAP server is only used for access management.
 * User group configuration. This creates user-defined user groups in Cloud Pak for Data to match the LDAP configuration. The configuration object used for this is `cp4d_user_group_configuration`.
@@ -21,6 +22,7 @@ For Cloud Pak for Data you can configure:
 ### Provision instances
 Some cartridges such as Data Virtualization have the ability to create one or more instances to run an isolated installation of the cartridge. If instances have been configured for the cartridge, this steps provisions them.
 The following Cloud Pak for Data cartridges are currently supported for creating instances:
+
 * Analytics engine powered by Apache Spark (`analytics-engine`)
 * Db2 OLTP (`db2`)
 * Cognos Analytics (`ca`)

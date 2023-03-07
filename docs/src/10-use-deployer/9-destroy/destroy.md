@@ -2,10 +2,8 @@
 
 If you have previously used the Cloud Pak Deployer to create assets on IBM Cloud, AWS or Azure, you can destroy the assets with the same command.
 
-<InlineNotification kind="info">
-  Currently, destroy is only implemented for IBM Cloud ROKS, AWS ROSA and Azure
-  ARO, not for other cloud platforms.
-</InlineNotification>
+!!! info
+    Currently, destroy is only implemented for IBM Cloud ROKS, AWS and Azure ARO, not for other cloud platforms.
 
 ## Prepare for destroy
 

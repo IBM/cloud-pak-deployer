@@ -179,9 +179,8 @@ The Cloud Pak Deployer runs as a container on the server. When you're in the pro
 
 When adding the `--cpd-develop` parameter to the command line, the current directory is mapped as a volume to the `/cloud-pak-deployer` directory within the container. This means that any latest changes you've done to the Ansible playbooks or other commands will take effect immediately.
 
-<InlineNotification kind="warning">
-Even though it is possible to run the deployer multiple times in parallel, for different environments, please be aware that is NOT possible when you use the `--cpd-develop` parameter. If you run two deploy processes with this parameters, you will see errors with permissions.
-</InlineNotification>
+!!! warning
+    Even though it is possible to run the deployer multiple times in parallel, for different environments, please be aware that is NOT possible when you use the `--cpd-develop` parameter. If you run two deploy processes with this parameters, you will see errors with permissions.
 
 ## Cloud Pak Deployer developer container image tag
 When working on multiple changes concurrently, you may have to switch between branches or tags. By default, the Cloud Pak Deployer image is built with image `latest`, but you can override this by setting the `CPD_IMAGE_TAG` environment variable in your session.

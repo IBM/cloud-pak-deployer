@@ -34,11 +34,8 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 - Select **Get Entitlement Key** and create a new key (or copy your existing key)
 - Copy the key value
 
-<InlineNotification kind="warning">
-  As stated for the API key, you can choose to download the entitlement key to a
-  file. However, when we reference the entitlement key, we mean the 80+
-  character string that is displayed, not the file.
-</InlineNotification>
+!!! warning
+    As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
 ## Optional: Locate or generate a public SSH Key
 To obtain access to the OpenShift nodes post-installation, you will need to specify the public SSH key of your server; typically this is `~/.ssh/id_rsa.pub`, where `~` is the home directory of your user. If you don't have an SSH key-pair yet, you can generate one using the steps documented here: https://docs.openshift.com/container-platform/4.10/installing/installing_aws/installing-aws-customizations.html#ssh-agent-using_installing-aws-customizations. Alternatively, deployer can generate SSH key-pair automatically if credential `ocp-ssh-pub-key` is not in the vault.
@@ -65,14 +62,8 @@ export CONFIG_DIR=$HOME/cpd-config
 - `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
 - `CONFIG_DIR`: Directory that holds the configuration, it must have `config`, `defaults` and `inventory` subdirectories
 
-<InlineNotification>
-  Cloud Pak Deployer uses the status directory to logs its activities and also
-  to keep track of its running state. For a given environment you're
-  provisioning or destroying, you should always specify the same status
-  directory to avoid contention between different deploy runs. You can run the
-  Cloud Pak Deployer in parallel for different environments (different
-  configuration directories).
-</InlineNotification>
+!!! info
+    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
 
 ### Create the secrets needed for vSphere
 
@@ -113,7 +104,7 @@ To run the container using a local configuration input directory and a data dire
 ./cp-deploy.sh env apply -e env_id=pluto-01 [--accept-all-liceneses]
 ```
 
-In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -125,7 +116,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](/30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -195,4 +186,4 @@ cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
 ## Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](/cp-deploy/post-run).
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).

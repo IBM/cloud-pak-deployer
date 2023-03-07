@@ -312,6 +312,7 @@ spec:
 
 ## Optional: start debug job
 The debug job can be useful if you want to access the status directory of the deployer if the deployer job has failed.
+
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly into the window)
@@ -374,6 +375,7 @@ spec:
 
 ## Re-run deployer when failed or if you want to update the configuration
 If the deployer has failed or if you want to make changes to the configuration after the successful run, you can do the following:
+
 * Open the OpenShift console
 * Go to Workloads --> Jobs
 * Delete the `cloud-pak-deployer` job including dependent assets. This will delete the job and also running/completed pod

@@ -43,7 +43,7 @@ The observations of Cloud Pak for Data are generated using the zen-watchdog comp
 
 Additional monitors which focus more on the operational usage of Cloud Pak for Data can be deployed as well. These monitors are maintained in a seperate Git repository and be accessed at https://github.com/IBM/cp4d-monitors. Using the Cloud Pak Deployer, monitors can be deployed which uses the Cloud Pak for Data zen-watchdog monitor framework. This allows adding custom monitors to the zen-watchdog, making these custom monitors visible in the Cloud Pak for Data metrics.
 
-![Cloud Pak for Data Monitors Overview](cp4d_monitors.png "Cloud Pak for Data Monitors Overview")
+![Cloud Pak for Data Monitors Overview](images/cp4d_monitors.png "Cloud Pak for Data Monitors Overview")
 
 Using the Cloud Pak Deployer `cp4d_monitors` capability implements the following:
 - Create Cloud Pak for Data ServiceMonitor endpoint to forward zen-watchdog monitor events to OpenShift Cluster monitoring

@@ -16,11 +16,8 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 - Select **Get Entitlement Key** and create a new key (or copy your existing key)
 - Copy the key value
 
-<InlineNotification kind="warning">
-  As stated for the API key, you can choose to download the entitlement key to a
-  file. However, when we reference the entitlement key, we mean the 80+
-  character string that is displayed, not the file.
-</InlineNotification>
+!!! warning
+    As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
 ## Prepare for running
 
@@ -41,9 +38,8 @@ export CONFIG_DIR=$HOME/cpd-config
 - `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
 - `CONFIG_DIR`: Directory that holds the configuration, it must have `config` and optionally `defaults` and `inventory` subdirectories
 
-<InlineNotification>
-  Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
-</InlineNotification>
+!!! info
+    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
 
 ### Store the OpenShift login command or configuration
 
@@ -80,9 +76,8 @@ Set the environment variable for the `oc login` command
 export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
 
-<InlineNotification kind="info">
-  Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
-</InlineNotification>
+!!! info
+    Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
 
 When the deployer is run, it automatically sets the `oc-login` vault secret to the specified `oc login` command. When logging in to OpenShift, the deployer first checks if there is a specific `oc login` secret for the cluster in question (see option 2). If there is not, it will default to the generic `oc-login` secret (option 1).
 
@@ -96,9 +91,8 @@ Store the login command in secret `<cluster name>-oc-login`
   -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
 
-<InlineNotification kind="info">
-  Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
-</InlineNotification>
+!!! info
+    Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
 
 #### Option 3: store the kubeconfig file
 If you already have a "kubeconfig" file that holds the credentials of your cluster, you can use this, otherwise:
@@ -149,13 +143,13 @@ If the cluster is air-gapped, make sure you add the `--air-gapped` flag
 ./cp-deploy.sh env apply [--accept-all-licenses]
 ```
 
-If you have chosen to use dynamic properties (extra variables), you can specify these on the command line, see below. Extra variables are covered in [advanced configuration](/advanced/advanced-configuration).
+If you have chosen to use dynamic properties (extra variables), you can specify these on the command line, see below. Extra variables are covered in [advanced configuration](../../../50-advanced/advanced-configuration).
 
 ```
 ./cp-deploy.sh env apply -e env_id=pluto-01 [--accept-all-licenses]
 ```
 
-In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -167,7 +161,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](/30-reference/timings).
+Preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -224,4 +218,4 @@ cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
 ## Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](/cp-deploy/post-run).
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).

@@ -25,11 +25,8 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 - Select **Get Entitlement Key** and create a new key (or copy your existing key)
 - Copy the key value
 
-<InlineNotification kind="warning">
-  As stated for the API key, you can choose to download the entitlement key to a
-  file. However, when we reference the entitlement key, we mean the 80+
-  character string that is displayed, not the file.
-</InlineNotification>
+!!! warning
+    As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
 ## Verify your permissions in Microsoft Azure
 
@@ -88,10 +85,8 @@ az ad sp list --filter "displayname eq '$SPNAME'" --query "[?appDisplayName=='$S
 
 You may want to create the service principal with the `Contributor` role by adding `--role="Contributor"` (the first command above). Anyhow, in the ARM template, the Contributor role is assigned to the given service principal (Virtual Network scope).
 
-<InlineNotification kind="info">
-  Pay attention to the "service_principal_id", "service_principal_secret", and
-  "service_principal_object_id" output parameter notes. They will be used later.
-</InlineNotification>
+!!! info
+    Pay attention to the "service_principal_id", "service_principal_secret", and "service_principal_object_id" output parameter notes. They will be used later.
 
 ## Get Azure Red Hat OpenShift Resource Provider objectId
 
@@ -107,10 +102,8 @@ az ad sp list --filter "displayname eq 'Azure Red Hat OpenShift RP'" --query "[?
 # ]
 ```
 
-<InlineNotification kind="info">
-  Pay attention to the "aro_rp_object_id" output parameter note. This will be
-  used later.
-</InlineNotification>
+!!! info
+    Pay attention to the "aro_rp_object_id" output parameter note. This will be used later.
 
 ## Prepare for running
 
@@ -144,14 +137,8 @@ export CONFIG_DIR=$HOME/cpd-config
 - `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
 - `CONFIG_DIR`: Directory that holds the configuration, it must have `config` and optionally `defaults` and `inventory` subdirectories
 
-<InlineNotification>
-  Cloud Pak Deployer uses the status directory to logs its activities and also
-  to keep track of its running state. For a given environment you're
-  provisioning or destroying, you should always specify the same status
-  directory to avoid contention between different deploy runs. You can run the
-  Cloud Pak Deployer in parallel for different environments (different
-  configuration directories).
-</InlineNotification>
+!!! info
+    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
 
 ### Create the secrets needed for ARO
 
@@ -195,7 +182,7 @@ To run the container using a local configuration input directory and a data dire
 ./cp-deploy.sh env apply -e env_id=pluto-01 -e azure_location=westeurope [--accept-all-licenses]
 ```
 
-For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -207,7 +194,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](/30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -216,10 +203,6 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ```
 
 ## Finishing up
-
-<InlineNotification kind="warning">
-  WIP - TODO: update this block once finished
-</InlineNotification>
 
 Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified. The `admin` password can be retrieved from the vault as follows:
 
@@ -251,3 +234,6 @@ PLAY [Secrets] *****************************************************************
 included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
+
+## Post-install configuration
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).

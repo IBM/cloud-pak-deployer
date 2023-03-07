@@ -1,6 +1,6 @@
 # Automated Cognos Authorization using LDAP groups
 
-![Authorization Overview](/images/cognos_authorization.png)
+![Authorization Overview](cognos_authorization.png)
 
 ## Description
 The automated cognos authorization capability uses LDAP groups to assign users to a Cognos Analytics Role, which allows these users to login to IBM Cloud Pak for Data and access the Cognos Analytics instance. This capability will perform the following tasks:
@@ -21,7 +21,7 @@ Prior to running the script, ensure:
 - The role(s) that will be associated with the User Group are present in IBM Cloud Pak for Data
 
 ## Usage of the Script
-The script is available in [automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh](/automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh).
+The script is available in [automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh](https://github.com/IBM/cloud-pak-deployer/automation-roles/50-install-cloud-pak/cp4d-service/files/assign_CA_authorization.sh).
 
 Run the script without arguments to show its usage help.
 ```

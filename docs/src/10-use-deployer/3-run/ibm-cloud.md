@@ -14,11 +14,8 @@ In order for the Cloud Pak Deployer to create the infrastructure and deploy IBM 
 - Click **Create an IBM Cloud API Key** and provide a name and description
 - Copy the IBM Cloud API key using the **Copy** button and store it in a safe place, as you will not be able to retrieve it later
 
-<InlineNotification kind="warning">
-  You can choose to download the API key for later reference. However, when we
-  reference the API key, we mean the IBM Cloud API key as a 40+ character
-  string.
-</InlineNotification>
+!!! warning
+    You can choose to download the API key for later reference. However, when we reference the API key, we mean the IBM Cloud API key as a 40+ character string.
 
 ## Acquire an IBM Cloud Pak Entitlement Key
 
@@ -28,11 +25,8 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 - Select **Get Entitlement Key** and create a new key (or copy your existing key)
 - Copy the key value
 
-<InlineNotification kind="warning">
-  As stated for the API key, you can choose to download the entitlement key to a
-  file. However, when we reference the entitlement key, we mean the 80+
-  character string that is displayed, not the file.
-</InlineNotification>
+!!! warning
+    As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
 ## Prepare for running
 
@@ -54,14 +48,8 @@ export CONFIG_DIR=$HOME/cpd-config
 - `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
 - `CONFIG_DIR`: Directory that holds the configuration, it must have `config`, `defaults` and `inventory` subdirectories
 
-<InlineNotification>
-  Cloud Pak Deployer uses the status directory to logs its activities and also
-  to keep track of its running state. For a given environment you're
-  provisioning or destroying, you should always specify the same status
-  directory to avoid contention between different deploy runs. You can run the
-  Cloud Pak Deployer in parallel for different environments (different
-  configuration directories).
-</InlineNotification>
+!!! info
+    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
 
 ## Optional: validate the configuration
 
@@ -79,7 +67,7 @@ To run the container using a local configuration input directory and a data dire
 ./cp-deploy.sh env apply -e env_id=pluto-01 -e ibm_cloud_region=eu-gb [--accept-all-licenses]
 ```
 
-In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. Also, the default `ibm_cloud_region` as configured in the inventory file (under the `inventory` directory) is overridden by `eu-gb`. For more information about the extra (dynamic) variables, see [advanced configuration](/advanced/advanced-configuration).
+In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. Also, the default `ibm_cloud_region` as configured in the inventory file (under the `inventory` directory) is overridden by `eu-gb`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -91,7 +79,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](/30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -150,4 +138,4 @@ cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
 ## Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](/cp-deploy/post-run).
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).

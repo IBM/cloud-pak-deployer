@@ -8,16 +8,16 @@ Dependent on the cloud platform on which the OpenShift cluster will be provision
 
 For OpenShift, there are 5 flavours:
 
-- [OpenShift on IBM Cloud](#openshift-on-ibm-cloud)
-- [OpenShift on vSphere](#openshift-on-vsphere)
-- [OpenShift on AWS - ROSA](#openshift-on-aws-rosa)
-- [OpenShift on AWS - self-managed](#openshift-on-aws-self-managed)
-- [OpenShift on Microsoft Azure (ARO)](<#openshift-on-microsoft-azure-(aro)>)
 - [Existing OpenShift](#existing-openshift)
+- [OpenShift on IBM Cloud](#openshift-on-ibm-cloud-roks)
+- [OpenShift on AWS - ROSA](#openshift-on-aws---rosa)
+- [OpenShift on AWS - self-managed](#openshift-on-aws---self-managed)
+- [OpenShift on Microsoft Azure (ARO)](#openshift-on-microsoft-azure-aro)
+- [OpenShift on vSphere](#openshift-on-vsphere)
 
 Every OpenShift cluster definition of a few mandatory properties that control which version of OpenShift is installed, the number and flavour of control plane and compute nodes and the underlying infrastructure, dependent on the cloud platform on which it is provisioned. Storage is a mandatory element for every `openshift` definition. For a list of supported storage types per cloud platform, refer to [Supported storage types](#supported-storage-types).
 
-Additionally, one can configure [upstream DNS servers](#upstream-dns-servers) and [OpenShift logging](#openshift-logging).
+Additionally, one can configure [Upstream DNS Servers](./dns.md) and [OpenShift logging](logging-auditing.md).
 
 ### OpenShift on IBM Cloud (ROKS)
 VPC-based OpenShift cluster on IBM Cloud, using the Red Hat OpenShift Kubernetes Services (ROKS).
@@ -84,15 +84,14 @@ openshift:
 | infrastructure.private_only    | If true, it indicates that the ROKS cluster must be provisioned without public endpoints                                                                                                         | No                      | True, False (default)                                                            |
 | infrastructure.deny_node_ports | If true, the Allow ICMP, TCP and UDP rules for the security group associated with the ROKS cluster are removed if present. If false, the Allow ICMP, TCP and UDP rules are added if not present. | No                      | True, False (default)                                                            |
 | infrastructure.secondary_storage | Reference to the storage flavour to be used as secondary storage, for example `"900gb.5iops-tier"` | No                     | Valid secondary storage flavour  |
-| openshift_logging[]            | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                                                                            | No                      |                                                                                  |
-| upstream_dns[]                 | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                                                                       | No                      |                                                                                  |
+| openshift_logging[]            | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                            | No                      |                                                                                  |
+| upstream_dns[]                 | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                       | No                      |                                                                                  |
 | openshift_storage[]            | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                                                        | Yes                     |                                                                                  |
 
 The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
 
-<InlineNotification kind="warning">
-  If you set `infrastructure.private_only` to `True`, the server from which you run the deployer must be able to access the ROKS cluster via its private endpoint, either by establishing a VPN to the cluster's VPC, or by making sure the deployer runs on a server that has a connection with the ROKS VPC via a transit gateway.
-</InlineNotification>
+!!! warning
+    If you set `infrastructure.private_only` to `True`, the server from which you run the deployer must be able to access the ROKS cluster via its private endpoint, either by establishing a VPN to the cluster's VPC, or by making sure the deployer runs on a server that has a connection with the ROKS VPC via a transit gateway.
 
 ##### openshift_storage[] - OpenShift storage definitions
 
@@ -112,9 +111,8 @@ The `managed` attribute indicates whether the ROKS cluster is managed by the Clo
 | stork_version       | Version of the Portworx storage orchestration layer for Kubernetes                              | Yes if `storage_type` is `pwx` |                       |
 | portworx_version    | Version of the Portworx storage provider                                                        | Yes if `storage_type` is `pwx` |                       |
 
-<InlineNotification kind="warning">
-  When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
-</InlineNotification>
+!!! warning
+    When deploying a ROKS cluster with OpenShift Data Foundation (fka OpenShift Container Storage/OCS), the minimum version of OpenShift is 4.7.
 
 ### OpenShift on vSphere
 
@@ -169,8 +167,8 @@ openshift:
 | oadp                        | Must the OpenShift Advanced Data Protection operator be installed                                         | No        | True, False (default)    |
 | infrastructure                        | Infrastructure properties                                                                                                                                             | No       |                          |
 | infrastructure.openshift_cluster_network_cidr | Network CIDR used by the OpenShift pods. Normally you would not have to change this, unless other systems in the network are in the 10.128.0.0/14 subnet.  | No        | CIDR                     |
-| openshift_logging[]         | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                     | No        |                          |
-| upstream_dns[]              | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                | No        |                          |
+| openshift_logging[]         | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                     | No        |                          |
+| upstream_dns[]                 | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                       | No                      |                                                                                  |
 | openshift_storage[]         | List of storage definitions to be defined on OpenShift, see below for further explanation                 | Yes       |                          |
 
 
@@ -252,7 +250,7 @@ openshift:
 | infrastructure.control_plane_iam_role | If not standard, specify the IAM role that the OpenShift installer must use for the control plane nodes during cluster creation                                       | No        |                          |
 | infrastructure.compute_iam_role       | If not standard, specify the IAM role that the OpenShift installer must use for the compute nodes during cluster creation                                             | No        |                          |
 | infrastructure.ami_id                 | ID of the AWS AMI to boot all images | No        |                          |
-| openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                                                 | No        |                          |
+| openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                | No        |                          |
 | openshift_storage[]                   | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                             | Yes       |                          |
 
 When deploying the OpenShift cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
@@ -335,8 +333,8 @@ openshift:
 | infrastructure.machine_cdr      | Machine CIDR, for example 10.243.0.0/16.                                                                                                     | No        | CIDR                     |
 | infrastructure.subnet_ids       | Existing public and private subnet IDs in the VPC to be used for the OpenShift cluster.  Must be specified in combination with machine_cidr. | No        | Existing subnet IDs      |
 | compute_nodes                   | Total number of compute nodes                                                                                                                | Yes       | Integer                  |
-| upstream_dns[]                  | Upstream DNS servers(s), see (#upstream-dns-servers)                                                                                         | No        |                          |
-| openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                        | No        |                          |
+| upstream_dns[]                 | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                       | No                      |                                                                                  |
+| openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                        | No        |                          |
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                   | No        |                          |
 | openshift_storage[]             | List of storage definitions to be defined on OpenShift, see below for further explanation                                                    | Yes       |                          |
 
@@ -388,11 +386,8 @@ openshift:
 
 #### Property explanation for OpenShift cluster on Microsoft Azure (ARO)
 
-<InlineNotification kind="warning">
-  You are not allowed to specify the OCP version of the ARO cluster. The latest current version is provisioned automatically instead no matter what value is
-  specified in the "ocp_version" parameter. The "ocp_version" parameter is mandatory for compatibility with other layers of the provisioning, such as the OpenShift client. For
-  instance, the value is used by the process which downloads and installs the `oc` client. Please, specify the value according to what OCP version will be provisioned.
-</InlineNotification>
+!!! warning
+    You are not allowed to specify the OCP version of the ARO cluster. The latest current version is provisioned automatically instead no matter what value is specified in the "ocp_version" parameter. The "ocp_version" parameter is mandatory for compatibility with other layers of the provisioning, such as the OpenShift client. For instance, the value is used by the process which downloads and installs the `oc` client. Please, specify the value according to what OCP version will be provisioned.
 
 | Property             | Description                                                                                                                                                                                                                                | Mandatory | Allowed values                      |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------- | ----------------------------------- |
@@ -405,8 +400,8 @@ openshift:
 | network              | Cluster network attributes                                                                                                                                                                                                                 | Yes       |                                     |
 | network.pod_cidr     | CIDR of pod network                                                                                                                                                                                                                        | Yes       | Must be a minimum of /18 or larger. |
 | network.service_cidr | CIDR of service network                                                                                                                                                                                                                    | Yes       | Must be a minimum of /18 or larger. |
-| openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                                                                                                                                                      | No        |                                     |
-| upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                                                                                                                 | No        |                                     |
+| openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                                                                      | No        |                                     |
+| upstream_dns[]                 | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                       | No                      |                                                                                  |
 | openshift_storage[]  | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                                                                                                  | Yes       |                                     |
 
 ##### openshift_storage[] - OpenShift storage definitions
@@ -461,14 +456,15 @@ openshift:
 | oadp                 | Must the OpenShift Advanced Data Protection operator be installed                                               | No               | True, False (default) |
 | infrastructure.type  | Infrastructure OpenShfit is deployed on. See below for additional explanation                                   | detect (default) |
 | infrastructure.processor_architecture | Architecture of the processor that the OpenShift cluster is deployed on | No | amd64 (default), ppc64le, s390x |
-| openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](#openshift-logging)                           | No               |                       |
-| upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                      | No               |                       |
+| openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                           | No               |                       |
+| upstream_dns[]                 | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                       | No                      |                                                                                  |
 | openshift_storage[]  | List of storage definitions to be defined on OpenShift, see below for further explanation                       | Yes              |                       |
 
 ##### infastructure.type - Type of infrastructure
 When deploying on existing OpenShift, the underlying infrastructure can pose some restrictions on capabilities available. For example, Red Hat OpenShift on IBM Cloud (aka ROKS) does not include the Machine Config Operator and ROSA on AWS does not allow to set labels for Machine Config Pools. This means that node settings required for Cloud Pak for Data must be applied in a non-standard manner.
 
 The following values are allowed for `infrastructure.type`:
+
 * `detect` (default): The deployer will attempt to detect the underlying cloud infrastructure. This is done by retrieving the existing storage classes and then inferring the cloud type.
 * `standard`: The deployer will assume a standard OpenShift cluster with no further restrictions. This is the fallback value for `detect` if the underlying infra cannot be detected. 
 * `aws-self-managed`: A self-managed OpenShift cluster on AWS. No restrictions.
@@ -485,121 +481,28 @@ The following values are allowed for `infrastructure.type`:
 | ocp_storage_class_file  | OpenShift storage class to use for file storage if different from default for storage_type  | Yes if `storage_type` is `custom` |                                     |
 | ocp_storage_class_block | OpenShift storage class to use for block storage if different from default for storage_type | Yes if `storage_type` is `custom` |                                     |
 
-**The custom storage_type can be used in case you want to use a non-standard storage class(es). In this case the storage class(es) must be already configured on the OCP cluster and set in the respective ocp_storage_class_file and ocp_storage_class_block variables**
+!!! info
+    The custom storage_type can be used in case you want to use a non-standard storage class(es). In this case the storage class(es) must be already configured on the OCP cluster and set in the respective ocp_storage_class_file and ocp_storage_class_block variables
 
-**The auto storage_type will let the deployer automatically detect the storage type based on the existing storage classes in the OpenShift cluster.**
+!!! info
+    The auto storage_type will let the deployer automatically detect the storage type based on the existing storage classes in the OpenShift cluster.
 
 ## Supported storage types
 An `openshift` definition always includes the type(s) of storage that it will provide. When the OpenShift cluster is provisioned by the deployer, the necessary infrastructure and storage class(es) are also configured. In case an existing OpenShift cluster is referenced by the configuration, the storage classes are expected to exist already.
 
 The table below indicates which storage classes are supported by the Cloud Pak Deployer per cloud infrastructure.
 
-<InlineNotification kind="warning">
-The ability to provision or use certain storage types does not imply support by the Cloud Paks or by OpenShift itself. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
-</InlineNotification>
+!!! warning
+    The ability to provision or use certain storage types does not imply support by the Cloud Paks or by OpenShift itself. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
 
 | Cloud Provider | NFS Storage | OCS/ODF Storage | Portworx | Elastic | Custom (2) |
-| -------------- | ----------- | --------------- | ---------| ------- } ---------- |
+| -------------- | ----------- | --------------- | ---------| ------- | ---------- |
 | ibm-cloud      | Yes         | Yes             | Yes      | No      | Yes        |
 | vsphere        | Yes (1)     | Yes             | No       | No      | Yes        |
 | aws            | No          | Yes             | No       | Yes (3) | Yes        |
 | azure          | No          | Yes             | No       | No      | Yes        |
 | existing-ocp   | Yes         | Yes             | No       | Yes     | Yes        |
 
-(1) An existing NFS server can be specified so that the deployer configures the `managed-nfs-storage` storage class. The deployer will not provision or change the NFS server itself.
-(2) If you specify a `custom` storage type, you must specify the storage class to be used for block (RWO) and file (RWX) storage.
-(3) Specifying this storage type means that Elastic File Storage (EFS) and Elastic Block Storage (EBS) storage classes will be used. For EFS, an `nfs_server` object is required to define the "file server" storage on AWS.
-
-## Advanced configuration
-
-### Upstream DNS servers
-
-When deploying OpenShift in a private network, one may want to reach additional private network services by their host name. Examples could be a database server, Hadoop cluster or an LDAP server.  OpenShift provides a DNS operator which deploys and manages CoreDNS which takes care of name resolution for pods running inside the container platform, also known as DNS forwarding.
-
-```
-  upstream_dns:
-  - name: sample-dns
-    zones:
-    - example.com
-    dns_servers:
-    - 172.31.2.73:53
-```
-
-The zones which have been defined for each of the upstream_dns configurations control which DNS server(s) will be used for name resolution. For example, if `example.com` is given as the zone and an upstream DNS server of `172.31.2.73:53`, any host name matching `*.example.com` will be resolved using DNS server `172.31.2.73` and port `53`.
-
-If you want to remove the upstream DNS that was previously configured, you can change the deployer configuration as below and run the deployer. Removing the `upstream_dns` element altogether will not make changes to the OpenShift DNS operator.
-
-```
-  upstream_dns: []
-```
-
-See https://docs.openshift.com/container-platform/4.8/networking/dns-operator.html for more information about the operator that is configured by specifying upstream DNS servers.
-
-#### Property explanation
-| Property       | Description                                                                            | Mandatory | Allowed values |
-| -------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
-| upstream_dns[] | List of alternative upstream DNS servers(s) for OpenShift                              | No        |                |
-| name           | Name of the upstream DNS entry                                                         | Yes       |                |
-| zones          | Specification of one or more zone for which the DNS server is applicable               | Yes       |                |
-| dns_servers    | One or more DNS servers (host:port) that will resolve host names in the specified zone | Yes       |                |
-
-### OpenShift logging
-
-Defines how OpenShift forwards the logs to external log collectors. Currently, the following log collector types are supported:
-
-- loki
-
-The `logging_output` element is mandatory and defines the external log collector(s) used by the inputs that have been defined. Besides the cluster wide logging inputs, audit logs can also be sent to the external log collector(s) for Cloud Pak for Data using the `cp4d_audit_config` object.
-
-```
-openshift_logging:
-- openshift_cluster_name: sample
-  configure_es_log_store: False
-  cluster_wide_logging:
-  - input: application
-    logging_name: loki-application
-    labels:
-      cluster_name: "{{ env_id }}"
-      cloud_region: eu-de
-  - input: infrastructure
-    logging_name: loki-application
-    labels:
-      cluster_name: "{{ env_id }}"
-  - input: audit
-    logging_name: loki-audit
-    labels:
-      cluster_name: "{{ env_id }}"
-  logging_output:
-  - name: loki-application
-    type: loki
-    url: https://loki-application.sample.com
-    certificates:
-      cert: "{{ env_id }}-loki-cert"
-      key: "{{ env_id }}-loki-key"
-      ca: "{{ env_id }}-loki-ca"
-  - name: loki-audit
-    type: loki
-    url: https://loki-audit.sample.com
-    certificates:
-      cert: "{{ env_id }}-loki-cert"
-      key: "{{ env_id }}-loki-key"
-      ca: "{{ env_id }}-loki-ca"
-```
-
-#### Property explanation
-| Property                          | Description                                                                                                              | Mandatory            | Allowed values                     |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | -------------------- | ---------------------------------- |
-| openshift_cluster_name            | Name of the OpenShift cluster to configure the logging for                                                               | Yes                  |                                    |
-| configure_es_log_store            | Must internal ElasticSearch log store and Kibana be provisioned? (default False)                                         | No                   | True, False (default)              |
-| cluster_wide_logging              | Defines which classes of log records will be sent to the log collectors                                                  | No                   |                                    |
-| cluster_wide_logging.input        | Specifies OpenShift log records class to forwawrd                                                                        | Yes                  | application, infrastructure, audit |
-| cluster_wide_logging.logging_name | Specifies the `logging_output` to send the records to . If not specified, records will be sent to the internal log only  | No                   |                                    |
-| cluster_wide_logging.labels       | Specify your own labels to be added to the log records. Every logging input/output combination can have its own labes    | No                   |                                    |
-| logging_output                    | Defines the log collectors. If `configure_es_log_store` is True, output will always be sent to the internal ES log store | No                   |                                    |
-| logging_output.name               | Log collector name, referenced by `cluster_wide_logging` or `cp4d_audit`                                                 | Yes                  |                                    |
-| logging_output.type               | Type of the log collector, currently only `loki` is possible                                                             | Yes                  | loki                               |
-| logging_output.url                | URL of the log collector; this URL must be reachable from within the cluster                                             | Yes                  |                                    |
-| logging_output.certificates       | Defines the vault secrets that hold the certificate elements                                                             | Yes, if url is https |                                    |
-| logging_output.certificates.cert  | Public certificate to connect to the URL                                                                                 | Yes                  |                                    |
-| logging_output.certificates.key   | Private key to connect to the URL                                                                                        | Yes                  |                                    |
-| logging_output.certificates.ca    | Certificate Authority bundle to connect to the URL                                                                       | Yes                  |                                    |
+* (1) An existing NFS server can be specified so that the deployer configures the `managed-nfs-storage` storage class. The deployer will not provision or change the NFS server itself.
+* (2) If you specify a `custom` storage type, you must specify the storage class to be used for block (RWO) and file (RWX) storage.
+* (3) Specifying this storage type means that Elastic File Storage (EFS) and Elastic Block Storage (EBS) storage classes will be used. For EFS, an `nfs_server` object is required to define the "file server" storage on AWS.

@@ -8,20 +8,22 @@ Depicted below is the basic deployment topology, followed by a topology with all
 ![Basic deployment](images/cloud-pak-context-deployment-basic.png)
 
 For more details on each of the configuration elements, refer to:
-* [Infrastructure](/30-design/reference/infrastructure)
-* [OpenShift](/30-design/reference/openshift)
-* [Cloud Pak](/30-design/reference/cloud-pak)
-* [Cloud Pak Cartridges](/30-design/reference/cp4d-cartridges)
-* [Cloud Pak Instances](/30-design/reference/cp4d-instances)
-* [Cloud Pak Assets](/30-design/reference/cp4d-assets)
+
+* [Infrastructure](../../../30-reference/configuration/infrastructure)
+* [OpenShift](../../../30-reference/configuration/openshift)
+* [Cloud Pak](../../../30-reference/configuration/cloud-pak)
+* [Cloud Pak Cartridges](../../../30-reference/configuration/cp4d-cartridges)
+* [Cloud Pak Instances](../../../30-reference/configuration/cp4d-instances)
+* [Cloud Pak Assets](../../../30-reference/configuration/cp4d-assets)
 
 ## Extended deployment
 ![Extended deployment](images/cloud-pak-context-deployment-full.png)
 
 For more details about extended deployment, refer to:
-* [Monitoring](/30-design/reference/monitoring)
-* [Logging and auditing](/30-design/reference/logging-auditing)
-* [Private registry](/30-design/reference/private-registry)
-* [DNS Servers](/30-design/reference/dns)
-* [Cloud Pak for Data LDAP integration](/30-design/reference/cp4d-ldap)
-* [Cloud Pak for Data SAML](/30-design/reference/cp4d-saml)
+
+* [Monitoring](../../../30-reference/configuration/monitoring)
+* [Logging and auditing](../../../30-reference/configuration/logging-auditing)
+* [Private registry](../../../30-reference/configuration/private-registry)
+* [DNS Servers](../../../30-reference/configuration/dns)
+* [Cloud Pak for Data LDAP integration](../../../30-reference/configuration/cp4d-ldap)
+* [Cloud Pak for Data SAML](../../../30-reference/configuration/cp4d-saml)

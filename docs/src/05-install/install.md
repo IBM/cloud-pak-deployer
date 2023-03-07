@@ -5,6 +5,7 @@ The Cloud Pak Deployer requires `podman` or `docker` to run, which are available
 
 ### Using a Macbook or Windows workstation
 If you don't have a Linux server in some cloud, you can use VirtualBox to create a Linux virtual machine.
+
 * Install VirtualBox: https://www.virtualbox.org
 * Install a Linux guest operating system: https://www.virtualbox.org/wiki/Guest_OSes
 
@@ -22,6 +23,7 @@ On Ubuntu, follow the instructions here: https://docs.docker.com/engine/install/
 ## Clone the current repository
 
 ### Using GitHub Desktop
+
 * Open GitHub Desktop
 * Select **Clone a Repository from the Internet**
 * Go to the **URL** tab and enter: https://github.com/IBM/cloud-pak-deployer.git

@@ -17,7 +17,7 @@ If you have not run the deployer yet and do not intend to install any Cloud Paks
 
 Deployer will check the configuration, download clients, attempt to login to OpenShift and prepare the OpenShift cluster with the global pull secret and (for Cloud Pak for Data) node settings. After that the deployer will finish without installing any Cloud Pak.
 
-## Run the Cloud Pak Deployer commad line
+## Run the Cloud Pak Deployer command line
 ```
 ./cp-deploy.sh env cmd -e env_id=pluto-01 
 ```
