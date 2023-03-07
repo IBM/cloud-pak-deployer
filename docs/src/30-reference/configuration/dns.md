@@ -17,6 +17,20 @@ openshift:
     - 172.31.2.73:53
 ```
 
-Any host name of which the domain ends with `example.com` will be resolved using private DNS server `172.31.2.73:53`. Typically the private DNS server have one or more upstream DNS servers configured to resolve public services such as `ibm.com`.
+The zones which have been defined for each of the upstream_dns configurations control which DNS server(s) will be used for name resolution. For example, if `example.com` is given as the zone and an upstream DNS server of `172.31.2.73:53`, any host name matching `*.example.com` will be resolved using DNS server `172.31.2.73` and port `53`.
 
-For more info on configuring upstream DNS servers check the [Upstream DNS](/30-reference/configuration/openshift#upstream-dns-servers).
+If you want to remove the upstream DNS that was previously configured, you can change the deployer configuration as below and run the deployer. Removing the `upstream_dns` element altogether will not make changes to the OpenShift DNS operator.
+
+```
+  upstream_dns: []
+```
+
+See https://docs.openshift.com/container-platform/4.8/networking/dns-operator.html for more information about the operator that is configured by specifying upstream DNS servers.
+
+#### Property explanation
+| Property       | Description                                                                            | Mandatory | Allowed values |
+| -------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
+| upstream_dns[] | List of alternative upstream DNS servers(s) for OpenShift                              | No        |                |
+| name           | Name of the upstream DNS entry                                                         | Yes       |                |
+| zones          | Specification of one or more zone for which the DNS server is applicable               | Yes       |                |
+| dns_servers    | One or more DNS servers (host:port) that will resolve host names in the specified zone | Yes       |                |

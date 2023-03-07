@@ -60,14 +60,12 @@ Your markdown input would look like:
 If you want to highlight something to reader, using an information or a warning block, use the following code:
 
 ```
-<InlineNotification kind="warning">
-Warning: please do not shut down the cluster at this stage.
-</InlineNotification>
+!!! warning
+    Warning: please do not shut down the cluster at this stage.
 ```
 
 This will show up as:
-<InlineNotification kind="warning">
-Warning: please do not shut down the cluster at this stage.
-</InlineNotification>
+!!! warning
+    Warning: please do not shut down the cluster at this stage.
 
-You can also `info` and `error` for `kind`.
+You can also `info` and `error`.

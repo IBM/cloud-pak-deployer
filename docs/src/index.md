@@ -1,4 +1,4 @@
-# Introduction to the Cloud Pak Deployer
+# Cloud Pak Deployer
 The intention of the Cloud Pak Deployer is to simplify the initial installation and also continuous management of OpenShift and the Cloud Paks on top of that, driven by automation. It will help you deploy (currently) Cloud Pak for Data on various OpenShift and infrastructures such as IBM Cloud ROKS, Azure Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), vSphere and also existing OpenShift.
 
 The Cloud Pak Deployer was created for a joint project with one of our key partners who need to fully automate the deployment of Cloud Pak for Data on IBM Cloud based on a configuration that is kept in a Git repository. As additional needs for the deployed environment surface, the configuration is changed, committed, approved and then changes are deployed without destroying the current environment.

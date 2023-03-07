@@ -5,6 +5,7 @@ title: Continuous Adoption using GitOps
 The process of supporting multiple products, releases and patch levels within a release has great similarity to the git-flow model, which has been really well-described by Vincent Driessen in his blog post: https://nvie.com/posts/a-successful-git-branching-model/. This model has been and is still very popular with many software-development teams.
 
 Below is a description of how a git-flow could be implemented with the Cloud Pak Deployer. The following steps are covered:
+
 * Setting up the company's Git and image registry for the Cloud Paks
 * The git-flow change process
 * Feeding Cloud Pak changes into the process
@@ -12,7 +13,7 @@ Below is a description of how a git-flow could be implemented with the Cloud Pak
 
 ## Environments, Git and registry
 
-![Governed Process with Continuous Adoption](governed-process-ca.png "Governed Process Continuous Adoption").
+![Governed Process with Continuous Adoption](images/governed-process-ca.png "Governed Process Continuous Adoption").
 
 There are 4 Cloud Pak environments within the company's domain: Dev, UAT, Pre-prod and Prod. Each of these environments have a namespace in the company's registry (or an isolated registry could be created per environment) and the Cloud Pak release installed is represented by manifests in a branch of the Git repository, respectively dev, uat, pp and prod.
 
@@ -45,11 +46,12 @@ If Cloud Pak for Data has been configured with a private registry in the deploye
 With the initial status in place, the continuous adoption process may commence, using the principles of git-flow.
 
 Git-flow addresses a couple of needs for continuous adoption:
+
 * Control and visibility over what software (version) runs in which environment; there is a central truth which describes the state of every environment managed
 * New features (in case of the deployer: new operator versions and custom resources) can be tested without affecting the pending releases or production implementation
 * While preparing for a new release, hot fixes can still be applied to the production environments
 
-![git-flow](git-flow.png)
+![git-flow](images/git-flow.png)
 
 The Git repository consists of 4 branches: dev, uat, pp and prd. At the start, release 4.0.0 is being implemented and it will go through the stages from dev to prd. When the installation has been tested in development, a pull request (PR) is done to promote to the uat branch. The PR is reviewed, and changes are then merged into the uat branch. After testing in the uat branch, the steps are repeated until the 4.0.0 release is eventually in production.
 

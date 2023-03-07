@@ -55,6 +55,7 @@ title: Deployment timings
 | ws  | Watson Studio | 30 | N/A | ccs |
 
 Examples:
+
 * Cloud Pak for Data installation with just Cognos Analytics will take 20 (control plane) + 75 (ccs) + 20 (ca) + 45 (ca instance) = ~160 minutes
 * Cloud Pak for Data installation with Cognos Analytics and Watson Studio will take 20 (control plane) + 75 (ccs) + 45 (ws+ca) + 45 (ca instance) = ~185 minutes
 * Cloud Pak for Data installation with just Watson Knowledge Catalog will take 20 (control plane) + 75 (ccs) + 30 (db2aas) + 60 (iis) + 90 (wkc) = ~275 minutes

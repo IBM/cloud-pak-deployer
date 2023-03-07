@@ -4,6 +4,7 @@
 Cloud Pak Deployer can use properties set in the global configuration (`global_config`) during the deployment process and also as substitution variables in the configuration, such as `"{{ ibm_cloud_region }}"`. 
 
 The following `global_config` variables are automatically copied into a "simple" form:
+
 * `environment_name`: Name used to group secrets, typically you will specify `sample`
 * `cloud_platform`: Cloud platform applicable to configuration, such as `ibm-cloud`, `aws`, `azure`
 * `ibm_cloud_region`: When Cloud Platform is `ibm-cloud`, the region into which the ROKS cluster is deployed

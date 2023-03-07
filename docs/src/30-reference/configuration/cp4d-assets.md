@@ -9,6 +9,7 @@ You can create one or more subdirectories under the specified location, each hol
 
 The following runtime attributes will be set prior to running the shell script or the Ansible task:
 * If the Cloud Pak for Data instances has the Common Core Services (CCS) custom resource installed, `cpdctl` is configured for the current Cloud Pak for Data instance and the current context is set to the `admin` user of the instance. This means you can run all `cpdctl` commands without first having to login to Cloud Pak for Data.
+* 
 * The current working directory is set to the directory holding the `cp4d-asset.sh` script.
 * When running the `cp4d-asset.sh` shell script, the following environment variables are available:
     - `CP4D_URL`: Cloud Pak for Data URL
@@ -35,6 +36,7 @@ cp4d_asset:
 Below is an example asset that implements the **Customer Attrition** industry accelerator, which can be found here: https://github.com/IBM/Industry-Accelerators/blob/master/CPD%204.0.1.0/utilities-customer-attrition-prediction-industry-accelerator.tar.gz
 
 To implement:
+
 * Download the zip file to the `cp4d-assets` directory in the specified configuration directory
 * Create the `cp4d-asset.sh` shell script (example below)
 * Add a `cp4d_asset` entry to the Cloud Pak for Data config file in the `config` directory (or in any other file with extention `.yaml`)

@@ -118,6 +118,7 @@ cat /tmp/sample-terraform-tfstate | jq -r '.resources[]' | grep -A 10 -E "ibm_is
 ```
 
 In the above examples, the IP addresses are:
+
 * Bastion public IP address: `149.81.215.172`
 * NFS server private IP address: `10.227.0.138`
 

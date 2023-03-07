@@ -39,62 +39,7 @@ cp4d:
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
 | image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
 | openshift_storage_name | References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | No, inferred from openshift->openshift_storage | |
-| cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](/30-reference/configuration/cp4d-cartridges) for more details | Yes | |
-
-### `image_registry`
-Defines a private registry that will be used for pulling the Cloud Pak container images from. Additionally, if the Cloud Pak entitlement key was specified at run time of the deployer, the images defined by the case files will be mirrored to this private registry.
-```
-image_registry:
-- name: cpd404
-  registry_host_name: cpd404.example.com
-  registry_port: 5000
-  registry_namespace: cpd404
-  registry_insecure: false
-  registry_trusted_ca_secret: cpd404-ca-bundle
-```
-
-#### Properties
-| Property | Description                                                          | Mandatory | Allowed values |
-| -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| name     | Name by which the image registry is identified.                      | Yes       |  |
-| registry_host_name | Host name of the registry server/service.                  | Yes       |  |
-| registry_port | Port that the image registry listens on. Default is the https port (443) | No | |
-| registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory only when using the IBM Cloud Container Registry (ICR)    | No       | |
-| registry_insecure | Defines whether insecure registry access with a self-signed certificate is allowed | No       | True, False (default) |
-| registry_trusted_ca_secret | Defines the vault secret which holds the certificate authority bundle that must be used when connecting to this private registry. This parameter cannot be specified if `registry_insecure` is also specified. | No       |  |
-
-When mirroring images, the deployer connects to the registry using the host name and port. If the port is omitted, the standard https protocol (443) is used. If a `registry_namespace` is specified, for example when using the IBM Container Registry on IBM Cloud, it will be appended to the registry URL.
-
-The user and password to connect to the registry will be retrieved from the vault, using secret `image-registry-<your_image_registry_name>` and must be stored in the format `registry_user:registry_password`. For example, if you want to connect to the image registry `cpd404` with user `admin` and password `very_s3cret`, you would create a secret as follows:
-```
-./cp-deploy.sh vault set \
-  -vs image-registry-cpd404 \
-  -vsv "admin:very_s3cret"
-```
-
-If you need to connect to a private registry which is not signed by a public certificate authority, you have two choices:
-* Store the PEM certificate that that holds the CA bundle in a vault secret and specify that secret for the `registry_trusted_ca_secret` property. This is the recommended method for private registries.
-* Specify `registry_insecure: false` (not recommended): This means that the registry (and port) will be marked as insecure and OpenShift will pull images from it, even if its certificate is self-signed.
-
-For example, if you have a file `/tmp/ca.crt` with the PEM certificate for the certificate authority, you can do the following:
-```
-./cp-deploy.sh vault set \
-  -vs cpd404-ca-bundle \
-  -vsf /tmp/ca.crt
-```
-
-This will create a vault secret which the deployer will use to populate a `configmap` in the `openshift-config` project, which in turn is referenced by the `image.config.openshift.io/cluster` custom resource. For the above configuration, configmap `cpd404-ca-bundle` would be created and teh `image.config.openshift.io/cluster` would look something like this:
-```
-apiVersion: config.openshift.io/v1
-kind: Image
-metadata:
-...
-...
-  name: cluster
-spec:
-  additionalTrustedCA:
-    name: cpd404-ca-bundle
-```
+| cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](../../../30-reference/configuration/cp4d-cartridges) for more details | Yes | |
 
 ## `cp4i`
 Defines the Cloud Pak for Integration installation to be configured on the OpenShift cluster(s).
@@ -162,9 +107,8 @@ The following properties are defined on the project level:
 | operators_in_all_namespaces     | It defines whether the operators are visible in all namespaces or just in the specific namespace where they are needed.  | No | True, False (default) |
 | instances                       | List of the instances that are going to be created (please see below). | Yes | |
 
-<InlineNotification kind="warning">
-  Note: Despite the properties *use_case_files*, *use_top_level_operator* and *operators_in_all_namespaces* are defined as optional, they are actually crucial for the way of execution of the installation process. If any of them is omitted, it is assumed that the default *False* value is used. If none of them exists, it means that all are *False*. In this case, it means that the *IBM Operator Catalog* is used and only the needed operators for specified instance types are installed in the specific namespace. 
-</InlineNotification>
+!!! warning
+    Despite the properties *use_case_files*, *use_top_level_operator* and *operators_in_all_namespaces* are defined as optional, they are actually crucial for the way of execution of the installation process. If any of them is omitted, it is assumed that the default *False* value is used. If none of them exists, it means that all are *False*. In this case, it means that the *IBM Operator Catalog* is used and only the needed operators for specified instance types are installed in the specific namespace. 
 
 ### Properties of the individual instances
 

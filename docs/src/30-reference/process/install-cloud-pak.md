@@ -8,6 +8,7 @@ tabs: ['Overview', 'Validate', 'Prepare', 'Provision-infra', 'Configure-infra', 
 This stage focuses on preparing the OpenShift cluster for installing the Cloud Pak(s) and then proceeds with the installation of Cloud Paks and the cartridges. The below documentation will start with a list of steps that will be executed for all Cloud Paks, then proceed with Cloud Pak specific activities. The execution of the steps may slightly differ from the sequence in the documentation.
 
 Sections:
+
 * [Remove obsolete Cloud Pak for Data instances](#remove-cloud-pak-for-data)
 * [Prepare private image registry](#prepare-private-image-registry)
 * [Install Cloud Pak for Data and cartridges](#install-cloud-pak-for-data-and-cartridges)
@@ -34,6 +35,7 @@ If an image registry has been specified for the Cloud Pak using the `image_regis
 
 ### Prepare OpenShift cluster for Cloud Pak for Data installation
 Cloud Pak for Data requires a number of cluster-wide settings:
+
 * Create an `ImageContentSourcePolicy` if images must be pulled from a private registry
 * Set the global pull secret with the credentials to pull images from the entitled or private image registry
 * Create a `Tuned` object to set kernel semaphores and other properties of CoreOS containers being spun up
@@ -70,6 +72,7 @@ Most custom resources defined by the cartridge operators require some back-end s
 
 ### Prepare the Cloud Pak for Data operator
 When using express install, the Cloud Pak for Data operator also installs the Cloud Pak Foundational Services. Consecutively, this part of the deployer:
+
 * Creates the `ibm-common-services` project if it doesn't exist already
 * Creates an OperatorGroup
 * Creates the platform operator subscription
