@@ -1,51 +1,36 @@
 # Documentation Development setup
 
-Gatsby themes encapsulate all of the configuration and implementation details of Gatsby websites. This GitHub repository has been built with a dependancy on the gatsby-theme-carbon package. The primary goal of gatsby-theme-carbon is to get content authors speaking the IBM Design Language with Carbon as soon as possible. This GiHub repository is connected to Travis any commit will cause a build of the GitHub pages to be triggered. A better way of working is to use the tooling from a loacal system
+Mkdocs themes encapsulate all of the configuration and implementation details of static documentation sites. This GitHub repository has been built with a dependency on the Mkdocs tool. This GiHub repository is connected to GitHub Actions; any commit to the `main` branch will cause a build of the GitHub pages to be triggered. The preferred method of working while developing documentation is to use the tooling from a loacal system
 
 ## Local tooling installation
-If you want to test the documentation pages you're developing, it is best to run Gatsby in a container and map your local doc folder to a folder inside the container. This avoids having to install nvm and many modules on your workstation.
+If you want to test the documentation pages you're developing, it is best to run Mkdocs in a container and map your local `docs` folder to a folder inside the container. This avoids having to install nvm and many modules on your workstation.
 
 Do the following:
+
 * Make sure you have cloned this repository to your development server
 * Start from the main directory of the cloud-pak-deployer repository
 ```
-cd doc
-podman build -t cpd-doc .
+cd docs
+./dev-doc-build.sh
 ```
 
-This will build a Red Hat UBI image with `nvm` and the required Node.js modules already installed. It will take ~5-10 minutes to complete this step, dependent on your network bandwidth.
+This will build a Red Hat UBI image with all requirements pre-installed. It will take ~2-10 minutes to complete this step, dependent on your network bandwidth.
 
 ## Running the documentation image
 ```
-podman rm -f cpd-doc 2>/dev/null && \
-rm -rf public node_modules .cache package-lock.json && \
-podman run --name cpd-doc -d -p 8000:8000 -v $PWD:/doc:Z cpd-doc:latest && \
-podman logs -fl
+./dev-doc-run.sh
 ```
 
-This will start the container as a daemon and tail the logs. It will take approximaely 5-10 minutes to download packages and build the server. Once finished, you will see the following message:
+This will start the container as a daemon and tail the logs. Once running, you will see the following message:
 ```output
-✖ 6 problems (0 errors, 6 warnings)
-
-success Building development bundle - 369.543s
-```
-
-Whenever you save changes to a document, the logs will show something:
-```output
-info changed file at /doc/src/pages/tools/development-setup.mdx
-success building schema - 0.634s
-info Total nodes: 147, SitePage nodes: 17 (use --verbose for breakdown)
-success createPages - 0.004s
-success Checking for changed pages - 0.001s
-success update schema - 0.047s
-success onPreExtractQueries - 0.001s
-success extract queries from components - 0.624s
 ...
-success Re-building development bundle - 2.436s
+INFO     -  Documentation built in 3.32 seconds
+INFO     -  [11:55:49] Watching paths for changes: 'src', 'mkdocs.yml'
+INFO     -  [11:55:49] Serving on http://0.0.0.0:8000/cloud-pak-deployer/...
 ```
 
 ## Starting the browswer
-Once you the container has fully started, it automatically tracks all changes in under the `doc` folder and updates the pages site automatically. You can view the site by opening a browswer for URL:
+Now that the container has fully started, it automatically tracks all changes under the `docs` folder and updates the pages site automatically. You can view the site by opening a browswer for URL:
 
 http://localhost:8000
 
@@ -55,7 +40,7 @@ If you don't want to test your changes locally anymore, stop the docker containe
 podman kill cpd-doc
 ```
 
-Next time you want to test your changes, re-run the series of commands that delete the container, delete cache and build the documentation.
+Next time you want to test your changes, re-run the `./dev-doc-run.sh`, which will delete the container, delete cache and build the documentation.
 
 ## Removing the docker container and image
 If you want to remove all from your development server, do the following:
