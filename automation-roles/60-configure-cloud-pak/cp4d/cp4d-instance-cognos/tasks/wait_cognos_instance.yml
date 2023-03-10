@@ -3,7 +3,7 @@
   debug:
     msg: "{{ _cognos_instance }}"
 
-- name: Retrieve running Cognos Analytics instance {{ _cognos_instance.name }}
+- name: Waiting for Cognos Analytics instance {{ _cognos_instance.name }} to appear
   uri:
     url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&display_name={{ _cognos_instance.name }}'
     method: GET
@@ -13,10 +13,19 @@
     return_content: yes
     validate_certs: no
     status_code: 200
-  register: _cognos_lookup_result
+  register: _cognos_name_lookup_result
+  until: _cognos_name_lookup_result.json.total_count == 1
+  retries: 120
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
 
 - set_fact:
-    _cognos_id: "{{ (_cognos_lookup_result.json.service_instances | first).id }}"
+    _cognos_id: "{{ (_cognos_name_lookup_result.json.service_instances | first).id }}"
 
 - set_fact:
     _cognos_instance_pods_count: "7"
