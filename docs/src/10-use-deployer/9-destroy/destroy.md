@@ -56,7 +56,7 @@ export CONFIG_DIR=$HOME/cpd-config
 ## Run the Cloud Pak Deployer to destroy the assets
 
 ```
-./cp-deploy.sh env destroy -e env_id=pluto-01 --confirm-destroy
+./cp-deploy.sh env destroy --confirm-destroy
 ```
 
 Please ensure you specify the same extra (dynamic) variables that you used when you ran the `env apply` command.

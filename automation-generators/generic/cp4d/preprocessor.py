@@ -31,7 +31,7 @@ import re
 # ---
 
 #cp4d:
-#- project: zen-40
+#- project: cpd
 #  openshift_cluster_name: sample
 #  cp4d_version: 4.0.9
 #  openshift_storage_name: nfs-storage

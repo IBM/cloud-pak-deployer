@@ -12,7 +12,7 @@ Defines the Cloud Pak(s) which is/are layed out on the OpenShift cluster, typica
 Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
 ```
 cp4d:
-- project: zen-40
+- project: cpd
   openshift_cluster_name: sample
   cp4d_version: 4.0.9
   use_case_files: False

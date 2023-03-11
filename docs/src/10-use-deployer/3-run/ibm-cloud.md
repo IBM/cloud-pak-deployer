@@ -56,7 +56,7 @@ export CONFIG_DIR=$HOME/cpd-config
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 --check-only [--accept-all-licenses]
+./cp-deploy.sh env apply --check-only [--accept-all-licenses]
 ```
 
 ## Run the Cloud Pak Deployer
@@ -64,10 +64,10 @@ If you only want to validate the configuration, you can run the dpeloyer with th
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 -e ibm_cloud_region=eu-gb [--accept-all-licenses]
+./cp-deploy.sh env apply [--accept-all-licenses]
 ```
 
-In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. Also, the default `ibm_cloud_region` as configured in the inventory file (under the `inventory` directory) is overridden by `eu-gb`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
+In the above commanYou can also specify extra variables such as `env_id` and `ibm_cloud_region` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -104,8 +104,8 @@ cat $STATUS_DIR/cloud-paks/*
 This will show the Cloud Pak URLs:
 
 ```output
-Cloud Pak for Data URL for cluster pluto-01 and project zen-40:
-https://cpd-zen-40.fke16h-a939e0e6a37f1ce85dbfddbb7ab97418-0000.eu-de.containers.appdomain.cloud
+Cloud Pak for Data URL for cluster pluto-01 and project cpd:
+https://cpd-cpd.fke16h-a939e0e6a37f1ce85dbfddbb7ab97418-0000.eu-de.containers.appdomain.cloud
 ```
 
 List the secrets in the vault:
