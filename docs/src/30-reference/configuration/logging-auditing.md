@@ -70,7 +70,7 @@ If you also want to activate audit logging for Cloud Pak for Data, you can do th
 
 ```
 cp4d_audit_config:
-- project: zen-40
+- project: cpd
   audit_replicas: 2
   audit_output:
   - type: openshift-logging
@@ -97,7 +97,7 @@ Additionally, for the `audit_output` entries, the OpenShift logging `ClusterLogF
 
 ```
 cp4d_audit_config:
-- project: zen-40
+- project: cpd
   audit_replicas: 2
   audit_output:
   - type: openshift-logging

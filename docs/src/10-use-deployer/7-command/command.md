@@ -12,25 +12,24 @@ Make sure you have set the **CONFIG_DIR** and **STATUS_DIR** environment variabl
 If you have not run the deployer yet and do not intend to install any Cloud Paks, but you do want to access the OpenShift cluster from the command line to check or prepare items, run the deployer with the `--skip-cp-install` flag.
 
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 --skip-cp-install
+./cp-deploy.sh env apply --skip-cp-install
 ```
 
 Deployer will check the configuration, download clients, attempt to login to OpenShift and prepare the OpenShift cluster with the global pull secret and (for Cloud Pak for Data) node settings. After that the deployer will finish without installing any Cloud Pak.
 
 ## Run the Cloud Pak Deployer command line
 ```
-./cp-deploy.sh env cmd -e env_id=pluto-01 
+./cp-deploy.sh env cmd 
 ```
 
 You should see something like this:
 ```
-Extra parameters (0): env_id=pluto-01
 -------------------------------------------------------------------------------
 Entering Cloud Pak Deployer command line in a container.
 Use the "exit" command to leave the container and return to the hosting server.
 -------------------------------------------------------------------------------
 Installing OpenShift client
-Current OpenShift context: zen-40
+Current OpenShift context: cpd
 ```
 
 Now, you can check the OpenShift cluster version:
@@ -56,7 +55,7 @@ kube-system                                                       Active
 openshift                                                         Active
 services                                                          Active
 tigera-operator                                                   Active
-zen-40                                                            Active
+cpd                                                            Active
 ```
 
 ## Exit the command line

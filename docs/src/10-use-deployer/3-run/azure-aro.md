@@ -179,7 +179,7 @@ You need to store all `ARO_` environments variables together with the OpenShift 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 -e azure_location=westeurope [--accept-all-licenses]
+./cp-deploy.sh env apply -e azure_location=westeurope [--accept-all-licenses]
 ```
 
 For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).

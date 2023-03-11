@@ -5,10 +5,12 @@ In some situations you may want to use a single configuration for deployment in 
 
 Example:
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 -e ibm_cloud_region=eu_gb [--accept-all-liceneses]
+./cp-deploy.sh env apply \
+  -e ibm_cloud_region=eu_gb \
+  -e env_id=jupiter-03 [--accept-all-liceneses]
 ```
 
-This passes the `env_id` and `ibm_cloud_region` variables to the Cloud Pak Deployer, which can then populate variables in the configuration. In the sample configurations, the `env_id` is used to specify the name of the VPC, ROKS cluster and others and the `ibm_cloud_region` overrides region specified in the inventory file.
+This passes the `env_id` and `ibm_cloud_region` variables to the Cloud Pak Deployer, which can then populate variables in the configuration. In the sample configurations, the `env_id` is used to specify the name of the VPC, ROKS cluster and others and overrides the value specified in the `global_config` definition. The `ibm_cloud_region` overrides region specified in the inventory file.
 
 ```
 ...
@@ -29,13 +31,13 @@ When running with the above `cp-deploy.sh` command, the snippet would be generat
 ```
 ...
 vpc:
-- name: "pluto-01"
+- name: "jupiter-03"
   allow_inbound: ['ssh']
 
 address_prefix:
 ### Prefixes for the client environment
-- name: "pluto-01-zone-1"
-  vpc: "pluto-01"
+- name: "jupiter-03-zone-1"
+  vpc: "jupiter-03"
   zone: eu-de-1
   cidr: 10.231.0.0/26
 ...
@@ -51,7 +53,7 @@ An example where the OpenShift OCS storage classes would only be generated for a
   - storage_name: nfs-storage
     storage_type: nfs
     nfs_server_name: "{{ env_id }}-nfs"
-{% if env_id == 'pluto-prod' %}
+{% if env_id == 'jupiter-prod' %}
   - storage_name: ocs-storage
     storage_type: ocs
     ocs_storage_label: ocs

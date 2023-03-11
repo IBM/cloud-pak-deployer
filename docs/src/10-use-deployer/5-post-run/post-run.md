@@ -30,5 +30,5 @@ Then, update the password:
 
 Finally, run the deployer again. It will make the necessary changes to the OpenShift secret and check that the `admin` user can log in. In this case you can speed up the process via the `--skip-infra` flag.
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 --skip-infra [--accept-all-liceneses]
+./cp-deploy.sh env apply --skip-infra [--accept-all-liceneses]
 ```
