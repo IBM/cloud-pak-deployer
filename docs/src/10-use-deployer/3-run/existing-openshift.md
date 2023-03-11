@@ -130,7 +130,7 @@ If you only want to validate the configuration, you can run the dpeloyer with th
 If the cluster is air-gapped, make sure you add the `--air-gapped` flag
 
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 --check-only [--accept-all-licenses]
+./cp-deploy.sh env apply --check-only [--accept-all-licenses]
 ```
 
 ## Run the Cloud Pak Deployer
@@ -146,10 +146,10 @@ If the cluster is air-gapped, make sure you add the `--air-gapped` flag
 If you have chosen to use dynamic properties (extra variables), you can specify these on the command line, see below. Extra variables are covered in [advanced configuration](../../../50-advanced/advanced-configuration).
 
 ```
-./cp-deploy.sh env apply -e env_id=pluto-01 [--accept-all-licenses]
+./cp-deploy.sh env apply [--accept-all-licenses]
 ```
 
-In the above command, the `env_id` extra variable defines the names of the objects that are being created; these are referenced in the `.yaml` configuration files as `{{ env_id }}`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../advanced/advanced-configuration).
+You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -186,8 +186,8 @@ cat $STATUS_DIR/cloud-paks/*
 This will show the Cloud Pak URLs:
 
 ```output
-Cloud Pak for Data URL for cluster pluto-01 and project zen-40:
-https://cpd-zen-40.apps.pluto-01.example.com
+Cloud Pak for Data URL for cluster pluto-01 and project cpd:
+https://cpd-cpd.apps.pluto-01.example.com
 ```
 
 List the secrets in the vault:

@@ -82,8 +82,7 @@ export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ
 
 * Run the `./cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
 ```
-./cp-deploy.sh env apply \
-    -e env_id=pluto-01 
+./cp-deploy.sh env apply
 ```
 The existence of the `image_registry` definition and its reference in the `cp4d` definition instruct the deployer to mirror images to the private registry and to configure the OpenShift cluster to pull images from the private registry. If you have already mirrored the Cloud Pak images, you can add the `--skip-mirror-images` parameter to speed up the deployment process.
 
@@ -121,7 +120,6 @@ If the status directory does not exist it is created at this point.
 * Run the deployer using the `./cp-deploy.sh env download --skip-portable-registry` command. For example:
 ```
 ./cp-deploy.sh env download \
-    -e env_id=pluto-01 \
     --skip-portable-registry
 ```
 This will download all clients to the status directory and then mirror images from the entitled registry to the private registry. If mirroring fails, fix the issue and just run the `env download` again.
@@ -167,7 +165,6 @@ export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ
 ```
 cd cloud-pak-deployer
 ./cp-deploy.sh env apply \
-    -e env_id=pluto-01 \
     --skip-mirror-images
 ```   
 
@@ -201,8 +198,7 @@ This use case is also usually referred to as "air-gapped", where the following c
 
 * Run the deployer using the `./cp-deploy.sh env download` command. For example:
 ```
-./cp-deploy.sh env download \
-    -e env_id=pluto-01
+./cp-deploy.sh env download
 ```
 This will download all clients, start the portable registry and then mirror images from the entitled registry to the **portable registry**. The portable registry data is kept in the status directory. If mirroring fails, fix the issue and just run the `env download` again.
 
@@ -252,8 +248,7 @@ export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ
 
 * Run the `./cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
 ```
-./cp-deploy.sh env apply \
-    -e env_id=pluto-01
+./cp-deploy.sh env apply
 ```  
 The `CPD_AIRGGAP` environment variable tells the deployer it will not download anything from the internet. As a first action, the deployer mirrors images from the portable registry to the private registry included in the configuration (`image_registry`)
 

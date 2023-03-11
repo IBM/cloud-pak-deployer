@@ -5,7 +5,7 @@ import sys
 # ---
 # cp4d_asset:
 # - name: sample-assets
-#   project: zen-40
+#   project: cpd
 #   asset_location: assets
 
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):

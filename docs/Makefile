@@ -60,7 +60,7 @@ package:
 # help: deploy                         - deploy project to github pages
 .PHONY: deploy
 deploy:
-	@/bin/bash -c "source $(VENV_DIR)/bin/activate && mkdocs gh-deploy -t material"
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && mkdocs gh-deploy -t material --force"
 
 # Keep these lines at the end of the file to retain output formatting.
 # help:

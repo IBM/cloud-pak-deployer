@@ -5,6 +5,6 @@ Cloud Pak Deployer supports various public and private cloud infrastructures. Cl
 * [Existing OpenShift](existing-openshift.md)
 * [IBM Cloud](ibm-cloud.md)
 * [AWS - ROSA](aws-rosa.md)
-* [AWS - Selfmanaged](aws-self-managed.md)
+* [AWS - Self-managed](aws-self-managed.md)
 * [Azure - ARO](azure-aro.md)
 * [vSphere](vsphere.md)

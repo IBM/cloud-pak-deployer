@@ -27,7 +27,7 @@ The IBM Cloud Portworx service is created.  This installs Portworx pods to all w
 An OpenShift cluster with the specified version (4.6) is provisioned inside the VPC and across subnets 1, 2 and 3.
 
 ## Cloud Pak for Data
-Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the IBM entitled registry and referencing the Portworx storage class in OpenShift.
+Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the IBM entitled registry and referencing the Portworx storage class in OpenShift.
 
 ### Cartridges
 The sample configuration holds a list of cartridges which will be installed. You can control whether cartridges will be installed by commenting or uncommenting the appropriate blocks. Please ensure that the cartridge elements are aligned (hyphens must be aligned with hyphens and properties with properties).
