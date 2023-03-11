@@ -1,7 +1,3 @@
----
-title: Deployment timings
----
-
 # Timings for the deployment
 
 ## Duration of the overall deployment process
