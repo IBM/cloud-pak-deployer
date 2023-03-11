@@ -1,8 +1,3 @@
----
-title: Configure the Cloud Pak
-tabs: ['Overview', 'Validate', 'Prepare', 'Provision-infra', 'Configure-infra', 'Install-cloud-pak', 'Configure-cloud-pak', 'Deploy-assets', 'Smoke-tests']
----
-
 # Configure the Cloud Pak(s)
 
 This stage focuses on post-installation configuration of the Cloud Paks and cartridges.
@@ -31,7 +26,7 @@ The following Cloud Pak for Data cartridges are currently supported for creating
 ### Configure instance access
 Cloud Pak for Data does not support group-defined access to cartridge instances. After creation of the instances (and also when the deployer is run with the `--cp-config-only` flag), the permissions of users accessing the instance is configured.
 
-For Cognos Analytics, the [Cognos Authorization](cp4d-cartridges/cognos-authorization) process is run to apply user group permissions to the Cognos Analytics instance.
+For Cognos Analytics, the [Cognos Authorization](cp4d-cartridges/cognos-authorization.md) process is run to apply user group permissions to the Cognos Analytics instance.
 
 ### Create or change platform connections
 Cloud Pak for Data defines data source connections at the platform level and these can be reused in some cartridges like Watson Knowledge Catalog and Watson Studio. The `cp4d_connection` object defines each of the platform connections that must be managed by the deployer.
