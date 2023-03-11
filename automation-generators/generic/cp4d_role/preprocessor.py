@@ -4,7 +4,7 @@ import sys
 # Validating:
 # ---
 # cp4d_role:
-# - project: zen-40
+# - project: cpd
 #   openshift_cluster_name: {{ env_id }}
 #   name: My Test Role
 #   description: My Test Role Description

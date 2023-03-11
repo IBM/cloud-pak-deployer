@@ -20,7 +20,7 @@ The following runtime attributes will be set prior to running the shell script o
 ```
 cp4d_asset:
 - name: sample-asset
-  project: zen-40
+  project: cpd
   asset_location: cp4d-assets
 ```
 

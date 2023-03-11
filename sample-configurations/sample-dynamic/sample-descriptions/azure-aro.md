@@ -16,7 +16,7 @@ The cluster is provisioned across 3 availability zones. In the sample configurat
 
 ## Cloud Pak for Data
 
-Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the entitled registry and referencing the OCS storage classes in OpenShift.
+Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the entitled registry and referencing the OCS storage classes in OpenShift.
 
 ### Cartridges
 

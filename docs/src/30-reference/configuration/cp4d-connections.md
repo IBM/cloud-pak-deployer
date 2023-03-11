@@ -7,7 +7,7 @@ The `cp4d_connection` object can be used to create Global Platform connections.
 cp4d_connection:
 - name: connection_name                                 # Name of the connection, must be unique
   type: database                                        # Type, currently supported: [database]
-  cp4d_instance: zen-40                                 # CP4D instance on which the connection must be created
+  cp4d_instance: cpd                                    # CP4D instance on which the connection must be created
   openshift_cluster_name: cluster_name                  # OpenShift cluster name on which the cp4d_instance is deployed
   database_type: db2                                    # Type of connection
   database_hostname: hostname                           # Hostname of the connection
@@ -32,9 +32,9 @@ Using the Cloud Pak Deployer cp4d_backup_restore_connections capability implemen
 
 ```
 cp4d_backup_restore_connections:
-- cp4d_instance: zen-40
+- cp4d_instance: cpd
   openshift_cluster_name: {{ env_id }}
-  connections_backup_file: {{ env_id }}_zen-40_connections.json
-  connections_restore_file: {{ env_id }}_zen-40_connection.json
+  connections_backup_file: {{ env_id }}_cpd_connections.json
+  connections_restore_file: {{ env_id }}_cpd_connection.json
   connections_restore_overwrite: false
 ```
