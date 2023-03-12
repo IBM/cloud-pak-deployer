@@ -20,7 +20,7 @@
 
 - name: Waiting for Db2 OLTP instance {{ _db2_instance.name }} to complete its provisioning
   uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _db2_instance_id }}'
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _db2_instance_id }}?include_service_status=true'
     method: GET
     headers:
       Content-Type: application/json
@@ -29,7 +29,7 @@
     validate_certs: no
     status_code: 200
   register: _wait_for_db2_service
-  until: _wait_for_db2_service.json.service_instance.provision_status == "PROVISIONED"
+  until: _wait_for_db2_service.json.service_instance.metadata.status == "RUNNING"
   retries: 60
   delay: 30
   vars:

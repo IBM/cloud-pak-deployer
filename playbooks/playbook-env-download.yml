@@ -214,3 +214,32 @@
     when: 
     - not (cpd_check_only | default(False) | bool)
     - not (_ibm_pak_used | default(False) | bool)  # not executed if ibm-pak tool is used
+
+
+- name: 40 - Save config and deployer
+  hosts: localhost
+  connection: local
+  become: True
+  gather_facts: False
+
+  vars:
+    ansible_callback_diy_runner_on_skipped_msg: ""
+    ansible_callback_diy_runner_on_ok_msg: ""
+    ansible_callback_diy_playbook_on_include_msg: ""
+
+  tasks:
+  - name: Archive the deployer directory
+    community.general.archive:
+      path: /cloud-pak-deployer
+      dest: "{{ status_dir }}/cloud-pak-deployer.tar.gz"
+      mode: u=rwx,g=r,o=r
+
+  - name: Delete deployer config if existent
+    file:
+      path: "{{ status_dir }}/cpd-config"
+      state: absent
+
+  - name: Copy the deployer configuration
+    copy:
+      src: "{{ config_dir }}/"
+      dest: "{{ status_dir }}/cpd-config/"
