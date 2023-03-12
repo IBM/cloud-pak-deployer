@@ -1,7 +1,11 @@
 ---
 
-- name: Download CASE file for {{ current_cp4i_instance.type }}
+- name: Download CASE file and create mirror manifest for {{ current_cp4i_instance.type }} 
   block:
+
+  # 
+  # Download
+  #
 
   - name: Find version specific instance type properties
     include_tasks: get-instance-properties.yml
@@ -19,12 +23,20 @@
 
   - name: Save case file {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}
     shell: |
-      cloudctl case save \
-        --repo {{ case_github_url }} \
-        --case {{ _instance_type_details.package_name }} \
-        --version {{ instance_properties.case_version }} \
-        --outputdir {{ _case_dir }} 
+      oc ibm-pak get {{ _instance_type_details.package_name }} --version {{ instance_properties.case_version }}
+  #
+  # Mirror manifest when Entitled registry is used
+  #
+  - name: Create mirror manifest when Entitled registry is used
+    shell: |
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.package_name }} --version {{ instance_properties.case_version }} icr.io
+
+  #
+  # Mirror manifest when private registry is used
+  #    
+  # - name: Create mirror manifest when private registry is used
+  #   shell: |
+  #     oc ibm-pak generate mirror-manifests {{ _instance_type_details.package_name }} --version {{ instance_properties.case_version }} {{ current_cp4i_cluster.image_registry_url }}
+  #   when: not (_use_entitled_registry | bool)  
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'
-
-

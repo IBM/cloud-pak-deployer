@@ -1,7 +1,7 @@
 ---
 
 # Variables:
-#   _case_dir
+#
 #   current_cp4i_instance
 #   current_cp4i_cluster
 
@@ -22,19 +22,19 @@
       msg: The definition of instance type {{ instance_properties.type }} not found
     when: _instance_type_details=={}
 
+
   # -------------------- ENTITLED REGISTRY ----------------------------
 
-  - name: Create catalog source from CASE archive {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz
+  - name: Create catalog source from CASE {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }} for entitled registry
     shell: |
-      cloudctl case launch  \
-        --case {{ _case_dir }}/{{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz \
-        --inventory {{ _instance_type_details.case_inventory }} \
-        --action install-catalog \
-        --namespace {{ current_cp4i_cluster.project }} \
-        --args "--registry cp.icr.io --inputDir {{ _case_dir }} --recursive" 
+      oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ instance_properties.case_version }}/catalog-sources.yaml
+    when: (_use_entitled_registry | bool)  
 
   # -------------------- PRIVATE REGISTRY -----------------------------
 
-  # TODO(SJ) - Implement creating catalog source from CASE when private registry is used.
+  - name: Create catalog source from CASE {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }} for private registry
+    shell: |
+      oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ instance_properties.case_version }}/catalog-sources.yaml
+    when: not (_use_entitled_registry | bool)  
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'

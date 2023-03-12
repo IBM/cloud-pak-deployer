@@ -1,0 +1,21 @@
+---
+
+- name: Create content source policy for the selected instance
+  block:
+
+  - name: Get instance properties and instance type details
+    include_role: 
+      name: cp4i-instance-props
+    vars:
+      _p_current_cp4i_cluster: "{{ current_cp4i_cluster }}"
+      _p_current_cp4i_instance: "{{ current_cp4i_instance }}"
+    # returns:
+      # _instance_properties 
+      # _instance_type_details   
+
+  - name: Create policy
+    shell: |
+      oc apply -f  {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ _instance_properties.case_version }}/image-content-source-policy.yaml  
+
+
+  when: (current_cp4i_instance.state | default('installed')) == 'installed'
