@@ -1,17 +1,26 @@
 ---
+
+
 # ------------ SETTING PROCESSING FACTS -----------------------------
 
-- set_fact:
+- name: Use CASE files by default
+  set_fact:
     _use_case_files: True
 
-- set_fact:
-   _use_case_files: False
-  when: (not current_cp4i_cluster.use_case_files | default(True) | bool)
+- name: Ignore False value for use_case_files when private registry is used
+  block:
+  - name: Check the configuration for the use of CASE files
+    set_fact:
+     _use_case_files: False
+    when: (not current_cp4i_cluster.use_case_files | default(True) | bool)
+  when: not (_use_entitled_registry | bool)
 
-- set_fact:
+- name: Install operators in all namespaces by default
+  set_fact:
     _operators_in_all_namespaces: True
 
-- set_fact:
+- name: Check the configuration for the operators visbility
+  set_fact:
     _operators_in_all_namespaces: False
   when: (not current_cp4i_cluster.operators_in_all_namespaces | default(True) | bool)
 
@@ -24,15 +33,15 @@
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
-- name: Prepare case files for Cloud Pak for Integration when using private registry or when explicitly using case files
-  include_tasks: prepare-cp4i-case-files.yml
-  when: _use_case_files
+- name: Download CASE files
+  block:
+  - name: Loop through instances and download CASE files for defined types
+    include_tasks: download-case-file.yml
+    loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+    loop_control:
+      loop_var: current_cp4i_instance
+  when: _use_case_files and (_use_entitled_registry | bool)
 
-- name: Mirror images for Cloud Pak for Integration to private registry {{ current_cp4i_cluster.image_registry_name }}
-  include_tasks: mirror-images-cp4i.yml
-  when: 
-  - (current_cp4i_cluster.image_registry_name | default("")) != ""
-  - ibm_cp_entitlement_key != ""
 
 # ------------ OPENSHIFT OBJECTS ------------------------------------
 
@@ -46,8 +55,13 @@
 - name: Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration
   include_tasks: openshift-prepare-project.yml
 
-- name: Create entitlement key secret
-  include_tasks: create-entitlement-key-secret.yml
+- name: Create entitlement key secret when entitled registry is used
+  block:
+    # NOTE(SJ) This could be skipped because we add entitled key in 
+    # the cluster's global pull secret
+    - name: Create entitlement key secret
+      include_tasks: create-entitlement-key-secret.yml
+  when: (_use_entitled_registry | bool)
 
 # ------------ CREATING CATALOG SOURCES -----------------------------
 

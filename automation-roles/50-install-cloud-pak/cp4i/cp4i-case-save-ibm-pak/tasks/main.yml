@@ -1,0 +1,23 @@
+---
+
+# Input:
+#   _p_current_cp4i_cluster       : processed cluster 
+#
+
+# In/Out
+#   -ibm_pak_used : switch it to true 
+
+
+- debug:
+    msg: Saving cp4i CASE files
+
+- name: Set _ibm_pak_used flag to True
+  set_fact:
+    _ibm_pak_used: True
+
+- name: Loop through instances and download CASE files for defined types
+  include_tasks: download-case-file.yml
+  loop: "{{ _p_current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: _p_current_cp4i_instance
+
