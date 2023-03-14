@@ -24,7 +24,6 @@ command_usage() {
   echo "    wizard                  Start the Cloud Pak Deployer Wizard Web UI"
   echo "    kill                    Kill the current apply/destroy process"
   echo "    download                Download all assets for air-gapped installation"
-  echo "    save                    Complete air-gapped download preparation"
   echo "  vault:"
   echo "    get                     Get a secret from the vault and return its value"
   echo "    set                     Create or update a secret in the vault"
@@ -167,7 +166,7 @@ environment)
     export ACTION="wizard"
     shift 1
     ;;
-  logs|kill|save)
+  logs|kill|download)
     if ${INSIDE_CONTAINER};then
       echo "$ACTION action not allowed when running inside container"
       exit 99
@@ -609,6 +608,17 @@ fi
 # Check existence of directories                                                                            #
 # --------------------------------------------------------------------------------------------------------- #
 
+# Validate if the status has been set
+if [ "${STATUS_DIR}" == "" ]; then
+  echo "Status directory not specified, assuming $HOME/cpd-status"
+  export STATUS_DIR=$HOME/cpd-status
+fi
+
+if [[ "${CPD_AIRGAP}" == "true" ]] && [[ "${CONFIG_DIR}" == "" ]];then
+  echo "Setting deployer configuration directory to ${STATUS_DIR}/cpd-config default for air-gapped installs"
+  export CONFIG_DIR=${STATUS_DIR}/cpd-config
+fi
+
 # Validate if the configuration directory exists and has the correct subdirectories
 if [[ "${ACTION}" != "kill" ]]; then
   if [ "${CONFIG_DIR}" == "" ]; then
@@ -631,12 +641,6 @@ if [[ "${ACTION}" != "kill" ]]; then
       exit 1
     fi
   fi
-fi
-
-# Validate if the status has been set
-if [ "${STATUS_DIR}" == "" ]; then
-  echo "Status directory not specified, assuming $HOME/cpd-status"
-  export STATUS_DIR=$HOME/cpd-status
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -707,17 +711,17 @@ fi
 
 # Ensure status directory exists
 if [ "$STATUS_DIR" != "" ];then
-  mkdir -p $STATUS_DIR/{log,pid}
+  mkdir -p $STATUS_DIR/{log,pid,downloads}
 fi
 
 # Make sure that Deployer image exists
 if [ "${CPD_AIRGAP}" == "true" ];then
   if ! ${CPD_CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
-    if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar ];then
+    if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar ];then
       echo "Loading Cloud Pak Deployer image from tar file..."
-      ${CPD_CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
+      ${CPD_CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar
     else
-      echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
+      echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
       exit 99
     fi
   fi
@@ -759,10 +763,6 @@ if ! $INSIDE_CONTAINER;then
       run_env_logs
       exit 0
     fi
-  elif [[ "${ACTION}" == "save" && "${ACTIVE_CONTAINER_ID}" != "" ]];then
-      echo "Cloud Pak Deployer is still running for status directory ${STATUS_DIR}"
-      echo "Cannot save current state until the process has completed"
-      exit 1
   # Display the logs if an active or inactive container was found
   elif [[ "${ACTION}" == "logs" ]];then
     if [[ "${CURRENT_CONTAINER_ID}" == "" ]];then
@@ -785,14 +785,12 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# If save action, save Deployer image
-if [[ "${ACTION}" == "save" ]] && ! ${CHECK_ONLY};then
-  echo "Destroying old archives for deployer"
-  rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar
-  echo "Saving Deployer registry image into ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar"
-  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-airgap.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
-  echo "Finished saving deployer assets into directory ${STATUS_DIR}. This directory can now be shipped."
-  exit 0
+# If download action, save Deployer image
+if [[ "${ACTION}" == "download" ]] && ! ${CHECK_ONLY};then
+  echo "Removing old archives for deployer container image"
+  rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar
+  echo "Saving Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG} into ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
+  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
 fi
 
 # Build command when not running inside container
@@ -804,7 +802,7 @@ if ! $INSIDE_CONTAINER;then
     run_cmd+=" --name ${CPD_CONTAINER_NAME}"
   fi
 
-  # If running "environment" subcommand with apply or destroy, run as daemon
+  # If running "environment" subcommand with some subcommands run as daemon
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
     run_cmd+=" -d"
   fi

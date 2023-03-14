@@ -41,6 +41,10 @@ cp4d:
 The deployer only supports using a private registry for the Cloud Pak images, not for OpenShift itself. Air-gapped installation of OpenShift is currently not in scope for the deployer.
 </InlineNotification>
 
+<InlineNotification kind="warning">
+The `registry_host_nae` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
+</InlineNotification>
+
 The main 3 directories that are needed for both types of air-gapped installations are:
 * Cloud Pak Deployer directory: `cloud-pak-deployer`
 * Configuration directory: The directory that holds a all the Cloud Pak Deployer configuration
@@ -65,7 +69,7 @@ The bastion server is connected to the internet and OpenShift cluster.
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
 * Export the CP_ENTITLEMENT_KEY environment variable with your Cloud Pak entitlement key
-* Create a vault secret holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example:
+* Create a vault secret `image-registry-<name>` holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example for a registry definition with name `cpd453`, create secret `image-registry-cpd453`.
 ```
 ./cp-deploy.sh vault set \
     -vs image-registry-cpd453 \
@@ -105,7 +109,7 @@ Please note that in this case the Cloud Pak Deployer expects an OpenShift cluste
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
 * Export the CP_ENTITLEMENT_KEY environment variable with your Cloud Pak entitlement key
-* Create a vault secret holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example:
+* Create a vault secret `image-registry-<name>` holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example for a registry definition with name `cpd453`, create secret `image-registry-cpd453`.
 ```
 ./cp-deploy.sh vault set \
     -vs image-registry-cpd453 \
@@ -120,7 +124,7 @@ If the status directory does not exist it is created at this point.
     -e env_id=pluto-01 \
     --skip-portable-registry
 ```
-This will download all clients and then mirror images from the entitled registry to the privatte registry. If mirroring fails, fix the issue and just run the `env download` again.
+This will download all clients to the status directory and then mirror images from the entitled registry to the private registry. If mirroring fails, fix the issue and just run the `env download` again.
 * Before saving the status directory, you can optionally remove the entitlement key from the vault:
 ```
 ./cp-deploy.sh vault delete \
@@ -128,16 +132,10 @@ This will download all clients and then mirror images from the entitled registry
 ```
 
 #### Diagram step 2
-When the download finished successfully, re-run the deployer with `./cp-deploy.sh env save` command to save the deployer container image to the status directory. For example:
-```
-./cp-deploy.sh env save
-```
+When the download finished successfully, the status directory holds the deployer scripts, the configuration directory and the deployer container image.
 
 #### Diagram step 3
-Ship the following directories from the internet-connected server to the bastion server:
-* `cloud-pak-deployer` directory
-* Configuration directory
-* Status directory
+Ship the status directory from the internet-connected server to the bastion server.
 
 You can use tar with gzip mode or any other compression technique. The total size of the directories should be relatively small, typically < 5 GB
 
@@ -145,28 +143,35 @@ You can use tar with gzip mode or any other compression technique. The total siz
 The bastion server is not connected to the internet but is connected to the private registry and the OpenShift cluster.
 
 #### Diagram step 4
-Use the instructions in [Run on existing OpenShift](/cp-deploy/run/run-on-existing-openshift), adding the `--air-gapped` and `--skip-mirror-images` flags, to start the deployer:
-* Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
+We're using the instructions in [Run on existing OpenShift](/cp-deploy/run/run-on-existing-openshift), adding the CPD_AIRGAP environment variable and `--skip-mirror-images` flag.
+
+* Restore the status directory onto the bastion server
+* Export the STATUS_DIR environment variable to point to the status directory
+* Untar the `cloud-pak-deployer` scripts, for example:
+```
+tar xvzf $STATUS_DIR/cloud-pak-deployer.tar.gz
+```
+
 * Set the CPD_AIRGAP environment variable to `true`
 ```
 export CPD_AIRGAP=true
 ```
 
-* Create a vault secret holding the credentials for the OpenShift cluster. For example: 
+* Set the environment variable for the `oc login` command. For example:
 ```
-./cp-deploy.sh vault set \
-    -vs pluto-01-oc-login \
-    -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
+export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
 
-* Run the `./cp-deploy.sh env apply --skip-mirror-images` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
+* Run the `cp-deploy.sh env apply --skip-mirror-images` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
 ```
+cd cloud-pak-deployer
 ./cp-deploy.sh env apply \
     -e env_id=pluto-01 \
     --skip-mirror-images
 ```    
 
 The `CPD_AIRGGAP` environment variable tells the deployer it will not download anything from the internet; `--skip-mirror-images` indicates that images are already available in the private registry that is included in the configuration (`image_registry`)
+
 
 ## Method 3 - Mirror images using a portable image registry
 This method is also usually referred to as "air-gapped", where the following conditions apply:
@@ -205,16 +210,10 @@ This will download all clients, start the portable registry and then mirror imag
 ```
 
 #### Diagram step 2
-When the download finished successfully, run the deployer with `./cp-deploy.sh env save` command to stop the portable registry and save the deployer container image to the status directory. For example:
-```
-./cp-deploy.sh env save
-```
+When the download finished successfully, the status directory holds the deployer scripts, the configuration directory, the deployer container image and the portable registry.
 
 #### Diagram step 3
-Ship the following directories from the internet-connected server to the bastion server:
-* `cloud-pak-deployer` directory
-* Configuration directory
-* Status directory
+Ship the status directory from the internet-connected server to the bastion server.
 
 You can use tar with gzip mode or any other compression technique. The status directory now holds all assets required for the air-gapped installation and its size can be substantial (100+ GB). You may want to use multi-volume tar files if you are using network transfer. 
 
@@ -222,23 +221,28 @@ You can use tar with gzip mode or any other compression technique. The status di
 The bastion server is not connected to the internet but is connected to the private registry and OpenShift cluster.
 
 #### Diagram step 4
+We're using the instructions in [Run on existing OpenShift](/cp-deploy/run/run-on-existing-openshift), adding the CPD_AIRGAP environment variable.
+
 Below we use the instructions in [Run on existing OpenShift](/cp-deploy/run/run-on-existing-openshift) to start the deployer, adapting the steps to an air-gapped OpenShift cluster:
 
-* Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
+* Restore the status directory onto the bastion server. Make sure the volume to which you restore has enough space to hold the entire status directory, which includes the portable registry.
+* Export the STATUS_DIR environment variable to point to the status directory
+* Untar the `cloud-pak-deployer` scripts, for example:
+```
+tar xvzf $STATUS_DIR/cloud-pak-deployer.tar.gz
+```
 
 * Set the CPD_AIRGAP environment variable to `true`
 ```
 export CPD_AIRGAP=true
 ```
 
-* Create a vault secret holding the credentials for the OpenShift cluster. For example: 
+* Set the environment variable for the `oc login` command. For example:
 ```
-./cp-deploy.sh vault set \
-    -vs pluto-01-oc-login \
-    -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
+export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
 
-* Create a vault secret holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example:
+* Create a vault secret `image-registry-<name>` holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example for a registry definition with name `cpd453`, create secret `image-registry-cpd453`.
 ```
 ./cp-deploy.sh vault set \
     -vs image-registry-cpd453 \
