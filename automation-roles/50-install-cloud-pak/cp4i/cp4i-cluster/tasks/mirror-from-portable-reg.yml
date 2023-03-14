@@ -13,8 +13,9 @@
       # _instance_properties 
       # _instance_type_details   
 
-  - name: Mirror instance images from portable to private registry
+  - name: Mirror instance images from portable to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
     shell: |
+      set -o pipefail
       oc image mirror \
        -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ _instance_properties.case_version }}/images-mapping-from-registry.txt \
        --filter-by-os '.*'  \
@@ -22,6 +23,7 @@
        --insecure  \
        --skip-multiple-scopes \
        --max-per-registry=1 \
-       --continue-on-error=true      
+       --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'

@@ -50,8 +50,9 @@
         --final-registry {{ _p_private_reg_url }}        
     when: not (cpd_skip_portable_registry | bool)
 
-  - name: Mirror to private registry
+  - name: Mirror to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
     shell: |
+      set -o pipefail
       oc image mirror \
        -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ _instance_properties.case_version }}/images-mapping.txt \
        --filter-by-os '.*'  \
@@ -59,11 +60,13 @@
        --insecure  \
        --skip-multiple-scopes \
        --max-per-registry=1 \
-       --continue-on-error=true
+       --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
     when: (cpd_skip_portable_registry | bool)
 
-  - name: Mirror to portable registry
+  - name: Mirror to portable registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
     shell: |
+      set -o pipefail
       oc image mirror \
         -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ _instance_properties.case_version }}/images-mapping-to-registry.txt \
         --filter-by-os '.*'  \
@@ -71,7 +74,8 @@
         --insecure  \
         --skip-multiple-scopes \
         --max-per-registry=1 \
-        --continue-on-error=true
+        --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
     when: not (cpd_skip_portable_registry | bool)
 
   when: (_p_current_cp4i_instance.state | default('installed')) == 'installed'  
