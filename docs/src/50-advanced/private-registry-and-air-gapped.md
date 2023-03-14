@@ -282,8 +282,3 @@ If you do not set these values, the deployer assumes that the default images are
 | -------------------- | ------------------------------------------------------ | ------------------------------ |
 | cpd_oc_debug_image   | Container image to be used for the `oc debug` command. | `registry.redhat.io/rhel8/support-tools:latest` |
 | cpd_ds_image         | Container image to be used for the DaemonSets that configure Kubelet, etc. | `registry.access.redhat.com/ubi8/ubi:latest` |
-
-Example of using with `cp-deploy.sh`
-```
-./cp-deploy.sh env apply --air-gapped -e cpd_oc_debug_image=registry.redhat.io/rhel8/support-tools:latest
-```
