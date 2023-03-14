@@ -305,17 +305,20 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         # Iterate over all cartridges to check if name-attribute is given. If not throw an error
         cpfsFound=False
         cpdPlatformFound=False
+        listedCartridges=[]
         for c in ge['cartridges']:
             if "name" not in c:
                 g.appendError(msg='name must be specified for all cartridges elements')
             else:
+                if c['name'] in listedCartridges:
+                    g.appendError(msg='Cartridge {} is listed more than once. You can only have 1 cartridge of each type in a project'.format(c['name']))
+                else:
+                    listedCartridges.append(c['name'])
                 if c['name'] in ["cpd_platform","lite"]:
                     cpdPlatformFound=True
                 if c['name'] in ["cpfs","cp-foundation"]:
                     cpfsFound=True
                     check_cp_foundation(c)
-                # if (not olm_utils) and (not c['name'] in ["cpfs","cp-foundation"]) and ("subscription_channel" not in c):
-                #     g.appendError(msg='subscription_channel must be specified for all cartridges (except cpfs) if not installing via OLM utils')
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
                     g.appendError(msg='Cartridge state must be "installed" or "removed"')
