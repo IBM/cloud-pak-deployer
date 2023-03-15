@@ -26,7 +26,7 @@ Images will be pulled from the specified namespace in the IBM Container Registry
 An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC. In the sample configuration, the `managed-nfs-storage` storage class is created, referencing the NFS server that is provisioned in the VPC.
 
 ## Cloud Pak for Data
-Cloud Pak for Data 4.0 is installed in OpenShift project `zen-40`, pulling images from the private registry and referencing the NFS storage class in OpenShift.
+Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the private registry and referencing the NFS storage class in OpenShift.
 
 ### Cartridges
 The sample configuration holds a list of cartridges which will be installed. You can control whether cartridges will be installed by commenting or uncommenting the appropriate blocks. Please ensure that the cartridge elements are aligned (hyphens must be aligned with hyphens and properties with properties).
