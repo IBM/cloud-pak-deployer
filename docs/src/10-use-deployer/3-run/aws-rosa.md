@@ -76,6 +76,20 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 
 ## Prepare for running
 
+## Rosa is already installed
+
+This scenario is supported. To enable this feature, please ensure that you take the following steps:
+
+1. Include the environment ID in the inftastrucure definition {{ env_id }} to match existing cluster
+2. Create "cluster-admin " password token using the following command:
+
+    ```bash
+    $ ./cp-deploy.sh vault set -vs={{env_id}}-cluster-admin-password=[YOUR PASSWORD]
+    ```
+
+Without these changes, sthe cloud player will fail and you will receive the following error message: "Failed to get the cluster-admin password from the vault".
+
+
 ### Set environment variables
 
 ```
