@@ -24,6 +24,7 @@ When building or running the deployer in an environment with strict policies for
 | Location                      | Used for                                                 |
 | ----------------------------- | -------------------------------------------------------- |
 | github.com                    | Case files, Cloud Pak clients: cloudctl, cpd-cli, cpdctl |
+| gcr.io                        | Google Container Registry (GCR)                          |
 | objects.githubusercontent.com | Binary content for github.com                            |
 | raw.githubusercontent.com     | Binary content for github.com                            |
 | mirror.openshift.com          | OpenShift client                                         |
