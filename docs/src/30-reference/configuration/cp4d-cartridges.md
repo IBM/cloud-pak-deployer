@@ -72,6 +72,6 @@ Manages the Watson Knowledge Catalog installation for the Cloud Pak for Data ins
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | size     | Scale configuration of the cartridge                                 | No        | small (default), medium, large |
 | installation_options.install_wkc_core_only | Install only the core of WKC?      | No | True, False (default) |
-| installation_options.enableKnowledgeGraph  |  | No | True, False (default) |
+| installation_options.enableKnowledgeGraph  | Enable the knowledge graph for business lineage? | No | True, False (default) |
 | installation_options.enableDataQuality     | Enable data quality for WKC?       | No | True, False (default) |
 | installation_options.enableMANTA           | Enable MANTA?                      | No | True, False (default) |
