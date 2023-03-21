@@ -23,10 +23,10 @@
   shell: |
     {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-factsheet.sh
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.sh
   copy:
     src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-factsheet.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.sh"
     remote_src: True
     mode: u+rwx
 
@@ -55,5 +55,5 @@
 
 - name: Run shell script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
   shell: |
-    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dp.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
   when: not _sequential_install
