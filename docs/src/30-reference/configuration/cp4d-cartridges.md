@@ -8,10 +8,10 @@ cp4d:
 - project: cpd-instance
   cp4d_version: 4.6.3
   sequential_install: False
-  
+
   cartridges:
   - name: cpfs
-    
+
   - name: cpd_platform
 
   - name: db2oltp
@@ -20,7 +20,7 @@ cp4d:
     - name: db2-instance
       metadata_size_gb: 20
       data_size_gb: 20
-      backup_size_gb: 20  
+      backup_size_gb: 20
       transactionlog_size_gb: 20
     state: installed
 
@@ -55,12 +55,12 @@ Some cartridges may require additional information to correctly install or to cr
 | installation_options | Record of properties that will be applied to the `spec` of the OpenShift Custom Resource | No | |
 
 ### Cartridge `cpfs` or `cp-foundation`
-Defines the Cloud Pak Foundational Services (fka Common Services) which are required for all Cloud Pak for Data installations. Cloud Pak for Data Foundational Services provide functionalities around certificate managemenent, license service, identity and access management (IAM), etc. 
+Defines the Cloud Pak Foundational Services (fka Common Services) which are required for all Cloud Pak for Data installations. Cloud Pak for Data Foundational Services provide functionalities around certificate managemenent, license service, identity and access management (IAM), etc.
 
 This cartridge is mandatory for every Cloud Pak for Data instance.
 
 ### Cartridge `cpd_platform` or `lite`
-Defines the Cloud Pak for Data platform operator (fka "lite") which installs the base services needed to operate Cloud Pak for Data, such as the Zen metastore, Zen watchdog and the user interface. 
+Defines the Cloud Pak for Data platform operator (fka "lite") which installs the base services needed to operate Cloud Pak for Data, such as the Zen metastore, Zen watchdog and the user interface.
 
 This cartridge is mandatory for every Cloud Pak for Data instance.
 
@@ -72,7 +72,6 @@ Manages the Watson Knowledge Catalog installation for the Cloud Pak for Data ins
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | size     | Scale configuration of the cartridge                                 | No        | small (default), medium, large |
 | installation_options.install_wkc_core_only | Install only the core of WKC?      | No | True, False (default) |
-| installation_options.enableKnowledgeGraph  | Enable the knowledge graph for business lineage? | No | True, False (default) |
+| installation_options.enableKnowledgeGraph  |  | No | True, False (default) |
 | installation_options.enableDataQuality     | Enable data quality for WKC?       | No | True, False (default) |
-| installation_options.enableKnowledgeGraph  | Enable the knowledge graph for business lineage? | No | True, False (default) |
 | installation_options.enableMANTA           | Enable MANTA?                      | No | True, False (default) |
