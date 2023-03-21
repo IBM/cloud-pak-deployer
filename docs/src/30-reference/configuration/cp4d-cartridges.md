@@ -55,7 +55,7 @@ Some cartridges may require additional information to correctly install or to cr
 | installation_options | Record of properties that will be applied to the `spec` of the OpenShift Custom Resource | No | |
 
 ### Cartridge `cpfs` or `cp-foundation`
-Defines the Cloud Pak Foundational Services (fka Common Services) which are required for all Cloud Pak for Data installations. Cloud Pak for Data Foundational Services provide functionalities around certificate managemenent, license service, identity and access management (IAM), etc.
+Defines the Cloud Pak Foundational Services (fka Common Services) which are required for all Cloud Pak for Data installations. Cloud Pak for Data Foundational Services provide functionalities around certificate management, license service, identity and access management (IAM), etc.
 
 This cartridge is mandatory for every Cloud Pak for Data instance.
 
