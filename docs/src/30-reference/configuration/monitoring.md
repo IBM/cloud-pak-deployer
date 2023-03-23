@@ -66,35 +66,39 @@ cp4d_monitors:
   #default_monitor_target_cr_password_secret: monitors_target_cr_password
   # List of monitors
   monitors:
-  - name: cp4d-cognos-task-info
+  - name: cp4dplatformcognosconnectionsinfo
+    context: cp4d-cognos-connections-info
+    label: latest
+    schedule: "*/15 * * * *"
+  - name: cp4dplatformcognostaskinfo
     context: cp4d-cognos-task-info
     label: latest
     schedule: "*/15 * * * *"
-  - name: cp4d-platform-global-connections
+  - name: cp4dplatformglobalconnections
     context: cp4d-platform-global-connections
     label: latest
     schedule: "*/15 * * * *"
-  - name: cp4d-watsonstudio-job-info-monitor
+  - name: cp4dplatformwatsonstudiojobinfo
     context: cp4d-watsonstudio-job-info
     label: latest
     schedule: "*/15 * * * *"
-  - name: cp4d-platform-watsonstudio-schedule-job-info
+  - name: cp4dplatformwatsonstudiojobscheduleinfo
     context: cp4d-watsonstudio-job-schedule-info
     label: latest
     schedule: "*/15 * * * *"
-  - name: cp4d-platform-watsonstudio-runtime-usage
+  - name: cp4dplatformwatsonstudioruntimeusage
     context: cp4d-watsonstudio-runtime-usage
     label: latest
     schedule: "*/15 * * * *"
-  - name: cp4d-wkc-info
+  - name: cp4dplatformwatsonknowledgecataloginfo
     context: cp4d-wkc-info
     label: latest
     schedule: "*/15 * * * *"
-  - name: cp4d-platform-wml-deployment-space-info
+  - name: cp4dplatformwmldeploymentspaceinfo
     context: cp4d-wml-deployment-space-info
     label: latest  
     schedule: "*/15 * * * *"
-  - name: cp4d-platform-wml-deployment-space-job-info
+  - name: cp4dplatformwmldeploymentspacejobinfo
     context: cp4d-wml-deployment-space-job-info
     label: latest
     schedule: "*/15 * * * *"
@@ -188,49 +192,4 @@ watchdog_cp4d_platform_global_connections_global_connection_valid{event_type="gl
 # HELP watchdog_cp4d_platform_global_connections_global_connections_count 
 # TYPE watchdog_cp4d_platform_global_connections_global_connections_count gauge
 watchdog_cp4d_platform_global_connections_global_connections_count{event_type="global_connections_count",monitor_type="cp4d_platform_global_connections",reference="Cloud Pak for Data Global Connections Count"} 2
-```
-
-### Install the Monitor using the Cloud Pak Deployer
-
-**Pre-requisite**: Ensure all secrets (source_token and target_cr) are configured in the vault prior to deploying the monitors. 
-
-Add the following section to the Cloud Pak Deployer configuration, or add the monitor to an existing `monitors` section:
-
-```
-# List of cp4d_monitors
-cp4d_monitors:
-- name: cp4d-monitor-set-1
-  cp4d_instance: <OC_PROJECT>
-  openshift_cluster_name: pluto-01
-  default_monitor_source_repo: https://github.com/IBM/cloud-pak-deployer-monitors
-  default_monitor_source_token_secret: monitors_source_repo_secret
-  default_monitor_target_cr: de.icr.io/monitorrepo  
-  default_monitor_target_cr_user_secret: monitors_target_cr_username
-  default_monitor_target_cr_password_secret: monitors_target_cr_password
-  # List of monitors
-  monitors:
-  - name: cp4d-platform-global-connections
-    #monitor_source_repo:             
-    #monitor_source_token_secret:    
-    #monitor_target_cr:              
-    #monitor_target_cr_user_secret:  
-    #monitor_target_cr_user_password:
-    context: cp4d-platform-global-connections
-    label: latest
-    schedule: "*/15 * * * *"
-    event_types:
-    - name: "global_connections_count"
-      simple_name: "Number of CP4D Platform connections"
-      alert_type: "platform"
-      short_description: "Number of CP4D Platform connections"
-      long_description: "Number of CP4D Platform connections: <global_connections_count>"
-      resolution: "none"
-      reason_code_prefix: "80"
-    - name: "global_connection_valid"
-      simple_name: "Test CP4D Platform connection"
-      alert_type: "platform"
-      short_description: "Test CP4D Platform connection"
-      long_description: "Test result CP4D Platform connection: <global_connection_valid>"
-      resolution: "Validate the connection properties"
-      reason_code_prefix: "80"
 ```
