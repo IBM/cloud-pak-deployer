@@ -5,11 +5,12 @@
 #
 
 NODE_UPDATED=0
+NODE_FIX_DIR=/tmp/cloud-pak-node-fix
 
 # Set global pull secret
-if [ -e /cloud-pak-node-fix/secrets/newdockerconfigjson ];then
-  if ! cmp -s /cloud-pak-node-fix/secrets/newdockerconfigjson /.docker/config.json;then
-    cp /cloud-pak-node-fix/secrets/newdockerconfigjson /.docker/config.json
+if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
+  if ! cmp -s ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json;then
+    cp ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json
     NODE_UPDATED=1
     echo "Pull secret changed in /.docker/config.json" >> /tmp/cloud-pak-node-fix.log
   fi
@@ -18,7 +19,7 @@ fi
 # Prepare for ImageContentSourcePolicy changes
 rm -f /tmp/registries.conf
 cp /etc/containers/registries.conf /tmp
-if [ $(ls -1 /cloud-pak-node-fix/config/cloud-pak-icsp*.conf 2>/dev/null | wc -l) -ne 0 ];then
+if [ $(ls -1 ${NODE_FIX_DIR}/config/cloud-pak-icsp*.conf 2>/dev/null | wc -l) -ne 0 ];then
   sed -i '/## ICSP replacement START/,/## ICSP replacement END/d' /tmp/registries.conf
   # Also remove Manta ICSP entry if it exists (supporting existing implementations)
   sed -i '/## ICSP replacement MANTA START/,/## ICSP replacement MANTA END/d' /tmp/registries.conf
@@ -26,16 +27,16 @@ if [ $(ls -1 /cloud-pak-node-fix/config/cloud-pak-icsp*.conf 2>/dev/null | wc -l
 fi
 
 # Add ImageContentSourcePolicy for private registries to registries.conf
-if [ -e /cloud-pak-node-fix/config/cloud-pak-icsp-registries.conf ];then
-  cat /cloud-pak-node-fix/config/cloud-pak-icsp-registries.conf >> /tmp/registries.conf
+if [ -e ${NODE_FIX_DIR}/config/cloud-pak-icsp-registries.conf ];then
+  cat ${NODE_FIX_DIR}/config/cloud-pak-icsp-registries.conf >> /tmp/registries.conf
 fi
 
 # Add ImageContentSourcePolicy for Manta registries to registries.conf
-if [ -e /cloud-pak-node-fix/config/cloud-pak-icsp-registries-manta.conf ];then
-  cat /cloud-pak-node-fix/config/cloud-pak-icsp-registries-manta.conf >> /tmp/registries.conf
+if [ -e ${NODE_FIX_DIR}/config/cloud-pak-icsp-registries-manta.conf ];then
+  cat ${NODE_FIX_DIR}/config/cloud-pak-icsp-registries-manta.conf >> /tmp/registries.conf
 fi
 
-if [ $(ls -1 /cloud-pak-node-fix/config/cloud-pak-icsp*.conf 2>/dev/null | wc -l) -ne 0 ];then
+if [ $(ls -1 ${NODE_FIX_DIR}/config/cloud-pak-icsp*.conf 2>/dev/null | wc -l) -ne 0 ];then
   echo '## ICSP replacement END' >> /tmp/registries.conf
 fi
 
@@ -47,18 +48,18 @@ if ! cmp -s /tmp/registries.conf /etc/containers/registries.conf;then
 fi
 
 # Change kubelet.conf to allow Db2 pods to run with unsafe Sysctls
-if [ -e /cloud-pak-node-fix/config/cp4d-kubelet.conf ];then 
-  if ! cmp -s /cloud-pak-node-fix/config/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf;then
-    cp -r /cloud-pak-node-fix/config/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf
+if [ -e ${NODE_FIX_DIR}/config/cp4d-kubelet.conf ];then 
+  if ! cmp -s ${NODE_FIX_DIR}/config/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf;then
+    cp -r ${NODE_FIX_DIR}/config/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf
     NODE_UPDATED=1
     echo "Kubelet configuration changes made in /etc/kubernetes/kubelet.conf" >> /tmp/cloud-pak-node-fix.log
   fi
 fi
 
 # Change crio.conf to allow more processes in a container
-if [ -e /cloud-pak-node-fix/config/cp4d-crio.conf ];then 
-  if ! cmp -s /cloud-pak-node-fix/config/cp4d-crio.conf /etc/crio/crio.conf;then
-    cp -r /cloud-pak-node-fix/config/cp4d-crio.conf /etc/crio/crio.conf
+if [ -e ${NODE_FIX_DIR}/config/cp4d-crio.conf ];then 
+  if ! cmp -s ${NODE_FIX_DIR}/config/cp4d-crio.conf /etc/crio/crio.conf;then
+    cp -r ${NODE_FIX_DIR}/config/cp4d-crio.conf /etc/crio/crio.conf
     NODE_UPDATED=1
     echo "CRI-O configuration changes made in /etc/crio/crio.conf" >> /tmp/cloud-pak-node-fix.log
   fi
