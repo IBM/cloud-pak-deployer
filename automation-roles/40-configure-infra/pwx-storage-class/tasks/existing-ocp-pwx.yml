@@ -1,28 +1,41 @@
 ---
-- name: Check if Portworx is installed
-  block:
-    - name: Check if portworx daemonset exists
-      command: oc get ds -n kube-system portworx
-      register: portworx_ds_exists
-      ignore_errors: true
+## Check if Portworx is working according to the ufficial Documentation
+- name: Get Portworx pod name
+  command: oc get pods -l name=portworx -n kube-system -o jsonpath='{.items[0].metadata.name}'
+  register: px_pod_result
+  ignore_errors: true
 
-    - name: Fail if portworx daemonset does not exist
-      fail:
-        msg: "Portworx is not installed on the cluster"
-      when: portworx_ds_exists.rc != 0
-  tags:
-    - portworx
+- name: Check if Portworx pod is running
+  fail:
+    msg: "Portworx pod is not running"
+  when: px_pod_result.rc != 0 or px_pod_result.stdout_lines|length == 0
 
-- name: Create Portworx storage classes for CP4D
-  block:
-    - name: Create Portworx storage class YAML file
-      template:
-        src: pwx_cp4d_storage_classes.j2
-        dest: "{{ pwx_storage_classes_file }}"
+- name: Get Portworx status
+  command: oc exec {{ px_pod_result.stdout }} -n kube-system -- /opt/pwx/bin/pxctl status
+  register: px_status_result
+  ignore_errors: true
 
-    - name: Apply Portworx storage classes YAML file
-      command: oc apply -f "{{ pwx_storage_classes_file }}"
-      changed_when: "'created' in result.stdout"
-  vars:
-    pwx_storage_classes_file: "{{ status_dir }}/openshift/pwx_cp4d_storage_classes.yaml"
+- name: Check if pxctl command succeeded
+  fail:
+    msg: "Failed to get Portworx status"
+  when: px_status_result.rc != 0
 
+#- name: Create other storage classes
+#  script:
+#    px-sc.sh
+#  ignore_errors: yes
+
+- name: Create temporary file for the pwx storage class yaml
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: pwx_tempfile
+
+- name: Create other storage classes yaml file {{ pwx_tempfile.path }}
+  template:
+    src: pwx_cp4d_storage_classes.j2
+    dest: "{{ pwx_tempfile.path }}"
+
+- name: Create pwx storage classes required for CP4D
+  command: |
+    oc apply -f "{{ pwx_tempfile.path }}"
