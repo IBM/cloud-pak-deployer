@@ -21,8 +21,9 @@ fi
 # Set global pull secret for CoreOS nodes
 if [ -e /root/.docker/config.json ];then
   if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
-    if ! cmp -s ${NODE_FIX_DIR}/secrets/newdockerconfigjson /root/.docker/config.json;then
-      cp ${NODE_FIX_DIR}/secrets/newdockerconfigjson /root/.docker/config.json
+    jq -s '.[0] * .[1]' /root/.docker/config.json ${NODE_FIX_DIR}/secrets/newdockerconfigjson > ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson
+    if ! cmp -s ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson /root/.docker/config.json;then
+      cp ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson /root/.docker/config.json
       NODE_UPDATED=1
       echo "Pull secret changed in /root/.docker/config.json" >> /tmp/cloud-pak-node-fix.log
     fi
