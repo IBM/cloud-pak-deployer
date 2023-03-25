@@ -7,12 +7,25 @@
 NODE_UPDATED=0
 NODE_FIX_DIR=/tmp/cloud-pak-node-fix
 
-# Set global pull secret
-if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
-  if ! cmp -s ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json;then
-    cp ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json
-    NODE_UPDATED=1
-    echo "Pull secret changed in /.docker/config.json" >> /tmp/cloud-pak-node-fix.log
+# Set global pull secret for RHEL nodes
+if [ -e /.docker/config.json ];then
+  if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
+    if ! cmp -s ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json;then
+      cp ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json
+      NODE_UPDATED=1
+      echo "Pull secret changed in /.docker/config.json" >> /tmp/cloud-pak-node-fix.log
+    fi
+  fi
+fi
+
+# Set global pull secret for CoreOS nodes
+if [ -e /root/.docker/config.json ];then
+  if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
+    if ! cmp -s ${NODE_FIX_DIR}/secrets/newdockerconfigjson /root/.docker/config.json;then
+      cp ${NODE_FIX_DIR}/secrets/newdockerconfigjson /root/.docker/config.json
+      NODE_UPDATED=1
+      echo "Pull secret changed in /root/.docker/config.json" >> /tmp/cloud-pak-node-fix.log
+    fi
   fi
 fi
 
