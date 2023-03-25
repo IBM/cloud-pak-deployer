@@ -29,23 +29,25 @@
         msg: "Portworx is ready"
 
 - name: Delete db2 Storage class that is created by provider
-  command:
-    cmd: oc delete sc portworx-db2-sc || true
-
-- name: Create Portworx storage classes for CP4D
-  template:
-    src: pwx_cp4d_storage_classes.j2
-    dest: "{{ status_dir }}/openshift/pwx_cp4d_storage_classes.yaml"
-
-- name: Apply Portworx storage classes YAML file
-  command: oc apply -f "{{ status_dir }}/openshift/pwx_cp4d_storage_classes.yaml"
-  changed_when: "'created' in result.stdout"
+  shell:
+    oc delete sc portworx-db2-sc || true
 
 #- name: Create other storage classes
-#  shell:
+#  script:
 #    px-sc.sh
 #  ignore_errors: yes
 
-- name: Delete db2 Storage class that is created by provider
-  shell:
-    oc delete sc portworx-db2-sc || true
+- name: Create temporary file for the pwx storage class yaml
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: pwx_tempfile
+
+- name: Create other storage classes yaml file {{ pwx_tempfile.path }}
+  template:
+    src: pwx_cp4d_storage_classes.j2
+    dest: "{{ pwx_tempfile.path }}"
+
+- name: Create pwx storage classes required for CP4D
+  command: |
+    oc apply -f "{{ pwx_tempfile.path }}"
