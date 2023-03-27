@@ -1,41 +1,34 @@
 ---
+- name: Get storage classes from cluster
+  shell:
+    oc get sc -o jsonpath='{.items[*].metadata.name}'
+  register: _openshift_storage_classes
+
+- set_fact:
+    _storage_type: 'pwx'
+  when: (_openshift_storage_classes.stdout | regex_search('px-db', multiline=True)) != None
+
 ## Check if Portworx is working according to the ufficial Documentation
 - name: Get Portworx pod name
   command: oc get pods -l name=portworx -n kube-system -o jsonpath='{.items[0].metadata.name}'
   register: px_pod_result
   ignore_errors: true
 
-- name: Check if Portworx pod is running
+- name: Check if Portworx has been installed on the cluster
   fail:
-    msg: "Portworx pod is not running"
-  when: px_pod_result.rc != 0 or px_pod_result.stdout_lines|length == 0
+    msg: "Portworx is not installed on the cluster"
+  when:
+  - (_openshift_storage_classes.stdout | regex_search('px-db', multiline=True)) == None
+  - (_openshift_storage_classes.stdout | regex_search('px-db-csi', multiline=True)) == None
 
-- name: Get Portworx status
-  command: oc exec {{ px_pod_result.stdout }} -n kube-system -- /opt/pwx/bin/pxctl status
-  register: px_status_result
-  ignore_errors: true
+- name: Create Portworx non-CSI storage classes for CP4D
+  shell:
+    /opt/ansible/bin/px-sc.sh
+  when:
+  - (_openshift_storage_classes.stdout | regex_search('px-db-csi', multiline=True)) == None
 
-- name: Check if pxctl command succeeded
-  fail:
-    msg: "Failed to get Portworx status"
-  when: px_status_result.rc != 0
-
-#- name: Create other storage classes
-#  script:
-#    px-sc.sh
-#  ignore_errors: yes
-
-- name: Create temporary file for the pwx storage class yaml
-  tempfile:
-    path: "{{status_dir}}/openshift"
-    state: file
-  register: pwx_tempfile
-
-- name: Create other storage classes yaml file {{ pwx_tempfile.path }}
-  template:
-    src: pwx_cp4d_storage_classes.j2
-    dest: "{{ pwx_tempfile.path }}"
-
-- name: Create pwx storage classes required for CP4D
-  command: |
-    oc apply -f "{{ pwx_tempfile.path }}"
+- name: Create Portworx CSI storage classes for CP4D
+  shell:
+    /opt/ansible/bin/px-sc-csi.sh
+  when:
+  - (_openshift_storage_classes.stdout | regex_search('px-db-csi', multiline=True)) != None
