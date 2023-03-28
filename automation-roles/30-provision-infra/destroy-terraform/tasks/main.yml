@@ -97,11 +97,11 @@
     when: _number_to_destroy is defined
 
   - fail:
-      msg: "Terraform will destroy artifacts and this was not confirmed"
+      msg: "Terraform will destroy artifacts and this was not confirmed with --confirm-destroy or global_config confirm_destroy property"
     when:
       - _number_to_destroy is defined
       - _number_to_destroy != '0'
-      - confirm_destroy | bool != True
+      - _confirm_destroy | bool != True
 
   - name: "Run terraform destroy in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/destroy.log"
     shell: |
