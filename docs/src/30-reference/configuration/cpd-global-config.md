@@ -15,6 +15,7 @@ The following `global_config` variables are automatically copied into a "simple"
 | `azure_location` | When Cloud Platform is `azure`, the region into which the ARO OpenShift cluster is deployed |
 | `universal_admin_user` | User name to be used for admin user (currently not used) |
 | `universal_password` | Password to be used for all (admin) users it not specified in the vault |
+| `confirm_destroy` | Is destroying of clusters, services/cartridges and instances allowed? |
 
 For all other variables, you can refer to the qualified form, for example: `"{{ global_config.division }}"`
 
@@ -26,6 +27,7 @@ global_config:
   env_id: pluto-01
   ibm_cloud_region: eu-de
   universal_password: very_secure_Passw0rd$
+  confirm_destroy: False
 ```
 
 If you run the `cp-deploy.sh` command and specify `-e env_id=jupiter-03`, this will override the value in the `global_config` object. The same applies to the other variables.
