@@ -8,7 +8,7 @@ on:
     branches:
     - build-image
   schedule:
-    - cron: '45 12 * * *'
+    - cron: '0 14 * * *'
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -23,14 +23,15 @@ jobs:
       - name: Check-out repository
         uses: actions/checkout@v3
 
-      - name: Build the image and push to quay.io
+      - name: Build the image
+        run: |
+          ./cp-deploy.sh build
+
+      - name: Push to quay.io
         env:
           QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
           QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
         run: |
-          ./cp-deploy.sh build
-          docker images
-          podman image ls
           podman login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
           podman tag cloud-pak-deployer:latest quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
           podman push quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
