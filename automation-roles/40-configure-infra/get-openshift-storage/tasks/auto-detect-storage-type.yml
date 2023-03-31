@@ -6,9 +6,13 @@
 - name: Show found storage classes
   debug:
     var: _openshift_storage_classes
+
+- debug:
+    msg: "{{ _openshift_storage_classes.stdout }}"
+
 - set_fact:
     _storage_type: 'pwx'
-  when: _openshift_storage_classes.stdout is search("portworx-shared-gp3")
+  when: (_openshift_storage_classes.stdout | regex_search('px-db', multiline=True)) != None
 
 - set_fact:
     _storage_type: 'ibm-classic-storage'
