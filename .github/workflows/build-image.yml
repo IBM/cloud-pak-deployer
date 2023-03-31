@@ -7,11 +7,8 @@ on:
   push:
     branches:
     - build-image
-  pull_request:
-    branches:
-    - main
-
-  # Allows running this workflow manually from the Actions tab
+  schedule:
+    - cron: '45 12 * * *'
   workflow_dispatch:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
@@ -26,15 +23,12 @@ jobs:
       - name: Check-out repository
         uses: actions/checkout@v3
 
-      - name: Build the image
-        run: |
-          ./cp-deploy.sh build
-
-      - name: Push the image to quay.io
+      - name: Build the image and push to quay.io
         env:
           QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
           QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
         run: |
+          ./cp-deploy.sh build
           docker login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
           docker tag localhost/cloud-pak-deployer:latest quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
           docker push quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
