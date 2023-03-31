@@ -23,9 +23,15 @@ jobs:
     # Sequence of tasks that will be executed as part of the job
     steps:
 
-      - name: Check-out repository under $GITHUB_WORKSPACE
+      - name: Check-out repository
         uses: actions/checkout@v3
 
       - name: Build the image
         run: |
           ./cp-deploy.sh build
+
+      - name: Push the image to quay.io
+        run: |
+          docker login quay.io -u ${secrets.QUAY_IO_USER} -p ${secrets.QUAY_IO_PASSWORD}
+          docker tag localhost/cloud-pak-deployer:latest quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
+          docker push quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
