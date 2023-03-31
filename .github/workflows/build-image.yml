@@ -31,7 +31,10 @@ jobs:
           ./cp-deploy.sh build
 
       - name: Push the image to quay.io
+        env:
+          QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
+          QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
         run: |
-          docker login quay.io -u ${secrets.QUAY_IO_USER} -p ${secrets.QUAY_IO_PASSWORD}
+          docker login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
           docker tag localhost/cloud-pak-deployer:latest quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
           docker push quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
