@@ -8,10 +8,8 @@
     name: vault-get-secret
   vars:
     secret_name: "aws-access-key"
-    secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _aws_access_key: "{{ secret_value }}"
+    secret_group: "{{ environment_name }}"
+     _p_secret_variable: _aws_access_key
 
 - name: Get aws-secret-access-key secret from the vault
   include_role: 
@@ -19,10 +17,7 @@
   vars:
     secret_name: "aws-secret-access-key"
     secret_group: "{{ environment_name }}" 
-
-- set_fact:
-    _aws_secret_access_key: "{{ secret_value }}"
-
+     _p_secret_variable: _aws_secret_access_key
 
 - name: Get cluster-admin password from the vault
   include_role:
@@ -30,25 +25,12 @@
   vars:
     secret_name: "{{ _p_openshift_cluster_name }}-cluster-admin-password"
     secret_group: "{{ environment_name }}"
-  failed_when: vault_get_secret.rc != 0
-  register: vault_get_secret_result
-  changed_when: false
+    _p_secret_variable: _rosa_cluster_admin_password
 
 - name: Display error message if vault-get-secret fails
   debug:
-    msg: "Failed to get the cluster-admin password from the vault: {{ vault_get_secret_result.stderr }}"
-  when: vault_get_secret_result.failed
-
-- name: Set _rosa_cluster_admin_password fact if secret_value is not blank
-  set_fact:
-    _rosa_cluster_admin_password: "{{ secret_value }}"
-  when:
-    - vault_get_secret_result.success
-    - secret_value is defined and secret_value != ''
-
-- set_fact:
-    _rosa_cluster_admin_password: "{{ secret_value }}"
-  when: vault_get_secret_result.success
+    msg: "Failed to get the cluster-admin password from the vault, it should be stored in vault secret {{ _p_openshift_cluster_name }}-cluster-admin-password"
+  when: _rosa_cluster_admin_password == ''
 
 - name: Check if ROSA cluster {{ _p_openshift_cluster_name }} exists
   shell: |
