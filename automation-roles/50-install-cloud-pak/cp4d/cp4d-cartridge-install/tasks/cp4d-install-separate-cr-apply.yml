@@ -3,20 +3,15 @@
   debug:
     msg: ""
 
-- name: Ensure that OLM utils work directory exists
-  file:
-    path: /tmp/work
-    state: directory
-
-- name: Write dpra install options to /tmp/work/dpra-install-options.yml
-  template:
-    src: dpra-install-options.j2
-    dest: "/tmp/work/dpra-install-options.yml"
+- name: Check if cartridge installation options file exists
+  stat:
+    path: "{{ status_dir }}/cp4d/{{ _current_cp4d_cartridge.olm_utils_name }}-install-options.yml"
+  register: _cartridge_install_options_file
 
 # Always generate the preview script to log what will be done
 - name: "Generate command preview script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}"
   set_fact:
-    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-dpra.j2') }}"
+    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-separate.j2') }}"
   vars:
     _p_preview_script: True 
 
@@ -28,10 +23,10 @@
   shell: |
     {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dpra.sh
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.sh
   copy:
     src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dpra.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.sh"
     remote_src: True
     mode: u+rwx
 
@@ -39,7 +34,7 @@
   block:
   - name: Generate apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}
     set_fact:
-      _apply_cr_command: "{{ lookup('template', 'apply-cr-dpra.j2') }}"
+      _apply_cr_command: "{{ lookup('template', 'apply-cr-separate.j2') }}"
     vars:
       _p_preview_script: False
   - name: Run apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
@@ -60,5 +55,5 @@
 
 - name: Run shell script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
   shell: |
-    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dpra.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
   when: not _sequential_install

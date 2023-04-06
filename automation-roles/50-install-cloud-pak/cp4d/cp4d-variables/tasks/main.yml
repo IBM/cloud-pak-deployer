@@ -41,6 +41,7 @@
             | default([])
           }}
   loop: "{{ _p_current_cp4d_cluster.cartridges }}"
+  no_log: True
 
 - set_fact:
     _undefined_cartridges: "{{ _cartridges_with_olm_utils_name | rejectattr('olm_utils_name','defined') }}"
@@ -81,6 +82,9 @@
       {{ _tmp_cartridges + _dp_cartridge }}
 
 - set_fact:
+    _all_cartridges: "{{ _cartridges_to_install }}"
+
+- set_fact:
     _upgrade_cp4d: False
 
 - name: Determine if CP4D must be upgraded
@@ -109,6 +113,7 @@
     _sequential_install: "{{ _sequential_install or item.force_sequential_install }}"
   when: (item.state | default('installed')) == 'installed'
   loop: "{{ _cartridges_to_install }}"
+  no_log: True
 
 - name: Show if sequential install is done
   debug:
@@ -120,21 +125,53 @@
       {{ _cartridge_dependencies + ( item.Dependencies.split('+') | map("trim") | list | reject('match','^$') | list ) | unique }}
   when: (item.state | default('installed')) == 'installed'
   loop: "{{ _cartridges_to_install }}"
+  no_log: True
 
 - name: Remove duplicate entries from cartridge dependencies
   set_fact:
     _cartridge_dependencies: >-
       {{ _cartridge_dependencies | unique }}
 
+- name: Show cartridge dependencies
+  debug:
+    var: _cartridge_dependencies
+
 - name: Show full cartridge information
   debug:
     var: _cartridges_to_install
+
+- name: Obtain surviving cartridges
+  set_fact:
+    _surviving_cartridges_names: "{{ _cartridges_to_install | json_query(jmes_query) }} + {{ _cartridge_dependencies }}"
+  vars:
+    jmes_query: "[?state=='installed'].name"
+
+- debug:
+    var: _surviving_cartridges_names
+
+- name: Determine the surviving cartridges
+  set_fact:
+    _surviving_cartridges: >-
+      {{ _surviving_cartridges | default([]) 
+        + [ _cartridges_to_install_item ]
+      }}
+  vars:
+    _cartridges_to_install_item: >-
+          {{ _cartridges_to_install
+            | selectattr('olm_utils_name','equalto',item)
+            | list
+            | first
+            | default({})
+          }}
+  loop: "{{ _surviving_cartridges_names }}"
+
+- set_fact:
+    _surviving_cartridges: "{{ _surviving_cartridges | rejectattr('CR_Kind','undefined') }}"
+
+- debug:
+    var: _surviving_cartridges
 
 - name: Write cartridge information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
   copy:
     content: "{{ _cartridges_to_install | default([]) | to_json }}"
     dest: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json"
-
-- name: Show cartridge dependencies
-  debug:
-    var: _cartridge_dependencies
