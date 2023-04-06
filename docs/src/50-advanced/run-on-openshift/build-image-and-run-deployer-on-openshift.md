@@ -9,6 +9,7 @@ cat << EOF > $CONFIG_DIR/config/cpd-config.yaml
 global_config:
   environment_name: demo
   cloud_platform: existing-ocp
+  confirm_destroy: False
 
 openshift:
 - name: cpd-demo
