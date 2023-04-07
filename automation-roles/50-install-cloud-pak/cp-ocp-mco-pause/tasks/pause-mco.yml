@@ -3,7 +3,7 @@
     _mco_exists: True
 
 # Check if the MachineConfigPool worker exists. Sometimes after provisioning of a cluster this may take a few minutes
-- name: Check if MachineConfigPool exists
+- name: Check if MachineConfigPool worker exists
   shell: |
     oc get mcp worker
   failed_when: false
@@ -11,37 +11,32 @@
   until: _mcp_worker.rc==0
   delay: 10
   retries: 30
-  when: 
-  - cloud_platform != 'ibm-cloud'
-  - cloud_platform != 'existing-ocp'
+  when: _existing_ocp_infra_type != 'ibm-roks'
 
 # Check if the MachineConfigPool worker exists for existing OpenShift
-- name: Check if MachineConfigPool exists for existing OpenShift
+- name: Check if MachineConfigPool
   shell: |
     oc get mcp worker
   failed_when: false
   register: _mcp_worker
-  when: 
-  - cloud_platform == 'existing-ocp'
 
 - set_fact:
     _mco_exists: False
-  when: (cloud_platform == 'ibm-cloud') or (_mcp_worker.rc | default(0) != 0)
+  when: _mcp_worker.rc != 0
 
-- name: Fail if MachineConfigPool worker does not exist and not existing OpenShift or IBM Cloud
+- name: Fail if MachineConfigPool worker does not exist and not IBM Cloud
   fail:
-    msg: "MachineConfigPool worker does not exist, it should be if not installing on existing OpenShift or IBM Cloud ROKS"
+    msg: "MachineConfigPool worker does not exist, it should be if not installing on IBM Cloud ROKS"
   when:
   - not _mco_exists
-  - cloud_platform != 'ibm-cloud'
-  - cloud_platform != 'existing-ocp'
+  - _existing_ocp_infra_type != 'ibm-roks'
 
 - name: Pause the MachineConfig operator to disable rebooting of compute nodes
   shell: |
     oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
   when: 
   - _mco_exists
-  - cloud_platform != 'aws'
+  - _existing_ocp_infra_type != 'aws-rosa'
 
 - include_tasks: non-mco-prepare-node-settings.yml
   when: not _mco_exists
