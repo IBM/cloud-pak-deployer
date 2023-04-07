@@ -49,6 +49,10 @@
         status_code: 200
       register: _db2_lookup_result
 
+    - fail:
+        msg: Db2 OLTP instance {{ _cognos_instance.metastore_ref }} was not found; the Cognos Analytics instance cannot be provisioned without a valid Db2 OLTP instance
+      when: _db2_lookup_result.json.total_count == 0
+
     - when: _db2_lookup_result.json.total_count == 1
       block:
         - name: "Prepare Cognos instance creation using provisioned Db2 OLTP instance {{ _cognos_instance.metastore_ref }}"
