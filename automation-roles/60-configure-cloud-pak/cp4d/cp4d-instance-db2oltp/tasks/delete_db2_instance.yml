@@ -23,10 +23,10 @@
 
 - name: Fail if Db2 OLTP instance will be deleted and destroy is not confirmed
   fail:
-    msg: "Flag --confirm-destroy was set to False, will not delete Db2 OLTP instance {{ _db2_instance_name }}"
+    msg: "Destroy was not confirmed via --confirm-destroy or global_config confirm_destroy property, will not delete Db2 OLTP instance {{ _db2_instance_name }}"
   when:
   - _delete_db2_instance | bool
-  - confirm_destroy | default (False) | bool == False
+  - _confirm_destroy | default (False) | bool == False
 
 - name: Deleting Db2 OLTP instance {{ _db2_instance_name }}
   uri:

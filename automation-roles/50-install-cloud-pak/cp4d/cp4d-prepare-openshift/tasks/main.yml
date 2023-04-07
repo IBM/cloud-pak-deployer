@@ -8,5 +8,10 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+- include_tasks: existing-ocp-pwx.yml  
+  when: 
+  - cloud_platform == 'existing-ocp'
+  - _storage_type == 'pwx'
+
 - name: Prepare cluster-wide configuration for Cloud Pak for Data
   include_tasks: cp4d-prepare-openshift.yml

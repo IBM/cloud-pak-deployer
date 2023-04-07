@@ -44,6 +44,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
+        fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
         var=g.getModuleVariables()
 
@@ -96,6 +97,14 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
             if "storage_type" in os and os['storage_type'] not in ['ocs','aws-elastic']:
                 g.appendError(msg='storage_type must be ocs or aws-elastic')
+            if "storage_type" in os and os['storage_type']=='aws-elastic':
+                nfs_server_names = []
+                if 'nfs_server' in fc:
+                    nfs_server_names = fc.match('nfs_server[*].name')
+                if "storage_name" not in os:
+                    g.appendError(msg='storage_name must be specified when storage_type is aws-elastic')
+                elif os['storage_name'] not in nfs_server_names:
+                    g.appendError(msg="'"+ os['storage_name'] + "' is not an existing nfs_server name (Found nfs_server: ["+ ','.join(nfs_server_names) +"] )")
             if "storage_type" in os and os['storage_type']=='ocs':
                 if "credentials_mode" in ge['infrastructure']:
                     g.appendError(msg='Installation of ODF using temporary cloud credentials (credentials_mode property) is not supported. Please choose elastic storage or install using permanent credentials.')
