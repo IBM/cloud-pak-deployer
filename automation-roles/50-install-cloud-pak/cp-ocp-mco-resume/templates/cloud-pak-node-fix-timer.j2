@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#
+# This script creates a systemd unit on 
+# non-mco RHCOS systems to run the cloud-pak-node-fix.sh script every 5 minutes
+#
+
+# Delete existing crontab entry, if it exists
+sed -i '/cloud-pak-node-fix.sh/d' /var/spool/cron/root 2> /dev/null | true
+
+echo 'Running timer installation script'
+if [[ $(systemctl list-timers | grep -c cloud-pak-node-fix.timer) -eq 0 ]];then
+# Populate /etc/systemd/system/cloud-pak-node-fix.service
+cat << EOF > /etc/systemd/system/cloud-pak-node-fix.service
+[Unit]
+Description=Runs cloud-pak-node-fix.sh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash -c 'date >> /tmp/cloud-pak-node-fix.log; sh /tmp/cloud-pak-node-fix/cloud-pak-node-fix.sh'
+EOF
+
+# Populate /etc/systemd/system/cloud-pak-node-fix.timer
+cat << EOF > /etc/systemd/system/cloud-pak-node-fix.timer
+[Unit]
+Description=Run cloud-pak-node-fix.service every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+EOF
+
+fi
+
+systemctl start cloud-pak-node-fix.timer
