@@ -1,3 +1,31 @@
 ---
-- include_tasks: retrieve-openshift-type.yml
-  when: cloud_platform == 'existing-ocp'
+- name: Get OpenShift definition of cluster {{ _p_openshift_cluster_name }}
+  include_role: 
+    name: get-openshift-cluster
+
+- debug:
+    var: _current_openshift_cluster
+
+- include_tasks: retrieve-openshift-type-existing-ocp.yml
+  when: 
+  - cloud_platform == 'existing-ocp'
+
+- include_tasks: retrieve-openshift-type-aws.yml
+  when: 
+  - cloud_platform == 'aws'
+
+- include_tasks: retrieve-openshift-type-aws.yml
+  when: 
+  - cloud_platform == 'azure'
+
+- include_tasks: retrieve-openshift-type-ibm-cloud.yml
+  when: 
+  - cloud_platform == 'ibm-cloud'
+
+- include_tasks: retrieve-openshift-type-vsphere.yml
+  when: 
+  - cloud_platform == 'vsphere'
+
+- name: Show inferred or set infrastructure type for OpenShift
+  debug:
+    var: _existing_ocp_infra_type

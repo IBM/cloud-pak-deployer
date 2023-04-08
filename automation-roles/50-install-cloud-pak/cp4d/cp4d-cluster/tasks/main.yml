@@ -37,6 +37,13 @@
   vars:
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
+- name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.openshift_storage_name }}
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"  
+
 - name: Ensure the status log folder exists
   file:
     path: "{{status_dir}}/log"
@@ -58,6 +65,8 @@
 - name: Prepare OpenShift cluster for Cloud Pak for Data
   include_role:
     name: cp4d-prepare-openshift
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
   when: ( current_cp4d_cluster.change_node_settings | default(True) | bool )
 
 - include_tasks: install-cp4d.yml

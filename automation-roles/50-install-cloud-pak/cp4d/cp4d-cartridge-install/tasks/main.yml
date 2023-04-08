@@ -2,6 +2,14 @@
 - include_role:
     name: cp4d-variables
 
+- name: Populate {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
+  lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    line: "custom_spec:"
+    insertbefore: "BOF"
+    state: present
+    create: True
+
 - name: Run pre-processing scripts
   include_tasks: cp4d-install-cr-pre-processing.yml
   loop: "{{ _cartridges_to_install | default([]) }}"

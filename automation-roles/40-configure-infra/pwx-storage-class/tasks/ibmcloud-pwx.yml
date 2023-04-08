@@ -1,0 +1,53 @@
+---
+- name: Wait for Portworx to be ready
+  hosts: localhost
+  gather_facts: false
+  
+  tasks:
+    - name: Wait 2 minutes
+      wait_for:
+        timeout: 120
+        state: started
+      delegate_to: localhost
+    
+    - name: Check number of ready pods
+      shell: oc get -n kube-system ds/portworx -o jsonpath='{.status.numberReady}'
+      register: px_ready
+      retries: 20
+      delay: 15
+      until: px_ready.stdout|int == px_ready.rc|int
+    
+    - name: Check Portworx status
+      shell: oc exec $(oc get pods -l name=portworx -n kube-system -o jsonpath='{.items[0].metadata.name}') -n kube-system -- /opt/pwx/bin/pxctl status --json | jq -r '.status'
+      register: px_status
+      retries: 20
+      delay: 15
+      until: px_status.stdout == "STATUS_OK"
+      
+    - name: Print success message
+      debug:
+        msg: "Portworx is ready"
+
+- name: Delete db2 Storage class that is created by provider
+  shell:
+    oc delete sc portworx-db2-sc || true
+
+#- name: Create other storage classes
+#  script:
+#    px-sc.sh
+#  ignore_errors: yes
+
+- name: Create temporary file for the pwx storage class yaml
+  tempfile:
+    path: "{{status_dir}}/openshift"
+    state: file
+  register: pwx_tempfile
+
+- name: Create other storage classes yaml file {{ pwx_tempfile.path }}
+  template:
+    src: pwx_cp4d_storage_classes.j2
+    dest: "{{ pwx_tempfile.path }}"
+
+- name: Create pwx storage classes required for CP4D
+  command: |
+    oc apply -f "{{ pwx_tempfile.path }}"
