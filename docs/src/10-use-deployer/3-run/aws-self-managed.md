@@ -7,6 +7,14 @@ On Amazon Web Services (AWS), OpenShift can be set up in various ways, managed b
 A typical setup of the self-managed OpenShift cluster is pictured below:
 ![AWS self-managed OpenShift](images/aws-self-managed-ocs.png)
 
+## Single-node OpenShift (SNO) on AWS
+Red Hat OpenShift also supports single-node deployments in which control plane and compute are combined into a single node. Obviously, this type of configuration does not cater for any high availability requirements that are usually part of a production installation, but it does offer a more cost-efficient option for development and testing purposes.
+
+Cloud Pak Deployer can deploy a single-node OpenShift with elastic storage and a sample configuration is provided as part of the deployer.
+
+!!! warning
+    When deploying the IBM Cloud Paks on single-node OpenShift, there may be intermittent timeouts as pods are starting up. In those cases, just re-run the deployer with the same configuration and check status of the pods.
+
 ## Configure Route53 service on AWS
 
 When deploying a self-managed OpenShift on Amazon web Services, a public hosted zone must be created in the same account as your OpenShift cluster. The domain name or subdomain name registered in the Route53 service must be specifed in the `openshift` configuration of the deployer. 
