@@ -31,7 +31,7 @@ def str_to_bool(s):
     else:
         return s.lower() in ['true','yes','1']
 
-def preprocessor(attributes=None, fullConfig=None):
+def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     global g
     g = GeneratorPreProcessor(attributes,fullConfig)
 
@@ -39,7 +39,7 @@ def preprocessor(attributes=None, fullConfig=None):
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
     openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
-    g('cartridges').isRequired()
+    # g('cartridges').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
