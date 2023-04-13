@@ -2,12 +2,9 @@
 cp4ba:
 - project: cp4ba
   openshift_cluster_name: "{{ env_id }}"
-  openshift_rwx_file_storage_name: ocs-storagecluster-cephfs
-  openshift_rwo_block_storage_name: ocs-storagecluster-ceph-rbd
-  case_version: 4.1.2
-  accept_licenses: False
+  openshift_storage_name: ocs-storage
+  accept_licenses: false
   state: installed
-  # openldap_enabled: true 
   patterns:
     foundation: # Foundation pattern, always true - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation
       optional_components:
@@ -15,18 +12,18 @@ cp4ba:
         bai: true # Business Automation Insights (BAI)
         ae: true # Application Engine (AE)
     decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
-      install: true
+      enabled: true
       optional_components:
         decision_center: true # Decison Center (ODM)
         decision_runner: true # Decison Runner (ODM)
         decision_server_runtime: true # Decison Server (ODM)
     decisions_ads: # Automation Decision Services (ADS) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads
-      install: true
+      enabled: true
       optional_components:
         ads_designer: true # Designer (ADS)
         ads_runtime: true # Runtime (ADS)
     content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
-      install: true
+      enabled: true
       optional_components:
         cmis: true # Content Management Interoperability Services (FNCM - CMIS)
         css: true # Content Search Services (FNCM - CSS)
@@ -35,21 +32,21 @@ cp4ba:
         ier: true # IBM Enterprise Records (FNCM - IER)
         icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
     application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
-      install: true
+      enabled: true
       optional_components:
         app_designer: true # App Designer (BAA)
         ae_data_persistence: true # App Engine data persistence (BAA)
     document_processing: # Automation Document Processing (ADP) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__adp
-      install: true
+      enabled: true
       optional_components: 
         document_processing_designer: true # Designer (ADP)
         document_processing_runtime: false # Runtime (ADP) - Currently not implemented
     workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
-      install: true
+      enabled: true
       optional_components:
         baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
     workstreams: # Automation Workstream Services (IAWS)
-      install: false # Always false in this tool - this feature is not implemented
+      enabled: false # Always false in this tool - this feature is not implemented
   
   document_processing_custom: # This will be merged with the generated CR file when document_processing is installed. Use with caution.
     spec:
@@ -59,4 +56,60 @@ cp4ba:
           gpu_enabled: false
           nodelabel_key: nvidia.com/gpu.present
           nodelabel_value: "true"
-            
+    
+  # Additional customization for Operational Decision Management
+  # Contents of the following will be merged into ODM part of CP4BA CR yaml file. Arrays are overwriten.
+  odm_custom:
+    spec:
+      odm_configuration:
+        decisionCenter:
+          # Enable support for decision models
+          disabledDecisionModel: false
+
+  ## Set to false if you don't want to install (or remove) Process Mining
+  pm_enabled: true
+
+  # Additional customization for Process Mining
+  # Contents of the following will be merged into PM CR yaml file. Arrays are overwriten.
+  pm_custom:
+    spec:
+      processmining:
+        storage:
+          # Disables redis to spare resources as per https://www.ibm.com/docs/en/process-mining/1.13.2?topic=configurations-custom-resource-definition
+          redis:
+            install: false  
+
+  ## Set to false if you don't want to install (or remove) Asset Repo
+  asset_repo_enabled: true
+
+  ## Set to false if you don't want to install (or remove) RPA
+  rpa_enabled: true
+
+  # Additional customization for Robotic Process Automation
+  # Contents of the following will be merged into RPA CR yaml file. Arrays are overwriten.
+  rpa_custom:
+    spec:
+      # Configures the NLP provider component of IBM RPA. You can disable it by specifying 0. https://www.ibm.com/docs/en/rpa/21.0?topic=platform-configuring-rpa-custom-resources#basic-setup
+      nlp:
+        replicas: 1  
+
+  ## Set to false if you don't want to install (or remove) AKHQ
+  akhq_enabled: true
+
+  ## Set to false if you don't want to install (or remove) Cerebro
+  cerebro_enabled: true
+
+  ## Set to false if you don't want to install (or remove) DB2 Management Console
+  db2mc_enabled: true
+
+  ## Set to false if you don't want to install (or remove) pgAdmin (PostgreSQL UI)
+  pgadmin_enabled: true
+
+  ## Set to false if you don't want to install (or remove) CloudBeaver (MSSQL UI)
+  cloudbeaver_enabled: true
+
+  ## Set to false if you don't want to install (or remove) Roundcube
+  roundcube_enabled: true
+
+  ## Set to false if you don't want to install (or remove) Mongo Express
+  mongo_express_enabled: true          
