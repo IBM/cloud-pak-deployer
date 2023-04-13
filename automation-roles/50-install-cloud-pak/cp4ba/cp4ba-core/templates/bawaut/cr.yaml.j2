@@ -1,0 +1,154 @@
+spec:
+  datasource_configuration:
+    dc_os_datasources:
+      - dc_database_type: postgresql
+        dc_os_label: badocs
+        dc_common_os_datasource_name: BADOCS
+        dc_common_os_xa_datasource_name: BADOCSXA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: badocs
+        database_port: "5432"
+      - dc_database_type: postgresql
+        dc_os_label: batos
+        dc_common_os_datasource_name: BATOS
+        dc_common_os_xa_datasource_name: BATOSXA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: batos
+        database_port: "5432"
+      - dc_database_type: postgresql
+        dc_os_label: bados
+        dc_common_os_datasource_name: BADOS
+        dc_common_os_xa_datasource_name: BADOSXA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: bados
+        database_port: "5432"
+    dc_cpe_datasources:        
+      - dc_database_type: postgresql
+        dc_os_label: ch
+        dc_common_cpe_datasource_name: CH
+        dc_common_cpe_xa_datasource_name: CHXA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: ch
+        database_port: "5432"
+        dc_common_conn_name: CH_dbconnection
+  workflow_authoring_configuration:
+    replicas: 1
+    admin_user: "{{ lc_principal_admin_user }}"
+    content_integration:
+      domain_name: P8DOMAIN
+      object_store_name: BADOCS
+    case:
+      domain_name: P8DOMAIN
+      object_store_name_dos: BADOS
+      object_store_name_tos: BATOS
+      connection_point_name_tos: pe_conn_batos
+      datasource_name_tos: BATOS
+{% if current_cp4ba_cluster.patterns.foundation.optional_components.bai %}
+      event_emitter:
+        date_sql: 20220401T000000Z
+        logical_unique_id: bawaut
+        solution_list: "*"
+      case_history_emitter:
+        enable: true
+        case_history_store_schema_name: CH
+        dc_common_cpe_datasource_name: CH
+{% endif %}
+    environment_config:
+      show_task_prioritization_service_toggle: true
+    federation_config:
+      case_manager:
+        - index_number_of_replicas: 1
+          index_number_of_shards: 3
+          object_store_name: BATOS
+    business_event:
+      enable: true
+      enable_task_api: true
+      subscription:
+        - {
+            "app_name": "*",
+            "version": "*",
+            "component_type": "*",
+            "component_name": "*",
+            "element_type": "*",
+            "element_name": "*",
+            "nature": "*",
+          }
+    lombardi_custom_xml_secret_name: wfs-lombardi-custom-xml-secret
+  baml_configuration:
+    intelligent_task_prioritization:
+      replicas: 1
+    workforce_insights:
+      replicas: 1
+  pfs_configuration:
+    replicas: 1
+  initialize_configuration:
+    ic_obj_store_creation:
+      object_stores:
+        - oc_cpe_obj_store_display_name: BADOCS
+          oc_cpe_obj_store_symb_name: BADOCS
+          oc_cpe_obj_store_conn:
+            name: BADOCS_dbconnection
+            dc_os_datasource_name: BADOCS
+            dc_os_xa_datasource_name: BADOCSXA
+          oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+          oc_cpe_obj_store_asa_name: badocs_asa
+          oc_cpe_obj_store_asa_file_systems_storage_device_name: badocs_file_system_storage
+          oc_cpe_obj_store_asa_root_dir_path: /opt/ibm/asa/badocs_storagearea1
+        - oc_cpe_obj_store_display_name: BADOS
+          oc_cpe_obj_store_symb_name: BADOS
+          oc_cpe_obj_store_conn:
+            name: BADOS_dbconnection
+            dc_os_datasource_name: BADOS
+            dc_os_xa_datasource_name: BADOSXA
+          oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+          oc_cpe_obj_store_asa_name: bados_asa
+          oc_cpe_obj_store_asa_file_systems_storage_device_name: bados_file_system_storage
+          oc_cpe_obj_store_asa_root_dir_path: /opt/ibm/asa/bados_storagearea1
+        - oc_cpe_obj_store_display_name: BATOS
+          oc_cpe_obj_store_symb_name: BATOS
+          oc_cpe_obj_store_conn:
+            name: BATOS_dbconnection
+            dc_os_datasource_name: BATOS
+            dc_os_xa_datasource_name: BATOSXA
+          oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+          oc_cpe_obj_store_asa_name: batos_asa
+          oc_cpe_obj_store_asa_file_systems_storage_device_name: batos_file_system_storage
+          oc_cpe_obj_store_asa_root_dir_path: /opt/ibm/asa/batos_storagearea1            
+          oc_cpe_obj_store_enable_workflow: true
+          oc_cpe_obj_store_workflow_region_name: batos_region_name
+          oc_cpe_obj_store_workflow_data_tbl_space: batos_tbs
+          oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
+          oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
+          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_batos
+    ic_icn_init_info:
+      icn_repos:
+        - add_repo_id: BADOCS
+          add_repo_os_sym_name: BADOCS
+          add_repo_os_dis_name: BADOCS
+        - add_repo_id: BADOS
+          add_repo_os_sym_name: BADOS
+          add_repo_os_dis_name: BADOS
+        - add_repo_id: BATOS
+          add_repo_os_sym_name: BATOS
+          add_repo_os_dis_name: BATOS
+      icn_desktop:
+        - add_desktop_id: BADOCS
+          add_desktop_name: BADOCS
+          add_desktop_description: BADOCS
+          add_desktop_repo_id: BADOCS
+        - add_desktop_id: BADOS
+          add_desktop_name: BADOS
+          add_desktop_description: BADOS
+          add_desktop_repo_id: BADOS
+        - add_desktop_id: BATOS
+          add_desktop_name: BATOS
+          add_desktop_description: BATOS
+          add_desktop_repo_id: BATOS
+  verify_configuration:
+    vc_icn_verification:
+      - vc_icn_repository: BADOCS
+        vc_icn_desktop_id: BADOCS          
+      - vc_icn_repository: BADOS
+        vc_icn_desktop_id: BADOS          
+      - vc_icn_repository: BATOS
+        vc_icn_desktop_id: BATOS          

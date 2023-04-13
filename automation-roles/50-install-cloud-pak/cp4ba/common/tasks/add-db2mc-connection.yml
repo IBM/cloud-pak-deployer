@@ -1,0 +1,58 @@
+# Example of the functionality call
+#
+# - name: Add DB2MC connection
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: add-db2mc-connection
+#   vars:
+#     common_db2_db_name: _db_name
+#     common_user: "{{ prefix_admin_user }}"
+#     common_password: "{{ prefix_universal_password }}"
+#     common_output_directory: "{{ prefix_output_directory }}"
+#     common_db2_hostname: "{{ prefix_db2_hostname }}"
+#     common_db2_password: "{{ prefix_db2_password }}"
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Prepare JSON file for db2mc token request
+  ansible.builtin.template:
+    src: db2mc-token-request.json.j2
+    dest: "{{ common_output_directory }}/db2mc-token-request.json"
+    mode: u+rwx
+
+- name: Get auth token
+  ansible.builtin.uri:
+    url: "https://db2mc.{{ apps_endpoint_domain }}/dbapi/v4/auth/tokens"
+    method: POST
+    body_format: json
+    src: "{{ common_output_directory }}/db2mc-token-request.json"
+    status_code: 200
+    validate_certs: false
+  register: auth_token_response
+
+- name: Set auth token
+  ansible.builtin.set_fact:
+    auth_token: "{{ auth_token_response.json | json_query('token') }}"
+
+- name: Prepare JSON file for db2mc connection
+  ansible.builtin.template:
+    src: db2mc-profile.json.j2
+    dest: "{{ common_output_directory }}/db2mc-profile.json"
+    mode: u+rwx
+
+- name: Adding DB to DB2MC
+  ansible.builtin.uri:
+    url: "https://db2mc.{{ apps_endpoint_domain }}/dbapi/v4/dbprofiles"
+    method: POST
+    headers:
+      Authorization: Bearer {{ auth_token }}
+    body_format: json
+    src: "{{ common_output_directory }}/db2mc-profile.json"
+    status_code: [201, 409]
+    validate_certs: false
+  register: add_response

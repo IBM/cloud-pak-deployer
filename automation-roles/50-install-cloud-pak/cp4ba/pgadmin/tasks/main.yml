@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    pgadmin_output_directory: "{{ pgadmin_base_dir }}/{{ pgadmin_dir_name }}"
+
+- name: Remove pgadmin directory for generated files
+  ansible.builtin.file:
+    path: "{{ pgadmin_output_directory }}"
+    state: absent
+
+- name: Install pgadmin
+  include_tasks: install.yml
+  when: "pgadmin_action == 'install'"
+
+- name: Remove pgadmin
+  include_tasks: remove.yml
+  when: "pgadmin_action == 'remove'"

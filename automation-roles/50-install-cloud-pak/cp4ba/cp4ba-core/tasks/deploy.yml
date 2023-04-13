@@ -1,0 +1,742 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Load base CR to variable
+  ansible.builtin.set_fact:
+    cr: "{{ lookup('template', 'cr.yaml.j2') | from_yaml }}"
+
+- name: Init variable for patterns
+  ansible.builtin.set_fact:
+    patterns: ['foundation']
+
+- name: Init variable for components
+  ansible.builtin.set_fact:
+    components: []
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-checking-cluster-configuration point 3
+- name: Add RR to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'rr/cr.yaml.j2') | from_yaml, recursive=true) }}"
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-navigator
+- name: Add BAN to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'ban/cr.yaml.j2') | from_yaml, recursive=true) }}"
+
+- name: Add BAN Google IDP configuration to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(ban_insert, recursive=true) }}"
+  vars:
+    ban_insert:
+      spec:
+        navigator_configuration:
+          icn_production_setting:
+            jvm_customize_options: DELIM=;-Dcom.filenet.authentication.ExShareGID.AuthTokenOrder=oidc,oauth,ltpa
+  when: cp4ba_external_share_google and current_cp4ba_cluster.patterns.content.optional_components.es
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-studio
+- name: Add BAS component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['bas'] }}"
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bas
+
+- name: Add BAS to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'bas/cr.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bas
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-insights
+- name: Add BAI component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['bai'] }}"
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bai
+
+- name: Add BAI to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'bai/cr.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bai
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-operational-decision-manager
+- name: Add ODM pattern
+  ansible.builtin.set_fact:
+    patterns: "{{ patterns + ['decisions'] }}"
+  when: current_cp4ba_cluster.patterns.decisions.enabled
+
+- name: Add ODM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['decisionCenter'] }}"
+  when: current_cp4ba_cluster.patterns.decisions.enabled and current_cp4ba_cluster.patterns.decisions.optional_components.decision_center
+
+- name: Add ODM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['decisionRunner'] }}"
+  when: current_cp4ba_cluster.patterns.decisions.enabled and current_cp4ba_cluster.patterns.decisions.optional_components.decision_runner
+
+- name: Add ODM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['decisionServerRuntime'] }}"
+  when: current_cp4ba_cluster.patterns.decisions.enabled and current_cp4ba_cluster.patterns.decisions.optional_components.decision_server_runtime
+
+- name: Add ODM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'odm/cr.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.decisions.enabled
+
+- name: Merge ODM customizations
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(odm_cr_custom , recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.decisions.enabled and (odm_cr_custom is defined)
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-automation-decision-services
+- name: Add ADS pattern
+  ansible.builtin.set_fact:
+    patterns: "{{ patterns + ['decisions_ads'] }}"
+  when: current_cp4ba_cluster.patterns.decisions_ads.enabled
+
+- name: Add ADS components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['ads_designer'] }}"
+  when: current_cp4ba_cluster.patterns.decisions_ads.enabled and current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer
+
+- name: Add ADS components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['ads_runtime'] }}"
+  when: current_cp4ba_cluster.patterns.decisions_ads.enabled and current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_runtime
+
+- name: Add ADS to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'ads/cr-designer.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.decisions_ads.enabled and current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer
+
+- name: Add ADS to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'ads/cr-runtime.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.decisions_ads.enabled and current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_runtime
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-filenet-content-manager
+- name: Add FNCM pattern
+  ansible.builtin.set_fact:
+    patterns: "{{ patterns + ['content'] }}"
+  when: current_cp4ba_cluster.patterns.content.enabled
+
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['cmis'] }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.cmis
+
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['css'] }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.css
+
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['es'] }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.es
+
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['tm'] }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.tm
+
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['ier'] }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.ier
+
+- name: Add FNCM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'fncm/cr-cpe.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.content.enabled
+
+- name: Add FNCM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'fncm/cr-graphql.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.enabled
+
+- name: Add FNCM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'fncm/cr-cmis.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.cmis
+
+- name: Add FNCM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'fncm/cr-css.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.css
+
+- name: Add FNCM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'fncm/cr-es.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.es
+
+- name: Add FNCM to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'fncm/cr-tm.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.tm
+
+
+- name: Add IER
+  block:
+
+    - name: Backup CR
+      ansible.builtin.set_fact:
+        cr_bck: "{{ cr }}"
+
+    - name: Add IER to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(lookup('template', 'ier/cr.yaml.j2') | from_yaml, recursive=true) }}"
+
+    - name: Combine lists back to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(list_overwrites, recursive=true) }}"
+      vars:
+        list_overwrites:
+          spec:
+            datasource_configuration:
+              dc_os_datasources: "{{ cr_bck.spec.datasource_configuration.dc_os_datasources + cr.spec.datasource_configuration.dc_os_datasources }}"
+            initialize_configuration:
+              ic_obj_store_creation:
+                object_stores: "{{ cr_bck.spec.initialize_configuration.ic_obj_store_creation.object_stores +
+                  cr.spec.initialize_configuration.ic_obj_store_creation.object_stores }}"
+              ic_icn_init_info:
+                icn_repos: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_repos + cr.spec.initialize_configuration.ic_icn_init_info.icn_repos }}"
+                icn_desktop: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_desktop +
+                  cr.spec.initialize_configuration.ic_icn_init_info.icn_desktop }}"
+            verify_configuration:
+              vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
+
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.ier
+
+- name: Google and IDP for External Share
+  block:
+
+    - name: Add Google TLS to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(google_tls_insert, recursive=true) }}"
+      vars:
+        google_tls_insert:
+          spec:
+            shared_configuration:
+              trusted_certificate_list: "{{ cr.spec.shared_configuration.trusted_certificate_list + ['google-tls'] }}"
+
+
+    - name: Add IDP configuration to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(lookup('template', 'fncm/cr-es-gid.yaml.j2') | from_yaml, recursive=true) }}"
+
+  when: cp4ba_external_share_google and current_cp4ba_cluster.patterns.content.optional_components.es
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-application
+- name: Add AAE pattern
+  ansible.builtin.set_fact:
+    patterns: "{{ patterns + ['application'] }}"
+  when: current_cp4ba_cluster.patterns.application.enabled
+
+- name: Add AAE components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['app_designer'] }}"
+  when: current_cp4ba_cluster.patterns.application.enabled and current_cp4ba_cluster.patterns.application.optional_components.app_designer
+
+- name: Add AAE components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['ae_data_persistence'] }}"
+  when: current_cp4ba_cluster.patterns.application.enabled and current_cp4ba_cluster.patterns.application.optional_components.ae_data_persistence
+
+- name: Set AAE data persistence to true in CR
+  ansible.builtin.set_fact:
+    aae_data_persistence: true
+  when: current_cp4ba_cluster.patterns.application.enabled and current_cp4ba_cluster.patterns.application.optional_components.ae_data_persistence
+
+- name: Add AAE to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(lookup('template', 'aae/cr.yaml.j2') | from_yaml, recursive=true) }}"
+  when: current_cp4ba_cluster.patterns.application.enabled
+
+- name: Add AAE persistence to CR
+  block:
+
+    - name: Backup CR
+      ansible.builtin.set_fact:
+        cr_bck: "{{ cr }}"
+
+    - name: Add AAE persistence to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(lookup('template', 'aae/cr-persistence.yaml.j2') | from_yaml, recursive=true) }}"
+
+    - name: Combine lists back to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(list_overwrites, recursive=true) }}"
+      vars:
+        list_overwrites:
+          spec:
+            datasource_configuration:
+              dc_os_datasources: "{{ cr_bck.spec.datasource_configuration.dc_os_datasources + cr.spec.datasource_configuration.dc_os_datasources }}"
+            initialize_configuration:
+              ic_obj_store_creation:
+                object_stores: "{{ cr_bck.spec.initialize_configuration.ic_obj_store_creation.object_stores +
+                  cr.spec.initialize_configuration.ic_obj_store_creation.object_stores }}"
+              ic_icn_init_info:
+                icn_repos: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_repos + cr.spec.initialize_configuration.ic_icn_init_info.icn_repos }}"
+                icn_desktop: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_desktop +
+                  cr.spec.initialize_configuration.ic_icn_init_info.icn_desktop }}"
+            verify_configuration:
+              vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
+
+  when: current_cp4ba_cluster.patterns.application.enabled and current_cp4ba_cluster.patterns.application.optional_components.ae_data_persistence
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-document-processing
+- name: Add ADP pattern
+  ansible.builtin.set_fact:
+    patterns: "{{ patterns + ['document_processing'] }}"
+  when: current_cp4ba_cluster.patterns.document_processing.enabled
+
+- name: Add ADP component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['document_processing_designer'] }}"
+  when: current_cp4ba_cluster.patterns.document_processing.enabled and
+    current_cp4ba_cluster.patterns.document_processing.optional_components.document_processing_designer
+
+- name: Add ADP component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['document_processing_runtime'] }}"
+  when: current_cp4ba_cluster.patterns.document_processing.enabled and
+    current_cp4ba_cluster.patterns.document_processing.optional_components.document_processing_runtime
+
+- name: Add ADP to CR
+  block:
+
+    - name: Backup CR
+      ansible.builtin.set_fact:
+        cr_bck: "{{ cr }}"
+
+    - name: Add ADP to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(lookup('template', 'adp/cr.yaml.j2') | from_yaml, recursive=true) }}"
+
+    - name: Merge ADP customizations
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(adp_cr_custom , recursive=true) }}"
+      when: adp_cr_custom is defined
+
+    - name: Combine lists back to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(list_overwrites, recursive=true) }}"
+      vars:
+        list_overwrites:
+          spec:
+            datasource_configuration:
+              dc_os_datasources: "{{ cr_bck.spec.datasource_configuration.dc_os_datasources + cr.spec.datasource_configuration.dc_os_datasources }}"
+            initialize_configuration:
+              ic_obj_store_creation:
+                object_stores: "{{ cr_bck.spec.initialize_configuration.ic_obj_store_creation.object_stores +
+                  cr.spec.initialize_configuration.ic_obj_store_creation.object_stores }}"
+              ic_icn_init_info:
+                icn_repos: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_repos + cr.spec.initialize_configuration.ic_icn_init_info.icn_repos }}"
+                icn_desktop: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_desktop +
+                  cr.spec.initialize_configuration.ic_icn_init_info.icn_desktop }}"
+            verify_configuration:
+              vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
+
+    - name: Combine lists back to CR with CSS
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(list_overwrites, recursive=true) }}"
+      vars:
+        list_overwrites:
+          spec:
+            initialize_configuration:
+              ic_css_index_area: "{{ cr_bck.spec.initialize_configuration.ic_css_index_area +
+                  cr.spec.initialize_configuration.ic_css_index_area }}"
+              ic_enable_cbr: "{{ cr_bck.spec.initialize_configuration.ic_enable_cbr + cr.spec.initialize_configuration.ic_enable_cbr }}"
+      when: current_cp4ba_cluster.patterns.content.optional_components.css
+
+  when: current_cp4ba_cluster.patterns.document_processing.enabled
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-workflow-authoring
+- name: Add BAWAUT pattern
+  ansible.builtin.set_fact:
+    patterns: "{{ patterns + ['workflow'] }}"
+  when: current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.workflow.optional_components.baw_authoring
+
+- name: Add BAWAUT component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['baw_authoring'] }}"
+  when: current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.workflow.optional_components.baw_authoring
+
+- name: Add AAE persistence to CR
+  block:
+
+    - name: Backup CR
+      ansible.builtin.set_fact:
+        cr_bck: "{{ cr }}"
+
+    - name: Add BAWAUT to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(lookup('template', 'bawaut/cr.yaml.j2') | from_yaml, recursive=true) }}"
+
+    - name: Combine lists back to CR
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(list_overwrites, recursive=true) }}"
+      vars:
+        list_overwrites:
+          spec:
+            datasource_configuration:
+              dc_os_datasources: "{{ cr_bck.spec.datasource_configuration.dc_os_datasources + cr.spec.datasource_configuration.dc_os_datasources }}"
+            initialize_configuration:
+              ic_obj_store_creation:
+                object_stores: "{{ cr_bck.spec.initialize_configuration.ic_obj_store_creation.object_stores +
+                  cr.spec.initialize_configuration.ic_obj_store_creation.object_stores }}"
+              ic_icn_init_info:
+                icn_repos: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_repos + cr.spec.initialize_configuration.ic_icn_init_info.icn_repos }}"
+                icn_desktop: "{{ cr_bck.spec.initialize_configuration.ic_icn_init_info.icn_desktop +
+                  cr.spec.initialize_configuration.ic_icn_init_info.icn_desktop }}"
+            verify_configuration:
+              vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
+
+  when: current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.workflow.optional_components.baw_authoring
+
+- name: Add patterns to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(patterns_insert, recursive=true) }}"
+  vars:
+    patterns_insert:
+      spec:
+        shared_configuration:
+          sc_deployment_patterns: "{{ patterns | unique | join(',') }}"
+
+- name: Add components to CR
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(components_insert, recursive=true) }}"
+  vars:
+    components_insert:
+      spec:
+        shared_configuration:
+          sc_optional_components: "{{ components | unique | join(',') }}"
+
+- name: Write CR to file
+  ansible.builtin.copy:
+    content: '{{ cr | to_nice_yaml(indent=2, width=1337) }}'
+    dest: "{{ cp4ba_output_directory }}/cr.yaml"
+    mode: u+rwx
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-deploying-custom-resource-you-created-script
+- name: Add CP4BA CR
+  kubernetes.core.k8s:
+    state: present
+    force: true
+    apply: true
+    src: "{{ cp4ba_output_directory }}/cr.yaml"
+
+- name: Wait for icp4ba Cartridge to be Ready
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: core.automation.ibm.com/v1beta1
+    common_resource_kind: Cartridge
+    common_resource_name: icp4ba
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Ready
+    common_retries: 36
+    common_delay: 300
+
+- name: Wait for Prereqs Ready states
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: icp4a.ibm.com/v1
+    common_resource_kind: ICP4ACluster
+    common_resource_name: "{{ cp4ba_cr_meta_name }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: "{{ item }}"
+    common_condition_value: Ready
+    common_retries: 30
+    common_delay: 120
+  with_items:
+    - resources[*].status.components.prereq.iafStatus
+    - resources[*].status.components.prereq.iamIntegrationStatus
+    - resources[*].status.components.prereq.rootCAStatus
+
+- name: Wait for RR to Ready state
+  kubernetes.core.k8s_info:
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - app.kubernetes.io/component=etcd-server
+  register: pod
+  retries: 30
+  delay: 120
+  until: (['True'] in pod | json_query(condition_query) | unique )
+  vars:
+    condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
+
+- name: Wait for BTS Ready state
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: operator.ibm.com/v1alpha1
+    common_resource_kind: BusinessTeamsService
+    common_resource_name: cp4ba-bts
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.serviceStatus
+    common_condition_value: ready
+    common_retries: 30
+    common_delay: 120
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bas or
+    (current_cp4ba_cluster.patterns.decisions_ads.enabled and current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer) or
+    (current_cp4ba_cluster.patterns.document_processing.enabled and current_cp4ba_cluster.patterns.document_processing.optional_components.document_processing_designer)
+    or current_cp4ba_cluster.patterns.workflow.enabled or
+    current_cp4ba_cluster.patterns.workflow_workstreams.enabled
+
+- name: Deployments wait list
+  ansible.builtin.set_fact:
+    wait_list:
+      - "{{ current_cp4ba_cluster.patterns.content.enabled | ternary(cp4ba_cr_meta_name+'-cpe-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.content.enabled and
+        current_cp4ba_cluster.patterns.content.optional_components.css | ternary(cp4ba_cr_meta_name+'-css-deploy-1','') }}"
+      - "{{ current_cp4ba_cluster.patterns.content.enabled and
+        current_cp4ba_cluster.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name+'-cmis-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.content.enabled and
+        current_cp4ba_cluster.patterns.content.enabled | ternary(cp4ba_cr_meta_name+'-graphql-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.content.enabled and
+        current_cp4ba_cluster.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.content.enabled and
+        current_cp4ba_cluster.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name+'-tm-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-mongo-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-gitgateway-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-viewone-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-cpds-deploy','') }}"
+      - "{{ current_cp4ba_cluster.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-cds-deploy','') }}"
+      - "{{ cp4ba_cr_meta_name+'-navigator-deploy' }}"
+      - "{{ current_cp4ba_cluster.patterns.foundation.optional_components.bas | ternary(cp4ba_cr_meta_name+'-pbk-ae-deployment','') }}"
+
+- name: Wait for Deployments to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 30
+    common_delay: 120
+  with_items: "{{ wait_list | select | list }}"
+
+- name: Wait for {{ cp4ba_cr_meta_name }}-bastudio-deployment StatefulSet ready replicas
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: apps/v1
+    common_resource_kind: StatefulSet
+    common_resource_name: "{{ cp4ba_cr_meta_name }}-bastudio-deployment"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.readyReplicas
+    common_condition_value: 1
+    common_retries: 60
+    common_delay: 120
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bas
+
+- name: Wait for {{ cp4ba_cr_meta_name }}-redis-ha-server StatefulSet ready replicas
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: apps/v1
+    common_resource_kind: StatefulSet
+    common_resource_name: "{{ cp4ba_cr_meta_name }}-redis-ha-server"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.readyReplicas
+    common_condition_value: 1
+    common_retries: 60
+    common_delay: 120
+  when: current_cp4ba_cluster.patterns.document_processing.enabled
+
+- name: StatefulSets wait list
+  ansible.builtin.set_fact:
+    wait_list:
+      - "{{ current_cp4ba_cluster.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-rabbitmq-ha','') }}"
+
+- name: Wait for StatefulSets ready replicas
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: apps/v1
+    common_resource_kind: StatefulSet
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.readyReplicas
+    common_condition_value: 2
+    common_retries: 30
+    common_delay: 120
+  with_items: "{{ wait_list | select | list }}"
+
+- name: Wait for Deployments to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 30
+    common_delay: 120
+  with_items:
+    - "{{ cp4ba_cr_meta_name }}-ier-deploy"
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.ier
+
+- name: Wait for ADP Deployments Available state
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 36
+    common_delay: 300
+  with_items:
+    - "{{ cp4ba_cr_meta_name }}-classifyprocess-classify"
+    - "{{ cp4ba_cr_meta_name }}-deep-learning"
+    - "{{ cp4ba_cr_meta_name }}-natural-language-extractor"
+    - "{{ cp4ba_cr_meta_name }}-ocr-extraction"
+    - "{{ cp4ba_cr_meta_name }}-postprocessing"
+    - "{{ cp4ba_cr_meta_name }}-processing-extraction"
+    - "{{ cp4ba_cr_meta_name }}-setup"
+    - "{{ cp4ba_cr_meta_name }}-spbackend"
+    - "{{ cp4ba_cr_meta_name }}-str-extraction"
+  when: current_cp4ba_cluster.patterns.document_processing.enabled
+
+- name: Wait for BAI InsightsEngine Ready state
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: insightsengine.automation.ibm.com/v1beta1
+    common_resource_kind: InsightsEngine
+    common_resource_name: iaf-insights-engine
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Ready
+    common_retries: 60
+    common_delay: 120
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bai
+
+- name: Deployment wait list
+  ansible.builtin.set_fact:
+    wait_list:
+      - "{{ current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-itp','') }}"
+      - "{{ current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-wfi','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions.enabled and
+        current_cp4ba_cluster.patterns.decisions.optional_components.decision_center | ternary(cp4ba_cr_meta_name+'-odm-decisioncenter','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions.enabled and
+        current_cp4ba_cluster.patterns.decisions.optional_components.decision_server_runtime | ternary(cp4ba_cr_meta_name+'-odm-decisionserverruntime','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions.enabled and
+        current_cp4ba_cluster.patterns.decisions.optional_components.decision_server_runtime | ternary(cp4ba_cr_meta_name+'-odm-decisionserverconsole','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions.enabled and
+        current_cp4ba_cluster.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name+'-odm-decisionrunner','') }}"
+      - "{{ current_cp4ba_cluster.patterns.application.enabled | ternary(cp4ba_cr_meta_name+'-instance1-aae-ae-deployment','') }}"
+
+- name: Wait for Deployments to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 60
+    common_delay: 120
+  with_items: "{{ wait_list | select | list }}"
+
+- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet ready replicas
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: apps/v1
+    common_resource_kind: StatefulSet
+    common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.readyReplicas
+    common_condition_value: 1
+    common_retries: 60
+    common_delay: 120
+  when: current_cp4ba_cluster.patterns.workflow.enabled
+
+- name: Deployment wait list
+  ansible.builtin.set_fact:
+    wait_list:
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name+'-ads-run-service','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-parsing-service','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-git-service','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-download-service','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-rest-api','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-front','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-embedded-build-service','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-credentials-service','') }}"
+      - "{{ current_cp4ba_cluster.patterns.decisions_ads.enabled and
+        current_cp4ba_cluster.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name+'-ads-runtime-service','') }}"
+
+- name: Wait for Deployments to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 60
+    common_delay: 120
+  with_items: "{{ wait_list | select | list }}"
+
+- name: Wait for CP4BA to be Ready
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: icp4a.ibm.com/v1
+    common_resource_kind: ICP4ACluster
+    common_resource_name: cp4ba
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Ready
+    common_retries: 60
+    common_delay: 120
+
+# Do not wait now as there is no common label to all CP4BA pods and on the subsequent try there can be other non-cp4ba broken pods in the Project
+# - name: Wait for all remaining pods to become Ready
+#   kubernetes.core.k8s_info:
+# # #     kind: Pod
+#     namespace: "{{ cp4ba_project_name }}"
+#     field_selectors:
+#       - status.phase!=Succeeded
+#       - status.phase!=Failed
+#   register: pods
+#   retries: 30
+#   delay: 60
+#   until: (['False'] not in pods | json_query(condition_query) | unique )
+#   vars:
+#     condition_query: "resources[*].status.conditions[?type == 'Ready'].status"

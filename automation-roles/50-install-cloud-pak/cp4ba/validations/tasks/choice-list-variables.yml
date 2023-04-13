@@ -1,0 +1,10 @@
+- name: Validate value is one of the provided options
+  ansible.builtin.fail:
+    msg: "The {{ item.name }} variable value is not one of the following {{ item.accepted_values }}"
+  when: "not item.value or item.value == None or item.value not in item.accepted_values"
+  with_items:
+    - name: deployment_platform
+      value: "{{ deployment_platform }}"
+      accepted_values:
+        - ROKS
+        - OCP

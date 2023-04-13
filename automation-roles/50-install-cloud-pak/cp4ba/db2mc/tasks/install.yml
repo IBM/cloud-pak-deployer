@@ -1,0 +1,226 @@
+# Based on https://www.ibm.com/docs/en/db2-data-mgr-console/3.1.x?topic=configuring-setting-up-db2-data-management-console
+# Based on https://hub.docker.com/r/ibmcom/db2console
+
+- name: Create DB2MC directory for generated files
+  ansible.builtin.file:
+    path: "{{ db2mc_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: db2mc
+    common_output_directory: "{{ db2mc_output_directory }}"
+
+- name: Prepare yaml file for PVC
+  ansible.builtin.template:
+    src: pvc.yaml.j2
+    dest: "{{ db2mc_output_directory }}/pvc.yaml"
+    mode: u+rwx
+
+- name: Add PVC
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2mc_output_directory }}/pvc.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Check that the {{ db2mc_wildcard_key_path }} exists
+  ansible.builtin.stat:
+    path: "{{ db2mc_wildcard_key_path }}"
+  register: db2mc_wildcard_key_file
+
+- name: Check that the {{ db2mc_wildcard_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ db2mc_wildcard_crt_path }}"
+  register: db2mc_wildcard_crt_file
+
+- name: Check that the {{ db2mc_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ db2mc_ca_crt_path }}"
+  register: db2mc_ca_crt_file
+
+- name: Ensure we have wildcard keypair and CA crt
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not db2mc_wildcard_key_file.stat.exists or not db2mc_wildcard_crt_file.stat.exists
+    or not db2mc_ca_crt_file.stat.exists
+
+- name: Load TLS key data
+  ansible.builtin.slurp:
+    src: '{{ db2mc_wildcard_key_path }}'
+  register: slurped_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_key: "{{ slurped_key_data.content }}"
+
+- name: Load TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ db2mc_wildcard_crt_path }}'
+  register: slurped_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_crt: "{{ slurped_crt_data.content }}"
+
+- name: Prepare yaml file for Secrets
+  ansible.builtin.template:
+    src: secrets.yaml.j2
+    dest: "{{ db2mc_output_directory }}/secrets.yaml"
+    mode: u+rwx
+
+- name: Add Secrets
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2mc_output_directory }}/secrets.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for Deployment
+  ansible.builtin.template:
+    src: deployment.yaml.j2
+    dest: "{{ db2mc_output_directory }}/deployment.yaml"
+    mode: u+rwx
+
+- name: Add Deployment
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2mc_output_directory }}/deployment.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+
+- name: Prepare yaml file for Service
+  ansible.builtin.template:
+    src: service.yaml.j2
+    dest: "{{ db2mc_output_directory }}/service.yaml"
+    mode: u+rwx
+
+- name: Add Service
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2mc_output_directory }}/service.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+  when: apps_endpoint_domain is not defined
+
+- name: Load TLS CA crt data
+  ansible.builtin.slurp:
+    src: "{{ db2mc_ca_crt_path }}"
+  register: slurped_ca_crt_data
+
+- name: Prepare yaml file for Route
+  ansible.builtin.template:
+    src: route.yaml.j2
+    dest: "{{ db2mc_output_directory }}/route.yaml"
+    mode: u+rwx
+
+- name: Add Route
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2mc_output_directory }}/route.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for Route to be Admitted
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: route.openshift.io/v1
+    common_resource_kind: Route
+    common_resource_name: db2mc
+    common_resource_namespace: db2mc
+    common_condition_query: resources[*].status.ingress[0].conditions[0].status
+    common_condition_value: 'True'
+    common_retries: 10
+    common_delay: 10
+
+- name: Create & configure DB2MC DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CREATE DATABASE DB2MC AUTOMATIC STORAGE YES PAGESIZE 32 K;
+      db2 activate db DB2MC;
+      db2 CONNECT TO DB2MC;
+      "
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"DB2MC\" already exists.*')
+
+- name: Get auth token
+  ansible.builtin.uri:
+    url: "https://db2mc.{{ apps_endpoint_domain }}/dbapi/v4/auth/tokens"
+    method: POST
+    body_format: json
+    body:
+      userid: "{{ db2mc_admin_user }}"
+      password: "{{ db2mc_universal_password }}"
+    validate_certs: false
+    status_code: 200
+  register: auth_token_response
+
+- name: Setup repository
+  ansible.builtin.uri:
+    url: "https://db2mc.{{ apps_endpoint_domain }}/dbapi/v4/repository"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ auth_token_response.json | json_query('token') }}"
+    body_format: json
+    body:
+      host: "{{ db2mc_db2_hostname }}"
+      dataServerType: DB2LUW
+      databaseName: DB2MC
+      port: "50000"
+      collectionCred:
+        user: db2inst1
+        password: "{{ db2mc_universal_password }}"
+      sslConnection: "false"
+    validate_certs: false
+    timeout: 120
+    status_code:
+      - 201
+      - 504
+      - -1
+  register: repo_setup_response
+  retries: 5
+  delay: 30
+  until: ('status' in repo_setup_response) and (repo_setup_response.status == 201)
+
+- name: Add DB connection to DB2MC
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2mc-connection
+  vars:
+    common_db2_db_name: DB2MC
+    common_user: "{{ db2mc_admin_user }}"
+    common_password: "{{ db2mc_universal_password }}"
+    common_output_directory: "{{ db2mc_output_directory }}"
+    common_db2_hostname: "{{ db2mc_db2_hostname }}"
+    common_db2_password: "{{ db2mc_db2_password }}"

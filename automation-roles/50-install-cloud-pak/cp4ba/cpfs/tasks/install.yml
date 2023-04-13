@@ -1,0 +1,615 @@
+- name: Create CPFS directory for generated files
+  ansible.builtin.file:
+    path: "{{ cpfs_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Prepare yaml file for common-service-maps
+  ansible.builtin.template:
+    src: common-service-maps.yaml.j2
+    dest: "{{ cpfs_output_directory }}/common-service-maps.yaml"
+    mode: u+rwx
+
+- name: Add common-service-maps
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/common-service-maps.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Create Project for dedicated cpfs instance
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ cpfs_cp4ba_project_name }}"
+    common_output_directory: "{{ cpfs_output_directory }}"
+
+- name: Prepare yaml file for CatalogSource
+  ansible.builtin.template:
+    src: catalogsource.yaml.j2
+    dest: "{{ cpfs_output_directory }}/catalogsource.yaml"
+    mode: u+rwx
+
+- name: Add CatalogSource
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/catalogsource.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CatalogSource
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
+  with_items:
+    - opencloud-operators
+    - bts-operator
+    - cloud-native-postgresql-catalog
+
+- name: Prepare yaml file for the Operator Group
+  ansible.builtin.template:
+    src: operatorgroup.yaml.j2
+    dest: "{{ cpfs_output_directory }}/operatorgroup.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Group
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/operatorgroup.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for the Operator Subscription
+  ansible.builtin.template:
+    src: subscription.yaml.j2
+    dest: "{{ cpfs_output_directory }}/subscription.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CommonService instance common-service to appear
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: common_service
+  retries: 10
+  delay: 15
+  until: common_service.resources | length == 1
+
+- name: Wait for CommonService instance common-service Succeeded phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: common_service
+  retries: 25
+  delay: 15
+  until: ('Succeeded' in phase)
+  vars:
+    condition_query: "resources[*].status.phase"
+    phase: "{{ common_service | json_query(condition_query) | unique }}"
+
+- name: Patch common-service to add services list
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services"
+        value: []
+
+- name: Patch common-service mongodb storage class
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services/-"
+        value:
+          name: "ibm-mongodb-operator"
+          spec:
+            mongoDB:
+              storageClass: "{{ cpfs_block_storage_class_name }}"
+
+- name: Patch common-service customize username of the default CPFS admin
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services/-"
+        value:
+          name: "ibm-iam-operator"
+          spec:
+            authentication:
+              config:
+                defaultAdminUser: "cpfsadmin"
+
+- name: Wait for CommonService instance common-service Succeeded phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: common_service
+  retries: 25
+  delay: 15
+  until: ('Succeeded' in phase)
+  vars:
+    condition_query: "resources[*].status.phase"
+    phase: "{{ common_service | json_query(condition_query) | unique }}"
+
+- name: Wait for SecretShare CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: secretshares.ibmcpcs.ibm.com
+
+- name: Wait for SecretShare instance common-services to appear
+  kubernetes.core.k8s_info:
+    api_version: ibmcpcs.ibm.com/v1
+    kind: SecretShare
+    name: common-services
+    namespace: cs-control
+  register: secret_share
+  retries: 10
+  delay: 15
+  until: secret_share.resources | length == 1
+
+- name: Patch SecretShare instance common-services to omit sharing into other namespaces
+  kubernetes.core.k8s:
+    state: present
+    api_version: ibmcpcs.ibm.com/v1
+    kind: SecretShare
+    name: common-services
+    namespace: cs-control
+    definition:
+      spec:
+        configmapshares: []
+        secretshares: []
+
+- name: Wait for CRDs to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: "{{ item }}"
+  with_items:
+    - operandconfigs.operator.ibm.com
+    - operandrequests.operator.ibm.com
+
+# This is needed as the sequence of creating CPFS dependent Operators is not detereministic and
+# it can happen that there are multiple "groups" of Operators with different InstallPlans
+# causing normal execution to fail and retry next time.
+- name: Get OperandRequest instance
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1alpha1
+    kind: OperandRequest
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: operand_request
+
+- name: Create ICR Secret
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-icr-secret
+  vars:
+    common_output_directory: "{{ cpfs_output_directory }}"
+    common_icr_secret_name: ibm-entitlement-key
+    common_icr_password: "{{ cpfs_icr_password }}"
+    common_namespace_name: "{{ cpfs_cp4ba_project_name }}"
+
+- name: Prepare yaml file for the OperandRequest instance
+  ansible.builtin.template:
+    src: operandrequest.yaml.j2
+    dest: "{{ cpfs_output_directory }}/operandrequest.yaml"
+    mode: u+rwx
+
+- name: Apply OperandRequest instance
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/operandrequest.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for OperandRequest instance Running phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1alpha1
+    kind: OperandRequest
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: operand_request
+  retries: 80
+  delay: 15
+  until: ('Running' in operand_request | json_query(condition_query) | unique)
+  vars:
+    condition_query: "resources[*].status.phase"
+
+- name: Wait for IAM Ready status as an indicator that CPFS is installed
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    name: ibm-common-services-status
+    namespace: kube-public
+  register: config_map
+  retries: 30
+  delay: 60
+  until: ('Ready' in config_map | json_query(condition_query) | unique)
+  vars:
+    condition_query: "resources[*].data.iamstatus"
+
+- name: Check that the {{ cpfs_wildcard_key_path }} exists
+  ansible.builtin.stat:
+    path: "{{ cpfs_wildcard_key_path }}"
+  register: cpfs_wildcard_key_file
+
+- name: Check that the {{ cpfs_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ cpfs_ca_crt_path }}"
+  register: cpfs_ca_crt_file
+
+- name: Ensure we have CA certificates and wildcards
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not cpfs_wildcard_key_file.stat.exists or not cpfs_ca_crt_file.stat.exists
+
+- name: Load TLS key data
+  ansible.builtin.slurp:
+    src: '{{ cpfs_wildcard_key_path }}'
+  register: slurped_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_key: "{{ slurped_key_data.content }}"
+
+- name: Load TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ cpfs_wildcard_crt_path }}'
+  register: slurped_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_crt: "{{ slurped_crt_data.content }}"
+
+- name: Load CA TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ cpfs_ca_crt_path }}'
+  register: slurped_ca_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_crt: "{{ slurped_ca_crt_data.content }}"
+
+- name: Prepare yaml file for Secret
+  ansible.builtin.template:
+    src: license-service-secret.yaml.j2
+    dest: "{{ cpfs_output_directory }}/license-service-secret.yaml"
+    mode: u+rwx
+
+- name: Add Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/license-service-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+# Based on https://www.ibm.com/docs/en/cpfs?topic=operator-using-custom-certificates
+- name: Apply custom certificate for License Service
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    namespace: cs-control
+    definition:
+      spec:
+        httpsCertsSource: "custom"
+
+- name: Prepare yaml file for the License Service Reporter
+  ansible.builtin.template:
+    src: ibmlicenseservicereporter.yaml.j2
+    dest: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
+    mode: u+rwx
+
+# Based on Based on https://www.ibm.com/docs/en/cpfs?topic=reporter-deploying-license-service
+- name: Apply License Service Reporter instance
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Patch common-service enable License Service Reporter
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services/-"
+        value:
+          name: "ibm-licensing-operator"
+          spec:
+            IBMLicenseServiceReporter: {}
+
+- name: Wait for license reporter Deployment to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: ibm-license-service-reporter-instance
+    common_resource_namespace: cs-control
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+# Switch Ingress certificate mode & delete artifacts"
+# Based on https://www.ibm.com/docs/en/cpfs?topic=operator-replacing-foundational-services-endpoint-certificates
+
+- name: Wait for management ingress operator Deployment to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: ibm-management-ingress-operator
+    common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+- name: Get yaml of ManagementIngress
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1alpha1
+    kind: ManagementIngress
+    name: default
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: ingress
+  retries: 40
+  delay: 30
+
+- name: Replace CPFS certificate
+  block:
+
+    - name: Patch certificate settings
+      kubernetes.core.k8s:
+        state: present
+        api_version: operator.ibm.com/v1alpha1
+        kind: ManagementIngress
+        name: default
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        definition:
+          spec:
+            ignoreRouteCert: true
+
+    - name: Wait for log occurence of Not watching certs
+      kubernetes.core.k8s_log:
+        api_version: apps/v1
+        kind: Deployment
+        name: ibm-management-ingress-operator
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+      register: log
+      retries: 30
+      delay: 60
+      until: "log.log is search('.*Not watching certificate: route-cert, IgnoreRouteCert is true.*')"
+
+    - name: Delete certificate
+      kubernetes.core.k8s:
+        state: absent
+        api_version: certmanager.k8s.io/v1alpha1
+        kind: Certificate
+        name: route-cert
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        wait: true
+        wait_sleep: 5
+        wait_timeout: 50
+
+    - name: Delete route secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        name: route-tls-secret
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        wait: true
+        wait_sleep: 5
+        wait_timeout: 50
+
+    - name: Prepare yaml file for Secret
+      ansible.builtin.template:
+        src: route-tls-secret.yaml.j2
+        dest: "{{ cpfs_output_directory }}/route-tls-secret.yaml"
+        mode: u+rwx
+
+    - name: Add Secret
+      kubernetes.core.k8s:
+        state: present
+        force: false
+        merge_type: merge
+        src: "{{ cpfs_output_directory }}/route-tls-secret.yaml"
+        wait: true
+        wait_sleep: 15
+        wait_timeout: 15
+
+    - name: Delete ca secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Secret
+        name: ibmcloud-cluster-ca-cert
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        wait: true
+        wait_sleep: 5
+        wait_timeout: 50
+
+    - name: Delete auth-idp pod
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        label_selectors:
+          - app=auth-idp
+
+    - name: Wait for IAM to be Available
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: v1
+        common_resource_kind: Deployment
+        common_resource_name: auth-idp
+        common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
+        common_condition_name: Available
+        common_retries: 80
+        common_delay: 15
+
+  when: not (ingress | json_query(condition_query) | bool)
+  vars:
+    condition_query: 'resources[0].spec.ignoreRouteCert'
+
+- name: Get cpfsadmin user password in secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: platform-auth-idp-credentials
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: cpfs_admin_secret
+  retries: 40
+  delay: 30
+
+- name: Update cpfs admin password
+  block:
+
+    # Based on https://www.ibm.com/docs/en/cpfs?topic=configurations-changing-cluster-administrator-access-credentials#pwd
+    # cloudctl command replaced with actual Secret and Pod restarts because per
+    # https://www.ibm.com/docs/en/cloud-paks/cp-integration/2020.3?topic=SSGT7J_20.3/cloudctl/3.x.x/cli_pm_commands.html#update-secret
+    # it does "Update a secret and restart deployments that use the secret."
+    - name: Change cpfsadmin user password in secret
+      kubernetes.core.k8s:
+        state: present
+        api_version: v1
+        kind: Secret
+        name: platform-auth-idp-credentials
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        definition:
+          data:
+            admin_password: "{{ cpfs_universal_password | b64encode }}"
+
+    - name: Delete pods which use cpfsadmin secret
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        label_selectors:
+          - "{{ item }}"
+      with_items:
+        - app=auth-pap
+        - app=auth-idp
+        - app=auth-pdp
+        - app=oidcclient-watcher
+        - app=secret-watcher
+
+    - name: Wait for Deployments which use cpfsadmin secret to be Available
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: v1
+        common_resource_kind: Deployment
+        common_resource_name: "{{ item }}"
+        common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
+        common_condition_name: Available
+        common_retries: 80
+        common_delay: 15
+      with_items:
+        - auth-pap
+        - auth-idp
+        - auth-pdp
+        - secret-watcher
+        - oidcclient-watcher
+
+  when: cpfs_admin_secret | json_query(condition_query) | b64decode !=  cpfs_universal_password
+  vars:
+    condition_query: 'resources[0].data.admin_password'
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "cpfsadmin"
+    common_password: "{{ cpfs_universal_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Prepare JSON file for LDAP connection
+  ansible.builtin.template:
+    src: ldap-connection.json.j2
+    dest: "{{ cpfs_output_directory }}/ldap-connection.json"
+    mode: u+rwx
+
+- name: Add LDAP connection
+  ansible.builtin.uri:
+    url: "https://cp-console-{{ cpfs_cp4ba_project_name }}.{{ apps_endpoint_domain }}/idmgmt/identity/api/v1/directory/ldap/onboardDirectory"
+    method: POST
+    headers:
+      Authorization: Bearer {{ iam_token }}
+    body_format: json
+    src: "{{ cpfs_output_directory }}/ldap-connection.json"
+    status_code: [200, 422]
+    validate_certs: false

@@ -1,0 +1,120 @@
+- name: Check that the {{ cp4ba_wildcard_key_path }} exists
+  ansible.builtin.stat:
+    path: "{{ cp4ba_wildcard_key_path }}"
+  register: cp4ba_wildcard_key_file
+
+- name: Check that the {{ cp4ba_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ cp4ba_ca_crt_path }}"
+  register: cp4ba_ca_crt_file
+
+- name: Ensure we have CA certificates and wildcards
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not cp4ba_wildcard_key_file.stat.exists or not cp4ba_ca_crt_file.stat.exists
+
+- name: Load TLS key data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_wildcard_key_path }}'
+  register: slurped_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_key: "{{ slurped_key_data.content }}"
+
+- name: Load TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_wildcard_crt_path }}'
+  register: slurped_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_crt: "{{ slurped_crt_data.content }}"
+
+- name: Load CA TLS key data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_ca_key_path }}'
+  register: slurped_ca_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_key: "{{ slurped_ca_key_data.content }}"
+
+- name: Load CA TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_ca_crt_path }}'
+  register: slurped_ca_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_crt: "{{ slurped_ca_crt_data.content }}"
+
+- name: Prepare yaml file for custom IAF TLS Secret
+  ansible.builtin.template:
+    src: iaf/iaf-tls-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/iaf-tls-secret.yaml"
+    mode: u+rwx
+
+- name: Add custom IAF TLS Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/iaf-tls-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for AutomationUIConfig CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: automationuiconfigs.core.automation.ibm.com
+
+- name: Wait for Deployments to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+  with_items:
+    - iaf-core-operator-controller-manager
+    - iaf-operator-controller-manager
+
+- name: Prepare yaml file for AutomationUiConfig CR
+  ansible.builtin.template:
+    src: iaf/automationuiconfig.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/automationuiconfig.yaml"
+    mode: u+rwx
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-custom-resources#automationuiconfig
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=certificates-providing-root-ca-certificate Note
+- name: Add AutomationUIConfig CR
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/automationuiconfig.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for AutomationUIConfig instance Ready state
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: core.automation.ibm.com/v1beta1
+    common_resource_kind: AutomationUIConfig
+    common_resource_name: iaf-system
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Ready
+    common_retries: 80
+    common_delay: 15

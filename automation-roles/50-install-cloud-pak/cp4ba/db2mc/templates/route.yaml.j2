@@ -1,0 +1,23 @@
+kind: Route
+apiVersion: route.openshift.io/v1
+metadata:
+  name: db2mc
+  namespace: db2mc
+spec:
+  host: "db2mc.{{ apps_endpoint_domain }}"
+  to:
+    kind: Service
+    name: db2mc
+    weight: 100
+  port:
+    targetPort: 8443
+  tls:
+    termination: reencrypt
+    certificate: |-
+      {{ slurped_crt_data.content | b64decode | indent(6) }}
+    key: |-
+      {{ slurped_key_data.content | b64decode | indent(6) }}
+    destinationCACertificate: |-
+      {{ slurped_ca_crt_data.content | b64decode | indent(6) }}
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

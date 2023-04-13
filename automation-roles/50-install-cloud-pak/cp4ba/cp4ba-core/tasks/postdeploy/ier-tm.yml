@@ -1,0 +1,78 @@
+- name: Copy AdditionalJars.tgz
+  ansible.builtin.copy:
+    src: "files/ier/AdditionalJars.tgz"
+    dest: "{{ cp4ba_output_directory }}/AdditionalJars.tgz"
+    mode: u+rwx
+
+# This is needed as ansible k8s_cp is not reliable for larger files
+- name: Nexus upload AdditionalJars.tgz
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: nexus-upload
+  vars:
+    common_file_folder_path: "{{ cp4ba_output_directory }}"
+    common_file_name: AdditionalJars.tgz
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+
+- name: Get TM pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app={{ cp4ba_cr_meta_name }}-tm-deploy"
+  register: tm_pod
+
+# Based on https://www.ibm.com/docs/en/enterprise-records/5.2.1?topic=in-configuring-content-navigator-task-manager-enterprise-records
+# Omit TM-Liberty.xml as it is already in cp4ba-tm-config
+- name: Download AdditionalJars.tgz to TM Pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ tm_pod.resources[0].metadata.name }}"
+    command: >
+      curl -kv --user "{{ lc_principal_admin_user }}:{{ lc_principal_admin_password }}"
+      http://{{ nexus_hostname }}:8081/repository/raw-hosted/cp4ba/AdditionalJars.tgz
+      --output /tmp/AdditionalJars.tgz
+  register: command_status
+
+- name: Extract AdditionalJars.tgz to TM Pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ tm_pod.resources[0].metadata.name }}"
+    command: >
+      tar xvf /tmp/AdditionalJars.tgz -C /opt/ibm/extTM
+  register: command_status
+
+- name: Get TM Pods
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app={{ cp4ba_cr_meta_name }}-tm-deploy"
+  register: pods
+  retries: 40
+  delay: 15
+
+- name: Delete TM pods
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Pod
+    state: absent
+    namespace: "{{ cp4ba_project_name }}"
+    name: "{{ item.metadata.name }}"
+  loop: "{{ pods.resources }}"
+
+- name: Wait for TM Deployment Available State
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ cp4ba_cr_meta_name }}-tm-deploy"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15

@@ -1,0 +1,268 @@
+- name: Add DB2 users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2-user
+  vars:
+    common_db2_user: "{{ item }}"
+    common_db2_password: "{{ cp4ba_db2_universal_password }}"
+  with_items:
+    - base
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: BASE DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CREATE DATABASE BASE AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
+      db2 CONNECT TO BASE;
+      db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER base;
+      db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER base;
+      db2 CONNECT RESET;
+      "
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"ADPBASE\" already exists.*')
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: TENANT1 DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 create database TENANT1 automatic storage YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT1 USING LOGFILSIZ 7500;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT1 USING LOGPRIMARY 15;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT1 USING APPLHEAPSZ 2560;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT1 USING STMTHEAP 8192;
+      db2 CONNECT TO TENANT1;
+      db2 DROP TABLESPACE USERSPACE1;
+      db2 CREATE Bufferpool TENANT1BP IMMEDIATE SIZE -1 PAGESIZE 32K;
+      db2 CREATE Bufferpool TENANT1TEMPBP IMMEDIATE SIZE -1 PAGESIZE 32K;
+      db2 CREATE Bufferpool TENANT1SYSBP IMMEDIATE SIZE -1 PAGESIZE 32K;
+      db2 CREATE LARGE TABLESPACE TENANT1DATA PAGESIZE 32K BUFFERPOOL TENANT1BP;
+      db2 CREATE USER TEMPORARY TABLESPACE USERTEMP1 PAGESIZE 32K BUFFERPOOL TENANT1TEMPBP;
+      db2 CREATE SYSTEM TEMPORARY TABLESPACE TEMPSYS1 PAGESIZE 32K BUFFERPOOL TENANT1SYSBP;
+      db2 GRANT CONNECT,DATAACCESS,CREATETAB ON DATABASE TO USER db2inst1;
+      db2 GRANT USE OF TABLESPACE TENANT1DATA TO user db2inst1;
+      db2 GRANT USE OF TABLESPACE USERTEMP1 TO user db2inst1;
+      db2 CONNECT RESET;
+      db2 activate db TENANT1;
+      "
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"TENANT1\" already exists.*')
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: TENANT2 DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 create database TENANT2 automatic storage YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT2 USING LOGFILSIZ 7500;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT2 USING LOGPRIMARY 15;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT2 USING APPLHEAPSZ 2560;
+      db2 UPDATE DATABASE CONFIGURATION FOR TENANT2 USING STMTHEAP 8192;
+      db2 CONNECT TO TENANT2;
+      db2 DROP TABLESPACE USERSPACE1;
+      db2 CREATE Bufferpool TENANT2BP IMMEDIATE SIZE -1 PAGESIZE 32K;
+      db2 CREATE Bufferpool TENANT2TEMPBP IMMEDIATE SIZE -1 PAGESIZE 32K;
+      db2 CREATE Bufferpool TENANT2SYSBP IMMEDIATE SIZE -1 PAGESIZE 32K;
+      db2 CREATE LARGE TABLESPACE TENANT2DATA PAGESIZE 32K BUFFERPOOL TENANT2BP;
+      db2 CREATE USER TEMPORARY TABLESPACE USERTEMP1 PAGESIZE 32K BUFFERPOOL TENANT2TEMPBP;
+      db2 CREATE SYSTEM TEMPORARY TABLESPACE TEMPSYS1 PAGESIZE 32K BUFFERPOOL TENANT2SYSBP;
+      db2 GRANT CONNECT,DATAACCESS,CREATETAB ON DATABASE TO USER db2inst1;
+      db2 GRANT USE OF TABLESPACE TENANT2DATA TO user db2inst1;
+      db2 GRANT USE OF TABLESPACE USERTEMP1 TO user db2inst1;
+      db2 CONNECT RESET;
+      db2 activate db TENANT2;
+      "
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"TENANT2\" already exists.*')
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=scripts-creating-databases-document-processing
+# DEVOS Based on
+# https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: postgresql
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
+- name: DEVOS1 DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir /pgsqldata/devos1
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
+
+- name: DEVOS1 DB prepare tablespace permissions
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: chown postgres:postgres /pgsqldata/devos1
+  register: command_status
+
+- name: DEVOS1 DB
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        -- create user devos1
+        CREATE ROLE devos1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create database devos1
+        create database devos1 owner devos1 template template0 encoding UTF8;
+        revoke connect on database devos1 from public;
+        grant all privileges on database devos1 to devos1;
+        grant connect, temp, create on database devos1 to devos1;
+
+        -- please modify location follow your requirement
+        create tablespace devos1_tbs owner devos1 location '/pgsqldata/devos1';
+        grant create on tablespace devos1_tbs to devos1;
+      EOF"
+  register: command_status
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: ADP copy DB init files
+  kubernetes.core.k8s_cp:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    container: db2u
+    remote_path: /tmp/_adp_tmp_DB2
+    local_path: "{{ cp4ba_output_directory }}/cert-kubernetes/ACA/configuration-ha/DB2"
+    no_preserve: true
+    state: to_pod
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: ADP cleanup db2inst1 folder
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      rm -rf sqllib/_adp_tmp
+      "
+  register: command_status
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: ADP create db2inst1 folder
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      mkdir -p sqllib/_adp_tmp
+      "
+  register: command_status
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: ADP move files to be accessible by db2inst1 user
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: |
+      sudo mv -f /tmp/_adp_tmp_DB2 /mnt/blumeta0/home/db2inst1/sqllib/_adp_tmp/DB2
+  register: command_status
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: ADP set DB init files ownership
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: |
+      sudo chown -R db2inst1:db2iadm1 /mnt/blumeta0/home/db2inst1/sqllib/_adp_tmp/DB2
+  register: command_status
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
+- name: ADP make init scripts executable
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      cd sqllib/_adp_tmp/DB2;
+      chmod +x InitBaseDB.sh;
+      chmod +x InitTenantDB.sh;
+      "
+  register: command_status
+
+- name: ADP init Base DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c '
+      cd sqllib/_adp_tmp/DB2;
+      echo -e "BASE\n
+      base\n
+      y" | ./InitBaseDB.sh;
+      '
+  register: command_status
+
+- name: ADP init Tenant1 DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c '
+      cd sqllib/_adp_tmp/DB2;
+      echo -e "TENANT1\n
+      TENANT1\n
+      TENANT1\n
+      No\n
+      db2inst1\n
+      {{ cp4ba_db2_universal_password }}\n
+      {{ cp4ba_db2_universal_password }}\n
+      default\n
+      BASE\n
+      base\n
+      y" | ./InitTenantDB.sh;
+      '
+  register: command_status
+
+- name: ADP init Tenant2 DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c '
+      cd sqllib/_adp_tmp/DB2;
+      echo -e "TENANT2\n
+      TENANT2\n
+      TENANT2\n
+      No\n
+      db2inst1\n
+      {{ cp4ba_db2_universal_password }}\n
+      {{ cp4ba_db2_universal_password }}\n
+      default\n
+      BASE\n
+      base\n
+      y" | ./InitTenantDB.sh;
+      '
+  register: command_status
+
+- name: Add DB connections to DB2MC
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2mc-connection
+  vars:
+    common_db2_db_name: "{{ item }}"
+    common_user: "{{ cp4ba_db2mc_admin_user }}"
+    common_password: "{{ cp4ba_db2mc_universal_password }}"
+    common_output_directory: "{{ cp4ba_output_directory }}"
+    common_db2_hostname: "{{ cp4ba_db2_hostname }}"
+    common_db2_password: "{{ cp4ba_db2_universal_password }}"
+  with_items:
+    - BASE
+    - TENANT1
+    - TENANT2
+  when: current_cp4ba_cluster.db2mc_enabled

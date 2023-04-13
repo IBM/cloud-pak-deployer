@@ -1,0 +1,120 @@
+- name: Get ProcessMining CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: processminings.processmining.ibm.com
+  register: processmining_crd
+  retries: 10
+  delay: 1
+
+- name: Delete ProcessMining instance
+  kubernetes.core.k8s:
+    state: absent
+    api_version: processmining.ibm.com/v1beta1
+    kind: ProcessMining
+    name: processmining
+    namespace: "{{ pm_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  when: processmining_crd.resources | length != 0
+
+- name: Delete Secrets
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: "{{ item }}"
+    namespace: "{{ pm_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - pm-dbs
+    - pm-tls-secret
+
+- name: Remove Operators
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ pm_project_name }}"
+    common_label_selector_stub: "{{ item }}"
+  with_items:
+    - "ibm-automation-processmining"
+    - "db2u-operator"
+
+- name: Remove Catalog Sources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+    wait: true
+  with_items:
+    - ibm-automation-processminings
+    - ibm-cloud-databases-redis-operator-catalog
+    - ibm-db2uoperator-catalog
+
+- name: Remove DB connections from DB2MC
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2mc-connection
+  vars:
+    common_db2_db_name: "{{ item }}"
+    common_password: "{{ pm_db2mc_universal_password }}"
+    common_output_directory: "{{ pm_output_directory }}"
+    common_db2_hostname: "{{ pm_db2_hostname }}"
+    common_user: "{{ pm_db2mc_admin_user }}"
+  with_items:
+    - PM
+  when: current_cp4ba_cluster.db2mc_enabled
+
+- name: Remove DB2 users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-user
+  vars:
+    common_db2_user: pm
+
+- name: Remove DB2 DBs
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-db
+  vars:
+    common_db2_db_name: PM
+
+- name: Get Mongo DB pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: mongodb
+    label_selectors:
+      - app.kubernetes.io/component=mongodb
+  register: mongodb_pod
+
+- name: Delete PM Mongo DB
+  kubernetes.core.k8s_exec:
+    namespace: mongodb
+    pod: "{{ mongodb_pod.resources[0].metadata.name }}"
+    command: >
+      mongo --username root --password {{ pm_universal_password }} --authenticationDatabase admin
+      --eval '{{ item }}' mongodb://localhost:27017/processmining
+  register: command_status
+  with_items:
+    - db.dropUser("root")
+    - db.dropDatabase()
+  when: mongodb_pod.resources | length != 0
+
+- name: Remove post-deploy.md Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: pm-postdeploy
+    namespace: "{{ pm_output_namespace }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15

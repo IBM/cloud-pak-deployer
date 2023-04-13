@@ -1,0 +1,28 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=database-creating-postgresql
+
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: postgresql
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
+- name: AAE DB
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        -- create a new user
+        create user aae with password '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create database aae
+        create database aae owner aae;
+
+        -- The following grant is used for databases
+        grant all privileges on database aae to aae;
+      EOF"
+  register: command_status

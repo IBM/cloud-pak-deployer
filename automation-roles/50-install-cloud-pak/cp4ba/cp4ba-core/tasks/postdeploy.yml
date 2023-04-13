@@ -1,0 +1,66 @@
+- name: Manage Zen
+  include_tasks: postdeploy/zen.yml
+
+- name: Manage BAML
+  include_tasks: postdeploy/baml.yml
+  when: current_cp4ba_cluster.patterns.foundation.optional_components.bai and current_cp4ba_cluster.patterns.workflow.enabled
+
+- name: Manage ADS
+  include_tasks: postdeploy/ads.yml
+  when: current_cp4ba_cluster.patterns.decisions_ads.enabled
+
+- name: Manage ODM
+  include_tasks: postdeploy/odm.yml
+  when: current_cp4ba_cluster.patterns.decisions.enabled
+
+- name: Manage ADP
+  include_tasks: postdeploy/adp.yml
+  when: current_cp4ba_cluster.patterns.document_processing.enabled
+
+- name: Manage IER
+  include_tasks: postdeploy/ier.yml
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.ier
+
+- name: Manage IER TM
+  include_tasks: postdeploy/ier-tm.yml
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.ier
+    and current_cp4ba_cluster.patterns.content.optional_components.tm
+
+- name: Manage TM
+  include_tasks: postdeploy/tm.yml
+  when: current_cp4ba_cluster.patterns.content.enabled and current_cp4ba_cluster.patterns.content.optional_components.tm
+
+- name: Manage BAWAUT
+  include_tasks: postdeploy/bawaut.yml
+  when: current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.workflow.optional_components.baw_authoring
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ cp4ba_output_namespace }}"
+    common_output_directory: "{{ cp4ba_output_directory }}"
+    common_project_output_name: "cp4ba-output-project.yaml"
+
+- name: Prepare post-deploy.md
+  ansible.builtin.template:
+    src: postdeploy.md.j2
+    dest: "{{ cp4ba_output_directory }}/postdeploy.md"
+    mode: u+rwx
+
+- name: Prepare post-deploy.md Config Map
+  ansible.builtin.template:
+    src: postdeploy-configmap.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/postdeploy-configmap.yaml"
+    mode: u+rwx
+
+- name: Add post-deploy.md Config Map
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/postdeploy-configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15

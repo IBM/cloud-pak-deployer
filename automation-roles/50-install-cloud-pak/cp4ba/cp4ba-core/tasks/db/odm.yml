@@ -1,0 +1,47 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-configuring-external-database
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-targeting-separate-external-databases
+
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: postgresql
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
+- name: ODM DC DB
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        -- create user odmdc
+        CREATE ROLE odmdc WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create database odmdc
+        create database odmdc owner odmdc template template0 encoding UTF8 ;
+        revoke connect on database odmdc from public;
+        grant all privileges on database odmdc to odmdc;
+        grant connect, temp, create on database odmdc to odmdc;
+      EOF"
+  register: command_status
+
+- name: ODM RES DB
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        -- create user odmres
+        CREATE ROLE odmres WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create database odmres
+        create database odmres owner odmres template template0 encoding UTF8 ;
+        revoke connect on database odmres from public;
+        grant all privileges on database odmres to odmres;
+        grant connect, temp, create on database odmres to odmres;
+      EOF"
+  register: command_status

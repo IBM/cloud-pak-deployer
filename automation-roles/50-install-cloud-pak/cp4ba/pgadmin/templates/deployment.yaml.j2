@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin
+  namespace: pgadmin
+  labels:
+    app: pgadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin
+  template:
+    metadata:
+      labels:
+        app: pgadmin
+    spec:
+      containers:
+        - name: pgadmin
+          image: "dpage/pgadmin4:{{ pgadmin_image_tag }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: PGADMIN_DEFAULT_EMAIL
+              value: "{{ lc_principal_admin_user }}@{{ lc_ldap_domain }}"
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: pgadmin
+                  key: pgadmin-password
+            # When LDAP is enabled, servers are not loaded and different then .local TLD for emails is enforced
+            # - name: PGADMIN_CONFIG_AUTHENTICATION_SOURCES
+            #   value: "['ldap','internal']"
+            # - name: PGADMIN_CONFIG_LDAP_SERVER_URI
+            #   value: "'{{ 'ldap' if not lc_ldap_ssl_enabled else 'ldaps' }}://{{ lc_ldap_server }}:{{ lc_ldap_port }}'"
+            # - name: PGADMIN_CONFIG_LDAP_USERNAME_ATTRIBUTE
+            #   value: "'{{ lc_ldap_user_display_name_attr }}'"
+            # - name: PGADMIN_CONFIG_LDAP_SEARCH_BASE_DN
+            #   value: "'{{ lc_ldap_user_base_dn }}'"
+            # - name: PGADMIN_CONFIG_LDAP_SEARCH_FILTER
+            #   value: "'(objectclass={{ lc_ldap_user_object_class }})'"
+            # - name: PGADMIN_CONFIG_LDAP_BIND_USER
+            #   value: "'{{ lc_bind_admin_user }}'"
+            # - name: PGADMIN_CONFIG_LDAP_BIND_PASSWORD
+            #   value: "'{{ lc_bind_admin_password }}'"
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          startupProbe:
+            failureThreshold: 30
+            periodSeconds: 10
+            httpGet:
+              path: /misc/ping
+              port: http
+          livenessProbe:
+            failureThreshold: 30
+            timeoutSeconds: 5
+            httpGet:
+              path: /misc/ping
+              port: http
+          readinessProbe:
+            failureThreshold: 30
+            timeoutSeconds: 5
+            httpGet:
+              path: /misc/ping
+              port: http              
+          volumeMounts:
+            - name: pgadmin-config
+              mountPath: /pgadmin4/servers.json
+              subPath: servers.json
+              readOnly: true
+            - name: pgadmin-data
+              mountPath: /var/lib/pgadmin
+            # pg passfile not working to pre-provide password
+            # - name: pgpassfile
+            #   readOnly: true
+            #   mountPath: /pgpassfile
+            #   subPath: pgpassfile              
+      volumes:
+        - name: pgadmin-data
+          persistentVolumeClaim:
+            claimName: pgadmin-data
+        - name: pgadmin-config
+          configMap:
+            name: pgadmin-config
+        # - name: pgpassfile
+        #   secret:
+        #     secretName: pgpassfile
+        #     defaultMode: 256

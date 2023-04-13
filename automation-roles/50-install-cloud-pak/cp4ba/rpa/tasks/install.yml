@@ -1,0 +1,343 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-robotic-process-automation
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Prepare yaml file for CatalogSource
+  ansible.builtin.template:
+    src: catalogsource.yaml.j2
+    dest: "{{ rpa_output_directory }}/catalogsource.yaml"
+    mode: u+rwx
+
+- name: Add CatalogSource
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ rpa_output_directory }}/catalogsource.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CatalogSource
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
+  with_items:
+    - ibm-robotic-process-automation-catalog
+    - ibm-cloud-databases-redis-operator-catalog
+    - ibmmq-operator-catalogsource
+
+- name: Prepare yaml file for the Operator Subscription
+  ansible.builtin.template:
+    src: subscription.yaml.j2
+    dest: "{{ rpa_output_directory }}/subscription.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ rpa_output_directory }}/subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait Operator ibm-automation-rpa
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-operator
+  vars:
+    common_namespace_name: "{{ rpa_project_name }}"
+    common_label_selector_stub: ibm-automation-rpa
+
+- name: Wait for RoboticProcessAutomation CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: roboticprocessautomations.rpa.automation.ibm.com
+
+- name: Get MSSQL Pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: mssql
+    label_selectors:
+      - app=mssql
+  register: pods
+  retries: 40
+  delay: 15
+
+- name: Prepare MSSQL DBs
+  kubernetes.core.k8s_exec:
+    namespace: mssql
+    pod: "{{ pods.resources[0].metadata.name }}"
+    command: >
+      /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P "{{ rpa_universal_password }}" -Q
+      "create database [automation];
+      create database [knowledge];
+      create database [wordnet];
+      create database [address];
+      create database [audit]"
+  register: command_status
+
+- name: Prepare yaml file for Secrets
+  ansible.builtin.template:
+    src: secrets.yaml.j2
+    dest: "{{ rpa_output_directory }}/secrets.yaml"
+    mode: u+rwx
+
+- name: Add Secrets
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ rpa_output_directory }}/secrets.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Load RPA CR to variable
+  ansible.builtin.set_fact:
+    cr: "{{ lookup('template', 'roboticprocessautomation.yaml.j2') | from_yaml }}"
+
+- name: Merge customizations
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(rpa_cr_custom | from_yaml, recursive=true) }}"
+  when: rpa_cr_custom is defined
+
+- name: Write CR to file
+  ansible.builtin.copy:
+    content: '{{ cr | to_nice_yaml(indent=2, width=1337) }}'
+    dest: "{{ rpa_output_directory }}/roboticprocessautomation.yaml"
+    mode: u+rwx
+
+- name: Add RoboticProcessAutomation instance
+  kubernetes.core.k8s:
+    state: present
+    force: true
+    apply: true
+    src: "{{ rpa_output_directory }}/roboticprocessautomation.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for rpa RoboticProcessAutomation to be Ready
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: rpa.automation.ibm.com/v1beta1
+    common_resource_kind: RoboticProcessAutomation
+    common_resource_name: rpa
+    common_resource_namespace: "{{ rpa_project_name }}"
+    common_condition_name: Ready
+    common_retries: 30
+    common_delay: 120
+
+- name: Wait for Deployments to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: apps/v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ rpa_project_name }}"
+    common_condition_name: Available
+    common_retries: 40
+    common_delay: 30
+  with_items:
+    - rpa-ui-rpa
+    - rpa-apiserver-rpa
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ rpa_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Get RPA zen login token
+  ansible.builtin.uri:
+    url: "https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/zen-token-login"
+    method: POST
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    status_code: 200
+  register: token_response
+
+- name: Set rpa_oidc_token
+  ansible.builtin.set_fact:
+    rpa_oidc_token: "{{ token_response.json.oidcAccessToken }}"
+
+- name: Set rpa_tenant_id
+  ansible.builtin.set_fact:
+    rpa_tenant_id: "{{ token_response.json.tenants[0].id }}"
+
+# ansible.builtin.uri not working
+- name: Get RPA token
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/token' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'tenantId: {{ rpa_tenant_id }}' \
+    -H 'oidc-access-token: {{ rpa_oidc_token }}' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'grant_type=password'
+  register: rpa_token_response
+  changed_when: false
+
+- name: Set rpa_token
+  ansible.builtin.set_fact:
+    rpa_token: "{{ rpa_token_response.stdout | from_json | json_query('access_token') }}"
+
+- name: Fail if RPA token not retrieved
+  ansible.builtin.fail:
+    msg: Failed to get RPA token
+  when: rpa_token | length == 0
+
+- name: Get roles
+  ansible.builtin.uri:
+    url: "https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/en-US/role?offset=0&limit=100&search=&orderBy=name&asc=true"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ rpa_token }}"
+    validate_certs: false
+    status_code: 200
+  register: roles_response
+
+- name: Get Bot Developer Role ID
+  ansible.builtin.set_fact:
+    bot_dev_role_id: "{{ roles_response.json | json_query(condition_query) | first }}"
+  vars:
+    condition_query: "results[?name == 'Bot Developer'].id"
+
+- name: Create new RPA team for Bot Developers
+  ansible.builtin.uri:
+    url: "https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/en-US/team"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ rpa_token }}"
+    body_format: json
+    body:
+      {
+        "description":"",
+        "name":"Team Bot Developer",
+        "roles": ["{{ bot_dev_role_id }}"]
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+      - 400
+  register: team_response
+  failed_when: team_response.status != 200 and team_response.content is not search('already exists in tenant')
+
+- name: Get teams
+  ansible.builtin.uri:
+    url: "https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/en-US/team?offset=0&limit=100&search=&orderBy=name&asc=true"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ rpa_token }}"
+    validate_certs: false
+    status_code: 200
+  register: teams_response
+
+- name: Get Bot Developer team ID
+  ansible.builtin.set_fact:
+    bot_dev_team_id: "{{ teams_response.json | json_query(condition_query) | first }}"
+  vars:
+    condition_query: "results[?name == 'Team Bot Developer'].id"
+
+- name: Get users
+  ansible.builtin.uri:
+    url: "https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/en-US/user?offset=0&limit=100&search=&orderBy=name&asc=true"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ rpa_token }}"
+    validate_certs: false
+    status_code: 200
+  register: users_response
+
+- name: Get admin ID
+  ansible.builtin.set_fact:
+    admin_user_id: "{{ users_response.json | json_query(condition_query) | first }}"
+  vars:
+    condition_query: "results[?email == '{{ lc_principal_admin_user }}@{{ lc_ldap_domain }}'].id"
+
+- name: Add admin to team for Bot Developers
+  ansible.builtin.uri:
+    url: "https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/en-US/team/{{ bot_dev_team_id }}/members"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ rpa_token }}"
+    body_format: json
+    body:
+      {
+        "users": ["{{ admin_user_id }}"],
+        "teams":[],
+        "ldapGroups":[]
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: add_team_response
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ rpa_output_namespace }}"
+    common_output_directory: "{{ rpa_output_directory }}"
+    common_project_output_name: "rpa-output-project.yaml"
+
+- name: Prepare post-deploy.md
+  ansible.builtin.template:
+    src: postdeploy.md.j2
+    dest: "{{ rpa_output_directory }}/postdeploy.md"
+    mode: u+rwx
+
+- name: Prepare post-deploy.md Config Map
+  ansible.builtin.template:
+    src: postdeploy-configmap.yaml.j2
+    dest: "{{ rpa_output_directory }}/postdeploy-configmap.yaml"
+    mode: u+rwx
+
+- name: Add post-deploy.md Config Map
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ rpa_output_directory }}/postdeploy-configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15

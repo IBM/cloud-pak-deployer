@@ -1,0 +1,638 @@
+- name: Add DB2 user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2-user
+  vars:
+    common_db2_user: pm
+    common_db2_password: "{{ pm_db2_password }}"
+
+- name: Create PM DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CREATE DATABASE PM AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
+      db2 CONNECT TO PM;
+      db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER pm;
+      db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER pm;
+      db2 CONNECT RESET;
+      "
+  register: command_status
+
+- name: Add DB connections to DB2MC
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2mc-connection
+  vars:
+    common_db2_db_name: PM
+    common_user: "{{ pm_db2mc_admin_user }}"
+    common_password: "{{ pm_db2mc_universal_password }}"
+    common_output_directory: "{{ pm_output_directory }}"
+    common_db2_hostname: "{{ pm_db2_hostname }}"
+    common_db2_password: "{{ pm_db2_password }}"
+  when: current_cp4ba_cluster.db2mc_enabled
+
+- name: Get Mongo DB pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: mongodb
+    label_selectors:
+      - app.kubernetes.io/component=mongodb
+  register: mongodb_pod
+
+- name: Create PM Mongo DB
+  kubernetes.core.k8s_exec:
+    namespace: mongodb
+    pod: "{{ mongodb_pod.resources[0].metadata.name }}"
+    command: |
+      mongo --username root --password {{ pm_universal_password }} --authenticationDatabase admin
+      --eval 'db.createUser({user: "root", pwd: "{{ pm_universal_password }}", roles: [ { role: "readWrite", db: "processmining" } ]})'
+      mongodb://localhost:27017/processmining
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*User \"root@processmining\" already exists.*')
+
+- name: Prepare yaml file for CatalogSource
+  ansible.builtin.template:
+    src: catalogsource.yaml.j2
+    dest: "{{ pm_output_directory }}/catalogsource.yaml"
+    mode: u+rwx
+
+- name: Add CatalogSource
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ pm_output_directory }}/catalogsource.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CatalogSource
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
+  with_items:
+    - ibm-automation-processminings
+    - ibm-cloud-databases-redis-operator-catalog
+    - ibm-db2uoperator-catalog
+
+- name: Prepare yaml file for the Operator Subscription
+  ansible.builtin.template:
+    src: subscription.yaml.j2
+    dest: "{{ pm_output_directory }}/subscription.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ pm_output_directory }}/subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait Operator ibm-automation-processmining
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-operator
+  vars:
+    common_namespace_name: "{{ pm_project_name }}"
+    common_label_selector_stub: ibm-automation-processmining
+
+- name: Wait for ProcessMining CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: processminings.processmining.ibm.com
+
+- name: Check that the {{ pm_wildcard_key_path }} exists
+  ansible.builtin.stat:
+    path: "{{ pm_wildcard_key_path }}"
+  register: pm_wildcard_key_file
+
+- name: Check that the {{ pm_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ pm_ca_crt_path }}"
+  register: pm_ca_crt_file
+
+- name: Ensure we have CA certificates and wildcards
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not pm_wildcard_key_file.stat.exists or not pm_ca_crt_file.stat.exists
+
+- name: Load TLS key data
+  ansible.builtin.slurp:
+    src: '{{ pm_wildcard_key_path }}'
+  register: slurped_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_key: "{{ slurped_key_data.content }}"
+
+- name: Load TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ pm_wildcard_crt_path }}'
+  register: slurped_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_crt: "{{ slurped_crt_data.content }}"
+
+- name: Load CA TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ pm_ca_crt_path }}'
+  register: slurped_ca_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_crt: "{{ slurped_ca_crt_data.content }}"
+
+- name: Prepare yaml file for Secrets
+  ansible.builtin.template:
+    src: secrets.yaml.j2
+    dest: "{{ pm_output_directory }}/secrets.yaml"
+    mode: u+rwx
+
+- name: Add Secrets
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ pm_output_directory }}/secrets.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Load PM CR to variable
+  ansible.builtin.set_fact:
+    cr: "{{ lookup('template', 'processmining.yaml.j2') | from_yaml }}"
+
+- name: Merge customizations
+  ansible.builtin.set_fact:
+    cr: "{{ cr | combine(pm_cr_custom | from_yaml, recursive=true) }}"
+  when: pm_cr_custom is defined
+
+- name: Write CR to file
+  ansible.builtin.copy:
+    content: '{{ cr | to_nice_yaml(indent=2, width=1337) }}'
+    dest: "{{ pm_output_directory }}/processmining.yaml"
+    mode: u+rwx
+
+- name: Add ProcessMining instance
+  kubernetes.core.k8s:
+    state: present
+    force: true
+    apply: true
+    src: "{{ pm_output_directory }}/processmining.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+# TODO hotfix for CPFS installed in multinamespace mode START last with IPM 1.13.1 at 2022-12-02
+- name: Prepare yaml file for licensing ConfigMap
+  ansible.builtin.template:
+    src: licensing-configmap.yaml.j2
+    dest: "{{ pm_output_directory }}/licensing-configmap.yaml"
+    mode: u+rwx
+
+- name: Add licensing ConfigMap
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ pm_output_directory }}/licensing-configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for licensing token upload secret to appear
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: ibm-licensing-upload-token
+    namespace: cs-control
+  register: licensing_secret
+  retries: 10
+  delay: 30
+  until: licensing_secret.resources | length == 1
+
+- name: Get existing licensing secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: cs-control
+    name: ibm-licensing-upload-token
+  register: licensing_secret
+
+- name: Set token_upload
+  ansible.builtin.set_fact:
+    token_upload: "{{ licensing_secret.resources[0].data['token-upload'] }}"
+
+- name: Prepare yaml file for licensing Secret
+  ansible.builtin.template:
+    src: licensing-secret.yaml.j2
+    dest: "{{ pm_output_directory }}/licensing-secret.yaml"
+    mode: u+rwx
+
+- name: Add licensing Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ pm_output_directory }}/licensing-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+# TODO hotfix for CPFS installed in multinamespace mode END
+
+# Based on validate successful deployment by following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=platform-how-validate-successful-installation
+- name: Wait for ProcessMining to be Ready
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: processmining.ibm.com/v1beta1
+    common_resource_kind: ProcessMining
+    common_resource_name: processmining
+    common_resource_namespace: "{{ pm_project_name }}"
+    common_condition_name: Ready
+    common_retries: 30
+    common_delay: 120
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ pm_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Get User profile
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    status_code: 200
+  register: user_profile_response
+
+- name: Set user profile api key
+  ansible.builtin.set_fact:
+    api_key: "{{ user_profile_response.json.data.apiKey }}"  
+
+# Based on https://www.ibm.com/docs/en/process-mining/latest?topic=manual-how-integrate-process-mining-task-mining
+- name: Setup master key for task mining
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/taskmining/api/pmMasterUser"
+    method: POST
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    body_format: json
+    body:
+      {
+        "userName": "{{ lc_principal_admin_user }}",
+        "apiKey": "{{ api_key }}"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+
+- name: Get all groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: groups_response
+
+- name: Get TaskMiningAdmins group
+  ansible.builtin.set_fact:
+    tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
+  vars:
+    condition_query: "data.groups[?name == 'TaskMiningAdmins']"
+
+- name: Create group
+  block:
+    - name: Create TaskMiningAdmins group
+      ansible.builtin.uri:
+        url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/NaN"
+        method: POST
+        headers:
+          Cookie: ibm-private-cloud-session={{ zen_token }}
+        body_format: form-urlencoded
+        body:
+          group: '{"id":null,"tenantId":"-1","name":"TaskMiningAdmins"}'
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+
+    - name: Get all groups
+      ansible.builtin.uri:
+        url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
+        method: GET
+        headers:
+          Cookie: ibm-private-cloud-session={{ zen_token }}
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: groups_response
+
+    - name: Get TaskMiningAdmins group
+      ansible.builtin.set_fact:
+        tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
+      vars:
+        condition_query: "data.groups[?name == 'TaskMiningAdmins']"
+
+  when: tm_admins_group | length == 0
+
+- name: Get TaskMiningAdmins group ID
+  ansible.builtin.set_fact:
+    tm_admins_group_id: "{{ tm_admins_group | first | json_query('id') }}"
+
+# Overwrites the current members of TM admin group
+# ansible.builtin.uri not working
+- name: Add admin to tm admins group
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ tm_admins_group_id }}' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'group={"id":"{{ tm_admins_group_id }}",
+    "name":"TaskMiningAdmins","tenantId":"-1",
+    "users":[{"username":"{{ lc_principal_admin_user }}"}],"groups":[],"authorizations":[]}'
+  changed_when: false
+
+- name: Get Classification permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=68"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add tm admins group Classification permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"68"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource","permissions":[{"id":"READ"},{"id":"WRITE"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
+
+- name: Get Decrypt permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=65"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add tm admins group Decrypt permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"65"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource","permissions":[{"id":"READ"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
+
+- name: Get Monitoring list permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=64"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add tm admins group Monitoring list permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"64"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource","permissions":[{"id":"READ"},{"id":"WRITE"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
+
+- name: Get Obfuscation permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=67"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add tm admins group Obfuscation permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"67"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource","permissions":[{"id":"READ"},{"id":"WRITE"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
+
+- name: Get Project permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=63"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add tm admins group Project permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"63"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource",
+    "permissions":[{"id":"READ"},{"id":"WRITE"},{"id":"CREATE"},{"id":"CREATE_PACKAGE"},{"id":"DEPLOY_PACKAGE"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
+
+- name: Get RPA Script permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=69"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add tm admins group RPA Script permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"69"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource","permissions":[{"id":"READ"},{"id":"WRITE"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
+
+- name: Get all users
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/user-accounts"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: users_response
+
+- name: Get admin user
+  ansible.builtin.set_fact:
+    admin_user: "{{ users_response.json | json_query(condition_query) }}"
+  vars:
+    condition_query: "[?username == '{{ lc_principal_admin_user }}']"
+
+- name: Get admin user ID
+  ansible.builtin.set_fact:
+    admin_user_id: "{{ admin_user | first | json_query('id') }}"
+
+- name: Get admin user
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/user-accounts/{{ admin_user_id }}"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: user_response
+
+- name: Retrieve admin user
+  ansible.builtin.set_fact:
+    admin_user: "{{ user_response.json }}"
+
+- name: Enable agent for admin user
+  ansible.builtin.set_fact:
+    admin_user: "{{ admin_user | combine({ 'agentEnabled': true }) }}"
+
+- name: Update admin user
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/user-accounts/update/{{ admin_user_id }}"
+    method: PUT
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    body_format: json
+    body: "{{ admin_user }}"
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: update_response
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ pm_output_namespace }}"
+    common_output_directory: "{{ pm_output_directory }}"
+    common_project_output_name: "pm-output-project.yaml"
+
+- name: Prepare post-deploy.md
+  ansible.builtin.template:
+    src: postdeploy.md.j2
+    dest: "{{ pm_output_directory }}/postdeploy.md"
+    mode: u+rwx
+
+- name: Prepare post-deploy.md Config Map
+  ansible.builtin.template:
+    src: postdeploy-configmap.yaml.j2
+    dest: "{{ pm_output_directory }}/postdeploy-configmap.yaml"
+    mode: u+rwx
+
+- name: Add post-deploy.md Config Map
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ pm_output_directory }}/postdeploy-configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15

@@ -1,0 +1,441 @@
+- name: Get ICP4ACluster CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: icp4aclusters.icp4a.ibm.com
+  register: icp4acluster_crd
+  retries: 60
+  delay: 30
+
+- name: Remove cp4ba cluster
+  kubernetes.core.k8s:
+    state: absent
+    api_version: icp4a.ibm.com/v1
+    kind: ICP4ACluster
+    name: cp4ba
+    namespace: "{{ cp4ba_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+  when: icp4acluster_crd.resources | length != 0
+
+# wait for the CartridgeRequirements instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for CartridgeRequirements instances to disappear
+  kubernetes.core.k8s_info:
+    api_version: base.automation.ibm.com/v1beta1
+    kind: CartridgeRequirements
+    namespace: "{{ cp4ba_project_name }}"
+  register: cartridge_requirements
+  retries: 60
+  delay: 30
+  until: cartridge_requirements.resources | length == 0
+
+# wait for the Cartridge instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for Cartridge intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: core.automation.ibm.com/v1beta1
+    kind: Cartridge
+    namespace: "{{ cp4ba_project_name }}"
+  register: cartridges
+  retries: 60
+  delay: 30
+  until: cartridges.resources | length == 0
+
+- name: Wait for InsightsEngine intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: insightsengine.automation.ibm.com/v1beta1
+    kind: InsightsEngine
+    namespace: "{{ cp4ba_project_name }}"
+  register: insightsengines
+  retries: 60
+  delay: 30
+  until: insightsengines.resources | length == 0
+
+- name: Get AutomationBase CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: automationbases.base.automation.ibm.com
+    namespace: "{{ cp4ba_project_name }}"
+  register: automationbase_crd
+  retries: 60
+  delay: 30
+
+- name: Remove AutomationBase
+  kubernetes.core.k8s:
+    state: absent
+    api_version: base.automation.ibm.com/v1beta1
+    kind: AutomationBase
+    name: foundation-iaf
+    namespace: "{{ cp4ba_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+  when: automationbase_crd.resources | length != 0
+
+- name: Get AutomationUIConfig CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: automationuiconfigs.core.automation.ibm.com
+    namespace: "{{ cp4ba_project_name }}"
+  register: automationuiconfig_crd
+  retries: 60
+  delay: 30
+
+- name: Remove AutomationUIConfig
+  kubernetes.core.k8s:
+    state: absent
+    api_version: core.automation.ibm.com/v1beta1
+    kind: AutomationUIConfig
+    name: iaf-system
+    namespace: "{{ cp4ba_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+  when: automationuiconfig_crd.resources | length != 0
+
+# wait for the Client instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for Client intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: oidc.security.ibm.com/v1
+    kind: Client
+    namespace: "{{ cp4ba_project_name }}"
+  register: clients
+  retries: 60
+  delay: 30
+  until: clients.resources | length == 0
+  ignore_errors: true
+
+- name: Clear Client instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: oidc.security.ibm.com/v1
+    common_kind: Client
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: clients.resources | length != 0
+
+- name: Remove CP4BA Operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_label_selector_stub: ibm-cp4a-operator
+
+- name: Remove Operators
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_label_selector_stub: "{{ item }}"
+  with_items:
+    - "ibm-cp4a-wfps-operator"
+    - "ibm-automation-insightsengine"
+    - "ibm-automation-eventprocessing"
+    - "ibm-automation-flink"
+    - "ibm-automation-elastic"
+    - "ibm-automation"
+    - "ibm-automation-core"
+
+- name: Remove Catalog Sources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+    wait: true
+  with_items:
+    - ibm-cp4a-operator-catalog
+    - ibm-cp-automation-foundation-catalog
+    - ibm-automation-foundation-core-catalog
+
+# Based on https://www.ibm.com/docs/en/cpfs?topic=online-uninstalling-foundational-services
+
+- name: Remove IBM Cloud Pak foundational services Operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_label_selector_stub: ibm-common-service-operator
+
+- name: Get OperandRequest CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: operandrequests.operator.ibm.com
+  register: operandrequest_crd
+  retries: 10
+  delay: 1
+
+- name: Delete all OperanRequests
+  block:
+
+    - name: Get all OperandRequest
+      kubernetes.core.k8s_info:
+        api_version: operator.ibm.com/v1alpha1
+        kind: OperandRequest
+        namespace: "{{ cp4ba_project_name }}"
+      register: operand_requests
+      retries: 10
+      delay: 1
+
+    - name: Delete All OperandRequest
+      kubernetes.core.k8s:
+        state: absent
+        api_version: operator.ibm.com/v1alpha1
+        kind: OperandRequest
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ cp4ba_project_name }}"
+      with_items: "{{ operand_requests.resources }}"
+
+    - name: Wait All OperandRequest disappear
+      kubernetes.core.k8s_info:
+        api_version: operator.ibm.com/v1alpha1
+        kind: OperandRequest
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ cp4ba_project_name }}"
+      with_items: "{{ operand_requests.resources }}"
+      register: operand_request
+      retries: 40
+      delay: 30
+      until: operand_request.resources | length == 0
+
+  when: operandrequest_crd.resources | length != 0
+
+- name: Get OperandConfig CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: operandconfigs.operator.ibm.com
+  register: operandconfig_crd
+  retries: 10
+  delay: 1
+
+- name: Remove OperandConfig common-service
+  kubernetes.core.k8s:
+    state: absent
+    api_version: operator.ibm.com/v1alpha1
+    kind: OperandConfig
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+  retries: 15
+  delay: 2
+  when: operandconfig_crd.resources | length != 0
+
+- name: Get OperandRegistry CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: operandregistries.operator.ibm.com
+  register: operandregistry_crd
+  retries: 10
+  delay: 1
+
+- name: Remove OperandRegistry common-service
+  kubernetes.core.k8s:
+    state: absent
+    api_version: operator.ibm.com/v1alpha1
+    kind: OperandRegistry
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+  retries: 15
+  delay: 2
+  when: operandregistry_crd.resources | length != 0
+
+- name: Get NamespaceScope CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: namespacescopes.operator.ibm.com
+  register: namespacescope_crd
+  retries: 10
+  delay: 1
+
+- name: Delete all NamespaceScope
+  block:
+
+    - name: Get all NamespaceScope
+      kubernetes.core.k8s_info:
+        api_version: operator.ibm.com/v1
+        kind: NamespaceScope
+        namespace: "{{ cp4ba_project_name }}"
+      register: namespace_scopes
+      retries: 10
+      delay: 1
+
+    - name: Delete All NamespaceScope
+      kubernetes.core.k8s:
+        state: absent
+        api_version: operator.ibm.com/v1
+        kind: NamespaceScope
+        name: "{{ item.metadata.name }}"
+        namespace: "{{ cp4ba_project_name }}"
+        wait: true
+        wait_sleep: 5
+        wait_timeout: 180
+      with_items: "{{ namespace_scopes.resources }}"
+
+  when: namespacescope_crd.resources | length != 0
+
+- name: Remove Operand Deployment Lifecycle Manager Operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_label_selector_stub: ibm-odlm
+
+- name: Remove Project cp4ba
+  kubernetes.core.k8s:
+    state: absent
+    api_version: project.openshift.io/v1
+    kind: Project
+    name: "{{ cp4ba_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+
+- name: Remove DB connections from DB2MC
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2mc-connection
+  vars:
+    common_db2_db_name: "{{ item }}"
+    common_password: "{{ cp4ba_db2mc_universal_password }}"
+    common_output_directory: "{{ cp4ba_output_directory }}"
+    common_db2_hostname: "{{ cp4ba_db2_hostname }}"
+    common_user: "{{ cp4ba_db2mc_admin_user }}"
+  with_items:
+    - BASE
+    - TENANT1
+    - TENANT2
+  when: current_cp4ba_cluster.db2mc_enabled
+
+- name: Remove DB2 users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-user
+  vars:
+    common_db2_user: "{{ item }}"
+  with_items:
+    - base
+
+- name: Remove DB2 DBs
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-db
+  vars:
+    common_db2_db_name: "{{ item }}"
+  with_items:
+    - TENANT1
+    - TENANT2
+    - BASE
+
+- name: Remove PostgreSQL DBs
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-postgresql-db
+  vars:
+    common_postgresql_db_name: "{{ item }}"
+  with_items:
+    - aeos
+    - aae
+    - devos1
+    - icndb
+    - pb
+    - bas
+    - badocs
+    - batos
+    - bados
+    - ch
+    - gcd
+    - os1
+    - fpos
+    - ros
+    - odmdc
+    - odmres
+
+- name: Remove PostgreSQL tablespaces
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-postgresql-tablespace
+  vars:
+    common_postgresql_tablespace_name: "{{ item }}"
+  with_items:
+    - aeos
+    - devos1
+    - icndb
+    - badocs
+    - batos
+    - bados
+    - ch
+    - gcd
+    - os1
+    - fpos
+    - ros
+
+- name: Remove PostgreSQL users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-postgresql-user
+  vars:
+    common_postgresql_user: "{{ item }}"
+  with_items:
+    - aeos
+    - aae
+    - devos1
+    - icndb
+    - pb
+    - bas
+    - badocs
+    - batos
+    - bados
+    - ch
+    - gcd
+    - os1
+    - fpos
+    - ros
+    - odmdc
+    - odmres
+
+- name: Remove post-deploy.md Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: cp4ba-postdeploy
+    namespace: "{{ cp4ba_output_namespace }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Remove cp4ba-cr Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: cp4ba-cr
+    namespace: "{{ cp4ba_output_namespace }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Remove cp4ba-opertor-log Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: cp4ba-opertor-log
+    namespace: "{{ cp4ba_output_namespace }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15

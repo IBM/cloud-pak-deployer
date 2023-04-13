@@ -1,0 +1,53 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: mailserver.config
+  namespace: mail
+  labels:
+    app: mailserver
+data:
+  postfix-accounts.cf: |
+    {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
+    cpadmin1@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
+    cpadmin2@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
+    cpuser@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
+    cpuser1@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
+    cpuser2@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
+
+  postfix-virtual.cf: |
+    cpuser@{{ lc_ldap_domain }} cpuser@{{ lc_ldap_domain }}
+    cpuser1@{{ lc_ldap_domain }} cpuser1@{{ lc_ldap_domain }}
+    cpuser2@{{ lc_ldap_domain }} cpuser2@{{ lc_ldap_domain }}
+    cpadmin1@{{ lc_ldap_domain }} cpadmin1@{{ lc_ldap_domain }}
+    cpadmin2@{{ lc_ldap_domain }} cpadmin2@{{ lc_ldap_domain }}
+    @{{ lc_ldap_domain }} {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}
+
+  postfix-main.cf: |
+    smtpd_recipient_restrictions = permit_sasl_authenticated,permit_mynetworks
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: mailserver.env.config
+  namespace: mail
+  labels:
+    app: mailserver
+data:
+  # Cannot be set to cp.internal, otherwise postfix is eating mails, some details at https://github.com/docker-mailserver/docker-mailserver/issues/968
+  OVERRIDE_HOSTNAME: relay.local
+  ENABLE_FETCHMAIL: "0"
+  ENABLE_SPAMASSASSIN: "0"
+  ENABLE_CLAMAV: "0"
+  ENABLE_FAIL2BAN: "0"
+  ENABLE_POSTGREY: "0"
+  ENABLE_AMAVIS: "0"
+  ENABLE_SRS: "0"
+  ENABLE_QUOTAS: "0"
+  ENABLE_UPDATE_CHECK: "0"
+  ENABLE_SASLAUTHD: "0"
+  ONE_DIR: "1"
+  DMS_DEBUG: "0"
+  SSL_TYPE: "manual"
+  SSL_CERT_PATH: "/tmp/ssl/tls.crt"
+  SSL_KEY_PATH: "/tmp/ssl/tls.key"

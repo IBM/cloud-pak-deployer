@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    cpfs_output_directory: "{{ cpfs_base_dir }}/{{ cpfs_dir_name }}"
+
+- name: Remove CPFS directory for generated files
+  ansible.builtin.file:
+    path: "{{ cpfs_output_directory }}"
+    state: absent
+
+- name: Install CPFS
+  include_tasks: install.yml
+  when: "cpfs_action == 'install'"
+
+- name: Remove CPFS
+  include_tasks: remove.yml
+  when: "cpfs_action == 'remove'"

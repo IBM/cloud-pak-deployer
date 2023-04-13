@@ -1,0 +1,150 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Navigator Logon
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/logon"
+    method: POST
+    body: "desktop=admin"
+    force_basic_auth: true
+    status_code: 200
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: InternalIamRealm
+      Content-Type: "application/x-www-form-urlencoded"
+    validate_certs: false
+    timeout: 60
+    return_content: true
+  register: login
+
+- name: icn session
+  ansible.builtin.set_fact:
+    content: "{{ login.content[4:] }}"
+    login_jsession: "{{ login.cookies['icn-JSESSIONID'] }}"
+    cookie_jsessionid_name: icn-JSESSIONID
+
+- name: Set Task Manager service URL
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/configuration/settings/default/taskManagerServiceURL"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body: "desktop=admin&value=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/tm/api/v1"
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Set Task manager log directory
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/configuration/settings/default/taskManagerLogDirectory"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body: "desktop=admin&value=/opt/ibm/viewerconfig/logs/"
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Set Task manager administrator user ID
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/configuration/settings/default/taskManagerAdminUserId"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body: "desktop=admin&value={{ lc_principal_admin_user }}"
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Set Task manager administrator password
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/configuration/settings/default/taskManagerAdminPassword"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body: "desktop=admin&value={{ lc_principal_admin_password }}"
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Enable Task Manager
+  ansible.builtin.uri:
+    url: >-
+      https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/
+      jaxrs/api/admin/configuration/settings/default/taskManagerServiceEnabled
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body: "desktop=admin&value=true"
+    body_format: form-urlencoded
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"

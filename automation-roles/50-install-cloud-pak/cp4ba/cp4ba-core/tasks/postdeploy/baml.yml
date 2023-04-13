@@ -1,0 +1,93 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=secrets-creating-custom-bpc-workforce-secret
+- name: Get BPM Systems Federated Response
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/pfs/rest/bpm/federated/v1/systems"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code:
+      - 200
+  register: bpm_systems_response
+
+- name: Prepare yaml file for the Workforce Insights Secret
+  ansible.builtin.template:
+    src: bai/workforce-insights-config-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/workforce-insights-config-secret.yaml"
+    mode: u+rwx
+  vars:
+    system_type_query: json.federationResult[?systemType=='SYSTEM_TYPE_WLE']
+    system_id: "{{ bpm_systems_response | json_query(system_type_query) | first | json_query('systemID') }}"
+    username: "{{ lc_principal_admin_user }}"
+    password: "{{ lc_principal_admin_password }}"
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bawaut"
+
+- name: Add the Workforce Insights Secret
+  kubernetes.core.k8s:
+    src: "{{ cp4ba_output_directory }}/workforce-insights-config-secret.yaml"
+    state: present
+    merge_type: merge
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Get BPC Pods
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - component = iaf-insights-engine-cockpit
+  register: pods
+  retries: 40
+  delay: 15
+
+- name: Delete BPC pods
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Pod
+    state: absent
+    namespace: "{{ cp4ba_project_name }}"
+    name: "{{ item.metadata.name }}"
+  loop: "{{ pods.resources }}"
+
+- name: Wait for BPC Deployment Available State
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: iaf-insights-engine-cockpit
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
