@@ -44,10 +44,10 @@
       when: _existing_ocp_cluster_info.stdout is not search("https://.*.openshiftapps.com:.*")
     when: _storage_inferred_ocp_infra_type == "aws"
 
-  # Do not match anything
+  # Do not match anything --> set to standard
   - set_fact:
       _existing_ocp_infra_type: "{{ _storage_inferred_ocp_infra_type }}"
-    when: _storage_inferred_ocp_infra_type == 'detect'
+    when: _existing_ocp_infra_type == 'detect'
 
   when: (_current_openshift_cluster.infrastructure.type | default('detect')) == 'detect'
 
