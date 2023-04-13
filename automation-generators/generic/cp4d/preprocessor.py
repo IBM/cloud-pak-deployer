@@ -234,6 +234,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('sequential_install').isOptional().mustBeOneOf([True, False])
     g('accept_licenses').isOptional().mustBeOneOf([True, False])
     g('change_node_settings').isOptional()
+    g('cp4d_entitlement').isOptional().mustBeOneOf(['cpd-enterprise', 'cpd-standard'])
+    g('cp4d_production_license').isOptional().mustBeOneOf([True, False])
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
