@@ -38,10 +38,10 @@
 - set_fact:
     _aws_compute_sg: "{{ _aws_sg.stdout | from_json | first }}"
 
-- name: Get subnets for compute nodes in OpenShift cluster {{ _current_openshift_cluster }}
+- name: Get subnets for nodes in OpenShift cluster {{ _current_openshift_cluster }}
   shell: |
     aws ec2 describe-instances --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}-*-worker-*" \
+      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}-*-*-*" \
       --query 'Reservations[*].Instances[*].SubnetId'
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
@@ -52,13 +52,13 @@
 - set_fact:
     _aws_subnets: "{{ _aws_instance_subnets.stdout | from_json | flatten | unique | default([]) }}"
 
-- name: Show subnets found for the compute nodes of OpenShift cluster {{ _current_openshift_cluster }}
+- name: Show subnets found for the nodes of OpenShift cluster {{ _current_openshift_cluster }}
   debug:
     var: _aws_subnets
 
-- name: Fail if no subnets were found for the compute nodes
+- name: Fail if no subnets were found for the nodes
   fail:
-    msg: "No subnets were found for compute nodes with name {{ _current_openshift_cluster.name }}-*-worker-*"
+    msg: "No subnets were found for nodes with name {{ _current_openshift_cluster.name }}-*-*-*"
   when: _aws_subnets == []
 
 - name: Get VPC for subnet {{ _aws_subnets | first }}
