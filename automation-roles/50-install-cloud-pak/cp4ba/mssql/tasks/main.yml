@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    mssql_output_directory: "{{ mssql_base_dir }}/{{ mssql_dir_name }}"
+
+- name: Remove MSSQL directory for generated files
+  ansible.builtin.file:
+    path: "{{ mssql_output_directory }}"
+    state: absent
+
+- name: Install MSSQL
+  include_tasks: install.yml
+  when: "mssql_action == 'install'"
+
+- name: Remove MSSQL
+  include_tasks: remove.yml
+  when: "mssql_action == 'remove'"

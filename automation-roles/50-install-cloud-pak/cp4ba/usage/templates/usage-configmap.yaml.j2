@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: usage
+  namespace: apollo-one-shot
+data:
+  usage.md: |- 
+    {{ lookup('file', usage_path) | indent(4) }}
+{% if git_commit_id is defined %}
+  z-git-commit: |
+    ## Version
+
+    For the reference and to know which version of the Apollo one-shot deployment was used, bellow you can find the sha hash of the used commit.
+
+    - Apollo one-shot used commit sha hash: {{ git_commit_id }}
+{% endif %}
+{% if zen_api_key_new is defined %}
+  zen-api-key: {{ zen_api_key_new }}
+{% endif %}

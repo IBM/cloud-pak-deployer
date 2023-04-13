@@ -1,0 +1,293 @@
+# Attempts & delays
+
+## Default attempts used when calling waiting scripts.
+## Means wait for 20 minutes with combination of DEFAULT_DELAY.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_attempts: 80
+## Default delay used when calling waiting scripts.
+## Means wait for 20 minutes with combination of DEFAULT_ATTEMPTS.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_delay: 15
+## Used e.g. for DB2. Default attempts used when calling waiting scripts.
+## Means wait for 20 minutes with combination of DEFAULT_DELAY_1.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_attempts_1: 40
+## Used e.g. for DB2. Default delay used when calling waiting scripts.
+## Means wait for 20 minutes with combination of DEFAULT_ATTEMPTS_1.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_delay_1: 30
+## Used e.g. for CPFS. Default attempts used when calling waiting scripts.
+## Means wait for 30 minutes with combination of DEFAULT_DELAY_2.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_attempts_2: 30
+## Used e.g. for CPFS. Default delay used when calling waiting scripts.
+## Means wait for 30 minutes with combination of DEFAULT_ATTEMPTS_2.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_delay_2: 60
+## Used e.g. for CP4BA pillars. Default attempts used when calling waiting scripts.
+## Means wait for 60 minutes with combination of DEFAULT_DELAY_3.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_attempts_3: 30
+## Used e.g. for CP4BA pillars. Default delay used when calling waiting scripts.
+## Means wait for 60 minutes with combination of DEFAULT_ATTEMPTS_3.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_delay_3: 120
+## Used e.g. for CP4BA pillars. Default attempts used when calling waiting scripts.
+## Means wait for 180 minutes with combination of DEFAULT_DELAY_4.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_attempts_4: 36
+## Used e.g. for CP4BA pillars. Default delay used when calling waiting scripts.
+## Means wait for 180 minutes with combination of DEFAULT_ATTEMPTS_4.
+## Increase if you OCP is slow and you need to wait for things longer.
+default_delay_4: 300
+
+generic_directory: "{{ status_dir }}/cp4ba"
+
+# TODO move to variables when ext share works
+    # ## Do NOT enable now. Set to true if you want to use FNCM External Share with Google ID.
+    ## You then need to provide also the following parameters (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET).
+    # ## Video on how to get these values is in assets/fncm-es-google-oidc-pre.mp4
+    # external_share_google: false
+    # google_client_id: TODO_GOOGLE_CLIENT_ID
+    # google_client_secret: TODO_GOOGLE_CLIENT_SECRET
+external_share_google: false
+
+# main platform admin user
+principal_admin_user: cpadmin
+
+lc_principal_admin_user: "{{ ldap_configuration.lc_principal_admin_user | default(principal_admin_user) }}"
+lc_principal_admin_password: "{{ ldap_configuration.lc_principal_admin_password | default(universal_password) }}"
+lc_principal_admin_group: "{{ ldap_configuration.lc_principal_admin_group | default('cpadmins') }}"
+lc_admin_groups: "{{ ldap_configuration.lc_admin_groups | default(['cpadmins']) }}"
+lc_admin_users: "{{ ldap_configuration.lc_admin_users | default(['cpadmin']) }}"
+lc_general_groups: "{{ ldap_configuration.lc_general_groups | default(['cpusers', 'cpusers1']) }}"
+lc_selected_ldap_type: "{{ ldap_configuration.lc_selected_ldap_type | default('Custom') }}"
+lc_ldap_server: "{{ ldap_configuration.lc_ldap_server | default('openldap-openldap-stack-ha.openldap.svc.cluster.local') }}"
+lc_bind_secret: "{{ ldap_configuration.lc_bind_secret | default('ldap-bind-secret') }}"
+lc_ldap_base_dn: "{{ ldap_configuration.lc_ldap_base_dn | default('dc=cp,dc=internal') }}"
+lc_ldap_user_base_dn: "{{ ldap_configuration.lc_ldap_user_base_dn | default('ou=Users,dc=cp,dc=internal') }}"
+lc_ldap_domain: "{{ ldap_configuration.lc_ldap_domain | default('cp.internal') }}"
+lc_ldap_ssl_enabled: "{{ ldap_configuration.lc_ldap_ssl_enabled | default(false) }}"
+lc_ldap_ssl_secret_name: "{{ ldap_configuration.lc_ldap_ssl_secret_name | default('') }}"
+lc_ldap_port: "{{ ldap_configuration.lc_ldap_port | default('389' if not lc_ldap_ssl_enabled else '636') }}"
+lc_ldap_user_object_class: "{{ ldap_configuration.lc_ldap_user_object_class | default('inetOrgPerson') }}"
+lc_ldap_user_id_attribute: "{{ ldap_configuration.lc_ldap_user_id_attribute | default('uid') }}"
+lc_ldap_user_name_attribute: "{{ ldap_configuration.lc_ldap_user_name_attribute | default('*:cn') }}"
+lc_ldap_user_display_name_attr: "{{ ldap_configuration.lc_ldap_user_display_name_attr | default('cn') }}"
+lc_ldap_group_object_class: "{{ ldap_configuration.lc_ldap_group_object_class | default('groupOfNames') }}"
+lc_ldap_group_base_dn: "{{ ldap_configuration.lc_ldap_group_base_dn | default('ou=Groups,dc=cp,dc=internal') }}"
+lc_ldap_group_id_attribute: "{{ ldap_configuration.lc_ldap_group_id_attribute | default('cn') }}"
+lc_ldap_group_name_attribute: "{{ ldap_configuration.lc_ldap_group_name_attribute | default('*:cn') }}"
+lc_ldap_group_display_name_attr: "{{ ldap_configuration.lc_ldap_group_display_name_attr | default('cn') }}"
+lc_ldap_group_membership_search_filter: "{{ ldap_configuration.lc_ldap_group_membership_search_filter
+    | default('(|(&(objectclass='+lc_ldap_group_object_class+')(member={0}))(&(objectclass=groupofuniquenames)(uniquemember={0})))') }}"
+lc_ldap_group_member_id_map: "{{ ldap_configuration.lc_ldap_group_member_id_map | default(lc_ldap_group_object_class + ':member') }}"
+
+lc_bind_admin_user: "{{ ldap_configuration.lc_bind_admin_user | default('cn=admin,'+ lc_ldap_base_dn) }}"
+lc_bind_admin_password: "{{ ldap_configuration.lc_bind_admin_password | default(universal_password) }}"
+
+ca_key_path: "{{ generic_directory }}/global-ca/global-ca.key"
+ca_crt_path: "{{ generic_directory }}/global-ca/global-ca.crt"
+ldap_hostname: "{{ lc_ldap_server }}"
+wildcard_key_path: "{{ generic_directory }}/global-ca/wildcard.key"
+wildcard_crt_path: "{{ generic_directory }}/global-ca/wildcard.crt"
+db2_hostname: c-db2ucluster-db2u.db2.svc.cluster.local
+postgresql_hostname: postgresql.postgresql.svc.cluster.local
+mongodb_hostname: mongodb.mongodb.svc.cluster.local
+mail_hostname: mailserver.mail.svc.cluster.local
+mssql_hostname: mssql.mssql.svc.cluster.local
+nexus_hostname: nexusrepo-sonatype-nexus-service.nexus.svc.cluster.local
+kibana_url: http://kibana.kibana.svc.cluster.local:5601
+
+elasticsearch_universal_password: "{{ universal_password }}"
+elasticsearch_admin_user: elasticsearch-admin
+
+usage_action: "{{ global_action }}"
+
+global_ca_action: "{{ global_action }}"
+
+db2_action: "{{ global_action }}"
+db2_universal_password: "{{ universal_password }}"
+db2_storage_class_name: "{{ storage_class_name }}"
+db2_icr_password: "{{ icr_password }}"
+db2_deployment_platform: "{{ deployment_platform }}"
+
+db2mc_action: "{{ global_action }}"
+db2mc_admin_user: "{{ principal_admin_user }}"
+db2mc_universal_password: "{{ universal_password }}"
+db2mc_storage_class_name: "{{ storage_class_name }}"
+db2mc_ca_crt_path: "{{ ca_crt_path }}"
+db2mc_wildcard_key_path: "{{ wildcard_key_path }}"
+db2mc_wildcard_crt_path: "{{ wildcard_crt_path }}"
+db2mc_db2_hostname: "{{ db2_hostname }}"
+db2mc_db2_password: "{{ db2_universal_password }}"
+
+openldap_action: "{{ global_action }}"
+openldap_universal_password: "{{ universal_password }}"
+openldap_storage_class_name: "{{ storage_class_name }}"
+openldap_ca_crt_path: "{{ ca_crt_path }}"
+openldap_wildcard_key_path: "{{ wildcard_key_path }}"
+openldap_wildcard_crt_path: "{{ wildcard_crt_path }}"
+
+gitea_action: "{{ global_action }}"
+gitea_universal_password: "{{ universal_password }}"
+gitea_storage_class_name: "{{ storage_class_name }}"
+gitea_ca_crt_path: "{{ ca_crt_path }}"
+gitea_wildcard_key_path: "{{ wildcard_key_path }}"
+gitea_wildcard_crt_path: "{{ wildcard_crt_path }}"
+gitea_ldap_hostname: "{{ ldap_hostname }}"
+
+nexus_action: "{{ global_action }}"
+nexus_universal_password: "{{ universal_password }}"
+nexus_storage_class_name: "{{ storage_class_name }}"
+nexus_ca_crt_path: "{{ ca_crt_path }}"
+nexus_wildcard_key_path: "{{ wildcard_key_path }}"
+nexus_wildcard_crt_path: "{{ wildcard_crt_path }}"
+nexus_ldap_hostname: "{{ ldap_hostname }}"
+
+mail_action: "{{ global_action }}"
+mail_storage_class_name: "{{ storage_class_name }}"
+mail_ca_key_path: "{{ ca_key_path }}"
+mail_ca_crt_path: "{{ ca_crt_path }}"
+mail_universal_password: "{{ universal_password }}"
+
+roundcube_action: "{{ global_action }}"
+roundcube_storage_class_name: "{{ storage_class_name }}"
+roundcube_ca_crt_path: "{{ ca_crt_path }}"
+roundcube_wildcard_key_path: "{{ wildcard_key_path }}"
+roundcube_wildcard_crt_path: "{{ wildcard_crt_path }}"
+roundcube_universal_password: "{{ universal_password }}"
+roundcube_mail_hostname: "{{ mail_hostname }}"
+
+cerebro_action: "{{ global_action }}"
+cerebro_ca_crt_path: "{{ ca_crt_path }}"
+cerebro_wildcard_key_path: "{{ wildcard_key_path }}"
+cerebro_wildcard_crt_path: "{{ wildcard_crt_path }}"
+cerebro_universal_password: "{{ universal_password }}"
+cerebro_cp4ba_project_name: "{{ cp4ba_project_name }}"
+cerebro_elasticsearch_universal_password: "{{ elasticsearch_universal_password }}"
+cerebro_elasticsearch_admin_user: "{{ elasticsearch_admin_user }}"
+
+akhq_action: "{{ global_action }}"
+akhq_universal_password: "{{ universal_password }}"
+akhq_admin_user: "{{ principal_admin_user }}"
+akhq_storage_class_name: "{{ storage_class_name }}"
+akhq_ca_key_path: "{{ ca_key_path }}"
+akhq_ca_crt_path: "{{ ca_crt_path }}"
+akhq_wildcard_key_path: "{{ wildcard_key_path }}"
+akhq_wildcard_crt_path: "{{ wildcard_crt_path }}"
+
+kibana_action: "{{ global_action }}"
+kibana_elasticsearch_universal_password: "{{ elasticsearch_universal_password }}"
+kibana_universal_password: "{{ kibana_elasticsearch_universal_password }}"
+kibana_storage_class_name: "{{ storage_class_name }}"
+kibana_cp4ba_project_name: "{{ cp4ba_project_name }}"
+kibana_ca_crt_path: "{{ ca_crt_path }}"
+kibana_wildcard_key_path: "{{ wildcard_key_path }}"
+kibana_wildcard_crt_path: "{{ wildcard_crt_path }}"
+kibana_elasticsearch_admin_user: "{{ elasticsearch_admin_user }}"
+kibana_admin_user: "{{ kibana_elasticsearch_admin_user }}"
+
+mongodb_action: "{{ global_action }}"
+mongodb_universal_password: "{{ universal_password }}"
+mongodb_storage_class_name: "{{ storage_class_name }}"
+
+mongo_express_action: "{{ global_action }}"
+mongo_express_ca_crt_path: "{{ ca_crt_path }}"
+mongo_express_wildcard_key_path: "{{ wildcard_key_path }}"
+mongo_express_wildcard_crt_path: "{{ wildcard_crt_path }}"
+mongo_express_universal_password: "{{ universal_password }}"
+mongo_express_mongodb_hostname: "{{ mongodb_hostname }}"
+mongo_express_admin_user: "{{ principal_admin_user }}"
+
+postgresql_action: "{{ global_action }}"
+postgresql_admin_user: "{{ principal_admin_user }}"
+postgresql_universal_password: "{{ universal_password }}"
+postgresql_storage_class_name: "{{ storage_class_name }}"
+
+pgadmin_action: "{{ global_action }}"
+pgadmin_universal_password: "{{ universal_password }}"
+pgadmin_storage_class_name: "{{ storage_class_name }}"
+pgadmin_ca_crt_path: "{{ ca_crt_path }}"
+pgadmin_wildcard_key_path: "{{ wildcard_key_path }}"
+pgadmin_wildcard_crt_path: "{{ wildcard_crt_path }}"
+pgadmin_postgresql_hostname: "{{ postgresql_hostname }}"
+pgadmin_postgresql_username: "{{ principal_admin_user }}"
+pgadmin_postgresql_password: "{{ pgadmin_universal_password }}"
+
+cloudbeaver_action: "{{ global_action }}"
+cloudbeaver_universal_password: "{{ universal_password }}"
+cloudbeaver_storage_class_name: "{{ storage_class_name }}"
+cloudbeaver_ca_crt_path: "{{ ca_crt_path }}"
+cloudbeaver_wildcard_key_path: "{{ wildcard_key_path }}"
+cloudbeaver_wildcard_crt_path: "{{ wildcard_crt_path }}"
+cloudbeaver_mssql_hostname: "{{ mssql_hostname }}"
+
+cpfs_action: "{{ global_action }}"
+cpfs_universal_password: "{{ universal_password }}"
+cpfs_storage_class_name: "{{ storage_class_name }}"
+cpfs_block_storage_class_name: "{{ block_storage_class_name }}"
+cpfs_ca_crt_path: "{{ ca_crt_path }}"
+cpfs_wildcard_key_path: "{{ wildcard_key_path }}"
+cpfs_wildcard_crt_path: "{{ wildcard_crt_path }}"
+cpfs_icr_password: "{{ icr_password }}"
+cpfs_ldap_hostname: "{{ ldap_hostname }}"
+
+cp4ba_action: "{{ global_action }}"
+cp4ba_universal_password: "{{ universal_password }}"
+cp4ba_db2mc_admin_user: "{{ db2mc_admin_user }}"
+cp4ba_db2mc_universal_password: "{{ db2mc_universal_password }}"
+cp4ba_storage_class_name: "{{ storage_class_name }}"
+cp4ba_block_storage_class_name: "{{ block_storage_class_name }}"
+cp4ba_icr_password: "{{ icr_password }}"
+cp4ba_ldap_hostname: "{{ ldap_hostname }}"
+cp4ba_db2_hostname: "{{ db2_hostname }}"
+cp4ba_db2_universal_password: "{{ db2_universal_password }}"
+cp4ba_postgresql_hostname: "{{ postgresql_hostname }}"
+cp4ba_postgresql_admin_user: "{{ postgresql_admin_user }}"
+cp4ba_postgresql_universal_password: "{{ postgresql_universal_password }}"
+cp4ba_mongodb_hostname: "{{ mongodb_hostname }}"
+cp4ba_mail_hostname: "{{ mail_hostname }}"
+cp4ba_kibana_url: "{{ kibana_url }}"
+cp4ba_project_name: cp4ba
+cp4ba_ca_key_path: "{{ ca_key_path }}"
+cp4ba_ca_crt_path: "{{ ca_crt_path }}"
+cp4ba_wildcard_key_path: "{{ wildcard_key_path }}"
+cp4ba_wildcard_crt_path: "{{ wildcard_crt_path }}"
+cp4ba_external_share_google: "{{ external_share_google }}"
+cp4ba_google_client_id: "{{ google_client_id }}"
+cp4ba_google_client_secret: "{{ google_client_secret }}"
+cp4ba_deployment_platform: "{{ deployment_platform }}"
+cp4ba_kibana_universal_password: "{{ kibana_universal_password }}"
+cp4ba_kibana_admin_user: "{{ kibana_admin_user }}"
+cp4ba_elasticsearch_universal_password: "{{ elasticsearch_universal_password }}"
+cp4ba_elasticsearch_admin_user: "{{ elasticsearch_admin_user }}"
+
+asset_repo_action: "{{ global_action }}"
+asset_repo_universal_password: "{{ universal_password }}"
+asset_repo_storage_class_name: "{{ storage_class_name }}"
+asset_repo_project_name: cp4ba
+
+mssql_action: "{{ global_action }}"
+mssql_universal_password: "{{ universal_password }}"
+mssql_storage_class_name: "{{ storage_class_name }}"
+
+rpa_action: "{{ global_action }}"
+rpa_universal_password: "{{ universal_password }}"
+rpa_storage_class_name: "{{ storage_class_name }}"
+rpa_mail_hostname: "{{ mail_hostname }}"
+rpa_mssql_hostname: "{{ mssql_hostname }}"
+rpa_project_name: cp4ba
+
+pm_action: "{{ global_action }}"
+pm_universal_password: "{{ universal_password }}"
+pm_db2mc_admin_user: "{{ db2mc_admin_user }}"
+pm_db2mc_universal_password: "{{ db2mc_universal_password }}"
+pm_storage_class_name: "{{ storage_class_name }}"
+pm_project_name: cp4ba
+pm_db2_hostname: "{{ db2_hostname }}"
+pm_db2_password: "{{ db2_universal_password }}"
+pm_mongodb_hostname: "{{ mongodb_hostname }}"
+pm_ca_crt_path: "{{ ca_crt_path }}"
+pm_wildcard_key_path: "{{ wildcard_key_path }}"
+pm_wildcard_crt_path: "{{ wildcard_crt_path }}"

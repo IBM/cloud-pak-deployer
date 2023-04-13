@@ -1,0 +1,196 @@
+# Based on https://www.ibm.com/docs/en/cpfs?topic=online-uninstalling-foundational-services
+
+- name: Get NamespaceScope CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: namespacescopes.operator.ibm.com
+  register: namespacescope_crd
+  retries: 10
+  delay: 1
+
+- name: Delete all NamespaceScope
+  block:
+    - name: Get all NamespaceScope cs-control
+      kubernetes.core.k8s_info:
+        api_version: operator.ibm.com/v1
+        kind: NamespaceScope
+        namespace: cs-control
+      register: namespace_scopes
+      retries: 10
+      delay: 1
+
+    - name: Delete All NamespaceScope cs-control
+      kubernetes.core.k8s:
+        state: absent
+        api_version: operator.ibm.com/v1
+        kind: NamespaceScope
+        name: "{{ item.metadata.name }}"
+        namespace: cs-control
+        wait: true
+        wait_sleep: 5
+        wait_timeout: 180
+      with_items: "{{ namespace_scopes.resources }}"
+
+  when: namespacescope_crd.resources | length != 0
+
+- name: Get OperandBindInfo CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: operandbindinfos.operator.ibm.com
+  register: operandbindinfo_crd
+  retries: 10
+  delay: 1
+
+- name: Delete all OperandBindInfos
+  block:
+
+    - name: Get all OperandBindInfos
+      kubernetes.core.k8s_info:
+        api_version: operator.ibm.com/v1alpha1
+        kind: OperandBindInfo
+        namespace: cs-control
+      register: operand_bind_infos
+      retries: 10
+      delay: 1
+
+    - name: Delete All OperandBindInfo
+      kubernetes.core.k8s:
+        state: absent
+        api_version: operator.ibm.com/v1alpha1
+        kind: OperandBindInfo
+        name: "{{ item.metadata.name }}"
+        namespace: cs-control
+      with_items: "{{ operand_bind_infos.resources }}"
+
+    - name: Wait All OperandBindInfo disappear
+      kubernetes.core.k8s_info:
+        api_version: operator.ibm.com/v1alpha1
+        kind: OperandBindInfo
+        name: "{{ item.metadata.name }}"
+        namespace: cs-control
+      with_items: "{{ operand_bind_infos.resources }}"
+      register: operand_bind_info
+      retries: 40
+      delay: 30
+      until: operand_bind_info.resources | length == 0
+
+  when: operandbindinfo_crd.resources | length != 0
+
+- name: Remove ibmcloud-cluster-ca-cert Secret
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: ibmcloud-cluster-ca-cert
+    namespace: kube-public
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+
+- name: Remove MutatingWebhookConfigurations
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: MutatingWebhookConfiguration
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  with_items:
+    - ibm-common-service-webhook-configuration
+    - ibm-operandrequest-webhook-configuration
+
+- name: Remove ibm-cs-ns-mapping-webhook-configuration ValidatingWebhookConfiguration
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: ibm-cs-ns-mapping-webhook-configuration
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+
+- name: Remove "{{ cpfs_cp4ba_project_name }}"-status ConfigMap
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: "{{ cpfs_cp4ba_project_name }}-status"
+    namespace: kube-public
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+
+- name: Remove Catalog Sources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+    wait: true
+  with_items:
+    - opencloud-operators
+    - bts-operator
+    - cloud-native-postgresql-catalog
+
+- name: Get OperandConfig CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: operandconfigs.operator.ibm.com
+  register: operandconfig_crd
+  retries: 10
+  delay: 1
+
+- name: Remove OperandConfig common-service
+  kubernetes.core.k8s:
+    state: absent
+    api_version: operator.ibm.com/v1alpha1
+    kind: OperandConfig
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+  retries: 15
+  delay: 2
+  when: operandconfig_crd.resources | length != 0
+
+- name: Remove cs-control Project
+  kubernetes.core.k8s:
+    state: absent
+    api_version: project.openshift.io/v1
+    kind: Project
+    name: cs-control
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 90
+
+- name: Remove common-service-maps
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: common-service-maps
+    namespace: kube-public
+    wait: true
+
+- name: Get Cluster Monitoring ConfigMap
+  kubernetes.core.k8s_info:
+    kind: ConfigMap
+    name: cluster-monitoring-config
+    namespace: openshift-monitoring
+  register: configmap
+  retries: 10
+  delay: 1
+
+- name: Remove Cluster Monitoring ConfigMap
+  kubernetes.core.k8s:
+    state: absent
+    kind: ConfigMap
+    name: cluster-monitoring-config
+    namespace: openshift-monitoring
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 60
+  when: configmap | json_query('resources[0].data.\"apollo-one-shot\"') | bool

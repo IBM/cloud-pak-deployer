@@ -1,0 +1,13 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=studio-creating-secrets-protect-sensitive-configuration-data
+- name: Prepare yaml file for BAS Secret
+  ansible.builtin.template:
+    src: bas/bas-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/bas-secret.yaml"
+    mode: u+rwx
+
+- name: Add BAS Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/bas-secret.yaml"

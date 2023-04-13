@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    db2mc_output_directory: "{{ db2mc_base_dir }}/{{ db2mc_dir_name }}"
+
+- name: Remove DB2MC directory for generated files
+  ansible.builtin.file:
+    path: "{{ db2mc_output_directory }}"
+    state: absent
+
+- name: Install DB2MC
+  include_tasks: install.yml
+  when: "db2mc_action == 'install'"
+
+- name: Remove DB2MC
+  include_tasks: remove.yml
+  when: "db2mc_action == 'remove'"

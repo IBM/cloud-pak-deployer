@@ -1,0 +1,112 @@
+- name: Remove PM
+  ansible.builtin.include_role:
+    name: pm
+  when: current_cp4ba_cluster.pm_enabled
+
+- name: RPA group
+  block:
+
+    - name: Remove RPA
+      ansible.builtin.include_role:
+        name: rpa
+
+    - name: Remove cloudbeaver
+      ansible.builtin.include_role:
+        name: cloudbeaver
+      when: current_cp4ba_cluster.cloudbeaver_enabled
+
+    - name: Remove MSSQL
+      ansible.builtin.include_role:
+        name: mssql
+
+  when: current_cp4ba_cluster.rpa_enabled
+
+# TODO requires some CP4I resources and fails
+# - name: Remove Asset Repo
+#   ansible.builtin.include_role:
+#     name: asset_repo
+#   when: current_cp4ba_cluster.asset_repo_enabled
+
+- name: Remove CP4BA
+  ansible.builtin.include_role:
+    name: cp4ba-core
+
+- name: Remove CPFS
+  ansible.builtin.include_role:
+    name: cpfs
+
+- name: Remove Mongo Express
+  ansible.builtin.include_role:
+    name: mongo_express
+  when: current_cp4ba_cluster.mongo_express_enabled
+
+- name: Remove MongoDB
+  ansible.builtin.include_role:
+    name: mongodb
+  when: mongodb_enabled
+
+- name: Remove Kibana
+  ansible.builtin.include_role:
+    name: kibana
+  when: kibana_enabled
+
+- name: Remove AKHQ
+  ansible.builtin.include_role:
+    name: akhq
+  when: current_cp4ba_cluster.akhq_enabled
+
+- name: Remove Cerebro
+  ansible.builtin.include_role:
+    name: cerebro
+  when: current_cp4ba_cluster.cerebro_enabled
+
+- name: Remove Roundcube
+  ansible.builtin.include_role:
+    name: roundcube
+  when: current_cp4ba_cluster.roundcube_enabled
+
+- name: Remove Mail
+  ansible.builtin.include_role:
+    name: mail
+  when: mail_enabled
+
+- name: Remove nexus
+  ansible.builtin.include_role:
+    name: nexus
+
+- name: Remove gitea
+  ansible.builtin.include_role:
+    name: gitea
+  when: gitea_enabled
+
+- name: Remove openldap
+  ansible.builtin.include_role:
+    name: openldap
+  when: openldap_enabled
+
+- name: Remove pgAdmin
+  ansible.builtin.include_role:
+    name: pgadmin
+  when: current_cp4ba_cluster.pgadmin_enabled
+
+- name: Remove PostgreSQL
+  ansible.builtin.include_role:
+    name: postgresql
+
+- name: Remove DB2MC
+  ansible.builtin.include_role:
+    name: db2mc
+  when: (current_cp4ba_cluster.patterns.document_processing.enabled or current_cp4ba_cluster.pm_enabled) and current_cp4ba_cluster.db2mc_enabled
+
+- name: Remove DB2
+  ansible.builtin.include_role:
+    name: db2
+  when: current_cp4ba_cluster.patterns.document_processing.enabled or current_cp4ba_cluster.pm_enabled
+
+- name: Remove usage
+  ansible.builtin.include_role:
+    name: usage
+
+- name: Remove Global CA
+  ansible.builtin.include_role:
+    name: global_ca

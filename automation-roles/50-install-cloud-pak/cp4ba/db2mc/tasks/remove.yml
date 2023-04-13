@@ -1,0 +1,16 @@
+- name: Remove Project db2mc
+  kubernetes.core.k8s:
+    state: absent
+    api_version: project.openshift.io/v1
+    kind: Project
+    name: db2mc
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove DB
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-db
+  vars:
+    common_db2_db_name: DB2MC

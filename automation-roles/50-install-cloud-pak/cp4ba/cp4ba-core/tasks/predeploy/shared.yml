@@ -1,0 +1,58 @@
+# Counts on TLS from iaf-automationuiconfig
+
+- name: Prepare yaml file for root CA Secret
+  ansible.builtin.template:
+    src: shared/root-ca-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/root-ca-secret.yaml"
+    mode: u+rwx
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=certificates-providing-root-ca-certificate
+- name: Add root CA Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/root-ca-secret.yaml"
+
+- name: Prepare yaml file for LDAP bind Secret
+  ansible.builtin.template:
+    src: shared/ldap-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ldap-secret.yaml"
+    mode: u+rwx
+
+- name: Add LDAP bind Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/ldap-secret.yaml"
+
+- name: Manage LDAP SSL
+  block:
+
+    - name: Load LDAP SSL Certificate Secret
+      kubernetes.core.k8s_info:
+        kind: Secret
+        api: v1
+        name: "{{ lc_ldap_ssl_secret_name }}"
+        namespace: apollo-one-shot
+      register: _ldap_ssl_crt
+
+    - name: Get the LDAP SSL Certificate
+      ansible.builtin.set_fact:
+        _ldap_ssl_crt: "{{ _ldap_ssl_crt.resources[0].data['tls.crt'] }}"
+
+    - name: Prepare yaml file for LDAP SSL Certificate Secret
+      ansible.builtin.template:
+        src: shared/ldap-ssl-secret.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
+        mode: u+rwx
+
+    - name: Add LDAP SSL Certificate Secret to the {{ cp4ba_project_name }} namespace
+      kubernetes.core.k8s:
+        state: present
+        force: false
+        merge_type: merge
+        src: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
+
+  when: lc_ldap_ssl_secret_name | length > 0

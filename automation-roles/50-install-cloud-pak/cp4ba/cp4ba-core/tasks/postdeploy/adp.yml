@@ -1,0 +1,116 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Create ADP organization in Gitea
+  ansible.builtin.uri:
+    url: "https://gitea.{{ apps_endpoint_domain }}/api/v1/orgs"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body_format: json
+    body:
+      description: ""
+      full_name: ""
+      location: ""
+      repo_admin_change_team_access: true
+      username: adp
+      visibility: private
+      website: ""
+    user: "{{ lc_principal_admin_user }}"
+    password: "{{ lc_principal_admin_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code:
+      - 201
+      - 422
+
+- name: Get Natural Language Extractor Pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - app={{ cp4ba_cr_meta_name }}-natural-language-extractor
+  register: pods
+  retries: 40
+  delay: 15
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-loading-default-sample-data
+- name: Download Init Tenants scripts
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ pods.resources[0].metadata.name }}"
+    # TODO add mechanism to either use db2 or postgress which is supported.
+    remote_path: /data-org/db_sample_data/db2_imports.tar.xz
+    local_path: "{{ cp4ba_output_directory }}/imports.tar.xz"
+    state: from_pod
+
+# This is needed as ansible k8s_cp is not reliable for larger files
+- name: Nexus upload imports.tar.xz
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: nexus-upload
+  vars:
+    common_file_folder_path: "{{ cp4ba_output_directory }}"
+    common_file_name: imports.tar.xz
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+
+- name: Download Init Tenants scripts to DB2
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      sudo curl -kv --user "{{ lc_principal_admin_user }}:{{ lc_principal_admin_password }}"
+      http://{{ nexus_hostname }}:8081/repository/raw-hosted/cp4ba/imports.tar.xz
+      --output /mnt/blumeta0/home/db2inst1/sqllib/_adp_tmp/DB2/imports.tar.xz
+  register: command_status
+
+- name: Set Init Tenants files ownership
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: |
+      sudo chown -R db2inst1:db2iadm1 /mnt/blumeta0/home/db2inst1/sqllib/_adp_tmp/DB2/imports.tar.xz
+  register: command_status
+
+- name: Extract Init Tenants scripts
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      cd sqllib/_adp_tmp/DB2;
+      tar -xvf imports.tar.xz;
+      "
+  register: command_status
+
+- name: Run Init Tenants scripts for Tenant1
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c '
+      cd sqllib/_adp_tmp/DB2;
+      echo -e "TENANT1\n
+      default\n
+      y" | ./LoadDefaultData.sh;
+      '
+  register: command_status
+
+- name: Run Init Tenants scripts for Tenant2
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c '
+      cd sqllib/_adp_tmp/DB2;
+      echo -e "TENANT2\n
+      default\n
+      y" | ./LoadDefaultData.sh;
+      '
+  register: command_status

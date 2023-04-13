@@ -1,0 +1,24 @@
+# Example of the functionality call
+#
+# - name: Wait for resource condition
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-resource-condition
+#   vars:
+#     common_api_version: api_version
+#     common_resource_kind: resource_kind
+#     common_resource_name: resource_name
+#     common_resource_namespace: _resource_namespace
+#     common_condition_name: condition_name
+#     common_retries: retries
+#     common_delay: delay
+
+- name: Wait on api version '{{ common_api_version }}', kind '{{ common_resource_kind }}', name '{{ common_resource_name }}'
+    in namespace '{{ common_resource_namespace }}' for condition '{{ common_condition_name }}' with '{{ common_retries }}' retries
+    with '{{ common_delay }}' seconds delay each (total of '{{ common_retries * common_delay / 60 }}' minutes)
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_condition_query: "resources[*].status.conditions[?type == '{{ common_condition_name }}'].status"
+    common_condition_value: ['True']

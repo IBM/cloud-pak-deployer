@@ -1,0 +1,27 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-configuring-external-database
+- name: Prepare yaml file for ODM DB Secret
+  ansible.builtin.template:
+    src: odm/odm-db-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/odm-db-secret.yaml"
+    mode: u+rwx
+
+- name: Add ODM DB Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/odm-db-secret.yaml"
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=access-mapping-odm-roles-iam-groups-users
+- name: Prepare yaml file for ODM web security Secret
+  ansible.builtin.template:
+    src: odm/odm-web-security-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/odm-web-security-secret.yaml"
+    mode: u+rwx
+
+- name: Add ODM web security Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/odm-web-security-secret.yaml"

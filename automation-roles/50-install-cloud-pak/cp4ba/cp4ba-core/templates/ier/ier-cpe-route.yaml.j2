@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Route
+metadata:
+  name: ierconfig
+  annotations:
+    haproxy.router.openshift.io/balance: roundrobin
+    haproxy.router.openshift.io/timeout: 3000s
+    router.openshift.io/sticky_cookie: -sticky_cookie_annotation
+spec:
+  host: "ierconfig-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}"
+  to:
+    kind: Service
+    name: "{{ cp4ba_cr_meta_name }}-cpe-svc"
+  port:
+    targetPort: http
+  wildcardPolicy: None    
