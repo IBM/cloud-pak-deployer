@@ -21,6 +21,8 @@ cp4d:
   accept_licenses: False
   image_registry_name: cpd404
   openshift_storage_name: nfs-storage
+  cp4d_entitlement: cpd-enterprise
+  cp4d_production_license: True
   
   cartridges:
   - name: cpfs
@@ -37,6 +39,8 @@ cp4d:
 | sequential_install | If set to `True` the deployer will run the **OLM utils** playbooks to install catalog sources, subscriptions and CRs. If set to `False`, deployer will use OLM utils to generate the scripts and then run them, which will cause the catalog sources, subscriptions and CRs to be created immediately and install in parallel | No | True (default), False |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
+| cp4d_entitlement | Set to `cpd-enterprise` or `cpd-standard`, dependent on the deployed license | No | cpd-enterprise (default), cpd-standard |
+| cp4d_production_license | Whether the Cloud Pak for Data is a production license | No | True (default), False |
 | image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
 | openshift_storage_name | References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | No, inferred from openshift->openshift_storage | |
 | cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](../../../30-reference/configuration/cp4d-cartridges) for more details | Yes | |
