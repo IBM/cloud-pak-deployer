@@ -1,0 +1,39 @@
+---
+- name: Show Db2 OLTP instance
+  debug:
+    var: _db2_instance
+
+- name: Retrieve running Db2 OLTP instance
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2oltp_instance_addon_type }}&display_name={{ _db2_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _db2_instance_lookup_result
+
+- set_fact:
+    _db2_instance_id: "{{ (_db2_instance_lookup_result.json.service_instances | first).id }}"
+
+- name: Waiting for Db2 OLTP instance {{ _db2_instance.name }} to complete its provisioning
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _db2_instance_id }}?include_service_status=true'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _wait_for_db2_service
+  until: _wait_for_db2_service.json.service_instance.metadata.status == "RUNNING"
+  retries: 60
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

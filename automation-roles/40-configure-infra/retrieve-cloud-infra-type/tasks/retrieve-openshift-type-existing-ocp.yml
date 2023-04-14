@@ -1,0 +1,61 @@
+---
+- name: Detect the infrastructure type for infrastructure.type == detect
+  block:
+  - name: Get Storage Class Information
+    shell: oc get sc -o name
+    register: _existing_ocp_storage_class
+    retries: 1
+    delay: 10
+    until: _existing_ocp_storage_class.rc == 0
+
+  - name: Show storage classes available on OpenShift cluster
+    debug:
+      var: _existing_ocp_storage_class.stdout
+
+  - set_fact:
+      _storage_inferred_ocp_infra_type: 'standard'
+
+  - set_fact:
+      _storage_inferred_ocp_infra_type: "{{ item.key }}"
+    loop: "{{ existing_ocp_cloud_infra | dict2items }}"
+    when: _existing_ocp_storage_class.stdout is search('storageclass.storage.k8s.io/{{ item.value.storage_class }}')
+
+  # Extra handling for ibm cloud 
+  - set_fact:
+      _existing_ocp_infra_type: "ibm-roks"
+    when: _storage_inferred_ocp_infra_type == "ibm-classic" or _storage_inferred_ocp_infra_type == "ibm-vpc-gen2"
+
+  # Extra handling for AWS
+  - name: Distinquish AWS OpenShift between self-managed and ROSA
+    block:
+    - name: Get OpenShift Cluster Information for OpenShift on AWS
+      shell: oc cluster-info
+      register: _existing_ocp_cluster_info
+      retries: 1
+      delay: 10
+      until: _existing_ocp_cluster_info.rc == 0
+
+    - set_fact:
+        _existing_ocp_infra_type: "aws-rosa"
+      when: _existing_ocp_cluster_info.stdout is search("https://.*.openshiftapps.com:.*")
+
+    - set_fact:
+        _existing_ocp_infra_type: "aws-self-managed"
+      when: _existing_ocp_cluster_info.stdout is not search("https://.*.openshiftapps.com:.*")
+    when: _storage_inferred_ocp_infra_type == "aws"
+
+  # Do not match anything --> set to standard
+  - set_fact:
+      _existing_ocp_infra_type: "{{ _storage_inferred_ocp_infra_type }}"
+    when: _existing_ocp_infra_type == 'detect'
+
+  when: (_current_openshift_cluster.infrastructure.type | default('detect')) == 'detect'
+
+- set_fact: 
+    _existing_ocp_infra_type: "{{ _current_openshift_cluster.infrastructure.type }}"
+  when: (_current_openshift_cluster.infrastructure.type | default('detect')) != 'detect'
+
+- name: Show inferred or set infrastructure type for OpenShift
+  debug:
+    var: _existing_ocp_infra_type
+

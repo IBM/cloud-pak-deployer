@@ -1,0 +1,42 @@
+{
+   "addon_type":"{{ cp4d_dv_addon_type }}",
+   "display_name":"{{ _dv_instance.name }}",
+   "namespace":"{{ current_cp4d_cluster.project }}",
+   "addon_version":"{{ _dv_version.stdout }}",
+   "create_arguments":{
+      "parameters":{
+         "resources.dv.requests.cpu": "{{ cp4d_dv_instance_requests_cpu }}",
+         "resources.dv.requests.memory": "{{ cp4d_dv_instance_requests_memory }}",
+         "image.pullPolicy": "{{ cp4d_dv_instance_pull_policy }}",
+         "workerCount": "{{ cp4d_dv_instance_compute_count }}",
+         "enableHostIPC": "{{ cp4d_dv_instance_enable_host_ipc }}",
+{% if _storage_type == 'pwx' %}
+         "persistence.storageClass": "portworx-dv-shared-gp3",
+         "persistence.workerpv.storageClass": "portworx-dv-shared-gp3",
+         "persistence.cachingpv.storageClass": "portworx-dv-shared-gp3",
+{% elif _storage_type == 'ocs' %}
+         "persistence.storageClass": "{{ ocp_storage_class_block }}",
+         "persistence.workerpv.storageClass": "{{ ocp_storage_class_block }}",
+         "persistence.cachingpv.storageClass": "{{ ocp_storage_class_block }}",
+{% else %}
+         "persistence.storageClass": "{{ ocp_storage_class_file }}",
+         "persistence.workerpv.storageClass": "{{ ocp_storage_class_file }}",
+         "persistence.cachingpv.storageClass": "{{ ocp_storage_class_file }}",
+{% endif %}
+         "persistence.size": "{{ cp4d_dv_instance_persistence_storage_size }}",
+         "persistence.workerpv.size": "{{ cp4d_dv_instance_persistence_compute_storage_size }}",
+         "persistence.cachingpv.size": "{{ cp4d_dv_instance_persistence_caching_storage_size }}"
+      },
+      "resources":{
+         "cpu":"{{ cp4d_dv_instance_requests_cpu }}",
+         "memory":"{{ cp4d_dv_instance_requests_memory }}"
+      },
+      "description":"Data Virtualization",
+      "metaData":{
+         
+      }
+   },
+   "transientFields":{
+      
+   }
+}
