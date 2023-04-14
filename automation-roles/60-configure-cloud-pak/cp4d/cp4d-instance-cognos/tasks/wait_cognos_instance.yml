@@ -1,0 +1,51 @@
+---
+- name: Show current Cognos Analytics instance
+  debug:
+    msg: "{{ _cognos_instance }}"
+
+- name: Waiting for Cognos Analytics instance {{ _cognos_instance.name }} to appear
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&display_name={{ _cognos_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cognos_name_lookup_result
+  until: _cognos_name_lookup_result.json.total_count == 1
+  retries: 120
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+
+- set_fact:
+    _cognos_id: "{{ (_cognos_name_lookup_result.json.service_instances | first).id }}"
+
+- set_fact:
+    _cognos_instance_pods_count: "7"
+  when: _ca_cp4d_version == "4.0"
+
+- set_fact:
+    _cognos_instance_pods_count: "5"
+  when: _ca_cp4d_version != "4.0"
+
+- name: "Wait for Cognos Analytics to finish its provisioning, starting all {{ _cognos_instance_pods_count }} pods"
+  shell: |
+    oc get po -n {{ current_cp4d_cluster.project }} | grep ^ca{{ _cognos_id }} | grep "1/1\|2/2" | grep "Running" | wc -l
+  register: _ca_provision_complete
+  retries: 140
+  delay: 30
+  until:
+    - _ca_provision_complete.rc==0
+    - _ca_provision_complete.stdout==_cognos_instance_pods_count
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

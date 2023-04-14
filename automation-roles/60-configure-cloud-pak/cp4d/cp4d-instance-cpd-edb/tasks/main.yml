@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _cpd_edb_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "edb_cp4d"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show EnterpriseDB cartridge
+  debug:
+    var: _cpd_edb_cartridge
+
+- set_fact:
+    _configured_cpd_edb_instances: []
+- set_fact:
+    _configured_cpd_edb_instances: "{{ _cpd_edb_cartridge.instances | default([] )}}"
+  when:
+  - _cpd_edb_cartridge != {}
+  - (_cpd_edb_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision-cpd-edb-instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete-cpd-edb-instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait-cpd-edb-instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

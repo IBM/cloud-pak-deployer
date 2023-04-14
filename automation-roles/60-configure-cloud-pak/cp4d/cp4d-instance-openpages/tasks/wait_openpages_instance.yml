@@ -1,0 +1,47 @@
+---
+- name: Show OpenPages instance
+  debug:
+    var: _openpages_instance
+
+- name: Waiting for OpenPages instance {{ _openpages_instance.name }} to appear
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ addon_type }}&display_name={{ _openpages_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _openpages_instance_name_lookup_result
+  until: _openpages_instance_name_lookup_result.json.total_count == 1
+  retries: 120
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- set_fact:
+    _openpages_instance_id: "{{ (_openpages_instance_name_lookup_result.json.service_instances | first).id }}"
+
+- name: Waiting for OpenPages instance {{ _openpages_instance.name }} to complete its provisioning
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _openpages_instance_id }}?include_service_status=true'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _openpages_instance_lookup_result
+  until: _openpages_instance_lookup_result.json.services_status == "RUNNING"
+  retries: 120
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

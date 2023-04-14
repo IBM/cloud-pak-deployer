@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _analyticsengine_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "analyticsengine"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Analytics Engine cartridge
+  debug:
+    var: _analyticsengine_cartridge
+
+- set_fact:
+    _configured_ae_instances: []
+- set_fact:
+    _configured_ae_instances: "{{ _analyticsengine_cartridge.instances | default([] )}}"
+  when:
+  - _analyticsengine_cartridge != {}
+  - (_analyticsengine_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_analyticsengine_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_analyticsengine_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_analyticsengine_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)

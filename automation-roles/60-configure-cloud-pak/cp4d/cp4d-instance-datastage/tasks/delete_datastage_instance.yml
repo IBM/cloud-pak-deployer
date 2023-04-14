@@ -1,0 +1,35 @@
+---
+- set_fact:
+    _ds_instance_name: "{{ _ds_instance.metadata.name }}"
+    _ds_instance_listed: {}
+    _delete_ds_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration and not default DS instance
+- block:
+  - set_fact:
+      _ds_instance_listed: "{{ _configured_ds_instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _ds_instance_name }}']" 
+  - set_fact:
+      _delete_ds_instance: True
+    when: 
+    - _ds_instance_listed == {}
+    - _ds_instance_name != 'ds-px-default'
+  when: (_p_delete_all_instances | default(False)) == False
+
+- set_fact:
+    _delete_ds_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
+- name: Fail if DataStage instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Destroy was not confirmed via --confirm-destroy or global_config confirm_destroy property, will not delete DataStage instance {{ _ds_instance_name }}"
+  when:
+  - _delete_ds_instance | bool
+  - _confirm_destroy | default (False) | bool == False
+
+- name: Delete DataStage instance {{ _ds_instance_name }}
+  shell: |
+    oc delete pxruntime "{{ _ds_instance_name }}" -n {{ current_cp4d_cluster.project }}
+  register: _ds_delete_result
+  when: _delete_ds_instance | bool

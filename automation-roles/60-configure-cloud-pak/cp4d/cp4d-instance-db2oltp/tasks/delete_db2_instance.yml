@@ -1,0 +1,63 @@
+---
+- set_fact:
+    _db2_instance_name: "{{ _db2_instance.display_name }}"
+    _db2_instance_id: "{{ _db2_instance.id }}"
+    _db2_cartridge_listed: {}
+    _delete_db2_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration
+- block:
+  - set_fact:
+      _db2_cartridge_listed: "{{ _db2_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _db2_instance_name }}']" 
+    when: _db2_cartridge.instances is defined
+  - set_fact:
+      _delete_db2_instance: True
+    when: _db2_cartridge_listed == {} or (_db2_cartridge.state | default('installed')) == 'removed'
+  when: (_p_delete_all_instances | default(False)) == False
+
+- set_fact:
+    _delete_db2_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
+- name: Fail if Db2 OLTP instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Destroy was not confirmed via --confirm-destroy or global_config confirm_destroy property, will not delete Db2 OLTP instance {{ _db2_instance_name }}"
+  when:
+  - _delete_db2_instance | bool
+  - _confirm_destroy | default (False) | bool == False
+
+- name: Deleting Db2 OLTP instance {{ _db2_instance_name }}
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _db2_instance_id }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 202
+  register: _db2_instance_delete_result
+  when: _delete_db2_instance | bool
+
+- name: Wait until Db2 OLTP instance {{ _db2_instance_name }} has been deleted
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _db2_instance_id }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 404
+  register: _db2_instance_exists
+  until: _db2_instance_exists.status == 404
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: _delete_db2_instance | bool

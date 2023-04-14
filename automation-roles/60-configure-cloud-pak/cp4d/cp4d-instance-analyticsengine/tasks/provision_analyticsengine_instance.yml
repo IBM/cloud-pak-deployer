@@ -1,0 +1,76 @@
+---
+- name: Show analytics engine instance
+  debug:
+    var: _ae_instance
+
+- name: Check if the Analytics Engine instance is already running
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_analyticsengine_instance_addon_type }}&display_name={{ _ae_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _ae_instance_lookup_result
+
+- name: Determine if Analytics Engine instance already exists
+  debug:
+    msg: "Analytics Engine instance {{ _ae_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
+  when: _ae_instance_lookup_result.json.total_count != 0
+
+- when: _ae_instance_lookup_result.json.total_count == 0
+  block:
+  - name: Obtain Analytics Engine version
+    shell:
+      oc get analyticsengine -n {{ current_cp4d_cluster.project }} analyticsengine-sample -o jsonpath='{.spec.version}'
+    register: _ae_version
+
+  - name: Prepare Analytics Engine storage instance {{ _ae_instance.name }} json file
+    template:
+      src: analyticsengine_storage_instance_40.json.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _ae_instance.name }}-ae_storage.json"
+
+  - name: Prepare Analytics Engine instance {{ _ae_instance.name }} json file
+    template:
+      src: analyticsengine_instance_40.json.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _ae_instance.name }}-ae_instance.json"
+
+  - name: Create Analytics Engine storage instance {{ _ae_instance.name }}
+    shell: |
+      curl -v -k \
+        -H 'Authorization: Bearer {{ cp4d_login.token }}' \
+        -H 'Content-Type: application/json' \
+        -X POST \
+        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _ae_instance.name }}-ae_storage.json
+    register: _create_analyticsengine_storage_instance_result
+
+  - set_fact:
+      _create_analyticsengine_storage_instance_result_json: "{{ _create_analyticsengine_storage_instance_result.stdout | from_json }}"
+
+  - name: Create Analytics Engine instance {{ _ae_instance.name }}
+    shell: |
+      curl -v -k \
+        -H 'Authorization: Bearer {{ cp4d_login.token }}' \
+        -H 'Content-Type: application/json' \
+        -X POST \
+        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _ae_instance.name }}-ae_instance.json
+    register: _create_ae_instance_result
+
+  - set_fact:
+      _create_ae_instance_result_json: "{{ _create_ae_instance_result.stdout | from_json }}"
+
+  - name: Show analytics engine storage instance result
+    debug:
+      var: _create_analyticsengine_storage_instance_result_json
+
+  - name: Show Analytics Engine instance result
+    debug:
+      var: _create_ae_instance_result_json
+
+  - set_fact:
+      _analyticsengine_storage_id: "{{ _create_analyticsengine_storage_instance_result_json.id }}"
+      _analyticsengine_id: "{{ _create_ae_instance_result_json.id }}"

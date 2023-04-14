@@ -1,0 +1,19 @@
+---
+- name: Get all current Db2 OLTP instances
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2oltp_instance_addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ cp4d_login.token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _all_db2_instances
+
+# Loop through all deployed Db2 OLTP instance definitions to check if instance no longer exists in the config
+- name: Loop through each Db2 OLTP instance to check if it must be deleted
+  include_tasks: delete_db2_instance.yml
+  loop: "{{ _all_db2_instances.json.service_instances | default([]) }}"
+  loop_control:
+    loop_var: _db2_instance

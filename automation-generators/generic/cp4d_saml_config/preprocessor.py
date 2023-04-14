@@ -4,11 +4,11 @@ import sys
 # Validating:
 # ---
 # cp4d_saml_config:
-# - project: zen-40
+# - project: cpd
 #   entrypoint: "https://prepiam.ice.ibmcloud.com/saml/sps/saml20ip/saml20/login"
 #   field_to_authenticate: email
-#   sp_cert_secret: {{ env_id }}-zen-40-sp-cert
-#   idp_cert_secret: {{ env_id }}-zen-40-idp-cert
+#   sp_cert_secret: {{ env_id }}-cpd-sp-cert
+#   idp_cert_secret: {{ env_id }}-cpd-idp-cert
 #   issuer: "cp4d"
 #   identifier_format: ""
 #   callback_url: ""
