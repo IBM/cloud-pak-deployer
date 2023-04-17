@@ -1,0 +1,130 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    batch.kubernetes.io/job-tracking: ""
+  labels:
+    app: db2u-dv
+    formation_id: db2u-dv
+    job-name: c-db2u-dv-restore-morph
+  name: c-db2u-dv-restore-morph
+spec:
+  backoffLimit: 2
+  completionMode: NonIndexed
+  completions: 1
+  parallelism: 1
+  suspend: false
+  template:
+    metadata:
+      labels:
+        app: db2u-dv
+        formation_id: db2u-dv
+        job-name: c-db2u-dv-restore-morph
+    spec:
+      affinity:
+        podAntiAffinity: {}
+      containers:
+      - command:
+        - /bin/bash
+        - -cx
+        - "source /tools/common.sh\n\t\tCAT_NODE=$(get_db2_head_node)\n\t\tkubectl
+          exec -it -n ${NAMESPACE}  ${CAT_NODE?} -- bash -c \"su - db2inst1 -c \\\"/db2u/db2u_restore_morph.sh\\\"\"\n\t\texit
+          $?"
+        env:
+        - name: SERVICENAME
+          value: c-db2u-dv-restore-morph
+        - name: role
+          value: restore-morph
+        - name: HEAD_NODE_NAME
+          value: c-db2u-dv-db2u
+        - name: SERVICE_NAME
+          value: c-db2u-dv
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: DB2TYPE
+          value: db2dv
+        - name: REPLICAS
+          value: "2"
+        - name: APP
+          value: db2u-dv
+        image: icr.io/db2u/db2u.tools@sha256:24238a8b1c9cac0081edc7a11cc5a0ccef46dc09e8b28e98f98a8b03276b632f
+        imagePullPolicy: IfNotPresent
+        name: restore-morph
+        resources:
+          limits:
+            cpu: 200m
+            ephemeral-storage: 40Mi
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            ephemeral-storage: 1Mi
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsUser: 500
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      initContainers:
+      - command:
+        - /bin/bash
+        - -cx
+        - /tools/post-install/db2u_ready.sh --replicas ${REPLICAS} --template ${APP}
+          --namespace ${NAMESPACE} --dbType ${DB2TYPE}
+        env:
+        - name: SERVICENAME
+          value: c-db2u-dv-restore-morph
+        - name: role
+          value: restore-morph
+        - name: HEAD_NODE_NAME
+          value: c-db2u-dv-db2u
+        - name: SERVICE_NAME
+          value: c-db2u-dv
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+        - name: DB2TYPE
+          value: db2dv
+        - name: REPLICAS
+          value: "2"
+        - name: APP
+          value: db2u-dv
+        image: icr.io/db2u/db2u.tools@sha256:24238a8b1c9cac0081edc7a11cc5a0ccef46dc09e8b28e98f98a8b03276b632f
+        imagePullPolicy: IfNotPresent
+        name: restore-morph-init
+        resources:
+          limits:
+            cpu: 200m
+            ephemeral-storage: 40Mi
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            ephemeral-storage: 1Mi
+            memory: 100Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: false
+          runAsUser: 500
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      restartPolicy: Never
+      schedulerName: default-scheduler
+      securityContext:
+        runAsNonRoot: true
+      serviceAccount: account-cpd-db2u-dv
+      serviceAccountName: account-cpd-db2u-dv
+      terminationGracePeriodSeconds: 10
