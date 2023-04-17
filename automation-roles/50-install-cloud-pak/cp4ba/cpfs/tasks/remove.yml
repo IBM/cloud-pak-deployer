@@ -34,50 +34,6 @@
 
   when: namespacescope_crd.resources | length != 0
 
-- name: Get OperandBindInfo CRD
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: operandbindinfos.operator.ibm.com
-  register: operandbindinfo_crd
-  retries: 10
-  delay: 1
-
-- name: Delete all OperandBindInfos
-  block:
-
-    - name: Get all OperandBindInfos
-      kubernetes.core.k8s_info:
-        api_version: operator.ibm.com/v1alpha1
-        kind: OperandBindInfo
-        namespace: cs-control
-      register: operand_bind_infos
-      retries: 10
-      delay: 1
-
-    - name: Delete All OperandBindInfo
-      kubernetes.core.k8s:
-        state: absent
-        api_version: operator.ibm.com/v1alpha1
-        kind: OperandBindInfo
-        name: "{{ item.metadata.name }}"
-        namespace: cs-control
-      with_items: "{{ operand_bind_infos.resources }}"
-
-    - name: Wait All OperandBindInfo disappear
-      kubernetes.core.k8s_info:
-        api_version: operator.ibm.com/v1alpha1
-        kind: OperandBindInfo
-        name: "{{ item.metadata.name }}"
-        namespace: cs-control
-      with_items: "{{ operand_bind_infos.resources }}"
-      register: operand_bind_info
-      retries: 40
-      delay: 30
-      until: operand_bind_info.resources | length == 0
-
-  when: operandbindinfo_crd.resources | length != 0
-
 - name: Remove ibmcloud-cluster-ca-cert Secret
   kubernetes.core.k8s:
     state: absent
