@@ -105,10 +105,13 @@
   ansible.builtin.set_fact:
     block_storage_class_name: "{{ ocp_storage_class_block }}"
 
-# TODO
+- name: Determine OCP type
+  ansible.builtin.include_role:
+    name: retrieve-openshift-type-existing-ocp
+
 - name: Create deployment_platform variable
   ansible.builtin.set_fact:
-    deployment_platform: ROKS
+    deployment_platform: "{{ 'ROKS' if _existing_ocp_infra_type == 'ibm-roks' else 'OCP' }}"
 
 - name: Get universal_password key from vault
   ansible.builtin.include_role:
