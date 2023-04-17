@@ -212,17 +212,6 @@
     - operandconfigs.operator.ibm.com
     - operandrequests.operator.ibm.com
 
-# This is needed as the sequence of creating CPFS dependent Operators is not detereministic and
-# it can happen that there are multiple "groups" of Operators with different InstallPlans
-# causing normal execution to fail and retry next time.
-- name: Get OperandRequest instance
-  kubernetes.core.k8s_info:
-    api_version: operator.ibm.com/v1alpha1
-    kind: OperandRequest
-    name: common-service
-    namespace: "{{ cpfs_cp4ba_project_name }}"
-  register: operand_request
-
 - name: Create ICR Secret
   ansible.builtin.include_role:
     name: common
@@ -344,49 +333,54 @@
       spec:
         httpsCertsSource: "custom"
 
-- name: Prepare yaml file for the License Service Reporter
-  ansible.builtin.template:
-    src: ibmlicenseservicereporter.yaml.j2
-    dest: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
-    mode: u+rwx
+# TODO Based on https://www.ibm.com/docs/en/cpfs?topic=i3o-installing-cloud-pak-foundational-services-in-multiple-namespaces
+# currently not supported in multi instnace deployment 2023-04-17
 
-# Based on Based on https://www.ibm.com/docs/en/cpfs?topic=reporter-deploying-license-service
-- name: Apply License Service Reporter instance
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+# - name: Prepare yaml file for the License Service Reporter
+#   ansible.builtin.template:
+#     src: ibmlicenseservicereporter.yaml.j2
+#     dest: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
+#     mode: u+rwx
 
-- name: Patch common-service enable License Service Reporter
-  kubernetes.core.k8s_json_patch:
-    api_version: operator.ibm.com/v3
-    kind: CommonService
-    name: common-service
-    namespace: "{{ cpfs_cp4ba_project_name }}"
-    patch:
-      - op: add
-        path: "/spec/services/-"
-        value:
-          name: "ibm-licensing-operator"
-          spec:
-            IBMLicenseServiceReporter: {}
+# # Based on Based on https://www.ibm.com/docs/en/cpfs?topic=reporter-deploying-license-service
 
-- name: Wait for license reporter Deployment to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: ibm-license-service-reporter-instance
-    common_resource_namespace: cs-control
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
+# - name: Apply License Service Reporter instance
+#   kubernetes.core.k8s:
+#     state: present
+#     force: false
+#     merge_type: merge
+#     src: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
+#     wait: true
+#     wait_sleep: 15
+#     wait_timeout: 15
+
+# - name: Patch common-service enable License Service Reporter
+#   kubernetes.core.k8s_json_patch:
+#     api_version: operator.ibm.com/v3
+#     kind: CommonService
+#     name: common-service
+#     namespace: "{{ cpfs_cp4ba_project_name }}"
+#     patch:
+#       - op: add
+#         path: "/spec/services/-"
+#         value:
+#           name: "ibm-licensing-operator"
+#           spec:
+#             IBMLicenseServiceReporter: {}
+
+# - name: Wait for license reporter Deployment to be Available
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-resource-condition
+#   vars:
+#     common_api_version: v1
+#     common_resource_kind: Deployment
+#     common_resource_name: ibm-license-service-reporter-instance
+#     common_resource_namespace: cs-control
+#     common_condition_name: Available
+#     common_retries: 80
+#     common_delay: 15
+# TODO END
 
 # Switch Ingress certificate mode & delete artifacts"
 # Based on https://www.ibm.com/docs/en/cpfs?topic=operator-replacing-foundational-services-endpoint-certificates
