@@ -126,6 +126,10 @@
   changed_when: true
   failed_when: ier_configmgr_output.rc != 0 and
     (ier_configmgr_output.stdout is not search('.*The current object store is already configured to the latest version.*'))
+  retries: 10
+  delay: 120
+  until: ier_configmgr_output.rc != 0 and
+    (ier_configmgr_output.stdout is search('.*The current object store is already configured to the latest version.*'))
 
 - name: Execute task configureROS
   ansible.builtin.shell: |
@@ -135,6 +139,7 @@
   failed_when: ier_configmgr_output.rc != 0
   retries: 10
   delay: 120
+  until: ier_configmgr_output.rc == 0
 
 - name: Execute task configureWorkflows
   ansible.builtin.shell: |
