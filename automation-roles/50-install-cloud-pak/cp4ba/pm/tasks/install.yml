@@ -6,7 +6,7 @@
     common_db2_user: pm
     common_db2_password: "{{ pm_db2_password }}"
 
-- name: Create PM DB
+- name: PM DB Create
   kubernetes.core.k8s_exec:
     namespace: db2
     pod: c-db2ucluster-db2u-0
@@ -14,15 +14,27 @@
       su - db2inst1 -s /usr/bin/bash -c "
       db2 CREATE DATABASE PM AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
       db2 CONNECT TO PM;
+      "
+  register: command_status
+  retries: 40
+  delay: 30
+  until: command_status.rc == 0
+
+- name: PM DB Configure
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CONNECT TO PM;
       db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER pm;
       db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER pm;
       db2 CONNECT RESET;
+      db2 activate db PM;
       "
   register: command_status
-  retries: 20
-  delay: 30
-  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"PM\" already exists.*')
-  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"PM\" already exists.*')
+  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
+    command_status.stdout is search('.*the database has already.*'))
 
 - name: Add DB connections to DB2MC
   ansible.builtin.include_role:
