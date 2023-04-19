@@ -22,7 +22,10 @@
       db2 CONNECT RESET;
       "
   register: command_status
-  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"ADPBASE\" already exists.*')
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"BASE\" already exists.*')
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"BASE\" already exists.*')
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
 - name: TENANT1 DB
@@ -51,6 +54,9 @@
       db2 activate db TENANT1;
       "
   register: command_status
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"TENANT1\" already exists.*')
   failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"TENANT1\" already exists.*')
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-preparing-db2-databases-document
@@ -80,6 +86,9 @@
       db2 activate db TENANT2;
       "
   register: command_status
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"TENANT2\" already exists.*')
   failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"TENANT2\" already exists.*')
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=scripts-creating-databases-document-processing
