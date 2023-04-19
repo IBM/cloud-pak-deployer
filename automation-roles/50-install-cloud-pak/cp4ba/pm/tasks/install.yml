@@ -19,6 +19,10 @@
       db2 CONNECT RESET;
       "
   register: command_status
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"PM\" already exists.*')
+  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"PM\" already exists.*')
 
 - name: Add DB connections to DB2MC
   ansible.builtin.include_role:

@@ -172,6 +172,9 @@
       db2 CONNECT TO DB2MC;
       "
   register: command_status
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"DB2MC\" already exists.*')
   failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"DB2MC\" already exists.*')
 
 - name: Get auth token

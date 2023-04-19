@@ -189,15 +189,13 @@
     pod: c-db2ucluster-db2u-0
     command: >
       su - db2inst1 -s /usr/bin/bash -c "
-      echo 'wait for db2start to finish';
-      sleep 30;
-      db2 deactivate db BLUDB;
       db2 force application ALL;
-      echo 'wait for force aplication to finish';
-      sleep 60;
+      db2 deactivate db BLUDB;
       db2 drop db BLUDB;
       "
   register: command_status
-  ignore_errors: true
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias name or database name \"BLUDB\" could not be found.*')
   failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias name or database name \"BLUDB\" could not be found.*')
   when: bludb_connect_command_status.rc == 0
