@@ -161,21 +161,31 @@
     common_retries: 10
     common_delay: 10
 
-- name: Create & configure DB2MC DB
+- name: DB2MC DB Create
   kubernetes.core.k8s_exec:
     namespace: db2
     pod: c-db2ucluster-db2u-0
     command: >
       su - db2inst1 -s /usr/bin/bash -c "
       db2 CREATE DATABASE DB2MC AUTOMATIC STORAGE YES PAGESIZE 32 K;
-      db2 activate db DB2MC;
       db2 CONNECT TO DB2MC;
       "
   register: command_status
-  retries: 20
+  retries: 40
   delay: 30
-  until: command_status.rc != 0 and command_status.stdout is search('.*The database alias \"DB2MC\" already exists.*')
-  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*The database alias \"DB2MC\" already exists.*')
+  until: command_status.rc == 0
+
+- name: DB2MC DB Configure
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 activate db DB2MC;
+      "
+  register: command_status
+  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
+    command_status.stdout is search('.*the database has already.*'))
 
 - name: Get auth token
   ansible.builtin.uri:
@@ -212,7 +222,7 @@
       - 504
       - -1
   register: repo_setup_response
-  retries: 5
+  retries: 20
   delay: 30
   until: ('status' in repo_setup_response) and (repo_setup_response.status == 201)
 
