@@ -26,4 +26,4 @@ There are a few activities that are somewhat related to deployment of the OpenSh
 The server on which you run the Cloud Pak Deployer may not have the necessary clients to interact with the cloud infrastructure, OpenShift, or the installed Cloud Pak. You can run commands using the same container image that runs the deployment of OpenShift and the Cloud Paks through the command line: [Open a command line](7-command/command)
 
 ### Destroying your OpenShift cluster
-If you want to destroy the provisioned OpenShift cluster, including the installed Cloud Pak(s), you can do this through the Cloud pak Deployer. Steps can be found here: [Destroy the assets](9-destroy/destroy)
+If you want to destroy the provisioned OpenShift cluster, including the installed Cloud Pak(s), you can do this through the Cloud pak Deployer. Steps can be found here: [Destroy the assets](../9-destroy/destroy)
