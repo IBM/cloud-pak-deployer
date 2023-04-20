@@ -46,6 +46,22 @@
     wait_sleep: 15
     wait_timeout: 15
 
+- name: Prepare yaml file for anyuid RoleBinding
+  ansible.builtin.template:
+    src: anyuid-scc-rolebinding.yaml.j2
+    dest: "{{ mssql_output_directory }}/anyuid-scc-rolebinding.yaml"
+    mode: u+rwx
+
+- name: Add anyuid RoleBinding
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mssql_output_directory }}/anyuid-scc-rolebinding.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
 - name: Prepare yaml file for Deployment
   ansible.builtin.template:
     src: deployment.yaml.j2
