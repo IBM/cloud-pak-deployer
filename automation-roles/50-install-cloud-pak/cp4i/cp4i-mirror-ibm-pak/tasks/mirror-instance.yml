@@ -37,14 +37,14 @@
 
   - name: Create mirror manifests for private registry     
     shell: |
-      oc ibm-pak generate mirror-manifests {{ _instance_type_details.package_name }} \
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_name }} \
         --version {{ _instance_properties.case_version }} \
         {{ _p_private_reg_url }}
     when: (cpd_skip_portable_registry | bool)
 
   - name: Create mirror manifests for portable registry with private registry as a final one
     shell: |
-      oc ibm-pak generate mirror-manifests {{ _instance_type_details.package_name }} \
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_name }} \
         --version {{ _instance_properties.case_version }} \
         {{ _p_portable_reg_url }} \
         --final-registry {{ _p_private_reg_url }}        
@@ -54,7 +54,7 @@
     shell: |
       set -o pipefail
       oc image mirror \
-       -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ _instance_properties.case_version }}/images-mapping.txt \
+       -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_name }}/{{ _instance_properties.case_version }}/images-mapping.txt \
        --filter-by-os '.*'  \
        -a {{ _p_reg_auth_file }} \
        --insecure  \
@@ -68,7 +68,7 @@
     shell: |
       set -o pipefail
       oc image mirror \
-        -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.package_name }}/{{ _instance_properties.case_version }}/images-mapping-to-registry.txt \
+        -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_name }}/{{ _instance_properties.case_version }}/images-mapping-to-registry.txt \
         --filter-by-os '.*'  \
         -a {{ _p_reg_auth_file }} \
         --insecure  \
