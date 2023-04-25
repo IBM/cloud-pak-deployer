@@ -298,20 +298,3 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
-
-- name: Add DB connections to DB2MC
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: add-db2mc-connection
-  vars:
-    common_db2_db_name: "{{ item }}"
-    common_user: "{{ cp4ba_db2mc_admin_user }}"
-    common_password: "{{ cp4ba_db2mc_universal_password }}"
-    common_output_directory: "{{ cp4ba_output_directory }}"
-    common_db2_hostname: "{{ cp4ba_db2_hostname }}"
-    common_db2_password: "{{ cp4ba_db2_universal_password }}"
-  with_items:
-    - BASE
-    - TENANT1
-    - TENANT2
-  when: current_cp4ba_cluster.db2mc_enabled
