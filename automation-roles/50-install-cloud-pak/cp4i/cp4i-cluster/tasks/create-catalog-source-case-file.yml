@@ -25,16 +25,16 @@
 
   # -------------------- ENTITLED REGISTRY ----------------------------
 
-  - name: Create catalog source from CASE {{ _instance_type_details.case_name }}-{{ instance_properties.case_version }} for entitled registry
+  - name: Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for entitled registry
     shell: |
-      oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
+      oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
     when: (_use_entitled_registry | bool)  
 
   # -------------------- PRIVATE REGISTRY -----------------------------
 
-  - name: Create catalog source from CASE {{ _instance_type_details.case_name }}-{{ instance_properties.case_version }} for private registry
+  - name: Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for private registry
     shell: |
-      oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
+      oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
     when: not (_use_entitled_registry | bool)  
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'
