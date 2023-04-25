@@ -10,11 +10,6 @@
       ansible.builtin.include_role:
         name: rpa
 
-    - name: Remove cloudbeaver
-      ansible.builtin.include_role:
-        name: cloudbeaver
-      when: current_cp4ba_cluster.cloudbeaver_enabled
-
     - name: Remove MSSQL
       ansible.builtin.include_role:
         name: mssql
@@ -84,19 +79,14 @@
     name: openldap
   when: openldap_enabled
 
-- name: Remove pgAdmin
+- name: Remove cloudbeaver
   ansible.builtin.include_role:
-    name: pgadmin
-  when: current_cp4ba_cluster.pgadmin_enabled
+    name: cloudbeaver
+  when: current_cp4ba_cluster.cloudbeaver_enabled
 
 - name: Remove PostgreSQL
   ansible.builtin.include_role:
     name: postgresql
-
-- name: Remove DB2MC
-  ansible.builtin.include_role:
-    name: db2mc
-  when: (current_cp4ba_cluster.patterns.document_processing.enabled or current_cp4ba_cluster.pm_enabled) and current_cp4ba_cluster.db2mc_enabled
 
 - name: Remove DB2
   ansible.builtin.include_role:

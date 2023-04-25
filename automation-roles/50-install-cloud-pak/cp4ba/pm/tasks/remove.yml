@@ -57,20 +57,6 @@
     - ibm-cloud-databases-redis-operator-catalog
     - ibm-db2uoperator-catalog
 
-- name: Remove DB connections from DB2MC
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: remove-db2mc-connection
-  vars:
-    common_db2_db_name: "{{ item }}"
-    common_password: "{{ pm_db2mc_universal_password }}"
-    common_output_directory: "{{ pm_output_directory }}"
-    common_db2_hostname: "{{ pm_db2_hostname }}"
-    common_user: "{{ pm_db2mc_admin_user }}"
-  with_items:
-    - PM
-  when: current_cp4ba_cluster.db2mc_enabled
-
 - name: Remove DB2 users
   ansible.builtin.include_role:
     name: common

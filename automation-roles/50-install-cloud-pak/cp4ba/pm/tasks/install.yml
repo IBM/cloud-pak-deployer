@@ -36,19 +36,6 @@
   failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
     command_status.stdout is search('.*the database has already.*'))
 
-- name: Add DB connections to DB2MC
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: add-db2mc-connection
-  vars:
-    common_db2_db_name: PM
-    common_user: "{{ pm_db2mc_admin_user }}"
-    common_password: "{{ pm_db2mc_universal_password }}"
-    common_output_directory: "{{ pm_output_directory }}"
-    common_db2_hostname: "{{ pm_db2_hostname }}"
-    common_db2_password: "{{ pm_db2_password }}"
-  when: current_cp4ba_cluster.db2mc_enabled
-
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
     api_version: v1
