@@ -39,7 +39,13 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
     openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
-    # g('cartridges').isRequired()
+    g('accept_licenses').isOptional().mustBeOneOf([True, False])
+    g('state').isRequired().mustBeOneOf(['installed', 'removed'])
+    g('cloudbeaver_enabled').isOptional().mustBeOneOf([True, False])
+    g('roundcube_enabled').isOptional().mustBeOneOf([True, False])
+    g('cerebro_enabled').isOptional().mustBeOneOf([True, False])
+    g('akhq_enabled').isOptional().mustBeOneOf([True, False])
+    g('mongo_express_enabled').isOptional().mustBeOneOf([True, False])
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
