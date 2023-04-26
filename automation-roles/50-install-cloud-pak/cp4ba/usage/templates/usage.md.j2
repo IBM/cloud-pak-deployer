@@ -13,7 +13,7 @@ It is divided into sections similar to the main overview picture on the landing 
 - [Version](#version)
 
 ## Extras
-
+{% if gitea_enabled == true %}
 ### Gitea
 
 As Git server provider.
@@ -28,6 +28,8 @@ OAS: https://gitea.{{ apps_endpoint_domain }}/api/swagger#/
 - Credentials you should use: {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 - Initial administrative user credentials: giteaadmin / {{ universal_password }}
 
+{% endif %}
+{% if nexus_enabled == true %}
 ### Nexus
 
 As package manager.
@@ -42,7 +44,8 @@ OAS: https://nexus.{{ apps_endpoint_domain }}/service/rest/swagger.json
 - Credentials you should use: {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 - Initial administrative user credentials: admin / {{ universal_password }}
 
-{% if current_cp4ba_cluster.roundcube_enabled == true %}
+{% endif %}
+{% if mail_enabled == true and current_cp4ba_cluster.roundcube_enabled == true %}
 ### Roundcube
 
 As mail client.
@@ -57,7 +60,8 @@ As mail client.
 - for other users: cpadmin1, cpadmin2, cpuser, cpuser1, cpuser2 with domain @{{ lc_ldap_domain }} / {{ universal_password }} (you can also use only the usernames without domain to login)
 
 {% endif %}
-{% if current_cp4ba_cluster.cerebro_enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.enabled == true and (current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true or 
+current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true) and current_cp4ba_cluster.cerebro_enabled == true %}
 ### Cerebro
 
 As elastic search browser.
@@ -73,7 +77,7 @@ Pre-configured for IAF elastic search.
 - {{ cerebro_elasticsearch_admin_user }} / {{ cerebro_elasticsearch_universal_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.akhq_enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.enabled == true and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true and current_cp4ba_cluster.akhq_enabled == true %}
 ### AKHQ
 
 As kafka browser.
@@ -85,6 +89,7 @@ Pre-configured for IAF Kafka with custom user ( {{ lc_principal_admin_user }} / 
 - UI: https://akhq.{{ apps_endpoint_domain }}
 
 {% endif %}
+{% if kibana_enabled == true %}
 ### Kibana
 
 As elastic search content browser and for BAI dashboards.
@@ -97,6 +102,8 @@ As elastic search content browser and for BAI dashboards.
 
 - {{ kibana_admin_user }} / {{ kibana_universal_password }}
 
+{% endif %}
+{% if mail_enabled == true %}
 ### Mail
 
 As mail server.
@@ -112,7 +119,8 @@ Not exposed outside the cluster.
 - for admin: {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}/ {{ mail_universal_password }}
 - for user: cpuser@{{ lc_ldap_domain }} / {{ mail_universal_password }}
 
-{% if current_cp4ba_cluster.mongo_express_enabled == true %}
+{% endif %}
+{% if mongodb_enabled == true and current_cp4ba_cluster.mongo_express_enabled == true %}
 ### Mongo Express
 
 As UI for MongoDB
@@ -126,7 +134,7 @@ As UI for MongoDB
 - {{ principal_admin_user }} / {{ universal_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cloudbeaver_enabled == true %}
+{% if (db2_enabled == true or postgresql_enabled == true or mssql_enabled == true) and current_cp4ba_cluster.cloudbeaver_enabled == true %}
 ### CloudBeaver
 
 As DB UI for PostgreSQL, DB2, MSSQL
@@ -140,6 +148,7 @@ As DB UI for PostgreSQL, DB2, MSSQL
 - UI: {{ principal_admin_user }} / {{ universal_password }}
 
 {% endif %}
+{% if current_cp4ba_cluster.cp4ba.enabled == true  %}
 ## CP4BA - CP4BA capabilities
 
 ### Zen service account credentials
@@ -197,7 +206,7 @@ etcdctl get --from-key '' --insecure-skip-tls-verify=true --user="root:{{ univer
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-{% if current_cp4ba_cluster.patterns.foundation.optional_components.bai == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
 ### Business Automation Studio (BAS) (foundation pattern)
 
 #### Endpoints
@@ -209,7 +218,7 @@ etcdctl get --from-key '' --insecure-skip-tls-verify=true --user="root:{{ univer
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.patterns.foundation.optional_components.bai == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
 ### Business Automation Insights (BAI) (foundation pattern)
 
 #### Endpoints
@@ -231,7 +240,7 @@ oc cp -n {{ cp4ba_project_name }} `oc get pod --no-headers -n {{ cp4ba_project_n
 ```
 {% endif %}
 
-{% if current_cp4ba_cluster.patterns.decisions.enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.decisions.enabled == true %}
 ### Operational Decision Manager (ODM) (decisions pattern)
 
 You may get 400 not authorized error when accessing endpoints. In this case clear cookies and refresh browser.
@@ -256,7 +265,7 @@ You may get 400 not authorized error when accessing endpoints. In this case clea
 - For ODM REST auth with {{ lc_principal_admin_user }} user or other LDAP users, follow guide on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=access-using-zen-api-key-authentication with REST Authorization header with ZenApiKey type
 
 {% endif %}
-{% if current_cp4ba_cluster.patterns.decisions_ads.enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled == true %}
 ### Automation Decision Services (ADS) (decisions_ads pattern)
 
 #### Endpoints
@@ -271,7 +280,7 @@ You may get 400 not authorized error when accessing endpoints. In this case clea
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.patterns.content.enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.content.enabled == true %}
 ### FileNet Content Manager (FNCM) (content pattern)
 
 #### Endpoints
@@ -318,7 +327,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 ```
 
 {% endif %}
-{% if current_cp4ba_cluster.patterns.application.enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.application.enabled == true %}
 ### Automation Application Engine (AAE) (application pattern)
 
 #### Endpoints
@@ -331,7 +340,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.patterns.document_processing.enabled == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled == true %}
 ### Automation Document Processing (ADP) (document_processing pattern)
 
 #### Endpoints
@@ -344,7 +353,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.patterns.workflow.enabled and current_cp4ba_cluster.patterns.workflow.optional_components.baw_authoring == true %}
+{% if current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring == true %}
 ### Business Automation Workflow Authoring (BAWAUT)
 
 #### Endpoints
@@ -433,7 +442,8 @@ Alternative custom user: cpadmin / {{ universal_password }}
 - Sasl Mechanism: SCRAM-SHA-512
 - Root CA cert (used in *Path to root CA certificates file*): ```oc get kafka iaf-system -n {{ cp4ba_project_name }} -o jsonpath='{.status.listeners[1].certificates[0]}'```
 
-{% if current_cp4ba_cluster.pm_enabled == true %}
+{% endif %}
+{% if current_cp4ba_cluster.pm.enabled == true %}
 ### Process Mining
 
 #### Endpoints
@@ -461,7 +471,7 @@ To get logs for Operator.
 oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-controller | xargs oc logs > process-mining-operator.log
 ```
 
-{% if current_cp4ba_cluster.asset_repo_enabled == true %}
+{% if current_cp4ba_cluster.asset_repo.enabled == true %}
 ### Asset Repository
 
 #### Endpoints
@@ -473,7 +483,7 @@ oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-co
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.rpa_enabled == true %}
+{% if current_cp4ba_cluster.rpa.enabled == true %}
 ### RPA
 
 #### Endpoints
@@ -519,7 +529,7 @@ curl -kL https:/ibm-licensing-service-instance-cs-control.{{ apps_endpoint_domai
 ```
 
 ## Pre-requisites
-
+{% if db2_enabled == true %}
 ### DB2
 
 As DB2 database storage for the platform.
@@ -541,6 +551,8 @@ su - db2inst1
 db2
 ```
 
+{% endif %}
+{% if postgresql_enabled == true %}
 ### PostgreSQL
 
 As PostgreSQL database storage for the platform.
@@ -559,6 +571,7 @@ As PostgreSQL database storage for the platform.
 psql postgresql://{{ lc_principal_admin_user }}:{{ universal_password }}@localhost:5432/postgres
 ```
 
+{% endif %}
 {% if openldap_enabled == true %}
 ### OpenLDAP + phpLDAPadmin
 
@@ -588,7 +601,7 @@ LDAP contains the following groups in {{ lc_ldap_group_base_dn }}:
 - cpusers1 - members: {{ lc_ldap_user_id_attribute }}=cpuser,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser1,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser2,{{ lc_ldap_user_base_dn }}
 
 {% endif %}
-
+{% if mssql_enabled == true %}
 ### MSSQL
 
 As DB server for RPA.
@@ -607,6 +620,8 @@ As DB server for RPA.
 /opt/mssql-tools/bin/sqlcmd -S 127.0.0.1 -U sa -P {{ universal_password }}
 ```
 
+{% endif %}
+{% if mongodb_enabled == true %}
 ### MongoDB
 
 As MongoDB database storage for the platform.
@@ -625,6 +640,7 @@ As MongoDB database storage for the platform.
 mongo --username root --password {{ universal_password }} --authenticationDatabase admin
 ```
 
+{% endif %}
 ## Deployment job
 
 ### Global CA

@@ -1,30 +1,28 @@
 - name: Remove PM
   ansible.builtin.include_role:
     name: pm
-  when: current_cp4ba_cluster.pm_enabled
+  when: current_cp4ba_cluster.pm.enabled
 
-- name: RPA group
-  block:
+- name: Remove RPA
+  ansible.builtin.include_role:
+    name: rpa
+  when: current_cp4ba_cluster.rpa.enabled
 
-    - name: Remove RPA
-      ansible.builtin.include_role:
-        name: rpa
-
-    - name: Remove MSSQL
-      ansible.builtin.include_role:
-        name: mssql
-
-  when: current_cp4ba_cluster.rpa_enabled
+- name: Remove MSSQL
+  ansible.builtin.include_role:
+    name: mssql
+  when: mssql_enabled
 
 # TODO requires some CP4I resources and fails
 # - name: Remove Asset Repo
 #   ansible.builtin.include_role:
 #     name: asset_repo
-#   when: current_cp4ba_cluster.asset_repo_enabled
+#   when: current_cp4ba_cluster.asset_repo.enabled
 
 - name: Remove CP4BA
   ansible.builtin.include_role:
     name: cp4ba-core
+  when: current_cp4ba_cluster.cp4ba.enabled
 
 - name: Remove CPFS
   ansible.builtin.include_role:
@@ -34,16 +32,6 @@
   ansible.builtin.include_role:
     name: mongo_express
   when: current_cp4ba_cluster.mongo_express_enabled
-
-- name: Remove MongoDB
-  ansible.builtin.include_role:
-    name: mongodb
-  when: mongodb_enabled
-
-- name: Remove Kibana
-  ansible.builtin.include_role:
-    name: kibana
-  when: kibana_enabled
 
 - name: Remove AKHQ
   ansible.builtin.include_role:
@@ -60,6 +48,21 @@
     name: roundcube
   when: current_cp4ba_cluster.roundcube_enabled
 
+- name: Remove cloudbeaver
+  ansible.builtin.include_role:
+    name: cloudbeaver
+  when: current_cp4ba_cluster.cloudbeaver_enabled
+
+- name: Remove Kibana
+  ansible.builtin.include_role:
+    name: kibana
+  when: kibana_enabled
+
+- name: Remove MongoDB
+  ansible.builtin.include_role:
+    name: mongodb
+  when: mongodb_enabled
+
 - name: Remove Mail
   ansible.builtin.include_role:
     name: mail
@@ -68,6 +71,7 @@
 - name: Remove nexus
   ansible.builtin.include_role:
     name: nexus
+  when: nexus_enabled
 
 - name: Remove gitea
   ansible.builtin.include_role:
@@ -79,19 +83,15 @@
     name: openldap
   when: openldap_enabled
 
-- name: Remove cloudbeaver
-  ansible.builtin.include_role:
-    name: cloudbeaver
-  when: current_cp4ba_cluster.cloudbeaver_enabled
-
 - name: Remove PostgreSQL
   ansible.builtin.include_role:
     name: postgresql
+  when: postgresql_enabled
 
 - name: Remove DB2
   ansible.builtin.include_role:
     name: db2
-  when: current_cp4ba_cluster.patterns.document_processing.enabled or current_cp4ba_cluster.pm_enabled
+  when: db2_enabled
 
 - name: Remove usage
   ansible.builtin.include_role:
