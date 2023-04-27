@@ -2,15 +2,21 @@
 
 This file contains endpoints, credentials and other useful information about capabilities installed in the platform.
 
-It is divided into sections similar to the main overview picture on the landing page [What is in the package](https://github.com/apollo-business-automation/ibm-cp4ba-enterprise-deployment/tree/main#what-is-in-the-package-).
-
 - [Extras](#extras)
 - [CP4BA - CP4BA capabilities](#cp4ba---cp4ba-capabilities)
 - [CP4BA - IAF capabilities](#cp4ba---iaf-capabilities)
+{% if current_cp4ba_cluster.pm.enabled == true %}
+- [Process Mining](#process-mining)
+{% endif %}
+{% if current_cp4ba_cluster.asset_repo.enabled == true %}
+- [Asset Repository](#asset-repository)
+{% endif %}
+{% if current_cp4ba_cluster.rpa.enabled == true %}
+- [RPA](#rpa)
+{% endif %}
 - [CPFS](#cpfs)
 - [Pre-requisites](#pre-requisites)
-- [Deployment job](#deployment-job) 
-- [Version](#version)
+- [Global CA](#global-ca) 
 
 ## Extras
 {% if gitea_enabled == true %}
@@ -444,9 +450,9 @@ Alternative custom user: cpadmin / {{ universal_password }}
 
 {% endif %}
 {% if current_cp4ba_cluster.pm.enabled == true %}
-### Process Mining
+## Process Mining
 
-#### Endpoints
+### Endpoints
 
 - Process Mining UI & API base: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining
 - Process Mining User Profile (to determine user API key) https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile
@@ -454,12 +460,12 @@ Alternative custom user: cpadmin / {{ universal_password }}
 - Task Mining Route for Client install: https://processmining-tm-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/
 - Process Mining non Zen Route: https://processmining-pm-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/
 
-#### Credentials
+### Credentials
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-#### Useful info
+### Useful info
 
 If you want to investigate the actual ansible code that is running in the operator, you can get it from running operator pod from /opt/ansible/ directory.
 ```bash
@@ -472,26 +478,26 @@ oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-co
 ```
 
 {% if current_cp4ba_cluster.asset_repo.enabled == true %}
-### Asset Repository
+## Asset Repository
 
-#### Endpoints
+### Endpoints
 
 - UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/assets
 
-#### Credentials
+### Credentials
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
 {% if current_cp4ba_cluster.rpa.enabled == true %}
-### RPA
+## RPA
 
-#### Endpoints
+### Endpoints
 
 - UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/rpa/ui
 - API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.2/en/configuration
 
-#### Credentials
+### Credentials
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
@@ -641,10 +647,8 @@ mongo --username root --password {{ universal_password }} --authenticationDataba
 ```
 
 {% endif %}
-## Deployment job
+## Global CA
 
-### Global CA
-
-If you haven't provided your own key and crt pair in configuration Secret, new one was generated in Project *apollo-one-shot* in Secret *apollo-one-shot* in *global_ca_tls.crt* and *global_ca_tls.key* keys.
+New key and crt pair was generated in Project *apollo-one-shot* in Secret *apollo-one-shot* in *global_ca_tls.crt* and *global_ca_tls.key* keys.
 
 You can import *global_ca_tls.crt* to you operating system or browser to automatically trust all the certificates used in the platform.
