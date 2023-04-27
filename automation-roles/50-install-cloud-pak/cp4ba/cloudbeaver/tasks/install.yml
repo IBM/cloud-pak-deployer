@@ -157,6 +157,23 @@
   ansible.builtin.set_fact:
     cb_session_id: "{{ cloudbeaver_login_response.cookies['cb-session-id'] }}"
 
+- name: Delete PostgreSQL Template
+  ansible.builtin.uri:
+    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
+    method: POST
+    headers:
+      content-type: "application/json"
+      Cookie: "cb-session-id={{ cb_session_id }}"
+    body_format: json
+    body:
+      query: 'mutation {
+          deleteConnection(projectId: "g_GlobalConfiguration" id: "postgresql-template-1")
+        }'
+  register: cloudbeaver_delete_response
+  failed_when: cloudbeaver_delete_response.status != 200 or
+    (cloudbeaver_delete_response.json.errors is defined and
+      cloudbeaver_delete_response.json.errors is not search('Connection \'postgresql-template-1\' not found'))
+
 - name: Get existing connections
   ansible.builtin.uri:
     url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
