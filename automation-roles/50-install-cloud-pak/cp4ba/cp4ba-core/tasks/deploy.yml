@@ -425,6 +425,19 @@
     apply: true
     src: "{{ cp4ba_output_directory }}/cr.yaml"
 
+- name: Wait for icp4ba Cartridge to be Ready
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: core.automation.ibm.com/v1beta1
+    common_resource_kind: Cartridge
+    common_resource_name: icp4ba
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Ready
+    common_retries: 36
+    common_delay: 300
+
 - name: Wait for AutomationBase instance Ready state
   ansible.builtin.include_role:
     name: common
@@ -497,19 +510,6 @@
     common_condition_name: Ready
     common_retries: 80
     common_delay: 15
-
-- name: Wait for icp4ba Cartridge to be Ready
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: core.automation.ibm.com/v1beta1
-    common_resource_kind: Cartridge
-    common_resource_name: icp4ba
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Ready
-    common_retries: 36
-    common_delay: 300
 
 - name: Wait for Prereqs Ready states
   ansible.builtin.include_role:
