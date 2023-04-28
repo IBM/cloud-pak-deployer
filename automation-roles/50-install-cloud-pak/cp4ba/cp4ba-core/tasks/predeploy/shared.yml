@@ -28,8 +28,8 @@
 
 - name: Prepare yaml file for root CA Secret
   ansible.builtin.template:
-    src: shared/root-ca-secret.yaml.j2
-    dest: "{{ cp4ba_output_directory }}/root-ca-secret.yaml"
+    src: shared/global-ca-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/global-ca-secret.yaml"
     mode: u+rwx
 
 - name: Create root CA Secret to trust other components like mail, also used for iaf issuer
@@ -37,7 +37,7 @@
     state: present
     force: false
     merge_type: merge
-    src: "{{ cp4ba_output_directory }}/root-ca-secret.yaml"
+    src: "{{ cp4ba_output_directory }}/global-ca-secret.yaml"
 
 - name: Retrieve default certification
   ansible.builtin.include_role:
