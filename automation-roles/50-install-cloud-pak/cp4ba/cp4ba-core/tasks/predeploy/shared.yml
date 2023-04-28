@@ -26,13 +26,13 @@
   ansible.builtin.set_fact:
     _ca_tls_crt: "{{ slurped_ca_crt_data.content }}"
 
-- name: Prepare yaml file for root CA Secret
+- name: Prepare yaml file for Global CA Secret
   ansible.builtin.template:
     src: shared/global-ca-secret.yaml.j2
     dest: "{{ cp4ba_output_directory }}/global-ca-secret.yaml"
     mode: u+rwx
 
-- name: Create root CA Secret to trust other components like mail, also used for iaf issuer
+- name: Create Global CA Secret to trust other components like mail
   kubernetes.core.k8s:
     state: present
     force: false
@@ -47,6 +47,12 @@
     common_crt_output_to_var: "tls_crt"
     common_key_output_to_var: "tls_key"
     common_ca_output_to_var: "ca_crt"
+
+- name: Prepare yaml file for default CA Secret
+  ansible.builtin.template:
+    src: shared/default-ca-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/default-ca-secret.yaml"
+    mode: u+rwx
 
 - name: Create default CA Secret to trust other components like gitea, nexus
   kubernetes.core.k8s:
