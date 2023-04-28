@@ -116,6 +116,17 @@
     condition_query: "resources[*].status.phase"
     phase: "{{ common_service | json_query(condition_query) | unique }}"
 
+- name: Set common-service profile
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+    definition:
+      spec:
+        size: "{{ current_cp4ba_cluster.cpfs_profile_size }}"
+
 - name: Patch common-service to add services list
   kubernetes.core.k8s_json_patch:
     api_version: operator.ibm.com/v3
