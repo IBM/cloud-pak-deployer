@@ -20,7 +20,8 @@
 
 - name: Retrieve default certificate name
   ansible.builtin.set_fact:
-    default_certificate_name: "{{ ingress_controller.resources[0].spec.defaultCertificate.name }}"
+    default_certificate_name: "{{ ingress_controller.resources[0].spec.defaultCertificate.name
+      if ingress_controller.resources[0].spec.defaultCertificate is defined else 'router-certs-default' }}"
 
 - name: Get default certificate contents
   kubernetes.core.k8s_info:

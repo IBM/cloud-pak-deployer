@@ -27,14 +27,7 @@ spec:
     sc_ingress_enable: false
     sc_deployment_hostname_suffix: "{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}"
     sc_image_repository: cp.icr.io
-    trusted_certificate_list: ['cp4ba-root-ca', 'default-ca']
-{% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai %}
-    sc_install_automation_base: false #Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=insights-customizing-kafka-elasticsearch-server-configuration,
-    # but that no longer is valid, with false, the automation base connection information for elastic search are not created properly
-    # which then stops processing of the Cloud Pak operator.
-{% else %}
-    sc_install_automation_base: true #Even when we create our own AutomationBase, this is required when BAI is not going to be installed, otherwise BAS and PFS won't work properly.
-{% endif %}
+    trusted_certificate_list: ['global-ca', 'default-ca']
     storage_configuration:
       sc_slow_file_storage_classname: "{{ cp4ba_storage_class_name }}"
       sc_medium_file_storage_classname: "{{ cp4ba_storage_class_name }}"

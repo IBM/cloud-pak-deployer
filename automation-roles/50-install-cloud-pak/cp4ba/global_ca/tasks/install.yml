@@ -115,31 +115,3 @@
         path: "/data/global_ca_tls.key"
         value: "{{ _global_ca_key }}"
   when: global_ca_secret.resources | length != 0 and (global_ca_secret.resources[0].data['global_ca_tls.crt'] is not defined)
-
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
-- name: Generate an OpenSSL private key
-  openssl_privatekey:
-    path: "{{ global_ca_output_directory }}/wildcard.key"
-
-- name: Generate an OpenSSL Certificate Signing Request with Subject information
-  openssl_csr:
-    path: "{{ global_ca_output_directory }}/wildcard.csr"
-    privatekey_path: "{{ global_ca_output_directory }}/wildcard.key"
-    subject: "CN=Wildcard"
-    subject_alt_name: "DNS:*.{{ apps_endpoint_domain }}"
-
-- name: Generate a Self Signed OpenSSL certificate
-  openssl_certificate:
-    path: "{{ global_ca_output_directory }}/wildcard.crt"
-    privatekey_path: "{{ global_ca_output_directory }}/wildcard.key"
-    csr_path: "{{ global_ca_output_directory }}/wildcard.csr"
-    provider: ownca
-    ownca_path: "{{ global_ca_output_directory }}/global-ca.crt"
-    ownca_privatekey_path: "{{ global_ca_output_directory }}/global-ca.key"
-    ownca_not_after: "+36500d"
