@@ -646,12 +646,14 @@ The following properties are defined on the project level:
 | openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. | No, only if multiple OpenShift clusters defined | Existing `openshift` cluster |
 | openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). | No, inferred from openshift->openshift_storage | |
 | accept_licenses | Set to `true` to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | true, false |
+| cpfs_profile_size                         | Profile size which affect replicas and resources of Pods of CPFS as per https://www.ibm.com/docs/en/cpfs?topic=operator-hardware-requirements-recommendations-foundational-services | Yes  | starterset, small, medium, large |
 
 ## Cloud Pak for Business Automation properties
 
 | Property            | Description                    | Mandatory            | Allowed values |
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to deploy CP4BA. Currently always `true`. | Yes  | true |
+| profile_size                         | Profile size which affect replicas and resources of Pods as per https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=pcmppd-system-requirements | Yes  | small, medium, large |
 | patterns          | Section where CP4BA patterns to be installed are defined. Please make sure to select all that is needed as a dependencies. Dependencies can be determined from documentation at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments | Yes | Object - see details below |
 
 ### Foundation pattern properties

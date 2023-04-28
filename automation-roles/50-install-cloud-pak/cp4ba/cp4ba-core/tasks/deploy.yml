@@ -160,11 +160,6 @@
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
-    cr: "{{ cr | combine(lookup('template', 'fncm/cr-cmis.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis
-
-- name: Add FNCM to CR
-  ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-css.yaml.j2') | from_yaml, recursive=true) }}"
   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
@@ -562,7 +557,8 @@
     common_delay: 120
   when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas or
     (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer) or
-    (current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer)
+    (current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and
+    current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer)
     or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled or
     current_cp4ba_cluster.cp4ba.patterns.workflow_workstreams.enabled
 
@@ -602,32 +598,24 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-bastudio-deployment StatefulSet ready replicas
+- name: Wait for {{ cp4ba_cr_meta_name }}-bastudio-deployment StatefulSet to be Available
   ansible.builtin.include_role:
     name: common
-    tasks_from: wait-resource-condition-generic
+    tasks_from: wait-statefulset-available
   vars:
-    common_api_version: apps/v1
-    common_resource_kind: StatefulSet
     common_resource_name: "{{ cp4ba_cr_meta_name }}-bastudio-deployment"
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.readyReplicas
-    common_condition_value: 1
     common_retries: 60
     common_delay: 120
   when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-redis-ha-server StatefulSet ready replicas
+- name: Wait for {{ cp4ba_cr_meta_name }}-redis-ha-server StatefulSet to be Available
   ansible.builtin.include_role:
     name: common
-    tasks_from: wait-resource-condition-generic
+    tasks_from: wait-statefulset-available
   vars:
-    common_api_version: apps/v1
-    common_resource_kind: StatefulSet
     common_resource_name: "{{ cp4ba_cr_meta_name }}-redis-ha-server"
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.readyReplicas
-    common_condition_value: 1
     common_retries: 60
     common_delay: 120
   when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
@@ -637,17 +625,13 @@
     wait_list:
       - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-rabbitmq-ha','') }}"
 
-- name: Wait for StatefulSets ready replicas
+- name: Wait for StatefulSets to be Available
   ansible.builtin.include_role:
     name: common
-    tasks_from: wait-resource-condition-generic
+    tasks_from: wait-statefulset-available
   vars:
-    common_api_version: apps/v1
-    common_resource_kind: StatefulSet
     common_resource_name: "{{ item }}"
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.readyReplicas
-    common_condition_value: 2
     common_retries: 30
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
@@ -709,14 +693,18 @@
 - name: Deployment wait list
   ansible.builtin.set_fact:
     wait_list:
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-itp','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-wfi','') }}"
+      - "{{ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
+        current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-itp','') }}"
+      - "{{ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
+        current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-wfi','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
         current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center | ternary(cp4ba_cr_meta_name+'-odm-decisioncenter','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime | ternary(cp4ba_cr_meta_name+'-odm-decisionserverruntime','') }}"
+        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
+        ternary(cp4ba_cr_meta_name+'-odm-decisionserverruntime','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime | ternary(cp4ba_cr_meta_name+'-odm-decisionserverconsole','') }}"
+        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
+        ternary(cp4ba_cr_meta_name+'-odm-decisionserverconsole','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
         current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name+'-odm-decisionrunner','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name+'-instance1-aae-ae-deployment','') }}"
@@ -735,17 +723,13 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet ready replicas
+- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
   ansible.builtin.include_role:
     name: common
-    tasks_from: wait-resource-condition-generic
+    tasks_from: wait-statefulset-available
   vars:
-    common_api_version: apps/v1
-    common_resource_kind: StatefulSet
     common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.readyReplicas
-    common_condition_value: 1
     common_retries: 60
     common_delay: 120
   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
