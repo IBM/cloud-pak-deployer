@@ -1,4 +1,30 @@
-# Counts on TLS from iaf-automationuiconfig
+- name: Check that the {{ cp4ba_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ cp4ba_ca_crt_path }}"
+  register: cp4ba_ca_crt_file
+
+- name: Ensure we have CA certificates and wildcards
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not cp4ba_ca_crt_file.stat.exists
+
+- name: Load CA TLS key data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_ca_key_path }}'
+  register: slurped_ca_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_key: "{{ slurped_ca_key_data.content }}"
+
+- name: Load CA TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_ca_crt_path }}'
+  register: slurped_ca_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_crt: "{{ slurped_ca_crt_data.content }}"
 
 - name: Prepare yaml file for root CA Secret
   ansible.builtin.template:
@@ -6,13 +32,28 @@
     dest: "{{ cp4ba_output_directory }}/root-ca-secret.yaml"
     mode: u+rwx
 
-# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=certificates-providing-root-ca-certificate
-- name: Add root CA Secret
+- name: Create root CA Secret to trust other components like mail, also used for iaf issuer
   kubernetes.core.k8s:
     state: present
     force: false
     merge_type: merge
     src: "{{ cp4ba_output_directory }}/root-ca-secret.yaml"
+
+- name: Retrieve default certification
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: retrieve_default_certification
+  vars:
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
+
+- name: Create default CA Secret to trust other components like gitea, nexus
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/default-ca-secret.yaml"
 
 - name: Prepare yaml file for LDAP bind Secret
   ansible.builtin.template:
