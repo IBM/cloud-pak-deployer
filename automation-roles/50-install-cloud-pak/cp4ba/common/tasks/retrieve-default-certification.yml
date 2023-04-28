@@ -33,11 +33,11 @@
 
 - name: Retrieve tls.crt
   ansible.builtin.set_fact:
-    "{{ common_crt_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] | b64decode }}"
+    "{{ common_crt_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] }}"
 
 - name: Retrieve tls.key
   ansible.builtin.set_fact:
-    "{{ common_key_output_to_var }}": "{{ default_secret.resources[0].data['tls.key'] | b64decode }}"
+    "{{ common_key_output_to_var }}": "{{ default_secret.resources[0].data['tls.key'] }}"
 
 - name: Get Proxy
   kubernetes.core.k8s_info:
@@ -63,10 +63,10 @@
 
     - name: Retrieve trusted CAs
       ansible.builtin.set_fact:
-        "{{ common_key_output_to_var }}": "{{ trusted_ca.resources[0].data['ca-bundle.crt'] }}"
+        "{{ common_ca_output_to_var }}": "{{ trusted_ca.resources[0].data['ca-bundle.crt'] | b64encode }}"
   when: trusted_ca_name | length > 0
 
 - name: Use tls.crt as ca.crt
   ansible.builtin.set_fact:
-    "{{ common_key_output_to_var }}": "{{ tls_crt }}"
+    "{{ common_ca_output_to_var }}": "{{ tls_crt }}"
   when: trusted_ca_name | length == 0
