@@ -27,16 +27,16 @@
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'ban/cr.yaml.j2') | from_yaml, recursive=true) }}"
 
-- name: Add BAN Google IDP configuration to CR
-  ansible.builtin.set_fact:
-    cr: "{{ cr | combine(ban_insert, recursive=true) }}"
-  vars:
-    ban_insert:
-      spec:
-        navigator_configuration:
-          icn_production_setting:
-            jvm_customize_options: DELIM=;-Dcom.filenet.authentication.ExShareGID.AuthTokenOrder=oidc,oauth,ltpa
-  when: cp4ba_external_share_google and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+# - name: Add BAN Google IDP configuration to CR
+#   ansible.builtin.set_fact:
+#     cr: "{{ cr | combine(ban_insert, recursive=true) }}"
+#   vars:
+#     ban_insert:
+#       spec:
+#         navigator_configuration:
+#           icn_production_setting:
+#             jvm_customize_options: DELIM=;-Dcom.filenet.authentication.ExShareGID.AuthTokenOrder=oidc,oauth,ltpa
+#   when: cp4ba_external_share_google and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-studio
 - name: Add BAS component
@@ -133,10 +133,10 @@
     components: "{{ components + ['css'] }}"
   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
-- name: Add FNCM components
-  ansible.builtin.set_fact:
-    components: "{{ components + ['es'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+# - name: Add FNCM components
+#   ansible.builtin.set_fact:
+#     components: "{{ components + ['es'] }}"
+#   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 - name: Add FNCM components
   ansible.builtin.set_fact:
@@ -163,10 +163,10 @@
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-css.yaml.j2') | from_yaml, recursive=true) }}"
   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
-- name: Add FNCM to CR
-  ansible.builtin.set_fact:
-    cr: "{{ cr | combine(lookup('template', 'fncm/cr-es.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+# - name: Add FNCM to CR
+#   ansible.builtin.set_fact:
+#     cr: "{{ cr | combine(lookup('template', 'fncm/cr-es.yaml.j2') | from_yaml, recursive=true) }}"
+#   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
@@ -206,24 +206,24 @@
 
   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
-- name: Google and IDP for External Share
-  block:
+# - name: Google and IDP for External Share
+#   block:
 
-    - name: Add Google TLS to CR
-      ansible.builtin.set_fact:
-        cr: "{{ cr | combine(google_tls_insert, recursive=true) }}"
-      vars:
-        google_tls_insert:
-          spec:
-            shared_configuration:
-              trusted_certificate_list: "{{ cr.spec.shared_configuration.trusted_certificate_list + ['google-tls'] }}"
+#     - name: Add Google TLS to CR
+#       ansible.builtin.set_fact:
+#         cr: "{{ cr | combine(google_tls_insert, recursive=true) }}"
+#       vars:
+#         google_tls_insert:
+#           spec:
+#             shared_configuration:
+#               trusted_certificate_list: "{{ cr.spec.shared_configuration.trusted_certificate_list + ['google-tls'] }}"
 
 
-    - name: Add IDP configuration to CR
-      ansible.builtin.set_fact:
-        cr: "{{ cr | combine(lookup('template', 'fncm/cr-es-gid.yaml.j2') | from_yaml, recursive=true) }}"
+#     - name: Add IDP configuration to CR
+#       ansible.builtin.set_fact:
+#         cr: "{{ cr | combine(lookup('template', 'fncm/cr-es-gid.yaml.j2') | from_yaml, recursive=true) }}"
 
-  when: cp4ba_external_share_google and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+#   when: cp4ba_external_share_google and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-application
 - name: Add AAE pattern
@@ -572,8 +572,8 @@
         current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name+'-cmis-deploy','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name+'-graphql-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
+      # - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
+      #   current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name+'-tm-deploy','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-mongo-deploy','') }}"
