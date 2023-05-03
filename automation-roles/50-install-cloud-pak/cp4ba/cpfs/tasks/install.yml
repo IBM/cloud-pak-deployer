@@ -270,9 +270,8 @@
   register: config_map
   retries: 30
   delay: 60
-  until: ('Ready' in config_map | json_query(condition_query) | unique)
-  vars:
-    condition_query: "resources[*].data.iamstatus"
+  until: config_map.resources[0].data[cpfs_cp4ba_project_name + "-iamstatus"] is defined and
+    config_map.resources[0].data[cpfs_cp4ba_project_name + "-iamstatus"] == 'Ready'
 
 - name: Retrieve default certification
   ansible.builtin.include_role:
