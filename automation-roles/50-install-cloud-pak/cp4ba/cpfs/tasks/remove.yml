@@ -68,16 +68,24 @@
     wait_sleep: 5
     wait_timeout: 50
 
-- name: Remove "{{ cpfs_cp4ba_project_name }}"-status ConfigMap
-  kubernetes.core.k8s:
-    state: absent
+- name: Get IAM status configmap
+  kubernetes.core.k8s_info:
     api_version: v1
     kind: ConfigMap
-    name: "{{ cpfs_cp4ba_project_name }}-status"
+    name: ibm-common-services-status
     namespace: kube-public
-    wait: true
-    wait_sleep: 5
-    wait_timeout: 50
+  register: config_map
+
+- name: Remove iam status for cp4ba project
+  kubernetes.core.k8s_json_patch:
+    api_version: v1
+    kind: ConfigMap
+    name: ibm-common-services-status
+    namespace: kube-public
+    patch:
+      - op: remove
+        path: "/data/{{ cpfs_cp4ba_project_name }}-iamstatus"
+  when: config_map is search(cpfs_cp4ba_project_name+ '-iamstatus')
 
 - name: Remove Catalog Sources
   kubernetes.core.k8s:
