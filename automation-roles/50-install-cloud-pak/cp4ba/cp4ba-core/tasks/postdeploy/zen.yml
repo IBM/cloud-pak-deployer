@@ -1,28 +1,3 @@
-- name: Retrieve default certification
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: retrieve-default-certification
-  vars:
-    common_crt_output_to_var: "tls_crt"
-    common_key_output_to_var: "tls_key"
-    common_ca_output_to_var: "ca_crt"
-
-- name: Prepare yaml file for custom IAF TLS Secret
-  ansible.builtin.template:
-    src: iaf/zen-tls-secret.yaml.j2
-    dest: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
-    mode: u+rwx
-
-- name: Add custom Zen TLS Secret
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
 # Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-custom-resources#automationuiconfig
 - name: Apply custom certificate for Zen
   kubernetes.core.k8s:
@@ -39,6 +14,31 @@
           caSecret:
             secretName: external-tls-secret
             key: ca.crt
+
+- name: Retrieve default certification
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: retrieve-default-certification
+  vars:
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
+
+- name: Prepare yaml file for custom Zen TLS Secret
+  ansible.builtin.template:
+    src: iaf/zen-tls-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
+    mode: u+rwx
+
+- name: Add custom Zen TLS Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
 
 - name: Delete Zen ibm-nginx pods
   kubernetes.core.k8s:
