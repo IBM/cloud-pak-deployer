@@ -42,7 +42,7 @@ Deployment of other parts is also based on respective official documentations.
 ## Benefits 🚀
 
 - Automatic deployment of the whole platform where you don't need to take care about almost any prerequisites
-- Common Global CA used to sign all certificates, so there is only one certificate you need to trust in you local machine to trust all URLs of the whole platform
+- OCP Ingress certificate is used for Routes so there is only one certificate you need to trust in you local machine to trust all URLs of the whole platform
 - Trusted certificate in browser also enable you to save passwords
 - Wherever possible a common admin user *cpadmin* with adjustable password is used, so you don't need to remember multiple credentials when you want to access the platform (convenience also comes with responsibility - so you don't want to expose your platform to whole world)
 - The whole platform is running on containers, so you don't need to manually prepare anything on traditional VMs and take care of them including required prerequisites
@@ -175,8 +175,6 @@ Review and perform post deploy manual steps for IPM as specified in ConfigMap *p
 ## Usage & operations 😊
 
 Endpoints, access info and other useful information is available in Project *apollo-one-shot* in ConfigMap named *usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
-Specifically, review the section *Global CA* in this md file.
 
 ![images/usage-cm.png](images/usage-cm.png)
 
