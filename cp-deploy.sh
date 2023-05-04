@@ -102,7 +102,7 @@ if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
-if [ -f /run/.containerenv ] || [ -f /.dockerenv ] || grep -q "/kubepods" /proc/1/cgroup;then
+if [ -f /run/.containerenv ] || [ -f /.dockerenv ] || grep -q "/kubepods" /proc/1/cgroup 2>/dev/null;then
   INSIDE_CONTAINER=true
 else
   INSIDE_CONTAINER=false
@@ -709,6 +709,15 @@ if $CPD_DEVELOP;then
   sleep 0.5
 fi
 
+# check selinux
+SELINUX_OPTION=""
+if hash getenforce 2>/dev/null; then
+  SELINUXSTATUS=$(getenforce)
+  if [ "$SELINUXSTATUS" != "Disabled" ]; then
+    SELINUX_OPTION=":z"
+  fi
+fi
+
 # Ensure status directory exists
 if [ "$STATUS_DIR" != "" ];then
   mkdir -p $STATUS_DIR/{log,pid,downloads}
@@ -810,14 +819,14 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" --cap-add=IPC_LOCK"
 
   if [ "${STATUS_DIR}" != "" ];then
-    run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}:z "
+    run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}${SELINUX_OPTION}"
   fi
 
   if [ "${CONFIG_DIR}" != "" ];then
-    run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}:z"
+    run_cmd+=" -v ${CONFIG_DIR}:${CONFIG_DIR}${SELINUX_OPTION}"
   fi
 
-  if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer:z";fi
+  if $CPD_DEVELOP;then run_cmd+=" -v ${PWD}:/cloud-pak-deployer${SELINUX_OPTION}";fi
 
   run_cmd+=" -e SUBCOMMAND=${SUBCOMMAND}"
   run_cmd+=" -e ACTION=${ACTION}"
@@ -837,7 +846,7 @@ if ! $INSIDE_CONTAINER;then
   # Map the file secrets to the container
   for (( i=0; i<${#arrVaultSecretValue[@]}; i++ ));do
     if [[ ${arrVaultSecretValue[$i]} = @* ]];then
-      run_cmd+=" -v ${arrVaultSecretValue[$i]:1}:${arrVaultSecretValue[$i]:1}:z"
+      run_cmd+=" -v ${arrVaultSecretValue[$i]:1}:${arrVaultSecretValue[$i]:1}${SELINUX_OPTION}"
     fi
   done
 
@@ -847,17 +856,17 @@ if ! $INSIDE_CONTAINER;then
 
   if [ ! -z $VAULT_CERT_CA_FILE ];then
     run_cmd+=" -e VAULT_CERT_CA_FILE=${VAULT_CERT_CA_FILE}"
-    run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}:z"
+    run_cmd+=" -v ${VAULT_CERT_CA_FILE}:${VAULT_CERT_CA_FILE}${SELINUX_OPTION}"
   fi
 
   if [ ! -z $VAULT_CERT_KEY_FILE ];then
     run_cmd+=" -e VAULT_CERT_KEY_FILE=${VAULT_CERT_KEY_FILE}"
-    run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}:z"
+    run_cmd+=" -v ${VAULT_CERT_KEY_FILE}:${VAULT_CERT_KEY_FILE}${SELINUX_OPTION}"
   fi
 
   if [ ! -z $VAULT_CERT_CERT_FILE ];then
     run_cmd+=" -e VAULT_CERT_CERT_FILE=${VAULT_CERT_CERT_FILE}"
-    run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}:z"
+    run_cmd+=" -v ${VAULT_CERT_CERT_FILE}:${VAULT_CERT_CERT_FILE}${SELINUX_OPTION}"
   fi
 
   run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
