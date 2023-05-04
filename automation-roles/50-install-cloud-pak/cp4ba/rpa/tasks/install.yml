@@ -38,6 +38,30 @@
     - ibm-cloud-databases-redis-operator-catalog
     - ibmmq-operator-catalogsource
 
+- name: Prepare yaml file for the MQ Operator Subscription
+  ansible.builtin.template:
+    src: mq-subscription.yaml.j2
+    dest: "{{ rpa_output_directory }}/mq-subscription.yaml"
+    mode: u+rwx
+
+- name: Add the MQ Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ rpa_output_directory }}/mq-subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait Operator ibm-mq
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-operator
+  vars:
+    common_namespace_name: "{{ rpa_project_name }}"
+    common_label_selector_stub: ibm-mq
+
 - name: Prepare yaml file for the Operator Subscription
   ansible.builtin.template:
     src: subscription.yaml.j2

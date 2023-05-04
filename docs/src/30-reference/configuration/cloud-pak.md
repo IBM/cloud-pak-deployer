@@ -523,37 +523,39 @@ cp4ba:
   openshift_storage_name: auto-storage
   accept_licenses: false
   state: installed
+  cpfs_profile_size: small # Profile size which affect replicas and resources of Pods of CPFS as per https://www.ibm.com/docs/en/cpfs?topic=operator-hardware-requirements-recommendations-foundational-services
 
   # Section for Cloud Pak for Business Automation itself
   cp4ba:
     # Set to false if you don't want to install (or remove) CP4BA
     enabled: true # Currently always true
+    profile_size: small # Profile size which affect replicas and resources of Pods as per https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=pcmppd-system-requirements
     patterns:
-      foundation: # Foundation pattern, always true - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation
+      foundation: # Foundation pattern, always true - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation
         optional_components:
           bas: true # Business Automation Studio (BAS) 
           bai: true # Business Automation Insights (BAI)
           ae: true # Application Engine (AE)
-      decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
+      decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
         enabled: true
         optional_components:
           decision_center: true # Decison Center (ODM)
           decision_runner: true # Decison Runner (ODM)
           decision_server_runtime: true # Decison Server (ODM)
         # Additional customization for Operational Decision Management
-        # Contents of the following will be merged into ODM part of CP4BA CR yaml file. Arrays are overwriten.
+        # Contents of the following will be merged into ODM part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
           spec:
             odm_configuration:
               decisionCenter:
                 # Enable support for decision models
                 disabledDecisionModel: false
-      decisions_ads: # Automation Decision Services (ADS) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads
+      decisions_ads: # Automation Decision Services (ADS) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads
         enabled: true
         optional_components:
           ads_designer: true # Designer (ADS)
           ads_runtime: true # Runtime (ADS)
-      content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
+      content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
         enabled: true
         optional_components:
           cmis: true # Content Management Interoperability Services (FNCM - CMIS)
@@ -562,27 +564,27 @@ cp4ba:
           tm: true # Task Manager (FNCM - TM)
           ier: true # IBM Enterprise Records (FNCM - IER)
           icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
-      application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
+      application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
         enabled: true
         optional_components:
           app_designer: true # App Designer (BAA)
           ae_data_persistence: true # App Engine data persistence (BAA)
-      document_processing: # Automation Document Processing (ADP) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.2?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__adp
+      document_processing: # Automation Document Processing (ADP) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__adp
         enabled: true
         optional_components: 
           document_processing_designer: true # Designer (ADP)
           document_processing_runtime: false # Runtime (ADP) - Currently not implemented
         # Additional customization for Automation Document Processing
-        # Contents of the following will be merged into ADP part of CP4BA CR yaml file. Arrays are overwriten.
+        # Contents of the following will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
           spec:
             ca_configuration:
-              # GPU config as described on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=resource-configuring-document-processing
+              # GPU config as described on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-document-processing
               deeplearning:
                 gpu_enabled: false
                 nodelabel_key: nvidia.com/gpu.present
                 nodelabel_value: "true"
-      workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
+      workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
         enabled: true
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
@@ -594,12 +596,12 @@ cp4ba:
     # Set to false if you don't want to install (or remove) Process Mining
     enabled: true
     # Additional customization for Process Mining
-    # Contents of the following will be merged into PM CR yaml file. Arrays are overwriten.
+    # Contents of the following will be merged into PM CR yaml file. Arrays are overwritten.
     cr_custom:
       spec:
         processmining:
           storage:
-            # Disables redis to spare resources as per https://www.ibm.com/docs/en/process-mining/1.13.2?topic=configurations-custom-resource-definition
+            # Disables redis to spare resources as per https://www.ibm.com/docs/en/process-mining/latest?topic=configurations-custom-resource-definition
             redis:
               install: false  
 
@@ -608,10 +610,10 @@ cp4ba:
     # Set to false if you don't want to install (or remove) RPA
     enabled: true
     # Additional customization for Robotic Process Automation
-    # Contents of the following will be merged into RPA CR yaml file. Arrays are overwriten.
+    # Contents of the following will be merged into RPA CR yaml file. Arrays are overwritten.
     cr_custom:
       spec:
-        # Configures the NLP provider component of IBM RPA. You can disable it by specifying 0. https://www.ibm.com/docs/en/rpa/21.0?topic=platform-configuring-rpa-custom-resources#basic-setup
+        # Configures the NLP provider component of IBM RPA. You can disable it by specifying 0. https://www.ibm.com/docs/en/rpa/latest?topic=platform-configuring-rpa-custom-resources#basic-setup
         nlp:
           replicas: 1
 
@@ -773,8 +775,8 @@ Used to install IBM Robotic Process Automation.
 
 | Property            | Description                    | Mandatory            | Allowed values |
 |---------------------|--------------------------------|----------------------|----------------|
-| enabled                         | Set to `true` to deploy `process mining`. | Yes  | true, false |
-| cr_custom          | Additional customization for Process Mining. Contents will be merged into PM CR yaml file. Arrays are overwritten. | No | Object |
+| enabled                         | Set to `true` to deploy `rpa`. | Yes  | true, false |
+| cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
 
 ## Asset Repo properties
 
