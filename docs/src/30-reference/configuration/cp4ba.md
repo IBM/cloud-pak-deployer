@@ -48,14 +48,15 @@ Deployment of other parts is also based on respective official documentations.
 - The whole platform is running on containers, so you don't need to manually prepare anything on traditional VMs and take care of them including required prerequisites
 - Many otherwise manual post-deployment steps have been automated
 - Pre integrated and automatically connected extras are deployed in the platform for easier access/management/troubleshooting
-- You have a working starting Production deployment which you can use as a reference for further custom deployments
+- You have a working Production deployment which you can use as a reference for further custom deployments
 
 ## General information 📢
 
 What is not included:
+
 - ICCs - not covered.
-- Caution! FNCM External share - Currently not supported with ZEN & IAM as per limitation on [FNCM limitations](https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=notes-known-limitations-issues#concept_gmf_x1h_1fb__ecm)
-- Caution! Asset Repository is now omitted due to requesting different CPFS version than CPFS.
+- FNCM External share - Currently not supported with ZEN & IAM as per limitation on [FNCM limitations](https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=notes-known-limitations-issues#concept_gmf_x1h_1fb__ecm)
+- Asset Repository is now omitted due to incompatibilities.
 - Workflow Server and Workstream Services - this is a dev deployment. BAW Authoring and (BAW + IAWS) are mutually exclusive in single project.
 
 ## What is in the package 📦
@@ -129,10 +130,13 @@ With proper sizing of the cluster and provided RWX File and RWO Block Storage Cl
 ## Automated post-deployment tasks ✅
 
 For your convenience the following post-deployment setup tasks have been automated:
+
+- CPFS - OCP Ingress certificate is used for better SSL trusting.
 - Zen - Users and Groups added.
 - Zen - Administrative group is given all available privileges from all pillars.
 - Zen - Regular groups are given developer privileges from all pillars.
 - Zen - Service account created in CPFS IAM and Zen and Zen API key is generated for convenient and stable usage.
+- Zen - OCP Ingress certificate is used for better SSL trusting.
 - Workforce Insights - Connection setup. You just need to create WFI dashboard. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=secrets-creating-custom-bpc-workforce-secret
 - ADS - Nexus connection setup and all ADS plugins loaded.
 - ADS - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=gst-task-2-connecting-git-repository-sharing-decision-service
