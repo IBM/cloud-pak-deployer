@@ -10,7 +10,7 @@ Contains CP4BA version 22.0.2 IF004, RPA 23.0.5 and IPM 1.14
 - [Environments used for installation 💻](#environments-used-for-installation-)
 - [Automated post-deployment tasks ✅](#automated-post-deployment-tasks-)
 - [Post installation steps ➡️](#post-installation-steps-️)
-- [Usage \& operations 😊](#usage--operations-)
+- [Usage \& operations 📇](#usage--operations-)
 
 ## Disclaimer ✋
 
@@ -157,29 +157,15 @@ For your convenience the following post-deployment setup tasks have been automat
 
 ## Post installation steps ➡️
 
-Review and perform post deploy manual steps for CP4BA as specified in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. See below images to find this file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. 
+CP4BA  
+Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. 
 
-![images/cp4ba-postdeploy-cm.png](images/cp4ba-postdeploy-cm.png)
+RPA  
+Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
-![images/cp4ba-postdeploy-md.png](images/cp4ba-postdeploy-md.png)
+Process Mining  
+Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
+## Usage & operations 📇
 
-Review and perform post deploy manual steps for RPA as specified in ConfigMap *rpa-postdeploy.md* in *postdeploy.md* file. See below images to find this file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
-![images/rpa-postdeploy-cm.png](images/rpa-postdeploy-cm.png)
-
-![images/rpa-postdeploy-md.png](images/rpa-postdeploy-md.png)
-
-Review and perform post deploy manual steps for IPM as specified in ConfigMap *pm-postdeploy.md* in *postdeploy.md* file. See below images to find this file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
-![images/pm-postdeploy-cm.png](images/pm-postdeploy-cm.png)
-
-![images/pm-postdeploy-md.png](images/pm-postdeploy-md.png)
-
-## Usage & operations 😊
-
-Endpoints, access info and other useful information is available in Project *apollo-one-shot* in ConfigMap named *usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
-![images/usage-cm.png](images/usage-cm.png)
-
-![images/usage-md.png](images/usage-md.png)
+Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
