@@ -35,9 +35,12 @@
     validate_certs: false
     status_code:
       - 200
+      - -1
   register: bpm_systems_response
   retries: 14
   delay: 30
+  until: bpm_systems_response.status == 200
+  failed_when: bpm_systems_response.status != 200
 
 - name: Prepare yaml file for the Workforce Insights Secret
   ansible.builtin.template:
