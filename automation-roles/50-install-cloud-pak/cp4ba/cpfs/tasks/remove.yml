@@ -138,23 +138,3 @@
     name: common-service-maps
     namespace: kube-public
     wait: true
-
-- name: Get Cluster Monitoring ConfigMap
-  kubernetes.core.k8s_info:
-    kind: ConfigMap
-    name: cluster-monitoring-config
-    namespace: openshift-monitoring
-  register: configmap
-  retries: 10
-  delay: 1
-
-- name: Remove Cluster Monitoring ConfigMap
-  kubernetes.core.k8s:
-    state: absent
-    kind: ConfigMap
-    name: cluster-monitoring-config
-    namespace: openshift-monitoring
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 60
-  when: configmap | json_query('resources[0].data.\"apollo-one-shot\"') | bool

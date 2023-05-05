@@ -8,11 +8,11 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Secret
-    name: apollo-one-shot
+    name: cp4ba-global-ca
     namespace: "{{ global_ca_output_namespace }}"
   register: global_ca_secret
 
-- name: Save Global CA if already rpesent
+- name: Save Global CA if already present
   block:
 
     - name: Save Global CA key
@@ -100,18 +100,3 @@
         wait_timeout: 15
 
   when: global_ca_secret.resources | length == 0
-
-- name: Add global CA to secret
-  kubernetes.core.k8s_json_patch:
-    api_version: v1
-    kind: Secret
-    name: apollo-one-shot
-    namespace: "{{ global_ca_output_namespace }}"
-    patch:
-      - op: add
-        path: "/data/global_ca_tls.crt"
-        value: "{{ _global_ca_crt }}"
-      - op: add
-        path: "/data/global_ca_tls.key"
-        value: "{{ _global_ca_key }}"
-  when: global_ca_secret.resources | length != 0 and (global_ca_secret.resources[0].data['global_ca_tls.crt'] is not defined)
