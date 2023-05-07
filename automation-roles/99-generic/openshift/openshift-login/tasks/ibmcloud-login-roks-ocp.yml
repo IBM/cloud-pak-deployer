@@ -22,6 +22,9 @@
     - name: Validate if the OpenShift cluster {{ _p_openshift_cluster_name }} exists
       command: "ibmcloud oc cluster get -c {{ _p_openshift_cluster_name }} --output json"
       register: ibmcloud_oc_cluster_result_json
+      retries: 20
+      delay: 10
+      until: ibmcloud_oc_cluster_result_json.rc==0
 
     - set_fact:
         ibmcloud_oc_cluster: "{{ ibmcloud_oc_cluster_result_json.stdout | from_json }}"
