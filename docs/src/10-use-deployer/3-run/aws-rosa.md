@@ -90,7 +90,7 @@ This scenario is supported. To enable this feature, please ensure that you take 
 Without these changes, sthe cloud player will fail and you will receive the following error message: "Failed to get the cluster-admin password from the vault".
 
 
-### Set environment variables
+### Set environment variables for AWS ROSA
 
 ```
 export AWS_ACCESS_KEY_ID=your_access_key
@@ -104,23 +104,43 @@ Optional: If your user does not have permanent administrator access but using te
 export AWS_SESSION_TOKEN=your_session_token
 ```
 
-Optional: Set the environment variables for the configuration and status directories. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
-```
-export STATUS_DIR=$HOME/cpd-status
-export CONFIG_DIR=$HOME/cpd-config
-```
-
 - `AWS_ACCESS_KEY_ID`: This is the AWS Access Key you retrieved above, often this is something like `AK1A2VLMPQWBJJQGD6GV`
 - `AWS_SECRET_ACCESS_KEY`: The secret associated with your AWS Access Key, also retrieved above
 - `AWS_SESSION_TOKEN`: The session token that will grant temporary elevated permissions
 - `ROSA_LOGIN_TOKEN`: The offline access token that was retrieved before. This is a very long string (200+ characters). Make sure you enclose the string in single or double quotes as it may hold special characters
 - `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
-- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
-- `CONFIG_DIR`: Directory that holds the configuration, it must have `config` and optionally `defaults` and `inventory` subdirectories
+
+
+### Set deployer status directory
+Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+
+```
+export STATUS_DIR=$HOME/cpd-status
+```
+
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory. If you don't specify a status directory, it is assumted to be `$HOME/cpd-status`.
+
+### Set deployer configuration location
+You can use a local directory to hold the deployer configuration or retrieve the configuration from a GitHub repository. If you don't specify any configuration directory or GitHub repository, the configuration directory are assumed to be `$HOME/cpd-config`.
+```
+export CONFIG_DIR=$HOME/cpd-config
+```
+
+- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory.
+
+Or, when using a GitHub repository for the configuration.
+```
+export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
+export CPD_CONFIG_GIT_REF="main"
+export CPD_CONFIG_GIT_CONTEXT=""
+```
+
+- `CPD_CONFIG_GIT_REPO`: The clone URL of the GitHub repository that holds the configuration.
+- `CPD_CONFIG_GIT_REF`: The branch, tag or commit ID to be cloned. If not specified, the repository's default branch will be cloned.
+- `CPD_CONFIG_GIT_CONTEXT`: The directory within the GitHub repository that holds the configuration. This directory must contain the `config` directory under which the YAML files are kept.
 
 !!! info
-    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different
-  configuration directories).
+    When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
 
 ## Optional: validate the configuration
 
