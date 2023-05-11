@@ -35,6 +35,9 @@ command_usage() {
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
   echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files \$HOME/cpd-status if not specified (\$STATUS_DIR)"
   echo "  --config-dir,-c <dir>         Directory to read the configuration from. \$HOME/cpd-config if not specified (\$CONFIG_DIR)"
+  echo "  --config-git-repo, -g <url>   URL of the git repository (ending with .git) to clone. Will use --config-dir if not specified (\$CPD_CONFIG_GIT_REPO)"
+  echo "  --config-git-ref              Reference (branch, tag, commit ID) of the git repo. Will use default branch if not specified (\$CPD_CONFIG_GIT_REF)"
+  echo "  --config-git-context          Context (directory) within the git repo. Will use the root if not specified (\$CPD_CONFIG_GIT_CONTEXT)"
   echo "  --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
@@ -238,6 +241,45 @@ while (( "$#" )); do
       shift 2
     else
       echo "Error: Missing argument for --status-dir parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --config-git-repo*|-g*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export CPD_CONFIG_GIT_REPO="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export CPD_CONFIG_GIT_REPO=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --config-git-repo parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --config-git-ref*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export CPD_CONFIG_GIT_REF="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export CPD_CONFIG_GIT_REF=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --config-git-ref parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --config-git-context*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export CPD_CONFIG_GIT_REF="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export CPD_CONFIG_GIT_REF=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --config-git-ref parameter."
       command_usage 2
     fi
     fi
@@ -604,6 +646,12 @@ if [[ "${SUBCOMMAND}" == "vault" ]];then
   fi
 fi
 
+# Either CONFIG_DIR or CPD_CONFIG_GIT_REPO must be specified, not both
+if [[ "${CONFIG_DIR}" != "" ]] && [[ "${CPD_CONFIG_GIT_REPO}" != "" ]]; then
+    echo "Specify either the config directory or the git repo from which to retrieve the configuration, not both."
+    exit 1
+fi
+
 # --------------------------------------------------------------------------------------------------------- #
 # Check existence of directories                                                                            #
 # --------------------------------------------------------------------------------------------------------- #
@@ -617,6 +665,24 @@ fi
 if [[ "${CPD_AIRGAP}" == "true" ]] && [[ "${CONFIG_DIR}" == "" ]];then
   echo "Setting deployer configuration directory to ${STATUS_DIR}/cpd-config default for air-gapped installs"
   export CONFIG_DIR=${STATUS_DIR}/cpd-config
+fi
+
+# If the config is in a git repository, clone it into the $STATUS_DIR/cpd-config
+if [ "${CPD_CONFIG_GIT_REPO}" != "" ];then
+  export CONFIG_DIR=$STATUS_DIR/cpd-config
+  rm -rf ${CONFIG_DIR}
+  mkdir -p ${CONFIG_DIR}
+  git_cmd="git clone"
+  if [ "${CPD_CONFIG_GIT_REF}" != "" ];then
+    git_cmd+=" -b ${CPD_CONFIG_GIT_REF}"
+  fi
+  git_cmd+=" ${CPD_CONFIG_GIT_REPO}"
+  git_cmd+=" ${CONFIG_DIR}"
+  echo "Cloning git repository ${CPD_CONFIG_GIT_REPO}..."
+  eval ${git_cmd}
+  if [ "${CPD_CONFIG_GIT_CONTEXT}" != "" ];then
+    CONFIG_DIR=${CONFIG_DIR}/${CPD_CONFIG_GIT_CONTEXT}
+  fi
 fi
 
 # Validate if the configuration directory exists and has the correct subdirectories
@@ -650,12 +716,15 @@ fi
 # Ensure vault certificate files exists
 if [[ ! -z $VAULT_CERT_CA_FILE && ! -f $VAULT_CERT_CA_FILE ]];then
     echo "Vault certificate CA file ${VAULT_CERT_CA_FILE} not found."
+    exit 1
 fi
 if [[ ! -z $VAULT_CERT_KEY_FILE && ! -f $VAULT_CERT_KEY_FILE ]];then
     echo "Vault certificate key file ${VAULT_CERT_KEY_FILE} not found."
+    exit 1
 fi
 if [[ ! -z $VAULT_CERT_CERT_FILE && ! -f $VAULT_CERT_CERT_FILE ]];then
     echo "Vault certificate file ${VAULT_CERT_CERT_FILE} not found."
+    exit 1
 fi
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -718,7 +787,7 @@ if hash getenforce 2>/dev/null; then
   fi
 fi
 
-# Ensure status directory exists
+# Ensure status directory and its contents exists
 if [ "$STATUS_DIR" != "" ];then
   mkdir -p $STATUS_DIR/{log,pid,downloads}
 fi
