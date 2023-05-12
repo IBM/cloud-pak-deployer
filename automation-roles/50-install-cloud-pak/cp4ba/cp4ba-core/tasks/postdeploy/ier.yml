@@ -1,0 +1,320 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+# Create Route for IER CPE configuration
+- name: Prepare yaml file for ierconfig Route
+  ansible.builtin.template:
+    src: ier/ier-cpe-route.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ier-cpe-route.yaml"
+    mode: u+rwx
+
+- name: Create ierconfig Route
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    namespace: "{{ cp4ba_project_name }}"
+    src: "{{ cp4ba_output_directory }}/ier-cpe-route.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for resource condition generic
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: route.openshift.io/v1
+    common_resource_kind: Route
+    common_resource_name: ierconfig
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.ingress[0].conditions[0].status
+    common_condition_value: 'True'
+    common_retries: 10
+    common_delay: 10
+
+- name: Create a directory for IER config
+  ansible.builtin.file:
+    path: "{{ cp4ba_output_directory }}/ierconfig"
+    state: directory
+    mode: u+rwx
+
+- name: Extract IER config
+  ansible.builtin.unarchive:
+    src: "files/ier/ierconfig.tgz"
+    dest: "{{ cp4ba_output_directory }}/ierconfig"
+
+- name: Template ierconfig/configure/configuration/config.ini
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/configure/configuration/config.ini"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/configure/configuration/config.ini"
+    mode: u+rwx
+
+- name: Template ierconfig/configure/profiles/configureWorkflows.xml
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/configureWorkflows.xml"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/configureWorkflows.xml"
+    mode: u+rwx
+
+- name: Template ierconfig/configure/profiles/createMarkingSetsAndAddOns.xml
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/createMarkingSetsAndAddOns.xml"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/createMarkingSetsAndAddOns.xml"
+    mode: u+rwx
+
+- name: Template ierconfig/configure/profiles/environmentObjectStoreConfiguration.xml
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/environmentObjectStoreConfiguration.xml"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/environmentObjectStoreConfiguration.xml"
+    mode: u+rwx
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Create CodeModules folder
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      query: |
+        mutation CreateCodeModulesFolder {createFolder(repositoryIdentifier:
+        "FPOS", folderProperties: {name: "CodeModules", parent: {identifier: "/"} }) {id} }
+    validate_certs: false
+    status_code:
+      - 200
+  register: folder_response
+  failed_when: ( folder_response.json | json_query('errors') | default([], true) | length > 1 ) and
+    ( folder_response.json | json_query('errors[0].extensions.serverErrorMessage')
+      is not match('A uniqueness requirement has been violated. The value for property FolderName of class Folder is not unique.') )
+
+- name: Execute task createMarkingSetsAndAddOns
+  ansible.builtin.shell: |
+    {{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl execute -task createMarkingSetsAndAddOns
+  register: ier_configmgr_output
+  changed_when: true
+  failed_when: ier_configmgr_output.rc != 0
+
+- name: Execute task configureFPOS
+  ansible.builtin.shell: |
+    {{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl execute -task configureFPOS
+  register: ier_configmgr_output
+  changed_when: true
+  failed_when: ier_configmgr_output.rc != 0 and
+    (ier_configmgr_output.stdout is not search('.*The current object store is already configured to the latest version.*'))
+  retries: 10
+  delay: 120
+  until: ier_configmgr_output.rc != 0 and
+    (ier_configmgr_output.stdout is search('.*The current object store is already configured to the latest version.*'))
+
+- name: Execute task configureROS
+  ansible.builtin.shell: |
+    {{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl execute -task configureROS
+  register: ier_configmgr_output
+  changed_when: true
+  failed_when: ier_configmgr_output.rc != 0
+  retries: 10
+  delay: 120
+  until: ier_configmgr_output.rc == 0
+
+- name: Execute task configureWorkflows
+  ansible.builtin.shell: |
+    {{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl execute -task configureWorkflows
+  register: ier_configmgr_output
+  changed_when: true
+  failed_when: ier_configmgr_output.rc != 0 and
+    (ier_configmgr_output.stdout is not search('.*workflow component queues were configured with FileNet P8 Component Manager.*'))
+
+- name: Execute task transferWorkflows
+  ansible.builtin.shell: |
+    {{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl execute -task transferWorkflows
+  register: ier_configmgr_output
+  changed_when: true
+  failed_when: ier_configmgr_output.rc != 0
+
+- name: Navigator Logon
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/logon"
+    method: POST
+    body: "desktop=admin"
+    force_basic_auth: true
+    status_code: 200
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: InternalIamRealm
+      Content-Type: "application/x-www-form-urlencoded"
+    validate_certs: false
+    timeout: 60
+    return_content: true
+  register: login
+
+- name: icn session
+  ansible.builtin.set_fact:
+    content: "{{ login.content[4:] }}"
+    login_jsession: "{{ login.cookies['icn-JSESSIONID'] }}"
+    cookie_jsessionid_name: icn-JSESSIONID
+
+# - name: Get list of plugins installed
+#   ansible.builtin.uri:
+#     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/admin/configuration"
+#     method: POST
+#     return_content: true
+#     follow_redirects: all
+#     body: "action=list&id=navigator&userid={{ lc_principal_admin_user }}&type=plugins&sorted=true&configuration=ApplicationConfig&\
+#       login_desktop=admin&application=navigator&securityTopic=plugins.plugins&desktop=admin"
+#     body_format: form-urlencoded
+#     validate_certs: false
+#     headers:
+#       Content-Type: "application/x-www-form-urlencoded"
+#       Connection: "keep-alive"
+#       Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+#       security_token: "{{ content.security_token }}"
+#       Authorization: "Bearer {{ zen_token }}"
+#       auth-token-realm: "InternalIamRealm"
+#     timeout: 60
+#   register: plugins_response
+
+# - name: Get plugin response
+#   ansible.builtin.set_fact:
+#     plugins_reponse_json: "{{ plugins_response.content[4:] }}"
+
+# - name: Set registered status to false
+#   ansible.builtin.set_fact:
+#     plugin_registered: false
+
+# - name: Check if the IER plugin is registered
+#   ansible.builtin.set_fact:
+#     plugin_registered: true
+#   when: "'IERApplicationPlugin' in item.id"
+#   loop: "{{ plugins_reponse_json.list }}"
+
+# - name: Load IERApplicationPlugin
+#   ansible.builtin.uri:
+#     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/plugin?\
+#       desktop=admin&\
+#       application=navigator&\
+#       fileName={{ 'https://cpd-'+cp4ba_project_name+'.'+apps_endpoint_domain+'/ier/EnterpriseRecordsPlugin/IERApplicationPlugin.jar' | urlencode() }}&\
+#       userid={{ lc_principal_admin_user }}"
+#     method: GET
+#     return_content: true
+#     follow_redirects: all
+#     body_format: form-urlencoded
+#     validate_certs: false
+#     headers:
+#       Content-Type: "application/x-www-form-urlencoded"
+#       Connection: "keep-alive"
+#       Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+#       security_token: "{{ content.security_token }}"
+#       Authorization: "Bearer {{ zen_token }}"
+#       auth-token-realm: "InternalIamRealm"
+#     timeout: 60
+#   register: plugin_load_response
+#   failed_when: "'name' not in plugin_load_response.content"
+#   when: not plugin_registered
+
+# - name: Extract content from plugin load response
+#   ansible.builtin.set_fact:
+#     plugin_load_response_content: "{{ plugin_load_response.content[4:] }}"
+#   when: not plugin_registered
+
+# - name: Add IERApplicationPlugin
+#   ansible.builtin.uri:
+#     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/plugin"
+#     method: POST
+#     body: "{
+#         \"application\": \"navigator\",
+#         \"json_post\": \"{'configClass': '{{ plugin_load_response_content.configClass }}', 'name': '{{ plugin_load_response_content.name }}',
+#          'ordering': 1, 'filename': 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ier/EnterpriseRecordsPlugin/IERApplicationPlugin.jar',
+#          'version': '{{ plugin_load_response_content.version }}', 'dependencies': [], 'configuration': null}\",
+#         \"userid\": \"{{ lc_principal_admin_user }}\",
+#         \"id\": \"{{ plugin_load_response_content.id }}\",
+#         \"desktop\": \"admin\"
+#       }"
+#     return_content: true
+#     follow_redirects: all
+#     body_format: form-urlencoded
+#     validate_certs: false
+#     headers:
+#       Content-Type: "application/x-www-form-urlencoded"
+#       Connection: "keep-alive"
+#       Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+#       security_token: "{{ content.security_token }}"
+#       Authorization: "Bearer {{ zen_token }}"
+#       auth-token-realm: "InternalIamRealm"
+#     timeout: 60
+#   register: plugin_add_response
+#   failed_when: "'The configuration was added' not in plugin_add_response.content"
+#   when: not plugin_registered
+
+# - name: Register IERApplicationPlugin
+#   ansible.builtin.uri:
+#     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/api/admin/plugin?\
+#     desktop=admin&\
+#     application=navigator&\
+#     fileName={{ 'https://cpd-'+cp4ba_project_name+'.'+apps_endpoint_domain+'/ier/EnterpriseRecordsPlugin/IERApplicationPlugin.jar' | urlencode() }}&\
+#     userid={{ lc_principal_admin_user }}"
+#     method: GET
+#     return_content: true
+#     follow_redirects: all
+#     body_format: form-urlencoded
+#     validate_certs: false
+#     headers:
+#       Content-Type: "application/x-www-form-urlencoded"
+#       Connection: "keep-alive"
+#       Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+#       security_token: "{{ content.security_token }}"
+#       Authorization: "Bearer {{ zen_token }}"
+#       auth-token-realm: "InternalIamRealm"
+#     timeout: 60
+#   register: plugin_register_response
+#   failed_when: "'name' not in plugin_register_response.content"
+#   when: not plugin_registered
+
+# - name: Configure IERApplicationPlugin
+#   ansible.builtin.uri:
+#     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/plugin?\
+#       repositoryId=FPOS&\
+#       navigatorVersionNumber=4&\
+#       plugin=IERApplicationPlugin&\
+#       action=ierGetRepositoryAttributes&\
+#       desktop=admin"
+#     method: POST
+#     return_content: true
+#     follow_redirects: all
+#     body_format: form-urlencoded
+#     validate_certs: false
+#     headers:
+#       Content-Type: "application/x-www-form-urlencoded"
+#       Connection: "keep-alive"
+#       Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+#       security_token: "{{ content.security_token }}"
+#       Authorization: "Bearer {{ zen_token }}"
+#       auth-token-realm: "InternalIamRealm"
+#     timeout: 60
+#   register: plugin_configure_response
+#   failed_when: "'name' not in plugin_configure_response.content"
+#   when: not plugin_registered

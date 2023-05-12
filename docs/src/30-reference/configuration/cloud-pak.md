@@ -7,6 +7,7 @@ Defines the Cloud Pak(s) which is/are layed out on the OpenShift cluster, typica
 - [Cloud Pak for Data](#cp4d)
 - [Cloud Pak for Integration](#cp4i)
 - [Cloud Pak for Watson AIOps](#cp4waiops)
+- [Cloud Pak for Business Automation](#cp4ba)
 
 ### `cp4d`
 Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
@@ -510,3 +511,302 @@ ElasticSearch, Logstash and Kibana stack.
 | turbo_demo_password | Demo user password if different from global password | No | |
 
 See sample config for remainder of properties.
+
+## `cp4ba`
+Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
+See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.
+
+```yaml
+---
+cp4ba:
+- project: cp4ba
+  openshift_cluster_name: "{{ env_id }}"
+  openshift_storage_name: auto-storage
+  accept_licenses: false
+  state: installed
+  cpfs_profile_size: small # Profile size which affect replicas and resources of Pods of CPFS as per https://www.ibm.com/docs/en/cpfs?topic=operator-hardware-requirements-recommendations-foundational-services
+
+  # Section for Cloud Pak for Business Automation itself
+  cp4ba:
+    # Set to false if you don't want to install (or remove) CP4BA
+    enabled: true # Currently always true
+    profile_size: small # Profile size which affect replicas and resources of Pods as per https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=pcmppd-system-requirements
+    patterns:
+      foundation: # Foundation pattern, always true - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation
+        optional_components:
+          bas: true # Business Automation Studio (BAS) 
+          bai: true # Business Automation Insights (BAI)
+          ae: true # Application Engine (AE)
+      decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
+        enabled: true
+        optional_components:
+          decision_center: true # Decison Center (ODM)
+          decision_runner: true # Decison Runner (ODM)
+          decision_server_runtime: true # Decison Server (ODM)
+        # Additional customization for Operational Decision Management
+        # Contents of the following will be merged into ODM part of CP4BA CR yaml file. Arrays are overwritten.
+        cr_custom:
+          spec:
+            odm_configuration:
+              decisionCenter:
+                # Enable support for decision models
+                disabledDecisionModel: false
+      decisions_ads: # Automation Decision Services (ADS) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads
+        enabled: true
+        optional_components:
+          ads_designer: true # Designer (ADS)
+          ads_runtime: true # Runtime (ADS)
+      content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
+        enabled: true
+        optional_components:
+          cmis: true # Content Management Interoperability Services (FNCM - CMIS)
+          css: true # Content Search Services (FNCM - CSS)
+          es: true # External Share (FNCM - ES)
+          tm: true # Task Manager (FNCM - TM)
+          ier: true # IBM Enterprise Records (FNCM - IER)
+          icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
+      application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
+        enabled: true
+        optional_components:
+          app_designer: true # App Designer (BAA)
+          ae_data_persistence: true # App Engine data persistence (BAA)
+      document_processing: # Automation Document Processing (ADP) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__adp
+        enabled: true
+        optional_components: 
+          document_processing_designer: true # Designer (ADP)
+          document_processing_runtime: false # Runtime (ADP) - Currently not implemented
+        # Additional customization for Automation Document Processing
+        # Contents of the following will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten.
+        cr_custom:
+          spec:
+            ca_configuration:
+              # GPU config as described on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-document-processing
+              deeplearning:
+                gpu_enabled: false
+                nodelabel_key: nvidia.com/gpu.present
+                nodelabel_value: "true"
+      workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
+        enabled: true
+        optional_components:
+          baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
+      workstreams: # Automation Workstream Services (IAWS)
+        enabled: false # Always false in this tool - this feature is not implemented
+  
+  # Section for IBM Process mining
+  pm:
+    # Set to false if you don't want to install (or remove) Process Mining
+    enabled: true
+    # Additional customization for Process Mining
+    # Contents of the following will be merged into PM CR yaml file. Arrays are overwritten.
+    cr_custom:
+      spec:
+        processmining:
+          storage:
+            # Disables redis to spare resources as per https://www.ibm.com/docs/en/process-mining/latest?topic=configurations-custom-resource-definition
+            redis:
+              install: false  
+
+  # Section for IBM Robotic Process Automation
+  rpa:
+    # Set to false if you don't want to install (or remove) RPA
+    enabled: true
+    # Additional customization for Robotic Process Automation
+    # Contents of the following will be merged into RPA CR yaml file. Arrays are overwritten.
+    cr_custom:
+      spec:
+        # Configures the NLP provider component of IBM RPA. You can disable it by specifying 0. https://www.ibm.com/docs/en/rpa/latest?topic=platform-configuring-rpa-custom-resources#basic-setup
+        nlp:
+          replicas: 1
+
+  # Section for Asset Repository
+  asset_repo:
+    # Set to false if you don't want to install (or remove) Asset Repo
+    enabled: false # Currently not implemented
+
+  # Set to false if you don't want to install (or remove) CloudBeaver (PostgreSQL, DB2, MSSQL UI)
+  cloudbeaver_enabled: true
+
+  # Set to false if you don't want to install (or remove) Roundcube
+  roundcube_enabled: true
+
+  # Set to false if you don't want to install (or remove) Cerebro
+  cerebro_enabled: true
+
+  # Set to false if you don't want to install (or remove) AKHQ
+  akhq_enabled: true
+
+  # Set to false if you don't want to install (or remove) Mongo Express
+  mongo_express_enabled: true
+```
+
+## Main properties
+
+The following properties are defined on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| project                         | The name of the OpenShift project that will be created and used for the installation of the defined instances. Currently always `cp4ba`. | Yes  | cp4ba |
+| openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. | No, only if multiple OpenShift clusters defined | Existing `openshift` cluster |
+| openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). | No, inferred from openshift->openshift_storage | |
+| accept_licenses | Set to `true` to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | true, false |
+| state | Set to `installed` to install `enabled` capabilities, set to `removed` to remove `enabled` capabilities. | Yes | installed, removed |
+| cpfs_profile_size                         | Profile size which affect replicas and resources of Pods of CPFS as per https://www.ibm.com/docs/en/cpfs?topic=operator-hardware-requirements-recommendations-foundational-services | Yes  | starterset, small, medium, large |
+
+## Cloud Pak for Business Automation properties
+
+Used to configure CP4BA.  
+Placed in `cp4ba` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable CP4BA. Currently always `true`. | Yes  | true |
+| profile_size                         | Profile size which affect replicas and resources of Pods as per https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=pcmppd-system-requirements | Yes  | small, medium, large |
+| patterns          | Section where CP4BA patterns are configured. Please make sure to select all that is needed as a dependencies. Dependencies can be determined from documentation at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments | Yes | Object - see details below |
+
+### Foundation pattern properties
+
+Always configure in CP4BA.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation  
+Placed in `cp4ba.patterns.foundation` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.bas          | Set to `true` to enable Business Automation Studio | Yes | true, false |
+| optional_components.bai          | Set to `true` to enable Business Automation Insights | Yes | true, false |
+| optional_components.ae          | Set to `true` to enable Application Engine | Yes | true, false |
+
+### Decisions pattern properties
+
+Used to configure Operation Decision Manager.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm  
+Placed in `cp4ba.patterns.decisions` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `decisions` pattern. | Yes  | true, false |
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.decision_center          | Set to `true` to enable Decision Center | Yes | true, false |
+| optional_components.decision_runner          | Set to `true` to enable Decision Runner | Yes | true, false |
+| optional_components.decision_server_runtime          | Set to `true` to enable Decision Server | Yes | true, false |
+| cr_custom          | Additional customization for Operational Decision Management. Contents will be merged into ODM part of CP4BA CR yaml file. Arrays are overwritten. | No | Object |
+
+### Decisions ADS pattern properties
+
+Used to configure Automation Decision Services.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads  
+Placed in `cp4ba.patterns.decisions_ads` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `decisions_ads` pattern. | Yes  | true, false |
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.ads_designer          | Set to `true` to enable Designer | Yes | true, false |
+| optional_components.ads_runtime          | Set to `true` to enable Runtime | Yes | true, false |
+
+### Content pattern properties
+
+Used to configure FileNet Content Manager.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm  
+Placed in `cp4ba.patterns.content` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `content` pattern. | Yes  | true, false |
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.cmis          | Set to `true` to enable CMIS | Yes | true, false |
+| optional_components.css          | Set to `true` to enable Content Search Services | Yes | true, false |
+| optional_components.es          | Set to `true` to enable External Share. Currently not functional. | Yes | true, false |
+| optional_components.tm          | Set to `true` to enable Task Manager | Yes | true, false |
+| optional_components.ier          | Set to `true` to enable IBm Enterprise Records | Yes | true, false |
+| optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
+
+### Application pattern properties
+
+Used to configure Business Automation Application.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa  
+Placed in `cp4ba.patterns.application` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `application` pattern. | Yes  | true, false |
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.app_designer          | Set to `true` to enable Application Designer | Yes | true, false |
+| optional_components.ae_data_persistence          | Set to `true` to enable App Engine data persistence | Yes | true, false |
+
+### Document Processing pattern properties
+
+Used to configure Automation Document Processing.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa  
+Placed in `cp4ba.patterns.document_processing` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `document_processing` pattern. | Yes  | true, false |
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.document_processing_designer          | Set to `true` to enable Designer | Yes | true, false |
+| optional_components.document_processing_runtime          | Set to `true` to enable Runtime. currently always `false`. | Yes | false |
+| cr_custom          | Additional customization for Automation Document Processing. Contents will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten. | No | Object |
+
+### Workflow pattern properties
+
+Used to configure Business Automation Workflow.  
+https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw  
+Placed in `cp4ba.patterns.workflow` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `workflow` pattern. | Yes  | true, false |
+| optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
+| optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
+
+### Workstreams pattern properties
+
+Used to configure Workstreams.  
+Placed in `cp4ba.patterns.workstreams` key.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `workstreams` pattern. Currently not implemented. Always `false`. | Yes  | false |
+
+## Process Mining properties
+
+Used to configure IBM Process Mining.  
+Placed in `pm` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `process mining`. | Yes  | true, false |
+| cr_custom          | Additional customization for Process Mining. Contents will be merged into PM CR yaml file. Arrays are overwritten. | No | Object |
+
+## Robotic Process Automation properties
+
+Used to configure IBM Robotic Process Automation.  
+Placed in `rpa` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `rpa`. | Yes  | true, false |
+| cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
+
+## Asset Repo properties
+
+Used to install Asset Repo.  
+Placed in `asset_repo` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `asset repo`. Currently not implemented. Always `false`. | Yes  | false |
+
+## Other properties
+
+Used to configure extra UIs.  
+The following properties are defined on the project level.  
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| cloudbeaver_enabled                         | Set to `true` to enable CloudBeaver (PostgreSQL, DB2, MSSQL UI). | Yes  | true, false |
+| roundcube_enabled                         | Set to `true` to enable Roundcube. Client for mail. | Yes  | true, false |
+| cerebro_enabled                         | Set to `true` to enable Cerebro. Client for ElasticSearch in CP4BA. | Yes  | true, false |
+| akhq_enabled                         | Set to `true` to enable AKHQ. Client for Kafka in CP4BA. | Yes  | true, false |
+| mongo_express_enabled                         | Set to `true` to enable Mongo Express. Client for MongoDB. | Yes  | true, false |

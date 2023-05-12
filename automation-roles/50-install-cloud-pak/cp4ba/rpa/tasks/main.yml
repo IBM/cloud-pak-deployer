@@ -1,0 +1,22 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    rpa_output_directory: "{{ rpa_base_dir }}/{{ rpa_dir_name }}"
+
+- name: Remove RPA directory for generated files
+  ansible.builtin.file:
+    path: "{{ rpa_output_directory }}"
+    state: absent
+
+- name: Create RPA directory for generated files
+  ansible.builtin.file:
+    path: "{{ rpa_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Install RPA
+  include_tasks: install.yml
+  when: "rpa_action == 'install'"
+
+- name: Remove RPA
+  include_tasks: remove.yml
+  when: "rpa_action == 'remove'"

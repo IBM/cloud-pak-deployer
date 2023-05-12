@@ -1,0 +1,39 @@
+# Based on
+# https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=fcm-creating-secrets-protect-sensitive-filenet-content-manager-configuration-data
+- name: Prepare yaml file for IER Secret
+  ansible.builtin.template:
+    src: ier/ier-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ier-secret.yaml"
+    mode: u+rwx
+
+- name: Add IER Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/ier-secret.yaml"
+
+# Make sure FNCM secret already exists
+- name: Add FPOS OS to FNCM Secret
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: ibm-fncm-secret
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      data:
+        fposDBUsername: "{{ 'fpos' | b64encode }}"
+        fposDBPassword: "{{ cp4ba_postgresql_universal_password | b64encode }}"
+
+- name: Add ROS OS to FNCM Secret
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: ibm-fncm-secret
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      data:
+        rosDBUsername: "{{ 'ros' | b64encode }}"
+        rosDBPassword: "{{ cp4ba_postgresql_universal_password | b64encode }}"

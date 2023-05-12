@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    cloudbeaver_output_directory: "{{ cloudbeaver_base_dir }}/{{ cloudbeaver_dir_name }}"
+
+- name: Remove cloudbeaver directory for generated files
+  ansible.builtin.file:
+    path: "{{ cloudbeaver_output_directory }}"
+    state: absent
+
+- name: Install cloudbeaver
+  include_tasks: install.yml
+  when: "cloudbeaver_action == 'install'"
+
+- name: Remove cloudbeaver
+  include_tasks: remove.yml
+  when: "cloudbeaver_action == 'remove'"

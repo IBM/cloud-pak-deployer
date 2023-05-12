@@ -1,0 +1,94 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Check if plugin exists
+  ansible.builtin.uri:
+    url: "https://nexus.{{ apps_endpoint_domain }}/repository/maven-releases/{{ item.value.maven_coordinates.groupId | replace('.', '/') }}/\
+      {{ item.value.maven_coordinates.artifactId }}/{{ item.value.maven_coordinates.version }}/{{ item.value.path | replace('_', '-') }}"
+    method: GET
+    user: "{{ lc_principal_admin_user }}"
+    password: "{{ lc_principal_admin_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    status_code:
+      - 200
+      - 404
+  register: ads_maven_plugin_response
+
+- name: Get plugin to nexus
+  block:
+
+    - name: Download plugin
+      ansible.builtin.get_url:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/download/{{ item.value.path }}"
+        headers:
+          Authorization: "Bearer {{ zen_token }}"
+        validate_certs: false
+        dest: "{{ cp4ba_output_directory }}/{{ item.value.path }}"
+        mode: u+rwx
+
+    # TODO from ansible 2.10+ but line endings of jar files are changed and CP4BA components cannot use these modified jars.
+    # - name: Upload plugin to Nexus
+    #   ansible.builtin.uri:
+    #     url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=maven-releases"
+    #     method: POST
+    #     body_format: form-multipart
+    #     body:
+    #       maven2.asset1:
+    #         content: "{{ lookup('file', cp4ba_output_directory+'/'+item.value.path) }}"
+    #         filename: "{{ item.value.path }}"
+    #       maven2.groupId: "{{ item.value.maven_coordinates.groupId }}"
+    #       maven2.artifactId: "{{ item.value.maven_coordinates.artifactId }}"
+    #       maven2.version: "{{ item.value.maven_coordinates.version }}"
+    #       maven2.asset1.extension: "{{ item.value.maven_coordinates.packaging }}"
+    #     validate_certs: false
+    #     status_code: 200
+    #     user: "{{ lc_principal_admin_user }}"
+    #     password: "{{ lc_principal_admin_password }}"
+    #     force_basic_auth: true
+    #   register: response
+    #   vars:
+    #     jar_name: "{{ ads_maven_plugins_response.json | json_query('resources.annotations_maven_plugin.path') }}"
+
+    - name: Upload plugin to Nexus
+      ansible.builtin.command: |
+        curl -kX 'POST' \
+        'https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=maven-releases' \
+        -H 'accept: application/json' \
+        -H 'Content-Type: multipart/form-data' \
+        -F 'maven2.groupId={{ item.value.maven_coordinates.groupId }}' \
+        -F 'maven2.artifactId={{ item.value.maven_coordinates.artifactId }}' \
+        -F 'maven2.version={{ item.value.maven_coordinates.version }}' \
+        -F 'maven2.asset1=@{{ cp4ba_output_directory }}/{{ item.value.path }}' \
+        -F 'maven2.asset1.extension={{ item.value.maven_coordinates.packaging }}' \
+        --user "{{ lc_principal_admin_user }}:{{ lc_principal_admin_password }}" \
+        -s -o /dev/null -w "%{http_code}"
+      register: ads_curl_result
+      changed_when: true
+      failed_when: ads_curl_result.stdout != "204"
+
+  when: ads_maven_plugin_response.status == 404

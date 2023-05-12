@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    akhq_output_directory: "{{ akhq_base_dir }}/{{ akhq_dir_name }}"
+
+- name: Remove AKHQ directory for generated files
+  ansible.builtin.file:
+    path: "{{ akhq_output_directory }}"
+    state: absent
+
+- name: Install AKHQ
+  include_tasks: install.yml
+  when: "akhq_action == 'install'"
+
+- name: Remove AKHQ
+  include_tasks: remove.yml
+  when: "akhq_action == 'remove'"

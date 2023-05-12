@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    db2_output_directory: "{{ db2_base_dir }}/{{ db2_dir_name }}"
+
+- name: Remove DB2 directory for generated files
+  ansible.builtin.file:
+    path: "{{ db2_output_directory }}"
+    state: absent
+
+- name: Install DB2
+  include_tasks: install.yml
+  when: "db2_action == 'install'"
+
+- name: Remove DB2
+  include_tasks: remove.yml
+  when: "db2_action == 'remove'"

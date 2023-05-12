@@ -1,0 +1,62 @@
+apiVersion: rpa.automation.ibm.com/v1beta1
+kind: RoboticProcessAutomation
+metadata:
+  name: rpa
+  namespace: "{{ rpa_project_name }}"
+spec:
+  license:
+    accept: true
+  version: "{{ rpa_version }}"
+  tls: {}
+  systemQueueProvider:
+    storage:
+      class: "{{ rpa_storage_class_name }}"      
+  api:
+    externalConnection:
+      secretName: rpa-db
+    firstTenant:
+      name: ibm
+      owner:
+        ownersecret:
+          secretName: rpa-first-tenant-owner
+    replicas: 1
+    smtp:
+      port: 587
+      server: "{{ rpa_mail_hostname }}"
+      userSecret:
+        secretName: rpa-smtp
+    storage:
+      hot:
+        size: 7Gi
+        class: "{{ rpa_storage_class_name }}"
+      archive:
+        size: 11Gi
+        class: "{{ rpa_storage_class_name }}"
+    template:
+      pod:
+        spec:
+          containers:
+            - name: rpa-server
+              readinessProbe:
+                initialDelaySeconds: 300
+              livenessProbe:
+                initialDelaySeconds: 300
+  ui:
+    replicas: 1
+  ocr:
+    replicas: 1
+  antivirus:
+    replicas: 1
+    template:
+      pod:
+        spec:
+          containers:
+            - name: clam-av-api
+              readinessProbe:
+                initialDelaySeconds: 300
+              livenessProbe:
+                initialDelaySeconds: 300
+  audit:
+    forwardingEnabled: false
+  nlp:
+    replicas: 1

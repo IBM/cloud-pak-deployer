@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    mail_output_directory: "{{ mail_base_dir }}/{{ mail_dir_name }}"
+
+- name: Remove Mail directory for generated files
+  ansible.builtin.file:
+    path: "{{ mail_output_directory }}"
+    state: absent
+
+- name: Install Mail
+  include_tasks: install.yml
+  when: "mail_action == 'install'"
+
+- name: Remove Mail
+  include_tasks: remove.yml
+  when: "mail_action == 'remove'"

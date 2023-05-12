@@ -1,0 +1,35 @@
+# Example of the functionality call
+#
+# - name: Clear resources finalizers
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: clear-resource-finalizers
+#   vars:
+#     common_api_version: _api_version
+#     common_kind: _kind
+#     common_resource_name: _resource_name # Optional, when elft out allinstances of given kind are cleared
+#     common_namespace_name: _namespace_name
+
+- name: Get resource with api '{{ common_api_version }}', kind '{{ common_kind }}',
+    name '{{ common_resource_name | default("N/A") }}' in namespace {{ common_namespace_name }}
+  kubernetes.core.k8s_info:
+    api_version: "{{ common_api_version }}"
+    kind: "{{ common_kind }}"
+    name: "{{ common_resource_name | default(omit) }}"
+    namespace: "{{ common_namespace_name }}"
+  register: resources
+
+- name: Clear resource finalizers
+  kubernetes.core.k8s:
+    state: patched
+    api_version: "{{ common_api_version }}"
+    kind: "{{ common_kind }}"
+    name: "{{ item.metadata.name }}"
+    namespace: "{{ common_namespace_name }}"
+    definition:
+      metadata:
+        finalizers: []
+  with_items: "{{ resources.resources }}"
+  when: resources | json_query(json_query) | length != 0
+  vars:
+    json_query: "resources[0].metadata.finalizers"

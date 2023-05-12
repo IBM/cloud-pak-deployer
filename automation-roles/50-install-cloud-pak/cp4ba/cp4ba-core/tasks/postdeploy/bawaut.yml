@@ -1,0 +1,48 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Add admin groups to tw_admins
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/wle/v1/group/tw_admins?action=addMember&group={{ item }}&parts=all"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code:
+      - 200
+  with_items: "{{ lc_admin_groups }}"
+
+- name: Add admin groups and general groups to tw_authors
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/wle/v1/group/tw_authors?action=addMember&group={{ item }}&parts=all"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code:
+      - 200
+  with_items: "{{ lc_general_groups + lc_admin_groups }}"

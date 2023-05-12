@@ -1,0 +1,38 @@
+# Example of the functionality call
+#
+# - name: Remove DB@ DB
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: remove-db2-db
+#   vars:
+#     common_db2_db_name: _db2_db_name
+
+- name: Get DB2 Pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: db2
+    label_selectors:
+      - component=db2oltp
+  register: pods
+  retries: 4
+  delay: 15
+
+- name: Delete DB2 DB
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 force application all;
+      db2 deactivate db {{ common_db2_db_name }};
+      db2 drop db {{ common_db2_db_name }};
+      "
+  register: command_status
+  retries: 20
+  delay: 30
+  until: command_status.rc != 0 and command_status.stdout is defined and
+    command_status.stdout is search('.*The database alias name or database name \"'+common_db2_db_name+'\" could not be.*')
+  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
+    command_status.stdout is search('.*The database alias name or database name \"'+common_db2_db_name+'\" could not be.*'))
+  when: pods.resources | length != 0

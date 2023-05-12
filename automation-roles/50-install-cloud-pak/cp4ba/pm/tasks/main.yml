@@ -1,0 +1,22 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    pm_output_directory: "{{ pm_base_dir }}/{{ pm_dir_name }}"
+
+- name: Remove PM directory for generated files
+  ansible.builtin.file:
+    path: "{{ pm_output_directory }}"
+    state: absent
+
+- name: Create PM directory for generated files
+  ansible.builtin.file:
+    path: "{{ pm_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Install PM
+  include_tasks: install.yml
+  when: "pm_action == 'install'"
+
+- name: Remove PM
+  include_tasks: remove.yml
+  when: "pm_action == 'remove'"

@@ -1,0 +1,35 @@
+apiVersion: ibmevents.ibm.com/v1beta2
+kind: KafkaUser
+metadata:
+  name: "{{ principal_admin_user }}"
+  namespace: "{{ cp4ba_project_name }}"
+  labels:
+    ibmevents.ibm.com/cluster: iaf-system
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    acls:
+      - host: '*'
+        operation: All
+        resource:
+          name: '*'
+          patternType: literal
+          type: topic
+      - host: '*'
+        operation: All
+        resource:
+          type: cluster
+      - host: '*'
+        operation: All
+        resource:
+          name: '*'
+          patternType: literal
+          type: group
+      - host: '*'
+        operation: All
+        resource:
+          name: '*'
+          patternType: literal
+          type: transactionalId
+    type: simple

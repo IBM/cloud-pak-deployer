@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    gitea_output_directory: "{{ gitea_base_dir }}/{{ gitea_dir_name }}"
+
+- name: Remove gitea directory for generated files
+  ansible.builtin.file:
+    path: "{{ gitea_output_directory }}"
+    state: absent
+
+- name: Install gitea
+  include_tasks: install.yml
+  when: "gitea_action == 'install'"
+
+- name: Remove gitea
+  include_tasks: remove.yml
+  when: "gitea_action == 'remove'"
