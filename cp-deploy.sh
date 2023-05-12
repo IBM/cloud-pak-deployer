@@ -792,21 +792,21 @@ if [ "$STATUS_DIR" != "" ];then
   mkdir -p $STATUS_DIR/{log,pid,downloads}
 fi
 
-# Make sure that Deployer image exists
-if [ "${CPD_AIRGAP}" == "true" ];then
-  if ! ${CPD_CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
-    if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar ];then
-      echo "Loading Cloud Pak Deployer image from tar file..."
-      ${CPD_CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar
-    else
-      echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
-      exit 99
+# Check if the cloud-pak-deployer image exists if not running inside container
+if ! $INSIDE_CONTAINER;then
+  # Load the image from the tar file in case of air-gapped installation
+  if [ "${CPD_AIRGAP}" == "true" ];then
+    if ! ${CPD_CONTAINER_ENGINE} inspect cloud-pak-deployer:${CPD_IMAGE_TAG} > /dev/null 2>&1;then
+      if [ -f ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar ];then
+        echo "Loading Cloud Pak Deployer image from tar file..."
+        ${CPD_CONTAINER_ENGINE} load -i ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar
+      else
+        echo "Container image Cloud Pak Deployer not found, expected ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
+        exit 99
+      fi
     fi
   fi
-fi
-
-# Check if the cloud-pak-deployer image exists
-if ! $INSIDE_CONTAINER;then
+  # Now check that the image exists
   if [[ "$(${CPD_CONTAINER_ENGINE} images -q cloud-pak-deployer:${CPD_IMAGE_TAG} 2> /dev/null)" == "" ]]; then
     echo "Container image cloud-pak-deployer:${CPD_IMAGE_TAG} does not exist on the local machine, please build first."
     exit 99
