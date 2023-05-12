@@ -1,0 +1,184 @@
+- name: Get RoboticProcessAutomation CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: roboticprocessautomations.rpa.automation.ibm.com
+  register: roboticprocessautomation_crd
+  retries: 10
+  delay: 1
+
+- name: Delete RoboticProcessAutomation instance
+  kubernetes.core.k8s:
+    state: absent
+    api_version: rpa.automation.ibm.com/v1beta1
+    kind: RoboticProcessAutomation
+    name: rpa
+    namespace: "{{ rpa_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  when: roboticprocessautomation_crd.resources | length != 0
+
+- name: Delete Deployments
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apps/v1
+    kind: Deployment
+    name: "{{ item }}"
+    namespace: "{{ rpa_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - rpa-ui-rpa
+    - rpa-apiserver-rpa
+
+- name: Delete Secrets
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: "{{ item }}"
+    namespace: "{{ rpa_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - rpa-db
+    - rpa-smtp
+    - rpa-apiserver-rpa-dashboard
+
+- name: Get MSSQL Pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: mssql
+    label_selectors:
+      - app=mssql
+  register: pods
+  retries: 40
+  delay: 15
+
+- name: Delete MSSQL DBs
+  kubernetes.core.k8s_exec:
+    namespace: mssql
+    pod: "{{ pods.resources[0].metadata.name }}"
+    command: >
+      /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P "{{ rpa_universal_password }}" -Q
+      "ALTER DATABASE [automation] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+      drop database [automation];
+      ALTER DATABASE [knowledge] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+      drop database [knowledge];
+      ALTER DATABASE [wordnet] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+      drop database [wordnet];
+      ALTER DATABASE [address] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+      drop database [address];
+      ALTER DATABASE [audit] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+      drop database [audit]"
+  register: command_status
+  when: pods.resources | length != 0
+
+- name: Remove RPA Operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ rpa_project_name }}"
+    common_label_selector_stub: "ibm-automation-rpa"
+
+# wait for the QueueManager instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for Queue Managers instances removal
+  kubernetes.core.k8s_info:
+    api_version: mq.ibm.com/v1beta1
+    kind: QueueManager
+    namespace: "{{ rpa_project_name }}"
+  register: queue_managers
+  retries: 60
+  delay: 30
+  until: queue_managers.resources | length == 0
+
+- name: Remove MQ Operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ rpa_project_name }}"
+    common_label_selector_stub: "ibm-mq"
+
+- name: Wait for RedisSentinel instances removal
+  kubernetes.core.k8s_info:
+    api_version: redis.databases.cloud.ibm.com/v1
+    kind: RedisSentinel
+    namespace: "{{ rpa_project_name }}"
+  register: redis_sentinels
+  retries: 60
+  delay: 30
+  until: redis_sentinels.resources | length == 0
+
+- name: Remove Redis Operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ rpa_project_name }}"
+    common_label_selector_stub: "ibm-cloud-databases-redis-operator"
+
+- name: Remove Catalog Sources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+    wait: true
+  with_items:
+    - ibm-robotic-process-automation-catalog
+    - ibm-cloud-databases-redis-operator-catalog
+    - ibmmq-operator-catalogsource
+
+- name: Remove cp4ba.validator.queuemanagers.mq.ibm.com ValidatingWebhookConfiguration
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: "{{ rpa_project_name }}.validator.queuemanagers.mq.ibm.com"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+
+- name: Delete PVCs
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    name: "{{ item }}"
+    namespace: "{{ rpa_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - data-rpa-mq-rpa-ibm-mq-0
+    - rpa-apiserver-rpa-hot
+    - rpa-apiserver-rpa-archive
+
+- name: Remove post-deploy.md Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: cp4ba-rpa-postdeploy
+    namespace: "{{ rpa_output_namespace }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Remove cp4ba.validator.queuemanagers.mq.ibm.com ValidatingWebhookConfiguration
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: cp4ba.validator.queuemanagers.mq.ibm.com
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50

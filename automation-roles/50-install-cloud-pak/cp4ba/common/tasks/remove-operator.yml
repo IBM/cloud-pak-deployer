@@ -1,0 +1,78 @@
+# Example of the functionality call
+#
+# - name: Remove Operator
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: remove-operator
+#   vars:
+#     common_namespace_name:_namespace_name
+#     common_label_selector_stub: _label_selector_stub
+
+- name: Set label_selectors
+  ansible.builtin.set_fact:
+    common_label_selector: "{{ ('operators.coreos.com/'+common_label_selector_stub+'.'+common_namespace_name)[:84] }}"
+
+# Based on
+# https://docs.openshift.com/container-platform/4.10/operators/admin/olm-deleting-operators-from-cluster.html#olm-deleting-operator-from-a-cluster-using-cli_olm-deleting-operators-from-a-cluster
+- name: Remove Operator Subscription
+  kubernetes.core.k8s:
+    state: absent
+    api_version: operators.coreos.com/v1alpha1
+    kind: Subscription
+    label_selectors:
+      - "{{ common_label_selector }}"
+    namespace: "{{ common_namespace_name }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  vars:
+    condition_query: "resources[*].metadata.name"
+
+- name: Remove Operator CSVs
+  kubernetes.core.k8s:
+    state: absent
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    label_selectors:
+      - "{{ common_label_selector }}"
+    namespace: "{{ common_namespace_name }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+
+- name: Wait for {{ common_label_selector }} Deployment to terminate
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ common_namespace_name }}"
+    label_selectors:
+      - "{{ common_label_selector }}"
+  register: deployments
+  retries: 60
+  delay: 30
+  until: deployments.resources | length == 0
+
+- name: Get Role Bindings left by Operator for label {{ common_label_selector }}
+  kubernetes.core.k8s_info:
+    api_version: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    namespace: "{{ common_namespace_name }}"
+    label_selectors:
+      - "{{ common_label_selector }}"
+  register: common_leftover_role_bindings
+  retries: 10
+  delay: 1
+
+- name: Remove leftover Role Bindings
+  kubernetes.core.k8s:
+    state: absent
+    api_version: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    name: "{{ common_leftover_role_binding.metadata.name }}"
+    namespace: "{{ common_namespace_name }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  loop: "{{ common_leftover_role_bindings.resources }}"
+  loop_control:
+    loop_var: common_leftover_role_binding

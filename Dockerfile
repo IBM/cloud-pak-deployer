@@ -19,9 +19,20 @@ RUN yum install -y yum-utils python38 python38-pip && \
     alternatives --set python /usr/bin/python3 && \
     yum install -y vault && \
     yum install -y nginx && \
+    curl -O https://download.java.net/java/GA/jdk9/9/binaries/openjdk-9_linux-x64_bin.tar.gz && \
+    tar -xvf openjdk-9_linux-x64_bin.tar.gz -C /usr && \
+    ln -fs /usr/jdk-9/bin/java /usr/bin/java && \
+    ln -fs /usr/jdk-9/bin/keytool /usr/bin/keytool && \
+    rm -f openjdk-9_linux-x64_bin.tar.gz && \
+    curl -O https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz && \
+    tar -zxvf helm-v3.6.0-linux-amd64.tar.gz linux-amd64/helm && \
+    mv linux-amd64/helm helm && \
+    rm -f helm-v3.6.0-linux-amd64.tar.gz && \
+    chmod u+x helm && \
+    mv helm /usr/bin/ && \
     yum clean all
 
-RUN ansible-galaxy collection install community.general community.crypto ansible.utils community.vmware
+RUN ansible-galaxy collection install community.general community.crypto ansible.utils community.vmware kubernetes.core
 
 VOLUME ["/Data"]
 

@@ -1,0 +1,14 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=secrets-creating-custom-bpc-workforce-secret
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=secrets-creating-custom-bai-secret
+- name: Prepare yaml file for BAI Secret
+  ansible.builtin.template:
+    src: bai/bai-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/bai-secret.yaml"
+    mode: u+rwx
+
+- name: Add BAI Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/bai-secret.yaml"

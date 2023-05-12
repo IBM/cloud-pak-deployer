@@ -1,0 +1,51 @@
+apiVersion: processmining.ibm.com/v1beta1
+kind: ProcessMining
+metadata:
+  name: processmining
+  namespace: "{{ pm_project_name }}"
+spec:
+  version: "{{ pm_version }}"
+  license:
+    accept: true
+    cloudPak: "IBM Cloud Pak for Business Automation"
+  defaultStorageClassName: "{{ pm_storage_class_name }}"
+  processmining:
+    tls:
+      ui:
+        secretname: pm-tls-secret
+        certificate: tls.crt
+        key: tls.key
+        ca: ca.crt
+    storage:
+      redis:
+        install: false
+      database:
+        external:
+          connectionstring: ""
+          host: "{{ pm_mongodb_hostname }}"        
+          port: 27017
+          database: processmining
+          user: root
+          credential: 
+            secretname: pm-dbs
+            passwordkey: mongodbPassword
+  taskmining:
+    tls:
+      ui:
+        secretname: pm-tls-secret
+        certificate: tls.crt
+        key: tls.key
+        ca: ca.crt      
+    storage:
+      database: 
+        dbtype: db2
+        external:
+          credential:
+            secretname: pm-dbs
+            passwordkey: db2Password
+          user: pm
+          database: pm
+          host: "{{ pm_db2_hostname }}"          
+          port: 50000
+          schema: PM
+          ssl: false        
