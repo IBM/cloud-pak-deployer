@@ -56,21 +56,29 @@
       oc get {{_inst_type_def.kind}} {{instance_properties.name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{instance_properties.name}}' | wc -l
     register: instance_exists  
 
-  - set_fact:
-      instance_template: "{{ instance_properties.template | default(default_template_name) }}"
-    vars:
-      default_template_name: "{{ _inst_type_def.default_template }}"
+  - name: Create instance if it does not already exist
+    block:
 
-  - name: Prepare yaml file for creating instance
-    template:
-      src: "{{instance_template}}.j2"
-      dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+    - name: If instance type is enterprise-gateway create admin password secret
+      include_tasks: create-dp-admin-password-secret.yml
+      when: instance_properties.type == 'enterprise-gateway'
+      
+    - set_fact:
+        instance_template: "{{ instance_properties.template | default(default_template_name) }}"
+      vars:
+        default_template_name: "{{ _inst_type_def.default_template }}"
+
+    - name: Prepare yaml file for creating instance
+      template:
+        src: "{{instance_template}}.j2"
+        dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+
+    - name: Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
+      shell: |
+        oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
+
     when: instance_exists.stdout == "0"
 
-  - name: Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
-    shell: |
-      oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
-    when: instance_exists.stdout == "0"
 
   # ---------- WAITING FOR PLATFORM NAVIGATOR TO BECOME READY -------
   
