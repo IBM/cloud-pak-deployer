@@ -72,9 +72,8 @@
       oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
     when: instance_exists.stdout == "0"
 
-  # ---------- WAITING FOR INSTANCE TO BECOME READY -------
-    # --- Currently we wait only in case of the Platform Navigator ----
-
+  # ---------- WAITING FOR PLATFORM NAVIGATOR TO BECOME READY -------
+  
   - name: Wait for the {{_inst_type_def.kind}} to become ready
     shell: |
       oc get {{_inst_type_def.kind}} -n {{current_cp4i_cluster.project}} {{instance_properties.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
