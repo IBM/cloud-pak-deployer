@@ -27,7 +27,7 @@
 
   # ---------- CREATE INSTANCE ----------------------------
 
-  - name: Check if the {{instance_properties.type}} {{instance_properties.name}} already exists
+  - name: "Check if the {{instance_properties.type}} {{instance_properties.name}} already exists"
     shell: |
       oc get {{_inst_type_def.kind}} {{instance_properties.name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{instance_properties.name}}' | wc -l
     register: instance_exists  
@@ -49,7 +49,7 @@
         src: "{{instance_template}}.j2"
         dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
 
-    - name: Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
+    - name: "Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
       shell: |
         oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
 
@@ -58,7 +58,7 @@
 
   # ---------- WAITING FOR PLATFORM NAVIGATOR TO BECOME READY -------
   
-  - name: Wait for the {{_inst_type_def.kind}} to become ready
+  - name: "Wait for the {{_inst_type_def.kind}} to become ready"
     shell: |
       oc get {{_inst_type_def.kind}} -n {{current_cp4i_cluster.project}} {{instance_properties.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
     register: instance_status

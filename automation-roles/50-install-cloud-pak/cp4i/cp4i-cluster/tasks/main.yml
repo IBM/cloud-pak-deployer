@@ -62,7 +62,7 @@
 # If private registry is used, check if {{ status_dir }}/ibm-pak exists
 #
 
-- name: If private registry is used, check if {{ status_dir }}/ibm-pak exists
+- name: "If private registry is used, check if {{ status_dir }}/ibm-pak exists"
   block:
   - stat:
       path: "{{ status_dir }}/ibm-pak"
@@ -107,7 +107,7 @@
 - name: Obtain private registry authentication credentials
   block:
 
-  - name: Get pull secret for image registry {{ current_cp4i_cluster.image_registry_name }} from the vault
+  - name: "Get pull secret for image registry {{ current_cp4i_cluster.image_registry_name }} from the vault"
     include_role: 
       name: vault-get-secret
     vars:
@@ -184,7 +184,7 @@
     # --- Verify if portable registry content exists ---
     # It is possible that images are already in the private registry
 
-    - name: Verify that directory {{ status_dir }}/registry-storage exists
+    - name: "Verify that directory {{ status_dir }}/registry-storage exists"
       stat:
         path: "{{ status_dir }}/registry-storage"
       register: _portable_reg_storage_dir
@@ -201,7 +201,7 @@
       # NOTE(SJ) The same code exists elsewere (cp-mirror-ibm-pak role,..., cp4d roles)
       # It would be worth considering a separate generic role
 
-      - name: Set target directory for portable registry to {{ status_dir }}/registry-storage
+      - name: "Set target directory for portable registry to {{ status_dir }}/registry-storage"
         ansible.builtin.replace:
           path: /opt/ansible/etc/registryv2-config.yml
           regexp: 'rootdirectory: .*'
@@ -235,7 +235,7 @@
         set_fact:
           _registry_auth_file: "{{ status_dir }}/cloud-paks/auth.json"
 
-      - name: Check that authentication file {{ _registry_auth_file }} exists
+      - name: "Check that authentication file {{ _registry_auth_file }} exists"
         stat:
           path: "{{ _registry_auth_file }}"
         register: _registry_auth_file_path
