@@ -50,13 +50,15 @@ env|environment)
   export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
 
   # temporary ini file for localhost
-  mkdir -p ${CONFIG_DIR}/inventory/tmp
-  echo ansible_host=localhost > ${CONFIG_DIR}/inventory/tmp/temp_inventory.ini
+  mkdir -p tmp
+  echo ansible_host=localhost > tmp/temp_inventory.ini
   
   # Assemble command
   run_cmd="ansible-playbook"
+  run_cmd+=" -i tmp/temp_inventory.ini"
+
   if [ -d "${CONFIG_DIR}/inventory" ]; then
-    run_cmd+=" -i ${CONFIG_DIR}/inventory/tmp/temp_inventory.ini"
+    run_cmd+=" -i ${CONFIG_DIR}/inventory"
   fi
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
