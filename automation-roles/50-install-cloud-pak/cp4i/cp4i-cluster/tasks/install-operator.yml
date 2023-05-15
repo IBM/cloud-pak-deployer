@@ -1,6 +1,6 @@
 ---
 
-- name: Install operator for {{ current_cp4i_instance.type }}
+- name: "Install operator for {{ current_cp4i_instance.type }}"
   block:
 
   - name: Find version specific instance type properties
@@ -23,7 +23,7 @@
 
   # ------------ CHECK IF SUBSCRIPTION EXISTS -------------------------  
 
-  - name: Check if subscription {{ _inst_type_def.package_name }} already exists
+  - name: "Check if subscription {{ _inst_type_def.package_name }} already exists"
     shell: | 
       oc get subscriptions | grep {{ _inst_type_def.package_name }} | wc -l
     register: subscription_exists
@@ -68,7 +68,7 @@
 
     # ---------- WAIT FOR SUBSCRIPTION TO BECOME READY ----------------
 
-    - name: Wait for subscription {{ _subscr_name }} to become ready
+    - name: "Wait for subscription {{ _subscr_name }} to become ready"
       shell: |
         csv=$(oc get subscription -n openshift-operators {{ _subscr_name }} -o json | jq -r .status.currentCSV)
         if [[ "$csv" == "null" ]]; then

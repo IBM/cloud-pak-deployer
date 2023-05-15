@@ -5,13 +5,13 @@
 #   current_cp4i_instance
 #   current_cp4i_cluster
 
-- name: Create catalog source file for {{ current_cp4i_instance.type }}
+- name: "Create catalog source file for {{ current_cp4i_instance.type }}"
   block:
 
   - name: Find version specific instance type properties
     include_tasks: get-instance-properties.yml
 
-  - name: Get the details for instance type {{ instance_properties.type }}
+  - name: "Get the details for instance type {{ instance_properties.type }}"
     set_fact:
       _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
     vars:
@@ -33,7 +33,7 @@
         oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/catalog-sources-linux-amd64.yaml
       when: _instance_type_details.case_file_name == 'ibm-apiconnect'
       
-    - name: Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for entitled registry
+    - name: "Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for entitled registry"
       shell: |
         oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
 
@@ -49,7 +49,7 @@
         oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/catalog-sources-linux-amd64.yaml
       when: _instance_type_details.case_file_name == 'ibm-apiconnect'
 
-    - name: Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for private registry
+    - name: "Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for private registry"
       shell: |
         oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
 
