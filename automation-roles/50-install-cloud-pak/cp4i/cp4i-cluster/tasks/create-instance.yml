@@ -25,30 +25,6 @@
   - name: Find version specific instance type properties
     include_tasks: get-instance-properties.yml
 
-  # ---------- DETERMINE SUBSCRIPTION NAME ---------------- 
-
-  - set_fact:
-      _subscription_name: "{{ _inst_type_def.package_name }}"
-
-  - debug:
-      msg: "Subscription name: {{ _subscription_name }}"
-    
-
-  # ---------- WAIT FOR SUBSCRIPTION ----------------------
-
-  - name: Wait for the {{ _subscription_name }} subscription
-    shell: |
-      csv=$(oc get subscription -n openshift-operators {{ _subscription_name }} -o json | jq -r .status.currentCSV)
-      if [[ "$csv" == "null" ]]; then
-        echo "null"
-      else
-        oc get csv -n openshift-operators ${csv} -o json 2>/dev/null | jq -r .status.phase
-      fi
-    register: pn_phase
-    retries: 100
-    delay: 20
-    until: pn_phase.stdout == "Succeeded"
-
   # ---------- CREATE INSTANCE ----------------------------
 
   - name: Check if the {{instance_properties.type}} {{instance_properties.name}} already exists
