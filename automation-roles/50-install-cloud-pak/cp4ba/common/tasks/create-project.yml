@@ -1,0 +1,38 @@
+# Example of the functionality call
+#
+# - name: Create Project
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: create-project
+#   vars:
+#     common_namespace_name: _project_name
+#     common_output_directory: "{{ prefix_output_directory }}"
+#     common_project_output_name: _project_output_name # Optional
+
+- name: Prepare yaml file for Project {{ common_namespace_name }}
+  ansible.builtin.template:
+    src: project.yaml.j2
+    dest: "{{ common_output_directory }}/{{ common_project_output_name }}"
+    mode: u+rwx
+
+- name: Add Project {{ common_namespace_name }}
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ common_output_directory }}/{{ common_project_output_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for Project {{ common_namespace_name }}
+  kubernetes.core.k8s_info:
+    api_version: project.openshift.io/v1
+    kind: Project
+    name: "{{ common_namespace_name }}"
+  register: project
+  retries: 10
+  delay: 1
+  until: ('Active' in project | json_query(phase_query) | unique)
+  vars:
+    phase_query: 'resources[*].status.phase'

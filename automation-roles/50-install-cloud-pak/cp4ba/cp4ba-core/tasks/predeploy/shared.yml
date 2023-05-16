@@ -1,0 +1,105 @@
+- name: Check that the {{ cp4ba_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ cp4ba_ca_crt_path }}"
+  register: cp4ba_ca_crt_file
+
+- name: Ensure we have CA certificates and wildcards
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not cp4ba_ca_crt_file.stat.exists
+
+- name: Load CA TLS key data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_ca_key_path }}'
+  register: slurped_ca_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_key: "{{ slurped_ca_key_data.content }}"
+
+- name: Load CA TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ cp4ba_ca_crt_path }}'
+  register: slurped_ca_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _ca_tls_crt: "{{ slurped_ca_crt_data.content }}"
+
+- name: Prepare yaml file for Global CA Secret
+  ansible.builtin.template:
+    src: shared/global-ca-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/global-ca-secret.yaml"
+    mode: u+rwx
+
+- name: Create Global CA Secret to trust other components like mail
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/global-ca-secret.yaml"
+
+- name: Retrieve default certification
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: retrieve-default-certification
+  vars:
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
+
+- name: Prepare yaml file for default CA Secret
+  ansible.builtin.template:
+    src: shared/default-ca-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/default-ca-secret.yaml"
+    mode: u+rwx
+
+- name: Create default CA Secret to trust other components like gitea, nexus
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/default-ca-secret.yaml"
+
+- name: Prepare yaml file for LDAP bind Secret
+  ansible.builtin.template:
+    src: shared/ldap-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ldap-secret.yaml"
+    mode: u+rwx
+
+- name: Add LDAP bind Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/ldap-secret.yaml"
+
+- name: Manage LDAP SSL
+  block:
+
+    - name: Load LDAP SSL Certificate Secret
+      kubernetes.core.k8s_info:
+        kind: Secret
+        api: v1
+        name: "{{ lc_ldap_ssl_secret_name }}"
+        namespace: cloud-pak-deployer
+      register: _ldap_ssl_crt
+
+    - name: Get the LDAP SSL Certificate
+      ansible.builtin.set_fact:
+        _ldap_ssl_crt: "{{ _ldap_ssl_crt.resources[0].data['tls.crt'] }}"
+
+    - name: Prepare yaml file for LDAP SSL Certificate Secret
+      ansible.builtin.template:
+        src: shared/ldap-ssl-secret.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
+        mode: u+rwx
+
+    - name: Add LDAP SSL Certificate Secret to the {{ cp4ba_project_name }} namespace
+      kubernetes.core.k8s:
+        state: present
+        force: false
+        merge_type: merge
+        src: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
+
+  when: lc_ldap_ssl_secret_name | length > 0

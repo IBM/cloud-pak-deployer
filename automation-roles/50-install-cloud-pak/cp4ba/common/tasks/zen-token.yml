@@ -1,0 +1,34 @@
+# Example of the functionality call
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-data/4.0?topic=resources-generating-authorization-token
+#
+# - name: Get Zen token
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: zen-token
+#   vars:
+#     comon_iam_token: "{{ iam_token }}"
+#     common_user: "{{ admin_user }}"
+#     common_namespace_name: _namespace_name
+#     common_output_to_var: "zen_token"
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Exchange IAM access token for Zen token
+  ansible.builtin.uri:
+    url: "https://cpd-{{ common_namespace_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth"
+    method: GET
+    headers:
+      iam-token: "{{ comon_iam_token }}"
+      username: "{{ common_user }}"
+    validate_certs: false
+    status_code: 200
+  register: token_response
+
+- name: Set zen token
+  ansible.builtin.set_fact:
+    "{{ common_output_to_var }}": "{{ token_response.json | json_query('accessToken') }}"

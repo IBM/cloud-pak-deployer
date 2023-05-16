@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    nexus_output_directory: "{{ nexus_base_dir }}/{{ nexus_dir_name }}"
+
+- name: Remove nexus directory for generated files
+  ansible.builtin.file:
+    path: "{{ nexus_output_directory }}"
+    state: absent
+
+- name: Install nexus
+  include_tasks: install.yml
+  when: "nexus_action == 'install'"
+
+- name: Remove nexus
+  include_tasks: remove.yml
+  when: "nexus_action == 'remove'"

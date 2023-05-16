@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    kibana_output_directory: "{{ kibana_base_dir }}/{{ kibana_dir_name }}"
+
+- name: Remove kibana directory for generated files
+  ansible.builtin.file:
+    path: "{{ kibana_output_directory }}"
+    state: absent
+
+- name: Install kibana
+  include_tasks: install.yml
+  when: "kibana_action == 'install'"
+
+- name: Remove kibana
+  include_tasks: remove.yml
+  when: "kibana_action == 'remove'"

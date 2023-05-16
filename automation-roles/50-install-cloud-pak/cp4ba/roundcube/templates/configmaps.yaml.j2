@@ -1,0 +1,56 @@
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: roundcubenginx-config
+  namespace: roundcube
+data:
+  default.conf: |
+    server {
+        listen 80 default_server;
+        server_name _;
+        root /var/www/html;
+
+        location / {
+            try_files $uri /index.php$is_args$args;
+        }
+
+        location ~ \.php(/|$) {
+            try_files $uri =404;
+            fastcgi_pass roundcubemail:9000;
+            fastcgi_read_timeout 300;
+            proxy_read_timeout 300;
+            fastcgi_split_path_info ^(.+\.php)(/.*)$;
+            include fastcgi_params;
+            fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+            fastcgi_param DOCUMENT_ROOT $realpath_root;
+            internal;
+        }
+
+        client_max_body_size 6m;
+
+        error_log  /var/log/nginx/error.log;
+        access_log /var/log/nginx/access.log;
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: roundcubemail-config
+  namespace: roundcube
+data:
+  custom.php: |
+    <?php
+      $config['smtp_conn_options'] = array(
+        'ssl'         => array(
+           'verify_peer'      => false,
+           'verify_peer_name' => false,
+        ),
+      );
+      $config['imap_conn_options'] = array(
+        'ssl'         => array(
+           'verify_peer'      => false,
+           'verify_peer_name' => false,
+        ),
+      );
+      $config['username_domain'] = 'cp.internal';

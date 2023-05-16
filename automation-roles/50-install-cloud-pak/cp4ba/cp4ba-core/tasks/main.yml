@@ -1,0 +1,28 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}"
+
+- name: Remove CP4BA directory for generated files
+  ansible.builtin.file:
+    path: "{{ cp4ba_output_directory }}"
+    state: absent
+
+- name: Create CP4BA directory for generated files
+  ansible.builtin.file:
+    path: "{{ cp4ba_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Install CP4BA
+  include_tasks: install.yml
+  vars:
+    _cp4ba_run_repository: "{{ _cp4ba_run_repository_override if _cp4ba_run_repository_override is defined else true }}"
+    _cp4ba_run_dbs: "{{ _cp4ba_run_dbs_override if _cp4ba_run_dbs_override is defined else true }}"
+    _cp4ba_run_predeploy: "{{ _cp4ba_run_predeploy_override if _cp4ba_run_predeploy_override is defined else true }}"
+    _cp4ba_run_deploy: "{{ _cp4ba_run_deploy_override if _cp4ba_run_deploy_override is defined else true }}"
+    _cp4ba_run_postdeploy: "{{ _cp4ba_run_postdeploy_override if _cp4ba_run_postdeploy_override is defined else true }}"
+  when: "cp4ba_action == 'install'"
+
+- name: Remove CP4BA
+  include_tasks: remove.yml
+  when: "cp4ba_action == 'remove'"

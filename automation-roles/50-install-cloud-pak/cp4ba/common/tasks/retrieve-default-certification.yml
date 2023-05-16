@@ -1,0 +1,72 @@
+# Example of the functionality call
+# Based on https://docs.openshift.com/container-platform/4.12/security/certificates/replacing-default-ingress-certificate.html
+#
+# - name: Retrieve default certification
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: retrieve-default-certification
+#   vars:
+#     common_crt_output_to_var: "tls_crt"
+#     common_key_output_to_var: "tls_key"
+#     common_ca_output_to_var: "ca_crt"
+
+- name: Get IngressController
+  kubernetes.core.k8s_info:
+    api_version: operator.openshift.io/v1
+    kind: IngressController
+    namespace: openshift-ingress-operator
+    name: default
+  register: ingress_controller
+
+- name: Retrieve default certificate name
+  ansible.builtin.set_fact:
+    default_certificate_name: "{{ ingress_controller.resources[0].spec.defaultCertificate.name
+      if ingress_controller.resources[0].spec.defaultCertificate is defined else 'router-certs-default' }}"
+
+- name: Get default certificate contents
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: openshift-ingress
+    name: "{{ default_certificate_name }}"
+  register: default_secret
+
+- name: Retrieve tls.crt
+  ansible.builtin.set_fact:
+    "{{ common_crt_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] }}"
+
+- name: Retrieve tls.key
+  ansible.builtin.set_fact:
+    "{{ common_key_output_to_var }}": "{{ default_secret.resources[0].data['tls.key'] }}"
+
+- name: Get Proxy
+  kubernetes.core.k8s_info:
+    api_version: config.openshift.io/v1
+    kind: Proxy
+    name: cluster
+  register: proxy
+
+- name: Retrieve trustedCA name
+  ansible.builtin.set_fact:
+    trusted_ca_name: "{{ proxy.resources[0].spec.trustedCA.name }}"
+
+- name: Get trusted CAs from OCP
+  block:
+
+    - name: Get trusted CAs config map
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: "{{ trusted_ca_name }}"
+        namespace: openshift-config
+      register: trusted_ca
+
+    - name: Retrieve trusted CAs
+      ansible.builtin.set_fact:
+        "{{ common_ca_output_to_var }}": "{{ trusted_ca.resources[0].data['ca-bundle.crt'] | b64encode }}"
+  when: trusted_ca_name | length > 0
+
+- name: Use tls.crt as ca.crt
+  ansible.builtin.set_fact:
+    "{{ common_ca_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] }}"
+  when: trusted_ca_name | length == 0
