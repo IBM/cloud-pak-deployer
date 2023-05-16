@@ -9,11 +9,13 @@ on:
     - main
     paths:
     - 'docs/**'
+    - '.gitub/workflows/**'
   pull_request:
     branches:
     - main
     paths:
     - 'docs/**'
+    - '.gitub/workflows/**'
 
   # Allows running this workflow manually from the Actions tab
   workflow_dispatch:
@@ -48,7 +50,7 @@ jobs:
           echo ${{ github.event_name }}
 
       - name: Deploy static pages to gh-pages branch
-        if: github.event_name == 'push'
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           make deploy
