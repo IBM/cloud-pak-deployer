@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    mongodb_output_directory: "{{ mongodb_base_dir }}/{{ mongodb_dir_name }}"
+
+- name: Remove mongodb directory for generated files
+  ansible.builtin.file:
+    path: "{{ mongodb_output_directory }}"
+    state: absent
+
+- name: Install mongodb
+  include_tasks: install.yml
+  when: "mongodb_action == 'install'"
+
+- name: Remove mongodb
+  include_tasks: remove.yml
+  when: "mongodb_action == 'remove'"

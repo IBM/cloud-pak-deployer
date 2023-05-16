@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    openldap_output_directory: "{{ openldap_base_dir }}/{{ openldap_dir_name }}"
+
+- name: Remove openldap directory for generated files
+  ansible.builtin.file:
+    path: "{{ openldap_output_directory }}"
+    state: absent
+
+- name: Install openldap
+  include_tasks: install.yml
+  when: "openldap_action == 'install'"
+
+- name: Remove openldap
+  include_tasks: remove.yml
+  when: "openldap_action == 'remove'"

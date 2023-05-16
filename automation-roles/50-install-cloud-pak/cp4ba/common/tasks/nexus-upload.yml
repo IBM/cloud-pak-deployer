@@ -1,0 +1,114 @@
+# Example of the functionality call
+#
+# - name: Nexus upload
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: nexus-upload
+#   vars:
+#     common_file_folder_path: _file_folder_path
+#     common_file_name: _file_name
+#     common_password: "{{ prefix_universal_password }}"
+#     common_user: "{{ admin_user }}"
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+# TODO from ansible 2.10+ but line endings of jar files are changed and CP4BA components cannot use these modified jars.
+# - name: Upload to Nexus
+#   ansible.builtin.uri:
+#     url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=raw-hosted"
+#     method: POST
+#     body_format: form-multipart
+#     body:
+#       raw.directory: cp4ba
+#       raw.asset1:
+#         content: "{{ lookup('file', common_file_folder_path+'/'+common_file_name) }}"
+#         filename: "{{ common_file_name }}"
+#       raw.asset1.filename: "{{ common_file_name }}"
+#     validate_certs: false
+#     status_code:
+#       - 204
+#     user: "{{ lc_principal_admin_user }}"
+#     password: "{{ lc_principal_admin_password }}"
+#     force_basic_auth: true
+#   register: nexus_upload_result
+#   ignore_errors: true
+
+- name: Upload to Nexus
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=raw-hosted' \
+    -H 'accept: application/json' \
+    -H 'Content-Type: multipart/form-data' \
+    -F 'raw.directory=cp4ba' \
+    -F 'raw.asset1=@{{ common_file_folder_path }}/{{ common_file_name }}' \
+    -F 'raw.asset1.filename={{ common_file_name }}' \
+    --user "{{ common_user }}:{{ common_password }}" \
+    -s -o /dev/null -w "%{http_code}"
+  register: import_curl_result
+  changed_when: true
+
+- name: Restart and reupload
+  block:
+
+    - name: Restart Nexus pod if upload failed
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        label_selectors:
+          - app=sonatype-nexus
+        namespace: nexus
+        wait: false
+
+    - name: Wait for Nexus Repo Deployment to be Available
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: v1
+        common_resource_kind: Deployment
+        common_resource_name: nexusrepo-sonatype-nexus
+        common_resource_namespace: nexus
+        common_condition_name: Available
+        common_retries: 80
+        common_delay: 15
+
+    # TODO from ansible 2.10+ but line endings of jar files are changed and CP4BA components cannot use these modified jars.
+    # - name: Upload to Nexus
+    #   ansible.builtin.uri:
+    #     url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=raw-hosted"
+    #     method: POST
+    #     body_format: form-multipart
+    #     body:
+    #       raw.directory: cp4ba
+    #       raw.asset1:
+    #         content: "{{ lookup('file', common_file_folder_path+'/'+common_file_name) }}"
+    #         filename: "{{ common_file_name }}"
+    #       raw.asset1.filename: "{{ common_file_name }}"
+    #     validate_certs: false
+    #     status_code: 204
+    #     user: "{{ lc_principal_admin_user }}"
+    #     password: "{{ lc_principal_admin_password }}"
+    #     force_basic_auth: true
+
+    - name: Upload to Nexus
+      ansible.builtin.command: |
+        curl -kX 'POST' \
+        'https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=raw-hosted' \
+        -H 'accept: application/json' \
+        -H 'Content-Type: multipart/form-data' \
+        -F 'raw.directory=cp4ba' \
+        -F 'raw.asset1=@{{ common_file_folder_path }}/{{ common_file_name }}' \
+        -F 'raw.asset1.filename={{ common_file_name }}' \
+        --user "{{ common_user }}:{{ common_password }}" \
+        -s -o /dev/null -w "%{http_code}"
+      register: import_curl_result
+      failed_when: import_curl_result.stdout != "204"
+      changed_when: true
+
+  when: import_curl_result.stdout != "204"

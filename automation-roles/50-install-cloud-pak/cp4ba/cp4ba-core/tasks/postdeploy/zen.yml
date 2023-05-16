@@ -1,0 +1,484 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-custom-resources#automationuiconfig
+- name: Apply custom certificate for Zen
+  kubernetes.core.k8s:
+    state: present
+    api_version: core.automation.ibm.com/v1beta1
+    kind: AutomationUIConfig
+    name: iaf-system
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      spec:
+        tls:
+          certificateSecret:
+            secretName: external-tls-secret
+          caSecret:
+            secretName: external-tls-secret
+            key: ca.crt
+
+- name: Retrieve default certification
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: retrieve-default-certification
+  vars:
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
+
+- name: Prepare yaml file for custom Zen TLS Secret
+  ansible.builtin.template:
+    src: iaf/zen-tls-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
+    mode: u+rwx
+
+- name: Add custom Zen TLS Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Delete Zen ibm-nginx pods
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - app.kubernetes.io/component=ibm-nginx
+
+- name: Wait for Zen ibm-nginx Deployment Available State
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: ibm-nginx
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+- name: Delete PFS pods
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - app.kubernetes.io/name=cp4ba-pfs
+
+- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-statefulset-available
+  vars:
+    common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_retries: 60
+    common_delay: 20
+  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+
+- name: Delete Kibana pods
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: kibana
+    label_selectors:
+      - app=kibana-app
+
+- name: Wait for Kibana Deployment Available State
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: kibana
+    common_resource_namespace: kibana
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+- name: Delete Zen ibm-nginx pods to refresh their cached IPs
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - app.kubernetes.io/component=ibm-nginx
+
+- name: Wait for Zen ibm-nginx Deployment Available State
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: ibm-nginx
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=tasks-business-automation-studio
+# Get access token for ZEN administrative initial user
+- name: Get Zen Initial Admin User Secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: admin-user-details
+  register: secret
+  retries: 40
+  delay: 15
+
+# Based on introspection of Zen NGINX configs in Deployment ibm-nginx in /user-home/_global_/nginx-conf.d/icp4d-open-api-configmap.conf
+# Based on CP4BA Operator code ansible\roles\AS-ID\tasks\iam-verify-and-add.yml@69+
+# Based on https://cloud.ibm.com/apidocs/cloud-pak-data/cloud-pak-data-4.5.0#getauthorizationtoken
+- name: Get Zen Initial Admin User Acccess Token
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icp4d-api/v1/authorize"
+    method: POST
+    body_format: json
+    body:
+      username: admin
+      password: "{{ secret.resources[0].data.initial_admin_password | b64decode }}"
+    validate_certs: false
+    status_code: 200
+  register: token_response
+
+- name: Retrieve Zen Initial User Access Token
+  ansible.builtin.set_fact:
+    zen_token: "{{ token_response.json | json_query('token') }}"
+
+# Groups endpoint found based on the network dev tools in the browser
+- name: Add All Roles to admin groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      name: "{{ item }}"
+      role_identifiers: "{{ user_roles }}"
+    validate_certs: false
+    status_code:
+      - 201
+      - 409
+  with_items: "{{ lc_admin_groups }}"
+  register: group_response
+  vars:
+    user_roles:
+      - zen_administrator_role
+      - iaf-automation-admin
+      - iaf-automation-analyst
+      - iaf-automation-developer
+      - iaf-automation-operator
+      - zen_user_role
+
+# Needed as group related permissions are updated only after first real login via browser
+- name: Add all roles to default admin user
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ lc_principal_admin_user }}?add_roles=true"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      username: "{{ lc_principal_admin_user }}"
+      user_roles:
+        - zen_administrator_role
+        - iaf-automation-admin
+        - iaf-automation-analyst
+        - iaf-automation-developer
+        - iaf-automation-operator
+        - zen_user_role
+    validate_certs: false
+    status_code:
+      - 200
+
+- name: Get the zen groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups"
+    method: GET
+    headers:
+      Accept: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code: 200
+  register: get_groups_response
+
+- name: Register ldap group with the zen group for admin groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups/{{ group_id }}/members"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      user_identifiers: []
+      ldap_groups: ["cn={{ group_name }},{{ lc_ldap_group_base_dn }}"]
+    validate_certs: false
+    return_content: true
+  register: register_group_response
+  loop: "{{ lc_admin_groups }}"
+  vars:
+    group_id_query: json.results[?name == '{{ item }}']
+    group_id: "{{ get_groups_response | json_query(group_id_query) | first | json_query('group_id') }}"
+    group_name: "{{ get_groups_response | json_query(group_id_query) | first | json_query('name') }}"
+  failed_when: >
+    (register_group_response.status != 200) and
+    ('duplicate_rule_for_group_id' not in register_group_response.content)
+
+# Switch from default zen admin to custom admin token
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    comon_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+# Groups endpoint found based on the network dev tools in the browser
+- name: Add Roles to general groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      name: "{{ item }}"
+      role_identifiers: "{{ user_roles }}"
+    validate_certs: false
+    status_code:
+      - 201
+      - 409
+  vars:
+    user_roles:
+      - iaf-automation-analyst
+      - iaf-automation-developer
+      - iaf-automation-operator
+      - zen_user_role
+  with_items: "{{ lc_general_groups }}"
+  register: group_response
+
+- name: Get the zen groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups"
+    method: GET
+    headers:
+      Accept: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code: 200
+  register: get_groups_response
+
+- name: Register ldap group with the zen group for general groups
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups/{{ group_id }}/members"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      user_identifiers: []
+      ldap_groups: ["cn={{ group_name }},{{ lc_ldap_group_base_dn }}"]
+    validate_certs: false
+    return_content: true
+  register: register_group_response
+  loop: "{{ lc_general_groups }}"
+  vars:
+    group_id_query: json.results[?name == '{{ item }}']
+    group_id: "{{ get_groups_response | json_query(group_id_query) | first | json_query('group_id') }}"
+    group_name: "{{ get_groups_response | json_query(group_id_query) | first | json_query('name') }}"
+  failed_when: >
+    (register_group_response.status != 200) and
+    ('duplicate_rule_for_group_id' not in register_group_response.content)
+
+# Needs to be added manually, otherwise WFPS doesn't work when CPFS admin username is customized
+- name: Add cpfsadmin to zen
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      username: cpfsadmin
+      displayName: cpfsadmin
+      user_roles: [zen_administrator_role]
+    validate_certs: false
+    status_code:
+      - 201
+      - 409
+  register: cpfsadmin_response
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "cpfsadmin"
+    common_password: "{{ cp4ba_universal_password }}"
+    common_output_to_var: "iam_token"
+
+# Based on https://www.ibm.com/docs/en/cpfs?topic=apis-oidc-registration#register
+- name: Add service client to IAM
+  ansible.builtin.uri:
+    url: "https://cp-console-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/registration"
+    method: POST
+    headers:
+      Authorization: Bearer {{ iam_token }}
+    body_format: json
+    body:
+      {
+        "client_id": "cpadminservice",
+        "client_name": "cpadminservice",
+        "client_secret": "{{ cp4ba_universal_password }}",
+        "scope": "openid profile email",
+        "preauthorized_scope": "openid profile email",
+        "introspect_tokens": true,
+        "proofKeyForCodeExchange": true,
+        "response_types": [
+          "code",
+          "token",
+          "id_token token"
+        ],
+        "grant_types": [
+          "authorization_code",
+          "client_credentials",
+          "implicit",
+          "refresh_token",
+          "urn:ietf:params:oauth:grant-type:jwt-bearer",
+          "password"
+        ],
+        "allow_regexp_redirects":true,
+        "redirect_uris": [
+          "regexp:https://.*/oidcclient/redirect/.*"
+        ],
+        "appTokenAllowed": true,
+        "application_type": "web",
+        "subject_type": "public"
+      }
+    validate_certs: false
+    status_code: 200
+  register: client_response
+
+- name: Add cpadminservice to zen
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      username: cpadminservice
+      displayName: cpadminservice
+      user_roles:
+        - zen_administrator_role
+        - iaf-automation-admin
+        - iaf-automation-analyst
+        - iaf-automation-developer
+        - iaf-automation-operator
+        - zen_user_role
+    validate_certs: false
+    status_code:
+      - 201
+      - 409
+  register: cpadminservice_response
+
+- name: Get Usage configmap
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ cp4ba_output_namespace }}"
+    name: cp4ba-usage
+  register: usage
+  retries: 40
+  delay: 15
+
+- name: Find zen api key
+  ansible.builtin.set_fact:
+    zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
+
+- name: Generate new Zen Api key
+  block:
+    - name: Get IAM token
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: iam-token-client
+      vars:
+        common_cpfs_project: "{{ cp4ba_project_name }}"
+        common_client_id: "cpadminservice"
+        common_client_secret: "{{ cp4ba_universal_password }}"
+        common_output_to_var: "iam_token"
+
+    - name: Get Zen token
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: zen-token
+      vars:
+        comon_iam_token: "{{ iam_token }}"
+        common_user: "cpadminservice"
+        common_namespace_name: "{{ cp4ba_project_name }}"
+        common_output_to_var: "zen_token"
+
+    # Based on network traffic
+    - name: Generate Zen API key for cpadminservice
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/apiKey"
+        method: GET
+        headers:
+          Authorization: Bearer {{ zen_token }}
+        validate_certs: false
+        status_code: 200
+      register: zen_api_key_response
+
+    - name: Get zen api key
+      ansible.builtin.set_fact:
+        zen_api_key_new: "{{ zen_api_key_response.json.apiKey }}"
+
+    # Regenerate usage with zen_api_key
+    - name: Generate usage
+      ansible.builtin.include_role:
+        name: usage
+
+    - name: Assign zen api key for further post deploy task
+      ansible.builtin.set_fact:
+        zen_api_key: "{{ zen_api_key_new }}"
+
+  when: zen_api_key | length == 0

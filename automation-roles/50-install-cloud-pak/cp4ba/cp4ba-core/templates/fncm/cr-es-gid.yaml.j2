@@ -1,0 +1,40 @@
+spec:
+  shared_configuration:
+    open_id_connect_providers:
+      - provider_name: ExShareGID
+        display_name: Google ID
+        client_oidc_secret:
+          es: internal-idp-oidc-google-secret
+          nav: internal-idp-oidc-google-secret
+          cpe: internal-idp-oidc-google-secret
+          graphql: internal-idp-oidc-google-secret
+        issuer_identifier: https://accounts.google.com
+        response_type: id_token token
+        scope: openid email profile
+        map_identity_to_registry_user: false
+        authn_session_disabled: false
+        inbound_propagation: supported
+        https_required: true
+        validation_method: introspect
+        disable_ltpa_cookie: true
+        signature_algorithm: RS256
+        user_identifier: email
+        unique_user_identifier: email
+        user_identity_to_create_subject: email
+        discovery_endpoint_url: https://accounts.google.com/.well-known/openid-configuration
+        jwk_client_oidc_secret:
+          es: internal-idp-oidc-google-secret
+          nav: internal-idp-oidc-google-secret
+          cpe: internal-idp-oidc-google-secret
+          graphql: internal-idp-oidc-google-secret
+        token_reuse: true
+# TODO Not working due to CPE java API bug, report, wait for fix
+#  initialize_configuration:
+#    ic_ldap_managed_realm:
+#      - managed_realm_name: externalManaged
+#        managed_realm_base_dn: dc=externalManaged,dc=managed
+#        managed_realm_principal_cat: External
+#        managed_realm_exclude_from_auth_user: false
+#        managed_realm_identity_rules:
+#          - identity_rule_type: "ALLOW_SELF_REGISTER"
+#            email_suffix: "gmail.com"

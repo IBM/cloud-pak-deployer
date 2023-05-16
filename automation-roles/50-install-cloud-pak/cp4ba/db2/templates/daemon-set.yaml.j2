@@ -1,0 +1,58 @@
+# Required for the NFS support
+# https://www.ibm.com/docs/en/db2/11.5?topic=SSEPGG_11.5.0/com.ibm.db2.luw.db2u_openshift.doc/aese-cfg-nfs-filegold.html
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: norootsquash
+  namespace: db2
+  labels:
+    tier: management
+    app: norootsquash
+spec:
+  selector:
+    matchLabels:
+      name: norootsquash
+  template:
+    metadata:
+      labels:
+        name: norootsquash
+    spec:
+      serviceAccountName: norootsquash
+      initContainers:
+        - resources:
+            requests:
+              cpu: 0.1
+          securityContext:
+            privileged: true
+          image: alpine:3.6
+          name: unrootsquash
+          command: ["chroot", "/host", "sh", "-c"]
+          args:
+            - >
+              grep "^Domain = slnfsv4.com" /etc/idmapd.conf;
+              if [ "$?" -ne "0" ] ; then
+                sed -i 's/.*Domain =.*/Domain = slnfsv4.com/g' /etc/idmapd.conf;
+                nfsidmap -c;
+                rpc.idmapd
+              fi;
+          volumeMounts:
+            - name: host
+              mountPath: /host
+      containers:
+        - resources:
+            requests:
+              cpu: 0.1
+          image: alpine:3.6
+          name: sleep
+          command: ["/bin/sh", "-c"]
+          args:
+            - >
+              while true; do
+                sleep 100000;
+              done
+      volumes:
+        - hostPath:
+            path: /
+            type: Directory
+          name: host

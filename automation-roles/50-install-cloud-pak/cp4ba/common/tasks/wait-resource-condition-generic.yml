@@ -1,0 +1,28 @@
+# Example of the functionality call
+#
+# - name: Wait for resource condition generic
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-resource-condition-generic
+#   vars:
+#     common_api_version: api_version
+#     common_resource_kind: resource_kind
+#     common_resource_name: resource_name
+#     common_resource_namespace: _resource_namespace
+#     common_condition_query: condition_query
+#     common_condition_value: condition_value
+#     common_retries: retries
+#     common_delay: delay
+
+- name: Wait on api version '{{ common_api_version }}', kind '{{ common_resource_kind }}', name '{{ common_resource_name }}'
+    in namespace '{{ common_resource_namespace }}' for condition query '{{ common_condition_query }}' to return '{{ common_condition_value }}'
+    with '{{ common_retries }}' retries with '{{ common_delay }}' seconds delay each (total of '{{ common_retries * common_delay / 60 }}' minutes)
+  kubernetes.core.k8s_info:
+    api_version: "{{ common_api_version }}"
+    kind: "{{ common_resource_kind }}"
+    name: "{{ common_resource_name }}"
+    namespace: "{{ common_resource_namespace }}"
+  register: common_resource_condition
+  retries: "{{ common_retries }}"
+  delay: "{{ common_delay }}"
+  until: common_resource_condition.resources is defined and (common_condition_value in common_resource_condition | json_query(common_condition_query) | unique )

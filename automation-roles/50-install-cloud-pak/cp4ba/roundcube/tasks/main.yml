@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    roundcube_output_directory: "{{ roundcube_base_dir }}/{{ roundcube_dir_name }}"
+
+- name: Remove Roundcube directory for generated files
+  ansible.builtin.file:
+    path: "{{ roundcube_output_directory }}"
+    state: absent
+
+- name: Install Roundcube
+  include_tasks: install.yml
+  when: "roundcube_action == 'install'"
+
+- name: Remove Roundcube
+  include_tasks: remove.yml
+  when: "roundcube_action == 'remove'"

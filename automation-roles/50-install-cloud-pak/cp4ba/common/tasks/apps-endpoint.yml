@@ -1,0 +1,21 @@
+# Example of the functionality call
+#
+# - name: Get OCP Apps domain
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: apps-endpoint
+#   vars:
+#     common_output_to_var: "apps_endpoint_domain"
+
+- name: Get Ingress
+  kubernetes.core.k8s_info:
+    api_version: config.openshift.io/v1
+    kind: Ingress
+    name: cluster
+  register: common_ingress
+  retries: 10
+  delay: 1
+
+- name: Set apps endpoint
+  ansible.builtin.set_fact:
+    "{{ common_output_to_var }}": "{{ common_ingress.resources[0].spec.domain }}"

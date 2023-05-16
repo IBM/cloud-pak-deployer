@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Route
+metadata:
+  name: "{{ common_route_name }}"
+spec:
+  host: "{{ common_route_name }}.{{ common_apps_endpoint_domain }}"
+  to:
+    kind: Service
+    name: "{{ common_service_name }}"
+{% if common_service_port is defined %}
+  port:
+    targetPort: "{{ common_service_port }}"
+{% endif %}    
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

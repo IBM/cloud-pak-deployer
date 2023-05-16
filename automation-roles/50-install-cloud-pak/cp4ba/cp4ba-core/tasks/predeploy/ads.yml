@@ -1,0 +1,14 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-configuring-decision-runtime
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-configuring-mongodb-storage
+- name: Prepare yaml file for ADS Secret
+  ansible.builtin.template:
+    src: ads/ads-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ads-secret.yaml"
+    mode: u+rwx
+
+- name: Add ADS Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/ads-secret.yaml"

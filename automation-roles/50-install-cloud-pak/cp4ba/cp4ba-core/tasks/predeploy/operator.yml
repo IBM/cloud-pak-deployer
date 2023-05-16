@@ -1,0 +1,51 @@
+- name: Create ICR Secret
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-icr-secret
+  vars:
+    common_output_directory: "{{ cp4ba_output_directory }}"
+    common_icr_secret_name: ibm-entitlement-key
+    common_icr_password: "{{ cp4ba_icr_password }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+
+- name: Prepare yaml file for OperatorGroup
+  ansible.builtin.template:
+    src: operator/operatorgroup.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/operatorgroup.yaml"
+    mode: u+rwx
+
+- name: Add OperatorGroup
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/operatorgroup.yaml"
+
+- name: Prepare yaml file for Subscription
+  ansible.builtin.template:
+    src: operator/subscription.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/subscription.yaml"
+    mode: u+rwx
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=cluster-setting-up-in-openshift-console
+- name: Add Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/subscription.yaml"
+
+- name: Wait Operator ibm-cp4a-operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-operator
+  vars:
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_label_selector_stub: ibm-cp4a-operator
+
+- name: Wait for ICP4ACluster CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: icp4aclusters.icp4a.ibm.com

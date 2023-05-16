@@ -1,0 +1,14 @@
+# Based on
+# https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=ban-creating-secrets-protect-sensitive-business-automation-navigator-configuration-data
+- name: Prepare yaml file for BAN Secret
+  ansible.builtin.template:
+    src: ban/ban-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ban-secret.yaml"
+    mode: u+rwx
+
+- name: Add BAN Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/ban-secret.yaml"
