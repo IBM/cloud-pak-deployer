@@ -23,7 +23,8 @@ In order to successfully install OpenShift on vSphere infrastructure, the follow
 
 There are also some optional settings, dependent on the specifics of the installation:
 | Pre-requisite    | Description                                                                                                                                                                                                                         |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pre-requisite       | Description                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Bastion server   | It can be useful to have a bastion/installation server to run the deployer. This (virtual) server must reside within the vSphere network                                                                                            |
 | NFS details      | If an NFS server is used for storage, it must be reacheable (firewall) and `no_root_squash` must be set                                                                                                                             |
 | Private registry | If the installation must use a private registry for the Cloud Pak installation, it must be available and credentials shared                                                                                                         |
