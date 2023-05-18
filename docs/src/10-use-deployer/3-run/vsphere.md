@@ -7,6 +7,32 @@ A typical setup of the vSphere cluster with OpenShift is pictured below:
 
 When deploying OpenShift and the Cloud Pak(s) on VMWare vSphere, there is a dependency on a DHCP server for issuing IP addresses to the newly configured cluster nodes. Also, once the OpenShift cluster has been installed, valid fully qualified host names are required to connect to the OpenShift API server at port `6443` and applications running behind the ingress server at port `443`. The Cloud Pak deployer cannot set up a DHCP server or a DNS server and to be able to connect to OpenShift or to reach the Cloud Pak after installation, name entries must be set up.
 
+### Pre-requisites
+In order to successfully install OpenShift on vSphere infrastructure, the following pre-requisites must have been met.
+
+| Pre-requisite       | Description 
+| ------------------- | ------------
+| Red Hat pull secret | A pull secret is required to download and install OpenShift. See [Acquire pull secret](#acquire-an-openshift-pull-secret)
+| IBM Entitlement key | When instaling an IBM Cloud Pak, you need an IBM entitlement key. See [Acquire IBM Cloud Pak entitlement key](#acquire-an-ibm-cloud-pak-entitlement-key)
+| vSphere credentials | The OpenShift IPI installer requires vSphere credentials to create VMs and storage
+| Firewall rules      | The OpenShift cluster's API server on port 6443 and application server on port 443 must be reachable.
+| Whitelisted URLs    | The OpenShift and Cloud Pak download locations and registry must be accessible from the vSphere infrastructure. See [Whitelisted locations](../../../50-advanced/locations-to-whitelist)
+| DHCP                | When provisioning new VMs, IP addresses must be automatically assigned through DHCP 
+| DNS                 | A DNS server that will resolve the OpenShift API server and applications is required. See [DNS configuration](#dns-configuration) 
+| Time server         | A time server to synchronize the time must be available in the network and configured through the DHCP server 
+
+
+There are also some optional settings, dependent on the specifics of the installation:
+
+| Pre-requisite       | Description 
+| ------------------- | ------------ 
+| Bastion server      | It can be useful to have a bastion/installation server to run the deployer. This (virtual) server must reside within the vSphere network 
+| NFS details         | If an NFS server is used for storage, it must be reacheable (firewall) and `no_root_squash` must be set 
+| Private registry    | If the installation must use a private registry for the Cloud Pak installation, it must be available and credentials shared 
+| Certificates        | If the Cloud Pak URL must have a CA-signed certificate, the key, certificate and CA bundle must be available at instlalation time
+| Load balancer       | The OpenShift IPI install creates 2 VIPs and takes care of the routing to the services. In some implementations, a load balancer provided by the infrastructure team is preferred. This load balancer must be configured externally
+
+
 ### DNS configuration
 
 Ensure that the DNS server has the following entries:
@@ -24,7 +50,9 @@ In order for the Cloud Pak Deployer to create the infrastructure and deploy the 
 
 To install OpenShift you need an OpenShift pull secret which holds your entitlement.
 
-- Navigate to https://console.redhat.com/openshift/install/pull-secret and download the pull secret into file `/tmp/ocp_pullsecret.json`
+When installing an IBM Cloud Pak, you can retrieve your Red Hat entitlement using instructions on this page: https://www.ibm.com/docs/en/cloud-paks/1.0?topic=iocpc-accessing-red-hat-entitlements-from-your-cloud-pak. Or, retrieve your pull secret from Red Hat: https://console.redhat.com/openshift/install/pull-secret.
+
+Download the pull secret into file `/tmp/ocp_pullsecret.json`
 
 ## Acquire an IBM Cloud Pak Entitlement Key
 
