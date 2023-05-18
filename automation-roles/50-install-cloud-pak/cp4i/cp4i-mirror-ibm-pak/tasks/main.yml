@@ -1,0 +1,99 @@
+---
+
+# Input:
+#   _p_current_cp4i_cluster   : processed cluster 
+#   _p_entitled_auth          : Entitled registry credentials
+#
+# Global parameter:
+#
+#  cpd_skip_portable_registry    : if True mirror to private reg, otherwise to portable
+
+# Images can be mirrored to the portable registry with the private registry defined 
+# as a final registry in the mirror manifest, or they can be mirrored directly to 
+# the private registry. 
+# In both cases, the private registry must be defined for the current cluster.
+# If it is not defined we will skip processing this cluster and let the calling task 
+# move to the next one if it exists.
+
+- set_fact:
+    _private_registry_defined: "False"
+
+- name: Check if the private registry is defined in the cluster
+  block:
+
+    # Find private registry for this cluster
+    
+    - name: Find private registry dedicated to this cluster
+      set_fact:
+        _selected_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?name=='{{ _p_current_cp4i_cluster.image_registry_name }}']
+
+    - name: Set registry related parameters needed to mirror the instances
+      block:
+
+        - set_fact:
+            _private_registry_defined: "True"
+
+        # Private registry URL
+            
+        - name: Assemble private registry URL
+          set_fact:
+            _registry_hostname: "{{ _selected_registry.registry_host_name }}"
+            _registry_port: "{{ _selected_registry.registry_port | default('') }}"
+            _registry_namespace: "{{ _selected_registry.registry_namespace | default('') }}"
+
+        - set_fact:
+            _p_private_reg_url: "{{ lookup('template','registry_url.j2') }}"
+
+        # Portable registry URL
+            
+        - name: Assemble portable registry URL
+          set_fact:
+            _p_portable_reg_url: "{{ _v_portable_registry }}:{{ _v_portable_registry_port }}"
+
+        # Private registry credentials
+            
+        - name: Obtain private registry credentials
+          include_role: 
+            name: vault-get-secret
+          vars:
+            secret_name: "image-registry-{{ _selected_registry.name }}"
+            secret_group: "{{ environment_name }}"
+
+        - set_fact:
+            _p_private_reg_auth: "{{ secret_value }}"
+
+        # Authentication file (contains private and entitled registry credentials)
+            
+        - name: Ensure {{ status_dir }}/cloud-paks exists
+          file:
+            path: "{{ status_dir }}/cloud-paks"
+            state: directory
+
+        - set_fact:
+            _p_reg_auth_file: "{{ status_dir }}/cloud-paks/auth.json" 
+
+        - name: Generate "{{ status_dir }}/cloud-paks/auth.json"
+          template:
+            src: auth.json.j2
+            dest: "{{ _p_reg_auth_file }}"
+
+      when: (_selected_registry | default({})) != {}
+  
+  when: (_p_current_cp4i_cluster.image_registry_name | default("")) != ""
+
+# Mirroring...
+
+- name: Mirror images if the private registry is defined for the cp4i cluster
+  block:
+          
+    - name: Loop through instances and mirror each of them
+      include_tasks: mirror-instance.yml
+      loop: "{{ _p_current_cp4i_cluster.instances | default([]) }}"
+      loop_control:
+        loop_var: _p_current_cp4i_instance
+
+  when: (_private_registry_defined | default(False) | bool) 
+

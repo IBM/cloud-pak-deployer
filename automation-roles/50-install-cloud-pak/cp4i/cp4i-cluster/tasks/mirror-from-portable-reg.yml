@@ -1,0 +1,29 @@
+---
+
+- name: Mirror images for instance
+  block:
+
+  - name: Get instance properties and instance type details
+    include_role: 
+      name: cp4i-instance-props
+    vars:
+      _p_current_cp4i_cluster: "{{ current_cp4i_cluster }}"
+      _p_current_cp4i_instance: "{{ current_cp4i_instance }}"
+    # returns:
+      # _instance_properties 
+      # _instance_type_details   
+
+  - name: "Mirror instance images from portable to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log"
+    shell: |
+      set -o pipefail
+      oc image mirror \
+       -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ _instance_properties.case_version }}/images-mapping-from-registry.txt \
+       --filter-by-os '.*'  \
+       -a {{ _registry_auth_file }} \
+       --insecure  \
+       --skip-multiple-scopes \
+       --max-per-registry=1 \
+       --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+
+  when: (current_cp4i_instance.state | default('installed')) == 'installed'
