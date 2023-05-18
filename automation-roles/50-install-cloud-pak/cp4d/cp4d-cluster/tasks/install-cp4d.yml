@@ -69,7 +69,7 @@
       _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
       _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
       _p_case_dir: "{{ status_dir }}/cp4d/case"
-      # In this case we are omitting the _p_processor_arch parameter as all images in the portable registry must be included
+      _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
       
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
@@ -125,6 +125,9 @@
 - name: Configure Cloud Pak for Data SSL certificate
   include_role:
     name: cp4d-configure-ssl-certificate
+
+- name: Apply the specified license to the Cloud Pak for Data installation
+  include_tasks: cp4d-apply-license.yml
 
 - name: Retrieve Cloud Pak Foundational Services 
   set_fact:

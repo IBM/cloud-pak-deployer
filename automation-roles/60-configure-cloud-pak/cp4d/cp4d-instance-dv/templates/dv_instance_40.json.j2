@@ -11,9 +11,13 @@
          "workerCount": "{{ cp4d_dv_instance_compute_count }}",
          "enableHostIPC": "{{ cp4d_dv_instance_enable_host_ipc }}",
 {% if _storage_type == 'pwx' %}
-         "persistence.storageClass": "portworx-db2-rwx-sc",
-         "persistence.workerpv.storageClass": "portworx-db2-rwx-sc",
-         "persistence.cachingpv.storageClass": "portworx-db2-rwx-sc",
+         "persistence.storageClass": "portworx-dv-shared-gp3",
+         "persistence.workerpv.storageClass": "portworx-dv-shared-gp3",
+         "persistence.cachingpv.storageClass": "portworx-dv-shared-gp3",
+{% elif _storage_type == 'ocs' %}
+         "persistence.storageClass": "{{ ocp_storage_class_block }}",
+         "persistence.workerpv.storageClass": "{{ ocp_storage_class_block }}",
+         "persistence.cachingpv.storageClass": "{{ ocp_storage_class_block }}",
 {% else %}
          "persistence.storageClass": "{{ ocp_storage_class_file }}",
          "persistence.workerpv.storageClass": "{{ ocp_storage_class_file }}",

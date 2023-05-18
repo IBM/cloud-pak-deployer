@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: roundcubedb
+  namespace: roundcube
+  labels:
+    service: roundcubedb
+spec:
+  type: NodePort
+  ports:
+  - port: 5432
+    protocol: TCP
+  selector:
+    service: roundcubedb
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: roundcubemail
+  namespace: roundcube
+  labels:
+    service: roundcubemail
+spec:
+  type: NodePort
+  ports:
+  - port: 9000
+    protocol: TCP
+  selector:
+    service: roundcubemail
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: roundcubenginx
+  namespace: roundcube
+  labels:
+    service: roundcubenginx
+spec:
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 80
+  selector:
+    service: roundcubenginx

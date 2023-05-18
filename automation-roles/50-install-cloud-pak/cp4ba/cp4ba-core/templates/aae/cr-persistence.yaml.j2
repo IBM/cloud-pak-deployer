@@ -1,0 +1,37 @@
+spec:
+  datasource_configuration:
+    dc_os_datasources:
+      - dc_database_type: postgresql
+        dc_os_label: aeos
+        dc_common_os_datasource_name: AEOS
+        dc_common_os_xa_datasource_name: AEOSXA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: aeos
+        database_port: "5432"
+  initialize_configuration:
+    ic_obj_store_creation:
+      object_stores:
+        - oc_cpe_obj_store_display_name: AEOS
+          oc_cpe_obj_store_symb_name: AEOS
+          oc_cpe_obj_store_conn:
+            name: AEOS_dbconnection
+            dc_os_datasource_name: AEOS
+            dc_os_xa_datasource_name: AEOSXA
+          oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+          oc_cpe_obj_store_asa_name: aeos_asa
+          oc_cpe_obj_store_asa_file_systems_storage_device_name: aeos_file_system_storage
+          oc_cpe_obj_store_asa_root_dir_path: /opt/ibm/asa/aeos_storagearea1
+    ic_icn_init_info:
+      icn_repos:
+        - add_repo_id: AEOS
+          add_repo_os_sym_name: AEOS
+          add_repo_os_dis_name: AEOS
+      icn_desktop:
+        - add_desktop_id: AEOS
+          add_desktop_name: AEOS
+          add_desktop_description: AEOS
+          add_desktop_repo_id: AEOS
+  verify_configuration:
+    vc_icn_verification:
+      - vc_icn_repository: AEOS
+        vc_icn_desktop_id: AEOS

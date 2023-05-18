@@ -9,12 +9,32 @@
     src: cloud-pak-node-fix.j2
     dest: "{{ status_dir }}/openshift/cloud-pak-node-fix.sh"
 
+- name: Create cloud-pak-node-fix-timer.sh script to create timer service
+  template:
+    src: cloud-pak-node-fix-timer.j2
+    dest: "{{ status_dir }}/openshift/cloud-pak-node-fix-timer.sh"
+
 - name: Put cloud-pak-node-fix.sh script into config map
   shell:
     oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
         --from-file={{ status_dir }}/openshift/cloud-pak-node-fix.sh 
 
-- name: Create DaemonSet to change node settings via crontab
+- name: Put cloud-pak-node-fix-timer.sh script into config map
+  shell:
+    oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
+        --from-file={{ status_dir }}/openshift/cloud-pak-node-fix-timer.sh 
+
+- name: Generate ServiceAccount for DaemonSet
+  template:
+    src: cloud-pak-node-fix-sa.j2
+    dest: "{{ status_dir }}/openshift/cloud-pak-node-fix-sa.yaml"
+
+- name: Create ServiceAccount cloud-pak-node-fix-sa
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/cloud-pak-node-fix-sa.yaml
+    oc adm policy add-scc-to-user -n kube-system -z cloud-pak-crontab-sa privileged
+
+- name: Create DaemonSet to change node settings via systemd timer service
   template:
     src: cloud-pak-node-fix-ds.j2
     dest: "{{ status_dir }}/openshift/cloud-pak-node-fix-ds.yaml"

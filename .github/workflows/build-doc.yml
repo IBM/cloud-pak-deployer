@@ -1,6 +1,6 @@
 # Build the pages documentation
 
-name: CI
+name: build-deployer-doc
 
 # Trigger the workflow on push or pull request events but only for the main branch
 on:
@@ -8,13 +8,14 @@ on:
     branches:
     - main
     paths:
-    - 'doc/**'
+    - 'docs/**'
+    - '.gitub/workflows/**'
   pull_request:
     branches:
     - main
     paths:
-    - 'doc/**'
-
+    - 'docs/**'
+    - '.gitub/workflows/**'
 
   # Allows running this workflow manually from the Actions tab
   workflow_dispatch:
@@ -28,34 +29,31 @@ jobs:
     # Sequence of tasks that will be executed as part of the job
     steps:
 
-      - name: Check-out repository under $GITHUB_WORKSPACE
+      - name: Check-out repository
         uses: actions/checkout@v3
-
-      - name: Install nodeJS
-        uses: actions/setup-node@v3
-        with:
-          node-version: 14.15.0
-
-      - name: Install node packages
-        run: npm install
-        working-directory: doc
-
-      - name: Install Gatsby CLI
-        run: npm install -g gatsby-cli@4
-        working-directory: doc
 
       - name: Build the static pages
         run: |
-          gatsby build --prefix-paths
-        working-directory: doc
+          make venv
+          make build
+        working-directory: docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/cache@v2
+        with:
+          key: ${{ github.ref }}
+          path: .cache
+
+      - name: Show event name
+        run: |
+          echo "Event name: ${{ github.event_name }}"
+
       - name: Deploy static pages to gh-pages branch
-        if: ${{ github.event_name == 'push' }}
+        if: ${{ github.event_name != 'pull_request' }}
         run: |
           git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
-          npx gh-pages -d public -u "github-actions-bot <support+actions@github.com>"
-        working-directory: doc
+          make deploy
+        working-directory: docs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,96 @@
+- name: Create Cerebro directory for generated files
+  ansible.builtin.file:
+    path: "{{ cerebro_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: cerebro
+    common_output_directory: "{{ cerebro_output_directory }}"
+
+- name: Prepare yaml file for anyuid ClusterRoleBinding
+  ansible.builtin.template:
+    src: anyuid-scc-clusterrolebinding.yaml.j2
+    dest: "{{ cerebro_output_directory }}/anyuid-scc-clusterrolebinding.yaml"
+    mode: u+rwx
+
+- name: Add anyuid ClusterRoleBinding
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cerebro_output_directory }}/anyuid-scc-clusterrolebinding.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for Config Map
+  ansible.builtin.template:
+    src: configmap.yaml.j2
+    dest: "{{ cerebro_output_directory }}/configmap.yaml"
+    mode: u+rwx
+
+- name: Add Config Map
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cerebro_output_directory }}/configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for Deployment
+  ansible.builtin.template:
+    src: deployment.yaml.j2
+    dest: "{{ cerebro_output_directory }}/deployment.yaml"
+    mode: u+rwx
+
+- name: Add Deployment
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cerebro_output_directory }}/deployment.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+
+- name: Prepare yaml file for Service
+  ansible.builtin.template:
+    src: service.yaml.j2
+    dest: "{{ cerebro_output_directory }}/service.yaml"
+    mode: u+rwx
+
+- name: Add Service
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cerebro_output_directory }}/service.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+  when: apps_endpoint_domain is not defined
+
+- name: Crete Edge Route
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-edge-route
+  vars:
+    common_namespace_name: cerebro
+    common_route_name: cerebro
+    common_service_name: cerebro
+    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
+    common_output_directory: "{{ cerebro_output_directory }}"

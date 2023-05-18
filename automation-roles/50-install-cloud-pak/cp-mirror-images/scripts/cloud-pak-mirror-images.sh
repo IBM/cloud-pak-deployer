@@ -146,6 +146,7 @@ do_image_mirror() {
     parse_image_mirror_arguments "$@"
 
     # temporary image mapping file
+    START_EPOCH=$(date +%s)
     CUR_TS=$(date "+%Y%m%d%H%M%S")
     OC_TMP_DIR=${LOG_DIR}/${OC_TMP_PREFIX}_image_mapping_${CUR_TS}
     mkdir -p ${OC_TMP_DIR}
@@ -168,6 +169,9 @@ do_image_mirror() {
         do_image_mirror_case_images
     fi
     tag_latest_olm_catalog_images
+    END_EPOCH=$(date +%s)
+    MIRROR_SECS=$((END_EPOCH - START_EPOCH))
+    printf 'Mirroring completed after %dh:%dm:%ds\n' $((MIRROR_SECS/3600)) $((MIRROR_SECS%3600/60)) $((MIRROR_SECS%60))
 }
 
 
@@ -409,8 +413,16 @@ tag_latest_olm_catalog_images() {
                         echo "${oc_cmd}"
                         eval ${oc_cmd}
 
-                        if [[ "$?" -ne 0 ]]; then
-                            exit 11
+                        mirror_exit=$?
+
+                        if [[ "$mirror_exit" -ne 0 ]]; then
+                            echo "[INFO] Retrying tagging ${image}:${tag} as ${image}:${latest_tag} using skopeo"
+                            skopeo_cmd="skopeo copy --all --authfile ${AUTH_JSON} --dest-tls-verify=false --src-tls-verify=false docker://${image}@${sha} docker://${image}:${latest_tag}" ;
+                            echo "${skopeo_cmd}"
+                            eval ${skopeo_cmd}
+                            if [[ "$?" -ne 0 ]]; then
+                                exit 11
+                            fi
                         fi
                     else
                         echo "[INFO] Not most recent tag ${tag}, skip tagging as ${latest_tag}"

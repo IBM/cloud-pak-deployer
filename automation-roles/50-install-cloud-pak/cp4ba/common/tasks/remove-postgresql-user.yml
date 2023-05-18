@@ -1,0 +1,29 @@
+# Example of the functionality call
+#
+# - name: Remove PostgreSQL user
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: remove-postgresql-user
+#   vars:
+#     common_postgresql_user: _postgresql_user
+
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: postgresql
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
+- name: Delete PostgreSQL user
+  kubernetes.core.k8s_exec:
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        DROP USER IF EXISTS {{ common_postgresql_user }};
+      EOF"
+  register: command_status
+  when: postgresql_pod.resources | length != 0

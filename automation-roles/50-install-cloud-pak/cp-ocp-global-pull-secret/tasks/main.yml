@@ -1,20 +1,16 @@
 ---
-- name: Create temporary directory to hold current pull secret content
-  tempfile:
-    state: directory
-  register: pull_secret_dir
 - name: Extract the global pull secret
   shell: |
-    oc extract secret/pull-secret -n openshift-config --confirm --to={{ pull_secret_dir.path }}
+    oc extract secret/pull-secret -n openshift-config --confirm --to={{ status_dir }}/openshift
 - name: Set the global pull secret
   shell: |
-    cat {{ pull_secret_dir.path }}/.dockerconfigjson | \
+    cat {{ status_dir }}/openshift/.dockerconfigjson | \
       jq --arg registry "{{ _p_registry_url }}" \
         --arg pull_secret $(echo -n "{{ _p_registry_pull_secret }}" | base64 -w0) \
         '.auths += {($registry): {"auth": $pull_secret, "email": "not-used"}}' \
-        > {{ pull_secret_dir.path }}/newdockerconfigjson
+        > {{ status_dir }}/openshift/newdockerconfigjson
     oc set data secret/pull-secret -n openshift-config \
-      --from-file=.dockerconfigjson={{ pull_secret_dir.path }}/newdockerconfigjson
+      --from-file=.dockerconfigjson={{ status_dir }}/openshift/newdockerconfigjson
 
 - name: Apply pull secret if the Machine Config Operator does not exist
   include_tasks: non-mco-apply-pull-secret.yml
