@@ -1,0 +1,70 @@
+apiVersion: icp4a.ibm.com/v1
+kind: ICP4ACluster
+metadata:
+  name: "{{ cp4ba_cr_meta_name }}"
+  namespace: "{{ cp4ba_project_name }}"
+  labels:
+    app.kubernetes.io/instance: ibm-dba
+    app.kubernetes.io/managed-by: ibm-dba
+    app.kubernetes.io/name: ibm-dba
+    release: "{{ cp4ba_version }}"
+spec:
+  appVersion: "{{ cp4ba_version }}"
+  ibm_license: accept
+  shared_configuration:
+    no_log: false
+    sc_deployment_fncm_license: non-production
+    sc_deployment_baw_license: non-production
+    sc_deployment_license: non-production
+    image_pull_secrets:
+      - ibm-entitlement-key
+    show_sensitive_log: true
+    root_ca_secret: "{{ cp4ba_cr_meta_name }}-root-ca"
+    sc_deployment_patterns: ""
+    sc_optional_components: ""
+    sc_deployment_type: Production
+    sc_deployment_profile_size: "{{ current_cp4ba_cluster.cp4ba.profile_size }}"
+    sc_deployment_platform: "{{ cp4ba_deployment_platform }}"
+    sc_ingress_enable: false
+    sc_deployment_hostname_suffix: "{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}"
+    sc_image_repository: cp.icr.io
+    trusted_certificate_list: ['global-ca', 'default-ca']
+    storage_configuration:
+      sc_slow_file_storage_classname: "{{ cp4ba_storage_class_name }}"
+      sc_medium_file_storage_classname: "{{ cp4ba_storage_class_name }}"
+      sc_fast_file_storage_classname: "{{ cp4ba_storage_class_name }}"
+      sc_block_storage_classname: "{{ cp4ba_block_storage_class_name }}"
+  ldap_configuration:
+    lc_selected_ldap_type: "{{ lc_selected_ldap_type }}"
+    lc_ldap_server: "{{ lc_ldap_server }}"
+    lc_ldap_port: "{{ lc_ldap_port }}"
+    lc_bind_secret: "{{ lc_bind_secret }}"
+    lc_ldap_base_dn: "{{ lc_ldap_base_dn }}"
+{% if lc_ldap_ssl_enabled %}
+    lc_ldap_ssl_enabled: true
+    lc_ldap_ssl_secret_name: "{{ lc_ldap_ssl_secret_name }}"
+{% else %}
+    lc_ldap_ssl_enabled: false
+{% endif %}
+    lc_ldap_user_name_attribute: "{{ lc_ldap_user_name_attribute }}"
+    lc_ldap_user_display_name_attr: "{{ lc_ldap_user_display_name_attr }}"
+    lc_ldap_group_base_dn: "{{ lc_ldap_group_base_dn }}"
+    lc_ldap_group_name_attribute: "{{ lc_ldap_group_name_attribute }}"
+    lc_ldap_group_display_name_attr: "{{ lc_ldap_group_display_name_attr }}"
+    lc_ldap_group_membership_search_filter: "{{ lc_ldap_group_membership_search_filter }}"
+    lc_ldap_group_member_id_map: "{{ lc_ldap_group_member_id_map }}"
+{% if 'IBM Security Directory Server' in lc_selected_ldap_type %}
+    tds:
+      lc_user_filter: "{{ lc_tds_user_filter }}"
+      lc_group_filter: "{{ lc_tds_group_filter }}"
+{% elif 'Microsoft Active Directory' in lc_selected_ldap_type %}
+    ad:
+      lc_user_filter: "{{ lc_ad_user_filter }}"
+      lc_group_filter: "{{ lc_ad_group_filter }}"
+{% elif 'Custom' in lc_selected_ldap_type %}
+    custom:
+      lc_user_filter: "{{ lc_custom_user_filter }}"
+      lc_group_filter: "{{ lc_custom_group_filter }}"
+{% endif %}
+  datasource_configuration:
+    dc_ssl_enabled: false

@@ -1,0 +1,163 @@
+- name: Create Mail directory for generated files
+  ansible.builtin.file:
+    path: "{{ mail_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: mail
+    common_output_directory: "{{ mail_output_directory }}"
+
+- name: Prepare yaml file for privileged RoleBinding
+  ansible.builtin.template:
+    src: privileged-scc-rolebinding.yaml.j2
+    dest: "{{ mail_output_directory }}/privileged-scc-rolebinding.yaml"
+    mode: u+rwx
+
+- name: Add privileged RoleBinding
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mail_output_directory }}/privileged-scc-rolebinding.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Generate an OpenSSL private key
+  openssl_privatekey:
+    path: "{{ mail_output_directory }}/mailserver.key"
+
+- name: Generate an OpenSSL Certificate Signing Request with Subject information
+  openssl_csr:
+    path: "{{ mail_output_directory }}/mailserver.csr"
+    privatekey_path: "{{ mail_output_directory }}/mailserver.key"
+    subject: "CN=mailserver"
+    subject_alt_name: DNS:mailserver
+
+- name: Check that the {{ mail_ca_key_path }} exists
+  ansible.builtin.stat:
+    path: "{{ mail_ca_key_path }}"
+  register: mail_ca_key_file
+
+- name: Check that the {{ mail_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ mail_ca_crt_path }}"
+  register: mail_ca_crt_file
+
+- name: Ensure we have CA certificates
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not mail_ca_key_file.stat.exists or not mail_ca_crt_file.stat.exists
+
+- name: Generate a Self Signed OpenSSL certificate
+  openssl_certificate:
+    path: "{{ mail_output_directory }}/mailserver.crt"
+    privatekey_path: "{{ mail_output_directory }}/mailserver.key"
+    csr_path: "{{ mail_output_directory }}/mailserver.csr"
+    provider: ownca
+    ownca_path: "{{ mail_ca_crt_path }}"
+    ownca_privatekey_path: "{{ mail_ca_key_path }}"
+    ownca_not_after: "+36500d"
+
+- name: Load TLS key data
+  ansible.builtin.slurp:
+    src: '{{ mail_output_directory }}/mailserver.key'
+  register: slurped_key_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_key: "{{ slurped_key_data.content }}"
+
+- name: Load TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ mail_output_directory }}/mailserver.crt'
+  register: slurped_crt_data
+
+- name: Decode data and store as fact
+  ansible.builtin.set_fact:
+    _tls_crt: "{{ slurped_crt_data.content }}"
+
+- name: Prepare yaml file for Secret
+  ansible.builtin.template:
+    src: secret.yaml.j2
+    dest: "{{ mail_output_directory }}/secret.yaml"
+    mode: u+rwx
+
+- name: Add Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mail_output_directory }}/secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for PVC
+  ansible.builtin.template:
+    src: pvc.yaml.j2
+    dest: "{{ mail_output_directory }}/pvc.yaml"
+    mode: u+rwx
+
+- name: Add PVC
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mail_output_directory }}/pvc.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for Config Maps
+  ansible.builtin.template:
+    src: configmaps.yaml.j2
+    dest: "{{ mail_output_directory }}/configmaps.yaml"
+    mode: u+rwx
+
+- name: Add Config Maps
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mail_output_directory }}/configmaps.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for Deployment
+  ansible.builtin.template:
+    src: deployment.yaml.j2
+    dest: "{{ mail_output_directory }}/deployment.yaml"
+    mode: u+rwx
+
+- name: Add Deployment
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mail_output_directory }}/deployment.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+
+- name: Prepare yaml file for Service
+  ansible.builtin.template:
+    src: service.yaml.j2
+    dest: "{{ mail_output_directory }}/service.yaml"
+    mode: u+rwx
+
+- name: Add Service
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ mail_output_directory }}/service.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15

@@ -1,0 +1,14 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=engine-creating-secrets-protect-sensitive-configuration-data
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=studio-creating-secrets-protect-sensitive-configuration-data
+- name: Prepare yaml file for RR Secret
+  ansible.builtin.template:
+    src: rr/rr-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/rr-secret.yaml"
+    mode: u+rwx
+
+- name: Add RR Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/rr-secret.yaml"

@@ -31,6 +31,15 @@
   debug:
     var: _selected_openshift_storage
 
+- name: Get storage classes from cluster
+  shell:
+    oc get sc -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'
+  register: _openshift_storage_classes
+
+- name: Show found storage classes
+  debug:
+    var: _openshift_storage_classes
+
 - set_fact:
     _storage_type: "{{ _selected_openshift_storage.storage_type }}"
 
@@ -69,19 +78,35 @@
 
 # Portworx storage classes vary according to cartridge, so are set in the relevant CR templates
 - set_fact:
-   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('portworx-shared-gp3') }}"
-   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('portworx-gp3-sc') }}"
+   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('px-replicated') }}"
+   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('px-db') }}"
   when: _storage_type == 'pwx'
 
+# Choose appropriate AWS storage class
 - set_fact:
    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2') }}"
-  when: _storage_type == 'aws-elastic'
+  when: _storage_type == 'aws-elastic' and (_openshift_storage_classes.stdout | regex_search('^gp2$', multiline=True)) != None
+
+- set_fact:
+   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2-csi') }}"
+  when: _storage_type == 'aws-elastic' and (_openshift_storage_classes.stdout | regex_search('^gp2-csi$', multiline=True)) != None
+
+- set_fact:
+   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp3-csi') }}"
+  when: _storage_type == 'aws-elastic' and (_openshift_storage_classes.stdout | regex_search('^gp3-csi$', multiline=True)) != None
 
 - set_fact:
     ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ibmc-file-gold-gid') }}"
     ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ibmc-block-gold') }}"
   when: _storage_type == 'ibm-classic-storage'
+
+- debug:
+    msg:
+    - "ocp_storage_class_file: {{ ocp_storage_class_file }}"
+    - "ocp_storage_class_block: {{ ocp_storage_class_block}}"
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:

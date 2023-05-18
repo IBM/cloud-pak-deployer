@@ -1,3 +1,4 @@
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -15,6 +16,7 @@ spec:
       labels:
         name: cloud-pak-crontab-ds
     spec:
+      serviceAccountName: cloud-pak-crontab-sa
       hostNetwork: true
       hostPID: true
       hostIPC: true
@@ -23,6 +25,9 @@ spec:
           resources:
             requests:
               cpu: 0.01
+          securityContext:
+            privileged: true
+            runAsUser: 0
           image: {{ cpd_ds_image | default('registry.access.redhat.com/ubi8:latest') }}
           command: ["/bin/sh", "-c"]
           args:
@@ -30,12 +35,8 @@ spec:
               date ;
               /usr/bin/rm -rf /ext-cloud-pak-node-fix/* ;
               /usr/bin/cp -rL /cloud-pak-node-fix/* /ext-cloud-pak-node-fix/ ;
-              chmod +x /ext-cloud-pak-node-fix/cloud-pak-node-fix.sh ;
-              touch /ext-var/spool/cron/root ;
-              if ! grep -q 'cloud-pak-node-fix' /ext-var/spool/cron/root;then 
-                echo '*/5 * * * * bash -c "date >> /tmp/cloud-pak-node-fix.log; sh /cloud-pak-node-fix/cloud-pak-node-fix.sh"' >> /ext-var/spool/cron/root ;
-              fi ;
-              cat /ext-var/spool/cron/root ;
+              chmod +x /ext-cloud-pak-node-fix/*.sh ;
+              chroot /host /tmp/cloud-pak-node-fix/cloud-pak-node-fix-timer.sh ;
               while true; do
                 sleep 100000;
               done
@@ -50,6 +51,8 @@ spec:
               mountPath: /ext-cloud-pak-node-fix
             - name: modifyvar
               mountPath: /ext-var
+            - mountPath: /host
+              name: host
       volumes:
         - name: node-settings-scripts
           configMap:
@@ -62,9 +65,11 @@ spec:
             secretName: cloud-pak-node-fix-secrets
         - name: modifycpnodefix
           hostPath:
-            path: /cloud-pak-node-fix
+            path: /tmp/cloud-pak-node-fix
         - name: modifyvar
           hostPath:
             path: /var
-
-
+        - hostPath:
+            path: /
+            type: Directory
+          name: host

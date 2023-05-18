@@ -65,10 +65,10 @@
     - name: "Run terraform plan in Terraform directory {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}, check {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/plan.log"
       shell: |
         set -o pipefail
-        terraform plan -destroy -no-color -detailed-exitcode 2>&1 \
-          | tee {{status_dir}}/terraform/plan.log
+        terraform plan -no-color -detailed-exitcode 2>&1 \
+          | tee {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/plan.log
       args:
-        chdir: "{{status_dir}}/terraform"
+        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
       environment:
         ARM_CLIENT_ID: "{{ _service_principal_id }}"
         ARM_CLIENT_SECRET: "{{ _service_principal_secret }}"
@@ -92,10 +92,12 @@
       shell: |
         set -o pipefail
         terraform apply -auto-approve -no-color 2>&1 \
-          | tee {{status_dir}}/terraform/apply.log
+          | tee {{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/apply.log
+      args:
+        chdir: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}"
       environment:
-        TF_LOG: "info"
-        TF_LOG_PATH: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/tf_apply.log"
+        # TF_LOG: "info"
+        # TF_LOG_PATH: "{{status_dir}}/azure-aro/{{_current_openshift_cluster.name}}/tf_apply.log"
         ARM_CLIENT_ID: "{{ _service_principal_id }}"
         ARM_CLIENT_SECRET: "{{ _service_principal_secret }}"
         ARM_SUBSCRIPTION_ID: "{{ _subscription_id }}"

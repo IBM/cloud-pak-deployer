@@ -1,0 +1,85 @@
+spec:
+  datasource_configuration:
+    dc_gcd_datasource:
+      dc_database_type: postgresql
+      dc_common_gcd_datasource_name: GCD
+      dc_common_gcd_xa_datasource_name: GCDXA
+      database_servername: "{{ cp4ba_postgresql_hostname }}"
+      database_name: gcd
+      database_port: "5432"
+    dc_os_datasources:
+      - dc_database_type: postgresql
+        dc_os_label: os1
+        dc_common_os_datasource_name: OS1
+        dc_common_os_xa_datasource_name: OS1XA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: os1
+        database_port: "5432"
+  ecm_configuration:
+    fncm_secret_name: ibm-fncm-secret
+    cpe:
+      cpe_production_setting:
+        gcd_jndi_name: GCD
+        gcd_jndixa_name: GCDXA
+        license_model: FNCM.PVUNonProd
+  initialize_configuration:
+    ic_domain_creation:
+      domain_name: P8DOMAIN
+      encryption_key: 128
+    ic_ldap_creation:
+      ic_ldap_admin_user_name: [{% for item in lc_admin_users %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+      ic_ldap_admins_groups_name: [{% for item in lc_admin_groups %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+      ic_ldap_name: ldap
+    ic_obj_store_creation:
+      object_stores:
+        - oc_cpe_obj_store_display_name: OS1
+          oc_cpe_obj_store_symb_name: OS1
+          oc_cpe_obj_store_conn:
+            name: OS1_dbconnection
+            dc_os_datasource_name: OS1
+            dc_os_xa_datasource_name: OS1XA
+          oc_cpe_obj_store_admin_user_groups: [{% for item in lc_admin_groups %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+          oc_cpe_obj_store_asa_name: os1_asa
+          oc_cpe_obj_store_asa_file_systems_storage_device_name: os1_file_system_storage
+          oc_cpe_obj_store_asa_root_dir_path: /opt/ibm/asa/os1_storagearea1
+{% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai %}
+          oc_cpe_obj_store_enable_content_event_emitter: true
+{% endif %}
+          oc_cpe_obj_store_addons_list:
+            - "{CE460ADD-0000-0000-0000-000000000004}" # 5.2.1 Base Application Extensions (default)
+            - "{CE460ADD-0000-0000-0000-000000000001}" # 5.2.1 Base Content Engine Extensions (default)
+            - "{CE460ADD-0000-0000-0000-000000000003}" # (default)
+            - "{CE511ADD-0000-0000-0000-000000000006}" # (default)
+            - "{CE460ADD-0000-0000-0000-000000000008}" # (default)
+            - "{CE460ADD-0000-0000-0000-000000000007}" # (default)
+            - "{CE460ADD-0000-0000-0000-000000000009}" # (default)
+            - "{CE460ADD-0000-0000-0000-00000000000A}" # (default)
+            - "{CE460ADD-0000-0000-0000-00000000000B}" # (default)
+            - "{CE460ADD-0000-0000-0000-00000000000D}" # (default)
+            - "{CE511ADD-0000-0000-0000-00000000000F}" # (default)
+            - "{CE511ADD-0000-0000-0000-000000000010}" # 5.2.1 Teamspace Extensions
+            - "{CE511ADD-0000-0000-0000-000000000015}" # 5.2.1 Custom Role Extensions
+            - "{CE521ADD-0000-0000-0000-000000000016}" # 5.2.1 Social Collaboration Role Extensions
+            - "{CE552ADD-0000-0000-0000-00000000001C}" # 5.5.2 Core Collaboration Extensions
+            - "{CE551ADD-0000-0000-0000-000000000011}" # 5.5.1 Social Collaboration Base Extensions
+            - "{CE554ADD-0000-0000-0000-000000000021}" # 5.5.4 Event-Driven External Service Invocation Extensions
+          oc_cpe_obj_store_enable_workflow: true
+          oc_cpe_obj_store_workflow_region_name: os1_region_name
+          oc_cpe_obj_store_workflow_data_tbl_space: os1_tbs
+          oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
+          oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
+          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_os1
+    ic_icn_init_info:
+      icn_repos:
+        - add_repo_id: OS1
+          add_repo_os_sym_name: OS1
+          add_repo_os_dis_name: OS1
+      icn_desktop:
+        - add_desktop_id: OS1
+          add_desktop_name: OS1
+          add_desktop_description: OS1
+          add_desktop_repo_id: OS1
+  verify_configuration:
+    vc_icn_verification:
+      - vc_icn_repository: OS1
+        vc_icn_desktop_id: OS1          
