@@ -1,0 +1,92 @@
+---
+
+# Input:
+#
+#   _p_current_cp4i_instance  : currently processed instance
+#   _p_current_cp4i_cluster   : currently processed cp4i cluster
+#
+#   _p_private_reg_url
+#   _p_portable_reg_url
+#   _p_reg_auth_file
+#
+# Global parameter:
+#
+#   cpd_skip_portable_registry    : if True mirror to target reg, otherwise to portable
+
+
+- name: Mirror images for instance type {{ _p_current_cp4i_instance.type }}
+  block:
+
+  - name: Validate mandatory variables are defined
+    assert:
+      that:
+        - _p_current_cp4i_instance is defined
+        - _p_current_cp4i_cluster is defined
+        - _p_private_reg_url is defined
+        - _p_portable_reg_url is defined
+        - _p_reg_auth_file is defined
+
+  - name: Get instance properties and instance type details
+    include_role: 
+      name: cp4i-instance-props
+      # returns:
+      # _instance_properties 
+      # _instance_type_details 
+
+  # Creating mirror manifests
+
+  - name: Create mirror manifests for private registry     
+    shell: |
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} \
+        --version {{ _instance_properties.case_version }} \
+        {{ _p_private_reg_url }}
+    when: (cpd_skip_portable_registry | bool)
+
+  - name: Create mirror manifests for portable registry with private registry as a final one
+    shell: |
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} \
+        --version {{ _instance_properties.case_version }} \
+        {{ _p_portable_reg_url }} \
+        --final-registry {{ _p_private_reg_url }}        
+    when: not (cpd_skip_portable_registry | bool)
+
+  - name: Mirror to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
+    shell: |
+      set -o pipefail
+      oc image mirror \
+       -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ _instance_properties.case_version }}/images-mapping.txt \
+       --filter-by-os '.*'  \
+       -a {{ _p_reg_auth_file }} \
+       --insecure  \
+       --skip-multiple-scopes \
+       --max-per-registry=1 \
+       --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+    when: (cpd_skip_portable_registry | bool)
+
+  - name: Mirror to portable registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
+    shell: |
+      set -o pipefail
+      oc image mirror \
+        -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ _instance_properties.case_version }}/images-mapping-to-registry.txt \
+        --filter-by-os '.*'  \
+        -a {{ _p_reg_auth_file }} \
+        --insecure  \
+        --skip-multiple-scopes \
+        --max-per-registry=1 \
+        --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+    when: not (cpd_skip_portable_registry | bool)
+
+  when: (_p_current_cp4i_instance.state | default('installed')) == 'installed'  
+
+
+
+
+
+
+
+
+
+
+

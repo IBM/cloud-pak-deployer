@@ -101,8 +101,48 @@
       loop: "{{ all_config.cp4d | default([]) }}"
       loop_control:
         loop_var: _p_current_cp4d_cluster
+
+# --- Mirroring with ibm-pak tool - BEGIN -----------------
+
+    - name: Remove ~/.ibm-pak directory in case it exists
+      file:
+        path: "~/.ibm-pak"
+        state: absent
+
+    - name: Init _ibm_pak_used flag (False)
+      set_fact:
+        _ibm_pak_used: False
+
+    - name: Save CASE files for Cloud Pak for Integration
+      include_role:
+        name: cp4i-case-save-ibm-pak
+      loop: "{{ all_config.cp4i | default([]) }}"
+      loop_control:
+        loop_var: _p_current_cp4i_cluster
+
+    # <-- Call here case save roles for other ibm-pak based cloud paks
+
+    - name: If ibm-pak is used call its version of mirroring
+      block:
+
+      - name: Call ibm-pak based mirroring
+        include_role: 
+          name: cp-mirror-ibm-pak
+
+      - name: Copy ibm-pak to status dir
+        command: cp -r ~/.ibm-pak {{ status_dir }}/ibm-pak
+
+      when: (_ibm_pak_used | default(False) | bool) 
+
+# --- Mirroring with ibm-pak tool - END -------------------
+
+
     when: not (cpd_check_only | default(False) | bool)
 
+
+# The following code will not be executed if _ibm_pak_used it True
+# The reason for this is that ibm-pak has its own logic for 
+# downloading CASEs, creating mirror manifests and mirroring images
 
 - name: 30 - Mirror images
   hosts: localhost
@@ -171,7 +211,10 @@
       
       when:
       - not (cpd_skip_mirror | bool)
-    when: not (cpd_check_only | default(False) | bool)
+    when: 
+    - not (cpd_check_only | default(False) | bool)
+    - not (_ibm_pak_used | default(False) | bool)  # not executed if ibm-pak tool is used
+
 
 - name: 40 - Save config and deployer
   hosts: localhost

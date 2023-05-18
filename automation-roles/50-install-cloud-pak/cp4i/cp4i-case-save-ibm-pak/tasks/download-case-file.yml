@@ -1,0 +1,19 @@
+---
+
+# Input:
+#   _p_current_cp4i_cluster       : processed cluster 
+#   _p_current_cp4i_instance      : instance defined in the cluster
+
+- name: Download CASE file for {{ _p_current_cp4i_instance.type }}
+  block:
+
+  - name: Get instance properties and instance type details
+    include_role: 
+      name: cp4i-instance-props
+
+  - name: Save case file {{ _instance_type_details.case_file_name }}-{{ _instance_properties.case_version }}
+    shell: |
+      oc ibm-pak get {{ _instance_type_details.case_file_name }} --version {{ _instance_properties.case_version }}
+
+
+  when: (_p_current_cp4i_instance.state | default('installed')) == 'installed'
