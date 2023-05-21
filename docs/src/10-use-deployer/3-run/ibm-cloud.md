@@ -30,26 +30,46 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 
 ## Prepare for running
 
-### Set environment variables
-
+### Set environment variables for IBM Cloud
+Set the environment variables specific to IBM Cloud deployments.
 ```
 export IBM_CLOUD_API_KEY=your_api_key
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-Optional: Ensure that the environment variables for the configuration and status directories are set. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
+- `IBM_CLOUD_API_KEY`: This is the API key you generated using your IBM Cloud account, this is a 40+ character string
+- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
+
+### Set deployer status directory
+Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+
 ```
 export STATUS_DIR=$HOME/cpd-status
+```
+
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory. If you don't specify a status directory, it is assumted to be `$HOME/cpd-status`.
+
+### Set deployer configuration location
+You can use a local directory to hold the deployer configuration or retrieve the configuration from a GitHub repository. If you don't specify any configuration directory or GitHub repository, the configuration directory are assumed to be `$HOME/cpd-config`.
+```
 export CONFIG_DIR=$HOME/cpd-config
 ```
 
-- `IBM_CLOUD_API_KEY`: This is the API key you generated using your IBM Cloud account, this is a 40+ character string
-- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
-- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
-- `CONFIG_DIR`: Directory that holds the configuration, it must have `config`, `defaults` and `inventory` subdirectories
+- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory.
+
+Or, when using a GitHub repository for the configuration.
+```
+export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
+export CPD_CONFIG_GIT_REF="main"
+export CPD_CONFIG_GIT_CONTEXT=""
+```
+
+- `CPD_CONFIG_GIT_REPO`: The clone URL of the GitHub repository that holds the configuration.
+- `CPD_CONFIG_GIT_REF`: The branch, tag or commit ID to be cloned. If not specified, the repository's default branch will be cloned.
+- `CPD_CONFIG_GIT_CONTEXT`: The directory within the GitHub repository that holds the configuration. This directory must contain the `config` directory under which the YAML files are kept.
 
 !!! info
-    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
+    When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
 
 ## Optional: validate the configuration
 

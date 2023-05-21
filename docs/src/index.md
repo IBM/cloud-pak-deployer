@@ -1,7 +1,7 @@
 # Cloud Pak Deployer
-The intention of the Cloud Pak Deployer is to simplify the initial installation and also continuous management of OpenShift and the Cloud Paks on top of that, driven by automation. It will help you deploy (currently) Cloud Pak for Data on various OpenShift and infrastructures such as IBM Cloud ROKS, Azure Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), vSphere and also existing OpenShift.
+The intention of the Cloud Pak Deployer is to simplify the initial installation and also continuous management of OpenShift and the Cloud Paks on top of that, driven by automation. It will help you deploy Cloud Pak for Data, Cloud Pak for Integration, Cloud Pak for Business Automation and Cloud Pak for Watson AIOps on various OpenShift and infrastructures such as IBM Cloud ROKS, Azure Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), vSphere and also existing OpenShift.
 
-The Cloud Pak Deployer was created for a joint project with one of our key partners who need to fully automate the deployment of Cloud Pak for Data on IBM Cloud based on a configuration that is kept in a Git repository. As additional needs for the deployed environment surface, the configuration is changed, committed, approved and then changes are deployed without destroying the current environment.
+The Cloud Pak Deployer was created for a joint project with one of our key partners who need to fully automate the deployment of Cloud Paks on IBM Cloud based on a configuration that is kept in a Git repository. As additional needs for the deployed environment surface, the configuration is changed, committed, approved and then changes are deployed without destroying the current environment.
 
 > "If we have seen a screen during deployment, it means something has failed"
 
@@ -15,7 +15,7 @@ Every deployment starts with a set of configuration files which define the infra
 
 ![Key principles](images/cpd-principles.png "Cloud Pak Deployer principles").
 
-As long as you keep the configuration directory and the vault available, you can make changes to the config and re-run the deployer to reach the new desired end state. For example, if you choose to add another cartridge to your Cloud Pak for Data deployment, just change the `state` of that cartridge and re-run the deployer.
+As long as you keep the configuration directory and the vault available, you can make changes to the config and re-run the deployer to reach the new desired end state. For example, if you choose to add another cartridge (service) to your Cloud Pak for Data deployment, just change the `state` of that cartridge and re-run the deployer; this applies to other Cloud Paks too.
 
 ## Opinionated
 Red Hat OpenShift and IBM Cloud Paks offer a wide variety of deployment and configuration options. It is the intention of the Cloud Pak Deployer to simplify the deployment by focusing on proven deployment patterns. As an example: for a non-highly available deployment of the Cloud Pak, we use an NFS storage class; for a production deployment, we use OpenShift Container Storage (aka OpenShift Data Foundation).

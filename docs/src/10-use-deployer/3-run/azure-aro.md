@@ -107,7 +107,7 @@ az ad sp list --filter "displayname eq 'Azure Red Hat OpenShift RP'" --query "[?
 
 ## Prepare for running
 
-### Set environment variables
+### Set environment variables for Azure ARO cluster
 
 ```
 export ARO_TENANT_ID=your_tenant_id
@@ -120,13 +120,6 @@ export ARO_RP_OBJECT_ID=aro_rp_object_id_obtained_above
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-Optional: Ensure that the environment variables for the configuration and status directories are set. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
-
-```
-export STATUS_DIR=$HOME/cpd-status
-export CONFIG_DIR=$HOME/cpd-config
-```
-
 - `ARO_TENANT_ID`: Azure Active Directory tenant id.
 - `ARO_SUBSCRIPTION_ID`: Subscription id (agreement) with Microsoft to use one or more Microsoft cloud platforms or services. An organization can have multiple subscriptions that use the same Azure AD tenant.
 - `ARO_SP_ID`: Service Principal id (appId) which is used to login to Microsoft Azure by the terraform process. At the same time, the ARM template uses the same Service Principal to deploy the cluster.
@@ -134,11 +127,37 @@ export CONFIG_DIR=$HOME/cpd-config
 - `ARO_SP_OBJECT_ID`: Object id of the Service Principal
 - `ARO_RP_OBJECT_ID`: Object id of the Azure Red Hat OpenShift Resource Provider
 - `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
-- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory
-- `CONFIG_DIR`: Directory that holds the configuration, it must have `config` and optionally `defaults` and `inventory` subdirectories
+
+### Set deployer status directory
+Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+
+```
+export STATUS_DIR=$HOME/cpd-status
+```
+
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory. If you don't specify a status directory, it is assumted to be `$HOME/cpd-status`.
+
+### Set deployer configuration location
+You can use a local directory to hold the deployer configuration or retrieve the configuration from a GitHub repository. If you don't specify any configuration directory or GitHub repository, the configuration directory are assumed to be `$HOME/cpd-config`.
+```
+export CONFIG_DIR=$HOME/cpd-config
+```
+
+- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory.
+
+Or, when using a GitHub repository for the configuration.
+```
+export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
+export CPD_CONFIG_GIT_REF="main"
+export CPD_CONFIG_GIT_CONTEXT=""
+```
+
+- `CPD_CONFIG_GIT_REPO`: The clone URL of the GitHub repository that holds the configuration.
+- `CPD_CONFIG_GIT_REF`: The branch, tag or commit ID to be cloned. If not specified, the repository's default branch will be cloned.
+- `CPD_CONFIG_GIT_CONTEXT`: The directory within the GitHub repository that holds the configuration. This directory must contain the `config` directory under which the YAML files are kept.
 
 !!! info
-    Cloud Pak Deployer uses the status directory to logs its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. You can run the Cloud Pak Deployer in parallel for different environments (different configuration directories).
+    When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
 
 ### Create the secrets needed for ARO
 
