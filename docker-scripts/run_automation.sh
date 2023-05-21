@@ -48,10 +48,16 @@ env|environment)
   fi
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
+  
   # Assemble command
   run_cmd="ansible-playbook"
+
   if [ -d "${CONFIG_DIR}/inventory" ]; then
     run_cmd+=" -i ${CONFIG_DIR}/inventory"
+  else
+    # temporary ini file for localhost
+    echo ansible_host=localhost > /tmp/temp_inventory.ini
+    run_cmd+=" -i /tmp/temp_inventory.ini"
   fi
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
@@ -146,6 +152,10 @@ vault)
   run_cmd="ansible-playbook"
   if [ -d "${CONFIG_DIR}/inventory" ]; then
     run_cmd+=" -i ${CONFIG_DIR}/inventory"
+  else
+    # temporary ini file for localhost
+    echo ansible_host=localhost > /tmp/temp_inventory.ini
+    run_cmd+=" -i /tmp/temp_inventory.ini"
   fi
   run_cmd+=" playbooks/playbook-vault.yml"
   run_cmd+=" --extra-vars ACTION=${ACTION}"

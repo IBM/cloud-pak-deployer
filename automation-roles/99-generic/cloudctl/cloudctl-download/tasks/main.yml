@@ -35,18 +35,11 @@
 - name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz
   unarchive:
     src: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
-    dest: "{{ status_dir }}/downloads"
+    dest: "/usr/local/bin"
 
 - name: Rename to cloudctl
   shell: |
-    mv -f {{ status_dir }}/downloads/cloudctl-linux-amd64 {{ status_dir }}/downloads/cloudctl
-
-- name: Make sure cloudctl can be run within path
-  copy:
-    src: "{{ status_dir }}/downloads/cloudctl"
-    dest: /usr/local/bin/cloudctl
-    mode: preserve
-    remote_src: True
+    mv -f /usr/local/bin/cloudctl-linux-amd64 /usr/local/bin/cloudctl
 
 - name: Get cloudctl version
   shell: |
