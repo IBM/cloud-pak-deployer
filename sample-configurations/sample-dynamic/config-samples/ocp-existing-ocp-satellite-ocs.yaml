@@ -7,7 +7,7 @@ global_config:
 
 #
 # This example defines an existing OpenShift on Satellite cluster with OpenShift Data Foundation (fka ocs) 
-# and its storage classes (ocs-storagecluster-cephfs, ocs-storagecluster-ceph-rbd) already created
+# and its storage classes (sat-ocs-cephfs-gold, sat-ocs-cephrbd-gold) already created by deployment with Satellite storage template
 # The infrastructure.type==ibm-roks signifies that the Machine Config Operator is not present on the cluster, effectively
 # treating the cluster as a ROKS cluster
 #
@@ -19,5 +19,8 @@ openshift:
   infrastructure:
     type: ibm-roks
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
+  - storage_name: ocs-storagecluster
+    storage_type: custom
+# Use storage classes provided as part of Satellite ODF storage template 
+    ocp_storage_class_file: sat-ocs-cephfs-gold
+    ocp_storage_class_block: sat-ocs-cephrbd-gold
