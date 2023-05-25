@@ -1,17 +1,17 @@
 ---
 
 # Variables:
-#   _case_dir
+#
 #   current_cp4i_instance
 #   current_cp4i_cluster
 
-- name: Create catalog source file for {{ current_cp4i_instance.type }}
+- name: "Create catalog source file for {{ current_cp4i_instance.type }}"
   block:
 
   - name: Find version specific instance type properties
     include_tasks: get-instance-properties.yml
 
-  - name: Get the details for instance type {{ instance_properties.type }}
+  - name: "Get the details for instance type {{ instance_properties.type }}"
     set_fact:
       _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
     vars:
@@ -22,19 +22,37 @@
       msg: The definition of instance type {{ instance_properties.type }} not found
     when: _instance_type_details=={}
 
+
   # -------------------- ENTITLED REGISTRY ----------------------------
 
-  - name: Create catalog source from CASE archive {{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz
-    shell: |
-      cloudctl case launch  \
-        --case {{ _case_dir }}/{{ _instance_type_details.package_name }}-{{ instance_properties.case_version }}.tgz \
-        --inventory {{ _instance_type_details.case_inventory }} \
-        --action install-catalog \
-        --namespace {{ current_cp4i_cluster.project }} \
-        --args "--registry cp.icr.io --inputDir {{ _case_dir }} --recursive" 
+  - name: Create catalog source from CASE - entitled registry
+    block:
+
+    - name: Create separate DataPower catalog source to support API Connect
+      shell: |
+        oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/catalog-sources-linux-amd64.yaml
+      when: _instance_type_details.case_file_name == 'ibm-apiconnect'
+      
+    - name: "Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for entitled registry"
+      shell: |
+        oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
+
+    when: (_use_entitled_registry | bool)  
 
   # -------------------- PRIVATE REGISTRY -----------------------------
 
-  # TODO(SJ) - Implement creating catalog source from CASE when private registry is used.
+  - name: Create catalog source from CASE - private registry
+    block:
+
+    - name: Create separate DataPower catalog source to support API Connect
+      shell: |
+        oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/catalog-sources-linux-amd64.yaml
+      when: _instance_type_details.case_file_name == 'ibm-apiconnect'
+
+    - name: "Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for private registry"
+      shell: |
+        oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
+
+    when: not (_use_entitled_registry | bool)  
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'

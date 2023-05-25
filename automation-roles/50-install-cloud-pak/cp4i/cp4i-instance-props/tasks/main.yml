@@ -1,0 +1,35 @@
+---
+
+# Input:
+#   _p_current_cp4i_cluster       : processed cluster 
+#   _p_current_cp4i_instance      : instance defined in the cluster
+#
+# Output
+#   _instance_properties          : merged all prperties - from config and variables
+#   _instance_type_details        : properties of the instance type
+
+- name: Find version specific instance type properties
+  include_tasks: get-instance-properties.yml
+  # returns _instance_properties
+
+- name: Instance properties
+  debug:
+    var: _instance_properties 
+
+- name: Include instance types variables
+  include_vars: ../../cp4i-cluster/vars/main.yml
+
+- name: Get the details for instance type {{ _instance_properties.type }}
+  set_fact:
+    _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='{{ _instance_properties.type }}']
+
+- name: Instance type details
+  debug:
+    var: _instance_type_details 
+
+- fail:
+    msg: The definition of instance type {{ instance_properties.type }} not found
+  when: _instance_type_details=={}

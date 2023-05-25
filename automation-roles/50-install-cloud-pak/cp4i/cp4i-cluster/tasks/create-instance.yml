@@ -25,57 +25,40 @@
   - name: Find version specific instance type properties
     include_tasks: get-instance-properties.yml
 
-  # ---------- DETERMINE SUBSCRIPTION NAME ---------------- 
-
-  - set_fact:
-      _subscription_name: "{{ _inst_type_def.package_name }}"
-
-  - debug:
-      msg: "Subscription name: {{ _subscription_name }}"
-    
-
-  # ---------- WAIT FOR SUBSCRIPTION ----------------------
-
-  - name: Wait for the {{ _subscription_name }} subscription
-    shell: |
-      csv=$(oc get subscription -n openshift-operators {{ _subscription_name }} -o json | jq -r .status.currentCSV)
-      if [[ "$csv" == "null" ]]; then
-        echo "null"
-      else
-        oc get csv -n openshift-operators ${csv} -o json 2>/dev/null | jq -r .status.phase
-      fi
-    register: pn_phase
-    retries: 100
-    delay: 20
-    until: pn_phase.stdout == "Succeeded"
-
   # ---------- CREATE INSTANCE ----------------------------
 
-  - name: Check if the {{instance_properties.type}} {{instance_properties.name}} already exists
+  - name: "Check if the {{instance_properties.type}} {{instance_properties.name}} already exists"
     shell: |
       oc get {{_inst_type_def.kind}} {{instance_properties.name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{instance_properties.name}}' | wc -l
     register: instance_exists  
 
-  - set_fact:
-      instance_template: "{{ instance_properties.template | default(default_template_name) }}"
-    vars:
-      default_template_name: "{{ _inst_type_def.default_template }}"
+  - name: Create instance if it does not already exist
+    block:
 
-  - name: Prepare yaml file for creating instance
-    template:
-      src: "{{instance_template}}.j2"
-      dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+    - name: If instance type is enterprise-gateway create admin password secret
+      include_tasks: create-dp-admin-password-secret.yml
+      when: instance_properties.type == 'enterprise-gateway'
+      
+    - set_fact:
+        instance_template: "{{ instance_properties.template | default(default_template_name) }}"
+      vars:
+        default_template_name: "{{ _inst_type_def.default_template }}"
+
+    - name: Prepare yaml file for creating instance
+      template:
+        src: "{{instance_template}}.j2"
+        dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+
+    - name: "Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+      shell: |
+        oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
+
     when: instance_exists.stdout == "0"
 
-  - name: Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
-    shell: |
-      oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
-    when: instance_exists.stdout == "0"
 
-  # ---------- WAITING FOR INSTANCE TO BECOME READY -------
-         # --- Currently only Platform Navigator ----
-
-  - name: Wait for the {{_inst_type_def.kind}} to become ready
+  # ---------- WAITING FOR PLATFORM NAVIGATOR TO BECOME READY -------
+  
+  - name: "Wait for the {{_inst_type_def.kind}} to become ready"
     shell: |
       oc get {{_inst_type_def.kind}} -n {{current_cp4i_cluster.project}} {{instance_properties.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
     register: instance_status
