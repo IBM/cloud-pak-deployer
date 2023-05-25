@@ -1,0 +1,65 @@
+---
+# Input:
+#   cpd_skip_portable_registry    : if True mirror to private reg, otherwise to portable
+
+
+# ------------ Portable registry -------------
+
+- name: Start portable registry if needed
+  block:
+
+  - name: Set target directory for portable registry to {{ status_dir }}/registry-storage
+    ansible.builtin.replace:
+      path: /opt/ansible/etc/registryv2-config.yml
+      regexp: 'rootdirectory: .*'
+      replace: 'rootdirectory: {{ status_dir }}/registry-storage'
+
+  - name: Start portable registry in the background
+    shell:
+      /opt/ansible/bin/start-registry > {{ status_dir }}/log/portable-registry.log 2>&1
+    async: 1500000
+    poll: 0
+    register: _portable_registry_job
+
+  - debug:
+      var: _portable_registry_job
+
+  - name: Wait until registry is available at port 12443
+    wait_for:
+      host: "127.0.0.1"
+      port: 12443
+      timeout: 30
+
+  when: not (cpd_skip_portable_registry | bool) 
+
+# ---------- Entitled registry ---------------
+
+- name: Get IBM Entitled Registry key
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ibm_cp_entitlement_key"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _ibm_cp_entitlement_key: "{{ secret_value }}"
+
+- fail:
+    msg: "IBM Entitled Registry key is missing in the vault"
+  when: _ibm_cp_entitlement_key == ""
+
+- set_fact:
+    _p_entitled_reg_auth: "{{ _v_entitled_registry_username }}:{{ _ibm_cp_entitlement_key }}"
+
+# --------------- Mirroring ------------------
+
+- name: Mirror Cloud Pak for Integration images 
+  include_role:
+    name: cp4i-mirror-ibm-pak
+  loop: "{{ all_config.cp4i | default([]) }}"
+  loop_control:
+    loop_var: _p_current_cp4i_cluster
+
+# <-- Add here mirroring other cloud paks that use ibm-pak
+
+

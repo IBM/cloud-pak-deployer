@@ -1,0 +1,40 @@
+---
+# Input:
+#   _p_current_cp4i_cluster
+#   _p_current_cp4i_instance
+#
+# Output
+#   _instance_properties
+
+
+- name: Include version details variables
+  include_vars: ../../cp4i-cluster/vars/versions.yml
+
+- name: Get cloud pak version
+  set_fact:
+    _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?cp4i_version=='{{ _p_current_cp4i_cluster.cp4i_version }}']
+
+- name: Fail if the cloud pak version cannot be found
+  fail:
+    msg: "The cloud pak version {{ _p_current_cp4i_cluster.cp4i_version }} not found."
+  when: _cloud_pak_ver=={}
+
+- name: Get instance type version specific properties
+  set_fact:
+    _inst_type_ver: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='{{ _p_current_cp4i_instance.type }}']
+
+- name: Fail if the instance type version specific properties cannot be found
+  fail:
+    msg: "The version specific properties for instance type {{ _p_current_cp4i_instance.type }} not found."
+  when: _inst_type_ver=={}
+
+- name: Combine properties
+  set_fact: 
+    _instance_properties: "{{ _inst_type_ver | combine(_p_current_cp4i_instance) }}"
+
