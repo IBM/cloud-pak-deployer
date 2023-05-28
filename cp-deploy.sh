@@ -617,6 +617,14 @@ if ! $INSIDE_CONTAINER;then
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     echo "Building container image for Cloud Pak Deployer including olm-utils"
+    # Store version info into image
+    mkdir -p ${SCRIPT_DIR}/.version-info
+    DEPLOYER_VERSION_INFO=$(git log -n1 --pretty='format:%h %cd |%s' --date=format:'%Y-%m-%dT%H:%M:%S' 2> /dev/null)
+    echo "COMMIT_HASH=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $1}')" > ${SCRIPT_DIR}/.version-info/version-info.sh
+    echo "COMMIT_TIMESTAMP=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $2}')" >> ${SCRIPT_DIR}/.version-info/version-info.sh
+    echo "COMMIT_MESSAGE=\"$(echo $DEPLOYER_VERSION_INFO  | cut -d'|' -f2)\"" >> ${SCRIPT_DIR}/.version-info/version-info.sh
+    chmod +x ${SCRIPT_DIR}/.version-info/version-info.sh
+    # Build the image
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
     exit $?
   fi
