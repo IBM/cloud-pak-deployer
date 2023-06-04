@@ -7,7 +7,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_describe_fs
 
 - name: Get file system ID for {{ _current_openshift_storage.storage_name }}
@@ -24,7 +24,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_sg
 
 - debug:
@@ -46,7 +46,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_instance_subnets
 
 - set_fact:
@@ -70,7 +70,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_subnet_vpc
 
 - name: Show the details of the first subnet in the list
@@ -86,7 +86,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_openshift_vpc
 
 - name: Show the found VPC for subnet {{ _aws_subnet_vpc.stdout | from_json | first }}
@@ -105,7 +105,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_sg_nfs_rule
 
 - name: Create NFS security group rule if not existent
@@ -118,7 +118,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _aws_create_fs
   when: (_aws_sg_nfs_rule.stdout | from_json) == []
 
