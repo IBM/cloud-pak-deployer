@@ -71,6 +71,11 @@
     mssql_enabled: "{{ true if current_cp4ba_cluster.rpa.enabled else false }}"
   when: mssql_enabled is not defined
 
+- name: MySQL config variable
+  ansible.builtin.set_fact:
+    mysql_enabled: "{{ true if current_cp4ba_cluster.pm.enabled else false }}"
+  when: mysql_enabled is not defined
+
 - name: Config External LDAP
   include_tasks: external-ldap.yml
   when: not openldap_enabled
