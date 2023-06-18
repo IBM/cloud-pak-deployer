@@ -1,6 +1,7 @@
 # Container image including olm-utils
+ARG CPD_OLM_UTILS_IMAGE
 FROM registry.access.redhat.com/ubi8/ubi
-FROM icr.io/cpopen/cpd/olm-utils:latest
+FROM ${CPD_OLM_UTILS_IMAGE}
 
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
