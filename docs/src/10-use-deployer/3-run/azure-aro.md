@@ -45,6 +45,33 @@ Login to the Microsoft Azure:
 - If your tenant requires Multi-Factor Authentication (MFA), use: `az login --tenant <TENANT_ID>`
 - If you have multiple Azure subscriptions, specify the relevant subscription ID: `az account set --subscription <SUBSCRIPTION_ID>`
 
+You can list the subscriptions via command:
+```bash
+az account subscription list
+```
+
+```output
+[
+  {
+    "authorizationSource": "RoleBased",
+    "displayName": "IBM xxx",
+    "id": "/subscriptions/dcexxx",
+    "state": "Enabled",
+    "subscriptionId": "dcexxx", ---> your_subscription_id parameter
+    "subscriptionPolicies": {
+      "locationPlacementId": "Public_2014-09-01",
+      "quotaId": "EnterpriseAgreement_2014-09-01",
+      "spendingLimit": "Off"
+    }
+  }
+]
+```
+
+To set the `SUBSCRIPTION_ID` to the first entry, run the following command:
+```bash
+export SUBSCRIPTION_ID=$(az account subscription list -o tsv --query '[0].subscriptionId') && echo "Subscription ID: $SUBSCRIPTION_ID"
+```
+
 ## Register Resource Providers
 
 Make sure the following Resource Providers are registered for your subscription by running:
@@ -63,17 +90,17 @@ az provider register -n Microsoft.Authorization --wait
 export SPNAME=cpd-sp
 
 # Create your service principal
-az ad sp create-for-rbac --name $SPNAME
+az ad sp create-for-rbac --name $SPNAME --role=Contributor --scopes="/subscriptions/$SUBSCRIPTION_ID"
 # {
 #   "appId": "694bxxx",          ---> service_principal_id parameter
 #   "displayName": "$SPNAME",
 #   "name": "694xxx",
 #   "password": "CXxxx",         ---> service_principal_secret parameter
-#   "tenant": "bb0xxx"
+#   "tenant": "bb0xxx"           ---> your_tenant_id
 # }
 
 # Get objectId of your service principal
-az ad sp list --filter "displayname eq '$SPNAME'" --query "[?appDisplayName=='$SPNAME'].{name: appDisplayName, objectId: objectId}"
+az ad sp list --filter "displayname eq '$SPNAME'" --query "[?appDisplayName=='$SPNAME'].{name: appDisplayName, objectId: id}"
 # [
 #   {
 #     "name": "$SPNAME",
@@ -92,7 +119,7 @@ You may want to create the service principal with the `Contributor` role by addi
 The ARM template also needs to grant the ARO 4 Resource Provider service principal permissions in order to provision and manage clusters. To obtain the ARO 4 RP service principal object id execute the following command:
 
 ```bash
-az ad sp list --filter "displayname eq 'Azure Red Hat OpenShift RP'" --query "[?appDisplayName=='Azure Red Hat OpenShift RP'].{name: appDisplayName, objectId: objectId}"
+az ad sp list --filter "displayname eq 'Azure Red Hat OpenShift RP'" --query "[?appDisplayName=='Azure Red Hat OpenShift RP'].{name: appDisplayName, objectId: id}"
 # [
 #   {
 #     "name": "Azure Red Hat OpenShift RP",
@@ -111,10 +138,10 @@ az ad sp list --filter "displayname eq 'Azure Red Hat OpenShift RP'" --query "[?
 ```
 export ARO_TENANT_ID=your_tenant_id
 export ARO_SUBSCRIPTION_ID=your_subscription_id
-export ARO_SP_ID=service_principal_id_created_above
-export ARO_SP_SECRET=service_principal_secret_created_above
-export ARO_SP_OBJECT_ID=service_principal_object_id_created_above
-export ARO_RP_OBJECT_ID=aro_rp_object_id_obtained_above
+export ARO_SP_ID=service_principal_id
+export ARO_SP_SECRET=service_principal_secret
+export ARO_SP_OBJECT_ID=service_principal_object_id
+export ARO_RP_OBJECT_ID=aro_rp_object_id
 
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
