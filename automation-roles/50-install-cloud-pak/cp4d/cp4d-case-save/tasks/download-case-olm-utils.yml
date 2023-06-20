@@ -8,6 +8,10 @@
     path: /tmp/work
     state: directory
 
+- name: Generate resolver YAML files if case files must be downloaded from a different repo
+  include_tasks: generate-casectl-resolvers.yml
+  when: (_p_current_cp4d_cluster.cp4d_case_repo | default({})) != {}
+
 # Always generate the preview script to log what will be done
 - name: Generate command preview script to save case files
   set_fact:
@@ -50,9 +54,9 @@
   - name: Run apply-olm command to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-case-save.log 2>&1
-  when: _upgrade_cp4d
+  # when: _upgrade_cp4d
 
-- name: Run shell script to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
-  shell: |
-    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh >> {{ status_dir }}/log/apply-olm-case-save.log 2>&1
-  when: not _upgrade_cp4d
+# - name: Run shell script to download case files, logs are in {{ status_dir }}/log/apply-olm-case-save.log
+#   shell: |
+#     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh >> {{ status_dir }}/log/apply-olm-case-save.log 2>&1
+#   when: not _upgrade_cp4d

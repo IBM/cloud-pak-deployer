@@ -1,9 +1,14 @@
 /opt/ansible/bin/apply-olm \
     --release={{ _p_current_cp4d_cluster.cp4d_version }} \
     --case_download=false \
-    --catsrc=false --sub=true --offline_dir={{ status_dir }}/cp4d/case -v \
-    --preview={%- if _p_preview_script -%}true{%- else -%}false{%- endif %} \
+    --catsrc=false --sub=true \
+{% if _p_current_cp4d_cluster.cp4d_version < '4.7.0' -%}
+    --offline_dir={{ status_dir }}/cp4d/case -v \
     --upgrade={%- if _upgrade_cp4d -%}true{%- else -%}false{%- endif %} \
+{% else -%}
+    --cpd_operator_ns={{ _p_current_cp4d_cluster.operators_project | default('cpd-operators') }} \
+{% endif -%}    
+    --preview={%- if _p_preview_script -%}true{%- else -%}false{%- endif %} \
     --components={% for c in _cartridges_to_install -%}
 {%- if ((c.state | default('installed')) == 'installed') or (cpd_test_cartridges | default(False) | bool) -%}
 {%- if not loop.first -%},{% endif -%}

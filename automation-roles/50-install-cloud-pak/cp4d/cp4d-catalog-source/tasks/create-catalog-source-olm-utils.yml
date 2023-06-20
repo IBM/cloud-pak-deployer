@@ -19,6 +19,11 @@
   debug:
     var: _apply_olm_command_script
 
+- name: Write script to "{{ status_dir }}/cp4d/apply-olm-catsrc.sh"
+  copy:
+    content: "{{ _apply_olm_command_script }}"
+    dest: "{{ status_dir }}/cp4d/apply-olm-catsrc.sh"
+
 - name: Generate preview script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
   shell: |
     {{ _apply_olm_command_script }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
@@ -75,15 +80,15 @@
   - name: Run apply-olm command to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
-  when: _sequential_install
+  # when: _sequential_install
 
-- block:
-  # Set current project to openshift-marketplace because script does not specify namespace for all catalog sources
-  - name: Set current project to openshift-marketplace
-    shell: |
-      oc project openshift-marketplace
+# - block:
+#   # Set current project to openshift-marketplace because script does not specify namespace for all catalog sources
+#   - name: Set current project to openshift-marketplace
+#     shell: |
+#       oc project openshift-marketplace
 
-  - name: Run shell script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
-    shell: |
-      {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh >> {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
-  when: not _sequential_install
+#   - name: Run shell script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
+#     shell: |
+#       {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh >> {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
+#   when: not _sequential_install

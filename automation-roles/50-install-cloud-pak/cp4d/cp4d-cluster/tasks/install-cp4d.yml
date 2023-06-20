@@ -76,6 +76,16 @@
   - cpd_airgap | bool
   - not (cpd_skip_mirror | bool)
 
+- name: Activate license service and certificate manager for CP4D 4.7.0 and higher
+  include_role:
+    name: cp-fs-cluster-components
+  vars:
+    _p_cp4d_version: "{{ current_cp4d_cluster.cp4d_version }}"
+  when: current_cp4d_cluster.cp4d_version >= "4.7.0"
+
+- name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
+  include_tasks: openshift-prepare-project.yml
+
 - name: Create catalog sources for Cloud Pak for Data
   include_role:
     name: cp4d-catalog-source
@@ -88,14 +98,10 @@
   vars:
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
-- name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
-  include_tasks: openshift-prepare-project.yml
-
 - name: Install or uninstall scheduling service
   include_role:
     name: cp4d-scheduling-service
   vars:
-    _p_fs_project: "{{ foundational_services_project }}"
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
 - include_tasks: install-control-plane-olm-utils.yml
@@ -126,9 +132,6 @@
   include_role:
     name: cp4d-configure-ssl-certificate
 
-- name: Apply the specified license to the Cloud Pak for Data installation
-  include_tasks: cp4d-apply-license.yml
-
 - name: Retrieve Cloud Pak Foundational Services 
   set_fact:
     _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
@@ -140,12 +143,16 @@
   debug:
     var: _cp_fs
 
-- name: Activate or deactivate license service
+- name: Activate or deactivate license service for older versions of Cloud Pak for Data
   include_role:
     name: cp-fs-license-service
   vars:
     _p_fs_project: "{{ foundational_services_project }}"
     _p_license_service: "{{ _cp_fs.license_service | default({}) }}"
+  when: current_cp4d_cluster.cp4d_version < "4.7.0"
+
+- name: Apply the specified license to the Cloud Pak for Data installation
+  include_tasks: cp4d-apply-license.yml
 
 # Install selected cartridges
 - include_tasks: cp4d-cartridges.yml
