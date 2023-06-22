@@ -199,6 +199,31 @@ else
     echo "Project ${IBM_CERT_MANAGER} does not exist, skipping"
 fi
 
+# Delete other elements belonging to CP4D install
+echo "Deleting MutatingWebhookConfigurations"
+oc delete MutatingWebhookConfiguration ibm-common-service-webhook-configuration --ignore-not-found
+oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration --ignore-not-found
+oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration-cpd-operators --ignore-not-found
+
+echo "Deleting ValidatingWebhookConfiguration"
+oc delete ValidatingWebhookConfiguration ibm-common-service-validating-webhook-cpd-operators --ignore-not-found
+oc delete ValidatingWebhookConfiguration ibm-cs-ns-mapping-webhook-configuration --ignore-not-found
+
+IBM_CS_CONTROL=cs-control
+oc get project ${IBM_CS_CONTROL} > /dev/null 2>&1
+if [ $? -eq 0 ];then
+    log "Deleting everything in the ${IBM_CS_CONTROL} project"
+    oc delete nss -n ${IBM_CS_CONTROL} --all --ignore-not-found
+
+    log "Deleting ${IBM_CS_CONTROL} project"
+    oc delete ns ${IBM_CS_CONTROL}
+else
+    echo "Project ${IBM_CS_CONTROL} does not exist, skipping"
+fi
+
+echo "Deleting common-service maps"
+oc delete cm -n kube-public common-service-maps --ignore-not-found
+
 #
 # Delete all CRs in the ibm-common-services project
 # Here we do wait for deletion to complete as it typically does finish ok in a few minutes
