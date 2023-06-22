@@ -101,6 +101,13 @@
   debug:
     var: _upgrade_cp4d
 
+- name: Fail if trying to upgrade to 4.7
+  fail:
+    msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 at the moment. Please consult Cloud Pak for Data documentation for upgrade steps which includes private topology deployment."
+  when:
+    - _upgrade_cp4d
+    - _p_current_cp4d_cluster.cp4d_version.startswith('4.7')
+
 - set_fact:
     _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
 
