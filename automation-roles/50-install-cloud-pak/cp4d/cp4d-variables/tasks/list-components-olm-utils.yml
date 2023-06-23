@@ -27,6 +27,20 @@
   when:
   - not (cpd_airgap | bool)
 
+#TODO: Issue #451 - Handle unsupported CP4D versions gracefully
+# The above task addresses the issue by checking if the config file for the specified CP4D version exists.
+# If it does not exist, an error is thrown indicating that the version is not supported.
+- name: Check if config file exists for the specified CP4D version
+  find:
+    paths: "/opt/ansible/ansible-play/config-vars/"
+    patterns: "release-{{ current_cp4d_cluster.cp4d_version }}.yml"
+  register: config_file_check
+
+- name: Throw an error if config file does not exist
+  fail:
+    msg: "Error: The Cloud Pak for Data you have selected ({{ current_cp4d_cluster.cp4d_version }}) is not supported."
+  when: config_file_check.matched == 0
+
 - name: Check if file {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv exists
   stat:
     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
