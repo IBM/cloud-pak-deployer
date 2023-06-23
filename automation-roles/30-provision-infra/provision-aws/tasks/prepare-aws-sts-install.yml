@@ -41,23 +41,23 @@
   args:
     chdir: "{{ status_dir }}/tmp/ccotmp"
 
-- name: Create AWS identity provider
+- name: Create AWS identity provider, logs in {{ status_dir }}/log/ccoctl-create-identity-provider-{{ _current_openshift_cluster.name }}.log
   shell: |
     {{ status_dir }}/tmp/ccotmp/ccoctl aws create-identity-provider \
       --name={{ _current_openshift_cluster.name }} \
       --region={{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --public-key-file={{ status_dir }}/tmp/ccotmp/serviceaccount-signer.public 2>&1
+      --public-key-file={{ status_dir }}/tmp/ccotmp/serviceaccount-signer.public \
+      > {{ status_dir }}/log/ccoctl-create-identity-provider-{{ _current_openshift_cluster.name }}.log 2>&1
   args:
     chdir: "{{ status_dir }}/tmp/ccotmp"
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
     AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
-  register: _create_identity_provider
 
 - name: Extract identity provider ARN
   set_fact:
-    _identity_provider_arn: "{{ _create_identity_provider.stdout | regex_search('arn:aws:.*') }}"
+    _identity_provider_arn: "{{ lookup('file', status_dir+'/log/ccoctl-create-identity-provider-'+_current_openshift_cluster.name+'.log') | regex_search('arn:aws:.*') }}"
 
 - name: Extract credential requests
   shell: |
@@ -66,7 +66,7 @@
       --to={{ status_dir }}/tmp/ccotmp/credrequests \
       --from={{ _release_image.stdout }}
 
-- name: Create IAM roles
+- name: Create IAM roles using identity provider {{ _current_openshift_cluster.name }}, {{ _identity_provider_arn }}
   shell: |
     {{ status_dir }}/tmp/ccotmp/ccoctl aws create-iam-roles \
       --name={{ _current_openshift_cluster.name }} \
