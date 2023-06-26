@@ -76,6 +76,12 @@
   - cpd_airgap | bool
   - not (cpd_skip_mirror | bool)
 
+- name: Migrate to private topology if upgrading to CP4D 4.7.0 or higher
+  include_tasks: migrate-private-topology.yml
+  when: 
+  - _installed_ibmcpd_version < "4.7.0"
+  - current_cp4d_cluster.cp4d_version >= "4.7.0"
+
 - name: Activate license service and certificate manager for CP4D 4.7.0 and higher
   include_role:
     name: cp-fs-cluster-components
