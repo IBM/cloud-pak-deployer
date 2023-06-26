@@ -18,7 +18,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   register: _rosa_describe_cluster
   failed_when: False
 
@@ -35,7 +35,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   when: _rosa_describe_cluster.rc == 0
 
 - name: Delete operator roles for ROSA cluster {{ _current_openshift_cluster.name }} when STS was used
@@ -45,7 +45,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   when: 
   - _rosa_describe_cluster.rc == 0
   - _current_openshift_cluster.infrastructure.use_sts | default(False) | bool
@@ -57,7 +57,7 @@
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
     AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
-    AWS_SESSION_TOKEN: "{{ lookup('env','AWS_SESSION_TOKEN') | default(omit) }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   when: 
   - _rosa_describe_cluster.rc == 0
   - _current_openshift_cluster.infrastructure.use_sts | default(False) | bool

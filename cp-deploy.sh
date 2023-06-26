@@ -752,6 +752,10 @@ if [[ "${SUBCOMMAND}" == "environment" ]];then
     arrVaultSecret+=("aws-secret-access-key")
     arrVaultSecretValue+=("${AWS_SECRET_ACCESS_KEY}")
   fi
+  if [[ "${AWS_SESSION_TOKEN}" != "" ]];then
+    arrVaultSecret+=("aws-session-token")
+    arrVaultSecretValue+=("${AWS_SESSION_TOKEN}")
+  fi
   if [[ "${ROSA_LOGIN_TOKEN}" != "" ]];then
     arrVaultSecret+=("rosa-login-token")
     arrVaultSecretValue+=("${ROSA_LOGIN_TOKEN}")
