@@ -4,6 +4,29 @@
     path: /tmp/work
     state: directory
 
+# Checking if the config file for the specified CP4D version exists in the olm-utils image
+# If it does not exist, an error is thrown indicating that the version is not supported.
+- name: Check if config file exists for the specified CP4D version
+  find:
+    paths: "/opt/ansible/ansible-play/config-vars/"
+    patterns: "release-{{ current_cp4d_cluster.cp4d_version }}.yml"
+  register: _config_file_check
+
+- name: List all config files for the different CP4D versions
+  find:
+    paths: "/opt/ansible/ansible-play/config-vars/"
+    patterns: "release-*.yml"
+  register: _list_cp4d_config_files
+  when: _config_file_check.matched == 0
+
+- set_fact:
+    _cp4d_config_files: "{{ _list_cp4d_config_files | json_query('files[*].path') | map('regex_replace','.*(\\d+\\.\\d+\\.\\d+).*','\\1') | join(', ') }}"
+
+- name: Throw an error if config file for Cloud Pak for Data version {{ current_cp4d_cluster.cp4d_version }} does not exist
+  fail:
+    msg: "Error: The Cloud Pak for Data you have selected ({{ current_cp4d_cluster.cp4d_version }}) is not included in the olm-utils image. Versions found: {{ _cp4d_config_files }}"
+  when: _config_file_check.matched == 0
+
 # Only run olm-utils command when not air-gapped
 - block:
   - name: Generate OLM command to list components for version {{ _p_current_cp4d_cluster.cp4d_version }}
