@@ -1,7 +1,13 @@
 # Container image including olm-utils
-ARG CPD_OLM_UTILS_IMAGE
+# ARG CPD_OLM_UTILS_IMAGE
 FROM registry.access.redhat.com/ubi8/ubi
-FROM ${CPD_OLM_UTILS_IMAGE}
+# FROM ${CPD_OLM_UTILS_IMAGE}
+
+FROM icr.io/cpopen/cpd/olm-utils:latest as olm-utils-v1
+RUN cd /opt/ansible && \
+    tar czf /tmp/opt-ansible-v1.tar.gz *
+
+FROM cp.stg.icr.io/cp/cpd/olm-utils-v2:latest
 
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
@@ -39,10 +45,16 @@ VOLUME ["/Data"]
 
 # Prepare directory that runs automation scripts
 RUN mkdir -p /cloud-pak-deployer && \
-    mkdir -p /Data
+    mkdir -p /Data && \
+    mkdir -p /olm-utils
 
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
+
+COPY --from=olm-utils-v1 /tmp/opt-ansible-v1.tar.gz /olm-utils/
+
+RUN cd /opt/ansible && \
+    tar czf /olm-utils/opt-ansible-v2.tar.gz *
 
 RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
