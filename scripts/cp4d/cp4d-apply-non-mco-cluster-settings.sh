@@ -103,5 +103,6 @@ echo "Waiting for 5 seconds for pods to start"
 sleep 5
 
 # Show pods
+echo
 echo "Showing running DaemonSet pods"
 oc get po -n kube-system -l name=cloud-pak-crontab-ds

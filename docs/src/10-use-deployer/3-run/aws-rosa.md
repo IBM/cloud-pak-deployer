@@ -99,7 +99,7 @@ export ROSA_LOGIN_TOKEN="your_rosa_login_token"
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-Optional: If your user does not have permanent administrator access but using temporary credentials, you can set the `AWS_SESSION_TOKEN` to be used for the AWS CLI. This session token will then be added to the environment variables of the deployer container.
+Optional: If your user does not have permanent administrator access but using temporary credentials, you can set the `AWS_SESSION_TOKEN` to be used for the AWS CLI.
 ```
 export AWS_SESSION_TOKEN=your_session_token
 ```
@@ -110,6 +110,8 @@ export AWS_SESSION_TOKEN=your_session_token
 - `ROSA_LOGIN_TOKEN`: The offline access token that was retrieved before. This is a very long string (200+ characters). Make sure you enclose the string in single or double quotes as it may hold special characters
 - `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
 
+!!! warning
+    If your `AWS_SESSION_TOKEN` is expires while the deployer is still running, the deployer may end abnormally. In such case, you can just issue new temporary credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN`) and restart the deployer. Alternatively, you can update the 3 vault secrets, respectively `aws-access-key`, `aws-secret-access-key` and `aws-session-token` with new values as they are re-retrieved by the deployer on a regular basis.
 
 ### Set deployer status directory
 Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
