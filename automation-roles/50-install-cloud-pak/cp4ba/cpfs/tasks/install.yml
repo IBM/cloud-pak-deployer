@@ -579,5 +579,7 @@
       Authorization: Bearer {{ iam_token }}
     body_format: json
     src: "{{ cpfs_output_directory }}/ldap-connection.json"
-    status_code: [200, 422]
+    status_code: [200, 422, 500]
     validate_certs: false
+  register: ldap_response
+  failed_when: ldap_response.status == 500 and ldap_response.message is not search('.*Already exists.*')
