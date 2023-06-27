@@ -9,15 +9,12 @@
   shell: |
     {{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-detach-cpd-instance.sh > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-{{ foundational_services_project }}-detach.log 2>&1
 
-- name: Generate script to upgrade certificate manager and license service {{ current_cp4d_cluster.project }}-upgrade-cert-license.sh
-  template:
-    src: upgrade-cert-license.j2
-    dest: "{{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-upgrade-cert-license.sh"
-    mode: u+rwx
-
-- name: Upgrade certificate manager and license service from {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-upgrade-cert-license.log
-  shell: |
-    {{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-upgrade-cert-license.sh > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-upgrade-cert-license.log 2>&1
+- name: Upgrade certificate manager and license service on cluster
+  include_role:
+    name: cp-fs-cluster-components
+  vars:
+    _p_cp4d_version: "{{ current_cp4d_cluster.cp4d_version }}"
+    _p_migrate_topology: True
 
 - name: Check if scheduler has been installed
   shell: |
