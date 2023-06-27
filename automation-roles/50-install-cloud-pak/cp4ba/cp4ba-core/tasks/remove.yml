@@ -51,50 +51,6 @@
   delay: 30
   until: insightsengines.resources | length == 0
 
-- name: Get AutomationBase CRD
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: automationbases.base.automation.ibm.com
-    namespace: "{{ cp4ba_project_name }}"
-  register: automationbase_crd
-  retries: 60
-  delay: 30
-
-- name: Remove AutomationBase
-  kubernetes.core.k8s:
-    state: absent
-    api_version: base.automation.ibm.com/v1beta1
-    kind: AutomationBase
-    name: foundation-iaf
-    namespace: "{{ cp4ba_project_name }}"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-  when: automationbase_crd.resources | length != 0
-
-- name: Get AutomationUIConfig CRD
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: automationuiconfigs.core.automation.ibm.com
-    namespace: "{{ cp4ba_project_name }}"
-  register: automationuiconfig_crd
-  retries: 60
-  delay: 30
-
-- name: Remove AutomationUIConfig
-  kubernetes.core.k8s:
-    state: absent
-    api_version: core.automation.ibm.com/v1beta1
-    kind: AutomationUIConfig
-    name: iaf-system
-    namespace: "{{ cp4ba_project_name }}"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-  when: automationuiconfig_crd.resources | length != 0
-
 # wait for the Client instances to disappear as if we do not wait, they will have finalizers left
 - name: Wait for Client intances to disappear
   kubernetes.core.k8s_info:
@@ -301,26 +257,6 @@
     wait_sleep: 15
     wait_timeout: 600
 
-- name: Remove DB2 users
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: remove-db2-user
-  vars:
-    common_db2_user: "{{ item }}"
-  with_items:
-    - base
-
-- name: Remove DB2 DBs
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: remove-db2-db
-  vars:
-    common_db2_db_name: "{{ item }}"
-  with_items:
-    - TENANT1
-    - TENANT2
-    - BASE
-
 - name: Remove PostgreSQL DBs
   ansible.builtin.include_role:
     name: common
@@ -387,6 +323,9 @@
     - ros
     - odmdc
     - odmres
+    - base
+    - tenant1
+    - tenant2
 
 - name: Remove post-deploy.md Config Map
   kubernetes.core.k8s:

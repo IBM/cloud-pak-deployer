@@ -1,104 +1,17 @@
 # Based on https://www.ibm.com/docs/en/cpfs?topic=online-uninstalling-foundational-services
 
-- name: Get NamespaceScope CRD
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: namespacescopes.operator.ibm.com
-  register: namespacescope_crd
-  retries: 10
-  delay: 1
-
-- name: Delete all NamespaceScope
-  block:
-    - name: Get all NamespaceScope cs-control
-      kubernetes.core.k8s_info:
-        api_version: operator.ibm.com/v1
-        kind: NamespaceScope
-        namespace: cs-control
-      register: namespace_scopes
-      retries: 10
-      delay: 1
-
-    - name: Delete All NamespaceScope cs-control
-      kubernetes.core.k8s:
-        state: absent
-        api_version: operator.ibm.com/v1
-        kind: NamespaceScope
-        name: "{{ item.metadata.name }}"
-        namespace: cs-control
-        wait: true
-        wait_sleep: 5
-        wait_timeout: 180
-      with_items: "{{ namespace_scopes.resources }}"
-
-  when: namespacescope_crd.resources | length != 0
-
-- name: Remove ibmcloud-cluster-ca-cert Secret
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Secret
-    name: ibmcloud-cluster-ca-cert
-    namespace: kube-public
-    wait: true
-    wait_sleep: 5
-    wait_timeout: 50
-
-- name: Remove MutatingWebhookConfigurations
-  kubernetes.core.k8s:
-    state: absent
-    api_version: admissionregistration.k8s.io/v1
-    kind: MutatingWebhookConfiguration
-    name: "{{ item }}"
-    wait: true
-    wait_sleep: 5
-    wait_timeout: 50
-  with_items:
-    - ibm-common-service-webhook-configuration
-    - ibm-operandrequest-webhook-configuration
-
-- name: Remove ibm-cs-ns-mapping-webhook-configuration ValidatingWebhookConfiguration
-  kubernetes.core.k8s:
-    state: absent
-    api_version: admissionregistration.k8s.io/v1
-    kind: ValidatingWebhookConfiguration
-    name: ibm-cs-ns-mapping-webhook-configuration
-    wait: true
-    wait_sleep: 5
-    wait_timeout: 50
-
-- name: Get IAM status configmap
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: ConfigMap
-    name: ibm-common-services-status
-    namespace: kube-public
-  register: config_map
-
-- name: Remove iam status for cp4ba project
-  kubernetes.core.k8s_json_patch:
-    api_version: v1
-    kind: ConfigMap
-    name: ibm-common-services-status
-    namespace: kube-public
-    patch:
-      - op: remove
-        path: "/data/{{ cpfs_cp4ba_project_name }}-iamstatus"
-  when: config_map is search(cpfs_cp4ba_project_name+ '-iamstatus')
-
-- name: Remove Catalog Sources
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1alpha1
-    kind: CatalogSource
-    name: "{{ item }}"
-    namespace: openshift-marketplace
-    wait: true
-  with_items:
-    - opencloud-operators
-    - bts-operator
-    - cloud-native-postgresql-catalog
+#TODO
+# - name: Remove MutatingWebhookConfigurations
+#   kubernetes.core.k8s:
+#     state: absent
+#     api_version: admissionregistration.k8s.io/v1
+#     kind: MutatingWebhookConfiguration
+#     name: "{{ item }}"
+#     wait: true
+#     wait_sleep: 5
+#     wait_timeout: 50
+#   with_items:
+#     - "ibm-operandrequest-webhook-configuration-{{ cpfs_cp4ba_project_name }}"
 
 - name: Get OperandConfig CRD
   kubernetes.core.k8s_info:
@@ -120,21 +33,49 @@
   delay: 2
   when: operandconfig_crd.resources | length != 0
 
-- name: Remove cs-control Project
+- name: Remove ibm-licensing
+  kubernetes.core.k8s:
+    state: absent
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+
+- name: Remove Project ibm-licensing
   kubernetes.core.k8s:
     state: absent
     api_version: project.openshift.io/v1
     kind: Project
-    name: cs-control
+    name: ibm-licensing
     wait: true
-    wait_sleep: 5
-    wait_timeout: 90
+    wait_sleep: 15
+    wait_timeout: 120
 
-- name: Remove common-service-maps
+- name: Remove Project ibm-cert-manager
   kubernetes.core.k8s:
     state: absent
-    api_version: v1
-    kind: ConfigMap
-    name: common-service-maps
-    namespace: kube-public
+    api_version: project.openshift.io/v1
+    kind: Project
+    name: ibm-cert-manager
     wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Catalog Sources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+    wait: true
+  with_items:
+    - opencloud-operators
+    - bts-operator
+    - ibm-cs-flink-operator-catalog
+    - ibm-cs-elastic-operator-catalog
+    - ibm-cert-manager-catalog
+    - ibm-licensing-catalog
+    - cloud-native-postgresql-catalog

@@ -4,30 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Prepare yaml file for common-service-maps
-  ansible.builtin.template:
-    src: common-service-maps.yaml.j2
-    dest: "{{ cpfs_output_directory }}/common-service-maps.yaml"
-    mode: u+rwx
-
-- name: Add common-service-maps
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cpfs_output_directory }}/common-service-maps.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Create Project for dedicated cpfs instance
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ cpfs_cp4ba_project_name }}"
-    common_output_directory: "{{ cpfs_output_directory }}"
-
 - name: Prepare yaml file for CatalogSource
   ansible.builtin.template:
     src: catalogsource.yaml.j2
@@ -57,7 +33,182 @@
   with_items:
     - opencloud-operators
     - bts-operator
+    - ibm-cs-flink-operator-catalog
+    - ibm-cs-elastic-operator-catalog
+    - ibm-cert-manager-catalog
+    - ibm-licensing-catalog
     - cloud-native-postgresql-catalog
+
+- name: Create Project for cpfs cert manager
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "ibm-cert-manager"
+    common_output_directory: "{{ cpfs_output_directory }}"
+
+- name: Prepare yaml file for the cert manager Operator Group
+  ansible.builtin.template:
+    src: certmgr-operatorgroup.yaml.j2
+    dest: "{{ cpfs_output_directory }}/certmgr-operatorgroup.yaml"
+    mode: u+rwx
+
+- name: Add the cert manager Operator Group
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/certmgr-operatorgroup.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for the cert manager Operator Subscription
+  ansible.builtin.template:
+    src: certmgr-subscription.yaml.j2
+    dest: "{{ cpfs_output_directory }}/certmgr-subscription.yaml"
+    mode: u+rwx
+
+- name: Add the cert manager Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/certmgr-subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CertManagerConfig instance default to appear
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1
+    kind: CertManagerConfig
+    name: default
+    namespace: ibm-cert-manager
+  register: cert_manager
+  retries: 10
+  delay: 15
+  until: cert_manager.resources | length == 1
+
+- name: Set cert manager license accept
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v1
+    kind: CertManagerConfig
+    name: default
+    namespace: ibm-cert-manager
+    definition:
+      spec:
+        license:
+          accept: true
+
+- name: Create Project for cpfs licensing
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "ibm-licensing"
+    common_output_directory: "{{ cpfs_output_directory }}"
+
+- name: Prepare yaml file for the licensing Operator Group
+  ansible.builtin.template:
+    src: licensing-operatorgroup.yaml.j2
+    dest: "{{ cpfs_output_directory }}/licensing-operatorgroup.yaml"
+    mode: u+rwx
+
+- name: Add the licensing Operator Group
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/licensing-operatorgroup.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for the licensing Operator Subscription
+  ansible.builtin.template:
+    src: licensing-subscription.yaml.j2
+    dest: "{{ cpfs_output_directory }}/licensing-subscription.yaml"
+    mode: u+rwx
+
+- name: Add the licensing Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/licensing-subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for IBMLicensing instance to appear
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    namespace: ibm-licensing
+  register: licensing
+  retries: 10
+  delay: 15
+  until: licensing.resources | length == 1
+
+- name: Set licensing license accept
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    namespace: ibm-licensing
+    definition:
+      spec:
+        license:
+          accept: true
+
+- name: Retrieve default certification
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: retrieve-default-certification
+  vars:
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
+
+- name: Prepare yaml file for Secret
+  ansible.builtin.template:
+    src: license-service-secret.yaml.j2
+    dest: "{{ cpfs_output_directory }}/license-service-secret.yaml"
+    mode: u+rwx
+
+- name: Add Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/license-service-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+# Based on https://www.ibm.com/docs/en/cpfs?topic=operator-using-custom-certificates
+- name: Apply custom certificate for License Service
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    namespace: ibm-licensing
+    definition:
+      spec:
+        httpsCertsSource: "custom"
+
+- name: Create Project for dedicated cpfs instance
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ cpfs_cp4ba_project_name }}"
+    common_output_directory: "{{ cpfs_output_directory }}"
 
 - name: Prepare yaml file for the Operator Group
   ansible.builtin.template:
@@ -127,6 +278,18 @@
       spec:
         size: "{{ current_cp4ba_cluster.cpfs_profile_size }}"
 
+- name: Set common-service license accept
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+    definition:
+      spec:
+        license:
+          accept: true
+
 - name: Patch common-service to add services list
   kubernetes.core.k8s_json_patch:
     api_version: operator.ibm.com/v3
@@ -148,7 +311,7 @@
       - op: add
         path: "/spec/services/-"
         value:
-          name: "ibm-mongodb-operator"
+          name: "ibm-im-mongodb-operator"
           spec:
             mongoDB:
               storageClass: "{{ cpfs_block_storage_class_name }}"
@@ -163,7 +326,7 @@
       - op: add
         path: "/spec/services/-"
         value:
-          name: "ibm-iam-operator"
+          name: "ibm-im-operator"
           spec:
             authentication:
               config:
@@ -183,35 +346,17 @@
     condition_query: "resources[*].status.phase"
     phase: "{{ common_service | json_query(condition_query) | unique }}"
 
-- name: Wait for SecretShare CRD to be Established
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-crd
-  vars:
-    common_crd_name: secretshares.ibmcpcs.ibm.com
-
-- name: Wait for SecretShare instance common-services to appear
-  kubernetes.core.k8s_info:
-    api_version: ibmcpcs.ibm.com/v1
-    kind: SecretShare
-    name: common-services
-    namespace: cs-control
-  register: secret_share
-  retries: 10
-  delay: 15
-  until: secret_share.resources | length == 1
-
-- name: Patch SecretShare instance common-services to omit sharing into other namespaces
+- name: Set common-service license accept
   kubernetes.core.k8s:
     state: present
-    api_version: ibmcpcs.ibm.com/v1
-    kind: SecretShare
-    name: common-services
-    namespace: cs-control
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cpfs_cp4ba_project_name }}"
     definition:
       spec:
-        configmapshares: []
-        secretshares: []
+        license:
+          accept: true
 
 - name: Wait for CRDs to be Established
   ansible.builtin.include_role:
@@ -262,56 +407,21 @@
   vars:
     condition_query: "resources[*].status.phase"
 
-- name: Wait for IAM Ready status as an indicator that CPFS is installed
+- name: Wait for Authentication Ready state 
   kubernetes.core.k8s_info:
-    kind: ConfigMap
-    name: ibm-common-services-status
-    namespace: kube-public
-  register: config_map
-  retries: 30
-  delay: 60
-  until: config_map.resources[0].data[cpfs_cp4ba_project_name + "-iamstatus"] is defined and
-    config_map.resources[0].data[cpfs_cp4ba_project_name + "-iamstatus"] == 'Ready'
-
-- name: Retrieve default certification
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: retrieve-default-certification
-  vars:
-    common_crt_output_to_var: "tls_crt"
-    common_key_output_to_var: "tls_key"
-    common_ca_output_to_var: "ca_crt"
-
-- name: Prepare yaml file for Secret
-  ansible.builtin.template:
-    src: license-service-secret.yaml.j2
-    dest: "{{ cpfs_output_directory }}/license-service-secret.yaml"
-    mode: u+rwx
-
-- name: Add Secret
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cpfs_output_directory }}/license-service-secret.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-# Based on https://www.ibm.com/docs/en/cpfs?topic=operator-using-custom-certificates
-- name: Apply custom certificate for License Service
-  kubernetes.core.k8s:
-    state: present
     api_version: operator.ibm.com/v1alpha1
-    kind: IBMLicensing
-    name: instance
-    namespace: cs-control
-    definition:
-      spec:
-        httpsCertsSource: "custom"
+    kind: Authentication
+    name: example-authentication
+    namespace: "{{ cpfs_cp4ba_project_name }}"
+  register: authentication
+  retries: 80
+  delay: 15
+  until: ('Ready' in authentication | json_query(condition_query) | unique)
+  vars:
+    condition_query: "resources[*].status.service.status"
 
 # TODO Based on https://www.ibm.com/docs/en/cpfs?topic=i3o-installing-cloud-pak-foundational-services-in-multiple-namespaces
-# currently not supported in multi instnace deployment 2023-04-17
+# currently not supported in multi instance deployment 2023-06-27
 
 # - name: Prepare yaml file for the License Service Reporter
 #   ansible.builtin.template:
@@ -362,151 +472,6 @@
 # Switch Ingress certificate mode & delete artifacts"
 # Based on https://www.ibm.com/docs/en/cpfs?topic=operator-replacing-foundational-services-endpoint-certificates
 
-- name: Wait for management ingress operator Deployment to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: ibm-management-ingress-operator
-    common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
-
-- name: Get yaml of ManagementIngress
-  kubernetes.core.k8s_info:
-    api_version: operator.ibm.com/v1alpha1
-    kind: ManagementIngress
-    name: default
-    namespace: "{{ cpfs_cp4ba_project_name }}"
-  register: ingress
-  retries: 40
-  delay: 30
-
-- name: Replace CPFS certificate
-  block:
-
-    - name: Patch certificate settings
-      kubernetes.core.k8s:
-        state: present
-        api_version: operator.ibm.com/v1alpha1
-        kind: ManagementIngress
-        name: default
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-        definition:
-          spec:
-            ignoreRouteCert: true
-
-    - name: Wait for log occurence of Not watching certs
-      kubernetes.core.k8s_log:
-        api_version: apps/v1
-        kind: Deployment
-        name: ibm-management-ingress-operator
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-      register: log
-      retries: 30
-      delay: 60
-      until: "log.log is search('.*Not watching certificate: route-cert, IgnoreRouteCert is true.*')"
-
-    - name: Delete certificate
-      kubernetes.core.k8s:
-        state: absent
-        api_version: certmanager.k8s.io/v1alpha1
-        kind: Certificate
-        name: route-cert
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-        wait: true
-        wait_sleep: 5
-        wait_timeout: 50
-
-    - name: Delete route secret
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Secret
-        name: route-tls-secret
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-        wait: true
-        wait_sleep: 5
-        wait_timeout: 50
-
-    - name: Prepare yaml file for Secret
-      ansible.builtin.template:
-        src: route-tls-secret.yaml.j2
-        dest: "{{ cpfs_output_directory }}/route-tls-secret.yaml"
-        mode: u+rwx
-
-    - name: Add Secret
-      kubernetes.core.k8s:
-        state: present
-        force: false
-        merge_type: merge
-        src: "{{ cpfs_output_directory }}/route-tls-secret.yaml"
-        wait: true
-        wait_sleep: 15
-        wait_timeout: 15
-
-    - name: Delete ca secret
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Secret
-        name: ibmcloud-cluster-ca-cert
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-        wait: true
-        wait_sleep: 5
-        wait_timeout: 50
-
-    - name: Delete auth-idp pod
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Pod
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-        label_selectors:
-          - app=auth-idp
-
-    - name: Delete operand-deployment-lifecycle-manager pod
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Pod
-        namespace: "{{ cpfs_cp4ba_project_name }}"
-        label_selectors:
-          - name=operand-deployment-lifecycle-manager
-
-    - name: Wait for IAM to be Available
-      ansible.builtin.include_role:
-        name: common
-        tasks_from: wait-resource-condition
-      vars:
-        common_api_version: v1
-        common_resource_kind: Deployment
-        common_resource_name: auth-idp
-        common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
-        common_condition_name: Available
-        common_retries: 80
-        common_delay: 15
-
-    - name: Wait for IAM to be Available
-      ansible.builtin.include_role:
-        name: common
-        tasks_from: wait-resource-condition
-      vars:
-        common_api_version: v1
-        common_resource_kind: Deployment
-        common_resource_name: operand-deployment-lifecycle-manager
-        common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
-        common_condition_name: Available
-        common_retries: 80
-        common_delay: 15
-
-  when: not (ingress | json_query(condition_query) | bool)
-  vars:
-    condition_query: 'resources[0].spec.ignoreRouteCert'
-
 - name: Get cpfsadmin user password in secret
   kubernetes.core.k8s_info:
     api_version: v1
@@ -535,20 +500,14 @@
           data:
             admin_password: "{{ cpfs_universal_password | b64encode }}"
 
-    - name: Delete pods which use cpfsadmin secret
+    - name: Delete pod which use cpfsadmin secret
       kubernetes.core.k8s:
         state: absent
         api_version: v1
         kind: Pod
         namespace: "{{ cpfs_cp4ba_project_name }}"
         label_selectors:
-          - "{{ item }}"
-      with_items:
-        - app=auth-pap
-        - app=auth-idp
-        - app=auth-pdp
-        - app=oidcclient-watcher
-        - app=secret-watcher
+          - app=platform-auth-service
 
     - name: Wait for Deployments which use cpfsadmin secret to be Available
       ansible.builtin.include_role:
@@ -557,19 +516,35 @@
       vars:
         common_api_version: v1
         common_resource_kind: Deployment
-        common_resource_name: "{{ item }}"
+        common_resource_name: platform-auth-service
         common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
         common_condition_name: Available
         common_retries: 80
         common_delay: 15
-      with_items:
-        - auth-pap
-        - auth-idp
-        - auth-pdp
-        - secret-watcher
-        - oidcclient-watcher
 
-  when: cpfs_admin_secret | json_query(condition_query) | b64decode !=  cpfs_universal_password
+    - name: Delete commonui to refresh references
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        namespace: "{{ cpfs_cp4ba_project_name }}"
+        label_selectors:
+          - k8s-app=common-web-ui
+
+    - name: Wait for Deployments which use cpfsadmin secret to be Available
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: v1
+        common_resource_kind: Deployment
+        common_resource_name: common-web-ui
+        common_resource_namespace: "{{ cpfs_cp4ba_project_name }}"
+        common_condition_name: Available
+        common_retries: 80
+        common_delay: 15
+
+  when: cpfs_admin_secret | json_query(condition_query) | b64decode != cpfs_universal_password
   vars:
     condition_query: 'resources[0].data.admin_password'
 
@@ -598,7 +573,7 @@
 
 - name: Add LDAP connection
   ansible.builtin.uri:
-    url: "https://cp-console-{{ cpfs_cp4ba_project_name }}.{{ apps_endpoint_domain }}/idmgmt/identity/api/v1/directory/ldap/onboardDirectory"
+    url: "https://cp-console-{{ cpfs_cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v3/auth/idsource/"
     method: POST
     headers:
       Authorization: Bearer {{ iam_token }}

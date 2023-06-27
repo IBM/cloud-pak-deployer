@@ -25,12 +25,6 @@
       | default('(&('+lc_ldap_group_id_attribute+'=%v)(|(objectclass='+lc_ldap_group_object_class+')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
   when: ('Custom' in lc_selected_ldap_type)
 
-- name: DB2 config variable
-  ansible.builtin.set_fact:
-    db2_enabled: "{{ true if ((current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled)
-      or current_cp4ba_cluster.pm.enabled) else false }}"
-  when: db2_enabled is not defined
-
 - name: PostgreSQL config variable
   ansible.builtin.set_fact:
     postgresql_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"

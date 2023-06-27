@@ -44,8 +44,7 @@
   kubernetes.core.k8s_cp:
     namespace: "{{ cp4ba_project_name }}"
     pod: "{{ pods.resources[0].metadata.name }}"
-    # TODO add mechanism to either use db2 or postgress which is supported.
-    remote_path: /data-org/db_sample_data/db2_imports.tar.xz
+    remote_path: /data-org/db_sample_data/pg_imports.tar.xz
     local_path: "{{ cp4ba_output_directory }}/imports.tar.xz"
     state: from_pod
 
@@ -60,57 +59,97 @@
     common_user: "{{ lc_principal_admin_user }}"
     common_password: "{{ lc_principal_admin_password }}"
 
-- name: Download Init Tenants scripts to DB2
+- name: Download Init Tenants scripts to PostgreSQL
   kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
+    namespace: postgresql
+    pod: postgresql-0
     command: >
       sudo curl -kv --user "{{ lc_principal_admin_user }}:{{ lc_principal_admin_password }}"
       http://{{ nexus_hostname }}:8081/repository/raw-hosted/cp4ba/imports.tar.xz
-      --output /mnt/blumeta0/home/db2inst1/sqllib/_adp_tmp/DB2/imports.tar.xz
-  register: command_status
-
-- name: Set Init Tenants files ownership
-  kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
-    command: |
-      sudo chown -R db2inst1:db2iadm1 /mnt/blumeta0/home/db2inst1/sqllib/_adp_tmp/DB2/imports.tar.xz
+      --output /tmp/_adp_tmp/PG/imports.tar.xz
   register: command_status
 
 - name: Extract Init Tenants scripts
   kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
+    namespace: postgresql
+    pod: postgresql-0
     command: >
-      su - db2inst1 -s /usr/bin/bash -c "
-      cd sqllib/_adp_tmp/DB2;
+      bash -c "
+      cd /tmp/_adp_tmp/PG/;
       tar -xvf imports.tar.xz;
       "
   register: command_status
 
 - name: Run LoadDefaultData scripts for Tenant1
   kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
+    namespace: postgresql
+    pod: postgresql-0
     command: >
-      su - db2inst1 -s /usr/bin/bash -c '
-      cd sqllib/_adp_tmp/DB2;
-      echo -e "TENANT1\n
-      default\n
-      y" | ./LoadDefaultData.sh;
+      bash -c '
+      cd /tmp/_adp_tmp/PG/;
+      export db_server=localhost
+      export db_port=5432
+      export db_server_for_ca=localhost
+      export db_port_for_ca=5432
+      export db_adm_username=tenant1
+      export db_adm_pwd={{ cp4ba_postgresql_universal_password }}
+      export db_adm_pwd_b64_encoded=0  # set to 1 if "db_adm_pwd" is base64 encoded
+      export base_db_name=base
+      export base_db_user=base
+      export base_db_pwd={{ cp4ba_postgresql_universal_password }}
+      export base_db_pwd_b64_encoded=0  # set to 1 if "base_db_pwd" is base64 encoded
+      export base_user_already_defined=1
+      export base_valid_user=1
+      export base_pwdconfirmed=1
+      export tenant_type=0   # Allowed values: 0 for Enterprise, 1 for Trial, 2 for Internal
+      export tenant_id=tenant1
+      export tenant_db_name=tenant1
+      export tenant_dsn_name=tenant1
+      export tenant_db_user=tenant1
+      export user_already_defined=1
+      export tenant_pwdconfirmed=1
+      export tenant_db_pwd={{ cp4ba_postgresql_universal_password }}
+      export tenant_db_pwd_b64_encoded=0  # set to 1 if "tenant_db_pwd" is base64 encoded
+      export tenant_ontology=default
+      export confirmation=y
+      export ssl=No  # Changes to "Yes" if SSL should be enabled (only "Yes" or "No" values are accepted)
+      ./LoadDefaultData.sh;
       '
   register: command_status
 
 - name: Run LoadDefaultData scripts for Tenant2
   kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
+    namespace: postgresql
+    pod: postgresql-0
     command: >
-      su - db2inst1 -s /usr/bin/bash -c '
-      cd sqllib/_adp_tmp/DB2;
-      echo -e "TENANT2\n
-      default\n
-      y" | ./LoadDefaultData.sh;
+      bash -c '
+      cd /tmp/_adp_tmp/PG/;
+      export db_server=localhost
+      export db_port=5432
+      export db_server_for_ca=localhost
+      export db_port_for_ca=5432
+      export db_adm_username=tenant2
+      export db_adm_pwd={{ cp4ba_postgresql_universal_password }}
+      export db_adm_pwd_b64_encoded=0  # set to 1 if "db_adm_pwd" is base64 encoded
+      export base_db_name=base
+      export base_db_user=base
+      export base_db_pwd={{ cp4ba_postgresql_universal_password }}
+      export base_db_pwd_b64_encoded=0  # set to 1 if "base_db_pwd" is base64 encoded
+      export base_user_already_defined=1
+      export base_valid_user=1
+      export base_pwdconfirmed=1
+      export tenant_type=0   # Allowed values: 0 for Enterprise, 1 for Trial, 2 for Internal
+      export tenant_id=tenant2
+      export tenant_db_name=tenant2
+      export tenant_dsn_name=tenant2
+      export tenant_db_user=tenant2
+      export user_already_defined=1
+      export tenant_pwdconfirmed=1
+      export tenant_db_pwd={{ cp4ba_postgresql_universal_password }}
+      export tenant_db_pwd_b64_encoded=0  # set to 1 if "tenant_db_pwd" is base64 encoded
+      export tenant_ontology=default
+      export confirmation=y
+      export ssl=No  # Changes to "Yes" if SSL should be enabled (only "Yes" or "No" values are accepted)
+      ./LoadDefaultData.sh;
       '
   register: command_status

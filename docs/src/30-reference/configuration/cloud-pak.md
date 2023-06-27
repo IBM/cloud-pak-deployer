@@ -589,6 +589,7 @@ cp4ba:
         enabled: true
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
+          kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
       workstreams: # Automation Workstream Services (IAWS)
         enabled: false # Always false in this tool - this feature is not implemented
   
@@ -759,6 +760,7 @@ Placed in `cp4ba.patterns.workflow` key.
 | enabled                         | Set to `true` to enable `workflow` pattern. | Yes  | true, false |
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
+| optional_components.kafka          | Set to `true` to install a kafka cluster and enable kafka service for workflow authoring. | Yes | true, false |
 
 ### Workstreams pattern properties
 
