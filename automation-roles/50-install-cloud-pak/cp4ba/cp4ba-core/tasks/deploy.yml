@@ -358,9 +358,10 @@
 
 - name: Add BAWAUT component
   ansible.builtin.set_fact:
-    components: "{{ components + ['baw_authoring'] }}"
+    components: "{{ components + ['baw_authoring', 'pfs'] }}"
   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.1?topic=services-kafka
 - name: Add BAWAUT kafka component
   ansible.builtin.set_fact:
     components: "{{ components + ['kafka'] }}"
@@ -691,9 +692,9 @@
     name: common
     tasks_from: wait-resource-condition
   vars:
-    common_api_version: insightsengine.automation.ibm.com/v1beta1
+    common_api_version: icp4a.ibm.com/v1
     common_resource_kind: InsightsEngine
-    common_resource_name: iaf-insights-engine
+    common_resource_name: cp4ba
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Ready
     common_retries: 60
@@ -733,16 +734,17 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-statefulset-available
-  vars:
-    common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_retries: 60
-    common_delay: 120
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+# PFS now part of BAS
+# - name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-statefulset-available
+#   vars:
+#     common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
+#     common_resource_namespace: "{{ cp4ba_project_name }}"
+#     common_retries: 60
+#     common_delay: 120
+#   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Deployment wait list
   ansible.builtin.set_fact:
