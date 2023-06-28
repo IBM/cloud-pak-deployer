@@ -582,4 +582,4 @@
     status_code: [200, 422, 500]
     validate_certs: false
   register: ldap_response
-  failed_when: ldap_response.status == 500 and ldap_response.message is not search('.*Already exists.*')
+  failed_when: ldap_response.status == 500 and ldap_response.json | json_query('message') is not search('.*Already exists.*')
