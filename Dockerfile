@@ -7,7 +7,7 @@ FROM icr.io/cpopen/cpd/olm-utils:latest as olm-utils-v1
 RUN cd /opt/ansible && \
     tar czf /tmp/opt-ansible-v1.tar.gz *
 
-FROM cp.stg.icr.io/cp/cpd/olm-utils-v2:latest
+FROM icr.io/cpopen/cpd/olm-utils-v2:latest
 
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
