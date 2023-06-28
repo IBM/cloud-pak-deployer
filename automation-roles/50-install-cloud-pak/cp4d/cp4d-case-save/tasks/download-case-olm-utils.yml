@@ -60,3 +60,10 @@
 #   shell: |
 #     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-save.sh >> {{ status_dir }}/log/apply-olm-case-save.log 2>&1
 #   when: not _upgrade_cp4d
+
+- name: Copy ibm-pak case files to the {{ status_dir }}/cp4d/case directory
+  copy:
+    src: /tmp/work/offline/
+    dest: "{{ status_dir }}/cp4d/case/"
+    remote_src: True
+  when: _p_current_cp4d_cluster.cp4d_version >= '4.7.0'
