@@ -148,6 +148,13 @@
   debug:
     var: _cartridges_to_install
 
+- name: Generate CP4D components based on cartridges to install
+  set_fact:
+    _cp4d_components: "{{ lookup('template','generate-cp4d-components.j2') }}"
+
+- debug: 
+    var: _cp4d_components
+
 - name: Obtain surviving cartridges
   set_fact:
     _surviving_cartridges_names: "{{ _cartridges_to_install | json_query(jmes_query) }} + {{ _cartridge_dependencies }}"
