@@ -47,27 +47,19 @@
     remote_path: /data-org/db_sample_data/pg_imports.tar.xz
     local_path: "{{ cp4ba_output_directory }}/imports.tar.xz"
     state: from_pod
+  retries: 5
+  delay: 15
 
-# This is needed as ansible k8s_cp is not reliable for larger files
-- name: Nexus upload imports.tar.xz
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: nexus-upload
-  vars:
-    common_file_folder_path: "{{ cp4ba_output_directory }}"
-    common_file_name: imports.tar.xz
-    common_user: "{{ lc_principal_admin_user }}"
-    common_password: "{{ lc_principal_admin_password }}"
-
-- name: Download Init Tenants scripts to PostgreSQL
-  kubernetes.core.k8s_exec:
+- name: Upload Init Tenants scripts to PostgreSQL
+  kubernetes.core.k8s_cp:
     namespace: postgresql
     pod: postgresql-0
-    command: >
-      curl -kv --user "{{ lc_principal_admin_user }}:{{ lc_principal_admin_password }}"
-      http://{{ nexus_hostname }}:8081/repository/raw-hosted/cp4ba/imports.tar.xz
-      --output /tmp/_adp_tmp/PG/imports.tar.xz
-  register: command_status
+    remote_path: /tmp/_adp_tmp/PG/imports.tar.xz
+    local_path: "{{ cp4ba_output_directory }}/imports.tar.xz"
+    no_preserve: true
+    state: to_pod
+  retries: 5
+  delay: 15
 
 - name: Extract Init Tenants scripts
   kubernetes.core.k8s_exec:
