@@ -36,7 +36,22 @@
       spec:
         zenCustomRoute:
           route_secret: cpd-route-tls-secret
-           
+
+- name: Decode crt
+  ansible.builtin.set_fact:
+    decoded_crt: "{{ tls_crt | b64decode }}"
+
+- name: Wait for Cert to be updated in Route
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: cpd
+    namespace: "{{ cp4ba_project_name }}"
+  register: route
+  retries: 90
+  delay: 60
+  until: route.resources[0].spec.tls.certificate == decoded_crt
+
 - name: Delete Zen ibm-nginx pods
   kubernetes.core.k8s:
     state: absent

@@ -142,6 +142,20 @@
   vars:
     condition_query: "elements[?name == 'Decision Service Execution'].id"
 
+- name: Get Usage configmap
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ cp4ba_output_namespace }}"
+    name: cp4ba-usage
+  register: usage
+  retries: 40
+  delay: 15
+
+- name: Find zen api key
+  ansible.builtin.set_fact:
+    zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
+
 - name: Update credentials for server
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter-api/v1/servers/{{ decision_service_server_id }}"
