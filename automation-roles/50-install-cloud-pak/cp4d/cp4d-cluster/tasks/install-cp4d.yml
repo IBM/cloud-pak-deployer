@@ -36,12 +36,11 @@
     vars:
       secret_name: "ibm_cp_entitlement_key"
       secret_group: "{{ environment_name }}"
-  - set_fact:
-      ibm_cp_entitlement_key: "{{ secret_value }}"
+      _p_secret_variable: ibm_cp_entitlement_key
 
   - name: Mirror images for Cloud Pak for Data from entitled to private registry {{ current_cp4d_cluster.image_registry_name }}
     include_role: 
-      name: cp-mirror-images
+      name: cp4d-mirror-images
     vars:
       _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
       _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
@@ -60,7 +59,7 @@
 - block:
   - name: Mirror images for Cloud Pak for Data from portable to private registry {{ current_cp4d_cluster.image_registry_name }}
     include_role: 
-      name: cp-mirror-images
+      name: cp4d-mirror-images
     vars:
       _p_source_registry_hostname: "{{ _v_portable_registry }}"
       _p_source_registry_port: "{{ _v_portable_registry_port }}"
