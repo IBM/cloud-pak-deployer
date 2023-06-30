@@ -8,6 +8,23 @@
     path: /tmp/work
     state: directory
 
+- name: Delete offline directory
+  file:
+    path: /tmp/work/offline
+    state: absent
+
+- name: Create offline directory
+  file:
+    path: /tmp/work/offline
+    state: absent
+
+- name: If air-gapped, copy case files from {{ status_dir }}/cp4d/case to /tmp/work/offline
+  copy:
+    src: "{{ status_dir }}/cp4d/case/"
+    dest: /tmp/work/offline/
+    remote_src: True
+  when: (cpd_airgad | default(False) | bool)
+
 # Always generate the preview script to log what will be done
 - name: Generate command preview script to create catalog sources
   set_fact:
@@ -80,15 +97,10 @@
   - name: Run apply-olm command to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
-  # when: _sequential_install
 
-# - block:
-#   # Set current project to openshift-marketplace because script does not specify namespace for all catalog sources
-#   - name: Set current project to openshift-marketplace
-#     shell: |
-#       oc project openshift-marketplace
-
-#   - name: Run shell script to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc.log
-#     shell: |
-#       {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-create-catsrc.sh >> {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
-#   when: not _sequential_install
+- name: If not air-gapped, copy case files from /tmp/work/offline to {{ status_dir }}/cp4d/case
+  copy:
+    src: /tmp/work/offline/
+    dest: "{{ status_dir }}/cp4d/case/"
+    remote_src: True
+  when: (cpd_airgad | default(False) | bool)
