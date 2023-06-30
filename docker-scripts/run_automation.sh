@@ -24,9 +24,6 @@ fi
 # Change to base directory
 cd ${SCRIPT_DIR}/..
 
-# Ensure /tmp/work exists
-mkdir -p /tmp/work
-
 # Retrieve version info
 source ./.version-info/version-info.sh
 

@@ -1,15 +1,10 @@
 ---
-- name: Ensure that OLM utils work directory exists
-  file:
-    path: /tmp/work
-    state: directory
-
 # Checking if the config file for the specified CP4D version exists in the olm-utils image
 # If it does not exist, an error is thrown indicating that the version is not supported.
 - name: Check if config file exists for the specified CP4D version
   find:
     paths: "/opt/ansible/ansible-play/config-vars/"
-    patterns: "release-{{ current_cp4d_cluster.cp4d_version }}.yml"
+    patterns: "release-{{ _p_current_cp4d_cluster.cp4d_version }}.yml"
   register: _config_file_check
 
 - name: List all config files for the different CP4D versions
@@ -21,13 +16,20 @@
 
 - set_fact:
     _cp4d_config_files: "{{ _list_cp4d_config_files | json_query('files[*].path') | map('regex_replace','.*(\\d+\\.\\d+\\.\\d+).*','\\1') | join(', ') }}"
+    _cp4d_components_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_current_cp4d_cluster.cp4d_version }}-components.csv"
+    _cp4d_components_no_header_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_current_cp4d_cluster.cp4d_version }}-components-no-header.csv"
 
-- name: Throw an error if config file for Cloud Pak for Data version {{ current_cp4d_cluster.cp4d_version }} does not exist
+- name: Throw an error if config file for Cloud Pak for Data version {{ _p_current_cp4d_cluster.cp4d_version }} does not exist
   fail:
-    msg: "Error: The Cloud Pak for Data you have selected ({{ current_cp4d_cluster.cp4d_version }}) is not included in the olm-utils image. Versions found: {{ _cp4d_config_files }}"
+    msg: "Error: The Cloud Pak for Data you have selected ({{ _p_current_cp4d_cluster.cp4d_version }}) is not included in the olm-utils image. Versions found: {{ _cp4d_config_files }}"
   when: _config_file_check.matched == 0
 
-# Only run olm-utils command when not air-gapped
+- name: Check if file {{ _cp4d_components_file }} exists
+  stat:
+    path: "{{ _cp4d_components_file }}"
+  register: _cp4d_components_file_exists
+
+# Only run olm-utils command when not air-gapped and when file does not exist yet
 - block:
   - name: Generate OLM command to list components for version {{ _p_current_cp4d_cluster.cp4d_version }}
     set_fact:
@@ -41,45 +43,47 @@
     shell: |
       {{ _list_components_command }}
 
-  - name: Copy file to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv
+  - name: Copy file to {{ _cp4d_components_file }}
     copy:
       src: /tmp/work/components.csv
-      dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
+      dest: "{{ _cp4d_components_file }}"
       remote_src: True
+      force: True
 
   when:
   - not (cpd_airgap | bool)
+  - not _cp4d_components_file_exists.stat.exists
 
-- name: Check if file {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv exists
+- name: Check if file {{ _cp4d_components_file }} exists
   stat:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
-  register: _cp4d_components_file
+    path: "{{ _cp4d_components_file }}"
+  register: _cp4d_components_file_exists
 
-- name: Fail if {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv does not exist
+- name: Fail if {{ _cp4d_components_file }} does not exist
   fail:
-    msg: "File {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv not found. If the deployer is running in air-gapped mode, the file was not persisted earlier. Please re-run env download."
-  when: not _cp4d_components_file.stat.exists
+    msg: "File {{ _cp4d_components_file }} not found. If the deployer is running in air-gapped mode, the file was not persisted earlier. Please re-run env download."
+  when: not _cp4d_components_file_exists.stat.exists
 
 - name: Get column headers
   shell: |
-    head -1 {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv
+    head -1 {{ _cp4d_components_file }}
   register: _csv_column_headers
 
-- name: Copy file to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv
+- name: Copy file to _cp4d_components_file
   copy:
-    src: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components.csv"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv"
+    src: "{{ _cp4d_components_file }}"
+    dest: "{{ _cp4d_components_no_header_file }}"
     remote_src: True
 
 - name: Remove first line from file
   lineinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv"
+    path: "{{ _cp4d_components_no_header_file }}"
     regexp: "^Component name"
     state: absent
 
 - name: Try to convert to json
   read_csv:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-components-no-header.csv"
+    path: "{{ _cp4d_components_no_header_file }}"
     fieldnames: "{{ _csv_column_headers.stdout | replace(' ','_') }}"
     skipinitialspace: True
   register: _list_components_json
