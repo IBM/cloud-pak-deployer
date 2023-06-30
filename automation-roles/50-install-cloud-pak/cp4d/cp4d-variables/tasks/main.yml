@@ -4,6 +4,12 @@
     path: "{{ status_dir }}/cp4d"
     state: directory
 
+- name: Redirect /tmp/work to {{ status_dir }}/cp4d
+  file:
+    path: /tmp/work
+    src: "{{ status_dir }}/cp4d"
+    state: link
+
 - name: Include variables for Cloud Pak for Data
   include_vars: vars-cp4d-installation.yml
 
@@ -101,6 +107,15 @@
   debug:
     var: _upgrade_cp4d
 
+- name: Fail if trying to upgrade to 4.7
+  fail:
+    msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 at the moment. Please consult Cloud Pak for Data documentation for upgrade steps which includes private topology deployment."
+  when:
+    - _upgrade_cp4d
+    - _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
+    - _installed_ibmcpd_version < "4.7.0"
+    - not allow_cp4d_upgrade | default(False) | bool
+
 - set_fact:
     _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
 
@@ -139,6 +154,13 @@
 - name: Show full cartridge information
   debug:
     var: _cartridges_to_install
+
+- name: Generate CP4D components based on cartridges to install
+  set_fact:
+    _cp4d_components: "{{ lookup('template','generate-cp4d-components.j2') }}"
+
+- debug: 
+    var: _cp4d_components
 
 - name: Obtain surviving cartridges
   set_fact:

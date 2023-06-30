@@ -8,15 +8,60 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+# Create project that will run operators of Cloud Pak for Data
+- name: Validate if OpenShift project {{ current_cp4d_cluster.operators_project | default('cpd-operators') }} exists
+  shell: oc project {{ current_cp4d_cluster.operators_project | default('cpd-operators') }}
+  failed_when: False
+  register: _cp4d_operators_project_exists
+  when: current_cp4d_cluster.cp4d_version >= '4.7.0'
+
+- name: Create OpenShift Project {{ current_cp4d_cluster.operators_project | default('cpd-operators') }} if it does not exist
+  command: oc new-project {{current_cp4d_cluster.operators_project | default('cpd-operators') }}
+  when:
+  - current_cp4d_cluster.cp4d_version >= '4.7.0'
+  - _cp4d_operators_project_exists.rc != 0
+
 # Create project that will run instance of Cloud Pak for Data
 - name: Validate if OpenShift project {{ current_cp4d_cluster.project }} exists
-  shell: "oc get projects | grep -i '^{{ current_cp4d_cluster.project }}' | wc -l"
-  register: cp4d_cluster_project_exists
+  shell: oc project {{ current_cp4d_cluster.project }}
+  failed_when: False
+  register: _cp4d_cluster_project_exists
 
 - name: Create OpenShift Project {{ current_cp4d_cluster.project }} if it does not exist
-  command: "oc new-project {{ current_cp4d_cluster.project }}"
-  when: cp4d_cluster_project_exists.stdout == "0"
+  command: oc new-project {{ current_cp4d_cluster.project }}
+  when: _cp4d_cluster_project_exists.rc != 0
 
-- name: Set OpenShift project {{ current_cp4d_cluster.project }} active
-  command: "oc project {{ current_cp4d_cluster.project }}"
+# Authorize instance topology
+- block:
+  - name: Generate authorize instance script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-authorize-instance.sh
+    template:
+      src: authorize-instance.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-authorize-instance.sh"
+      mode: u+rwx
 
+  - name: Run script to authorize instance, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log
+    shell: |
+      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-authorize-instance.sh > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log 2>&1
+
+  # TODO: Remove this step, should not be needed
+  - name: Delete resolver files
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - /tmp/auth/play_env.sh
+      - /tmp/auth/resolvers_auth.yaml
+      - /tmp/work/resolvers.yaml
+
+  - name: Generate setup instance topology script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-setup-instance-topology.sh
+    template:
+      src: setup-instance-topology.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-setup-instance-topology.sh"
+      mode: u+rwx
+
+  - name: Run script to setup instance topology, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance-topology.log
+    shell: |
+      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-setup-instance-topology.sh > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance-topology.log 2>&1
+
+  when: 
+  - current_cp4d_cluster.cp4d_version >= '4.7.0'
