@@ -34,6 +34,7 @@ case "$SUBCOMMAND" in
 env|environment)
   # Clear state directory
   mkdir -p ${STATUS_DIR}/state
+  chmod 777 ${STATUS_DIR}/state
   rm -rf ${STATUS_DIR}/state/*
   # Set Ansible config file to use
   ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg
