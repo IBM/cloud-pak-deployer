@@ -77,7 +77,10 @@
   - not (cpd_skip_mirror | bool)
 
 - name: Migrate to private topology if upgrading to CP4D 4.7.0 or higher
-  include_tasks: migrate-private-topology.yml
+  include_role: 
+    name: cp4d-migrate-private-topology
+  vars:
+    _p_preview: False
   when:
   - _upgrade_cp4d
   - _installed_ibmcpd_version < "4.7.0"
@@ -89,6 +92,7 @@
   vars:
     _p_cp4d_version: "{{ current_cp4d_cluster.cp4d_version }}"
     _p_migrate_topology: False
+    _p_preview: False
   when: current_cp4d_cluster.cp4d_version >= "4.7.0"
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
