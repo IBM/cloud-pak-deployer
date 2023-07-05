@@ -107,9 +107,17 @@
   debug:
     var: _upgrade_cp4d
 
-- name: Fail if trying to upgrade to 4.7
-  fail:
-    msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 at the moment. Please consult Cloud Pak for Data documentation for upgrade steps which includes private topology deployment."
+- block:
+
+  - name: Generate migrate-private-topology scripts
+    include_role:
+      name: cp4d-migrate-private-topology
+    vars:
+      _p_preview: True
+      
+  - name: Fail if trying to upgrade to 4.7
+    fail:
+      msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 at the moment. Please consult Cloud Pak for Data documentation for upgrade steps. For convenience, the {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-migrate-private-topology.sh script has the steps to migrate to the private topology."
   when:
     - _upgrade_cp4d
     - _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
