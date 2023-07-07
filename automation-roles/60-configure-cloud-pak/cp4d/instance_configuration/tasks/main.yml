@@ -3,8 +3,20 @@
   debug:
     var: _cp4d_instance
 
+- name: Get Pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ current_cp4d_cluster.project }}"
+    label_selectors:
+      - component=cp4dinstanceconfiguration
+  register: pods
+
 - name: Get Route to Cloud Pak for Data
-  shell: |
+  kubernetes.core.k8s_exec:
+    namespace: "{{ current_cp4d_cluster.project }}"
+    pod: "{{ pods.resources[0].metadata.name }}"
+    command: |
     oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
       -o jsonpath="{.items[0].spec.host}"
   register: cp4d_url
