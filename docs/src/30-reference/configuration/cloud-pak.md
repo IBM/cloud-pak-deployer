@@ -540,9 +540,9 @@ cp4ba:
       decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
         enabled: true
         optional_components:
-          decision_center: true # Decison Center (ODM)
-          decision_runner: true # Decison Runner (ODM)
-          decision_server_runtime: true # Decison Server (ODM)
+          decision_center: true # Decision Center (ODM)
+          decision_runner: true # Decision Runner (ODM)
+          decision_server_runtime: true # Decision Server (ODM)
         # Additional customization for Operational Decision Management
         # Contents of the following will be merged into ODM part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
