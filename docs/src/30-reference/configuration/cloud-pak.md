@@ -514,7 +514,8 @@ See sample config for remainder of properties.
 
 ## `cp4ba`
 Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
-See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.
+See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.  
+RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.
 
 ```yaml
 ---
