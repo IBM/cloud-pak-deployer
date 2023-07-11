@@ -186,6 +186,27 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_label_selector_stub: ibm-odlm
 
+- name: Wait for ZenExtension intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: zen.cpd.ibm.com/v1
+    kind: ZenExtension
+    namespace: "{{ cp4ba_project_name }}"
+  register: zenexts
+  retries: 10
+  delay: 30
+  until: zenexts.resources | length == 0
+  ignore_errors: true
+
+- name: Clear ZenExtension instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: zen.cpd.ibm.com/v1
+    common_kind: ZenExtension
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: zenexts.resources | length != 0
+
 - name: Remove Project cp4ba
   kubernetes.core.k8s:
     state: absent
