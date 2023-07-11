@@ -44,10 +44,22 @@
   community.general.java_cert:
     cert_url: "cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}"
     keystore_path: "{{ cp4ba_output_directory }}/ierconfig/configure/truststore.jks"
-    keystore_pass: changeit
+    keystore_pass: "{{ lc_principal_admin_password }}"
     keystore_create: true
     state: present
     cert_alias: cpd-cert
+
+- name: Template ierconfig/configure/configmgr_cl.ini
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl.ini"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl.ini"
+    mode: u+rwx
+
+- name: Template ierconfig/Workflow/configureRMworkflow/WorkflowTransfer.sh
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/Workflow/configureRMworkflow/WorkflowTransfer.sh"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/Workflow/configureRMworkflow/WorkflowTransfer.sh"
+    mode: u+rwx
 
 - name: Get IAM token
   ansible.builtin.include_role:
