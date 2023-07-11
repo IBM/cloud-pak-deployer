@@ -222,7 +222,7 @@
 
 - name: Set user profile api key
   ansible.builtin.set_fact:
-    api_key: "{{ user_profile_response.json.data.apiKey }}"  
+    api_key: "{{ user_profile_response.json.data.apiKey }}"
 
 # Based on https://www.ibm.com/docs/en/process-mining/latest?topic=manual-how-integrate-process-mining-task-mining
 - name: Setup master key for task mining
@@ -261,6 +261,7 @@
     condition_query: "data.groups[?name == 'TaskMiningAdmins']"
 
 - name: Create group
+  when: tm_admins_group | length == 0
   block:
     - name: Create TaskMiningAdmins group
       ansible.builtin.uri:
@@ -294,7 +295,6 @@
       vars:
         condition_query: "data.groups[?name == 'TaskMiningAdmins']"
 
-  when: tm_admins_group | length == 0
 
 - name: Get TaskMiningAdmins group ID
   ansible.builtin.set_fact:
@@ -504,7 +504,7 @@
 
 - name: Enable agent for admin user
   ansible.builtin.set_fact:
-    admin_user: "{{ admin_user | combine({ 'agentEnabled': true }) }}"
+    admin_user: "{{ admin_user | combine({'agentEnabled': true }) }}"
 
 - name: Update admin user
   ansible.builtin.uri:
