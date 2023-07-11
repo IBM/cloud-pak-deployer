@@ -16,8 +16,8 @@
     command: >
       mysql -uroot -p{{ pm_universal_password }} -e "CREATE USER 'pm'@'%' IDENTIFIED BY '{{ pm_universal_password }}';"
   register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
-    command_status.stdout is search('.*Operation CREATE USER failed.*'))
+  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
+    command_status.stderr is search('.*Operation CREATE USER failed.*'))
 
 - name: Prepare MySQL DB
   kubernetes.core.k8s_exec:
@@ -26,8 +26,8 @@
     command: >
       mysql -uroot -p{{ pm_universal_password }} -e "CREATE DATABASE pm;"
   register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
-    command_status.stdout is search('.*database exists.*'))
+  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
+    command_status.stderr is search('.*database exists.*'))
 
 - name: Set privileges
   kubernetes.core.k8s_exec:
@@ -168,63 +168,6 @@
     wait: true
     wait_sleep: 15
     wait_timeout: 15
-
-# TODO hotfix for CPFS installed in multinamespace mode START last with IPM 1.13.1 at 2022-12-02
-- name: Prepare yaml file for licensing ConfigMap
-  ansible.builtin.template:
-    src: licensing-configmap.yaml.j2
-    dest: "{{ pm_output_directory }}/licensing-configmap.yaml"
-    mode: u+rwx
-
-- name: Add licensing ConfigMap
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ pm_output_directory }}/licensing-configmap.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Wait for licensing token upload secret to appear
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    name: ibm-licensing-upload-token
-    namespace: cs-control
-  register: licensing_secret
-  retries: 10
-  delay: 30
-  until: licensing_secret.resources | length == 1
-
-- name: Get existing licensing secret
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    namespace: cs-control
-    name: ibm-licensing-upload-token
-  register: licensing_secret
-
-- name: Set token_upload
-  ansible.builtin.set_fact:
-    token_upload: "{{ licensing_secret.resources[0].data['token-upload'] }}"
-
-- name: Prepare yaml file for licensing Secret
-  ansible.builtin.template:
-    src: licensing-secret.yaml.j2
-    dest: "{{ pm_output_directory }}/licensing-secret.yaml"
-    mode: u+rwx
-
-- name: Add licensing Secret
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ pm_output_directory }}/licensing-secret.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-# TODO hotfix for CPFS installed in multinamespace mode END
 
 # Based on validate successful deployment by following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=platform-how-validate-successful-installation
 - name: Wait for ProcessMining to be Ready
