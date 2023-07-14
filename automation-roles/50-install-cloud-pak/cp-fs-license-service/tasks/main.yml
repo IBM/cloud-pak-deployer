@@ -8,6 +8,15 @@
 - name: Install license service in project {{ _p_fs_project }}
   block:
 
+  - name: Get Pod
+    kubernetes.core.k8s_info:
+      api_version: v1
+      kind: Pod
+      namespace: "{{ _p_fs_project }}"
+      label_selectors:
+        - component=licenseserviceinstall
+    register: installpods
+
   - name: Make sure that directory {{ status_dir }}/cloud-paks exists
     file:
       path: "{{ status_dir }}/cloud-paks"
@@ -19,12 +28,17 @@
       dest: "{{ status_dir }}/cloud-paks/license-service.yml"
 
   - name: Create license service OperandRequest
-    shell: |
-      oc apply -f {{ status_dir }}/cloud-paks/license-service.yml
-
+    kubernetes.core.k8s_exec:
+      namespace: "{{ _p_fs_project }}"
+      pod: "{{ installpods.resources[0].metadata.name }}"
+      command: oc apply -f {{ status_dir }}/cloud-paks/license-service.yml
+    register: command_status
+    
   - name: Wait until IBMLicensing CR is present
-    shell: |
-      oc get ibmlicensing instance
+    kubernetes.core.k8s_exec:
+      namespace: "{{ _p_fs_project }}"
+      pod: "{{ installpods.resources[0].metadata.name }}"
+      command: oc get ibmlicensing instance
     register: _ibm_licensing_cr
     retries: 60
     delay: 10

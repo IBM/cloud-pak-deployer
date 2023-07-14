@@ -3,23 +3,31 @@
   debug:
     var: cp4d_user_group
 
-- name: Get Pod
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Pod
-    namespace: "{{ current_cp4d_cluster.project }}"
-    label_selectors:
-      - component=cp4dusergroup
-  register: pods
-
+# - name: Get Route to Cloud Pak for Data
+#   kubernetes.core.k8s_info:
+#     api_version: v1
+#     kind: Service
+#     name: web
+#     namespace: testing
+#   register: web_service
 
 - name: Get Route to Cloud Pak for Data
-  kubernetes.core.k8s_exec:
-    namespace: "{{ current_cp4d_cluster.project }}"
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx -o jsonpath="{.items[0].spec.host}"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Route
+    name: cp4d_url
+    namespace: '{{ current_cp4d_cluster.project }}'
+    label_selectors:
+      - component = ibm-nginx
   register: cp4d_url
 
+
+# - name: Get Route to Cloud Pak for Data
+#   shell: |
+#     oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
+#       -o jsonpath="{.items[0].spec.host}"
+#   register: cp4d_url
+ 
 - set_fact:
     ldap_role_assignments_list: "{{ cp4d_user_group.role_assigmnents | map(attribute='name') | list }}"
     ldap_group_mappings_list: "{{ cp4d_user_group.ldap_groups | map(attribute='name') | list }}"
