@@ -5,38 +5,6 @@
   vars:
     common_output_to_var: "apps_endpoint_domain"
 
-# Create Route for IER CPE configuration
-- name: Prepare yaml file for ierconfig Route
-  ansible.builtin.template:
-    src: ier/ier-cpe-route.yaml.j2
-    dest: "{{ cp4ba_output_directory }}/ier-cpe-route.yaml"
-    mode: u+rwx
-
-- name: Create ierconfig Route
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    namespace: "{{ cp4ba_project_name }}"
-    src: "{{ cp4ba_output_directory }}/ier-cpe-route.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Wait for resource condition generic
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition-generic
-  vars:
-    common_api_version: route.openshift.io/v1
-    common_resource_kind: Route
-    common_resource_name: ierconfig
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.ingress[0].conditions[0].status
-    common_condition_value: 'True'
-    common_retries: 10
-    common_delay: 10
-
 - name: Create a directory for IER config
   ansible.builtin.file:
     path: "{{ cp4ba_output_directory }}/ierconfig"
@@ -72,6 +40,27 @@
     dest: "{{ cp4ba_output_directory }}/ierconfig/configure/profiles/environmentObjectStoreConfiguration.xml"
     mode: u+rwx
 
+- name: Import trusted CA from SSL certificate
+  community.general.java_cert:
+    cert_url: "cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}"
+    keystore_path: "{{ cp4ba_output_directory }}/ierconfig/configure/truststore.jks"
+    keystore_pass: "{{ lc_principal_admin_password }}"
+    keystore_create: true
+    state: present
+    cert_alias: cpd-cert
+
+- name: Template ierconfig/configure/configmgr_cl.ini
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl.ini"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/configure/configmgr_cl.ini"
+    mode: u+rwx
+
+- name: Template ierconfig/Workflow/configureRMworkflow/WorkflowTransfer.sh
+  ansible.builtin.template:
+    src: "{{ cp4ba_output_directory }}/ierconfig/Workflow/configureRMworkflow/WorkflowTransfer.sh"
+    dest: "{{ cp4ba_output_directory }}/ierconfig/Workflow/configureRMworkflow/WorkflowTransfer.sh"
+    mode: u+rwx
+
 - name: Get IAM token
   ansible.builtin.include_role:
     name: common
@@ -87,7 +76,7 @@
     name: common
     tasks_from: zen-token
   vars:
-    comon_iam_token: "{{ iam_token }}"
+    common_iam_token: "{{ iam_token }}"
     common_user: "{{ lc_principal_admin_user }}"
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_output_to_var: "zen_token"

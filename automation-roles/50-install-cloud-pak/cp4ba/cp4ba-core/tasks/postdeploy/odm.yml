@@ -20,7 +20,7 @@
     name: common
     tasks_from: zen-token
   vars:
-    comon_iam_token: "{{ iam_token }}"
+    common_iam_token: "{{ iam_token }}"
     common_user: "{{ lc_principal_admin_user }}"
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_output_to_var: "zen_token"
@@ -121,7 +121,7 @@
     name: common
     tasks_from: zen-token
   vars:
-    comon_iam_token: "{{ iam_token }}"
+    common_iam_token: "{{ iam_token }}"
     common_user: "{{ lc_principal_admin_user }}"
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_output_to_var: "zen_token"
@@ -141,6 +141,20 @@
     decision_service_server_id: "{{ servers_response.json | json_query(condition_query) | first }}"
   vars:
     condition_query: "elements[?name == 'Decision Service Execution'].id"
+
+- name: Get Usage configmap
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ cp4ba_output_namespace }}"
+    name: cp4ba-usage
+  register: usage
+  retries: 40
+  delay: 15
+
+- name: Find zen api key
+  ansible.builtin.set_fact:
+    zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
 
 - name: Update credentials for server
   ansible.builtin.uri:

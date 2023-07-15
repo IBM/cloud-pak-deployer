@@ -20,7 +20,7 @@
     name: common
     tasks_from: zen-token
   vars:
-    comon_iam_token: "{{ iam_token }}"
+    common_iam_token: "{{ iam_token }}"
     common_user: "{{ lc_principal_admin_user }}"
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_output_to_var: "zen_token"
@@ -28,7 +28,7 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=secrets-creating-custom-bpc-workforce-secret
 - name: Get BPM Systems Federated Response
   ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/pfs/rest/bpm/federated/v1/systems"
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/federated/v1/systems"
     method: GET
     headers:
       Authorization: "Bearer {{ zen_token }}"
@@ -70,7 +70,7 @@
     kind: Pod
     namespace: "{{ cp4ba_project_name }}"
     label_selectors:
-      - component = iaf-insights-engine-cockpit
+      - "component={{ cp4ba_cr_meta_name }}-insights-engine-cockpit"
   register: pods
   retries: 40
   delay: 15
@@ -91,7 +91,7 @@
   vars:
     common_api_version: v1
     common_resource_kind: Deployment
-    common_resource_name: iaf-insights-engine-cockpit
+    common_resource_name: "{{ cp4ba_cr_meta_name }}-insights-engine-cockpit"
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Available
     common_retries: 80
