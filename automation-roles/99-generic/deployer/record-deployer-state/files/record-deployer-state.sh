@@ -83,7 +83,8 @@ while true;do
 
   log_state "percentage_completed" ${completion_perc}
 
-  mv -f ${temp_file} ${status_dir}/state/deployer-state.out
+  cp -f ${temp_file} ${status_dir}/state/deployer-state.out
+  chmod 777 ${status_dir}/state/deployer-state.out
 
   sleep 10
 done

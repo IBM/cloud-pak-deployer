@@ -1,10 +1,13 @@
 ---
 cp4d:
-- project: zen-45
+- project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 4.5.0
+  cp4d_version: 4.7.0
+  cp4d_entitlement: cpd-enterprise
+  cp4d_production_license: True
   accept_licenses: False
   sequential_install: False
+  operators_project: cpd-operators
   cartridges:
   - name: cp-foundation
     license_service:
@@ -26,7 +29,7 @@ cp4d:
 #
 
   - name: analyticsengine 
-    description: Analytics Engine Powered by Apache Spark
+    description: Analytics Engine Powered by Apache Spark 
     size: small 
     state: removed
 
@@ -50,12 +53,16 @@ cp4d:
     description: Db2 Data Gate
     state: removed
 
+  - name: datastage-ent
+    description: DataStage Enterprise
+    state: removed
+
   - name: datastage-ent-plus
     description: DataStage Enterprise Plus
     state: removed
     # instances:
     #   - name: ds-instance
-    #     # Optional settings    
+    #     # Optional settings
     #     description: "datastage ds-instance"
     #     size: medium
     #     storage_class: efs-nfs-client
@@ -72,7 +79,7 @@ cp4d:
     #       cpu_request: 1
     #       cpu_limit: 3
     #       memory_request: 4Gi
-    #       memory_limit: 12Gi
+    #       memory_limit: 12Gi    
 
   - name: db2
     description: Db2 OLTP
@@ -103,6 +110,10 @@ cp4d:
     size: small
     state: removed
 
+  - name: dpra
+    description: Data Privacy Risk Assessment
+    state: removed
+
   - name: dv
     description: Data Virtualization
     size: small 
@@ -126,6 +137,11 @@ cp4d:
         #resource_limit_cpu: 1000m
         #resource_limit_memory: 4Gi
 
+  - name: factsheet
+    description: AI Factsheets
+    size: small
+    state: removed
+
   - name: hadoop
     description: Execution Engine for Apache Hadoop
     size: small
@@ -141,8 +157,15 @@ cp4d:
     description: OpenPages
     state: removed
 
+  # For Planning Analytics, the case version is needed due to defect in olm utils
   - name: planning-analytics
     description: Planning Analytics
+    state: removed
+
+  - name: replication
+    description: Data Replication
+    license: IDRC
+    size: small
     state: removed
 
   - name: rstudio
@@ -169,10 +192,10 @@ cp4d:
     state: removed
 
   # For Watson Knowledge Studio, the case version is needed due to defect in olm utils
-  # Not Released for 4.5.0
-  #- name: watson-ks
-  #  size: small
-  #  state: removed
+  - name: watson-ks
+    description: Watson Knowledge Studio
+    size: small
+    state: removed
 
   - name: watson-openscale
     description: Watson OpenScale
@@ -189,6 +212,12 @@ cp4d:
     description: Watson Knowledge Catalog
     size: small
     state: removed
+    installation_options:
+      install_wkc_core_only: False
+      enableKnowledgeGraph: False
+      enableDataQuality: False
+      enableFactSheet: False
+      enableMANTA: False
 
   - name: wml
     description: Watson Machine Learning
@@ -201,16 +230,26 @@ cp4d:
     size: small
     state: removed
 
-  - name: wsl
+  - name: ws
     description: Watson Studio
     state: installed
+
+  - name: ws-pipelines
+    description: Watson Studio Pipelines
+    state: removed
 
   - name: ws-runtimes
     description: Watson Studio Runtimes
     runtimes:
+    - ibm-cpd-ws-runtime-py39
+    - ibm-cpd-ws-runtime-222-py
     - ibm-cpd-ws-runtime-py39gpu
+    - ibm-cpd-ws-runtime-222-pygpu
+    - ibm-cpd-ws-runtime-231-pygpu
     - ibm-cpd-ws-runtime-r36
-    state: removed
+    - ibm-cpd-ws-runtime-222-r
+    - ibm-cpd-ws-runtime-231-r
+    state: removed 
 
 #
 # Cartridges where extra work is needed (will not install automatically)
