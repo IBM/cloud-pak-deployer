@@ -1,5 +1,7 @@
 # Running the Cloud Pak Deployer on IBM Cloud
 
+See the deployer in action in this video: https://ibm.box.com/v/cpd-ibm-cloud-roks
+
 ## Topology
 
 A typical setup of the ROKS cluster on IBM Cloud VPC is pictured below:
@@ -9,7 +11,7 @@ A typical setup of the ROKS cluster on IBM Cloud VPC is pictured below:
 
 In order for the Cloud Pak Deployer to create the infrastructure and deploy IBM Cloud Pak for Data, it must perform tasks on IBM Cloud. In order to do so it requires an IBM Cloud API Key. This can be created by following these steps:
 
-- Go to https://cloud.ibm.com/iam/apikeys and login with your IBMId credentials
+- Go to https://cloud.ibm.com/iam/apikeys and login with your IBMid credentials
 - Ensure you have selected the correct IBM Cloud Account for which you wish to use the Cloud Pak Deployer
 - Click **Create an IBM Cloud API Key** and provide a name and description
 - Copy the IBM Cloud API key using the **Copy** button and store it in a safe place, as you will not be able to retrieve it later
@@ -21,7 +23,7 @@ In order for the Cloud Pak Deployer to create the infrastructure and deploy IBM 
 
 If you want to pull the Cloud Pak images from the entitled registry (i.e. an online install), or if you want to mirror the images to your private registry, you need to download the entitlement key. You can skip this step if you're installing from a private registry and all Cloud Pak images have already been downloaded to the private registry.
 
-- Navigate to https://myibm.ibm.com/products-services/containerlibrary and login with your IBMId credentials
+- Navigate to https://myibm.ibm.com/products-services/containerlibrary and login with your IBMid credentials
 - Select **Get Entitlement Key** and create a new key (or copy your existing key)
 - Copy the key value
 

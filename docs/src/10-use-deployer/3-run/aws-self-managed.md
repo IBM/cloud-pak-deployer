@@ -2,6 +2,8 @@
 
 On Amazon Web Services (AWS), OpenShift can be set up in various ways, managed by Red Hat (ROSA) or self-managed. The steps below are applicable to a self-managed OpenShift installation. The IPI (Installer Provisioned Infrastructure) installer will be used. More information about IPI installation can be found here: https://docs.openshift.com/container-platform/4.10/installing/installing_aws/installing-aws-customizations.html.
 
+See the deployer in action in this video: https://ibm.box.com/v/cpd-aws-self-managed
+
 ## Topology
 
 A typical setup of the self-managed OpenShift cluster is pictured below:
