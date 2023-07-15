@@ -28,6 +28,7 @@ log_state() {
 }
 
 mkdir -p ${status_dir}/state
+chmod 777 ${status_dir}/state
 temp_file=$(mktemp)
 
 log "----------"

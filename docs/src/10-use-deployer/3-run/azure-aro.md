@@ -35,10 +35,9 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 
 ## Login to the Microsoft Azure
 
-You are required to create a Service Principal and get Azure Red Hat OpenShift Resource Provider objectId before starting the deployment. The future steps expect that you are logged in to the Microsoft Azure by using CLI. You can either:
+You are required to create a Service Principal and get Azure Red Hat OpenShift Resource Provider objectId before starting the deployment. The future steps expect that you are logged in to the Microsoft Azure by using CLI.
 
-- [Install Azure CLI tool](https://learn.hashicorp.com/tutorials/terraform/install-cli?in=terraform/azure-get-started#install-terraform), and run the commands in your operationg system, or
-- use the Azure CLI tool which is already installed in the deployer image. You need to run the container with the overridden entrypoint, and thus get the interactive access to the tools inside ([`docker` | `podman`]), i.e: `docker run -it --name cpd-cli --entrypoint /bin/bash cloud-pak-deployer:latest`
+[Install Azure CLI tool](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=dnf), and run the commands in your operating system, or
 
 Login to the Microsoft Azure:
 

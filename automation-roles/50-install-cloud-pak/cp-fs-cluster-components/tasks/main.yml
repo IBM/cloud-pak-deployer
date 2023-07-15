@@ -1,0 +1,25 @@
+---
+- name: Validate that mandatory parameters have been specified
+  assert:
+    that:
+      - _p_cp4d_version is defined
+
+- name: Generate apply-cluster-components script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
+  template:
+    src: apply-cluster-components.j2
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh"
+    mode: u+rwx
+
+- name: Apply cluster components if not already done in an earlier step
+  block:
+
+  - name: Run shell script to apply cluster components, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cluster-components.log
+    shell: |
+      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
+
+  - set_fact:
+      _cp_fs_cluster_compontents_run: True
+
+  when: 
+  - not _p_preview
+  - not (_cp_fs_cluster_compontents_run | default(False))
