@@ -514,7 +514,9 @@ See sample config for remainder of properties.
 
 ## `cp4ba`
 Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
-See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.
+See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.  
+RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
+There is cp4ba-22.0.2 branch which would have to be built manually and contains both RPA and IPM.
 
 ```yaml
 ---
@@ -540,9 +542,9 @@ cp4ba:
       decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
         enabled: true
         optional_components:
-          decision_center: true # Decison Center (ODM)
-          decision_runner: true # Decison Runner (ODM)
-          decision_server_runtime: true # Decison Server (ODM)
+          decision_center: true # Decision Center (ODM)
+          decision_runner: true # Decision Runner (ODM)
+          decision_server_runtime: true # Decision Server (ODM)
         # Additional customization for Operational Decision Management
         # Contents of the following will be merged into ODM part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
@@ -589,6 +591,7 @@ cp4ba:
         enabled: true
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
+          kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
       workstreams: # Automation Workstream Services (IAWS)
         enabled: false # Always false in this tool - this feature is not implemented
   
@@ -759,6 +762,7 @@ Placed in `cp4ba.patterns.workflow` key.
 | enabled                         | Set to `true` to enable `workflow` pattern. | Yes  | true, false |
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
+| optional_components.kafka          | Set to `true` to install a kafka cluster and enable kafka service for workflow authoring. | Yes | true, false |
 
 ### Workstreams pattern properties
 

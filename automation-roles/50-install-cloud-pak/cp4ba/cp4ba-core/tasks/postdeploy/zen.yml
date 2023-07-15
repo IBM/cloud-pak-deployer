@@ -1,19 +1,3 @@
-# Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-custom-resources#automationuiconfig
-- name: Apply custom certificate for Zen
-  kubernetes.core.k8s:
-    state: present
-    api_version: core.automation.ibm.com/v1beta1
-    kind: AutomationUIConfig
-    name: iaf-system
-    namespace: "{{ cp4ba_project_name }}"
-    definition:
-      spec:
-        tls:
-          certificateSecret:
-            secretName: external-tls-secret
-          caSecret:
-            secretName: external-tls-secret
-            key: ca.crt
 
 - name: Retrieve default certification
   ansible.builtin.include_role:
@@ -40,6 +24,34 @@
     wait_sleep: 15
     wait_timeout: 15
 
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=security-customizing-cloud-pak-entry-point
+- name: Apply custom certificate for Zen
+  kubernetes.core.k8s:
+    state: present
+    api_version: zen.cpd.ibm.com/v1
+    kind: ZenService
+    name: iaf-zen-cpdservice
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      spec:
+        zenCustomRoute:
+          route_secret: cpd-route-tls-secret
+
+- name: Decode crt
+  ansible.builtin.set_fact:
+    decoded_crt: "{{ tls_crt | b64decode }}"
+
+- name: Wait for Cert to be updated in Route
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: cpd
+    namespace: "{{ cp4ba_project_name }}"
+  register: route
+  retries: 90
+  delay: 60
+  until: route.resources[0].spec.tls.certificate == decoded_crt
+
 - name: Delete Zen ibm-nginx pods
   kubernetes.core.k8s:
     state: absent
@@ -62,25 +74,26 @@
     common_retries: 80
     common_delay: 15
 
-- name: Delete PFS pods
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Pod
-    namespace: "{{ cp4ba_project_name }}"
-    label_selectors:
-      - app.kubernetes.io/name=cp4ba-pfs
+# TODO need to restart bas instead?
+# - name: Delete PFS pods
+#   kubernetes.core.k8s:
+#     state: absent
+#     api_version: v1
+#     kind: Pod
+#     namespace: "{{ cp4ba_project_name }}"
+#     label_selectors:
+#       - app.kubernetes.io/name=cp4ba-pfs
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-statefulset-available
-  vars:
-    common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_retries: 60
-    common_delay: 20
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+# - name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-statefulset-available
+#   vars:
+#     common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
+#     common_resource_namespace: "{{ cp4ba_project_name }}"
+#     common_retries: 60
+#     common_delay: 20
+#   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Delete Kibana pods
   kubernetes.core.k8s:
@@ -104,27 +117,28 @@
     common_retries: 80
     common_delay: 15
 
-- name: Delete Zen ibm-nginx pods to refresh their cached IPs
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Pod
-    namespace: "{{ cp4ba_project_name }}"
-    label_selectors:
-      - app.kubernetes.io/component=ibm-nginx
+#TODO needed?
+# - name: Delete Zen ibm-nginx pods to refresh their cached IPs
+#   kubernetes.core.k8s:
+#     state: absent
+#     api_version: v1
+#     kind: Pod
+#     namespace: "{{ cp4ba_project_name }}"
+#     label_selectors:
+#       - app.kubernetes.io/component=ibm-nginx
 
-- name: Wait for Zen ibm-nginx Deployment Available State
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: ibm-nginx
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
+# - name: Wait for Zen ibm-nginx Deployment Available State
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-resource-condition
+#   vars:
+#     common_api_version: v1
+#     common_resource_kind: Deployment
+#     common_resource_name: ibm-nginx
+#     common_resource_namespace: "{{ cp4ba_project_name }}"
+#     common_condition_name: Available
+#     common_retries: 80
+#     common_delay: 15
 
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
@@ -262,7 +276,7 @@
     name: common
     tasks_from: zen-token
   vars:
-    comon_iam_token: "{{ iam_token }}"
+    common_iam_token: "{{ iam_token }}"
     common_user: "{{ lc_principal_admin_user }}"
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_output_to_var: "zen_token"
@@ -394,8 +408,12 @@
         "subject_type": "public"
       }
     validate_certs: false
-    status_code: 200
+    status_code:
+      - 201
+      - 400
   register: client_response
+  failed_when: client_response.status == 400 and client_response.json | json_query('error_description') is not search('.*already exists.*')
+
 
 - name: Add cpadminservice to zen
   ansible.builtin.uri:
@@ -452,7 +470,7 @@
         name: common
         tasks_from: zen-token
       vars:
-        comon_iam_token: "{{ iam_token }}"
+        common_iam_token: "{{ iam_token }}"
         common_user: "cpadminservice"
         common_namespace_name: "{{ cp4ba_project_name }}"
         common_output_to_var: "zen_token"
