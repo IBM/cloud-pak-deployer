@@ -5,9 +5,13 @@ from packaging import version
 #---
 # openshift:
 # - name: "{{ env_id }}-cluster"
-#   azure_aro_name: "{{ env_id }}-infra"
-#   subdomain_name: "{{ env_id }}"
-#   ocp_version: 4.8
+#   azure_name: "{{ env_id }}-infra"
+#   domain_name: deployer.eu
+#   ocp_version: 4.12
+#   control_plane_flavour: Standard_D8s_v3
+#   compute_flavour: Standard_D16s_v3
+#   compute_disk_size_gb: 128
+#   compute_nodes: 3
 #   network:
 #     pod_cidr: "10.128.0.0/14"
 #     service_cidr: "172.30.0.0/16"
@@ -24,8 +28,12 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     #Check Must Fields
     #Level 1
     g('name').isRequired()
-    g('azure_aro_name').isRequired()    
-    g('subdomain_name').isRequired()
+    g('azure_name').isRequired()    
+    g('domain_name').isOptional()
+    g('control_plane_flavour').isRequired()
+    g('compute_flavour').isRequired()
+    g('compute_disk_size_gb').isRequired()
+    g('compute_nodes').isRequired()
     g('ocp_version').isRequired()
     g('network').isRequired()
     g('openshift_storage').isRequired()

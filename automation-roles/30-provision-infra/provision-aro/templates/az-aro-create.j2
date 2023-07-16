@@ -1,0 +1,16 @@
+set -o pipefail
+az aro create \
+    --resource-group {{ _azure_config.resource_group.name }} \
+    --name {{ _current_openshift_cluster.name }} \
+    --vnet {{ _azure_config.vnet.name }} \
+    --master-subnet {{ (_azure_vnet_control_plane_subnet.stdout | from_json).id }} \
+    --worker-subnet {{ (_azure_vnet_compute_subnet.stdout | from_json).id }}  \
+{% if (_current_openshift_cluster.domain_name | default('')) != '' %}
+    --domain {{ _current_openshift_cluster.domain_name }} \
+{% endif %}
+    --master-vm-size {{ _current_openshift_cluster.control_plane_flavour }} \
+    --worker-vm-size {{ _current_openshift_cluster.compute_flavour }} \
+    --worker-count {{ _current_openshift_cluster.compute_nodes }} \
+    --worker-vm-disk-size-gb {{ _current_openshift_cluster.compute_disk_size_gb }} \
+    --pull-secret @{{ status_dir }}/azure-aro/ocp_pullsecret.json \
+    --debug 2>&1 | tee {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log

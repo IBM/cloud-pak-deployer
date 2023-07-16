@@ -6,7 +6,7 @@ global_config:
   env_id: pluto-01
   confirm_destroy: False
   
-azure_aro:
+azure:
 - name: "{{ env_id }}-infra"
   resource_group:
     name: "{{ env_id }}-rg"
@@ -18,22 +18,20 @@ azure_aro:
     subnet:
       name: "{{ env_id }}-control-plane-subnet"
       address_prefixes: 10.0.0.0/23
-    vm:
-      size: Standard_D8s_v3
   compute:
     subnet:
       name: "{{ env_id }}-compute-subnet"
       address_prefixes: 10.0.2.0/23
-    vm:
-      size: Standard_D16s_v3
-      disk_size_gb: 128
-      count: 3
 
 openshift:
-- name: "{{ env_id }}-cluster"
-  azure_aro_name: "{{ env_id }}-infra"
-  subdomain_name: "{{ env_id }}"
-  ocp_version: 4.8
+- name: "{{ env_id }}"
+  azure_name: "{{ env_id }}-infra"
+  domain_name: "{{ env_id }}.eu"
+  ocp_version: 4.10.54
+  control_plane_flavour: Standard_D8s_v3
+  compute_flavour: Standard_D16s_v3
+  compute_disk_size_gb: 128
+  compute_nodes: 3
   network:
     pod_cidr: "10.128.0.0/14"
     service_cidr: "172.30.0.0/16"
