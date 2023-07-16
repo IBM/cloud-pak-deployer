@@ -7,7 +7,7 @@ A typical setup of the ARO cluster is pictured below:
 
 The ARO cluster is deployed by using the Terraform in combination with the Azure Resource Manager (ARM) template.
 
-When deploying ARO, you can partially configure the domain name by setting the `openshift.subdomain_name` attribute. The resulting domain name is managed by Azure, and it must be unique across all ARO instances deployed in Azure. Both the API and Ingress urls are set to be public in the template, so they can be resolved by external clients.
+When deploying ARO, you can configure the domain name by setting the `openshift.domain_name` attribute. The resulting domain name is managed by Azure, and it must be unique across all ARO instances deployed in Azure. Both the API and Ingress urls are set to be public in the template, so they can be resolved by external clients.
 
 ## Acquire an Red Hat OpenShift pull secret
 
@@ -31,7 +31,7 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 ## Verify your permissions in Microsoft Azure
 
 - Check [Azure resource quota](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#before-you-begin) of the subscription - Azure Red Hat OpenShift requires a minimum of 40 cores to create and run an OpenShift cluster.
-- The ARO cluster is provisioned by using ARM template which expects Service Principal to be created and used. Ideally, one has to have `Contributor` permissions on the subscription (Azure resources) and `Application administrator` role assigned in the Azure Active Directory. See details [here](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#verify-your-permissions).
+- The ARO cluster is provisioned using the `az` command. Ideally, one has to have `Contributor` permissions on the subscription (Azure resources) and `Application administrator` role assigned in the Azure Active Directory. See details [here](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#verify-your-permissions).
 
 ## Login to the Microsoft Azure
 
@@ -67,11 +67,6 @@ az account subscription list
 ]
 ```
 
-To set the `SUBSCRIPTION_ID` to the first entry, run the following command:
-```bash
-export SUBSCRIPTION_ID=$(az account subscription list -o tsv --query '[0].subscriptionId') && echo "Subscription ID: $SUBSCRIPTION_ID"
-```
-
 ## Register Resource Providers
 
 Make sure the following Resource Providers are registered for your subscription by running:
@@ -83,75 +78,17 @@ az provider register -n Microsoft.Storage --wait
 az provider register -n Microsoft.Authorization --wait
 ```
 
-## Create a Service Principal
-
-```bash
-# Specify a name for your service principal, e.g. cpd-sp
-export SPNAME=cpd-sp
-
-# Create your service principal
-az ad sp create-for-rbac --name $SPNAME --role=Contributor --scopes="/subscriptions/$SUBSCRIPTION_ID"
-# {
-#   "appId": "694bxxx",          ---> service_principal_id parameter
-#   "displayName": "$SPNAME",
-#   "name": "694xxx",
-#   "password": "CXxxx",         ---> service_principal_secret parameter
-#   "tenant": "bb0xxx"           ---> your_tenant_id
-# }
-
-# Get objectId of your service principal
-az ad sp list --filter "displayname eq '$SPNAME'" --query "[?appDisplayName=='$SPNAME'].{name: appDisplayName, objectId: id}"
-# [
-#   {
-#     "name": "$SPNAME",
-#     "objectId": "70bdxxx"      ---> service_principal_object_id parameter
-#   }
-# ]
-```
-
-You may want to create the service principal with the `Contributor` role by adding `--role="Contributor"` (the first command above). Anyhow, in the ARM template, the Contributor role is assigned to the given service principal (Virtual Network scope).
-
-!!! info
-    Pay attention to the "service_principal_id", "service_principal_secret", and "service_principal_object_id" output parameter notes. They will be used later.
-
-## Get Azure Red Hat OpenShift Resource Provider objectId
-
-The ARM template also needs to grant the ARO 4 Resource Provider service principal permissions in order to provision and manage clusters. To obtain the ARO 4 RP service principal object id execute the following command:
-
-```bash
-az ad sp list --filter "displayname eq 'Azure Red Hat OpenShift RP'" --query "[?appDisplayName=='Azure Red Hat OpenShift RP'].{name: appDisplayName, objectId: id}"
-# [
-#   {
-#     "name": "Azure Red Hat OpenShift RP",
-#     "objectId": "28exxx"       ---> aro_rp_object_id parameter
-#   }
-# ]
-```
-
-!!! info
-    Pay attention to the "aro_rp_object_id" output parameter note. This will be used later.
 
 ## Prepare for running
 
 ### Set environment variables for Azure ARO cluster
 
 ```
-export ARO_TENANT_ID=your_tenant_id
-export ARO_SUBSCRIPTION_ID=your_subscription_id
-export ARO_SP_ID=service_principal_id
-export ARO_SP_SECRET=service_principal_secret
-export ARO_SP_OBJECT_ID=service_principal_object_id
-export ARO_RP_OBJECT_ID=aro_rp_object_id
-
+export CPD_AZURE-true
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-- `ARO_TENANT_ID`: Azure Active Directory tenant id.
-- `ARO_SUBSCRIPTION_ID`: Subscription id (agreement) with Microsoft to use one or more Microsoft cloud platforms or services. An organization can have multiple subscriptions that use the same Azure AD tenant.
-- `ARO_SP_ID`: Service Principal id (appId) which is used to login to Microsoft Azure by the terraform process. At the same time, the ARM template uses the same Service Principal to deploy the cluster.
-- `ARO_SP_SECRET`: Secret password of the Service Principal
-- `ARO_SP_OBJECT_ID`: Object id of the Service Principal
-- `ARO_RP_OBJECT_ID`: Object id of the Azure Red Hat OpenShift Resource Provider
+- `CPD_AZURE`: This environment variable ensures the that the `$HOME/.azure` directory is mapped into the deployer container
 - `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
 
 ### Set deployer status directory
@@ -187,33 +124,9 @@ export CPD_CONFIG_GIT_CONTEXT=""
 
 ### Create the secrets needed for ARO
 
-You need to store all `ARO_` environments variables together with the OpenShift pull secret in the vault so that the deployer has access to them.
+You need to store the OpenShift pull secret in the vault so that the deployer has access to it.
 
 ```
-./cp-deploy.sh vault set \
-    --vault-secret aro-tenant-id \
-    --vault-secret-value $ARO_TENANT_ID
-
-./cp-deploy.sh vault set \
-    --vault-secret aro-subscription-id \
-    --vault-secret-value $ARO_SUBSCRIPTION_ID
-
-./cp-deploy.sh vault set \
-    --vault-secret aro-sp-id \
-    --vault-secret-value $ARO_SP_ID
-
-./cp-deploy.sh vault set \
-    --vault-secret aro-sp-secret \
-    --vault-secret-value $ARO_SP_SECRET
-
-./cp-deploy.sh vault set \
-    --vault-secret aro-sp-object-id \
-    --vault-secret-value $ARO_SP_OBJECT_ID
-
-./cp-deploy.sh vault set \
-    --vault-secret aro-rp-object-id \
-    --vault-secret-value $ARO_RP_OBJECT_ID
-
 ./cp-deploy.sh vault set \
     --vault-secret ocp-pullsecret \
     --vault-secret-file /tmp/ocp_pullsecret.json
@@ -224,7 +137,7 @@ You need to store all `ARO_` environments variables together with the OpenShift 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-./cp-deploy.sh env apply -e azure_location=westeurope [--accept-all-licenses]
+./cp-deploy.sh env apply [--accept-all-licenses]
 ```
 
 For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
@@ -264,7 +177,6 @@ Secret list for group sample:
 - ibm_cp_entitlement_key
 - sample-provision-ssh-key
 - sample-provision-ssh-pub-key
-- sample-terraform-tfstate
 - cp4d_admin_zen_sample_sample
 ```
 
