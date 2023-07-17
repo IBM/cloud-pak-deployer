@@ -1,0 +1,55 @@
+---
+- name: Retrieve pull secret from vault
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-pullsecret"
+    secret_group: "{{ environment_name }}"
+    secret_file: "{{ status_dir }}/azure-aro/ocp_pullsecret.json"
+
+- name: Create resource group {{ _azure_config.resource_group.name }} for ARO cluster
+  shell: |
+    az group create \
+      --name {{ _azure_config.resource_group.name }} \
+      --location {{ _azure_config.resource_group.location }} 
+
+- name: Create vnet {{ _azure_config.vnet.name }} for ARO cluster
+  shell: |
+    az network vnet create \
+      --resource-group {{ _azure_config.resource_group.name }} \
+      --name {{ _azure_config.vnet.name }} \
+      --address-prefixes {{ _azure_config.vnet.address_space }}
+
+- name: Create control plane subnet {{ _azure_config.control_plane.subnet.name }} for vnet {{ _azure_config.vnet.name }}
+  shell: |
+    az network vnet subnet create \
+      --resource-group {{ _azure_config.resource_group.name }} \
+      --vnet-name {{ _azure_config.vnet.name }} \
+      --name {{ _azure_config.control_plane.subnet.name }} \
+      --address-prefixes {{ _azure_config.control_plane.subnet.address_prefixes }}
+  register: _azure_vnet_control_plane_subnet
+
+- name: Create compute subnet {{ _azure_config.compute.subnet.name }} for vnet {{ _azure_config.vnet.name }}
+  shell: |
+    az network vnet subnet create \
+      --resource-group {{ _azure_config.resource_group.name }} \
+      --vnet-name {{ _azure_config.vnet.name }} \
+      --name {{ _azure_config.compute.subnet.name }} \
+      --address-prefixes {{ _azure_config.compute.subnet.address_prefixes }}
+  register: _azure_vnet_compute_subnet
+
+- name: Generate script to create ARO cluster {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-create-aro.sh
+  template:
+    src: az-aro-create.j2
+    dest: "{{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-create-aro.sh"
+    mode: u+rwx
+
+- name: Provision ARO cluster {{ _current_openshift_cluster.name }}, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
+  shell: |
+    {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-create-aro.sh
+
+- name: Store info about the console and API URLs of the cluster in the {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}/aro-cluster-urls.txt file
+  shell: |
+    az aro show \
+      --resource-group {{ _azure_config.resource_group.name }} \
+      --name {{ _current_openshift_cluster.name }} > {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-aro-cluster-urls.txt
