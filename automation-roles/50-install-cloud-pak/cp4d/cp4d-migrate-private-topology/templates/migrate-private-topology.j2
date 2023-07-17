@@ -1,0 +1,12 @@
+#! /bin/bash
+SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
+
+set -o pipefail
+
+${SCRIPT_DIR}/{{ current_cp4d_cluster.project }}-detach-shared-components.sh
+
+${SCRIPT_DIR}/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
+
+${SCRIPT_DIR}/{{ current_cp4d_cluster.project }}-migrate-scheduler.sh
+
+${SCRIPT_DIR}/{{ current_cp4d_cluster.project }}-detach-cpd-instance.sh

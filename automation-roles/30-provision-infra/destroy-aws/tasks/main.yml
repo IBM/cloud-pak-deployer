@@ -24,6 +24,14 @@
     secret_group: "{{ environment_name }}" 
     _p_secret_variable: _aws_secret_access_key
 
+- name: Get aws-session-token secret from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "aws-session-token"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_session_token
+
 - name: Destroy Openshift with AWS ROSA
   include_tasks: destroy-aws-rosa.yml
   when: _current_openshift_cluster.infrastructure.type is defined and _current_openshift_cluster.infrastructure.type  == 'rosa'

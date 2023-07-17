@@ -1,0 +1,14 @@
+---
+- name: Check if the olm-utils-cm ConfigMap is present in {{ current_cp4d_cluster.project }}
+  shell:
+    oc get cm -n {{ current_cp4d_cluster.project }} olm-utils-cm
+  failed_when: False
+  register: _olm_utils_cm_exists
+
+- name: Copy the ConfigMap from {{ foundational_services_project }} to {{ current_cp4d_cluster.project }}
+  shell: |
+    oc extract cm/olm-utils-cm -n {{ foundational_services_project }} --to=/tmp --confirm
+    oc create cm -n {{ current_cp4d_cluster.project }} olm-utils-cm | true
+    oc set data -n {{ current_cp4d_cluster.project }} cm/olm-utils-cm --from-file=/tmp/release_version
+    oc set data -n {{ current_cp4d_cluster.project }} cm/olm-utils-cm --from-file=/tmp/release_components_meta
+  when: _olm_utils_cm_exists.rc != 0

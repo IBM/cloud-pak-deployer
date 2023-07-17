@@ -1,0 +1,63 @@
+---
+# First generate the scripts
+- name: Generate script to detach shared components {{ current_cp4d_cluster.project }}-detach-shared-components.sh
+  template:
+    src: detach-cpd-instance.j2
+    dest: "{{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-detach-shared-components.sh"
+    mode: u+rwx
+
+- name: Generate script to upgrade certificate manager and license service on cluster
+  include_role:
+    name: cp-fs-cluster-components
+  vars:
+    _p_cp4d_version: "{{ current_cp4d_cluster.cp4d_version }}"
+    _p_migrate_topology: True
+    _p_preview: True
+
+- name: Generate script to migrate scheduler {{ current_cp4d_cluster.project }}-migrate-scheduler.sh
+  template:
+    src: migrate-scheduler.j2
+    dest: "{{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-migrate-scheduler.sh"
+    mode: u+rwx
+
+- name: Generate script to detach CP4D instance {{ current_cp4d_cluster.project }}-detach-instance.sh
+  template:
+    src: detach-cpd-instance.j2
+    dest: "{{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-detach-cpd-instance.sh"
+    mode: u+rwx
+  vars:
+    
+- name: Generate master script to migrate to private topology
+  template:
+    src: migrate-private-topology.j2
+    dest: "{{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-migrate-private-toplology.sh"
+    mode: u+rwx
+
+# Now, run the scripts
+
+- block:
+  - name: Detach shared components instance from {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-detach-shared-components.log
+    shell: |
+      {{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-detach-shared-components.sh 
+
+  - name: Upgrade certificate manager and license service on cluster
+    include_role:
+      name: cp-fs-cluster-components
+    vars:
+      _p_cp4d_version: "{{ current_cp4d_cluster.cp4d_version }}"
+      _p_migrate_topology: True
+
+  - name: Migrate scheduler from {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-migrate-scheduler.log
+    shell: |
+      {{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-migrate-scheduler.sh
+
+  - name: Detach CP4D instance from {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-detach-cpd-instance.log
+    shell: |
+      {{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-detach-cpd-instance.sh 
+      
+  # TODO: Remove temporary patch once CP4D upgrade defect is fixed
+  - name: Patch olm-utils-cm ConfigMap
+    include_tasks: patch-olm-utils-cm.yml
+
+  when: not _p_preview
+

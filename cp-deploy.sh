@@ -616,7 +616,7 @@ if ! $INSIDE_CONTAINER;then
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
-    echo "Building container image for Cloud Pak Deployer including olm-utils"
+    echo "Building container image for Cloud Pak Deployer"
     # Store version info into image
     mkdir -p ${SCRIPT_DIR}/.version-info
     DEPLOYER_VERSION_INFO=$(git log -n1 --pretty='format:%h %cd |%s' --date=format:'%Y-%m-%dT%H:%M:%S' 2> /dev/null)
@@ -757,6 +757,10 @@ if [[ "${SUBCOMMAND}" == "environment" ]];then
   if [[ "${AWS_SECRET_ACCESS_KEY}" != "" ]];then
     arrVaultSecret+=("aws-secret-access-key")
     arrVaultSecretValue+=("${AWS_SECRET_ACCESS_KEY}")
+  fi
+  if [[ "${AWS_SESSION_TOKEN}" != "" ]];then
+    arrVaultSecret+=("aws-session-token")
+    arrVaultSecretValue+=("${AWS_SESSION_TOKEN}")
   fi
   if [[ "${ROSA_LOGIN_TOKEN}" != "" ]];then
     arrVaultSecret+=("rosa-login-token")

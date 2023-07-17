@@ -1,0 +1,14 @@
+---
+- name: Use olm-utils-v1 for older versions of Cloud Pak for Data
+  unarchive:
+    src: /olm-utils/opt-ansible-v1.tar.gz
+    dest: /opt/ansible
+    remote_src: True
+  when: _p_current_cp4d_cluster.cp4d_version < "4.7.0"
+
+- name: Use olm-utils-v2
+  unarchive:
+    src: /olm-utils/opt-ansible-v2.tar.gz
+    dest: /opt/ansible
+    remote_src: True
+  when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
