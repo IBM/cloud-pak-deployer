@@ -5,25 +5,39 @@
     query: >-
       [?name=='{{ _p_openshift_cluster_name }}']
 
+- set_fact:
+    _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _openshift_config.azure_name }}']
+
 - name: Retrieve kubeadmin password from vault
   include_role:
     name: vault-get-secret
   vars:
     secret_name: "{{ _p_openshift_cluster_name }}-kubeadmin-password"
     secret_group: "{{ environment_name }}"
+    _p_secret_variable: _kubeadmin_password
+
+- name: Get API URL from ARO cluster {{ _p_openshift_cluster_name }}
+  shell: |
+    az aro show \
+      --resource-group {{ _azure_config.resource_group.name }} \
+      --name {{ _p_openshift_cluster_name }}
+  register: _aro_cluster_details
 
 - set_fact:
-    _kubeadmin_password: "{{ secret_value }}"
+    _api_url: "{{ (_aro_cluster_details.stdout | from_json).apiserverProfile.url }}"
 
-- name: Login to OpenShift cluster
+- name: Login to OpenShift ARO cluster {{ _p_openshift_cluster_name }}
   shell: |
-    oc login https://api.{{ _openshift_config.subdomain_name }}.{{ azure_location }}.aroapp.io:6443 \
+    oc login {{ _api_url }} \
       -u kubeadmin -p {{ _kubeadmin_password }} \
       --insecure-skip-tls-verify=true
-  register: oc_login_result
+  register: _oc_login_result
   retries: 60
   delay: 10
-  until: oc_login_result.rc==0
+  until: _oc_login_result.rc==0
 
 - debug:
-    msg: "{{ oc_login_result }}"
+    msg: "{{ _oc_login_result }}"

@@ -3,52 +3,27 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: Retrieve Service Principal id
-  include_role:
-    name: vault-get-secret
-  vars:
-    secret_name: "aro-sp-id"
-    secret_group: "{{ environment_name }}"
-
 - set_fact:
-    _service_principal_id: "{{ secret_value }}"
-
-- name: Retrieve Service Principal secret
-  include_role:
-    name: vault-get-secret
-  vars:
-    secret_name: "aro-sp-secret"
-    secret_group: "{{ environment_name }}"
-
-- set_fact:
-    _service_principal_secret: "{{ secret_value }}"
-
-- name: Retrieve Tenant id
-  include_role:
-    name: vault-get-secret
-  vars:
-    secret_name: "aro-tenant-id"
-    secret_group: "{{ environment_name }}"
-
-- set_fact:
-    _tenant_id: "{{ secret_value }}"
-
-- set_fact:
-    _azure_aro_config: "{{ all_config.azure_aro | json_query(query) | first | default({}) }}"
+    _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='{{ current_openshift_cluster.azure_aro_name }}']
+      [?name=='{{ current_openshift_cluster.azure_name }}']
 
 - name: Destroy info
   debug:
-    msg: Cluster "{{current_openshift_cluster.name}}" and any other resources in the resource group "{{_azure_aro_config.resource_group.name}}" will be destroyed
+    msg: Cluster "{{ current_openshift_cluster.name }}" and any other resources in the resource group "{{ _azure_config.resource_group.name }}" will be destroyed
 
-- name: "Login and destroy {{ _azure_aro_config.resource_group.name }} resource group"
+- name: Check if resource group {{ _azure_config.resource_group.name }} still exists
   shell: |
-    az login --service-principal -u {{ _service_principal_id }} -p {{ _service_principal_secret }} --tenant {{ _tenant_id }}
-    az group delete --name {{ _azure_aro_config.resource_group.name }} -y
-  register: _destroy_resource_group
-  failed_when: "_destroy_resource_group.rc != 0"
+    az group show --resource-group {{ _azure_config.resource_group.name }}
+  failed_when: False
+  register: _show_rg
+
+- name: Destroy {{ _azure_config.resource_group.name }} resource group, logs are in {{ current_openshift_cluster.name }}, logs can be found in {{ status_dir }}/log/{{ current_openshift_cluster.name }}-destroy-rg.log
+  shell: |
+    az group delete --name {{ _azure_config.resource_group.name }} \
+      --verbose -y > {{ status_dir }}/log/{{ current_openshift_cluster.name }}-destroy-rg.log 2>&1
+  when: _show_rg.rc == 0
 
 - name: Delete "{{ current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
   include_role:
@@ -57,19 +32,7 @@
     secret_name: "{{ current_openshift_cluster.name }}-kubeadmin-password"
     secret_group: "{{ environment_name }}"
 
-- name: "Find all directories in {{status_dir}} except config, defaults, inventory, and vault"
-  find:
-    path: "{{ status_dir }}"
-    file_type: directory
-    excludes:
-      - "config"
-      - "defaults"
-      - "inventory"
-      - "vault"
-  register: found_dirs
-
-- name: "Delete all directories in {{status_dir}} except config, defaults, inventory and vault"
+- name: Delete {{ status_dir }}/azure-aro directory
   file:
-    path: "{{ item.path }}"
+    path: "{{ status_dir }}/azure-aro"
     state: absent
-  with_items: "{{ found_dirs['files'] }}"

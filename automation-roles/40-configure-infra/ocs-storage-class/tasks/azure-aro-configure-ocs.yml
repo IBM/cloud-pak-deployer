@@ -25,14 +25,25 @@
 - debug:
     var: _image_details
 
+- name: Retrieve resource group from existing machineset
+  shell: |
+    oc -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.resourceGroup}{"\n"}' get machineset/{{ _infrastructure_id }}-worker-{{ azure_location }}1
+  register: _get_machineset_resource_group
+
 - set_fact:
-    _azure_aro_config: "{{ all_config.azure_aro | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?name=='{{ current_openshift_cluster.azure_aro_name }}']
+    _machineset_resource_group: "{{ _get_machineset_resource_group.stdout }}"
 
 - debug:
-    var: _azure_aro_config
+    var: _machineset_resource_group
+
+- set_fact:
+    _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.azure_name }}']
+
+- debug:
+    var: _azure_config
 
 - name: Generate MachineSet file {{status_dir}}/openshift/azure-aro-ocs-machineset.yaml
   template:

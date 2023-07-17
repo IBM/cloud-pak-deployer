@@ -395,14 +395,14 @@ serviceid:
 
 For Microsoft Azure, the following object type is supported:
 
-- [azure_aro](#azure-aro)
+- [azure](#azure)
 
-### Azure ARO
+### Azure
 
 Defines an infrastructure configuration onto which OpenShift will be provisioned.
 
 ```
-azure_aro:
+azure:
 - name: sample
   resource_group:
     name: sample
@@ -414,23 +414,17 @@ azure_aro:
     subnet:
       name: control-plane-subnet
       address_prefixes: 10.0.0.0/23
-    vm:
-      size: Standard_D8s_v3
   compute:
     subnet:
       name: compute-subnet
       address_prefixes: 10.0.2.0/23
-    vm:
-      size: Standard_D16s_v3
-      disk_size_gb: 128
-      count: 3
 ```
 
 #### Properties explanation
 
 | Property                              | Description                                                                              | Mandatory | Allowed values                                                                                                                                               |
 | ------------------------------------- | ---------------------------------------------------------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| name                                  | Name of the `azure_aro` definition object, will be referenced by `openshift`             | Yes       |                                                                                                                                                              |
+| name                                  | Name of the `azure` definition object, will be referenced by `openshift`             | Yes       |                                                                                                                                                              |
 | resource_group                        | Resource group attributes                                                                | Yes       |                                                                                                                                                              |
 | resource_group.name                   | Name of the resource group (will be provisioned)                                         | Yes       | unique value, it must not exist                                                                                                                              |
 | resource_group.location               | Azure location                                                                           | Yes       | to pick a different location, run: `az account list-locations -o table`                                                                                      |
