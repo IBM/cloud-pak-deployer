@@ -24,9 +24,6 @@ fi
 # Change to base directory
 cd ${SCRIPT_DIR}/..
 
-# Ensure /tmp/work exists
-mkdir -p /tmp/work
-
 # Retrieve version info
 source ./.version-info/version-info.sh
 
@@ -37,6 +34,7 @@ case "$SUBCOMMAND" in
 env|environment)
   # Clear state directory
   mkdir -p ${STATUS_DIR}/state
+  chmod 777 ${STATUS_DIR}/state
   rm -rf ${STATUS_DIR}/state/*
   # Set Ansible config file to use
   ANSIBLE_CONFIG_FILE=$PWD/ansible-apply.cfg

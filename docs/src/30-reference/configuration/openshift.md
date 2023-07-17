@@ -219,7 +219,7 @@ openshift:
   - storage_name: ocs-storage
     storage_type: ocs
     ocs_storage_label: ocs
-    ocs_storage_size_gb: 500
+    ocs_storage_size_gb: 512
   - storage_name: sample-elastic
     storage_type: aws-elastic
 ```
@@ -276,7 +276,7 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                         | No                             |                  |
 | ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                   | Yes if `storage_type` is `ocs` |                  |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                     | Yes if `storage_type` is `ocs` |                  |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. `gp2` is usually available after OpenShift installation | No                             |                  |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
 ### OpenShift on AWS - ROSA
@@ -310,7 +310,7 @@ openshift:
   - storage_name: ocs-storage
     storage_type: ocs
     ocs_storage_label: ocs
-    ocs_storage_size_gb: 500
+    ocs_storage_size_gb: 512
   - storage_name: sample-elastic
     storage_type: aws-elastic
 ```
@@ -360,7 +360,7 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                         | No                             |                  |
 | ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                   | Yes if `storage_type` is `ocs` |                  |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                     | Yes if `storage_type` is `ocs` |                  |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. `gp2` is usually available after OpenShift installation | No                             |                  |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
 ### OpenShift on Microsoft Azure (ARO)

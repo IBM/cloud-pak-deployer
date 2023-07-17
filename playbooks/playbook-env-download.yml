@@ -90,18 +90,6 @@
         name: download-cli
       when: not (cpd_check_only | default(False) | bool)
 
-    - name: Remove case directory in case it exists
-      file:
-        path: "{{ status_dir }}/cp4d/case"
-        state: absent
-
-    - name: Save case files for Cloud Pak for Data
-      include_role:
-        name: cp4d-case-save
-      loop: "{{ all_config.cp4d | default([]) }}"
-      loop_control:
-        loop_var: _p_current_cp4d_cluster
-
 # --- Mirroring with ibm-pak tool - BEGIN -----------------
 
     - name: Remove ~/.ibm-pak directory in case it exists
@@ -175,12 +163,15 @@
       # Mirror to portable image registry
       - name: Mirror images to portable image registry
         include_role:
-          name: cp-mirror-images
+          name: cp4d-mirror-images
         vars:
           _p_target_registry_hostname: "{{ _v_portable_registry }}"
           _p_target_registry_port: "{{ _v_portable_registry_port }}"
           _p_case_dir: "{{ status_dir }}/cp4d/case"
           _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
+        loop: "{{ all_config.cp4d | default([]) }}"
+        loop_control:
+          loop_var: _p_current_cp4d_cluster
         when:
         - not (cpd_skip_portable_registry | bool)
 
@@ -198,7 +189,7 @@
 
         - name: Mirror images from entitled to private registry
           include_role: 
-            name: cp-mirror-images
+            name: cp4d-mirror-images
           vars:
             _p_target_registry_hostname: "{{ _image_registry.registry_host_name }}"
             _p_target_registry_port: "{{ _image_registry.registry_port | default('') }}"
@@ -206,6 +197,9 @@
             _p_target_registry_credentials_secret: "image-registry-{{ _image_registry.name }}"
             _p_case_dir: "{{ status_dir }}/cp4d/case"
             _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
+          loop: "{{ all_config.cp4d | default([]) }}"
+          loop_control:
+            loop_var: _p_current_cp4d_cluster
         when:
         - (cpd_skip_portable_registry | bool)
       

@@ -45,16 +45,16 @@
       oc create ns openshift-storage
     fi
 
-- name: Generate OCS operator file {{status_dir}}/openshift/ocs-operator.yaml
+- name: Generate ODF operator file {{status_dir}}/openshift/ocs-operator.yaml
   template:
     src: "ocs-operator.j2"
     dest: "{{status_dir}}/openshift/ocs-operator.yaml"
 
-- name: Create OCS operator
+- name: Create ODF operator
   shell: |
     oc apply -f {{status_dir}}/openshift/ocs-operator.yaml
 
-- name: Wait until OCS Operator CSV has status Succeeded
+- name: Wait until ODF Operator CSV has status Succeeded
   shell: |
     oc get csv -n openshift-storage \
      -l operators.coreos.com/ocs-operator.openshift-storage \
@@ -71,24 +71,31 @@
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
+- name: Ensure that Data Foundation is shown in the console
+  shell: |
+    oc patch console.operator cluster \
+      -n openshift-storage \
+      --type json \
+      -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
+
 - name: Check if StorageCluster ocs-storagecluster already exists
   command: |
     oc get StorageCluster ocs-storagecluster -n openshift-storage
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Generate OCS StorageCluster file {{status_dir}}/openshift/aws-ocs-storagecluster.yaml
+- name: Generate ODF StorageCluster file {{status_dir}}/openshift/aws-ocs-storagecluster.yaml
   template:
     src: "aws-ocs-storagecluster.j2"
     dest: "{{status_dir}}/openshift/aws-ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
-- name: Create OCS StorageCluster
+- name: Create ODF StorageCluster
   shell: |
     oc apply -f {{status_dir}}/openshift/aws-ocs-storagecluster.yaml
   when: _ocs_cluster_exists.rc != 0
 
-- name: Wait until OCS StorageCluster has status Ready
+- name: Wait until ODF StorageCluster has status Ready
   shell: |
     oc get StorageCluster ocs-storagecluster -n openshift-storage \
      --no-headers \
