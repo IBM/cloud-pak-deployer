@@ -15,6 +15,7 @@ from packaging import version
 #   network:
 #     pod_cidr: "10.128.0.0/14"
 #     service_cidr: "172.30.0.0/16"
+#     machine_cidr: 
 #   openshift_storage:
 #   - storage_name: ocs-storage
 #     storage_type: ocs
@@ -36,12 +37,15 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('compute_nodes').isRequired()
     g('ocp_version').isRequired()
     g('network').isRequired()
+    g('infrastructure').isRequired()
     g('openshift_storage').isRequired()
+
 
     #Level 2
     if len(g.getErrors()) == 0:
         g('network.pod_cidr').isRequired()
         g('network.service_cidr').isRequired()
+        g('infrastructure.type').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
