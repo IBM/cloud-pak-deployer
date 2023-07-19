@@ -84,7 +84,7 @@ az provider register -n Microsoft.Authorization --wait
 ### Set environment variables for Azure ARO cluster
 
 ```
-export CPD_AZURE-true
+export CPD_AZURE=true
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
