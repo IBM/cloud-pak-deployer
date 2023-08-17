@@ -1,27 +1,10 @@
 ---
-- name: Get first compute node
-  shell: |
-    oc get no --no-headers -l node-role.kubernetes.io/worker -o custom-columns='name:.metadata.name' | head -1
-  register: _ocp_compute_nodes
+- name: Create cp4d-apply-kubelet-config.sh script that will update the Kubelet configuration
+  template:
+    src: cp4d-apply-kubelet-config.j2
+    dest: "{{ status_dir }}/openshift/cp4d-apply-kubelet-config.sh"
 
-- name: Retrieve /etc/kubernetes/kubelet.conf
-  shell: |
-    {{ lookup('template','oc-debug-kubelet.j2') }}
-  register: debug_node_result
-  retries: 3
-  delay: 10
-  until: debug_node_result.rc==0
-
-- name: Append allowedUnsafeSysctls to kubelet.conf
-  blockinfile:
-    path: "{{ status_dir }}/openshift/cp4d-kubelet.conf"
-    block: |
-      allowedUnsafeSysctls:
-        - "kernel.msg*"
-        - "kernel.shm*"
-        - "kernel.sem"
-
-- name: Add cp4d-kubelet.conf to node fix config map
+- name: Put cp4d-apply-kubelet-config.sh script into config map
   shell:
-    oc set data -n kube-system cm/cloud-pak-node-fix-config  \
-        --from-file={{ status_dir }}/openshift/cp4d-kubelet.conf
+    oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
+        --from-file={{ status_dir }}/openshift/cp4d-apply-kubelet-config.sh
