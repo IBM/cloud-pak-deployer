@@ -186,6 +186,30 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_label_selector_stub: ibm-odlm
 
+- name: Remove MutatingWebhookConfigurations
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: MutatingWebhookConfiguration
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  with_items:
+    - "ibm-operandrequest-webhook-configuration-{{ cp4ba_project_name }}"    
+
+- name: Remove ValidatingWebhookConfiguration
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  with_items:
+    - "ibm-common-service-validating-webhook-{{ cp4ba_project_name }}"    
+
 - name: Wait for ZenExtension intances to disappear
   kubernetes.core.k8s_info:
     api_version: zen.cpd.ibm.com/v1
