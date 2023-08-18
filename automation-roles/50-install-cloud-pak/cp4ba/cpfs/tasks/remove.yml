@@ -1,25 +1,5 @@
 # Based on https://www.ibm.com/docs/en/cpfs?topic=online-uninstalling-foundational-services
 
-- name: Get OperandConfig CRD
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: operandconfigs.operator.ibm.com
-  register: operandconfig_crd
-  retries: 10
-  delay: 1
-
-- name: Remove OperandConfig common-service
-  kubernetes.core.k8s:
-    state: absent
-    api_version: operator.ibm.com/v1alpha1
-    kind: OperandConfig
-    name: common-service
-    namespace: "{{ cp4ba_project_name }}"
-  retries: 15
-  delay: 2
-  when: operandconfig_crd.resources | length != 0
-
 - name: Remove ibm-licensing
   kubernetes.core.k8s:
     state: absent
@@ -66,27 +46,3 @@
     - ibm-cert-manager-catalog
     - ibm-licensing-catalog
     - cloud-native-postgresql-catalog
-
-- name: Remove MutatingWebhookConfigurations
-  kubernetes.core.k8s:
-    state: absent
-    api_version: admissionregistration.k8s.io/v1
-    kind: MutatingWebhookConfiguration
-    name: "{{ item }}"
-    wait: true
-    wait_sleep: 5
-    wait_timeout: 50
-  with_items:
-    - "ibm-operandrequest-webhook-configuration-{{ cpfs_cp4ba_project_name }}"    
-
-- name: Remove ValidatingWebhookConfiguration
-  kubernetes.core.k8s:
-    state: absent
-    api_version: admissionregistration.k8s.io/v1
-    kind: ValidatingWebhookConfiguration
-    name: "{{ item }}"
-    wait: true
-    wait_sleep: 5
-    wait_timeout: 50
-  with_items:
-    - "ibm-common-service-validating-webhook-{{ cpfs_cp4ba_project_name }}"    
