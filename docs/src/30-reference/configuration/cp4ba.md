@@ -142,8 +142,8 @@ For your convenience the following post-deployment setup tasks have been automat
 - ODM - Service user credentials automatically assigned to servers.
 - ADP - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-setting-up-remote-git-organization
 - ADP - Default project data loaded. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-loading-default-sample-data
-- IER - Initial setup through configmgr performed.
-- Task manager - Set up with JARs required by IER.
+- IER - Task Manager pod has TM_JOB_URL parameter set.
+- IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
