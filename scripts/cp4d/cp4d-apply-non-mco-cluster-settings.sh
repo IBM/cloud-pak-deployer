@@ -62,7 +62,7 @@ oc set data -n kube-system secret/cloud-pak-node-fix-secrets \
 if [[ "${CPD_PRIVATE_REGISTRY}" != "" ]]; then
     echo "Private registry specified, creating ImageContentSourcePolicy for registry ${CPD_PRIVATE_REGISTRY}"
     cp ${AUTOMATION_ROLES_DIR}/cp-ocp-icsp/templates/cloud-pak-icsp-registries-conf.j2 /tmp/cloud-pak-icsp-registries-conf.conf
-    sed -i "s/{{ private_registry_url_namespace }}/${CPD_PRIVATE_REGISTRY}/g" /tmp/cloud-pak-icsp-registries-conf.conf
+    sed -i "s#{{ private_registry_url_namespace }}#${CPD_PRIVATE_REGISTRY}#g" /tmp/cloud-pak-icsp-registries-conf.conf
     oc set data cm/cloud-pak-node-fix-config -n kube-system \
       --from-file=/tmp/cloud-pak-icsp-registries-conf.conf
 fi
