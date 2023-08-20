@@ -1,0 +1,13 @@
+---
+- name: Get version of current OpenShift cluster
+  shell:
+    oc version -o json
+  register: _oc_version_output
+
+- name: Extract OpenShift version from oc version output
+  set_fact:
+    _p_current_ocp_version_full: "{{ (_oc_version_output.stdout | from_json).openshiftVersion }}"
+    _p_current_ocp_version: "{{ (_oc_version_output.stdout | from_json).openshiftVersion | string | regex_search('([0-9].[0-9]+)','\\1') | first }}"
+
+- debug:
+    msg: "Current OpenShift version: {{ _p_current_ocp_version }}, full version {{ _p_current_ocp_version_full }}"
