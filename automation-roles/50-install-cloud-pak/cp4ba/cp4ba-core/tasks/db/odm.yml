@@ -10,38 +10,20 @@
       - app=postgresql
   register: postgresql_pod
 
-- name: ODM DC DB
+- name: ODMDB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user odmdc
-        CREATE ROLE odmdc WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user odmdb
+        CREATE ROLE odmdb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database odmdc
-        create database odmdc owner odmdc template template0 encoding UTF8 ;
-        revoke connect on database odmdc from public;
-        grant all privileges on database odmdc to odmdc;
-        grant connect, temp, create on database odmdc to odmdc;
-      EOF"
-  register: command_status
-
-- name: ODM RES DB
-  kubernetes.core.k8s_exec:
-    namespace: postgresql
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: >
-      bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user odmres
-        CREATE ROLE odmres WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
-
-        -- create database odmres
-        create database odmres owner odmres template template0 encoding UTF8 ;
-        revoke connect on database odmres from public;
-        grant all privileges on database odmres to odmres;
-        grant connect, temp, create on database odmres to odmres;
+        -- create database odmdb
+        create database odmdb owner odmdb template template0 encoding UTF8 ;
+        revoke connect on database odmdb from public;
+        grant all privileges on database odmdb to odmdb;
+        grant connect, temp, create on database odmdb to odmdb;
       EOF"
   register: command_status
