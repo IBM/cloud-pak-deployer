@@ -14,17 +14,17 @@
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user base
+        -- create user adpbase
         CREATE ROLE adpbase WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database devos1
+        -- create database adpbase
         create database adpbase owner adpbase template template0 encoding UTF8;
         revoke connect on database adpbase from public;
         grant all privileges on database adpbase to adpbase;
       EOF"
   register: command_status
 
-- name: proj1 DB
+- name: ADP proj1 DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
@@ -41,7 +41,7 @@
       EOF"
   register: command_status
 
-- name: proj2 DB
+- name: ADP proj2 DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
