@@ -7,7 +7,7 @@
       - app=postgresql
   register: postgresql_pod
 
-- name: BASE DB
+- name: ADPBASE DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
@@ -15,12 +15,12 @@
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
         -- create user base
-        CREATE ROLE base WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE ROLE adpbase WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database devos1
-        create database base owner base template template0 encoding UTF8;
-        revoke connect on database base from public;
-        grant all privileges on database base to base;
+        create database adpbase owner adpbase template template0 encoding UTF8;
+        revoke connect on database adpbase from public;
+        grant all privileges on database adpbase to adpbase;
       EOF"
   register: command_status
 
@@ -120,7 +120,7 @@
       "
   register: command_status
 
-- name: ADP init Base DB
+- name: ADP init ADPBase DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: postgresql-0
@@ -131,11 +131,11 @@
       export db_port=5432;
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=base;
+      export db_adm_username=adpbase;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
@@ -163,8 +163,8 @@
       export db_adm_username=tenant1;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
@@ -202,8 +202,8 @@
       export db_adm_username=tenant2;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
