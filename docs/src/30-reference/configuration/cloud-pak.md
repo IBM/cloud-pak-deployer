@@ -621,11 +621,6 @@ cp4ba:
         nlp:
           replicas: 1
 
-  # Section for Asset Repository
-  asset_repo:
-    # Set to false if you don't want to install (or remove) Asset Repo
-    enabled: false # Currently not implemented
-
   # Set to false if you don't want to install (or remove) CloudBeaver (PostgreSQL, DB2, MSSQL UI)
   cloudbeaver_enabled: true
 
@@ -792,15 +787,6 @@ Placed in `rpa` key on the project level.
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to enable `rpa`. | Yes  | true, false |
 | cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
-
-## Asset Repo properties
-
-Used to install Asset Repo.  
-Placed in `asset_repo` key on the project level.
-
-| Property            | Description                    | Mandatory            | Allowed values |
-|---------------------|--------------------------------|----------------------|----------------|
-| enabled                         | Set to `true` to enable `asset repo`. Currently not implemented. Always `false`. | Yes  | false |
 
 ## Other properties
 
