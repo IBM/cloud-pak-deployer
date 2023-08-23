@@ -1,40 +1,41 @@
-- name: Add DB2 user
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: add-db2-user
-  vars:
-    common_db2_user: pm
-    common_db2_password: "{{ pm_db2_password }}"
-
-- name: PM DB Create
-  kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
-    command: >
-      su - db2inst1 -s /usr/bin/bash -c "
-      db2 CREATE DATABASE PM AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
-      db2 CONNECT TO PM;
-      "
-  register: command_status
+- name: Get MySQL Pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: mysql
+    label_selectors:
+      - app=mysql
+  register: pods
   retries: 40
-  delay: 30
-  until: command_status.rc == 0
+  delay: 15
 
-- name: PM DB Configure
+- name: Add MySQL User
   kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
+    namespace: mysql
+    pod: "{{ pods.resources[0].metadata.name }}"
     command: >
-      su - db2inst1 -s /usr/bin/bash -c "
-      db2 CONNECT TO PM;
-      db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER pm;
-      db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER pm;
-      db2 CONNECT RESET;
-      db2 activate db PM;
-      "
+      mysql -uroot -p{{ pm_universal_password }} -e "CREATE USER 'pm'@'%' IDENTIFIED BY '{{ pm_universal_password }}';"
   register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
-    command_status.stdout is search('.*the database has already.*'))
+  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
+    command_status.stderr is search('.*Operation CREATE USER failed.*'))
+
+- name: Prepare MySQL DB
+  kubernetes.core.k8s_exec:
+    namespace: mysql
+    pod: "{{ pods.resources[0].metadata.name }}"
+    command: >
+      mysql -uroot -p{{ pm_universal_password }} -e "CREATE DATABASE pm;"
+  register: command_status
+  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
+    command_status.stderr is search('.*database exists.*'))
+
+- name: Set privileges
+  kubernetes.core.k8s_exec:
+    namespace: mysql
+    pod: "{{ pods.resources[0].metadata.name }}"
+    command: >
+      mysql -uroot -p{{ pm_universal_password }} -e "GRANT ALL PRIVILEGES ON pm.* TO 'pm'@'%';"
+  register: command_status
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
@@ -168,63 +169,6 @@
     wait_sleep: 15
     wait_timeout: 15
 
-# TODO hotfix for CPFS installed in multinamespace mode START last with IPM 1.13.1 at 2022-12-02
-- name: Prepare yaml file for licensing ConfigMap
-  ansible.builtin.template:
-    src: licensing-configmap.yaml.j2
-    dest: "{{ pm_output_directory }}/licensing-configmap.yaml"
-    mode: u+rwx
-
-- name: Add licensing ConfigMap
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ pm_output_directory }}/licensing-configmap.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Wait for licensing token upload secret to appear
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    name: ibm-licensing-upload-token
-    namespace: cs-control
-  register: licensing_secret
-  retries: 10
-  delay: 30
-  until: licensing_secret.resources | length == 1
-
-- name: Get existing licensing secret
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    namespace: cs-control
-    name: ibm-licensing-upload-token
-  register: licensing_secret
-
-- name: Set token_upload
-  ansible.builtin.set_fact:
-    token_upload: "{{ licensing_secret.resources[0].data['token-upload'] }}"
-
-- name: Prepare yaml file for licensing Secret
-  ansible.builtin.template:
-    src: licensing-secret.yaml.j2
-    dest: "{{ pm_output_directory }}/licensing-secret.yaml"
-    mode: u+rwx
-
-- name: Add licensing Secret
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ pm_output_directory }}/licensing-secret.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-# TODO hotfix for CPFS installed in multinamespace mode END
-
 # Based on validate successful deployment by following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=platform-how-validate-successful-installation
 - name: Wait for ProcessMining to be Ready
   ansible.builtin.include_role:
@@ -261,7 +205,7 @@
     name: common
     tasks_from: zen-token
   vars:
-    comon_iam_token: "{{ iam_token }}"
+    common_iam_token: "{{ iam_token }}"
     common_user: "{{ lc_principal_admin_user }}"
     common_namespace_name: "{{ pm_project_name }}"
     common_output_to_var: "zen_token"
@@ -278,7 +222,7 @@
 
 - name: Set user profile api key
   ansible.builtin.set_fact:
-    api_key: "{{ user_profile_response.json.data.apiKey }}"  
+    api_key: "{{ user_profile_response.json.data.apiKey }}"
 
 # Based on https://www.ibm.com/docs/en/process-mining/latest?topic=manual-how-integrate-process-mining-task-mining
 - name: Setup master key for task mining
@@ -317,6 +261,7 @@
     condition_query: "data.groups[?name == 'TaskMiningAdmins']"
 
 - name: Create group
+  when: tm_admins_group | length == 0
   block:
     - name: Create TaskMiningAdmins group
       ansible.builtin.uri:
@@ -350,7 +295,6 @@
       vars:
         condition_query: "data.groups[?name == 'TaskMiningAdmins']"
 
-  when: tm_admins_group | length == 0
 
 - name: Get TaskMiningAdmins group ID
   ansible.builtin.set_fact:
@@ -560,7 +504,7 @@
 
 - name: Enable agent for admin user
   ansible.builtin.set_fact:
-    admin_user: "{{ admin_user | combine({ 'agentEnabled': true }) }}"
+    admin_user: "{{ admin_user | combine({'agentEnabled': true }) }}"
 
 - name: Update admin user
   ansible.builtin.uri:

@@ -358,8 +358,14 @@
 
 - name: Add BAWAUT component
   ansible.builtin.set_fact:
-    components: "{{ components + ['baw_authoring'] }}"
+    components: "{{ components + ['baw_authoring', 'pfs'] }}"
   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.1?topic=services-kafka
+- name: Add BAWAUT kafka component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['kafka'] }}"
+  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka
 
 - name: Add AAE persistence to CR
   block:
@@ -425,91 +431,97 @@
     apply: true
     src: "{{ cp4ba_output_directory }}/cr.yaml"
 
-- name: Wait for icp4ba Cartridge to be Ready
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: core.automation.ibm.com/v1beta1
-    common_resource_kind: Cartridge
-    common_resource_name: icp4ba
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Ready
-    common_retries: 36
-    common_delay: 300
+- block:
+  - name: Wait for Kafka instance Ready state
+    ansible.builtin.include_role:
+      name: common
+      tasks_from: wait-resource-condition
+    vars:
+      common_api_version: ibmevents.ibm.com/v1beta2
+      common_resource_kind: Kafka
+      common_resource_name: iaf-system
+      common_resource_namespace: "{{ cp4ba_project_name }}"
+      common_condition_name: Ready
+      common_retries: 60
+      common_delay: 60
 
-- name: Wait for AutomationBase instance Ready state
+  - name: Wait for KafkaUser CRD to be Established
+    ansible.builtin.include_role:
+      name: common
+      tasks_from: wait-crd
+    vars:
+      common_crd_name: kafkausers.ibmevents.ibm.com
+
+  # Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-administration-guide#day-2-operations-for-kafka reference for Strimzi in Kafka Day 2
+  - name: Prepare yaml file for KafkaUser CR
+    ansible.builtin.template:
+      src: iaf/kafkauser.yaml.j2
+      dest: "{{ cp4ba_output_directory }}/kafkauser.yaml"
+      mode: u+rwx
+
+  - name: Add KafkaUser CR
+    kubernetes.core.k8s:
+      state: present
+      force: false
+      merge_type: merge
+      src: "{{ cp4ba_output_directory }}/kafkauser.yaml"
+
+  - name: Wait for KafkaUser instance Ready state
+    ansible.builtin.include_role:
+      name: common
+      tasks_from: wait-resource-condition
+    vars:
+      common_api_version: ibmevents.ibm.com/v1beta2
+      common_resource_kind: KafkaUser
+      common_resource_name: "{{ principal_admin_user }}"
+      common_resource_namespace: "{{ cp4ba_project_name }}"
+      common_condition_name: Ready
+      common_retries: 80
+      common_delay: 15
+
+  - name: Prepare yaml file for KafkaUser Secret
+    ansible.builtin.template:
+      src: iaf/kafkauser-secret.yaml.j2
+      dest: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
+      mode: u+rwx
+
+# TODO patch secret with correct password
+# base64 encode and oc patch module
+  - name: Add KafkaUser Secret
+    kubernetes.core.k8s:
+      state: present
+      force: false
+      #merge_type: smerge
+      src: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
+
+  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+
+- name: Wait for ElasticSearch instance Ready state
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
   vars:
-    common_api_version: base.automation.ibm.com/v1beta1
-    common_resource_kind: AutomationBase
-    common_resource_name: foundation-iaf
+    common_api_version: elastic.automation.ibm.com/v1beta1
+    common_resource_kind: Elasticsearch
+    common_resource_name: iaf-system
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Ready
     common_retries: 30
     common_delay: 60
+  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
-- name: Wait for Apicurio Deployment to be Available
+- name: Wait for ZenService instance Ready state
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
   vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: iaf-system-apicurio
+    common_api_version: zen.cpd.ibm.com/v1
+    common_resource_kind: ZenService
+    common_resource_name: iaf-zen-cpdservice
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
-
-- name: Wait for KafkaUser CRD to be Established
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-crd
-  vars:
-    common_crd_name: kafkausers.ibmevents.ibm.com
-
-- name: Prepare yaml file for KafkaUser Secret
-  ansible.builtin.template:
-    src: iaf/kafkauser-secret.yaml.j2
-    dest: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
-    mode: u+rwx
-
-- name: Add KafkaUser Secret
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
-
-# Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-administration-guide#day-2-operations-for-kafka reference for Strimzi in Kafka Day 2
-- name: Prepare yaml file for KafkaUser CR
-  ansible.builtin.template:
-    src: iaf/kafkauser.yaml.j2
-    dest: "{{ cp4ba_output_directory }}/kafkauser.yaml"
-    mode: u+rwx
-
-- name: Add KafkaUser CR
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cp4ba_output_directory }}/kafkauser.yaml"
-
-- name: Wait for KafkaUser instance Ready state
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: ibmevents.ibm.com/v1beta2
-    common_resource_kind: KafkaUser
-    common_resource_name: "{{ principal_admin_user }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Ready
-    common_retries: 80
-    common_delay: 15
+    common_condition_name: Successful
+    common_retries: 90
+    common_delay: 60
 
 - name: Wait for Prereqs Ready states
   ansible.builtin.include_role:
@@ -529,7 +541,7 @@
     - resources[*].status.components.prereq.iamIntegrationStatus
     - resources[*].status.components.prereq.rootCAStatus
 
-- name: Wait for RR to Ready state
+- name: Wait for RR Ready state
   kubernetes.core.k8s_info:
     kind: Pod
     namespace: "{{ cp4ba_project_name }}"
@@ -673,7 +685,6 @@
     - "{{ cp4ba_cr_meta_name }}-processing-extraction"
     - "{{ cp4ba_cr_meta_name }}-setup"
     - "{{ cp4ba_cr_meta_name }}-spbackend"
-    - "{{ cp4ba_cr_meta_name }}-str-extraction"
   when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
 
 - name: Wait for BAI InsightsEngine Ready state
@@ -681,9 +692,9 @@
     name: common
     tasks_from: wait-resource-condition
   vars:
-    common_api_version: insightsengine.automation.ibm.com/v1beta1
+    common_api_version: icp4a.ibm.com/v1
     common_resource_kind: InsightsEngine
-    common_resource_name: iaf-insights-engine
+    common_resource_name: cp4ba
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Ready
     common_retries: 60
@@ -723,16 +734,17 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-statefulset-available
-  vars:
-    common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_retries: 60
-    common_delay: 120
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+# PFS now part of BAS
+# - name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: wait-statefulset-available
+#   vars:
+#     common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
+#     common_resource_namespace: "{{ cp4ba_project_name }}"
+#     common_retries: 60
+#     common_delay: 120
+#   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Deployment wait list
   ansible.builtin.set_fact:
@@ -782,18 +794,3 @@
     common_condition_name: Ready
     common_retries: 60
     common_delay: 120
-
-# Do not wait now as there is no common label to all CP4BA pods and on the subsequent try there can be other non-cp4ba broken pods in the Project
-# - name: Wait for all remaining pods to become Ready
-#   kubernetes.core.k8s_info:
-# # #     kind: Pod
-#     namespace: "{{ cp4ba_project_name }}"
-#     field_selectors:
-#       - status.phase!=Succeeded
-#       - status.phase!=Failed
-#   register: pods
-#   retries: 30
-#   delay: 60
-#   until: (['False'] not in pods | json_query(condition_query) | unique )
-#   vars:
-#     condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
