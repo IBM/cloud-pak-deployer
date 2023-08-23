@@ -1,6 +1,6 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 22.0.2 IF004, RPA 23.0.5 and IPM 1.14
+Contains CP4BA version 23.0.1, RPA 23.0.6 and IPM 1.14.1
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -22,8 +22,6 @@ It is always your responsibility to make sure you are license compliant when usi
 Please do not hesitate to create an issue here if needed. Your feedback is appreciated.
 
 **Not for production use (neither dev nor test or prod environments). Suitable for Demo and PoC environments - but with Production deployment.**  
-
-**!Important** - Keep in mind that the platform contains DB2 which is licensed with Standard Edition license available from CP4BA, and it must adhere to the *Additional IBM DB2 Standard Edition Detail* in official license information at http://www-03.ibm.com/software/sla/sladb.nsf/doclookup/F2925E0D5C24EAB4852586FE0060B3CC?OpenDocument (or its newer revision).
 
 **!Important** - Keep in mind that this deployment contains capabilities (the ones which are not bundled with CP4BA) which are not eligible to run on Worker Nodes covered by CP4BA OCP Restricted licenses. More info on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=clusters-restricted-openshift-entitlement.
 
@@ -80,7 +78,7 @@ Contains extra software which makes working with the platform even easier.
 - Kibana - Web UI elastic search dashboard tool automatically connected to ES instance deployed with CP4BA.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
 - Mongo Express - Web UI for Mongo DB databases for CP4BA and Process Mining to easier troubleshoot DB.
-- CloudBeaver - Web UI for DB2, Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
+- CloudBeaver - Web UI for Postgresql, MSSQL and MySQL databases making it easier to admin and troubleshoot the DBs.
 
 ### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
 
@@ -92,9 +90,9 @@ More info for CP4BA capabilities is available in official docs at https://www.ib
 
 More specifically in overview of patterns at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments.
 
-Pink color is used for IAF capabilities.
+Pink color is used for CPFS dedicated capabilities.
 
-More info for IAF capabilities is available in official docs at https://www.ibm.com/docs/en/cloud-paks/1.0?topic=automation-foundation.
+More info for CPFS dedicated capabilities is available in official docs at https://www.ibm.com/docs/en/cloud-paks/foundational-services/latest.
 
 Magenta color is used for additional capabilities.
 
@@ -111,17 +109,17 @@ Contains services which are reused by Cloud Paks.
 More info available in official docs at https://www.ibm.com/docs/en/cpfs.
 
 - License metering - Tracks license usage.
-- IAM - Provides Identity and Access management.
+- Certificate Manager - Provides certificate handling.
 
 ### Pre-requisites section<!-- omit in toc -->
 
 Contains prerequisites for the whole platform.
 
-- DB2 - Database storage for ADP.
 - PostgreSQL - Database storage for the majority of capabilities.
 - OpenLDAP - Directory solution for users and groups definition.
 - MSSQL server - Database storage for RPA server.
 - MongoDB - Database storage for ADS and Process Mining.
+- MySQL - Database storage for Task Mining.
 
 ## Environments used for installation 💻
 

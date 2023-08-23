@@ -1,22 +1,22 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=openshift-installing-production-deployments
 
 - name: Repository
-  include_tasks: repository.yml
+  ansible.builtin.include_tasks: repository.yml
   when: _cp4ba_run_repository
 
 - name: DBs
-  include_tasks: dbs.yml
+  ansible.builtin.include_tasks: dbs.yml
   when: _cp4ba_run_dbs
 
 - name: Predeploy
-  include_tasks: predeploy.yml
+  ansible.builtin.include_tasks: predeploy.yml
   when: _cp4ba_run_predeploy
 
 - name: Deploy
   block:
 
     - name: Deploy
-      include_tasks: deploy.yml
+      ansible.builtin.include_tasks: deploy.yml
       when: _cp4ba_run_deploy
 
     - name: Set failed state to false
@@ -30,7 +30,7 @@
         _cp4ba_run_deploy_failed: true
 
     - name: CR & Log
-      include_tasks: cr-log.yml
+      ansible.builtin.include_tasks: cr-log.yml
       when: _cp4ba_run_deploy
 
     - name: End play
@@ -38,9 +38,9 @@
         msg: CP4BA deployment failed.
 
 - name: Deploy CR & Log
-  include_tasks: cr-log.yml
+  ansible.builtin.include_tasks: cr-log.yml
   when: _cp4ba_run_deploy
 
 - name: Postdeploy
-  include_tasks: postdeploy.yml
+  ansible.builtin.include_tasks: postdeploy.yml
   when: _cp4ba_run_postdeploy

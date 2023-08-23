@@ -25,6 +25,13 @@
     remote_src: True
     mode: u+rwx
 
+# TODO: Remove patch once fixed in product
+- name: Patch DashboardService in apply-cr script to workaround defect
+  ansible.builtin.replace:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
+    regexp: 'kind:\s+dashboardservice'
+    replace: 'kind: DashboardService'
+
 - name: Run apply-cr command to install cartridges
   block:
   - name: Generate apply-cr command to install cartridges
