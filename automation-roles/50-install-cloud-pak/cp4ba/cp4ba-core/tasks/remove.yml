@@ -112,8 +112,18 @@
       with_items: "{{ operand_requests.resources }}"
       register: operand_request
       retries: 40
-      delay: 30
+      delay: 60
       until: operand_request.resources | length == 0
+      ignore_errors: true
+
+    - name: Clear OperandRequest instances finalizers
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: clear-resource-finalizers
+      vars:
+        common_api_version: operator.ibm.com/v1alpha1
+        common_kind: OperandRequest
+        common_namespace_name: "{{ cp4ba_project_name }}"
 
   when: operandrequest_crd.resources | length != 0
 
