@@ -1,0 +1,12 @@
+---
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _p_openshift_cluster_name }}']
+
+- include_tasks: azure-login-aro-ocp.yml
+  when: _openshift_config.infrastructure.type  == 'aro'
+
+- include_tasks: azure-login-ipi-ocp.yml
+  when: _openshift_config.infrastructure.type  == 'self-managed'

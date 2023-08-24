@@ -1,0 +1,135 @@
+---
+- name: Get current storage class
+  debug:
+    var: current_openshift_storage
+
+- name: Retrieve infrastructure ID
+  shell: |
+    oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
+  register: _get_infrastructure_id
+
+- set_fact:
+    _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"
+
+- debug:
+    var: _infrastructure_id
+
+- name: Get machineset
+  shell: |
+    oc -n openshift-machine-api get machineset/{{ _infrastructure_id }}-worker-{{ azure_location }}1 -o json
+  register: _get_machineset
+
+- set_fact:
+    _azure_machineset: "{{ _get_machineset.stdout | from_json }}"
+    
+- name: Retrieve details needed to create new machineset
+  set_fact:
+    _image_details: "{{ _azure_machineset.spec.template.spec.providerSpec.value.image }}"
+    _machineset_network_resource_group: "{{ _azure_machineset.spec.template.spec.providerSpec.value.networkResourceGroup }}"
+    _machineset_managed_identity: "{{ _azure_machineset.spec.template.spec.providerSpec.value.managedIdentity }}"
+    _machineset_public_load_balancer: "{{ _azure_machineset.spec.template.spec.providerSpec.value.publicLoadBalancer }}"
+    _machineset_resource_group: "{{ _azure_machineset.spec.template.spec.providerSpec.value.resourceGroup }}"
+    _machineset_subnet: "{{ _azure_machineset.spec.template.spec.providerSpec.value.subnet }}"
+    _machineset_vnet: "{{ _azure_machineset.spec.template.spec.providerSpec.value.vnet }}"
+
+- set_fact:
+    _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_openshift_cluster.azure_name }}']
+
+- debug:
+    var: _azure_config
+
+- name: Generate MachineSet file {{status_dir}}/openshift/azure-ipi-ocs-machineset.yaml
+  template:
+    src: "azure-ipi-ocs-machineset.j2"
+    dest: "{{status_dir}}/openshift/azure-ipi-ocs-machineset.yaml"
+
+- name: Create or update machine set
+  shell: oc apply -f {{status_dir}}/openshift/azure-ipi-ocs-machineset.yaml
+
+- name: Wait for machine sets
+  include_tasks: wait-for-machine-set.yml
+  with_items:
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}1"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}2"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}3"
+  loop_control:
+    loop_var: _machine_set_name
+
+- name: Create openshift-storage OpenShift project
+  shell: |
+    if ! oc get ns openshift-storage > /dev/null 2>&1;then
+      oc create ns openshift-storage
+    fi
+
+- name: Get OpenShift version
+  shell: |
+    oc version -o yaml
+  register: _get_ocp_version
+
+- set_fact:
+    _azure_current_ocp_version: "{{ _get_ocp_version.stdout | regex_search('openshiftVersion: ([0-9]+.[0-9]+)', '\\1') | first }}"
+
+- debug:
+    var: _azure_current_ocp_version
+
+- name: Generate OCS operator file {{status_dir}}/openshift/ocs-operator.yaml
+  template:
+    src: "ocs-operator.j2"
+    dest: "{{status_dir}}/openshift/ocs-operator.yaml"
+
+- name: Create OCS operator
+  shell: |
+    oc apply -f {{status_dir}}/openshift/ocs-operator.yaml
+
+- name: Wait until OCS Operator CSV has status Succeeded
+  shell: |
+    oc get csv -n openshift-storage \
+     -l operators.coreos.com/ocs-operator.openshift-storage \
+     --no-headers \
+     -o custom-columns='name:metadata.name,phase:status.phase' | \
+     grep -i succeeded | wc -l
+  register: _ocs_csv_status
+  retries: 30
+  delay: 30
+  until: _ocs_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Check if StorageCluster ocs-storagecluster already exists
+  command: |
+    oc get StorageCluster ocs-storagecluster -n openshift-storage
+  failed_when: False
+  register: _ocs_cluster_exists
+
+- name: Generate OCS StorageCluster file {{ status_dir }}/openshift/ocs-storagecluster.yaml
+  template:
+    src: "azure-ipi-ocs-storagecluster.j2"
+    dest: "{{ status_dir }}/openshift/ocs-storagecluster.yaml"
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Create OCS StorageCluster
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/ocs-storagecluster.yaml
+  when: _ocs_cluster_exists.rc != 0
+
+- name: Wait until OCS StorageCluster has status Ready
+  shell: |
+    oc get StorageCluster ocs-storagecluster -n openshift-storage \
+     --no-headers \
+     -o custom-columns='name:metadata.name,phase:status.phase' | \
+     grep -i ready | wc -l
+  register: _ocs_csv_status
+  retries: 30
+  delay: 30
+  until: _ocs_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
