@@ -66,6 +66,14 @@
       dest: /opt/ansible/.azure/osServicePrincipal.json
       mode: u+rwx
 
+  - name: Login Azure to service principal {{ _current_openshift_cluster.name }}-sp
+    shell: |
+      az login --service-principal -u {{ _az_sp_details.appId }} -p {{ _az_sp_details.password }} --tenant {{ _az_sp_details.tenant }}
+    register: _az_login_sp
+    retries: 10
+    delay: 10
+    until: _az_login_sp.rc == 0
+
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
     shell: |
       openshift-install create cluster --dir={{ status_dir }}/azure/{{ _current_openshift_cluster.name }} --log-level debug >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
