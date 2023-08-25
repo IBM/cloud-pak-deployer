@@ -61,10 +61,10 @@ oc set data -n kube-system secret/cloud-pak-node-fix-secrets \
 # Create ImageContentSourcePolicy
 if [[ "${CPD_PRIVATE_REGISTRY}" != "" ]]; then
     echo "Private registry specified, creating ImageContentSourcePolicy for registry ${CPD_PRIVATE_REGISTRY}"
-    cp ${AUTOMATION_ROLES_DIR}/cp-ocp-icsp/templates/cloud-pak-icsp-registries-conf.j2 /tmp/cloud-pak-icsp-registries-conf.conf
-    sed -i "s#{{ private_registry_url_namespace }}#${CPD_PRIVATE_REGISTRY}#g" /tmp/cloud-pak-icsp-registries-conf.conf
+    cp ${AUTOMATION_ROLES_DIR}/cp-ocp-icsp/templates/cloud-pak-icsp-registries-conf.j2 /tmp/cloud-pak-icsp-registries.conf
+    sed -i "s#{{ private_registry_url_namespace }}#${CPD_PRIVATE_REGISTRY}#g" /tmp/cloud-pak-icsp-registries.conf
     oc set data cm/cloud-pak-node-fix-config -n kube-system \
-      --from-file=/tmp/cloud-pak-icsp-registries-conf.conf
+      --from-file=/tmp/cloud-pak-icsp-registries.conf
 fi
 
 # Generate tuned
@@ -76,8 +76,6 @@ oc apply -f /tmp/cp4d-tuned.yaml
 echo "Writing fix scripts to config map"
 oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
     --from-file=cp4d-apply-kubelet-config.sh=${AUTOMATION_ROLES_DIR}/cp4d/cp4d-ocp-kubelet-config/templates/cp4d-apply-kubelet-config.j2
-oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
-    --from-file=cp4d-apply-crio-config.sh=${AUTOMATION_ROLES_DIR}/cp4d/cp4d-ocp-crio-config/templates/cp4d-apply-crio-config.j2
 oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
     --from-file=cloud-pak-node-fix.sh=${AUTOMATION_ROLES_DIR}/cp-ocp-mco-resume/templates/cloud-pak-node-fix.j2
 oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
