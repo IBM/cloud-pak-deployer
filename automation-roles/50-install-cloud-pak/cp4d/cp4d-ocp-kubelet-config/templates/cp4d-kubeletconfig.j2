@@ -4,15 +4,13 @@ metadata:
   name: {{ kubelet_config_name }}
 spec:
   machineConfigPoolSelector:
-{% if _existing_ocp_infra_type == 'aws-rosa' %}
     matchLabels:
       pools.operator.machineconfiguration.openshift.io/worker: ""
-{% else %}
-    matchLabels:
-      db2u-kubelet: sysctl
-{% endif %}
   kubeletConfig:
     allowedUnsafeSysctls:
       - "kernel.msg*"
       - "kernel.shm*"
       - "kernel.sem"
+{% if _p_current_ocp_version >= '4.12' %}
+    podPidsLimit: 16384
+{% endif %}
