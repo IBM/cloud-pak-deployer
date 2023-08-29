@@ -1,0 +1,38 @@
+---
+- name: Retrieve credentials for service principal {{ _p_az_sp_name }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _p_az_sp_name }}-credentials"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _az_sp_credentials
+
+- name: Fail if service principal credentials were not found in vault
+  fail:
+    msg: Service principal credentials not found in vault secret {{ _p_az_sp_name }}-credentials
+  when: _az_sp_credentials == ""
+
+- set_fact:
+    _az_sp_details: "{{ _az_sp_credentials }}"
+
+- name: Login Azure to service principal {{ _p_az_sp_name }}
+  shell: |
+    az login --service-principal -u {{ _az_sp_details.appId }} -p {{ _az_sp_details.password }} --tenant {{ _az_sp_details.tenant }}
+  register: _az_login_sp
+  retries: 10
+  delay: 10
+  until: _az_login_sp.rc == 0
+
+- name: Get Azure subscription ID
+  shell: |
+    az account show
+  register: _az_show_account
+
+- set_fact:
+    _subscription_id: "{{ (_az_show_account.stdout | from_json).id }}"
+
+- name: Generate .azure/osServicePrincipal.json in home directory
+  template:
+    src: osServicePrincipal.j2
+    dest: /opt/ansible/.azure/osServicePrincipal.json
+    mode: u+rwx
