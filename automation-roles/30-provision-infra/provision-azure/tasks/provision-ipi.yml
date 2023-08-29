@@ -21,58 +21,10 @@
     vars:
       _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
-  - name: Ensure .azure/osServicePrincipal.json does not exist when setting RBAC for service principal
-    file:
-      path: /opt/ansible/.azure/osServicePrincipal.json
-      state: absent
-
-  - name: Get Azure subscription ID
-    shell: |
-      az account show
-    register: _az_show_account
-
-  - set_fact:
-      _subscription_id: "{{ (_az_show_account.stdout | from_json).id }}"
-
-  - name: Create resource group {{ _azure_config.resource_group.name }} for OpenShift cluster
-    shell: |
-      az group create \
-        --name {{ _azure_config.resource_group.name }} \
-        --location {{ _azure_config.resource_group.location }} 
-
-  - name: Create service principal {{ _current_openshift_cluster.name }}-sp for OpenShift cluster
-    shell: |
-      az ad sp create-for-rbac --role Contributor --name {{ _current_openshift_cluster.name }}-sp --scopes /subscriptions/{{ _subscription_id }}
-    register: _az_sp_create_command
-
-  - debug:
-      var: _az_sp_create_command
-
-  - set_fact:
-      _az_sp_details: "{{ _az_sp_create_command.stdout | from_json }}"
-
-  - name: Get object ID for service principal {{ _current_openshift_cluster.name }}-sp
-    shell: |
-      az ad sp show --id {{ _az_sp_details.appId }} --query id -o tsv
-    register: _az_sp_obj_id
-
-  - name: Grant User Access Administrator permissions to service principal {{ _current_openshift_cluster.name }}-sp
-    shell: |
-      az role assignment create --role "User Access Administrator" --assignee-object-id {{ _az_sp_obj_id.stdout }}
-
-  - name: Generate .azure/osServicePrincipal.json in home directory
-    template:
-      src: osServicePrincipal.j2
-      dest: /opt/ansible/.azure/osServicePrincipal.json
-      mode: u+rwx
-
-  - name: Login Azure to service principal {{ _current_openshift_cluster.name }}-sp
-    shell: |
-      az login --service-principal -u {{ _az_sp_details.appId }} -p {{ _az_sp_details.password }} --tenant {{ _az_sp_details.tenant }}
-    register: _az_login_sp
-    retries: 10
-    delay: 10
-    until: _az_login_sp.rc == 0
+  - include_role:
+      name: azure-login-sp
+    vars:
+      _p_az_sp_name: "{{ _azure_config.sp_name }}"
 
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
     shell: |

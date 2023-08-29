@@ -13,6 +13,11 @@
   debug:
     msg: Cluster "{{ current_openshift_cluster.name }}" and any other resources in the resource group "{{ _azure_config.resource_group.name }}" will be destroyed
 
+- include_role:
+    name: azure-login-sp
+  vars:
+    _p_az_sp_name: "{{ _azure_config.sp_name }}"
+
 - name: Check if resource group {{ _azure_config.resource_group.name }} still exists
   shell: |
     az group show --resource-group {{ _azure_config.resource_group.name }}
@@ -22,13 +27,13 @@
 - name: Destroy Azure ARO cluster
   include_tasks: destroy-azure-aro.yml
   when: 
-  - _current_openshift_cluster.infrastructure.type is defined and _current_openshift_cluster.infrastructure.type  == 'aro'
+  - current_openshift_cluster.infrastructure.type  == 'aro'
   - _show_rg.rc == 0
 
 - name: Destroy Azure self-managed (IPI) Openshift
   include_tasks: destroy-azure-ipi.yml
   when: 
-  - _current_openshift_cluster.infrastructure.type is defined and _current_openshift_cluster.infrastructure.type  == 'self-managed'
+  - current_openshift_cluster.infrastructure.type  == 'self-managed'
   - _show_rg.rc == 0
 
 - name: Delete "{{ current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
