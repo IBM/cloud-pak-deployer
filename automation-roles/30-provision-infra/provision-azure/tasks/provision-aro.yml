@@ -4,7 +4,12 @@
   vars:
     query: >-
       [?name=='{{ _current_openshift_cluster.azure_name }}']
-      
+
+- include_role:
+    name: azure-login-sp
+  vars:
+    _p_az_sp_name: "{{ _azure_config.sp_name }}"
+    
 - name: Check if ARO cluster {{ _current_openshift_cluster.name }} already exists
   shell: |
     az aro show --name {{ _current_openshift_cluster.name }} --resource-group {{ _azure_config.resource_group.name }}

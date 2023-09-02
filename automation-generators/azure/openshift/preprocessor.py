@@ -30,7 +30,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     #Level 1
     g('name').isRequired()
     g('azure_name').isRequired()    
-    g('domain_name').isOptional()
     g('control_plane_flavour').isRequired()
     g('compute_flavour').isRequired()
     g('compute_disk_size_gb').isRequired()
@@ -39,7 +38,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('network').isRequired()
     g('infrastructure').isRequired()
     g('openshift_storage').isRequired()
-
 
     #Level 2
     if len(g.getErrors()) == 0:
@@ -50,6 +48,10 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
         ge=g.getExpandedAttributes()
+
+        # If type is self-managed, the domain name is required
+        if ge['infrastructure']['type'] == 'self-managed':
+            g('domain_name').isRequired()
 
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
