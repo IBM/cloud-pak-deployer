@@ -1,10 +1,4 @@
 ---
-- set_fact:
-    _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?name=='{{ _current_openshift_cluster.azure_name }}']
-
 - name: Check if OpenShift cluster already exists by checking kubeadmin password secret
   include_role: 
     name: vault-get-secret
@@ -15,16 +9,22 @@
 
 # Run OpenShift IPI installer if OpenShift cluster does not exist yet
 - block:
-  - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
-    include_role:
-      name: openshift-download-installer
+  - set_fact:
+      _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
     vars:
-      _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+      query: >-
+        [?name=='{{ _current_openshift_cluster.azure_name }}']
 
   - include_role:
       name: azure-login-sp
     vars:
       _p_az_sp_name: "{{ _azure_config.sp_name }}"
+
+  - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
+    include_role:
+      name: openshift-download-installer
+    vars:
+      _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
     shell: |
