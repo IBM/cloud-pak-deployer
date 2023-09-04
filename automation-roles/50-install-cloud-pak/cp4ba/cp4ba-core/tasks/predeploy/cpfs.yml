@@ -45,7 +45,7 @@
         path: "/spec/services"
         value: []
 
-# TODO remove when fixed in CPFS and CP4BA services overriding
+# TODO remove when fixed in CPFS and CP4BA services overriding and custom cpfs admin
 - name: Patch common-service mongodb storage class
   kubernetes.core.k8s_json_patch:
     api_version: operator.ibm.com/v3
@@ -60,6 +60,14 @@
           spec:
             mongoDB:
               storageClass: "{{ cpfs_block_storage_class_name }}"
+      - op: add
+        path: "/spec/services/-"
+        value:
+          name: "ibm-im-operator"
+          spec:
+            authentication:
+              config:
+                defaultAdminUser: cpfsadmin
 
 - name: Wait for CommonService instance common-service Succeeded phase
   kubernetes.core.k8s_info:
