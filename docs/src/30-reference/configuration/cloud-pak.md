@@ -576,7 +576,6 @@ cp4ba:
         enabled: true
         optional_components: 
           document_processing_designer: true # Designer (ADP)
-          document_processing_runtime: false # Runtime (ADP) - Currently not implemented
         # Additional customization for Automation Document Processing
         # Contents of the following will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
@@ -592,8 +591,6 @@ cp4ba:
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
           kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
-      workstreams: # Automation Workstream Services (IAWS)
-        enabled: false # Always false in this tool - this feature is not implemented
   
   # Section for IBM Process mining
   pm:
@@ -742,8 +739,7 @@ Placed in `cp4ba.patterns.document_processing` key.
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to enable `document_processing` pattern. | Yes  | true, false |
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
-| optional_components.document_processing_designer          | Set to `true` to enable Designer | Yes | true, false |
-| optional_components.document_processing_runtime          | Set to `true` to enable Runtime. currently always `false`. | Yes | false |
+| optional_components.document_processing_designer          | Set to `true` to enable Designer | Yes | true |
 | cr_custom          | Additional customization for Automation Document Processing. Contents will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten. | No | Object |
 
 ### Workflow pattern properties
@@ -758,15 +754,6 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
 | optional_components.kafka          | Set to `true` to install a kafka cluster and enable kafka service for workflow authoring. | Yes | true, false |
-
-### Workstreams pattern properties
-
-Used to configure Workstreams.  
-Placed in `cp4ba.patterns.workstreams` key.
-
-| Property            | Description                    | Mandatory            | Allowed values |
-|---------------------|--------------------------------|----------------------|----------------|
-| enabled                         | Set to `true` to enable `workstreams` pattern. Currently not implemented. Always `false`. | Yes  | false |
 
 ## Process Mining properties
 
