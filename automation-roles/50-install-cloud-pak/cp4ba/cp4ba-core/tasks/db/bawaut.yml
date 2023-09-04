@@ -127,39 +127,39 @@
 # Based on https://www.ibm.com/docs/en/baw/20.x?topic=system-preparing-database-case-history-store
 # Based on
 # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=bawraws-optional-enabling-timeline-visualizer-widget-display-business-automation-workflow-process-activity-flow
-- name: CHOS DB prepare tablespace
+- name: CHDB DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/chos
+    command: mkdir /pgsqldata/chdb
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: CHOS DB prepare tablespace permissions
+- name: CHDB DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/chos
+    command: chown postgres:postgres /pgsqldata/chdb
   register: command_status
 
-- name: CHOS DB
+- name: CHDB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user chos
-        CREATE ROLE chos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user chdb
+        CREATE ROLE chdb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database chos
-        create database chos owner chos template template0 encoding UTF8 ;
-        revoke connect on database chos from public;
-        grant all privileges on database chos to chos;
-        grant connect, temp, create on database chos to chos;
+        -- create database chdb
+        create database chdb owner chdb template template0 encoding UTF8 ;
+        revoke connect on database chdb from public;
+        grant all privileges on database chdb to chdb;
+        grant connect, temp, create on database chdb to chdb;
 
         -- please modify location follow your requirement
-        create tablespace ch_tbs owner chos location '/pgsqldata/chos';
-        grant create on tablespace ch_tbs to chos;
+        create tablespace chdb_tbs owner chdb location '/pgsqldata/chdb';
+        grant create on tablespace chdb_tbs to chdb;
       EOF"
   register: command_status
