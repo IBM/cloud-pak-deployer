@@ -28,6 +28,16 @@ if [[ "${CPD_PRIVATE_REGISTRY}" == "" ]] && [[ "${CP_ENTITLEMENT_KEY}" == "" ]];
     exit 1
 fi
 
+# Create config map and secret
+echo "Creating ConfigMaps and secret"
+oc delete cm -n kube-system cloud-pak-node-fix-scripts --ignore-not-found
+oc create cm -n kube-system cloud-pak-node-fix-scripts
+oc delete cm -n kube-system cloud-pak-node-fix-config --ignore-not-found
+oc create cm -n kube-system cloud-pak-node-fix-config
+oc delete secret -n kube-system cloud-pak-node-fix-secrets --ignore-not-found
+oc create secret generic -n kube-system cloud-pak-node-fix-secrets
+
+# Set global pull secret
 echo "Setting global pull secret"
 if [[ "${CPD_PRIVATE_REGISTRY}" != "" ]]; then
     REGISTRY=${CPD_PRIVATE_REGISTRY}
@@ -48,28 +58,14 @@ oc set data secret/pull-secret -n openshift-config \
 oc set data -n kube-system secret/cloud-pak-node-fix-secrets \
     --from-file=newdockerconfigjson=/tmp/newdockerconfigjson
 
-# Generate kubelet config
-echo "Generating kubelet config"
-first_compute=$(oc get no --no-headers -l node-role.kubernetes.io/worker -o custom-columns='name:.metadata.name' | head -1)
-oc debug no/${first_compute} --to-namespace kube-system \
-    -- cat /host/etc/kubernetes/kubelet.conf > /tmp/cp4d-kubelet.conf
-sed -i "/# BEGIN ANSIBLE MANAGED BLOCK/,/# END ANSIBLE MANAGED BLOCK/d" /tmp/cp4d-kubelet.conf
-cat << EOF >> /tmp/cp4d-kubelet.conf
-# BEGIN ANSIBLE MANAGED BLOCK
-allowedUnsafeSysctls:
-- "kernel.msg*"
-- "kernel.shm*"
-- "kernel.sem"
-# END ANSIBLE MANAGED BLOCK
-EOF
-oc set data -n kube-system cm/cloud-pak-node-fix-config --from-file=/tmp/cp4d-kubelet.conf
-
-# Generate crio config
-echo "Generating crio config"
-oc debug no/${first_compute} --to-namespace kube-system \
-    -- cat /host/etc/crio/crio.conf > /tmp/cp4d-crio.conf
-sed -i "s/pids_limit.*/pids_limit = 12288/" /tmp/cp4d-crio.conf
-oc set data -n kube-system cm/cloud-pak-node-fix-config --from-file=/tmp/cp4d-crio.conf
+# Create ImageContentSourcePolicy
+if [[ "${CPD_PRIVATE_REGISTRY}" != "" ]]; then
+    echo "Private registry specified, creating ImageContentSourcePolicy for registry ${CPD_PRIVATE_REGISTRY}"
+    cp ${AUTOMATION_ROLES_DIR}/cp-ocp-icsp/templates/cloud-pak-icsp-registries-conf.j2 /tmp/cloud-pak-icsp-registries.conf
+    sed -i "s#{{ private_registry_url_namespace }}#${CPD_PRIVATE_REGISTRY}#g" /tmp/cloud-pak-icsp-registries.conf
+    oc set data cm/cloud-pak-node-fix-config -n kube-system \
+      --from-file=/tmp/cloud-pak-icsp-registries.conf
+fi
 
 # Generate tuned
 echo "Generating Tuned config"
@@ -78,6 +74,8 @@ oc apply -f /tmp/cp4d-tuned.yaml
 
 # Populate configmap with scripts
 echo "Writing fix scripts to config map"
+oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
+    --from-file=cp4d-apply-kubelet-config.sh=${AUTOMATION_ROLES_DIR}/cp4d/cp4d-ocp-kubelet-config/templates/cp4d-apply-kubelet-config.j2
 oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
     --from-file=cloud-pak-node-fix.sh=${AUTOMATION_ROLES_DIR}/cp-ocp-mco-resume/templates/cloud-pak-node-fix.j2
 oc set data -n kube-system cm/cloud-pak-node-fix-scripts \

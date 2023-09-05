@@ -1,10 +1,16 @@
 ---
+- name: Delete KubeletConfig cpd-crio-kubeletconfig if it exists
+  shell: |
+    oc delete KubeletConfig cpd-crio-kubeletconfig --ignore-not-found
+    
 - name: Create KubeletConfig yaml
   template:
     src: cp4d-kubeletconfig.j2
     dest: "{{ status_dir }}/openshift/cp4d-kubeletconfig.yaml"
+
 - name: Create KubeletConfig {{ kubelet_config_name }}
   shell: oc apply -f {{ status_dir }}/openshift/cp4d-kubeletconfig.yaml
+
 - name: Label worker machine config pool to allow KubeletConfig
   shell: oc label machineconfigpool worker db2u-kubelet=sysctl --overwrite
   when: _existing_ocp_infra_type != 'aws-rosa'
