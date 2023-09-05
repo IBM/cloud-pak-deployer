@@ -1,0 +1,12 @@
+---
+- name: Generate password segments
+  set_fact:
+    _password_segments: "{{ _password_segments | default([]) + [lookup('password', '/dev/null length=' + (_p_segment_length | default(5)) | string + ' chars=ascii_letters')] }}"
+  loop: "{{ range(_p_password_segments | default(4)) }}"
+  
+- name: Format password
+  set_fact:
+    _p_generated_password: "{{ _password_segments | join('-') }}"
+
+- debug:
+    var: _p_generated_password
