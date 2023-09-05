@@ -4,6 +4,9 @@ set -o pipefail
 mirror-images \
     --release={{ _p_current_cp4d_cluster.cp4d_version }} \
     --components={%- if _p_current_cp4d_cluster.cp4d_version >= '4.7.0' %}ibm-cert-manager,ibm-licensing,{%- endif %}{{ _cp4d_components }} \
+{% if _p_source_registry_hostname == _v_portable_registry -%}
+    --source_registry={{ _v_portable_registry }}:{{ _v_portable_registry_port }} \
+{% endif -%}    
     --target_registry={{ _target_registry_url }} \
     --arch={{ _openshift_processor_arch }} \
     --preview={%- if _p_preview_script -%}true{%- else -%}false{%- endif %} \

@@ -37,27 +37,16 @@ configmap "cloud-pak-node-fix-config" deleted
 configmap/cloud-pak-node-fix-config created
 secret "cloud-pak-node-fix-secrets" deleted
 secret/cloud-pak-node-fix-secrets created
-Setting global pull secret and ICSP for private registry de.icr.io/cp4d-470
-configmap/cloud-pak-node-fix-config data updated
-Global pull secret will be set for private registry de.icr.io
+Setting global pull secret
 /tmp/.dockerconfigjson
-secret/pull-secret data updated
+info: pull-secret was not changed
 secret/cloud-pak-node-fix-secrets data updated
-Generating kubelet config
-Starting pod/102310132-debug ...
-To use host binaries, run `chroot /host`
-
-Removing debug pod ...
-configmap/cloud-pak-node-fix-config data updated
-Generating crio config
-Starting pod/102310132-debug ...
-To use host binaries, run `chroot /host`
-
-Removing debug pod ...
-configmap/cloud-pak-node-fix-config data updated
+Private registry specified, creating ImageContentSourcePolicy for registry de.icr.io/cp4d-470
 Generating Tuned config
 tuned.tuned.openshift.io/cp4d-ipc unchanged
 Writing fix scripts to config map
+configmap/cloud-pak-node-fix-scripts data updated
+configmap/cloud-pak-node-fix-scripts data updated
 configmap/cloud-pak-node-fix-scripts data updated
 configmap/cloud-pak-node-fix-scripts data updated
 Creating service account for DaemonSet
@@ -67,20 +56,18 @@ Recreate DaemonSet
 daemonset.apps "cloud-pak-crontab-ds" deleted
 daemonset.apps/cloud-pak-crontab-ds created
 Showing running DaemonSet pods
-NAME                         READY   STATUS        RESTARTS   AGE
-cloud-pak-crontab-ds-bvjzl   0/1     Pending       0          1s
-cloud-pak-crontab-ds-dq7mb   1/1     Terminating   0          85s
-cloud-pak-crontab-ds-pl7cz   0/1     Pending       0          0s
-cloud-pak-crontab-ds-ql975   1/1     Terminating   0          85s
-cloud-pak-crontab-ds-rrrbf   0/1     Pending       0          0s
-cloud-pak-crontab-ds-tz5tl   1/1     Terminating   0          85s
+NAME                         READY   STATUS              RESTARTS   AGE
+cloud-pak-crontab-ds-b92f9   0/1     Terminating         0          12m
+cloud-pak-crontab-ds-f85lf   0/1     ContainerCreating   0          0s
+cloud-pak-crontab-ds-jlbvm   0/1     ContainerCreating   0          0s
+cloud-pak-crontab-ds-rbj65   1/1     Terminating         0          12m
+cloud-pak-crontab-ds-vckrs   0/1     ContainerCreating   0          0s
+cloud-pak-crontab-ds-x288p   1/1     Terminating         0          12m
 Waiting for 5 seconds for pods to start
+
 Showing running DaemonSet pods
-NAME                         READY   STATUS        RESTARTS   AGE
-cloud-pak-crontab-ds-bvjzl   0/1     Pending       0          6s
-cloud-pak-crontab-ds-dq7mb   1/1     Terminating   0          90s
-cloud-pak-crontab-ds-pl7cz   0/1     Pending       0          5s
-cloud-pak-crontab-ds-ql975   1/1     Terminating   0          90s
-cloud-pak-crontab-ds-rrrbf   0/1     Pending       0          5s
-cloud-pak-crontab-ds-tz5tl   1/1     Terminating   0          90s
+NAME                         READY   STATUS    RESTARTS   AGE
+cloud-pak-crontab-ds-f85lf   1/1     Running   0          5s
+cloud-pak-crontab-ds-jlbvm   1/1     Running   0          5s
+cloud-pak-crontab-ds-vckrs   1/1     Running   0          5s
 ```
