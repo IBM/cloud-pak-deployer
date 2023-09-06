@@ -73,6 +73,13 @@
           }}
   loop: "{{ _cartridges_with_olm_utils_name }}"
 
+# Remove any cartridges without a defined Component_name
+- set_fact:
+    _tmp_cartridges: "{{ _cartridges_to_install | rejectattr('Component_name','undefined') }}"
+
+- set_fact:
+    _cartridges_to_install: "{{ _tmp_cartridges }}"
+
 - set_fact:
     _dp_cartridge: >-
       {{ _cartridges_to_install | selectattr('Component_name','match','dp') | default({}) }}
