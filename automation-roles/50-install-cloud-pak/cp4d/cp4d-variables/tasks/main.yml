@@ -115,13 +115,13 @@
     vars:
       _p_preview: True
       
-  - name: Fail if trying to upgrade to 4.7
+  - name: Fail if trying to upgrade to {{ _p_current_cp4d_cluster.cp4d_version }} from a release that is lower than 4.6.5
     fail:
-      msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 at the moment. Please consult Cloud Pak for Data documentation for upgrade steps. For convenience, the {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-migrate-private-topology.sh script has the steps to migrate to the private topology."
+      msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 or higher from any release earlier than 4.6.5. The currently installed release of CP4D is {{ _installed_ibmcpd_version }}. If you want to upgrade, please first upgrade to CP4D 4.6.5 or 4.6.6 and then upgrade to CP4D {{ _p_current_cp4d_cluster.cp4d_version }}"
   when:
     - _upgrade_cp4d
     - _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
-    - _installed_ibmcpd_version < "4.7.0"
+    - _installed_ibmcpd_version < "4.6.5"
     - not allow_cp4d_upgrade | default(False) | bool
 
 - set_fact:
