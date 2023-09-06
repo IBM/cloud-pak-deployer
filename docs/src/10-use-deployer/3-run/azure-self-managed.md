@@ -174,6 +174,8 @@ Finally, set the permissions of the service principal to allow creation of the O
 ```bash
 az role assignment create \
   --role "User Access Administrator" \
+  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID} \
+  --assignee-principal-type ServicePrincipal \
   --assignee-object-id $(az ad sp list --display-name=${AZURE_SP} --query='[].id' -o tsv)
 ```
 
@@ -182,6 +184,8 @@ If you do not have permissions to list service principals, you can also run the 
 export AZURE_SP_ID=$(jq -r .appId /tmp/${AZURE_SP}-credentials.json)
 az role assignment create \
   --role "User Access Administrator" \
+  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID} \
+  --assignee-principal-type ServicePrincipal \
   --assignee-object-id $(az ad sp show --id ${AZURE_SP_ID} --query='id' -o tsv)
 ```
 
