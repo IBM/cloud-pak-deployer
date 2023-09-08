@@ -72,7 +72,7 @@
       "
   register: command_status
 
-- name: Run LoadDefaultData scripts for Tenant1
+- name: Run LoadDefaultData scripts for proj1
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: postgresql-0
@@ -83,21 +83,21 @@
       export db_port=5432;
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=tenant1;
+      export db_adm_username=proj1;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
       export base_valid_user=1;
       export base_pwdconfirmed=1;
       export tenant_type=0;
-      export tenant_id=tenant1;
-      export tenant_db_name=tenant1;
-      export tenant_dsn_name=tenant1;
-      export tenant_db_user=tenant1;
+      export tenant_id=proj1;
+      export tenant_db_name=proj1;
+      export tenant_dsn_name=proj1;
+      export tenant_db_user=proj1;
       export user_already_defined=1;
       export tenant_pwdconfirmed=1;
       export tenant_db_pwd={{ cp4ba_postgresql_universal_password }};
@@ -111,7 +111,7 @@
   until: command_status.rc == 0
   retries: 5
 
-- name: Run LoadDefaultData scripts for Tenant2
+- name: Run LoadDefaultData scripts for proj2
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: postgresql-0
@@ -122,21 +122,21 @@
       export db_port=5432
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=tenant2;
+      export db_adm_username=proj2;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
       export base_valid_user=1;
       export base_pwdconfirmed=1;
       export tenant_type=0;
-      export tenant_id=tenant2;
-      export tenant_db_name=tenant2;
-      export tenant_dsn_name=tenant2;
-      export tenant_db_user=tenant2;
+      export tenant_id=proj2;
+      export tenant_db_name=proj2;
+      export tenant_dsn_name=proj2;
+      export tenant_db_user=proj2;
       export user_already_defined=1;
       export tenant_pwdconfirmed=1;
       export tenant_db_pwd={{ cp4ba_postgresql_universal_password }};
@@ -149,3 +149,65 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5  
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    common_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+# Based on internal code cp4ba-ansible-roles\prerequisites\templates\gitea\gitea-register-to-bas-job.yaml
+- name: Create Gitea connection
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cdra/cdapi/v1/api/credentials"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "org_url": "https://gitea.{{ apps_endpoint_domain }}/adp",
+        "api_url": "https://gitea.{{ apps_endpoint_domain }}/api/v1",
+        "user_id": "{{ lc_principal_admin_user }}",
+        "type": "password",
+        "secret": "{{ lc_principal_admin_password }}",
+        "provider": "gitea"
+      }
+    validate_certs: false
+    status_code:
+      - 204
+
+- name: Create CDD repo
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cdra/cdapi/v1/api/project/createCDDRepo"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    validate_certs: false
+    status_code:
+      - 201
+      - 200

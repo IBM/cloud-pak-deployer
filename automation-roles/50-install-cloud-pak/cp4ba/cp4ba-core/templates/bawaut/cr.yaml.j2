@@ -2,46 +2,46 @@ spec:
   datasource_configuration:
     dc_os_datasources:
       - dc_database_type: postgresql
-        dc_os_label: badocs
-        dc_common_os_datasource_name: BADOCS
-        dc_common_os_xa_datasource_name: BADOCSXA
+        dc_os_label: bawdocs
+        dc_common_os_datasource_name: BAWDOCS
+        dc_common_os_xa_datasource_name: BAWDOCSXA
         database_servername: "{{ cp4ba_postgresql_hostname }}"
-        database_name: badocs
+        database_name: bawdocs
         database_port: "5432"
       - dc_database_type: postgresql
-        dc_os_label: batos
-        dc_common_os_datasource_name: BATOS
-        dc_common_os_xa_datasource_name: BATOSXA
+        dc_os_label: bawtos
+        dc_common_os_datasource_name: BAWTOS
+        dc_common_os_xa_datasource_name: BAWTOSXA
         database_servername: "{{ cp4ba_postgresql_hostname }}"
-        database_name: batos
+        database_name: bawtos
         database_port: "5432"
       - dc_database_type: postgresql
-        dc_os_label: bados
-        dc_common_os_datasource_name: BADOS
-        dc_common_os_xa_datasource_name: BADOSXA
+        dc_os_label: bawdos
+        dc_common_os_datasource_name: BAWDOS
+        dc_common_os_xa_datasource_name: BAWDOSXA
         database_servername: "{{ cp4ba_postgresql_hostname }}"
-        database_name: bados
+        database_name: bawdos
         database_port: "5432"
-    dc_cpe_datasources:        
+    dc_cpe_datasources:
       - dc_database_type: postgresql
         dc_os_label: ch
-        dc_common_cpe_datasource_name: CH
-        dc_common_cpe_xa_datasource_name: CHXA
+        dc_common_cpe_datasource_name: CASEHISTORYDS
+        dc_common_cpe_xa_datasource_name: CASEHISTORYDSXA
         database_servername: "{{ cp4ba_postgresql_hostname }}"
-        database_name: ch
+        database_name: chdb
         database_port: "5432"
         dc_common_conn_name: CH_dbconnection
   workflow_authoring_configuration:
     admin_user: "{{ lc_principal_admin_user }}"
     content_integration:
       domain_name: P8DOMAIN
-      object_store_name: BADOCS
+      object_store_name: BAWDOCS
     case:
       domain_name: P8DOMAIN
-      object_store_name_dos: BADOS
-      object_store_name_tos: BATOS
-      connection_point_name_tos: pe_conn_batos
-      datasource_name_tos: BATOS
+      object_store_name_dos: BAWDOS
+      object_store_name_tos: BAWTOS
+      connection_point_name_tos: pe_conn_bawtos
+      datasource_name_tos: BAWTOS
 {% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai %}
       event_emitter:
         date_sql: 20220401T000000Z
@@ -50,13 +50,13 @@ spec:
       case_history_emitter:
         enable: true
         case_history_store_schema_name: CH
-        dc_common_cpe_datasource_name: CH
+        dc_common_cpe_datasource_name: CASEHISTORYDS
 {% endif %}
     environment_config:
       show_task_prioritization_service_toggle: true
     federation_config:
       case_manager:
-        - object_store_name: BATOS
+        - object_store_name: BAWTOS
     business_event:
       enable: true
       enable_task_api: true
@@ -77,62 +77,62 @@ spec:
   initialize_configuration:
     ic_obj_store_creation:
       object_stores:
-        - oc_cpe_obj_store_display_name: BADOCS
-          oc_cpe_obj_store_symb_name: BADOCS
+        - oc_cpe_obj_store_display_name: BAWDOCS
+          oc_cpe_obj_store_symb_name: BAWDOCS
           oc_cpe_obj_store_conn:
-            name: BADOCS_dbconnection
-            dc_os_datasource_name: BADOCS
-            dc_os_xa_datasource_name: BADOCSXA
+            name: BAWDOCS_dbconnection
+            dc_os_datasource_name: BAWDOCS
+            dc_os_xa_datasource_name: BAWDOCSXA
           oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
-        - oc_cpe_obj_store_display_name: BADOS
-          oc_cpe_obj_store_symb_name: BADOS
+        - oc_cpe_obj_store_display_name: BAWDOS
+          oc_cpe_obj_store_symb_name: BAWDOS
           oc_cpe_obj_store_conn:
-            name: BADOS_dbconnection
-            dc_os_datasource_name: BADOS
-            dc_os_xa_datasource_name: BADOSXA
+            name: BAWDOS_dbconnection
+            dc_os_datasource_name: BAWDOS
+            dc_os_xa_datasource_name: BAWDOSXA
           oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
-        - oc_cpe_obj_store_display_name: BATOS
-          oc_cpe_obj_store_symb_name: BATOS
+        - oc_cpe_obj_store_display_name: BAWTOS
+          oc_cpe_obj_store_symb_name: BAWTOS
           oc_cpe_obj_store_conn:
-            name: BATOS_dbconnection
-            dc_os_datasource_name: BATOS
-            dc_os_xa_datasource_name: BATOSXA
+            name: BAWTOS_dbconnection
+            dc_os_datasource_name: BAWTOS
+            dc_os_xa_datasource_name: BAWTOSXA
           oc_cpe_obj_store_admin_user_groups: [{% for item in (lc_admin_groups+lc_admin_users) %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]        
           oc_cpe_obj_store_enable_workflow: true
-          oc_cpe_obj_store_workflow_region_name: batos_region_name
-          oc_cpe_obj_store_workflow_data_tbl_space: batos_tbs
+          oc_cpe_obj_store_workflow_region_name: bawtos_region_name
+          oc_cpe_obj_store_workflow_data_tbl_space: bawtos_tbs
           oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
           oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
-          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_batos
+          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_bawtos
     ic_icn_init_info:
       icn_repos:
-        - add_repo_id: BADOCS
-          add_repo_os_sym_name: BADOCS
-          add_repo_os_dis_name: BADOCS
-        - add_repo_id: BADOS
-          add_repo_os_sym_name: BADOS
-          add_repo_os_dis_name: BADOS
-        - add_repo_id: BATOS
-          add_repo_os_sym_name: BATOS
-          add_repo_os_dis_name: BATOS
+        - add_repo_id: BAWDOCS
+          add_repo_os_sym_name: BAWDOCS
+          add_repo_os_dis_name: BAWDOCS
+        - add_repo_id: BAWOS
+          add_repo_os_sym_name: BAWDOS
+          add_repo_os_dis_name: BAWDOS
+        - add_repo_id: BAWTOS
+          add_repo_os_sym_name: BAWTOS
+          add_repo_os_dis_name: BAWTOS
       icn_desktop:
-        - add_desktop_id: BADOCS
-          add_desktop_name: BADOCS
-          add_desktop_description: BADOCS
-          add_desktop_repo_id: BADOCS
-        - add_desktop_id: BADOS
-          add_desktop_name: BADOS
-          add_desktop_description: BADOS
-          add_desktop_repo_id: BADOS
-        - add_desktop_id: BATOS
-          add_desktop_name: BATOS
-          add_desktop_description: BATOS
-          add_desktop_repo_id: BATOS
+        - add_desktop_id: BAWDOCS
+          add_desktop_name: BAWDOCS
+          add_desktop_description: BAWDOCS
+          add_desktop_repo_id: BAWDOCS
+        - add_desktop_id: BAWDOS
+          add_desktop_name: BAWDOS
+          add_desktop_description: BAWDOS
+          add_desktop_repo_id: BAWDOS
+        - add_desktop_id: BAWTOS
+          add_desktop_name: BAWTOS
+          add_desktop_description: BAWTOS
+          add_desktop_repo_id: BAWTOS
   verify_configuration:
     vc_icn_verification:
-      - vc_icn_repository: BADOCS
-        vc_icn_desktop_id: BADOCS          
-      - vc_icn_repository: BADOS
-        vc_icn_desktop_id: BADOS          
-      - vc_icn_repository: BATOS
-        vc_icn_desktop_id: BATOS          
+      - vc_icn_repository: BAWDOCS
+        vc_icn_desktop_id: BAWDOCS          
+      - vc_icn_repository: BAWDOS
+        vc_icn_desktop_id: BAWDOS          
+      - vc_icn_repository: BAWTOS
+        vc_icn_desktop_id: BAWTOS          

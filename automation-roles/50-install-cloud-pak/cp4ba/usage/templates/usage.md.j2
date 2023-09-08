@@ -4,12 +4,9 @@ This file contains endpoints, credentials and other useful information about cap
 
 - [Extras](#extras)
 - [CP4BA - CP4BA capabilities](#cp4ba---cp4ba-capabilities)
-- [CP4BA - IAF capabilities](#cp4ba---iaf-capabilities)
+- [CP4BA - CPFS dedicated capabilities](#cp4ba---cpfs-dedicated-capabilities) 
 {% if current_cp4ba_cluster.pm.enabled == true %}
 - [Process Mining](#process-mining)
-{% endif %}
-{% if current_cp4ba_cluster.asset_repo.enabled == true %}
-- [Asset Repository](#asset-repository)
 {% endif %}
 {% if current_cp4ba_cluster.rpa.enabled == true %}
 - [RPA](#rpa)
@@ -72,7 +69,7 @@ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true) and current_cp4ba
 
 As elastic search browser.
 
-Pre-configured for IAF elastic search.
+Pre-configured for CPFS elastic search.
 
 #### Endpoints
 
@@ -88,7 +85,7 @@ Pre-configured for IAF elastic search.
 
 As kafka browser.
 
-Pre-configured for IAF Kafka with custom user ( {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }} ). Admin credentials can be found in this doc in [IAF Kafka section](#ibm-automation-foundation-iaf---kafka).
+Pre-configured for CPFS Kafka with custom user ( {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }} ). Admin credentials can be found in this doc in [CPFS Kafka section](#kafka).
 
 #### Endpoints
 
@@ -170,6 +167,10 @@ If you want to investigate the actual ansible code that is running in the operat
 oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep cp4a-operator | awk '{print $1}'`:/opt/ansible/roles cp4ba-ansible-roles
 # Content
 oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep ibm-content-operator | awk '{print $1}'`:/opt/ansible/roles content-ansible-roles
+# DPE
+oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep ibm-dpe-operator | awk '{print $1}'`:/opt/ansible/roles dpe-ansible-roles
+# Foundation
+oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep foundation-operator | awk '{print $1}'`:/opt/ansible/roles foundation-ansible-roles
 ```
 
 Order of capabilities deployment can be found in operator code in */opt/ansible/roles/icp4a/tasks/main.yml*.
@@ -237,7 +238,7 @@ etcdctl get --from-key '' --insecure-skip-tls-verify=true --user="root:{{ univer
 #### Credentials
 
 - for BAI - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-- for Flink - username: eventprocessing-admin (```oc get secret -n {{ cp4ba_project_name }} $(oc get InsightsEngine -n {{ cp4ba_project_name }} iaf-insights-engine -o jsonpath='{.status.components.flinkUi.endpoints[0].authentication.secret.secretName}') -o jsonpath='{.data.username}' | base64 -d```) / password: ```oc get secret -n {{ cp4ba_project_name }} $(oc get InsightsEngine -n {{ cp4ba_project_name }} iaf-insights-engine -o jsonpath='{.status.components.flinkUi.endpoints[0].authentication.secret.secretName}') -o jsonpath='{.data.password}' | base64 -d```
+- for Flink - username: eventprocessing-admin (```oc get secret -n {{ cp4ba_project_name }} $(oc get InsightsEngine -n {{ cp4ba_project_name }} {{ cp4ba_cr_meta_name }} -o jsonpath='{.status.components.flinkUi.endpoints[0].authentication.secret.secretName}') -o jsonpath='{.data.username}' | base64 -d```) / password: ```oc get secret -n {{ cp4ba_project_name }} $(oc get InsightsEngine -n {{ cp4ba_project_name }} {{ cp4ba_cr_meta_name }} -o jsonpath='{.status.components.flinkUi.endpoints[0].authentication.secret.secretName}') -o jsonpath='{.data.password}' | base64 -d```
 
 #### Extracting generated templates from operator for debug
 
@@ -337,8 +338,8 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 
 #### Endpoints
 
-- AAE Server apps list: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-instance1/v2/applications
-- AAE API Docs https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-instance1/public/apidoc
+- AAE Server apps list: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-workspace/v2/applications
+- AAE API Docs https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-workspace/public/apidoc
 
 #### Credentials
 
@@ -377,11 +378,11 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - Case REST endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/CaseManager/CASEREST/
 - Case Builder: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/CaseBuilder
 - FNCM Server definition in BAW:
-  - Host name: cp4ba-cmis-svc.cp4ba.svc.cluster.local
+  - Host name: icp4adeploy-cmis-svc.cp4ba.svc.cluster.local
   - Port: 9443
   - Context path: /cmis/openfncmis_wlp/services
   - Secure server: true
-  - Repository: depends on which you want to connect in internal FNCM (e.g. BADOCS or OS1)
+  - Repository: depends on which you want to connect in internal FNCM (e.g. BAWDOCS or OS1)
   - Credentials as in Credentials section
 
 #### Credentials
@@ -389,7 +390,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-## CP4BA - IAF capabilities
+## CP4BA - CPFS dedicated capabilities
 
 ### BTS
 
@@ -413,6 +414,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
+{% if current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true or current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai.enabled == true %}
 ### Elastic Search
 
 #### Endpoints
@@ -423,6 +425,8 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 
 - {{ elasticsearch_admin_user }} / {{ elasticsearch_universal_password }}
 
+{% endif %}
+{% if (current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka == true) or current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai.enabled == true %}
 ### Kafka
 
 #### Endpoints
@@ -442,6 +446,7 @@ Alternative custom user: cpadmin / {{ universal_password }}
 - Sasl Mechanism: SCRAM-SHA-512
 - Root CA cert (used in *Path to root CA certificates file*): ```oc get kafka iaf-system -n {{ cp4ba_project_name }} -o jsonpath='{.status.listeners[1].certificates[0]}'```
 
+{% endif %}
 {% endif %}
 {% if current_cp4ba_cluster.pm.enabled == true %}
 ## Process Mining
@@ -471,18 +476,6 @@ To get logs for Operator.
 oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-controller | xargs oc logs > process-mining-operator.log
 ```
 
-{% if current_cp4ba_cluster.asset_repo.enabled == true %}
-## Asset Repository
-
-### Endpoints
-
-- UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/assets
-
-### Credentials
-
-- {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
-{% endif %}
 {% if current_cp4ba_cluster.rpa.enabled == true %}
 ## RPA
 

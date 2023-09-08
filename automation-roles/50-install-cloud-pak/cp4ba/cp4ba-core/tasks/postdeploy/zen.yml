@@ -74,27 +74,6 @@
     common_retries: 80
     common_delay: 15
 
-# TODO need to restart bas instead?
-# - name: Delete PFS pods
-#   kubernetes.core.k8s:
-#     state: absent
-#     api_version: v1
-#     kind: Pod
-#     namespace: "{{ cp4ba_project_name }}"
-#     label_selectors:
-#       - app.kubernetes.io/name=cp4ba-pfs
-
-# - name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
-#   ansible.builtin.include_role:
-#     name: common
-#     tasks_from: wait-statefulset-available
-#   vars:
-#     common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
-#     common_resource_namespace: "{{ cp4ba_project_name }}"
-#     common_retries: 60
-#     common_delay: 20
-#   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
-
 - name: Delete Kibana pods
   kubernetes.core.k8s:
     state: absent
@@ -103,6 +82,7 @@
     namespace: kibana
     label_selectors:
       - app=kibana-app
+  when: kibana_enabled
 
 - name: Wait for Kibana Deployment Available State
   ansible.builtin.include_role:
@@ -116,29 +96,7 @@
     common_condition_name: Available
     common_retries: 80
     common_delay: 15
-
-#TODO needed?
-# - name: Delete Zen ibm-nginx pods to refresh their cached IPs
-#   kubernetes.core.k8s:
-#     state: absent
-#     api_version: v1
-#     kind: Pod
-#     namespace: "{{ cp4ba_project_name }}"
-#     label_selectors:
-#       - app.kubernetes.io/component=ibm-nginx
-
-# - name: Wait for Zen ibm-nginx Deployment Available State
-#   ansible.builtin.include_role:
-#     name: common
-#     tasks_from: wait-resource-condition
-#   vars:
-#     common_api_version: v1
-#     common_resource_kind: Deployment
-#     common_resource_name: ibm-nginx
-#     common_resource_namespace: "{{ cp4ba_project_name }}"
-#     common_condition_name: Available
-#     common_retries: 80
-#     common_delay: 15
+  when: kibana_enabled
 
 - name: Get OCP Apps domain
   ansible.builtin.include_role:

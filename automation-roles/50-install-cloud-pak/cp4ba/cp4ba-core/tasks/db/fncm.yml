@@ -9,78 +9,78 @@
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-preparing-databases
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-space-content-platform-engine-gcd
-- name: GCD DB prepare tablespace
+- name: GCDDB DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/gcd
+    command: mkdir /pgsqldata/gcddb
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: GCD DB prepare tablespace permissions
+- name: GCDDB DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/gcd
+    command: chown postgres:postgres /pgsqldata/gcddb
   register: command_status
 
-- name: GCD DB
+- name: GCDDB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user gcd
-        CREATE ROLE gcd WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user gcddb
+        CREATE ROLE gcddb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database gcd
-        create database gcd owner gcd template template0 encoding UTF8 ;
-        revoke connect on database gcd from public;
-        grant all privileges on database gcd to gcd;
-        grant connect, temp, create on database gcd to gcd;
+        -- create database gcddb
+        create database gcddb owner gcddb template template0 encoding UTF8 ;
+        revoke connect on database gcddb from public;
+        grant all privileges on database gcddb to gcddb;
+        grant connect, temp, create on database gcddb to gcddb;
 
         -- please modify location follow your requirement
-        create tablespace gcd_tbs owner gcd location '/pgsqldata/gcd';
-        grant create on tablespace gcd_tbs to gcd;
+        create tablespace gcddb_tbs owner gcddb location '/pgsqldata/gcddb';
+        grant create on tablespace gcddb_tbs to gcddb;
       EOF"
   register: command_status
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-preparing-databases
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
-- name: OS1 DB prepare tablespace
+- name: OS1DB DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/os1
+    command: mkdir /pgsqldata/os1db
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: OS1 DB prepare tablespace permissions
+- name: OS1DB DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/os1
+    command: chown postgres:postgres /pgsqldata/os1db
   register: command_status
 
-- name: OS1 DB
+- name: OS1DB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user os1
-        CREATE ROLE os1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user os1db
+        CREATE ROLE os1db WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database os1
-        create database os1 owner os1 template template0 encoding UTF8 ;
-        revoke connect on database os1 from public;
-        grant all privileges on database os1 to os1;
-        grant connect, temp, create on database os1 to os1;
+        -- create database os1db
+        create database os1db owner os1db template template0 encoding UTF8 ;
+        revoke connect on database os1db from public;
+        grant all privileges on database os1db to os1db;
+        grant connect, temp, create on database os1db to os1db;
 
         -- please modify location follow your requirement
-        create tablespace os1_tbs owner os1 location '/pgsqldata/os1';
-        grant create on tablespace os1_tbs to os1;
+        create tablespace os1db_tbs owner os1db location '/pgsqldata/os1db';
+        grant create on tablespace os1db_tbs to os1db;
       EOF"
   register: command_status

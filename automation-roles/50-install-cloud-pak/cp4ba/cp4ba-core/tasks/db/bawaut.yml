@@ -9,157 +9,157 @@
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=authoring-creating-required-databases
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
-- name: BADOCS DB prepare tablespace
+- name: BAWDOCS DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/badocs
+    command: mkdir /pgsqldata/bawdocs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: BADOCS DB prepare tablespace permissions
+- name: BAWDOCS DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/badocs
+    command: chown postgres:postgres /pgsqldata/bawdocs
   register: command_status
 
-- name: BADOCS DB
+- name: BAWDOCS DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user badocs
-        CREATE ROLE badocs WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user bawdocs
+        CREATE ROLE bawdocs WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database badocs
-        create database badocs owner badocs template template0 encoding UTF8 ;
-        revoke connect on database badocs from public;
-        grant all privileges on database badocs to badocs;
-        grant connect, temp, create on database badocs to badocs;
+        -- create database bawdocs
+        create database bawdocs owner bawdocs template template0 encoding UTF8 ;
+        revoke connect on database bawdocs from public;
+        grant all privileges on database bawdocs to bawdocs;
+        grant connect, temp, create on database bawdocs to bawdocs;
 
         -- please modify location follow your requirement
-        create tablespace badocs_tbs owner badocs location '/pgsqldata/badocs';
-        grant create on tablespace badocs_tbs to badocs;
+        create tablespace bawdocs_tbs owner bawdocs location '/pgsqldata/bawdocs';
+        grant create on tablespace bawdocs_tbs to bawdocs;
       EOF"
   register: command_status
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=authoring-creating-required-databases
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
-- name: BATOS DB prepare tablespace
+- name: BAWTOS DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/batos
+    command: mkdir /pgsqldata/bawtos
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: BATOS DB prepare tablespace permissions
+- name: BAWTOS DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/batos
+    command: chown postgres:postgres /pgsqldata/bawtos
   register: command_status
 
-- name: BATOS DB
+- name: BAWTOS DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user batos
-        CREATE ROLE batos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user bawtos
+        CREATE ROLE bawtos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database batos
-        create database batos owner batos template template0 encoding UTF8 ;
-        revoke connect on database batos from public;
-        grant all privileges on database batos to batos;
-        grant connect, temp, create on database batos to batos;
+        -- create database bawtos
+        create database bawtos owner bawtos template template0 encoding UTF8 ;
+        revoke connect on database bawtos from public;
+        grant all privileges on database bawtos to bawtos;
+        grant connect, temp, create on database bawtos to bawtos;
 
         -- please modify location follow your requirement
-        create tablespace batos_tbs owner batos location '/pgsqldata/batos';
-        grant create on tablespace batos_tbs to batos;
+        create tablespace bawtos_tbs owner bawtos location '/pgsqldata/bawtos';
+        grant create on tablespace bawtos_tbs to bawtos;
       EOF"
   register: command_status
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=authoring-creating-required-databases
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
-- name: BADOS DB prepare tablespace
+- name: BAWDOS DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/bados
+    command: mkdir /pgsqldata/bawdos
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: BADOS DB prepare tablespace permissions
+- name: BAWDOS DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/bados
+    command: chown postgres:postgres /pgsqldata/bawdos
   register: command_status
 
-- name: BADOS DB
+- name: BAWDOS DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user bados
-        CREATE ROLE bados WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user bawdos
+        CREATE ROLE bawdos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database bados
-        create database bados owner bados template template0 encoding UTF8 ;
-        revoke connect on database bados from public;
-        grant all privileges on database bados to bados;
-        grant connect, temp, create on database bados to bados;
+        -- create database bawdos
+        create database bawdos owner bawdos template template0 encoding UTF8 ;
+        revoke connect on database bawdos from public;
+        grant all privileges on database bawdos to bawdos;
+        grant connect, temp, create on database bawdos to bawdos;
 
         -- please modify location follow your requirement
-        create tablespace bados_tbs owner bados location '/pgsqldata/bados';
-        grant create on tablespace bados_tbs to bados;
+        create tablespace bawdos_tbs owner bawdos location '/pgsqldata/bawdos';
+        grant create on tablespace bawdos_tbs to bawdos;
       EOF"
   register: command_status
 
 # Based on https://www.ibm.com/docs/en/baw/20.x?topic=system-preparing-database-case-history-store
 # Based on
 # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=bawraws-optional-enabling-timeline-visualizer-widget-display-business-automation-workflow-process-activity-flow
-- name: CH DB prepare tablespace
+- name: CHDB DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/ch
+    command: mkdir /pgsqldata/chdb
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: CH DB prepare tablespace permissions
+- name: CHDB DB prepare tablespace permissions
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/ch
+    command: chown postgres:postgres /pgsqldata/chdb
   register: command_status
 
-- name: CH DB
+- name: CHDB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user ch
-        CREATE ROLE ch WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user chdb
+        CREATE ROLE chdb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database ch
-        create database ch owner ch template template0 encoding UTF8 ;
-        revoke connect on database ch from public;
-        grant all privileges on database ch to ch;
-        grant connect, temp, create on database ch to ch;
+        -- create database chdb
+        create database chdb owner chdb template template0 encoding UTF8 ;
+        revoke connect on database chdb from public;
+        grant all privileges on database chdb to chdb;
+        grant connect, temp, create on database chdb to chdb;
 
         -- please modify location follow your requirement
-        create tablespace ch_tbs owner ch location '/pgsqldata/ch';
-        grant create on tablespace ch_tbs to ch;
+        create tablespace chdb_tbs owner chdb location '/pgsqldata/chdb';
+        grant create on tablespace chdb_tbs to chdb;
       EOF"
   register: command_status

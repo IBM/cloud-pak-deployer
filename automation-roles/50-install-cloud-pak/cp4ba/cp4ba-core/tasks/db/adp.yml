@@ -7,54 +7,54 @@
       - app=postgresql
   register: postgresql_pod
 
-- name: BASE DB
+- name: ADPBASE DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user base
-        CREATE ROLE base WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user adpbase
+        CREATE ROLE adpbase WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database devos1
-        create database base owner base template template0 encoding UTF8;
-        revoke connect on database base from public;
-        grant all privileges on database base to base;
+        -- create database adpbase
+        create database adpbase owner adpbase template template0 encoding UTF8;
+        revoke connect on database adpbase from public;
+        grant all privileges on database adpbase to adpbase;
       EOF"
   register: command_status
 
-- name: TENANT1 DB
+- name: ADP proj1 DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user tenant1
-        CREATE ROLE tenant1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user proj1
+        CREATE ROLE proj1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database tenant1
-        create database tenant1 owner tenant1 template template0 encoding UTF8;
-        revoke connect on database tenant1 from public;
-        grant all privileges on database tenant1 to tenant1;
+        -- create database proj1
+        create database proj1 owner proj1 template template0 encoding UTF8;
+        revoke connect on database proj1 from public;
+        grant all privileges on database proj1 to proj1;
       EOF"
   register: command_status
 
-- name: TENANT2 DB
+- name: ADP proj2 DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
-        -- create user tenant2
-        CREATE ROLE tenant2 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user proj2
+        CREATE ROLE proj2 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database tenant2
-        create database tenant2 owner tenant2 template template0 encoding UTF8;
-        revoke connect on database tenant2 from public;
-        grant all privileges on database tenant2 to tenant2;
+        -- create database proj2
+        create database proj2 owner proj2 template template0 encoding UTF8;
+        revoke connect on database proj2 from public;
+        grant all privileges on database proj2 to proj2;
       EOF"
   register: command_status
 
@@ -120,7 +120,7 @@
       "
   register: command_status
 
-- name: ADP init Base DB
+- name: ADP init ADPBase DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: postgresql-0
@@ -131,11 +131,11 @@
       export db_port=5432;
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=base;
+      export db_adm_username=adpbase;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
@@ -149,7 +149,7 @@
   until: command_status.rc == 0
   retries: 5
 
-- name: ADP init Tenant1 DB
+- name: ADP init proj1 DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: postgresql-0
@@ -160,21 +160,21 @@
       export db_port=5432;
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=tenant1;
+      export db_adm_username=proj1;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
       export base_valid_user=1;
       export base_pwdconfirmed=1;
       export tenant_type=0;
-      export tenant_id=tenant1;
-      export tenant_db_name=tenant1;
-      export tenant_dsn_name=tenant1;
-      export tenant_db_user=tenant1;
+      export tenant_id=proj1;
+      export tenant_db_name=proj1;
+      export tenant_dsn_name=proj1;
+      export tenant_db_user=proj1;
       export user_already_defined=1;
       export tenant_pwdconfirmed=1;
       export tenant_db_pwd={{ cp4ba_postgresql_universal_password }};
@@ -188,7 +188,7 @@
   until: command_status.rc == 0
   retries: 5
 
-- name: ADP init Tenant2 DB
+- name: ADP init proj2 DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: postgresql-0
@@ -199,21 +199,21 @@
       export db_port=5432;
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=tenant2;
+      export db_adm_username=proj2;
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
-      export base_db_name=base;
-      export base_db_user=base;
+      export base_db_name=adpbase;
+      export base_db_user=adpbase;
       export base_db_pwd={{ cp4ba_postgresql_universal_password }};
       export base_db_pwd_b64_encoded=0;
       export base_user_already_defined=1;
       export base_valid_user=1;
       export base_pwdconfirmed=1;
       export tenant_type=0;
-      export tenant_id=tenant2;
-      export tenant_db_name=tenant2;
-      export tenant_dsn_name=tenant2;
-      export tenant_db_user=tenant2;
+      export tenant_id=proj2;
+      export tenant_db_name=proj2;
+      export tenant_dsn_name=proj2;
+      export tenant_db_user=proj2;
       export user_already_defined=1;
       export tenant_pwdconfirmed=1;
       export tenant_db_pwd={{ cp4ba_postgresql_universal_password }};

@@ -12,7 +12,7 @@
     state: absent
     api_version: icp4a.ibm.com/v1
     kind: ICP4ACluster
-    name: cp4ba
+    name: icp4adeploy
     namespace: "{{ cp4ba_project_name }}"
     wait: true
     wait_sleep: 15
@@ -83,6 +83,7 @@
   delay: 1
 
 - name: Delete all OperanRequests
+  when: operandrequest_crd.resources | length != 0
   block:
 
     - name: Get all OperandRequest
@@ -114,8 +115,7 @@
       retries: 40
       delay: 30
       until: operand_request.resources | length == 0
-
-  when: operandrequest_crd.resources | length != 0
+      ignore_errors: true
 
 - name: Get OperandConfig CRD
   kubernetes.core.k8s_info:
@@ -186,6 +186,30 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
     common_label_selector_stub: ibm-odlm
 
+- name: Remove MutatingWebhookConfigurations
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: MutatingWebhookConfiguration
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  with_items:
+    - "ibm-operandrequest-webhook-configuration-{{ cp4ba_project_name }}"
+
+- name: Remove ValidatingWebhookConfiguration
+  kubernetes.core.k8s:
+    state: absent
+    api_version: admissionregistration.k8s.io/v1
+    kind: ValidatingWebhookConfiguration
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 5
+    wait_timeout: 50
+  with_items:
+    - "ibm-common-service-validating-webhook-{{ cp4ba_project_name }}"
+
 - name: Wait for ZenExtension intances to disappear
   kubernetes.core.k8s_info:
     api_version: zen.cpd.ibm.com/v1
@@ -225,24 +249,23 @@
     common_postgresql_db_name: "{{ item }}"
   with_items:
     - aeos
-    - aae
+    - aaedb
     - devos1
     - icndb
-    - pb
-    - bas
-    - badocs
-    - batos
-    - bados
-    - ch
-    - gcd
-    - os1
+    - appdb
+    - basdb
+    - bawdocs
+    - bawtos
+    - bawdos
+    - chdb
+    - gcddb
+    - os1db
     - fpos
     - ros
-    - odmdc
-    - odmres
-    - base
-    - tenant1
-    - tenant2
+    - odmdb
+    - adpbase
+    - proj1
+    - proj2
 
 - name: Remove PostgreSQL tablespaces
   ansible.builtin.include_role:
@@ -254,12 +277,12 @@
     - aeos
     - devos1
     - icndb
-    - badocs
-    - batos
-    - bados
-    - ch
-    - gcd
-    - os1
+    - bawdocs
+    - bawtos
+    - bawdos
+    - chdb
+    - gcddb
+    - os1db
     - fpos
     - ros
 
@@ -271,24 +294,23 @@
     common_postgresql_user: "{{ item }}"
   with_items:
     - aeos
-    - aae
+    - aaedb
     - devos1
     - icndb
-    - pb
-    - bas
-    - badocs
-    - batos
-    - bados
-    - ch
-    - gcd
-    - os1
+    - appdb
+    - basdb
+    - bawdocs
+    - bawtos
+    - bawdos
+    - chdb
+    - gcddb
+    - os1db
     - fpos
     - ros
-    - odmdc
-    - odmres
-    - base
-    - tenant1
-    - tenant2
+    - odmdb
+    - adpbase
+    - proj1
+    - proj2
 
 - name: Remove post-deploy.md Config Map
   kubernetes.core.k8s:

@@ -8,7 +8,7 @@
   register: postgresql_pod
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=studio-creating-databases
-- name: PB DB
+- name: APPDB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
@@ -16,18 +16,18 @@
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
         -- create a new user
-        create user pb with password '{{ cp4ba_postgresql_universal_password }}';
+        create user appdb with password '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database pb
-        create database pb owner pb;
+        -- create database appdb
+        create database appdb owner appdb;
 
         -- The following grant is used for databases
-        grant all privileges on database pb to pb;
+        grant all privileges on database appdb to appdb;
       EOF"
   register: command_status
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=studio-creating-databases
-- name: BAS DB
+- name: BASDB DB
   kubernetes.core.k8s_exec:
     namespace: postgresql
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
@@ -35,15 +35,15 @@
       bash -c "
         psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
         -- create the user
-        CREATE ROLE bas WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE ROLE basdb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create the database:
-        CREATE DATABASE bas WITH OWNER bas ENCODING 'UTF8';
-        GRANT ALL ON DATABASE bas to bas;
+        CREATE DATABASE basdb WITH OWNER basdb ENCODING 'UTF8';
+        GRANT ALL ON DATABASE basdb to basdb;
 
         -- Connect to your database and create schema
-        \c bas;
-        SET ROLE bas;
-        CREATE SCHEMA IF NOT EXISTS bas AUTHORIZATION bas;
+        \c basdb;
+        SET ROLE basdb;
+        CREATE SCHEMA IF NOT EXISTS basdb AUTHORIZATION basdb;
       EOF"
   register: command_status

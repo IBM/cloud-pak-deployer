@@ -576,7 +576,6 @@ cp4ba:
         enabled: true
         optional_components: 
           document_processing_designer: true # Designer (ADP)
-          document_processing_runtime: false # Runtime (ADP) - Currently not implemented
         # Additional customization for Automation Document Processing
         # Contents of the following will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
@@ -592,8 +591,6 @@ cp4ba:
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
           kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
-      workstreams: # Automation Workstream Services (IAWS)
-        enabled: false # Always false in this tool - this feature is not implemented
   
   # Section for IBM Process mining
   pm:
@@ -620,11 +617,6 @@ cp4ba:
         # Configures the NLP provider component of IBM RPA. You can disable it by specifying 0. https://www.ibm.com/docs/en/rpa/latest?topic=platform-configuring-rpa-custom-resources#basic-setup
         nlp:
           replicas: 1
-
-  # Section for Asset Repository
-  asset_repo:
-    # Set to false if you don't want to install (or remove) Asset Repo
-    enabled: false # Currently not implemented
 
   # Set to false if you don't want to install (or remove) CloudBeaver (PostgreSQL, DB2, MSSQL UI)
   cloudbeaver_enabled: true
@@ -747,8 +739,7 @@ Placed in `cp4ba.patterns.document_processing` key.
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to enable `document_processing` pattern. | Yes  | true, false |
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
-| optional_components.document_processing_designer          | Set to `true` to enable Designer | Yes | true, false |
-| optional_components.document_processing_runtime          | Set to `true` to enable Runtime. currently always `false`. | Yes | false |
+| optional_components.document_processing_designer          | Set to `true` to enable Designer | Yes | true |
 | cr_custom          | Additional customization for Automation Document Processing. Contents will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten. | No | Object |
 
 ### Workflow pattern properties
@@ -763,15 +754,6 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
 | optional_components.kafka          | Set to `true` to install a kafka cluster and enable kafka service for workflow authoring. | Yes | true, false |
-
-### Workstreams pattern properties
-
-Used to configure Workstreams.  
-Placed in `cp4ba.patterns.workstreams` key.
-
-| Property            | Description                    | Mandatory            | Allowed values |
-|---------------------|--------------------------------|----------------------|----------------|
-| enabled                         | Set to `true` to enable `workstreams` pattern. Currently not implemented. Always `false`. | Yes  | false |
 
 ## Process Mining properties
 
@@ -792,15 +774,6 @@ Placed in `rpa` key on the project level.
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to enable `rpa`. | Yes  | true, false |
 | cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
-
-## Asset Repo properties
-
-Used to install Asset Repo.  
-Placed in `asset_repo` key on the project level.
-
-| Property            | Description                    | Mandatory            | Allowed values |
-|---------------------|--------------------------------|----------------------|----------------|
-| enabled                         | Set to `true` to enable `asset repo`. Currently not implemented. Always `false`. | Yes  | false |
 
 ## Other properties
 

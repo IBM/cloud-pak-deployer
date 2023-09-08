@@ -17,11 +17,6 @@
   ansible.builtin.set_fact:
     components: []
 
-# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-checking-cluster-configuration point 3
-- name: Add RR to CR
-  ansible.builtin.set_fact:
-    cr: "{{ cr | combine(lookup('template', 'rr/cr.yaml.j2') | from_yaml, recursive=true) }}"
-
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-navigator
 - name: Add BAN to CR
   ansible.builtin.set_fact:
@@ -295,12 +290,6 @@
   when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and
     current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer
 
-- name: Add ADP component
-  ansible.builtin.set_fact:
-    components: "{{ components + ['document_processing_runtime'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and
-    current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_runtime
-
 - name: Add ADP to CR
   block:
 
@@ -571,8 +560,7 @@
     (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer) or
     (current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and
     current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer)
-    or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled or
-    current_cp4ba_cluster.cp4ba.patterns.workflow_workstreams.enabled
+    or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Deployments wait list
   ansible.builtin.set_fact:
@@ -606,7 +594,7 @@
     common_resource_name: "{{ item }}"
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Available
-    common_retries: 30
+    common_retries: 60
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
@@ -694,7 +682,7 @@
   vars:
     common_api_version: icp4a.ibm.com/v1
     common_resource_kind: InsightsEngine
-    common_resource_name: cp4ba
+    common_resource_name: "{{ cp4ba_cr_meta_name }}"
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Ready
     common_retries: 60
@@ -718,7 +706,7 @@
         ternary(cp4ba_cr_meta_name+'-odm-decisionserverconsole','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
         current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name+'-odm-decisionrunner','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name+'-instance1-aae-ae-deployment','') }}"
+      - "{{ current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name+'-workspace-aae-ae-deployment','') }}"
 
 - name: Wait for Deployments to be Available
   ansible.builtin.include_role:
@@ -789,7 +777,7 @@
   vars:
     common_api_version: icp4a.ibm.com/v1
     common_resource_kind: ICP4ACluster
-    common_resource_name: cp4ba
+    common_resource_name: "{{ cp4ba_cr_meta_name }}"
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_condition_name: Ready
     common_retries: 60
