@@ -1,6 +1,7 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 23.0.1, RPA 23.0.6 and IPM 1.14.1
+Contains CP4BA version 23.0.1 IFix 2.  
+Currently RPA and IPM are not available due to CPFS incompatibility.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -54,8 +55,9 @@ What is not included:
 
 - ICCs - not covered.
 - FNCM External share - Currently not supported with ZEN & IAM as per limitation on [FNCM limitations](https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=notes-known-limitations-issues#concept_gmf_x1h_1fb__ecm)
-- Asset Repository is now omitted due to incompatibilities.
+- Asset Repository - it is more part of CP4I.
 - Workflow Server and Workstream Services - this is a dev deployment. BAW Authoring and (BAW + IAWS) are mutually exclusive in single project.
+- ADP Runtime deployment - this is a dev deployment.
 
 ## What is in the package 📦
 
@@ -142,8 +144,9 @@ For your convenience the following post-deployment setup tasks have been automat
 - ODM - Service user credentials automatically assigned to servers.
 - ADP - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-setting-up-remote-git-organization
 - ADP - Default project data loaded. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-loading-default-sample-data
-- IER - Initial setup through configmgr performed.
-- Task manager - Set up with JARs required by IER.
+- ADP - Git connection and CDD repo creation done. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-setting-up-remote-git-organization
+- IER - Task Manager pod has TM_JOB_URL parameter set.
+- IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.

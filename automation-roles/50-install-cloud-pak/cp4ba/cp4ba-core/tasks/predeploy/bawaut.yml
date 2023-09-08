@@ -11,12 +11,21 @@
         {{ item }}DBUsername: {{ item | b64encode }}
         {{ item }}DBPassword: {{ cp4ba_postgresql_universal_password | b64encode }}
   with_items:
-    - badocs
-    - batos
-    - bados
-    # Update FNCM secret for new Case History connection.
-    # Make sure FNCM secret already exists
-    - ch
+    - bawdocs
+    - bawtos
+    - bawdos
+
+- name: Add BAWAUT OSs to FNCM Secret
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: ibm-fncm-secret
+    namespace: "{{ cp4ba_project_name }}"
+    definition: |
+      data:
+        chDBUsername: {{ 'chdb' | b64encode }}
+        chDBPassword: {{ cp4ba_postgresql_universal_password | b64encode }}
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-optional-customizing-runtime-server-properties
 # Based on https://www.ibm.com/docs/en/baw/20.x?topic=work-configuring-email-notifications

@@ -2,26 +2,19 @@ spec:
   datasource_configuration:
     dc_gcd_datasource:
       dc_database_type: postgresql
-      dc_common_gcd_datasource_name: GCD
-      dc_common_gcd_xa_datasource_name: GCDXA
+      dc_common_gcd_datasource_name: FNGCDDS
+      dc_common_gcd_xa_datasource_name: FNGCDDSXA
       database_servername: "{{ cp4ba_postgresql_hostname }}"
-      database_name: gcd
+      database_name: gcddb
       database_port: "5432"
     dc_os_datasources:
       - dc_database_type: postgresql
         dc_os_label: os1
-        dc_common_os_datasource_name: OS1
-        dc_common_os_xa_datasource_name: OS1XA
+        dc_common_os_datasource_name: FNOS1DS
+        dc_common_os_xa_datasource_name: FNOS1DSXA
         database_servername: "{{ cp4ba_postgresql_hostname }}"
-        database_name: os1
+        database_name: os1db
         database_port: "5432"
-  ecm_configuration:
-    fncm_secret_name: ibm-fncm-secret
-    cpe:
-      cpe_production_setting:
-        gcd_jndi_name: GCD
-        gcd_jndixa_name: GCDXA
-        license_model: FNCM.PVUNonProd
   initialize_configuration:
     ic_domain_creation:
       domain_name: P8DOMAIN
@@ -36,8 +29,8 @@ spec:
           oc_cpe_obj_store_symb_name: OS1
           oc_cpe_obj_store_conn:
             name: OS1_dbconnection
-            dc_os_datasource_name: OS1
-            dc_os_xa_datasource_name: OS1XA
+            dc_os_datasource_name: FNOS1DS
+            dc_os_xa_datasource_name: FNOS1DSXA
           oc_cpe_obj_store_admin_user_groups: [{% for item in lc_admin_groups %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
 {% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai %}
           oc_cpe_obj_store_enable_content_event_emitter: true
@@ -62,7 +55,7 @@ spec:
             - "{CE554ADD-0000-0000-0000-000000000021}" # 5.5.4 Event-Driven External Service Invocation Extensions
           oc_cpe_obj_store_enable_workflow: true
           oc_cpe_obj_store_workflow_region_name: os1_region_name
-          oc_cpe_obj_store_workflow_data_tbl_space: os1_tbs
+          oc_cpe_obj_store_workflow_data_tbl_space: os1db_tbs
           oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
           oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
           oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_os1

@@ -1,15 +1,16 @@
 spec:
   application_engine_configuration:
-    - name: instance1
-      admin_secret_name: cp4ba-instance1-aae-app-engine-admin-secret
+    - name: workspace
       admin_user: "{{ lc_principal_admin_user }}"
-      autoscaling:
-        enabled: false
       database:
-        host: "{{ cp4ba_postgresql_hostname }}"      
-        name: aae
+        host: "{{ cp4ba_postgresql_hostname }}"
+        name: aaedb
         port: "5432"
         type: postgresql
       data_persistence:
         enable: "{{ aae_data_persistence | default(false) }}"
         object_store_name: AEOS
+      env:
+        server_env_type: development
+      # TODO delete when default fixed - last seen in 23.0.1.2
+      admin_secret_name: {{ cp4ba_cr_meta_name }}-workspace-aae-app-engine-admin-secret

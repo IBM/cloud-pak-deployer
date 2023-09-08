@@ -1,0 +1,93 @@
+- name: Wait for CommonService instance common-service to appear
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+  register: common_service
+  retries: 10
+  delay: 15
+  until: common_service.resources | length == 1
+
+- name: Wait for CommonService instance common-service Succeeded phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+  register: common_service
+  retries: 25
+  delay: 15
+  until: ('Succeeded' in phase)
+  vars:
+    condition_query: "resources[*].status.phase"
+    phase: "{{ common_service | json_query(condition_query) | unique }}"
+
+- name: Set common-service profile
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      spec:
+        size: "{{ current_cp4ba_cluster.cpfs_profile_size }}"
+
+# TODO remove completely when mongodb storage is fixed in next releases and cpfs admin is used from sc_iam
+- name: Patch common-service to add services list
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services"
+        value: []
+
+- name: Patch common-service mongodb storage class
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services/-"
+        value:
+          name: "ibm-im-mongodb-operator"
+          spec:
+            mongoDB:
+              storageClass: "{{ cpfs_block_storage_class_name }}"
+
+- name: Patch common-service cpfsadmin
+  kubernetes.core.k8s_json_patch:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+    patch:
+      - op: add
+        path: "/spec/services/-"
+        value:
+          name: "ibm-im-operator"
+          spec:
+            authentication:
+              config:
+                defaultAdminUser: cpfsadmin
+# TODO END remove when fixed in CPFS
+
+- name: Wait for CommonService instance common-service Succeeded phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v3
+    kind: CommonService
+    name: common-service
+    namespace: "{{ cp4ba_project_name }}"
+  register: common_service
+  retries: 25
+  delay: 15
+  until: ('Succeeded' in phase)
+  vars:
+    condition_query: "resources[*].status.phase"
+    phase: "{{ common_service | json_query(condition_query) | unique }}"
