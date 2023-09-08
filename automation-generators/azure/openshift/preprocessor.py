@@ -10,7 +10,7 @@ from packaging import version
 #   ocp_version: 4.12
 #   control_plane_flavour: Standard_D8s_v3
 #   compute_flavour: Standard_D16s_v3
-#   compute_disk_size_gb: 128
+#   compute_disk_size_gb: 300
 #   compute_nodes: 3
 #   network:
 #     pod_cidr: "10.128.0.0/14"

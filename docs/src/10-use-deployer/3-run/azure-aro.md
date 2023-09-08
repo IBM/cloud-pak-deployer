@@ -176,7 +176,7 @@ Example output in credentials file:
 {
   "appId": "a4c39ae9-f9d1-4038-b4a4-ab011e769111",
   "displayName": "pluto-01-sp",
-  "password": "et-8Q~BzcWaPdpBuKv8O7cvlzFnE38Iw55gUZaiq",
+  "password": "xyz-xyz",
   "tenant": "869930ac-17ee-4dda-bbad-7354c3e7629c8"
 }
 ```
