@@ -1,0 +1,26 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - cloud_platform is defined
+
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Ensure {{ status_dir }}/azure directory exists
+  file:
+    path: "{{ status_dir }}/azure"
+    state: directory
+
+- include_tasks: provision-aro.yml
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type == 'aro'
+
+- include_tasks: provision-ipi.yml
+  loop: "{{ all_config.openshift | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_cluster
+  when: _current_openshift_cluster.infrastructure.type  == 'self-managed'

@@ -1,0 +1,50 @@
+---
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
+    state: directory
+
+- name: Download OpenShift installer for version {{ current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-installer
+  vars:
+    _p_ocp_version: "{{ current_openshift_cluster.ocp_version }}"
+
+- name: Retrieve metadata json from the vault to check if OpenShift cluster still exist
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ current_openshift_cluster.name }}-metadata-json"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _azure_metadata_json
+
+- block:
+  - name: Ensure {{ status_dir }}/azure/{{ current_openshift_cluster.name }} directory exists
+    file:
+      path: "{{ status_dir }}/azure/{{ current_openshift_cluster.name }}"
+      state: directory
+
+  - name: Write {{ status_dir }}/azure/{{ current_openshift_cluster.name }}/metadata.json file
+    copy:
+      content: "{{ secret_value }}"
+      dest: "{{ status_dir }}/azure/{{ current_openshift_cluster.name }}/metadata.json"
+
+  - name: Delete IPI cluster, logs can be found in {{ status_dir }}/log/{{ current_openshift_cluster.name }}-delete-cluster.log
+    shell: |
+      openshift-install destroy cluster --dir={{ status_dir }}/azure/{{ current_openshift_cluster.name }} --log-level debug >> {{ status_dir }}/log/{{ current_openshift_cluster.name }}-delete-cluster.log 2>&1
+
+  when: _azure_metadata_json != '' 
+
+- name: Delete "{{ current_openshift_cluster.name }}-metadata-json" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ current_openshift_cluster.name }}-metadata-json"
+    secret_group: "{{ environment_name }}"
+
+- name: Delete "{{ current_openshift_cluster.name }}-install-config-yaml" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ current_openshift_cluster.name }}-install-config-yaml"
+    secret_group: "{{ environment_name }}"

@@ -1,24 +1,15 @@
 ---
-- name: Validate mandatory variables are defined
-  assert:
-    that:
-      - cloud_platform is defined
-
-- name: Validate cloud_platform is implemented
-  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
-  when: "cloud_platform not in implemented_cloud_platform_types"
-
-- name: Ensure {{ status_dir }}/azure-aro directory exists
-  file:
-    path: "{{ status_dir }}/azure-aro"
-    state: directory
-
 - set_fact:
     _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?name=='{{ _current_openshift_cluster.azure_name }}']
 
+- include_role:
+    name: azure-login-sp
+  vars:
+    _p_az_sp_name: "{{ _azure_config.sp_name }}"
+    
 - name: Check if ARO cluster {{ _current_openshift_cluster.name }} already exists
   shell: |
     az aro show --name {{ _current_openshift_cluster.name }} --resource-group {{ _azure_config.resource_group.name }}

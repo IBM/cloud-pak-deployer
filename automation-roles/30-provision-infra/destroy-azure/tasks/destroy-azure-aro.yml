@@ -1,0 +1,12 @@
+---
+- name: Check if resource group {{ _azure_config.resource_group.name }} still exists
+  shell: |
+    az group show --resource-group {{ _azure_config.resource_group.name }}
+  failed_when: False
+  register: _show_rg
+
+- name: Destroy {{ _azure_config.resource_group.name }} resource group, logs are in {{ current_openshift_cluster.name }}, logs can be found in {{ status_dir }}/log/{{ current_openshift_cluster.name }}-destroy-rg.log
+  shell: |
+    az group delete --name {{ _azure_config.resource_group.name }} \
+      --verbose -y > {{ status_dir }}/log/{{ current_openshift_cluster.name }}-destroy-rg.log 2>&1
+  when: _show_rg.rc == 0

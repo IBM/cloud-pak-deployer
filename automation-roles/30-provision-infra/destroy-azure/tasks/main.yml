@@ -13,17 +13,28 @@
   debug:
     msg: Cluster "{{ current_openshift_cluster.name }}" and any other resources in the resource group "{{ _azure_config.resource_group.name }}" will be destroyed
 
+- include_role:
+    name: azure-login-sp
+  vars:
+    _p_az_sp_name: "{{ _azure_config.sp_name }}"
+
 - name: Check if resource group {{ _azure_config.resource_group.name }} still exists
   shell: |
     az group show --resource-group {{ _azure_config.resource_group.name }}
   failed_when: False
   register: _show_rg
 
-- name: Destroy {{ _azure_config.resource_group.name }} resource group, logs are in {{ current_openshift_cluster.name }}, logs can be found in {{ status_dir }}/log/{{ current_openshift_cluster.name }}-destroy-rg.log
-  shell: |
-    az group delete --name {{ _azure_config.resource_group.name }} \
-      --verbose -y > {{ status_dir }}/log/{{ current_openshift_cluster.name }}-destroy-rg.log 2>&1
-  when: _show_rg.rc == 0
+- name: Destroy Azure ARO cluster
+  include_tasks: destroy-azure-aro.yml
+  when: 
+  - current_openshift_cluster.infrastructure.type  == 'aro'
+  - _show_rg.rc == 0
+
+- name: Destroy Azure self-managed (IPI) Openshift
+  include_tasks: destroy-azure-ipi.yml
+  when: 
+  - current_openshift_cluster.infrastructure.type  == 'self-managed'
+  - _show_rg.rc == 0
 
 - name: Delete "{{ current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
   include_role:
@@ -32,7 +43,7 @@
     secret_name: "{{ current_openshift_cluster.name }}-kubeadmin-password"
     secret_group: "{{ environment_name }}"
 
-- name: Delete {{ status_dir }}/azure-aro directory
+- name: Delete {{ status_dir }}/azure/{{ current_openshift_cluster.name }} directory
   file:
-    path: "{{ status_dir }}/azure-aro"
+    path: "{{ status_dir }}/azure/{{ current_openshift_cluster.name }}"
     state: absent

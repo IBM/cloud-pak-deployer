@@ -1,0 +1,66 @@
+---
+- name: Check if OpenShift cluster already exists by checking kubeadmin password secret
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _kubeadmin_password
+
+# Run OpenShift IPI installer if OpenShift cluster does not exist yet
+- block:
+  - set_fact:
+      _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?name=='{{ _current_openshift_cluster.azure_name }}']
+
+  - include_role:
+      name: azure-login-sp
+    vars:
+      _p_az_sp_name: "{{ _azure_config.sp_name }}"
+
+  - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
+    include_role:
+      name: openshift-download-installer
+    vars:
+      _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+  - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
+    shell: |
+      openshift-install create cluster --dir={{ status_dir }}/azure/{{ _current_openshift_cluster.name }} --log-level debug >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
+    ignore_errors: yes
+    register: _openshift_install_result
+
+  - name: Check if metadata.json was created
+    stat:
+      path: "{{ status_dir }}/azure/{{ _current_openshift_cluster.name }}/metadata.json"
+    register: _metadata_json
+
+  - name: Store the metadata json file as secret {{ _current_openshift_cluster.name }}-metadata-json in group {{ environment_name }}
+    include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ _current_openshift_cluster.name }}-metadata-json"
+      secret_group: "{{ environment_name }}"
+      secret_file: "{{ status_dir }}/azure/{{ _current_openshift_cluster.name }}/metadata.json"
+    when: _metadata_json.stat.exists
+
+  - name: Fail if there were errors during the installation process
+    fail:
+      msg: Error occurred during OpenShift installation, check the  apply, state has been preserved. Failing now. Check the {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log for details
+    when: 
+    - _openshift_install_result.rc!=0
+
+  - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
+    set_fact:
+      _new_kubeadmin_password: "{{ lookup('file', status_dir + '/azure/' + _current_openshift_cluster.name + '/auth/kubeadmin-password') }}"
+
+  - name: Store kubeadmin password into the vault
+    include_role: 
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+      secret_group: "{{ environment_name }}" 
+      secret_payload: "{{ _new_kubeadmin_password }}"
+  when: _kubeadmin_password==""
