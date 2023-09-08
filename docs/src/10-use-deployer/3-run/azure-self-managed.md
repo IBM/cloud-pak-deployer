@@ -1,19 +1,19 @@
-# Running the Cloud Pak Deployer on Microsoft Azure - ARO
+# Running the Cloud Pak Deployer on Microsoft Azure - Self-managed
 
 ## Topology
 
-A typical setup of the ARO cluster is pictured below:
-![ARO configuration](images/azure-aro.png)
+A typical setup of the OpenShift cluster on Azure is pictured below:
+![Self-managed configuration](images/azure-aro.png)
 
-When deploying ARO, you can configure the domain name by setting the `openshift.domain_name` attribute. The resulting domain name is managed by Azure, and it must be unique across all ARO instances deployed in Azure. Both the API and Ingress urls are set to be public in the template, so they can be resolved by external clients. If you want to use a custom domain and don't have one yet, you buy one from Azure: https://learn.microsoft.com/en-us/azure/app-service/manage-custom-dns-buy-domain.
+When deploying self-managed OpenShift on Azure, you must configure the domain name by setting the `openshift.domain_name`, which must be public domain with a registrar. OpenShift will create a public DNS zone with additional entries to reach the OpenShift API and the applications (Cloud Paks). If you don't have a domain yet, you buy one from Azure: https://learn.microsoft.com/en-us/azure/app-service/manage-custom-dns-buy-domain.
 
 ## Acquire an Red Hat OpenShift pull secret
 
 To install OpenShift you need an OpenShift pull secret which holds your entitlement.
 
-- Navigate and login to [Red Hat OpenShift cluster manager portal](https://cloud.redhat.com/openshift/install/azure/aro-provisioned)
+When installing an IBM Cloud Pak, you can retrieve your Red Hat entitlement using instructions on this page: https://www.ibm.com/docs/en/cloud-paks/1.0?topic=iocpc-accessing-red-hat-entitlements-from-your-cloud-pak. Or, retrieve your pull secret from Red Hat: https://console.redhat.com/openshift/install/pull-secret.
 
-- Click on `Download pull secret` button, and save the pull secret into the `/tmp/ocp_pullsecret.json` file.
+Download the pull secret into file `/tmp/ocp_pullsecret.json`
 
 ## Acquire an IBM Cloud Pak Entitlement Key
 
@@ -26,7 +26,7 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 !!! warning
     As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
-## Verify your quota and permissions in Microsoft Azure
+## Verify your quota and permissons in Microsoft Azure
 
 - Check [Azure resource quota](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#before-you-begin) of the subscription - Azure Red Hat OpenShift requires a minimum of 40 cores to create and run an OpenShift cluster.
 - The ARO cluster is provisioned using the `az` command. Ideally, one has to have `Contributor` permissions on the subscription (Azure resources) and `Application administrator` role assigned in the Azure Active Directory. See details [here](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#verify-your-permissions).
@@ -93,17 +93,6 @@ az account subscription list
     }
   }
 ]
-```
-
-## Register Resource Providers
-
-Make sure the following Resource Providers are registered for your subscription by running:
-
-```bash
-az provider register -n Microsoft.RedHatOpenShift --wait
-az provider register -n Microsoft.Compute --wait
-az provider register -n Microsoft.Storage --wait
-az provider register -n Microsoft.Authorization --wait
 ```
 
 ## Prepare Azure resources
@@ -185,6 +174,8 @@ Finally, set the permissions of the service principal to allow creation of the O
 ```bash
 az role assignment create \
   --role "User Access Administrator" \
+  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID} \
+  --assignee-principal-type ServicePrincipal \
   --assignee-object-id $(az ad sp list --display-name=${AZURE_SP} --query='[].id' -o tsv)
 ```
 
@@ -193,12 +184,14 @@ If you do not have permissions to list service principals, you can also run the 
 export AZURE_SP_ID=$(jq -r .appId /tmp/${AZURE_SP}-credentials.json)
 az role assignment create \
   --role "User Access Administrator" \
+  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID} \
+  --assignee-principal-type ServicePrincipal \
   --assignee-object-id $(az ad sp show --id ${AZURE_SP_ID} --query='id' -o tsv)
 ```
 
 ## Prepare for running
 
-### Set environment variables for Azure ARO cluster
+### Set environment variables for deployer
 
 ```
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
@@ -237,19 +230,23 @@ export CPD_CONFIG_GIT_CONTEXT=""
 !!! info
     When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
 
-### Create the secrets needed for ARO deployment
+### Create the secrets needed for Azure deployment
 
-You need to store the OpenShift pull secret in the vault so that the deployer has access to it.
+You need to store the below secrets in the vault so that the deployer has access to them when installing self-managed OpenShift cluster on Azure.
 
 ```
 ./cp-deploy.sh vault set \
     --vault-secret ocp-pullsecret \
     --vault-secret-file /tmp/ocp_pullsecret.json
 
-
 ./cp-deploy.sh vault set \
     --vault-secret ${AZURE_SP}-credentials \
     --vault-secret-file /tmp/${AZURE_SP}-credentials.json
+
+# Optional if you would like to use your own public key
+./cp-deploy.sh vault set \
+    --vault-secret ocp-ssh-pub-key \
+    --vault-secret-file ~/.ssh/id_rsa.pub
 ```
 
 ## Run the Cloud Pak Deployer

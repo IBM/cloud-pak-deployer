@@ -1,21 +1,22 @@
 ---
-- name: Check if ocp-pullsecret secret is in the vault
-  include_role:
+- name: Retrieve pull secret from vault
+  include_role: 
     name: vault-get-secret
   vars:
     secret_name: "ocp-pullsecret"
-    secret_group: "{{ environment_name }}"
+    secret_group: "{{ environment_name }}" 
+    secret_file: /tmp/ocp_pullsecret.json
+    _p_secret_variable: _ocp_pullsecret
 
 - name: Check that ocp-pullsecret secret is present in the vault
   fail:
     msg: "Secret ocp-pullsecret is mandatory and was not found in the vault"
-  when: secret_value==""
+  when: _ocp_pullsecret==""
 
-- name: Check if the .azure directory exists
-  stat:
-    path: /opt/ansible/.azure
-  register: _azure_directory
-
-- fail:
-    msg: "You must set environment variable CPD_AZURE=true before running the deployer for Azure"
-  when: not _azure_directory.stat.exists
+- name: Retrieve SSH public key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "ocp-ssh-pub-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ocp_ssh_pub_key

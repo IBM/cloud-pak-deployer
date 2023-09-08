@@ -660,12 +660,6 @@ if [[ "${CONFIG_DIR}" != "" ]] && [[ "${CPD_CONFIG_GIT_REPO}" != "" ]]; then
     exit 1
 fi
 
-# If CPD_AZURE is specified, the azure cli config directory must exist
-if [ ! -z $CPD_AZURE ] && [ ! -d $HOME/.azure ];then
-    echo "Directory ${HOME}/.azure was not found. This is mandatory for Azure deployments"
-    exit 1
-fi
-
 # --------------------------------------------------------------------------------------------------------- #
 # Check existence of directories                                                                            #
 # --------------------------------------------------------------------------------------------------------- #
@@ -969,10 +963,6 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
   run_cmd+=" -e CPD_ACCEPT_LICENSES=${CPD_ACCEPT_LICENSES}"
   run_cmd+=" -e CPD_WIZARD_MODE=${CPD_WIZARD_MODE}"
-
-  if [ ! -z $CPD_AZURE ];then
-    run_cmd+=" -v $HOME/.azure:/opt/ansible/.azure${SELINUX_OPTION}"
-  fi
 
   # Add proxy servers if present in the current session
   if [ ! -z "${http_proxy}" ];then

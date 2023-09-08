@@ -1,0 +1,61 @@
+{% for _zone in [1,2,3] %}
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
+    machine.openshift.io/cluster-api-machine-role: worker
+    machine.openshift.io/cluster-api-machine-type: worker
+  name: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}{{ _zone }}
+  namespace: openshift-machine-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
+      machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}{{ _zone }}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        machine.openshift.io/cluster-api-cluster: {{ _infrastructure_id }} 
+        machine.openshift.io/cluster-api-machine-role: worker
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}{{ _zone }}
+    spec:
+      metadata:
+        labels:
+          cluster.ocs.openshift.io/openshift-storage: ""
+      providerSpec:
+        value:
+          acceleratedNetworking: true
+          apiVersion: machine.openshift.io/v1beta1
+          credentialsSecret:
+            name: azure-cloud-credentials
+            namespace: openshift-machine-api
+          image:
+            offer: ""
+            publisher: ""
+            resourceID: {{ _image_details.resourceID }}
+            sku: ""
+            version: ""
+          kind: AzureMachineProviderSpec
+          location: {{ azure_location }}
+          managedIdentity: {{ _machineset_managed_identity }}
+          networkResourceGroup: {{ _machineset_network_resource_group }}
+          osDisk:
+            diskSizeGB: 128
+            managedDisk:
+              storageAccountType: Premium_LRS
+            osType: Linux
+          publicIP: false
+          publicLoadBalancer: {{ _infrastructure_id }}
+          resourceGroup: {{ _machineset_resource_group }}
+          subnet: {{ _machineset_subnet }}  
+          userDataSecret:
+            name: worker-user-data 
+          vmSize: Standard_D16s_v3
+          vnet: {{ _machineset_vnet }}
+          zone: "{{ _zone }}" 
+---
+{% endfor %}

@@ -10,11 +10,12 @@ from packaging import version
 #   ocp_version: 4.12
 #   control_plane_flavour: Standard_D8s_v3
 #   compute_flavour: Standard_D16s_v3
-#   compute_disk_size_gb: 128
+#   compute_disk_size_gb: 300
 #   compute_nodes: 3
 #   network:
 #     pod_cidr: "10.128.0.0/14"
 #     service_cidr: "172.30.0.0/16"
+#     machine_cidr: 
 #   openshift_storage:
 #   - storage_name: ocs-storage
 #     storage_type: ocs
@@ -29,23 +30,28 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     #Level 1
     g('name').isRequired()
     g('azure_name').isRequired()    
-    g('domain_name').isOptional()
     g('control_plane_flavour').isRequired()
     g('compute_flavour').isRequired()
     g('compute_disk_size_gb').isRequired()
     g('compute_nodes').isRequired()
     g('ocp_version').isRequired()
     g('network').isRequired()
+    g('infrastructure').isRequired()
     g('openshift_storage').isRequired()
 
     #Level 2
     if len(g.getErrors()) == 0:
         g('network.pod_cidr').isRequired()
         g('network.service_cidr').isRequired()
+        g('infrastructure.type').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
         ge=g.getExpandedAttributes()
+
+        # If type is self-managed, the domain name is required
+        if ge['infrastructure']['type'] == 'self-managed':
+            g('domain_name').isRequired()
 
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
@@ -72,9 +78,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
                 if "ocs_dynamic_storage_class" not in os:
                     g.appendError(msg='ocs_dynamic_storage_class must be specified when storage_type is ocs')
-                else:
-                    if os['ocs_dynamic_storage_class'] not in ['managed-premium']:
-                        g.appendError(msg='ocs_dynamic_storage_class must be managed-premium')
                 if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
                     g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
 

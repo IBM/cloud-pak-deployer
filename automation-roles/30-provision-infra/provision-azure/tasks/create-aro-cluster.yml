@@ -5,13 +5,7 @@
   vars:
     secret_name: "ocp-pullsecret"
     secret_group: "{{ environment_name }}"
-    secret_file: "{{ status_dir }}/azure-aro/ocp_pullsecret.json"
-
-- name: Create resource group {{ _azure_config.resource_group.name }} for ARO cluster
-  shell: |
-    az group create \
-      --name {{ _azure_config.resource_group.name }} \
-      --location {{ _azure_config.resource_group.location }} 
+    secret_file: "{{ status_dir }}/azure/ocp_pullsecret.json"
 
 - name: Create vnet {{ _azure_config.vnet.name }} for ARO cluster
   shell: |
@@ -38,18 +32,18 @@
       --address-prefixes {{ _azure_config.compute.subnet.address_prefixes }}
   register: _azure_vnet_compute_subnet
 
-- name: Generate script to create ARO cluster {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-create-aro.sh
+- name: Generate script to create ARO cluster {{ status_dir }}/azure/{{ _current_openshift_cluster.name }}-create-aro.sh
   template:
     src: az-aro-create.j2
-    dest: "{{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-create-aro.sh"
+    dest: "{{ status_dir }}/azure/{{ _current_openshift_cluster.name }}-create-aro.sh"
     mode: u+rwx
 
 - name: Provision ARO cluster {{ _current_openshift_cluster.name }}, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
   shell: |
-    {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-create-aro.sh
+    {{ status_dir }}/azure/{{ _current_openshift_cluster.name }}-create-aro.sh
 
-- name: Store info about the console and API URLs of the cluster in the {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}/aro-cluster-urls.txt file
+- name: Store info about the console and API URLs of the cluster in the {{ status_dir }}/azure/{{ _current_openshift_cluster.name }}/aro-cluster-urls.txt file
   shell: |
     az aro show \
       --resource-group {{ _azure_config.resource_group.name }} \
-      --name {{ _current_openshift_cluster.name }} > {{ status_dir }}/azure-aro/{{ _current_openshift_cluster.name }}-aro-cluster-urls.txt
+      --name {{ _current_openshift_cluster.name }} > {{ status_dir }}/azure/{{ _current_openshift_cluster.name }}-aro-cluster-urls.txt

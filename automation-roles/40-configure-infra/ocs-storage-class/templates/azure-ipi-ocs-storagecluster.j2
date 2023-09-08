@@ -1,0 +1,38 @@
+---
+apiVersion: ocs.openshift.io/v1
+kind: StorageCluster
+metadata:
+  annotations:
+    uninstall.ocs.openshift.io/cleanup-policy: delete
+    uninstall.ocs.openshift.io/mode: graceful
+  name: ocs-storagecluster
+  namespace: openshift-storage
+  finalizers:
+    - storagecluster.ocs.openshift.io
+spec:
+  encryption: {}
+  externalStorage: {}
+  managedResources:
+    cephBlockPools: {}
+    cephFilesystems: {}
+    cephObjectStoreUsers: {}
+    cephObjectStores: {}
+  storageDeviceSets:
+    - config: {}
+      count: 1
+      dataPVCTemplate:
+        metadata:
+          creationTimestamp: null
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: {{ current_openshift_storage.ocs_storage_size_gb }}Gi
+          storageClassName: {{ current_openshift_storage.ocs_dynamic_storage_class | default('managed-csi') }}
+          volumeMode: Block
+        status: {}
+      name: ocs-deviceset-{{ current_openshift_storage.ocs_dynamic_storage_class | default('managed-csi') }}
+      portable: true
+      replica: 3
+      resources: {}

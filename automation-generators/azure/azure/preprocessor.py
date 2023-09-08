@@ -10,6 +10,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('vnet').isRequired()
     g('control_plane').isRequired()
     g('compute').isRequired()
+    g('sp_name').isRequired()
 
     #Level 2
     if len(g.getErrors()) == 0:    

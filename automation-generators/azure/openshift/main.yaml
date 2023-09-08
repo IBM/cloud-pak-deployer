@@ -1,1 +1,47 @@
 ---
+- name: "Start {{generator.name}} generator"
+  debug:
+    msg: 'from {{generator.name}} in {{generator.path}} attributes: {{generator.attributes}}'
+
+- name: Show generator
+  debug:
+    var: generator
+
+- set_fact:
+    _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ generator.attributes.name }}']
+
+# Only run generators for self-managed OpenShift on Azure
+- block:
+  - set_fact:
+      _azure_config: "{{ all_config.azure | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?name=='{{ _openshift_config.azure_name }}']
+  
+  - name: Delete existing artifacts from the {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} directory
+    file:
+      path: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}"
+      state: absent
+
+  - name: Make sure that directory {{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }} exists
+    file:
+      path: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}"
+      state: directory
+
+  - name: Generate instance of "{{generator.name}}" in {{ PATH_TO_OUTPUT_DIR }}
+    template:
+      src: '../templates/main.tf.j2'
+      dest: '{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml'
+
+  - name: Store the install-config.yaml file as secret {{ generator.attributes.name }}-install-config-yaml
+    include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ generator.attributes.name }}-install-config-yaml"
+      secret_group: "{{ environment_name }}"
+      secret_file: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml"
+
+  when: (_openshift_config.infrastructure.type | default('aro')) == 'self-managed' and not (cpd_check_only | default(False) | bool)
