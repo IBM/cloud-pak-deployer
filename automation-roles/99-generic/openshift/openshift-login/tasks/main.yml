@@ -8,6 +8,17 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
+# Set retries and delay depending on whether successful login is required
+- set_fact:
+    _ocp_login_retries: 60
+    _ocp_login_delay: 10
+  when: _p_require_successful_ocp_login | default(True)
+
+- set_fact:
+    _ocp_login_retries: 5
+    _ocp_login_delay: 10
+  when: not (_p_require_successful_ocp_login | default(True))
+
 - name: Create OpenShift configuration directory
   file:
     path: "{{ status_dir }}/openshift"
@@ -26,6 +37,9 @@
   vars:
     _p_ocp_version: "{{ _openshift_cluster.ocp_version }}"
 
+- set_fact:
+    _p_oc_login_successful: True
+    
 - include_tasks: ibmcloud-login-roks-ocp.yml
   when: cloud_platform == 'ibm-cloud'
 
@@ -35,8 +49,7 @@
 - include_tasks: vsphere-login-ocp.yml
   when: cloud_platform == 'vsphere'
 
-- name: Login to OpenShift Azure
-  include_tasks: azure-login-ocp.yml
+- include_tasks: azure-login-ocp.yml
   when: cloud_platform == 'azure'
 
 - include_tasks: aws-login-ocp.yml
@@ -49,6 +62,7 @@
   retries: 30
   delay: 10
   until: _oc_cluster_info.rc == 0
+  when: _p_oc_login_successful
 
 - name: Copy the kubeconfig file to the default location used by olm-utils
   copy:
