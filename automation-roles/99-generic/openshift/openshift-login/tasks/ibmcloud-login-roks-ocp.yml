@@ -42,21 +42,37 @@
         msg: "ROKS public endpoint: {{ roks_publicEndpoint }}"
 
     - name: Set terminal context for OpenShift cluster {{ _p_openshift_cluster_name }}
-      command: "ibmcloud oc cluster config -c {{ _p_openshift_cluster_name }}  --admin"
+      shell: |
+        ibmcloud oc cluster config -c {{ _p_openshift_cluster_name }}  --admin
 
     - name: Login to OpenShift ROKS cluster
-      command: "oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}"
-      register: oc_login_result
-      retries: 60
-      delay: 10
-      until: oc_login_result.rc==0
+      shell: |
+        oc login -u apikey -p {{ ibmcloud_api_key }} {{ roks_publicEndpoint }}
+      register: _oc_login_result
+      failed_when: False
+      retries: "{{ _ocp_login_retries }}"
+      delay: "{{ _ocp_login_delay }}"
+      until: _oc_login_result.rc==0
 
     - name: Rename current context to {{ _p_openshift_cluster_name }}
       shell: |
         oc config delete-context {{ _p_openshift_cluster_name }} || true
         oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+      when:
+      - _oc_login_result.rc!=0
 
     - name: Show OpenShift login result
       debug:
-        msg: "{{ oc_login_result }}"
+        msg: "{{_oc_login_result }}"
+
+    - fail:
+        msg: "OpenShift login to cluster {{ _p_openshift_cluster_name }} failed, details: {{ _oc_login_result }}"
+      when:
+      - _oc_login_result.rc != 0
+      - _p_require_successful_ocp_login | default(True)
+
+    - set_fact:
+        _p_oc_login_successful: False
+      when: _oc_login_result.rc != 0
+
   when: _oc_use_context.rc != 0 or _oc_cluster_info.rc != 0
