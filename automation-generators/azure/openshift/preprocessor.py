@@ -61,6 +61,19 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             if type(ge['cloud_native_toolkit']) != bool:
                 g.appendError(msg='Attribute cloud_native_toolkit must be either true or false if specified. Default is false.')
 
+        if 'mcg' in ge:
+            mcg=ge['mcg']
+            if 'install' not in mcg:
+                g.appendError(msg='install property must be specified in openshift.mcg')
+            elif type(mcg['install']) != bool:
+                g.appendError(msg='Value mcg.install must be True or False')
+            if 'storage_type' not in mcg:
+                g.appendError(msg='storage_type property must be specified in openshift.mcg')
+            elif mcg['storage_type'] not in ['storage-class']:
+                g.appendError(msg='Value mcg.storage_type must be storage-class')
+            if 'storage_class' not in mcg:
+                g.appendError(msg='storage_class property must be specified in openshift.mcg')
+
         # Check openshift_storage atttributes
         if len(ge['openshift_storage']) < 1:
             g.appendError(msg='At least one openshift_storage element must be specified.')

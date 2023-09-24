@@ -1,0 +1,45 @@
+---
+- name: Create openshift-storage OpenShift project
+  shell: |
+    oc create ns openshift-storage || true
+
+- name: Retrieve default channel for ocs-operator manifest
+  shell:
+    oc get packagemanifest ocs-operator -o jsonpath='{.status.defaultChannel}'
+  register: _odf_packagemanifest
+
+- set_fact:
+    _odf_channel: "{{ _odf_packagemanifest.stdout }}"
+
+- name: Generate ODF operator file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
+  template:
+    src: odf-operator.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml"
+
+- name: Create ODF operator
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
+
+- name: Wait until ODF Operator CSV has status Succeeded
+  shell: |
+     oc get csv -n openshift-storage \
+      -l operators.coreos.com/ocs-operator.openshift-storage \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _odf_csv_status
+  retries: 30
+  delay: 30
+  until: _odf_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Ensure that Data Foundation is shown in the console
+  shell: |
+    oc patch console.operator cluster \
+      -n openshift-storage \
+      --type json \
+      -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
