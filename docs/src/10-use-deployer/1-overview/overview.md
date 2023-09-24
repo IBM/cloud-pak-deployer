@@ -8,19 +8,15 @@ There are 3 main steps you need to perform to provision an OpenShift cluster wit
 3. [Run the Cloud Pak Deployer to create the cluster and install the Cloud Pak](../../../10-use-deployer/3-run/run)
 
 ## What will I need?
-To complete the deployment, you will need the following. Details will be provided when you need them.
+To complete the deployment, you will or may need the following. Details will be provided when you need them.
 
 * Your Cloud Pak entitlement key to pull images from the IBM Container Registry
 * IBM Cloud VPC: An IBM Cloud API key that allows you to provision infrastructure
 * vSphere: A vSphere user and password which has infrastructure create permissions
 * AWS ROSA: AWS IAM credentials (access key and secret access key), a ROSA login token and optionally a temporary security token
 * AWS Self-managed: AWS IAM credentials (access key and secret access key) and optionally a temporary security token
+* Azure: Azure service principal with the correct permissions
 * Existing OpenShift: Cluster admin login credentials of the OpenShift cluster
-
-## Other "deployment" activities
-There are a few activities that are somewhat related to deployment of the OpenShift cluster and/or Cloud Paks. These can also be performed through the deployer.
-
-### Post-run configuration and secret retrieval
 
 ### Executing commands on the OpenShift cluster
 The server on which you run the Cloud Pak Deployer may not have the necessary clients to interact with the cloud infrastructure, OpenShift, or the installed Cloud Pak. You can run commands using the same container image that runs the deployment of OpenShift and the Cloud Paks through the command line: [Open a command line](7-command/command)
