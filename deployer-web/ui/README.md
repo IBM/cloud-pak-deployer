@@ -38,7 +38,7 @@ nvm install 16.15.1
 
 1. Open your terminal and then type
     ```sh
-    git clone https://github.com/IBM/cloud-pak-deployer.git
+    git clone --depth=1 https://github.com/IBM/cloud-pak-deployer.git
     ```
     This clones the repo cloud-pak-deployer. 
 
@@ -70,7 +70,7 @@ Launches the test runner in the interactive watch mode. See the section about [r
 
 1. Open your terminal and then type
     ```sh
-    git clone https://github.com/IBM/cloud-pak-deployer.git
+    git clone --depth=1 https://github.com/IBM/cloud-pak-deployer.git
     ```
     This clones the repo cloud-pak-deployer. 
 
