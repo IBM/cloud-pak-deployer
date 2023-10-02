@@ -3,10 +3,20 @@
 ## Log in to the OpenShift cluster
 Log is as a cluster administrator to be able to run the deployer with the correct permissions.
 
+## Make sure you have a default storage class
+* Go to Storage --> StorageClasses
+* Check if you have a default storage class (grey `Default` annotation)
+* If you don't, click on a "file" storage class (`ocs-storagecluster-cephfs` if you have ODF, `managed-nfs-storage` if you have NFS)
+* Click Actions --> Annotations at the top right
+* Add an entry with key `storageclass.kubernetes.io/is-default-class` and value `true`
+* Click save
+
+Now you should have a default storage class that the deployer will use to store its statue information.
+
 ## Prepare the deployer project and the storage
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the follliwng block (exactly into the window)
+* Paste the following block (exactly) into the window
 ```
 ---
 apiVersion: v1
@@ -65,7 +75,7 @@ spec:
 * Update the secret below with your Cloud Pak entitlement key. Make sure the key is indented exactly as below.
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the follliwng block (exactly into the window)
+* Paste the follliwng block, **adjust where needed**
 ```
 ---
 apiVersion: v1
@@ -110,7 +120,7 @@ data:
     cp4d:
     - project: cpd
       openshift_cluster_name: cpd-demo
-      cp4d_version: 4.6.2
+      cp4d_version: 4.7.3
       sequential_install: True
       accept_licenses: True
       cartridges:
@@ -181,7 +191,11 @@ data:
         size: small
         state: removed
 
-      - name: mdm
+      - name: mantaflow
+        size: small
+        state: removed
+
+      - name: match360
         size: small
         wkc_enabled: true
         state: removed
@@ -234,7 +248,6 @@ data:
           enableKnowledgeGraph: False
           enableDataQuality: False
           enableFactSheet: False
-          enableMANTA: False
 
       - name: wml
         size: small
@@ -245,7 +258,7 @@ data:
         size: small
         state: removed
 
-      - name: wsl
+      - name: ws
         state: installed
 
       - name: ws-pipelines
@@ -255,7 +268,7 @@ data:
 ## Run the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block (exactly into the window)
+* Paste the following block (exactly) into the window
 ```
 apiVersion: batch/v1
 kind: Job
@@ -267,7 +280,7 @@ metadata:
 spec:
   parallelism: 1
   completions: 1
-  backoffLimit: 0
+  backoffLimit: 2
   template:
     metadata:
       name: cloud-pak-deployer
@@ -316,7 +329,7 @@ The debug job can be useful if you want to access the status directory of the de
 
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block (exactly into the window)
+* Paste the following block (exactly) into the window
 ```
 apiVersion: batch/v1
 kind: Job
@@ -373,6 +386,9 @@ spec:
 * Select `cloud-pak-deployer` as the project at the top of the page
 * Click the deployer pod
 * Click logs
+
+!!! info
+    When running the deployer installing Cloud Pak for Data, the first run will fail. This is because the deployer applies the node configuration to OpenShift, which will cause all nodes to restart one by one, including the node that runs the deployer. Because of the job setting, a new deployer pod will automatically start and resume from where it was stopped.  
 
 ## Re-run deployer when failed or if you want to update the configuration
 If the deployer has failed or if you want to make changes to the configuration after the successful run, you can do the following:
