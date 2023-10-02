@@ -6,8 +6,6 @@ from packaging import version
 # openshift:
 # - name: {{ env_id }}
 #   ocp_version: 4.8
-#   cluster_name: {{ env_id }}
-#   domain_name: example.com
 #   cloud_native_toolkit: False
 #   openshift_storage:
 #   - storage_name: nfs-storage
@@ -21,8 +19,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     g('name').isRequired()
     g('ocp_version').isRequired()    
-    g('cluster_name').isRequired()
-    g('domain_name').isRequired()
     g('openshift_storage').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
