@@ -10,12 +10,13 @@ There are 3 main steps you need to perform to provision an OpenShift cluster wit
 ## What will I need?
 To complete the deployment, you will need the following. Details will be provided when you need them.
 
-* Your Cloud Pak entitlement key to pull images from the IBM Container Registry
-* IBM Cloud VPC: An IBM Cloud API key that allows you to provision infrastructure
-* vSphere: A vSphere user and password which has infrastructure create permissions
-* AWS ROSA: AWS IAM credentials (access key and secret access key), a ROSA login token and optionally a temporary security token
-* AWS Self-managed: AWS IAM credentials (access key and secret access key) and optionally a temporary security token
-* Existing OpenShift: Cluster admin login credentials of the OpenShift cluster
+* Cloud Pak Entitlement Key: This key is essential for pulling images from the IBM Container Registry.
+* IBM Cloud VPC: You will need an IBM Cloud API key to enable infrastructure provisioning.
+* vSphere: Ensure you have the necessary vSphere user credentials, including a username and password, with permissions to create infrastructure.
+* AWS ROSA: For AWS Red Hat OpenShift Service (ROSA), you should have AWS IAM credentials, including an access key and secret access key Additionally, you'll need a ROSA login token and, if necessary, a temporary security token.
+* AWS Self-managed: If you are using AWS for self-managed OpenShift, you'll require AWS IAM credentials, including an access key and secret access key. Optionally, you may need a temporary security token.
+* Azure ARO: For Azure Red Hat OpenShift (ARO), ensure you have your Azure subscription details and appropriate credentials on hand.
+* Existing OpenShift: If you are working with an existing OpenShift cluster, be prepared with the cluster admin login credentials.
 
 ## Other "deployment" activities
 There are a few activities that are somewhat related to deployment of the OpenShift cluster and/or Cloud Paks. These can also be performed through the deployer.

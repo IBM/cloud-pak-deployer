@@ -11,21 +11,59 @@ If you don't have a Linux server in some cloud, you can use VirtualBox to create
 
 Once the guest operating system is up and running, log on as root to the guest operating system. For convenience, VirtualBox also supports port forwarding so you can use `PuTTY` to access the Linux command line.
 
-### Install on Linux
-On Red Hat Enterprise Linux of CentOS, run the following commands:
+#### Using WSL2
+WSL allows you to run a Linux distribution alongside your Windows installation.
+
+1. Open PowerShell as Administrator and run:
 ```
-yum install -y podman git
-yum clean all
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+```
+2. Install WSL 2 by running:
+```
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+```
+3. Set WSL 2 as the default version:
+```
+wsl --set-default-version 2
+```
+4. Installing a Linux Distribution on WSL
+Install a Linux distribution from the Microsoft Store (e.g., Ubuntu, Debian).
+Launch the distribution to complete the installation.
+Set up your username and password.
+Install following "Install on Linux"
+
+
+### Install on Linux
+
+Linux distributions often come with their own package managers. Here are some common ones:
+
+#### DNF (Fedora/RHEL)
+```
+sudo dnf install package-name
 ```
 
-On MacOS, run the following commands:
+#### APT (Debian/Ubuntu)
+```
+sudo apt update
+sudo apt install package-name
+```
+
+#### On MacOS, run the following commands:
 ```
 brew install podman git
 podman machine create
 podman machine init
 ```
 
-On Ubuntu, follow the instructions here: https://docs.docker.com/engine/install/ubuntu/
+#### Pacman (Arch Linux)
+```
+sudo pacman -S package-name
+```
+
+#### Zypper (openSUSE)
+```
+sudo zypper install package-name
+```
 
 ## Clone the current repository
 
@@ -50,3 +88,42 @@ Then run the following command to build the container image.
 ```
 
 This process will take 5-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Python and required operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
+
+# Getting Cloud Pak Deployer Image from Quay.io
+You can obtain the Cloud Pak Deployer image from the Quay.io container registry. This method allows you to fetch the image directly from the repository. Here's a step-by-step guide on how to do this:
+
+1. Login to Quay.io
+Before pulling the Cloud Pak Deployer image, you need to log in to your Quay.io account or create one if you don't have it.
+```
+docker login quay.io
+```
+
+2. Pull the Cloud Pak Deployer Image
+
+Using Docker : 
+```
+docker pull quay.io/cloud-pak-deployer/cloud-pak-deployer
+```
+
+Using podman 
+```
+podman pull quay.io/cloud-pak-deployer/cloud-pak-deployer
+```
+
+# Air-gapped :
+In air-gapped environments where direct internet access is restricted, you can build Docker images on one Linux server and then transfer them to another server using a combination of Docker's docker cp command and the scp (Secure Copy Protocol) utility.
+
+1. Build the Deployer image on Server A
+
+2. Save the Docker Image as a Tarball:
+```
+docker save -o cloud-pak-deployer.tar cloud-pak-deployer:latest
+```
+3. Copy the tarball from Server A to Server B using scp:
+```
+scp /path/to/cloud-pak-deployer.tar user@ServerB:/path/to/destination/
+```
+4. Load the Docker image from the tarball on Server B
+```
+docker load -i /path/to/destination/cloud-pak-deployer.tar
+```
