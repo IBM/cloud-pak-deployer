@@ -1,7 +1,8 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
 Contains CP4BA version 23.0.1 IF003.  
-Currently RPA and IPM are not available due to CPFS incompatibility.
+Contains IPM version 1.14.2.
+Currently RPA is not available due to CPFS incompatibility.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)

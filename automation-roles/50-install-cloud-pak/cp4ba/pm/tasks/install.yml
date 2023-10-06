@@ -210,38 +210,6 @@
     common_namespace_name: "{{ pm_project_name }}"
     common_output_to_var: "zen_token"
 
-- name: Get User profile
-  ansible.builtin.uri:
-    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile"
-    method: GET
-    headers:
-      Cookie: ibm-private-cloud-session={{ zen_token }}
-    validate_certs: false
-    status_code: 200
-  register: user_profile_response
-
-- name: Set user profile api key
-  ansible.builtin.set_fact:
-    api_key: "{{ user_profile_response.json.data.apiKey }}"
-
-# Based on https://www.ibm.com/docs/en/process-mining/latest?topic=manual-how-integrate-process-mining-task-mining
-- name: Setup master key for task mining
-  ansible.builtin.uri:
-    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/taskmining/api/pmMasterUser"
-    method: POST
-    headers:
-      Cookie: ibm-private-cloud-session={{ zen_token }}
-    body_format: json
-    body:
-      {
-        "userName": "{{ lc_principal_admin_user }}",
-        "apiKey": "{{ api_key }}"
-      }
-    validate_certs: false
-    return_content: true
-    status_code:
-      - 200
-
 - name: Get all groups
   ansible.builtin.uri:
     url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
@@ -253,6 +221,29 @@
     status_code:
       - 200
   register: groups_response
+
+- name: Get Analysts Users group ID
+  ansible.builtin.set_fact:
+    analysts_users_group: "{{ groups_response.json | json_query(condition_query) }}"
+  vars:
+    condition_query: "data.groups[?name == 'Analysts Users']"
+
+- name: Get Analysts Users group ID
+  ansible.builtin.set_fact:
+    analysts_users_group_id: "{{ analysts_users_group | first | json_query('id') }}"    
+
+# Overwrites the current members of Analysts Users group
+# ansible.builtin.uri not working
+- name: Add admin to Analysts Users group
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ analysts_users_group_id }}' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'group={"id":"{{ analysts_users_group_id }}",
+    "name":"Analysts Users","tenantId":"-1",
+    "users":[{"username":"{{ lc_principal_admin_user }}"}],"groups":[],"authorizations":[]}'
+  changed_when: false
 
 - name: Get TaskMiningAdmins group
   ansible.builtin.set_fact:
@@ -277,24 +268,11 @@
         status_code:
           - 200
 
-    - name: Get all groups
-      ansible.builtin.uri:
-        url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
-        method: GET
-        headers:
-          Cookie: ibm-private-cloud-session={{ zen_token }}
-        validate_certs: false
-        return_content: true
-        status_code:
-          - 200
-      register: groups_response
-
     - name: Get TaskMiningAdmins group
       ansible.builtin.set_fact:
         tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
       vars:
         condition_query: "data.groups[?name == 'TaskMiningAdmins']"
-
 
 - name: Get TaskMiningAdmins group ID
   ansible.builtin.set_fact:
