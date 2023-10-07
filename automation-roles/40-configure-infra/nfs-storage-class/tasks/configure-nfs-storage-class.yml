@@ -13,37 +13,6 @@
         query: >-
           [?name=='{{ current_openshift_storage.nfs_server_name }}']
 
-    - name: Retrieve Terraform tfstate from the vault for IBM Cloud
-      include_role: 
-        name: vault-get-secret
-      vars:
-        secret_name: "{{ environment_name }}-terraform-tfstate"
-        secret_group: "{{ environment_name }}"
-      when: cloud_platform == 'ibm-cloud'
-
-    - set_fact:
-        tfstate: "{{ secret_value }}"   
-      when: cloud_platform == 'ibm-cloud'       
-
-    # Retrieve the private IP address of the NFS server
-    - set_fact:
-        _nfs_server_ip: "{{ tfstate.resources | json_query(query) | first }}"
-      vars:
-        query: >-
-          [?type=='ibm_is_instance' && instances[0].attributes.name=='{{ _nfs_server.name }}'].instances[0].attributes.primary_network_interface[0].primary_ipv4_address
-      when: cloud_platform == 'ibm-cloud' 
-
-    - name: NFS Server IP address
-      debug:
-        msg: "{{ _nfs_server_ip }}"
-      when: cloud_platform == 'ibm-cloud' 
-
-    - set_fact:
-        _nfs_storage_class: "{{ nfs_storage_class_name }}"
-        _nfs_storage_server_ip: "{{ _nfs_server_ip }}"
-        _nfs_storage_server_path: "{{ _nfs_server.infrastructure.storage_folder }}"
-      when: cloud_platform == 'ibm-cloud'
-
     - set_fact:
         _nfs_storage_class: "{{ nfs_storage_class_name }}"
         _nfs_storage_server_ip: "{{ _nfs_server.infrastructure.host_ip }}"

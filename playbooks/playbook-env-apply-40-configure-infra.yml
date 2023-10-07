@@ -1,48 +1,53 @@
 ---
-- name: 40 - Configure infrastructure
-  hosts: localhost
-  connection: local
-  become: True
-  gather_facts: False
+# - name: 40 - Configure infrastructure
+#   hosts: localhost
+#   connection: local
+#   become: True
+#   gather_facts: False
 
-  vars:
-    ansible_callback_diy_runner_on_skipped_msg: ""
-    ansible_callback_diy_runner_on_ok_msg: ""
-    ansible_callback_diy_playbook_on_include_msg: ""
+#   vars:
+#     ansible_callback_diy_runner_on_skipped_msg: ""
+#     ansible_callback_diy_runner_on_ok_msg: ""
+#     ansible_callback_diy_playbook_on_include_msg: ""
 
-  tasks:
-  - name: Assemble NFS Servers group
-    include_role:
-      name: nfs-server
-    when: cloud_platform == 'ibm-cloud'
+#   tasks:
+#   - name: Assemble NFS Servers group
+#     include_role:
+#       name: nfs-server
+#     when: cloud_platform == 'ibm-cloud'
 
-- name: 40 - Configure infrastructure - Bastion servers
-  hosts: vpc_bastion_server
-  become: True
-  gather_facts: False
+# - name: 40 - Configure infrastructure - Bastion servers
+#   hosts: vpc_bastion_server
+#   become: True
+#   gather_facts: False
 
-  vars:
-    ansible_callback_diy_runner_on_skipped_msg: ""
-    ansible_callback_diy_runner_on_ok_msg: ""
+#   vars:
+#     ansible_callback_diy_runner_on_skipped_msg: ""
+#     ansible_callback_diy_runner_on_ok_msg: ""
 
-  tasks:
-  - name: Configure bastion servers
-    include_role: 
-      name: nfs-server-ibmcloud-vpc-bastion
+#   tasks:
+#   - name: Install Python on the bastion server
+#     dnf:
+#       name: python
+#       state: present
 
-- name: 40 - Configure infrastructure - NFS servers
-  hosts: vpc_nfs_servers
-  become: True
-  gather_facts: False
+#   - name: Configure bastion servers
+#     include_role: 
+#       name: nfs-server-ibmcloud-vpc-bastion
 
-  vars:
-    ansible_callback_diy_runner_on_skipped_msg: ""
-    ansible_callback_diy_runner_on_ok_msg: ""
+# - name: 40 - Configure infrastructure - NFS servers
+#   hosts: vpc_nfs_servers
+#   become: True
+#   gather_facts: False
 
-  tasks:
-  - name: Configure NFS servers
-    include_role: 
-      name: nfs-server-ibmcloud-vpc-install
+#   vars:
+#     ansible_callback_diy_runner_on_skipped_msg: ""
+#     ansible_callback_diy_runner_on_ok_msg: ""
+
+#   tasks:
+#   - name: Configure NFS servers
+#     include_role: 
+#       name: nfs-server-ibmcloud-vpc-install
 
 - name: 40 - Configure infrastructure - Configure OpenShift
   hosts: localhost

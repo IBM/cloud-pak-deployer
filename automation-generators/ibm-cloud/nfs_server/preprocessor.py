@@ -24,15 +24,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         g('infrastructure.vpc_name').expandWith('vpc[*]').isRequired().mustBeOneOf('vpc[*]')
         g('infrastructure.subnet').expandWith('subnet[*]').isRequired().mustBeOneOf('subnet[*]')
         g('infrastructure.zone').lookupFromProperty('infrastructure.subnet','subnet','zone').isRequired()
-        g('infrastructure.primary_ipv4_address').isOptional()
-        g('infrastructure.bastion_host').isOptional()
-        g('infrastructure.storage_profile').isRequired()
         g('infrastructure.volume_size_gb').isRequired()
-        g('infrastructure.storage_folder').isRequired()
-        g('infrastructure.image').isRequired()
-        g('infrastructure.allow_ip_spoofing').isOptional().mustBeOneOf([True,False])
-        g('infrastructure.keys').expandWith('ssh_keys[*]').isRequired().mustBeOneOf('ssh_keys[*]')
-        g('infrastructure.profile').isRequired()
     
     result = {
         'attributes_updated': g.getExpandedAttributes(),

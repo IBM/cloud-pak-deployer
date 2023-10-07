@@ -10,66 +10,31 @@
   vars:
     secret_name: "{{ environment_name }}-terraform-tfstate"
     secret_group: "{{ environment_name }}"
-
-- set_fact:
-    tfstate: "{{ secret_value }}"
+    _p_secret_variable: tfstate
 
 - name: Show tfstate file
   debug:
     var: tfstate
 
-# Retrieve the public IP address of the bastion, which will be used as a jump host
-- set_fact:
-    bastion_fip: "{{ tfstate.resources | json_query(query) | first }}"
-  vars:
-    query: >-
-      [?type=='ibm_is_floating_ip' && instances[0].attributes.name=='{{bastion_host}}'].
-      {public_ip_address: instances[0].attributes.address, public_ip_name: instances[0].attributes.name}
-
-- name: Show public address of bastion VSI
-  debug:
-    msg: "{{ bastion_fip }}"
-
 # Retrieve the private IP address of the NFS server
-- set_fact:
+- name: Retrieving IP address of NFS mount point {{ current_nfs_server.name }}-mount
+  set_fact:
     _nfs_server_ip: "{{ tfstate.resources | json_query(query) | first }}"
   vars:
     query: >-
-      [?type=='ibm_is_instance' && instances[0].attributes.name=='{{ current_nfs_server.name }}'].instances[0].attributes.primary_network_interface[0].primary_ipv4_address
+      [?type=='ibm_is_share_mount_target' && instances[0].attributes.name=='{{ current_nfs_server.name }}-mount'].instances[0].attributes.virtual_network_interface[0].primary_ip[0].address
+
+- name: Retrieving mount path of NFS mount point {{ current_nfs_server.name }}-mount
+  set_fact:
+    _nfs_mount_path: "{{ tfstate.resources | json_query(query) | first }}"
+  vars:
+    query: >-
+      [?type=='ibm_is_share_mount_target' && instances[0].attributes.name=='{{ current_nfs_server.name }}-mount'].instances[0].attributes.mount_path
 
 - name: NFS Server IP address
   debug:
-    msg: "{{ _nfs_server_ip }}"    
+    msg: "{{ _nfs_server_ip }}"
 
-- name: Create temporary directory to hold SSH private key
-  tempfile:
-    state: directory
-    suffix: _ssh
-  register: ssh_key_dir
-
-- name: Retrieve SSH private key {{ nfs_server_ssh_key }}-key from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "{{ nfs_server_ssh_key }}-ssh-key"
-    secret_group: "{{ environment_name }}"
-
-- name: Store SSH private key in file {{ ssh_key_dir.path }}/id_rsa
-  copy:
-    content: "{{ secret_value }}\n"
-    dest: "{{ ssh_key_dir.path }}/id_rsa"
-    mode: 0600
-
-- name: Create dynamic Ansible group vpc_bastion_server
-  add_host:
-    name: "{{bastion_fip.public_ip_address}}"
-    groups: vpc_bastion_server
-    ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
-
-- name: Create dynamic Ansible group vpc_nfs_servers
-  add_host:
-    name: "{{ _nfs_server_ip }}" 
-    groups: vpc_nfs_servers
-    ansible_ssh_private_key_file: "{{ ssh_key_dir.path }}/id_rsa"
-    ansible_ssh_common_args: '-o ProxyCommand="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i {{ ssh_key_dir.path }}/id_rsa -W %h:%p -q {{ bastion_fip.public_ip_address }}"'
-    nfs_server: "{{ current_nfs_server }}"
+- name: NFS Server mount path
+  debug:
+    msg: "{{ _nfs_mount_path }}"

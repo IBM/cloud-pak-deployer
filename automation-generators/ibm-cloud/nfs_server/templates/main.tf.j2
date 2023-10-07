@@ -1,55 +1,25 @@
 {# start - nfs_server definition #}
 
-
-data "ibm_is_image" "{{generator.attributes.name | replace("-", "_") }}" {
-    name = "{{generator.attributes.infrastructure.image}}"
-}
-
-resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_data" {
-    name           = "{{ generator.attributes.name }}-data"
-    resource_group = data.ibm_resource_group.thisresourcegroup.id
-    profile        = "{{ generator.attributes.infrastructure.storage_profile }}"
-    zone           = "{{ generator.attributes.infrastructure.zone }}"
-    capacity       = {{ generator.attributes.infrastructure.volume_size_gb}}
+resource "ibm_is_share" "{{generator.attributes.name | replace("-", "_") }}" {
+    name                = "{{ generator.attributes.name }}"
+    access_control_mode = "security_group"
+    size                = {{ generator.attributes.infrastructure.volume_size_gb}}
+    profile             = "dp2"
+    resource_group      = data.ibm_resource_group.thisresourcegroup.id
+    zone                = "{{ generator.attributes.infrastructure.zone }}"
     lifecycle {
-      ignore_changes = [ resource_group ]
+      ignore_changes    = [ resource_group ]
     }
 }
 
-resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" {
-    name = "{{generator.attributes.name }}"
-    resource_group =  data.ibm_resource_group.thisresourcegroup.id
-    profile = "{{ generator.attributes.infrastructure.profile }}"
-    keys = [
-        {% for item in generator.attributes.infrastructure.get('keys',[]) %}
-            data.ibm_is_ssh_key.{{item | replace("-", "_") }}.id
-        {% endfor %}
-    ]
-    zone = "{{ generator.attributes.infrastructure.zone }}"
-    vpc = ibm_is_vpc.{{ generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
-    image = data.ibm_is_image.{{ generator.attributes.name | replace("-", "_") }}.id
-    
-    boot_volume {
-        name = "{{generator.attributes.name }}-disk-boot"
-    }
-    primary_network_interface {
+resource "ibm_is_share_mount_target" "{{generator.attributes.name | replace("_", "-") }}-mount" {
+    share = ibm_is_share.{{generator.attributes.name | replace("-", "_") }}.id
+    name  = "{{generator.attributes.name | replace("_", "-") }}-mount"
+    virtual_network_interface {
         name = "{{generator.attributes.name }}-nic"
         subnet = ibm_is_subnet.{{generator.attributes.infrastructure.subnet | replace("-", "_") }}.id
-        {% if generator.attributes.infrastructure.primary_ipv4_address is defined %}
-        primary_ipv4_address = "{{generator.attributes.infrastructure.primary_ipv4_address}}"
-        {% endif %}
-        allow_ip_spoofing = "{{ generator.attributes.infrastructure.allow_ip_spoofing | default('false') | lower }}"
-    }
-
-
-    volumes = [
-        ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_data.id
-    ]
-    lifecycle {
-      ignore_changes = [ resource_group ]
-    }
+  }
 }
-
 
 /* FOR DEBUGGING: generator.attributes:
 {{generator.attributes | to_nice_json}}
