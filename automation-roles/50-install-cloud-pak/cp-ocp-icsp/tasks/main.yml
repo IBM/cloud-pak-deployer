@@ -1,8 +1,16 @@
 ---
-- name: Create ImageContentSourcePolicy
-  include_tasks: create-icsp.yml
-  when: _mco_exists
+- include_tasks: create-icsp.yml
+  when: 
+  - _mco_exists
+  - (all_config.cp_alt_repo | default({})) == {}
+
+- include_tasks: create-icsp-alt.yml
+  when: 
+  - _mco_exists
+  - (all_config.cp_alt_repo | default({})) != {}
 
 - name: Apply ImageContentSourcePolicy settings if the Machine Config Operator does not exist
   include_tasks: non-mco-apply-icsp.yml
-  when: not _mco_exists
+  when: 
+  - not _mco_exists
+  - (all_config.cp_alt_repo | default({})) == {}
