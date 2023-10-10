@@ -1,41 +1,41 @@
-- name: Get MySQL Pod
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Pod
-    namespace: mysql
-    label_selectors:
-      - app=mysql
-  register: pods
+- name: Add DB2 user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2-user
+  vars:
+    common_db2_user: pm
+    common_db2_password: "{{ pm_db2_password }}"
+
+- name: PM DB Create
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CREATE DATABASE PM AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
+      db2 CONNECT TO PM;
+      "
+  register: command_status
   retries: 40
-  delay: 15
+  delay: 30
+  until: command_status.rc == 0
 
-- name: Add MySQL User
+- name: PM DB Configure
   kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
     command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "CREATE USER 'pm'@'%' IDENTIFIED BY '{{ pm_universal_password }}';"
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CONNECT TO PM;
+      db2 CREATE SCHEMA PM AUTHORIZATION pm;
+      db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER pm;
+      db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER pm;
+      db2 CONNECT RESET;
+      db2 activate db PM;
+      "
   register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
-    command_status.stderr is search('.*Operation CREATE USER failed.*'))
-
-- name: Prepare MySQL DB
-  kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "CREATE DATABASE pm;"
-  register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
-    command_status.stderr is search('.*database exists.*'))
-
-- name: Set privileges
-  kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "GRANT ALL PRIVILEGES ON pm.* TO 'pm'@'%';"
-  register: command_status
+  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
+    command_status.stdout is search('.*the database has already.*'))
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
@@ -218,9 +218,10 @@
       Cookie: ibm-private-cloud-session={{ zen_token }}
     validate_certs: false
     return_content: true
-    status_code:
-      - 200
   register: groups_response
+  until: groups_response.status == 200
+  retries: 10
+  delay: 60
 
 - name: Get Analysts Users group ID
   ansible.builtin.set_fact:
@@ -267,6 +268,18 @@
         return_content: true
         status_code:
           - 200
+
+    - name: Get all groups
+      ansible.builtin.uri:
+        url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
+        method: GET
+        headers:
+          Cookie: ibm-private-cloud-session={{ zen_token }}
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: groups_response
 
     - name: Get TaskMiningAdmins group
       ansible.builtin.set_fact:
