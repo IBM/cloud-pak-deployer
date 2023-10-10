@@ -1,0 +1,173 @@
+- name: Create DB2 directory for generated files
+  ansible.builtin.file:
+    path: "{{ db2_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: db2
+    common_output_directory: "{{ db2_output_directory }}"
+
+- name: Prepare yaml file for CatalogSource
+  ansible.builtin.template:
+    src: catalogsource.yaml.j2
+    dest: "{{ db2_output_directory }}/catalogsource.yaml"
+    mode: u+rwx
+
+- name: Add CatalogSource
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2_output_directory }}/catalogsource.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CatalogSource
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: ibm-db2uoperator-catalog
+    namespace: db2
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
+
+- name: No root squash for DB2
+  block:
+
+    - name: Prepare yaml for No Root Squash DB2 Service Account for NFS on IBM Cloud
+      ansible.builtin.template:
+        src: service-account.yaml.j2
+        dest: "{{ db2_output_directory }}/service-account.yaml"
+        mode: u+rwx
+
+    - name: Add No Root Squash DB2 Service Account for NFS on IBM Cloud
+      kubernetes.core.k8s:
+        state: present
+        force: false
+        merge_type: merge
+        src: "{{ db2_output_directory }}/service-account.yaml"
+        wait: true
+        wait_sleep: 15
+        wait_timeout: 15
+
+    - name: Prepare yaml for No Root Squash DB2 Role Binding for NFS on IBM Cloud
+      ansible.builtin.template:
+        src: privileged-scc-clusterrolebinding.yaml.j2
+        dest: "{{ db2_output_directory }}/privileged-scc-clusterrolebinding.yaml"
+        mode: u+rwx
+
+    - name: Add No Root Squash DB2 Role Binding for NFS on IBM Cloud
+      kubernetes.core.k8s:
+        state: present
+        force: true
+        merge_type: merge
+        src: "{{ db2_output_directory }}/privileged-scc-clusterrolebinding.yaml"
+        wait: true
+        wait_sleep: 15
+        wait_timeout: 15
+
+    - name: Prepare yaml for No Root Squash DB2 Daemon Set
+      ansible.builtin.template:
+        src: daemon-set.yaml.j2
+        dest: "{{ db2_output_directory }}/daemon-set.yaml"
+        mode: u+rwx
+
+    - name: Add No Root Squash DB2 Daemon Set
+      kubernetes.core.k8s:
+        state: present
+        force: false
+        merge_type: merge
+        src: "{{ db2_output_directory }}/daemon-set.yaml"
+        wait: true
+        wait_sleep: 15
+        wait_timeout: 60
+
+  when: db2_deployment_platform == "ROKS"
+
+- name: Prepare yaml file for the Operator Group
+  ansible.builtin.template:
+    src: operatorgroup.yaml.j2
+    dest: "{{ db2_output_directory }}/operatorgroup.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Group
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2_output_directory }}/operatorgroup.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for the Operator Subscription
+  ansible.builtin.template:
+    src: subscription.yaml.j2
+    dest: "{{ db2_output_directory }}/subscription.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2_output_directory }}/subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for Db2uCluster CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: db2uclusters.db2u.databases.ibm.com
+
+- name: Create ICR Secret
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-icr-secret
+  vars:
+    common_output_directory: "{{ db2_output_directory }}"
+    common_icr_secret_name: ibm-entitlement-key
+    common_icr_password: "{{ db2_icr_password }}"
+    common_namespace_name: db2
+
+# Based on LI at http://www-03.ibm.com/software/sla/sladb.nsf/doclookup/F2925E0D5C24EAB4852586FE0060B3CC?OpenDocument
+# DB2 Standard Edition is a supporting program with limitation of 16 CPU and 128 Memory
+- name: Prepare yaml file for Db2uCluster Instance
+  ansible.builtin.template:
+    src: db2ucluster.yaml.j2
+    dest: "{{ db2_output_directory }}/db2ucluster.yaml"
+    mode: u+rwx
+
+- name: Add the Db2uCluster Instance
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ db2_output_directory }}/db2ucluster.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for the Db2uCluster Instance Ready State
+  kubernetes.core.k8s_info:
+    api_version: db2u.databases.ibm.com/v1
+    kind: Db2uCluster
+    name: db2ucluster
+    namespace: db2
+  register: db2ucluster
+  retries: 60
+  delay: 15
+  until: ('Ready' in db2ucluster | json_query(state_query) | unique)
+  vars:
+    state_query: 'resources[*].status.state'
