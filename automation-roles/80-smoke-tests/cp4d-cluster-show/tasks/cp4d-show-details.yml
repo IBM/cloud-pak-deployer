@@ -16,6 +16,21 @@
       -o jsonpath="{.items[0].spec.host}"
   register: cp4d_url
 
+- name: Get ZenService CR to check authentication method
+  shell: |
+    oc get --namespace {{ current_cp4d_cluster.project }} ZenService lite-cr -o json
+  register: _zenservice_cr
+
+- set_fact:
+    _iam_integration: "{{ (_zenservice_cr.stdout | from_json).spec.iamIntegration | bool  }}"
+
+- set_fact:
+    _cp4d_admin_user: "admin"
+
+- set_fact:
+    _cp4d_admin_user: "cpadmin"
+  when: _iam_integration
+
 - name: Make sure that directory {{ status_dir }}/cloud-paks exists
   file:
     path: "{{ status_dir }}/cloud-paks"
@@ -30,6 +45,7 @@
   debug:
     msg: 
     - "CP4D URL: https://{{ cp4d_url.stdout }}"
-    - "CP4D admin password: {{ _cp4d_admin_password }}"
+    - "CP4D User: {{ _cp4d_admin_user }}"
+    - "CP4D {{ _cp4d_admin_user }} password: {{ _cp4d_admin_password }}"
   vars:
     ansible_callback_diy_runner_on_ok_msg: "{{ ansible_callback_diy.result.output.msg }}\n"
