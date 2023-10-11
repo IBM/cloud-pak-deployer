@@ -4,11 +4,16 @@
     path: /tmp/work
     state: directory
 
+- name: Generate platform install options file {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-cpd-platform-install-options.yml
+  template:
+    src: apply-cr-cpd-platform-install-options.j2
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-cpd-platform-install-options.yml"
+
 - name: Generate apply-cr command to install Cloud Pak for Data platform
   set_fact:
     _apply_cr_command: "{{ lookup('template', 'apply-cr-cpd-platform.j2') }}" 
   vars:
-    _p_preview_script: True 
+    _p_preview_script: True
 
 - name: Show apply-cr command to install Cloud Pak for Data platform
   debug:
@@ -41,13 +46,6 @@
   shell: |
     {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh >> {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
   when: not _sequential_install
-
-- name: Setup Coud Pak for Data to use Foundational Services IAM
-  shell: |
-    oc patch -n {{ current_cp4d_cluster.project }} Ibmcpd ibmcpd-cr \
-      --type=merge \
-      --patch='{"spec":{"cloudpakfordata": true, "iamIntegration": true}}'
-  when: (current_cp4d_cluster.use_fs_iam | default(False) | bool)
 
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for ZenService to be completed
