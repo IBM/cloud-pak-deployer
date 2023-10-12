@@ -76,7 +76,15 @@ git clone https://github.com/IBM/cloud-pak-deployer.git
 ```
 You wil be prompted for user and password. Enter your GitHub user name and the token you generated above.
 
-## Build the image
+
+## Get Cloud-pak-deployer Image
+To get Cloud pak deployer you have two option : build deployer on your local machine or get from registry. 
+
+### Build the image
+
+Prerequisite : 
+You have to  [whitelist domain](../50-advanced/location-wo-whitelist.md) 
+
 First go to the directory where you cloned the GitHub repository, for example `~/cloud-pak-deployer`.
 ```
 cd cloud-pak-deployer
@@ -89,16 +97,10 @@ Then run the following command to build the container image.
 
 This process will take 5-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Python and required operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
 
-# Getting Cloud Pak Deployer Image from Quay.io
+### Getting Cloud Pak Deployer Image from Quay.io
 You can obtain the Cloud Pak Deployer image from the Quay.io container registry. This method allows you to fetch the image directly from the repository. Here's a step-by-step guide on how to do this:
 
-1. Login to Quay.io
-Before pulling the Cloud Pak Deployer image, you need to log in to your Quay.io account or create one if you don't have it.
-```
-docker login quay.io
-```
-
-2. Pull the Cloud Pak Deployer Image
+1. Pull the Cloud Pak Deployer Image
 
 Using Docker : 
 ```
@@ -110,20 +112,10 @@ Using podman
 podman pull quay.io/cloud-pak-deployer/cloud-pak-deployer
 ```
 
-# Air-gapped :
-In air-gapped environments where direct internet access is restricted, you can build Docker images on one Linux server and then transfer them to another server using a combination of Docker's docker cp command and the scp (Secure Copy Protocol) utility.
+2. (optional) Verify image and TAG : 
+```
+$ docker images
 
-1. Build the Deployer image on Server A
-
-2. Save the Docker Image as a Tarball:
-```
-docker save -o cloud-pak-deployer.tar cloud-pak-deployer:latest
-```
-3. Copy the tarball from Server A to Server B using scp:
-```
-scp /path/to/cloud-pak-deployer.tar user@ServerB:/path/to/destination/
-```
-4. Load the Docker image from the tarball on Server B
-```
-docker load -i /path/to/destination/cloud-pak-deployer.tar
+REPOSITORY                                     TAG         IMAGE ID      CREATED      SIZE
+quay.io/cloud-pak-deployer/cloud-pak-deployer  latest      939b7717b8f9  2 hours ago  2 GB
 ```
