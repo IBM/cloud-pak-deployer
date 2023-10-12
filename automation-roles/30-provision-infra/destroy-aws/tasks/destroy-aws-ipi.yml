@@ -4,6 +4,12 @@
     path: "{{status_dir}}/log"
     state: directory
 
+- name: Delete file servers associated with OpenShift cluster
+  include_tasks: aws-delete-file-servers.yml
+  loop: "{{ _current_openshift_cluster.openshift_storage }}"
+  loop_control:
+    loop_var: _current_openshift_storage
+
 - name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
   include_role:
     name: openshift-download-installer
@@ -38,6 +44,13 @@
       AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
 
   when: _aws_metadata_json != '' 
+
+- name: Delete "{{ _current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
 
 - name: Delete "{{ _current_openshift_cluster.name }}-metadata-json" secret from the vault
   include_role:

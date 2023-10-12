@@ -34,9 +34,8 @@ If you clone the repository from the command line, you will need to enter a toke
 
 Go to a directory where you want to download the Git repo.
 ```
-git clone https://github.com/IBM/cloud-pak-deployer.git
+git clone --depth=1 https://github.com/IBM/cloud-pak-deployer.git
 ```
-You wil be prompted for user and password. Enter your GitHub user name and the token you generated above.
 
 ## Build the image
 First go to the directory where you cloned the GitHub repository, for example `~/cloud-pak-deployer`.
