@@ -57,38 +57,19 @@
     - ibm-cloud-databases-redis-operator-catalog
     - ibm-db2uoperator-catalog
 
-- name: Get MySQL Pod
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Pod
-    namespace: mysql
-    label_selectors:
-      - app=mysql
-  register: pods
-  retries: 40
-  delay: 15
+- name: Remove DB2 users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-user
+  vars:
+    common_db2_user: pm
 
-- name: Remove MySQL User
-  kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "CREATE USER 'pm'@'%' IDENTIFIED BY '{{ pm_universal_password }}';"
-  register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
-    command_status.stdout is search('.*Operation DROP USER failed.*'))
-  when: pods.resources | length != 0
-
-- name: Remove MySQL DB
-  kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "DROP DATABASE pm;"
-  register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
-    command_status.stdout is search('.*database doesn\'t exist.*'))
-  when: pods.resources | length != 0
+- name: Remove DB2 DBs
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-db2-db
+  vars:
+    common_db2_db_name: PM
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
