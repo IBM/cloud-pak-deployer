@@ -1,10 +1,23 @@
 # Using alternative repositories and registries
 
 !!! warning
-  In most scenarios you will not need this capability. 
+  In most scenarios you will not need this type of configuration. 
 
 Alternative repositories and registries are mainly geared towards pre-GA use of the Cloud Paks where CASE files are downloaded from internal repositories and staging container image registries need to be used as images have not been released yet.
 
+## Building the Cloud Pak Deployer image
+By default the Cloud Pak Deployer image is built on top of the `olm-utils` images in `icr.io`. If you're working with a pre-release of the Cloud Pak OLM utils image, you can override the setting as follows:
+
+```
+export CPD_OLM_UTILS_V2_IMAGE=cp.staging.acme.com:4.8.0
+```
+
+Subsequently, run the install commmand:
+```
+./cp-deploy.sh build
+```
+
+## Configuring the alternative repositories and registries
 When specifying a `cp_alt_repo` object in a YAML file, this is used for all Cloud Paks. The object triggers the following steps:
 * The following files are created in the `/tmp/work` directory in the container: `play_env.sh`, `resolvers.yaml` and `resolvers_auth`.
 * When downloading CASE files using the `ibm-pak` plug-in, the `play_env` sets the locations of the resolvers and authorization files.
@@ -44,7 +57,7 @@ cp_alt_repo:
 | Property       | Description                                                                            | Mandatory | Allowed values |
 | -------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
 | repo           | Repositories to be accessed and the Git token                                          | Yes       |                |
-} repo.token_secret | Secret in the vault that holds the Git login token                                  | Yes       |                |
+| repo.token_secret | Secret in the vault that holds the Git login token                                  | Yes       |                |
 | repo.cp_path   | Repository path where to find Cloud Pak CASE files                                     | Yes       |                |
 | repo.fs)path   | Repository path where to find the Foundational Services CASE files                     | Yes       |                |
 | repo.opencontent_path | Repository path where to find the Open Content CASE files                       | Yes       |                |
@@ -71,4 +84,10 @@ For the registry credentials, specify the user and password separated by a colon
 You can also set these tokens on the `cp-deploy.sh env apply` command line.
 ```
 ./cp-deploy.sh env apply -f -vs github-internal-repo=abc123def456 -vs cp-staging="cp-staging-user:cp-staging-password
+```
+
+## Running the deploy
+To run the deployer you can now use the standard process:
+```
+./cp-deploy.sh env apply -v
 ```
