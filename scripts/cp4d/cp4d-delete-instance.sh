@@ -94,6 +94,8 @@ if [ $? -eq 0 ];then
     log "Delete role binding if Cloud Pak for Data was connected to IAM"
     oc delete rolebinding -n ${CP4D_PROJECT} admin --ignore-not-found --wait=false
     oc patch -n ${CP4D_PROJECT} rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+    oc delete authentication.operator.ibm.com -n ${CP4D_PROJECT} example-authentication --ignore-not-found --wait=false
+    oc patch -n ${CP4D_PROJECT} authentication.operator.ibm.com/example-authentication --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
 
     #
     # Now the CP4D project should be empty and can be deleted, this may take a while (5-15 minutes)
