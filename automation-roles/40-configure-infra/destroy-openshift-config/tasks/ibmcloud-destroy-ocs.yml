@@ -21,61 +21,65 @@
       name: openshift-login
     vars:
       _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
-
-  - name: Check if OcsCluster custom resource exists
-    shell: |
-      oc get OcsCluster
-    failed_when: False
-    register: _ocs_cluster_exists
-
-  - name: Show OcsCluster objects
-    debug:
-      var: _ocs_cluster_exists
+      _p_require_successful_ocp_login: False
 
   - block:
-    - name: Delete OcsCluster custom resource
+    - name: Check if OcsCluster custom resource exists
       shell: |
-        oc delete OcsCluster --all --wait=false --ignore-not-found
-        oc delete ns openshift-storage --wait=false --ignore-not-found
+        oc get OcsCluster
+      failed_when: False
+      register: _ocs_cluster_exists
 
-    - name: Force deletion of OcsCluster
-      shell: |
-        oc -n openshift-storage patch OcsCluster ocs -p '{"metadata":{"finalizers":[]}}' --type=merge
-      failed_when: false
+    - name: Show OcsCluster objects
+      debug:
+        var: _ocs_cluster_exists
 
-    - name: Wait for OcsCluster to be deleted
-      pause:
-        seconds: 20
+    - block:
+      - name: Delete OcsCluster custom resource
+        shell: |
+          oc delete OcsCluster --all --wait=false --ignore-not-found
+          oc delete ns openshift-storage --wait=false --ignore-not-found
 
-    - name: Delete CRs in openshift-storage project
-      shell: |
-        oc -n openshift-storage patch persistentvolumeclaim/db-noobaa-db-0 -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch cephblockpool.ceph.rook.io/ocs-storagecluster-cephblockpool -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch cephcluster.ceph.rook.io/ocs-storagecluster-cephcluster -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch cephfilesystem.ceph.rook.io/ocs-storagecluster-cephfilesystem -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch cephobjectstore.ceph.rook.io/ocs-storagecluster-cephobjectstore -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch cephobjectstoreuser.ceph.rook.io/noobaa-ceph-objectstore-user -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch cephobjectstoreuser.ceph.rook.io/ocs-storagecluster-cephobjectstoreuser -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch noobaa/noobaa -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch backingstores.noobaa.io/noobaa-default-backing-store -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch bucketclasses.noobaa.io/noobaa-default-bucket-class -p '{"metadata":{"finalizers":[]}}' --type=merge
-        oc -n openshift-storage patch storagecluster.ocs.openshift.io/ocs-storagecluster -p '{"metadata":{"finalizers":[]}}' --type=merge
-      failed_when: false
+      - name: Force deletion of OcsCluster
+        shell: |
+          oc -n openshift-storage patch OcsCluster ocs -p '{"metadata":{"finalizers":[]}}' --type=merge
+        failed_when: false
 
-    - name: Wait for CRs to be deleted
-      pause:
-        seconds: 20
+      - name: Wait for OcsCluster to be deleted
+        pause:
+          seconds: 20
 
-    - name: Delete pods in openshift-storage project
-      shell: |
-        oc delete po -n openshift-storage --all --force --grace-period=0
+      - name: Delete CRs in openshift-storage project
+        shell: |
+          oc -n openshift-storage patch persistentvolumeclaim/db-noobaa-db-0 -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch cephblockpool.ceph.rook.io/ocs-storagecluster-cephblockpool -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch cephcluster.ceph.rook.io/ocs-storagecluster-cephcluster -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch cephfilesystem.ceph.rook.io/ocs-storagecluster-cephfilesystem -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch cephobjectstore.ceph.rook.io/ocs-storagecluster-cephobjectstore -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch cephobjectstoreuser.ceph.rook.io/noobaa-ceph-objectstore-user -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch cephobjectstoreuser.ceph.rook.io/ocs-storagecluster-cephobjectstoreuser -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch noobaa/noobaa -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch backingstores.noobaa.io/noobaa-default-backing-store -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch bucketclasses.noobaa.io/noobaa-default-bucket-class -p '{"metadata":{"finalizers":[]}}' --type=merge
+          oc -n openshift-storage patch storagecluster.ocs.openshift.io/ocs-storagecluster -p '{"metadata":{"finalizers":[]}}' --type=merge
+        failed_when: false
 
-    - name: Wait for pods to be deleted
-      pause:
-        seconds: 20
+      - name: Wait for CRs to be deleted
+        pause:
+          seconds: 20
 
-    - name: Delete all remaining PVs
-      shell:
-        oc delete pv --all --wait=false
+      - name: Delete pods in openshift-storage project
+        shell: |
+          oc delete po -n openshift-storage --all --force --grace-period=0
 
-    when: _ocs_cluster_exists.rc == 0
+      - name: Wait for pods to be deleted
+        pause:
+          seconds: 20
+
+      - name: Delete all remaining PVs
+        shell:
+          oc delete pv --all --wait=false
+
+      when: _ocs_cluster_exists.rc == 0
+    
+    when: _p_oc_login_successful

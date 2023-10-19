@@ -62,48 +62,9 @@
   loop_control:
     loop_var: _machine_set_name
 
-- name: Create openshift-storage OpenShift project
-  shell: |
-    if ! oc get ns openshift-storage > /dev/null 2>&1;then
-      oc create ns openshift-storage
-    fi
-
-- name: Get OpenShift version
-  shell: |
-    oc version -o yaml
-  register: _get_ocp_version
-
-- set_fact:
-    _azure_current_ocp_version: "{{ _get_ocp_version.stdout | regex_search('openshiftVersion: ([0-9]+.[0-9]+)', '\\1') | first }}"
-
-- debug:
-    var: _azure_current_ocp_version
-
-- name: Generate OCS operator file {{status_dir}}/openshift/ocs-operator.yaml
-  template:
-    src: "ocs-operator.j2"
-    dest: "{{status_dir}}/openshift/ocs-operator.yaml"
-
-- name: Create OCS operator
-  shell: |
-    oc apply -f {{status_dir}}/openshift/ocs-operator.yaml
-
-- name: Wait until OCS Operator CSV has status Succeeded
-  shell: |
-    oc get csv -n openshift-storage \
-     -l operators.coreos.com/ocs-operator.openshift-storage \
-     --no-headers \
-     -o custom-columns='name:metadata.name,phase:status.phase' | \
-     grep -i succeeded | wc -l
-  register: _ocs_csv_status
-  retries: 30
-  delay: 30
-  until: _ocs_csv_status.stdout == "1"
-  vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+- name: Install ODF operator
+  include_role: 
+    name: odf-operator
 
 - name: Check if StorageCluster ocs-storagecluster already exists
   command: |
