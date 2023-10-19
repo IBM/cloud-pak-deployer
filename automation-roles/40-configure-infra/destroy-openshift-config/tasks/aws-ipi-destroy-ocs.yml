@@ -14,6 +14,7 @@
       name: openshift-login
     vars:
       _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+      _p_require_successful_ocp_login: False
 
   - name: Delete namespaces which use OCS storage classes
     shell: |
@@ -26,8 +27,10 @@
       done
     failed_when: False
     register: _delete_ns_result
+    when: _p_oc_login_successful
 
   - name: Show output of namespace deletion
     debug:
       var: _delete_ns_result
+    when: _p_oc_login_successful
   when: _kubeadmin_password != ''

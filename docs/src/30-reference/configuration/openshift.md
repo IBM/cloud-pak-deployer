@@ -19,6 +19,8 @@ Every OpenShift cluster definition of a few mandatory properties that control wh
 
 Additionally, one can configure [Upstream DNS Servers](./dns.md) and [OpenShift logging](logging-auditing.md).
 
+The Multicloud Object Gateway (MCG) supports access to s3-compatible object storage via an underpinning block/file storage class, through the Noobaa operator. Some Cloud Pak for Data services such as Watson Assistant need object storage to run. MCG does not need to be installed if OpenShift Data Foundation (fka OCS) is also installed as the operator includes Noobaa.
+
 ### OpenShift on IBM Cloud (ROKS)
 VPC-based OpenShift cluster on IBM Cloud, using the Red Hat OpenShift Kubernetes Services (ROKS).
 ```
@@ -46,6 +48,10 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: managed-nfs-storage
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -68,7 +74,7 @@ openshift:
 #### Property explanation OpenShift clusters on IBM Cloud (ROKS)
 
 | Property                         | Description                                                                                                                                                                                      | Mandatory               | Allowed values                                                                   |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- | -------------------------------------------------------------------------------- |
+|----------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------|----------------------------------------------------------------------------------|
 | name                             | Name of the OpenShift cluster                                                                                                                                                                    | Yes                     |                                                                                  |
 | managed                          | Is the ROKS cluster managed by this deployer? See note below.                                                                                                                                    | No                      | True (default), False                                                            |
 | ocp_version                      | ROKS Kubernetes version. If you want to install `4.10`, specify `"4.10"`                                                                                                                         | Yes                     | >= 4.6                                                                           |
@@ -86,6 +92,10 @@ openshift:
 | infrastructure.secondary_storage | Reference to the storage flavour to be used as secondary storage, for example `"900gb.5iops-tier"`                                                                                               | No                      | Valid secondary storage flavour                                                  |
 | openshift_logging[]              | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                           | No                      |                                                                                  |
 | upstream_dns[]                   | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                                    | No                      |                                                                                  |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]              | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                                                        | Yes                     |                                                                                  |
 
 The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
@@ -96,7 +106,7 @@ The `managed` attribute indicates whether the ROKS cluster is managed by the Clo
 ##### openshift_storage[] - OpenShift storage definitions
 
 | Property            | Description                                                                                     | Mandatory                      | Allowed values        |
-| ------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ | --------------------- |
+|---------------------|-------------------------------------------------------------------------------------------------|--------------------------------|-----------------------|
 | openshift_storage[] | List of storage definitions to be defined on OpenShift                                          | Yes                            |                       |
 | storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                               | Yes                            |                       |
 | storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | nfs, ocs or pwx       |
@@ -138,6 +148,10 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: thin
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -153,7 +167,7 @@ openshift:
 #### Property explanation OpenShift clusters on vSphere
 
 | Property                                      | Description                                                                                                                                               | Mandatory | Allowed values           |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------ |
+|-----------------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------|
 | name                                          | Name of the OpenShift cluster                                                                                                                             | Yes       |                          |
 | domain_name                                   | Domain name of the cluster, this will also depict the route to the API and ingress endpoints                                                              | Yes       |                          |
 | ocp_version                                   | OpenShift version.  If you want to install `4.10`, specify `"4.10"`                                                                                       | Yes       | >= 4.6                   |
@@ -169,13 +183,17 @@ openshift:
 | infrastructure.openshift_cluster_network_cidr | Network CIDR used by the OpenShift pods. Normally you would not have to change this, unless other systems in the network are in the 10.128.0.0/14 subnet. | No        | CIDR                     |
 | openshift_logging[]                           | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                    | No        |                          |
 | upstream_dns[]                                | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                             | No        |                          |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]                           | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                 | Yes       |                          |
 
 
 ##### openshift_storage[] - OpenShift storage definitions
 
 | Property                  | Description                                                                                                                         | Mandatory                      | Allowed values        |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | --------------------- |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-----------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                              | Yes                            |                       |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                                   | Yes                            |                       |
 | storage_type              | Type of storage class to create in the OpenShift cluster                                                                            | Yes                            | nfs or ocs            |
@@ -215,6 +233,10 @@ openshift:
     - subnet-0ea5ac344c0fbadf5
     hosted_zone_id: Z08291873MCIC4TMIK4UP
     ami_id: ami-09249dd86b1933dd5
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: gp3-csi
   openshift_storage:
   - storage_name: ocs-storage
     storage_type: ocs
@@ -227,7 +249,7 @@ openshift:
 #### Property explanation OpenShift clusters on AWS (self-managed)
 
 | Property                                      | Description                                                                                                                                                                                                                                                 | Mandatory | Allowed values           |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------------------------ |
+|-----------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------|
 | name                                          | Name of the OpenShift cluster                                                                                                                                                                                                                               | Yes       |                          |
 | ocp_version                                   | OpenShift version version, specified as `x.y.z`                                                                                                                                                                                                             | Yes       | >= 4.6                   |
 | domain_name                                   | Base domain name of the cluster. Together with the `name`, this will be the domain of the OpenShift cluster.                                                                                                                                                | Yes       |                          |
@@ -251,6 +273,10 @@ openshift:
 | infrastructure.compute_iam_role               | If not standard, specify the IAM role that the OpenShift installer must use for the compute nodes during cluster creation                                                                                                                                   | No        |                          |
 | infrastructure.ami_id                         | ID of the AWS AMI to boot all images                                                                                                                                                                                                                        | No        |                          |
 | openshift_logging[]                           | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                                                                                      | No        |                          |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]                           | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                                                                                                                   | Yes       |                          |
 
 When deploying the OpenShift cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
@@ -268,14 +294,14 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 
 ##### openshift_storage[] - OpenShift storage definitions
 
-| Property                  | Description                                                                                                   | Mandatory                      | Allowed values   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------- |
-| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                        | Yes                            |                  |
-| storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                             | Yes                            |                  |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                      | Yes                            | ocs, aws-elastic |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                         | No                             |                  |
-| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                   | Yes if `storage_type` is `ocs` |                  |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                     | Yes if `storage_type` is `ocs` |                  |
+| Property                  | Description                                                                                                       | Mandatory                      | Allowed values   |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------|------------------|
+| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                            | Yes                            |                  |
+| storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                 | Yes                            |                  |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | ocs, aws-elastic |
+| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
+| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                       | Yes if `storage_type` is `ocs` |                  |
+| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `ocs` |                  |
 | ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
@@ -306,6 +332,10 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: gp3-csi
   openshift_storage:
   - storage_name: ocs-storage
     storage_type: ocs
@@ -317,8 +347,8 @@ openshift:
 
 #### Property explanation OpenShift clusters on AWS (ROSA)
 
-| Property                        | Description         | Mandatory | Allowed values           |
-| ------------------------------- | ------------------- | --------- | ------------------------ |
+| Property                        | Description                                                                                                                                  | Mandatory | Allowed values           |
+|---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|-----------|--------------------------|
 | name                            | Name of the OpenShift cluster                                                                                                                | Yes       |                          |
 | ocp_version                     | OpenShift version version, specified as `x.y.z`                                                                                              | Yes       | >= 4.6                   |
 | compute_flavour                 | Flavour of the AWS servers used for the compute nodes. `m5.4xlarge` is a large node with 16 cores and 64 GB of memory                        | Yes       |                          |
@@ -336,6 +366,10 @@ openshift:
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                | No        |                          |
 | openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                       | No        |                          |
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                   | No        |                          |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]             | List of storage definitions to be defined on OpenShift, see below for further explanation                                                    | Yes       |                          |
 
 When deploying the OpenShift cluster within an existing VPC, you must specify the `machine_cidr` that covers all subnets and the subnet IDs within the VPC. For example:
@@ -352,14 +386,14 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 
 ##### openshift_storage[] - OpenShift storage definitions
 
-| Property                  | Description                                                                                                   | Mandatory                      | Allowed values   |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------ | ---------------- |
-| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                        | Yes                            |                  |
-| storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                             | Yes                            |                  |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                      | Yes                            | ocs, aws-elastic |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                         | No                             |                  |
-| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                   | Yes if `storage_type` is `ocs` |                  |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                     | Yes if `storage_type` is `ocs` |                  |
+| Property                  | Description                                                                                                       | Mandatory                      | Allowed values   |
+|---------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------|------------------|
+| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                            | Yes                            |                  |
+| storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                 | Yes                            |                  |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | ocs, aws-elastic |
+| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
+| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                       | Yes if `storage_type` is `ocs` |                  |
+| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `ocs` |                  |
 | ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
@@ -390,7 +424,7 @@ openshift:
     You are not allowed to specify the OCP version of the ARO cluster. The latest current version is provisioned automatically instead no matter what value is specified in the "ocp_version" parameter. The "ocp_version" parameter is mandatory for compatibility with other layers of the provisioning, such as the OpenShift client. For instance, the value is used by the process which downloads and installs the `oc` client. Please, specify the value according to what OCP version will be provisioned.
 
 | Property             | Description                                                                               | Mandatory | Allowed values                      |
-| -------------------- | ----------------------------------------------------------------------------------------- | --------- | ----------------------------------- |
+|----------------------|-------------------------------------------------------------------------------------------|-----------|-------------------------------------|
 | name                 | Name of the OpenShift cluster                                                             | Yes       |                                     |
 | azure_name           | Name of the `azure` element in the configuration                                          | Yes       |                                     |
 | domain_name          | Domain mame of the cluster, if you want to override the name generated by Azure           | No        |                                     |
@@ -402,12 +436,16 @@ openshift:
 | network.service_cidr | CIDR of service network                                                                   | Yes       | Must be a minimum of /18 or larger. |
 | openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)    | No        |                                     |
 | upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                             | No        |                                     |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]  | List of storage definitions to be defined on OpenShift, see below for further explanation | Yes       |                                     |
 
 ##### openshift_storage[] - OpenShift storage definitions
 
 | Property                  | Description                                                                                                                                  | Mandatory                      | Allowed values    |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ | ----------------- |
+|---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                                       | Yes                            |                   |
 | storage_name              | Name of the storage                                                                                                                          | Yes                            |                   |
 | storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `ocs` or `nfs`    |
@@ -437,27 +475,35 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: managed-nfs-storage
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
-    # ocp_storage_class_file: nfs-client
-    # ocp_storage_class_block: nfs-client
+    # ocp_storage_class_file: managed-nfs-storage
+    # ocp_storage_class_block: managed-nfs-storage
 ```
 
 #### Property explanation for existing OpenShift clusters
 
-| Property                              | Description                                                                                                     | Mandatory        | Allowed values                  |
-| ------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------- |
-| name                                  | Name of the OpenShift cluster                                                                                   | Yes              |                                 |
-| ocp_version                           | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes              | >= 4.6                          |
-| cluster_name                          | Name of the cluster (part of the FQDN)                                                                          | Yes              |                                 |
-| domain_name                           | Domain name of the cluster (part of the FQDN)                                                                   | Yes              |                                 |
-| cloud_native_toolkit                  | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                  | No               | True, False (default)           |
-| oadp                                  | Must the OpenShift Advanced Data Protection operator be installed                                               | No               | True, False (default)           |
+| Property             | Description                                                                                                     | Mandatory | Allowed values        |
+|----------------------|-----------------------------------------------------------------------------------------------------------------|-----------|-----------------------|
+| name                 | Name of the OpenShift cluster                                                                                   | Yes       |                       |
+| ocp_version          | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes       | >= 4.6                |
+| cluster_name         | Name of the cluster (part of the FQDN)                                                                          | Yes       |                       |
+| domain_name          | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                       |
+| cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                  | No        | True, False (default) |
+| oadp                 | Must the OpenShift Advanced Data Protection operator be installed                                               | No        | True, False (default) |
 | infrastructure.type                   | Infrastructure OpenShfit is deployed on. See below for additional explanation                                   | detect (default) |
 | infrastructure.processor_architecture | Architecture of the processor that the OpenShift cluster is deployed on                                         | No               | amd64 (default), ppc64le, s390x |
 | openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                          | No               |                                 |
 | upstream_dns[]                        | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                   | No               |                                 |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]                   | List of storage definitions to be defined on OpenShift, see below for further explanation                       | Yes              |                                 |
 
 ##### infastructure.type - Type of infrastructure
@@ -475,7 +521,7 @@ The following values are allowed for `infrastructure.type`:
 ##### openshift_storage[] - OpenShift storage definitions
 
 | Property                | Description                                                                                 | Mandatory                         | Allowed values                      |
-| ----------------------- | ------------------------------------------------------------------------------------------- | --------------------------------- | ----------------------------------- |
+|-------------------------|---------------------------------------------------------------------------------------------|-----------------------------------|-------------------------------------|
 | storage_name            | Name of the storage definition, to be referenced by the Cloud Pak                           | Yes                               |                                     |
 | storage_type            | Type of storage class to use in the OpenShift cluster                                       | Yes                               | nfs, ocs, aws-elastic, auto, custom |
 | ocp_storage_class_file  | OpenShift storage class to use for file storage if different from default for storage_type  | Yes if `storage_type` is `custom` |                                     |
@@ -496,7 +542,7 @@ The table below indicates which storage classes are supported by the Cloud Pak D
     The ability to provision or use certain storage types does not imply support by the Cloud Paks or by OpenShift itself. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
 
 | Cloud Provider | NFS Storage | OCS/ODF Storage | Portworx | Elastic | Custom (2) |
-| -------------- | ----------- | --------------- | -------- | ------- | ---------- |
+|----------------|-------------|-----------------|----------|---------|------------|
 | ibm-cloud      | Yes         | Yes             | Yes      | No      | Yes        |
 | vsphere        | Yes (1)     | Yes             | No       | No      | Yes        |
 | aws            | No          | Yes             | No       | Yes (3) | Yes        |

@@ -1,7 +1,8 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
 Contains CP4BA version 23.0.1 IF003.  
-Currently RPA and IPM are not available due to CPFS incompatibility.
+Contains IPM version 1.14.2.
+Currently RPA is not available due to CPFS incompatibility.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -80,7 +81,7 @@ Contains extra software which makes working with the platform even easier.
 - Kibana - Web UI elastic search dashboard tool automatically connected to ES instance deployed with CP4BA.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
 - Mongo Express - Web UI for Mongo DB databases for CP4BA and Process Mining to easier troubleshoot DB.
-- CloudBeaver - Web UI for Postgresql, MSSQL and MySQL databases making it easier to admin and troubleshoot the DBs.
+- CloudBeaver - Web UI for Postgresql, MSSQL and DB2 databases making it easier to admin and troubleshoot the DBs.
 
 ### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
 
@@ -121,7 +122,7 @@ Contains prerequisites for the whole platform.
 - OpenLDAP - Directory solution for users and groups definition.
 - MSSQL server - Database storage for RPA server.
 - MongoDB - Database storage for ADS and Process Mining.
-- MySQL - Database storage for Task Mining.
+- DB2 - Database storage for Task Mining.
 
 ## Environments used for installation 💻
 
@@ -152,7 +153,6 @@ For your convenience the following post-deployment setup tasks have been automat
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
-- IPM - Task mining master key set. https://www.ibm.com/docs/en/process-mining/1.13.1?topic=manual-how-integrate-process-mining-task-mining
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 

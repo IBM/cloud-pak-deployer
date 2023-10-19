@@ -8,6 +8,12 @@
   vars:
     query: >-
       [?name=='{{ _previous_cp4d_cluster.openshift_cluster_name }}']
+  when: (_previous_cp4d_cluster.openshift_cluster_name | default('')) != ''
+
+# Default to current OpenShift cluster if previous OpenShift cluster not found
+- set_fact:
+    _previous_cp4d_openshift_cluster: "{{ all_config.openshift | first | default({}) }}"
+  when: (_previous_cp4d_cluster.openshift_cluster_name | default('')) == ''
 
 - name: Found OpenShift in current config
   debug:
