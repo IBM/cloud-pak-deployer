@@ -1,0 +1,43 @@
+---
+- set_fact:
+    _cp4d_user: "{{ _p_cp4d_user | default('admin') }}"
+
+- name: Authenticate to Cloud Pak for Data API endpoint https://{{ _current_cp4d_url.stdout }}/icp4d-api/v1/authorize
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/icp4d-api/v1/authorize'
+    method: POST
+    body_format: json
+    body: '{"username":"{{ _cp4d_user }}","password":"{{ _p_cp4d_password }}"}'
+    force: yes
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_login_non_iam_result
+  retries: 3
+  delay: 5
+  failed_when: False
+  until: _cp4d_login_non_iam_result.status == 200
+
+- set_fact:
+    _cp4d_login_successful: True
+  when: 
+  - _cp4d_login_non_iam_result.status == 200
+
+- set_fact:
+    _cp4d_login_successful: False
+  when: 
+  - _cp4d_login_non_iam_result.status != 200
+
+- fail:
+    msg: |
+      "Failed to login to Cloud Pak for Data instance {{ _p_cp4d_project }}."
+      "{{ _cp4d_login_non_iam_result }}"
+  when:
+  - not _cp4d_login_successful
+  - (_p_fail_on_error | default(True))
+
+- set_fact:
+    _cp4d_login: "{{ _cp4d_login_non_iam_result.json | default({}) }}"
+
+- set_fact:
+    _cp4d_bearer_token: "{{ _cp4d_login.token }}"
