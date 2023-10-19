@@ -40,7 +40,7 @@
       return_content: yes
       validate_certs: no
       status_code: 200
-    register: _databases_details_result
+    register: _databases_details_result_v1
     when: current_cp4d_cluster.cp4d_version < '4.7.0'
 
   - name: Get CP4D Database specifications
@@ -53,7 +53,15 @@
       return_content: yes
       validate_certs: no
       status_code: 200
-    register: _databases_details_result
+    register: _databases_details_result_v2
+    when: current_cp4d_cluster.cp4d_version >= '4.7.0'
+
+  - set_fact:
+      _databases_details_result: "{{ _databases_details_result_v1 }}"
+    when: current_cp4d_cluster.cp4d_version < '4.7.0'
+
+  - set_fact:
+      _databases_details_result: "{{ _databases_details_result_v2 }}"
     when: current_cp4d_cluster.cp4d_version >= '4.7.0'
 
   - debug:
