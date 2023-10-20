@@ -16,12 +16,6 @@
 - set_fact:
     cp4d_url: "{{ _current_cp4d_url }}"
 
-- name: Get route to identity provider when using Foundational Services IAM
-  shell: |
-    oc --namespace {{ _p_cp4d_project }} get route platform-id-provider \
-      -o jsonpath="{.spec.host}{.spec.path}"
-  register: _current_idp_url
-
 - include_tasks: cp4d-login-non-iam.yml
   when: not _iam_integration
 
