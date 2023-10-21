@@ -4,7 +4,7 @@ On Amazon Web Services (AWS), OpenShift can be set up in various ways, managed b
 
 There are 5 main steps to run the deploye for AWS (ROSA):
 1. [Configure deployer](#1-configure-deployer)
-2. [Prepare the AWS cloud environment](#2-prepare-the-aws-cloud-enironment)
+2. [Prepare the AWS cloud environment](#2-prepare-the-aws-cloud-environment)
 3. [Obtain Cloud Pak entitlement key](#3-acquire-an-ibm-cloud-pak-entitlement-key)
 4. [Set environment variables](#4-set-environment-variables-for-aws-rosa)
 5. [Run the deployer](#5-run-the-deployer)
@@ -47,7 +47,7 @@ If the deployer configuration is kept on GitHub, follow the instructions in [Git
 For special configuration with defaults and dynamic variables, refer to [Advanced configuration](../../50-advanced/advanced-configuration.md#using-dynamic-variables-extra-variables).
 
 
-# 2. Prepare the AWS Cloud enironment
+# 2. Prepare the AWS Cloud environment
 
 ## Enable ROSA on AWS
 
