@@ -99,12 +99,6 @@ export AWS_SESSION_TOKEN=IQxxxxxxxxxxxxxbfQ
 
 If the `openshift` configuration has the `infrastructure.credentials_mode` set to `Manual`, Cloud Pak Deployer will automatically configure and run the Cloud Credential Operator utility.
 
-## Acquire an OpenShift pull secret
-
-To install OpenShift you need an OpenShift pull secret which holds your entitlement.
-
-- Navigate to https://console.redhat.com/openshift/install/pull-secret and download the pull secret into file `/tmp/ocp_pullsecret.json`
-
 # 3. Acquire an IBM Cloud Pak Entitlement Key
 
 If you want to pull the Cloud Pak images from the entitled registry (i.e. an online install), or if you want to mirror the images to your private registry, you need to download the entitlement key. You can skip this step if you're installing from a private registry and all Cloud Pak images have already been downloaded to the private registry.
@@ -115,6 +109,12 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 
 !!! warning
     As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
+
+## Acquire an OpenShift pull secret
+
+To install OpenShift you need an OpenShift pull secret which holds your entitlement.
+
+- Navigate to https://console.redhat.com/openshift/install/pull-secret and download the pull secret into file `/tmp/ocp_pullsecret.json`
 
 ## Optional: Locate or generate a public SSH Key
 To obtain access to the OpenShift nodes post-installation, you will need to specify the public SSH key of your server; typically this is `~/.ssh/id_rsa.pub`, where `~` is the home directory of your user. If you don't have an SSH key-pair yet, you can generate one using the steps documented here: https://docs.openshift.com/container-platform/4.12/installing/installing_aws/installing-aws-customizations.html#ssh-agent-using_installing-aws-customizations. Alternatively, deployer can generate SSH key-pair automatically if credential `ocp-ssh-pub-key` is not in the vault.
