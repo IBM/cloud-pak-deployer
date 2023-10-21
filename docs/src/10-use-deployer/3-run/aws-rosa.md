@@ -2,7 +2,7 @@
 
 On Amazon Web Services (AWS), OpenShift can be set up in various ways, managed by Red Hat (ROSA) or self-managed. The steps below are applicable to the ROSA (Red Hat OpenShift on AWS) installation. More information about ROSA can be found here: https://aws.amazon.com/rosa/
 
-There are 5 main steps to run the deploye for AWS (ROSA):
+There are 5 main steps to run the deployer for AWS (ROSA):
 1. [Configure deployer](#1-configure-deployer)
 2. [Prepare the AWS cloud environment](#2-prepare-the-aws-cloud-environment)
 3. [Obtain Cloud Pak entitlement key](#3-acquire-an-ibm-cloud-pak-entitlement-key)
