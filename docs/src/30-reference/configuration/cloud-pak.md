@@ -15,12 +15,11 @@ Defines the Cloud Pak for Data instances to be configured on the OpenShift clust
 cp4d:
 - project: cpd
   openshift_cluster_name: sample
-  cp4d_version: 4.0.9
-  use_case_files: False
+  cp4d_version: 4.7.3
   sequential_install: False
+  use_fs_iam: False
   change_node_settings: True
   accept_licenses: False
-  image_registry_name: cpd404
   openshift_storage_name: nfs-storage
   cp4d_entitlement: cpd-enterprise
   cp4d_production_license: True
@@ -36,8 +35,8 @@ cp4d:
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
 | openshift_cluster_name | Name of the OpenShift cluster                  | Yes, inferred from openshift       | Existing `openshift` cluster |
 | cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges that do not specify a version | Yes | 4.x.x |
-| use_case_files | This property indicates whether or not the case files will be used to install the catalog sources in case of an online install from the entitled registry. If `true`, operator case files are downloaded from the case repository to define the catalog sources. If a private registry has been specified (property `image_registry_name`), it is assumed that case file are used to install the catalog sources.                | No       | True, False (default) |
 | sequential_install | If set to `True` the deployer will run the **OLM utils** playbooks to install catalog sources, subscriptions and CRs. If set to `False`, deployer will use OLM utils to generate the scripts and then run them, which will cause the catalog sources, subscriptions and CRs to be created immediately and install in parallel | No | True (default), False |
+| use_fs_iam | If set to `True` the deployer will enable Foundational Services IAM for authentication | No | False (default), True |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
 | cp4d_entitlement | Set to `cpd-enterprise` or `cpd-standard`, dependent on the deployed license | No | cpd-enterprise (default), cpd-standard |
