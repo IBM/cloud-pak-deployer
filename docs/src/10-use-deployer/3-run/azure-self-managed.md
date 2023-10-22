@@ -72,7 +72,7 @@ export AZURE_SP=pluto-01-sp
 
 ### Store Service Principal credentials
 
-You must run the OpenShift installation using an Azure Service Principal with sufficient permissions. The Azure account administrator will share the SP credentials as a JSON file.
+You must run the OpenShift installation using an Azure Service Principal with sufficient permissions. The Azure account administrator will share the SP credentials as a JSON file. If you have subscription-level access you can also create the Service Principal yourself. See steps in [Create Azure service principal](./azure-service-principal.md).
 
 Example output in credentials file:
 ```output
@@ -85,8 +85,6 @@ Example output in credentials file:
 ```
 
 Store this file as `/tmp/${AZURE_SP}-credentials.json`.
-
-If you have subscription-level access you can also create the Service Principal yourself. See steps in [Create Azure service principal](./azure-service-principal.md).
 
 ### Login as Service Principal
 
