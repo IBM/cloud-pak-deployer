@@ -1,13 +1,15 @@
 # Container image including olm-utils
-# ARG CPD_OLM_UTILS_IMAGE
-FROM registry.access.redhat.com/ubi8/ubi
-# FROM ${CPD_OLM_UTILS_IMAGE}
+ARG CPD_OLM_UTILS_V1_IMAGE
+ARG CPD_OLM_UTILS_V2_IMAGE
 
-FROM icr.io/cpopen/cpd/olm-utils:latest as olm-utils-v1
+FROM registry.access.redhat.com/ubi8/ubi
+
+FROM ${CPD_OLM_UTILS_V1_IMAGE} as olm-utils-v1
+
 RUN cd /opt/ansible && \
     tar czf /tmp/opt-ansible-v1.tar.gz *
 
-FROM icr.io/cpopen/cpd/olm-utils-v2:latest
+FROM ${CPD_OLM_UTILS_V2_IMAGE}
 
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
