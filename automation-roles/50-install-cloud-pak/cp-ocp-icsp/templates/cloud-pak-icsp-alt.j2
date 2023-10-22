@@ -1,0 +1,13 @@
+apiVersion: operator.openshift.io/v1alpha1
+kind: ImageContentSourcePolicy
+metadata:
+  name: {{ icsp_name }}
+spec:
+  repositoryDigestMirrors:
+{% for registry_mirror in all_config.cp_alt_repo.registry_mirrors %}
+  - source: {{ registry_mirror.source}}
+    mirrors:
+{% for mirror in registry_mirror.mirrors %}
+    - {{ mirror }}
+{% endfor %}
+{% endfor %}

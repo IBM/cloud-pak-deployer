@@ -16,11 +16,7 @@ metadata:
   name: odf-operator
   namespace: openshift-storage
 spec:
-{% if cloud_platform == 'azure' %}
-  channel: stable-{{ current_openshift_storage.ocs_version | default(_azure_current_ocp_version) }} 
-{% else %}
-  channel: stable-{{ current_openshift_storage.ocs_version | default(current_openshift_cluster.ocp_version | string | regex_search('([0-9].[0-9]+)','\\1') | first) }}
-{% endif %}
+  channel: {{ _odf_channel }}
   installPlanApproval: Automatic
   name: odf-operator
   source: redhat-operators

@@ -6,8 +6,6 @@ from packaging import version
 # openshift:
 # - name: {{ env_id }}
 #   ocp_version: 4.8
-#   cluster_name: {{ env_id }}
-#   domain_name: example.com
 #   cloud_native_toolkit: False
 #   openshift_storage:
 #   - storage_name: nfs-storage
@@ -21,8 +19,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     g('name').isRequired()
     g('ocp_version').isRequired()    
-    g('cluster_name').isRequired()
-    g('domain_name').isRequired()
     g('openshift_storage').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
@@ -61,6 +57,19 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 elif len(dns['dns_servers']) < 1:
                     g.appendError(msg='At least 1 dns_servers element must be specified for all upstream_dns configurations')
 
+        if 'mcg' in ge:
+            mcg=ge['mcg']
+            if 'install' not in mcg:
+                g.appendError(msg='install property must be specified in openshift.mcg')
+            elif type(mcg['install']) != bool:
+                g.appendError(msg='Value mcg.install must be True or False')
+            if 'storage_type' not in mcg:
+                g.appendError(msg='storage_type property must be specified in openshift.mcg')
+            elif mcg['storage_type'] not in ['storage-class']:
+                g.appendError(msg='Value mcg.storage_type must be storage-class')
+            if 'storage_class' not in mcg:
+                g.appendError(msg='storage_class property must be specified in openshift.mcg')
+                
         # Check openshift_storage atttributes
         if len(ge['openshift_storage']) < 1:
             g.appendError(msg='At least one openshift_storage element must be specified.')
