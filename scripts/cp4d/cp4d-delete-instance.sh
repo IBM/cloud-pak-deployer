@@ -36,13 +36,10 @@ delete_operator_ns() {
 
         log "Deleting ${CP4D_OPERATORS} project"
         oc delete ns ${CP4D_OPERATORS} --ignore-not-found --wait=false
-        opreq_deleted=true
-        while [ opreq_deleted ];do
-            opreq_deleted=false
+        while [ $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers 2>/dev/null | wc -l) -ne 0  ];do
             for opreq in $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers | awk '{print $1}');do
                 oc delete operandrequest -n ${CP4D_OPERATORS} ${opreq} --ignore-not-found --wait=false
                 oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
-                opreq_deleted=true
             done
         done
         wait_ns_deleted ${CP4D_OPERATORS}
@@ -218,7 +215,7 @@ oc delete cm -n kube-public common-service-maps --ignore-not-found
 log "Deleting IBM catalog sources"
 oc delete catsrc -n openshift-marketplace \
     $(oc get catsrc -n openshift-marketplace \
-    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found
+    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found 2>/dev/null
 
 #
 # Delete IBM CRDs that don't have an instance
