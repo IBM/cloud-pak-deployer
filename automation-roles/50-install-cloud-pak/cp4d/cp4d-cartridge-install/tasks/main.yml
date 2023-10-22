@@ -10,6 +10,15 @@
     state: present
     create: True
 
+- name: Insert cpd_platform options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
+  blockinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    marker: "# {mark} CPD Platform options #"
+    block: |2
+        cpd_platform:
+          cloudpakfordata: true
+          iamIntegration: {{ _p_current_cp4d_cluster.use_fs_iam | default(False) | bool }}
+
 - name: Run pre-processing scripts
   include_tasks: cp4d-install-cr-pre-processing.yml
   loop: "{{ _cartridges_to_install | default([]) }}"
