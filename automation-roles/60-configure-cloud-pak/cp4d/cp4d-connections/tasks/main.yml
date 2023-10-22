@@ -9,7 +9,7 @@
   register: _cp4d_connection_temp_dir
 
 - name: Get the Catalog 'Platform assets catalog'
-  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/catalogs?entity.name={{ _cp4d_all_assets_catalog_name }}'"
+  shell: "curl -s -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/catalogs?entity.name={{ _cp4d_all_assets_catalog_name }}'"
   register: _cp4d_get_catalog_result
 
 - set_fact:
@@ -25,7 +25,7 @@
   when: "not _cp4d_catalog|length == 1"
 
 - name: Get the available connection types
-  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/datasource_types'"
+  shell: "curl -s -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/datasource_types'"
   register: _cp4d_datasource_types_result
 
 - set_fact:

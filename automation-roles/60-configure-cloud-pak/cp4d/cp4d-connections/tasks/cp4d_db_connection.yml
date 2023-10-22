@@ -4,7 +4,7 @@
     msg: "{{ _cp4d_connection }}"
 
 - name: Validate if the connection to the'{{ _cp4d_connection.name }}' is available
-  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog[0].metadata.guid }}&entity.flags=personal_credentials&entity.name={{ _cp4d_connection.name }}'"
+  shell: "curl -s -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog[0].metadata.guid }}&entity.flags=personal_credentials&entity.name={{ _cp4d_connection.name }}'"
   register: _cp4d_connection_existing_result
 
 - set_fact:
@@ -76,7 +76,7 @@
         dest: "{{ _cp4d_connection_temp_dir.path }}/db_connection.json"
 
     - name: Create Datasource connection {{ _cp4d_database_name }}
-      shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog[0].metadata.guid }} -T {{ _cp4d_connection_temp_dir.path }}/db_connection.json"
+      shell: "curl -v -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog[0].metadata.guid }} -T {{ _cp4d_connection_temp_dir.path }}/db_connection.json"
       register: _create_db_connection_result       
 
     - set_fact:
@@ -124,7 +124,7 @@
             msg: "Update {{ _cp4d_connection.name }} resource"
 
         - name: Delete existing {{ _cp4d_database_name }}
-          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X DELETE https://{{ cp4d_url.stdout }}/v2/connections/{{ _connection_asset_id }}?catalog_id={{ _cp4d_catalog[0].metadata.guid }}"
+          shell: "curl -v -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X DELETE https://{{ cp4d_url.stdout }}/v2/connections/{{ _connection_asset_id }}?catalog_id={{ _cp4d_catalog[0].metadata.guid }}"
           register: delete_db_connection_result       
 
         - name: Create Datasource connection json file
@@ -133,7 +133,7 @@
             dest: "{{ _cp4d_connection_temp_dir.path }}/db_connection.json"
 
         - name: Create Datasource connection {{ _cp4d_database_name }}
-          shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog[0].metadata.guid }} -T {{ _cp4d_connection_temp_dir.path }}/db_connection.json"
+          shell: "curl -v -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog[0].metadata.guid }} -T {{ _cp4d_connection_temp_dir.path }}/db_connection.json"
           register: _create_db_connection_result       
 
         - set_fact:

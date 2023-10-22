@@ -1,0 +1,51 @@
+---
+- set_fact:
+    _cp_alt_repo: "{{ all_config.cp_alt_repo }}"
+
+- name: Get CASE repository token from vault secret {{ _cp_alt_repo.case_repo_token_secret }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cp_alt_repo.repo.token_secret }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _case_repo_token
+
+- fail:
+    msg: "Secret {{ _cp_alt_repo.repo.token_secret }} not found in vault; it must contain the alternative Git repository's login token"
+  when: _case_repo_token==""
+
+- name: Strip off https from the repository URLs
+  set_fact:
+    _case_repo_path_cp: "{{ (_cp_alt_repo.repo.cp_path | urlsplit('hostname')) + (_cp_alt_repo.repo.cp_path | urlsplit('path')) }}"
+    _case_repo_path_fs: "{{ (_cp_alt_repo.repo.fs_path | urlsplit('hostname')) + (_cp_alt_repo.repo.fs_path | urlsplit('path')) }}"
+    _case_repo_path_opencontent: "{{ (_cp_alt_repo.repo.opencontent_path | urlsplit('hostname')) + (_cp_alt_repo.repo.opencontent_path | urlsplit('path')) }}"
+
+- name: Ensure {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Generate play_env.sh
+  template:
+    src: play_env.j2
+    dest: "{{ status_dir }}/cloud-paks/play_env.sh"
+
+- name: Generate resolvers.yaml
+  template:
+    src: resolvers.j2
+    dest: "{{ status_dir }}/cloud-paks/resolvers.yaml"
+
+- name: Generate resolvers_auth.yaml
+  template:
+    src: resolvers_auth.j2
+    dest: "{{ status_dir }}/cloud-paks/resolvers_auth.yaml"
+
+- name: Copy casectl files to /tmp/work
+  copy:
+    src: "{{ item }}"
+    dest: /tmp/work/
+    remote_src: true
+  loop:
+    - "{{ status_dir }}/cloud-paks/play_env.sh"
+    - "{{ status_dir }}/cloud-paks/resolvers.yaml"
+    - "{{ status_dir }}/cloud-paks/resolvers_auth.yaml"

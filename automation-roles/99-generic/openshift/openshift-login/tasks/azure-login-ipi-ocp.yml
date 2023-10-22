@@ -18,11 +18,22 @@
     oc login api.{{ _openshift_config.name }}.{{ _openshift_config.domain_name }}:6443 \
       -u kubeadmin -p {{ _kubeadmin_password }} \
       --insecure-skip-tls-verify=true
-  register: oc_login_result
-  retries: 60
-  delay: 10
-  until: oc_login_result.rc==0
+  register: _oc_login_result
+  failed_when: False
+  retries: "{{ _ocp_login_retries }}"
+  delay: "{{ _ocp_login_delay }}"
+  until: _oc_login_result.rc==0
 
 - name: Show OpenShift login result
   debug:
-    msg: "{{ oc_login_result }}"
+    msg: "{{_oc_login_result }}"
+
+- fail:
+    msg: "OpenShift login to cluster {{ _p_openshift_cluster_name }} failed, details: {{ _oc_login_result }}"
+  when:
+  - _oc_login_result.rc != 0
+  - _p_require_successful_ocp_login | default(True)
+
+- set_fact:
+    _p_oc_login_successful: False
+  when: _oc_login_result.rc != 0

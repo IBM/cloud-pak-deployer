@@ -616,7 +616,7 @@ if ! $INSIDE_CONTAINER;then
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
-    echo "Building container image for Cloud Pak Deployer"
+    echo "Building Cloud Pak Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG}"
     # Store version info into image
     mkdir -p ${SCRIPT_DIR}/.version-info
     DEPLOYER_VERSION_INFO=$(git log -n1 --pretty='format:%h %cd |%s' --date=format:'%Y-%m-%dT%H:%M:%S' 2> /dev/null)
@@ -624,8 +624,22 @@ if ! $INSIDE_CONTAINER;then
     echo "COMMIT_TIMESTAMP=$(echo $DEPLOYER_VERSION_INFO  | awk '{print $2}')" >> ${SCRIPT_DIR}/.version-info/version-info.sh
     echo "COMMIT_MESSAGE=\"$(echo $DEPLOYER_VERSION_INFO  | cut -d'|' -f2)\"" >> ${SCRIPT_DIR}/.version-info/version-info.sh
     chmod +x ${SCRIPT_DIR}/.version-info/version-info.sh
+    # Show version info
+    cat ${SCRIPT_DIR}/.version-info/version-info.sh
+    # If images have not been overridden, set the variables here
+    if [ -z $CPD_OLM_UTILS_V1_IMAGE ];then
+      export CPD_OLM_UTILS_V1_IMAGE=icr.io/cpopen/cpd/olm-utils:latest
+    fi
+    if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
+      export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
+    fi
     # Build the image
-    ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} --pull -f ${SCRIPT_DIR}/Dockerfile ${SCRIPT_DIR}
+    ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
+      --pull \
+      -f ${SCRIPT_DIR}/Dockerfile \
+      --build-arg CPD_OLM_UTILS_V1_IMAGE=${CPD_OLM_UTILS_V1_IMAGE} \
+      --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
+      ${SCRIPT_DIR}
     exit $?
   fi
 fi

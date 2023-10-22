@@ -585,6 +585,9 @@ cp4ba:
                 gpu_enabled: false
                 nodelabel_key: nvidia.com/gpu.present
                 nodelabel_value: "true"
+              # [Tech Preview] Deploy OCR Engine 2 (IOCR) for ADP - https://www.ibm.com/support/pages/extraction-language-technology-preview-feature-available-automation-document-processing-2301
+              ocrextraction:
+                use_iocr: none # Allowed values: "none" to uninstall, "all" or "auto" to install (these are aliases)
       workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
         enabled: true
         optional_components:
