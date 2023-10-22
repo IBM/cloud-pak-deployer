@@ -1,0 +1,26 @@
+---
+- name: Preparing pull secret alternative registry {{ _alt_registry.registry }}
+  debug:
+    var: _alt_registry
+
+- set_fact:
+    _registry_url_without_path: "{{ _alt_registry.registry.split('/') | first }}"
+
+- name: Get alternative registry credentials vault secret {{ _alt_registry.pull_secret }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _alt_registry.pull_secret }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _alt_registry_pull_secret
+
+- fail:
+    msg: "Secret {{ _alt_registry.pull_secret }} not found in vault; it must contain the alternative registry's login credentials"
+  when: _alt_registry_pull_secret==""
+
+- name: Set the global pull secret for alternative registry {{ _registry_url_without_path }}
+  include_role:
+    name: cp-ocp-global-pull-secret
+  vars:
+    _p_registry_url: "{{ _registry_url_without_path }}" 
+    _p_registry_pull_secret: "{{ _alt_registry_pull_secret }}"
