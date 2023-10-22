@@ -16,7 +16,7 @@
     method: GET
     headers:
       Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
     return_content: yes
     validate_certs: no
     status_code: 200
@@ -43,7 +43,7 @@
         method: GET
         headers:
           Content-Type: application/json
-          Authorization: "Bearer {{ cp4d_login.token }}"
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
         return_content: yes
         validate_certs: no
         status_code: 200
@@ -67,7 +67,7 @@
         method: GET
         headers:
           Content-Type: application/json
-          Authorization: "Bearer {{ cp4d_login.token }}"
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
         return_content: yes
         validate_certs: no
         status_code: 200
@@ -93,7 +93,7 @@
         method: GET
         headers:
           Content-Type: application/json
-          Authorization: "Bearer {{ cp4d_login.token }}"
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
         return_content: yes
         validate_certs: no
         status_code: 200
@@ -117,7 +117,7 @@
             method: GET
             headers:
               Content-Type: application/json
-              Authorization: "Bearer {{ cp4d_login.token }}"
+              Authorization: "Bearer {{ _cp4d_bearer_token }}"
             return_content: yes
             validate_certs: no
             status_code: 200
@@ -140,7 +140,7 @@
         - name: Create Datasource connection {{ _cp4d_platform_connection_name }}
           shell: |
             curl -v -k \
-              -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' \
+              -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' \
               -X POST \
               https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }} \
               -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cp4d_platform_connection_name }}-connection.json
@@ -153,7 +153,7 @@
         method: GET
         headers:
           Content-Type: application/json
-          Authorization: "Bearer {{ cp4d_login.token }}"
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
         return_content: yes
         validate_certs: no
         status_code: 200
@@ -180,7 +180,7 @@
         method: PUT
         url: "https://{{ cp4d_url.stdout }}/v2/connections/{{ _cp4d_cognos_db2_platform_connection_id }}/actions/test?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}"
         headers:
-          Authorization: "Bearer {{ cp4d_login.token }}"
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
           Content-Type: "application/json"
           Accept: "application/json"
         validate_certs: no
@@ -220,7 +220,7 @@
             method: GET
             headers:
               Content-Type: application/json
-              Authorization: "Bearer {{ cp4d_login.token }}"
+              Authorization: "Bearer {{ _cp4d_bearer_token }}"
             return_content: yes
             validate_certs: no
             status_code: 200
@@ -246,7 +246,7 @@
             - name: Create Cognos smtp secret
               shell: |
                 curl -v -k \
-                  -H 'Authorization: Bearer {{ cp4d_login.token }}' \
+                  -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
                   -H 'Content-Type: application/json' \
                   -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets' \
                   -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_smtp_secret.json
@@ -272,7 +272,7 @@
     - name: Create Cognos instance
       shell: |
         curl -v -k \
-          -H 'Authorization: Bearer {{ cp4d_login.token }}' \
+          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
           -H 'Content-Type: application/json' \
           -X POST \
           'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \

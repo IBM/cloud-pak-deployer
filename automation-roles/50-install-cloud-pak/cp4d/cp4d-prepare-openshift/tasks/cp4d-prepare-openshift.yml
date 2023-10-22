@@ -4,12 +4,19 @@
     name: cp-ocp-mco-pause
 
 - include_tasks: cp4d-prepare-entitled-registry.yml
-  when: (current_cp4d_cluster.image_registry_name | default("")) == ""
+  when: 
+  - (current_cp4d_cluster.image_registry_name | default("")) == ""
+  - (all_config.cp_alt_repo | default({})) == {}
 
 - include_tasks: cp4d-prepare-private-registry.yml
-  when: (current_cp4d_cluster.image_registry_name | default("")) != ""
+  when: 
+  - (current_cp4d_cluster.image_registry_name | default("")) != ""
+  - (all_config.cp_alt_repo | default({})) == {}
 
-# Node kernel parameters must only be set if certain db2u services are used and db2u does not run in privileged mode
+- include_tasks: cp4d-prepare-alt-registries.yml
+  when: 
+  - (all_config.cp_alt_repo | default({})) != {}
+
 - name: Set the kernel parameters via the Tuned object if not on IBM Cloud
   include_role:
     name: cp4d-ocp-tuned
