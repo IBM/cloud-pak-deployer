@@ -4,8 +4,7 @@
 There are 3 main steps you need to perform to provision an OpenShift cluster with the desired Cloud Pak(s):
 
 1. [Install the Cloud Pak Deployer](../../../05-install/install)
-2. [Configure the environment you want to deploy](../../../10-use-deployer/2-configure/configure)
-3. [Run the Cloud Pak Deployer to create the cluster and install the Cloud Pak](../../../10-use-deployer/3-run/run)
+2. [Run the Cloud Pak Deployer to create the cluster and install the Cloud Pak](../../../10-use-deployer/3-run/run)
 
 ## What will I need?
 To complete the deployment, you will or may need the following. Details will be provided when you need them.
