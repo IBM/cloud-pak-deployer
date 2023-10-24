@@ -1,8 +1,6 @@
 # Cloud Pak Deployer Advanced Configuration
 
-Before starting the configuration, take a look at the [basic and extended topologies](../../30-reference/configuration/topologies.md) to plan your infrastructure, OpenShift cluster and Cloud Pak.
-
-The Cloud Pak Deployer includes several samples which you can use to build your own configuration. You can find sample configuration `yaml` files in the sub-directories of the `sample-configurations` directory of the repository. Descriptions are also included in the sub-directories.
+The Cloud Pak Deployer includes several samples which you can use to build your own configuration. You can find sample configuration `yaml` files in the sub-directories of the `sample-configurations` directory of the repository. Descriptions and topologies are also included in the sub-directories.
 
 !!! warning
     Do not make changes to the sample configurations in the `cloud-pak-deployer` directory, but rather copy it to your own home directory or somewhere else and then make changes. If you store your own configuration under the repository's clone, you may not be able to update (pull) the repository with changes applied on GitHub, or accidentally overwrite it.
