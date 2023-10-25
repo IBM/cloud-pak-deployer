@@ -31,15 +31,19 @@
   vars:
     secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
     secret_group: "{{ environment_name }}"
+    _p_secret_variable: private_registry_auth
 
 - name: Fail if the credentials for the image registry have not been found in the vault
   fail:
     msg: "Credentials for specified image registry {{ current_cp4d_cluster.image_registry_name }} not found in vault"
-  when: 
-  - secret_value == ""
+  when: private_registry_auth == ""
+
+- name: Fail if the credentials are not in the correct format of "user:password"
+  fail:
+    msg: "Private registry credentials in vault secret image-registry-{{ current_cp4d_cluster.image_registry_name }} must in the format of user:password"
+  when: not (_registry_credentials is search(':'))
 
 - set_fact:
-    private_registry_auth: "{{ secret_value }}"
     private_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
     private_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
 
