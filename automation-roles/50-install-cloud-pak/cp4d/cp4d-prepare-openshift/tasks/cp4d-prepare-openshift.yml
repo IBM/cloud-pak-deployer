@@ -20,10 +20,19 @@
 - name: Set the kernel parameters via the Tuned object if not on IBM Cloud
   include_role:
     name: cp4d-ocp-tuned
-  
+  when:
+  - _db2u_dependency | default(False)
+  - _db2u_node_tuning | default(False)
+  - current_cp4d_cluster.db2u_limited_privileges | default(False)
+
+# KubeletConfig must only be set if certain db2u services are used and db2u does not run in privileged mode  
 - name: Set the kubelet configuration
   include_role:
     name: cp4d-ocp-kubelet-config
+  when:
+  - _db2u_dependency | default(False)
+  - _db2u_kubelet | default(False)
+  - current_cp4d_cluster.db2u_limited_privileges | default(False)
 
 - name: Set the CRI-O configuration
   include_role:
