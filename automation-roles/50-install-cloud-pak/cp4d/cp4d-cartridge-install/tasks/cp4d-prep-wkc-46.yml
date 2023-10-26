@@ -1,0 +1,50 @@
+---
+- name: Prepare yaml file for WKC SCC
+  template:
+    src: "wkc-scc.j2"
+    dest: "{{ status_dir }}/cp4d/wkc-scc.yml"
+
+- name: Apply WKC SCC
+  command: |
+    oc apply -f "{{ status_dir }}/cp4d/wkc-scc.yml"
+  register: _scc_create_result
+  retries: 10
+  delay: 30
+  until: _scc_create_result.rc == 0
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Authorize WKC service account to use SCC
+  shell:
+    oc adm policy add-scc-to-user wkc-iis-scc system:serviceaccount:{{ _p_current_cp4d_cluster.project }}:wkc-iis-sa
+
+- name: Insert wkc options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
+  blockinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    marker: "# {mark} WKC options #"
+    block: |2
+        wkc:
+          install_wkc_core_only: {{ _current_cp4d_cartridge.installation_options.install_wkc_core_only | default(True) }}
+          enableKnowledgeGraph: {{ _current_cp4d_cartridge.installation_options.enableKnowledgeGraph | default(False) }}
+          enableDataQuality: {{ _current_cp4d_cartridge.installation_options.enableDataQuality | default(False) }}
+          enableFactSheet: {{ _current_cp4d_cartridge.installation_options.enableFactSheet | default(False) }}
+          enableMANTA: {{ _current_cp4d_cartridge.installation_options.enableMANTA | default(False) }}
+  when: _p_current_cp4d_cluster.db2u_limited_privileges | default(False)
+
+- name: Insert wkc options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml with elevated privileges
+  blockinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    marker: "# {mark} WKC options #"
+    block: |2
+        wkc:
+          install_wkc_core_only: {{ _current_cp4d_cartridge.installation_options.install_wkc_core_only | default(True) }}
+          enableKnowledgeGraph: {{ _current_cp4d_cartridge.installation_options.enableKnowledgeGraph | default(False) }}
+          enableDataQuality: {{ _current_cp4d_cartridge.installation_options.enableDataQuality | default(False) }}
+          enableFactSheet: {{ _current_cp4d_cartridge.installation_options.enableFactSheet | default(False) }}
+          enableMANTA: {{ _current_cp4d_cartridge.installation_options.enableMANTA | default(False) }}
+          wkc_db2u_set_kernel_params: True
+          iis_db2u_set_kernel_params: True
+  when: not (_p_current_cp4d_cluster.db2u_limited_privileges | default(False))

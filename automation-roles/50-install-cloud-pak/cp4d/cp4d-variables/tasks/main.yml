@@ -131,6 +131,7 @@
     - _installed_ibmcpd_version < "4.6.5"
     - not allow_cp4d_upgrade | default(False) | bool
 
+# Determine if cartridges must be installed sequentially
 - set_fact:
     _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
 
@@ -148,6 +149,27 @@
 - name: Show if sequential install is done
   debug:
     var: _sequential_install
+
+# Determine if any cartridges with a db2u dependency are installed
+- set_fact:
+    _db2u_dependency: False
+
+- name: Determine if any of the cartridges has a db2u dependency
+  set_fact:
+    _db2u_dependency: "{{ _db2u_dependency or (item.db2u_dependency | default(False)) }}"
+  when: (item.state | default('installed')) == 'installed'
+  loop: "{{ _cartridges_to_install }}"
+  no_log: True
+
+- name: Show if there is a db2u dependency
+  debug:
+    var: _db2u_dependency
+
+- include_tasks: check-db2u-node-tuning.yml
+  when: _db2u_dependency
+
+- include_tasks: check-db2u-kubelet.yml
+  when: _db2u_dependency
 
 - name: Determine cartridge dependencies
   set_fact:
