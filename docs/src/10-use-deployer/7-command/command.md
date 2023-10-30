@@ -46,7 +46,6 @@ NAME                                               DISPLAY NAME   STATUS
 calico-system                                                     Active
 default                                                           Active
 ibm-cert-store                                                    Active
-ibm-common-services                                               Active
 ibm-odf-validation-webhook                                        Active
 ibm-system                                                        Active
 kube-node-lease                                                   Active

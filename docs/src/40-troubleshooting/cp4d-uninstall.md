@@ -10,4 +10,4 @@ Steps:
 You will have to confirm that you want to delete the instance and all other artifacts.
 
 !!! Warning
-    Please be very careful with this command. Ensure you are connected to the correct OpenShift cluster and that no other Cloud Paks use `ibm-common-services`. The action cannot be undone.
+    Please be very careful with this command. Ensure you are connected to the correct OpenShift cluster and that no other Cloud Paks use operator namespace. The action cannot be undone.
