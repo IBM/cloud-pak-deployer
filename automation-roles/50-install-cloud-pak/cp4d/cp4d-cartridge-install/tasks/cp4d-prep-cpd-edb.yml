@@ -21,21 +21,3 @@
 - name: Apply EDB PostgreSQL secret
   command: |
     oc apply -f "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
-
-#TODO temporary fix to resolve hard coded zen reference in cpd-edb operator
-- when: _p_current_cp4d_cluster.project != "zen"
-  block:
-    - name: Create zen project as temporary fix
-      shell: oc new-project zen || true
-
-    - name: Apply permissions to project zen
-      shell: oc policy add-role-to-user admin system:serviceaccount:ibm-common-services:ibm-cpd-edb-serviceaccount -n zen
-
-    # - name: Prepare ConfigMap cpd-edb-aux-br-cm in correct namespace {{ _p_current_cp4d_cluster.project }}
-    #   template:
-    #     src: "cpd-edb-aux-br-cm.j2"
-    #     dest: "{{ status_dir }}/cp4d/cpd-edb-aux-br-cm.yml"
-
-    # - name: Apply ConfigMap cpd-edb-aux-br-cm in correct namespace {{ _p_current_cp4d_cluster.project }}
-    #   command: |
-    #     oc apply -f "{{ status_dir }}/cp4d/cpd-edb-aux-br-cm.yml"
