@@ -18,39 +18,6 @@ wait_ns_deleted() {
     done
 }
 
-delete_operator_ns() {
-    CP4D_OPERATORS=$1
-    oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
-    if [ $? -eq 0 ];then
-        log "Deleting everything in the ${CP4D_OPERATORS} project"
-        oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
-        oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-        oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-
-        oc delete operandconfig -n ${CP4D_OPERATORS} --all --ignore-not-found
-        oc delete operandregistry -n ${CP4D_OPERATORS} --all --ignore-not-found
-        oc delete nss -n ${CP4D_OPERATORS} --all --ignore-not-found
-
-        oc delete sub -n ${CP4D_OPERATORS} --all --ignore-not-found
-        oc delete csv -n ${CP4D_OPERATORS} --all --ignore-not-found
-
-        log "Deleting ${CP4D_OPERATORS} project"
-        oc delete ns ${CP4D_OPERATORS} --ignore-not-found --wait=false
-        opreq_deleted=true
-        while [ opreq_deleted ];do
-            opreq_deleted=false
-            for opreq in $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers | awk '{print $1}');do
-                oc delete operandrequest -n ${CP4D_OPERATORS} ${opreq} --ignore-not-found --wait=false
-                oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
-                opreq_deleted=true
-            done
-        done
-        wait_ns_deleted ${CP4D_OPERATORS}
-    else
-        echo "Project ${CP4D_OPERATORS} does not exist, skipping"
-    fi
-}
-
 wait_ns_deleted() {
     NS=$1
     log "Waiting for deletion of namespace ${NS} ..."
