@@ -1,5 +1,15 @@
 # Running the Cloud Pak Deployer on Microsoft Azure - Self-managed
 
+On Azure, OpenShift can be set up in various ways, managed by Red Hat (ARO) or self-managed. The steps below are applicable to the self-managed Red Hat OpenShift.
+
+There are 5 main steps to run the deployer for Azure:
+
+1. [Configure deployer](#1-configure-deployer)
+2. [Prepare the cloud environment](#2-prepare-the-cloud-environment)
+3. [Obtain entitlement keys and secrets](#3-acquire-entitlement-keys-and-secrets)
+4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
+5. [Run the deployer](#5-run-the-deployer)
+
 ## Topology
 
 A typical setup of the OpenShift cluster on Azure is pictured below:
@@ -7,158 +17,62 @@ A typical setup of the OpenShift cluster on Azure is pictured below:
 
 When deploying self-managed OpenShift on Azure, you must configure the domain name by setting the `openshift.domain_name`, which must be public domain with a registrar. OpenShift will create a public DNS zone with additional entries to reach the OpenShift API and the applications (Cloud Paks). If you don't have a domain yet, you buy one from Azure: https://learn.microsoft.com/en-us/azure/app-service/manage-custom-dns-buy-domain.
 
-## Acquire an Red Hat OpenShift pull secret
+## 1. Configure deployer
 
-To install OpenShift you need an OpenShift pull secret which holds your entitlement.
+### Deployer configuration and status directories
+Deployer reads the configuration from a directory you set in the `CONFIG_DIR` environment variable. A status directory (`STATUS_DIR` environment variable) is used to log activities, store temporary files, scripts. If you use a File Vault (default), the secrets are kept in the `$STATUS_DIR/vault` directory.
 
-When installing an IBM Cloud Pak, you can retrieve your Red Hat entitlement using instructions on this page: https://www.ibm.com/docs/en/cloud-paks/1.0?topic=iocpc-accessing-red-hat-entitlements-from-your-cloud-pak. Or, retrieve your pull secret from Red Hat: https://console.redhat.com/openshift/install/pull-secret.
-
-Download the pull secret into file `/tmp/ocp_pullsecret.json`
-
-## Acquire an IBM Cloud Pak Entitlement Key
-
-If you want to pull the Cloud Pak images from the entitled registry (i.e. an online install), or if you want to mirror the images to your private registry, you need to download the entitlement key. You can skip this step if you're installing from a private registry and all Cloud Pak images have already been downloaded to the private registry.
-
-- Navigate to https://myibm.ibm.com/products-services/containerlibrary and login with your IBMId credentials
-- Select **Get Entitlement Key** and create a new key (or copy your existing key)
-- Copy the key value
-
-!!! warning
-    As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
-
-## Verify your quota and permissons in Microsoft Azure
-
-- Check [Azure resource quota](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#before-you-begin) of the subscription - Azure Red Hat OpenShift requires a minimum of 40 cores to create and run an OpenShift cluster.
-- The ARO cluster is provisioned using the `az` command. Ideally, one has to have `Contributor` permissions on the subscription (Azure resources) and `Application administrator` role assigned in the Azure Active Directory. See details [here](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#verify-your-permissions).
-
-## Login to the Microsoft Azure
-
-You are required to create a Service Principal and get Azure Red Hat OpenShift Resource Provider objectId before starting the deployment. The future steps expect that you are logged in to the Microsoft Azure by using CLI.
-
-[Install Azure CLI tool](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=dnf), and run the commands in your operating system, or
-
-Login to the Microsoft Azure:
-```
-az login
-```
-
-If you have a subscription with multiple tenants, use:
-```
-az login --tenant <TENANT_ID>
-```
+You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). For Azure self-managed installations, copy one of `ocp-azure-self-managed*.yaml` files into the `$CONFIG_DIR/config` directory. If you also want to install a Cloud Pak, copy one of the `cp4*.yaml` files.
 
 Example:
-```bash
-az login --tenant 869930ac-17ee-4dda-bbad-7354c3e7629c8
-To sign in, use a web browser to open the page https://microsoft.com/devicelogin and enter the code AXWFQQ5FJ to authenticate.
-[
-  {
-    "cloudName": "AzureCloud",
-    "homeTenantId": "869930ac-17ee-4dda-bbad-7354c3e7629c8",
-    "id": "72281667-6d54-46cb-8423-792d7bcb1234",
-    "isDefault": true,
-    "managedByTenants": [],
-    "name": "Azure Account",
-    "state": "Enabled",
-    "tenantId": "869930ac-17ee-4dda-bbad-7354c3e7629c8",
-    "user": {
-      "name": "you_user@domain.com",
-      "type": "user"
-    }
-  }
-]
+```
+mkdir -p $HOME/cpd-config/config
+cp sample-configurations/sample-dynamic/config-samples/ocp-azure-self-managed.yaml $HOME/cpd-config/config/
+cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
 ```
 
-### Set subscription (optional)
+### Set configuration and status directories environment variables
+Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
 
-If you have multiple Azure subscriptions, specify the relevant subscription ID: `az account set --subscription <SUBSCRIPTION_ID>`
-
-You can list the subscriptions via command:
-```bash
-az account subscription list
+```
+export CONFIG_DIR=$HOME/cpd-config
+export STATUS_DIR=$HOME/cpd-status
 ```
 
-```output
-[
-  {
-    "authorizationSource": "RoleBased",
-    "displayName": "IBM xxx",
-    "id": "/subscriptions/dcexxx",
-    "state": "Enabled",
-    "subscriptionId": "dcexxx", ---> your_subscription_id parameter
-    "subscriptionPolicies": {
-      "locationPlacementId": "Public_2014-09-01",
-      "quotaId": "EnterpriseAgreement_2014-09-01",
-      "spendingLimit": "Off"
-    }
-  }
-]
-```
+- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory which contains the configuration `yaml` files.
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files.
 
-## Prepare Azure resources
+#### Optional: advanced configuration
+If the deployer configuration is kept on GitHub, follow the instructions in [GitHub configuration](../../50-advanced/advanced-configuration.md#using-a-github-repository-for-the-configuration).
+
+For special configuration with defaults and dynamic variables, refer to [Advanced configuration](../../50-advanced/advanced-configuration.md#using-dynamic-variables-extra-variables).
+
+## 2. Prepare the cloud environment
+
+### Install the Azure CLI tool
+
+[Install Azure CLI tool](https://learn.microsoft.com/en-us/cli/azure/install-azure-cli-linux?pivots=dnf), and run the commands in your operating system.
+
+### Verify your quota and permissions in Microsoft Azure
+
+- Check [Azure resource quota](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#before-you-begin) of the subscription - Azure Red Hat OpenShift requires a minimum of 40 cores to create and run an OpenShift cluster.
+- The self-managed cluster is provisioned using the IPI installer command. Ideally, one has to have `Contributor` permissions on the subscription (Azure resources) and `Application administrator` role assigned in the Azure Active Directory. See details [here](https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster#verify-your-permissions).
 
 ### Set environment variables for Azure
 
 ```bash
-export ENV_ID=env_id_in_config_files
-export AZURE_SUBSCRIPTION_ID=your_azure_subscription_id
-export AZURE_RESOURCE_GROUP=${ENV_ID}-rg
-export AZURE_LOCATION=azure_location
-export AZURE_SP=${ENV_ID}-sp
+export AZURE_RESOURCE_GROUP=pluto-01-rg
+export AZURE_LOCATION=westeurope
+export AZURE_SP=pluto-01-sp
 ```
 
-- `AZURE_SUBSCRIPTION_ID`: The id of your Azure subscription. Once logged in, you can retrieve this using the `az account show` command.
 - `AZURE_RESOURCE_GROUP`: The Azure resource group that will hold all resources belonging to the cluster: VMs, load balancers, virtual networks, subnets, etc.. Typically you will create a resource group for every OpenShift cluster you provision.
 - `AZURE_LOCATION`: The Azure location of the resource group, for example `useast` or `westeurope`.
-- `AZURE_SP`: Azure service principal that is used to create the resources on Azure. Typically you will use a service principal for every OpenShift cluster you provision.
+- `AZURE_SP`: Azure service principal that is used to create the resources on Azure. You will get the service principal from the Azure administrator.
 
-Example:
-```bash
-export ENV_ID=pluto-01
-export AZURE_SUBSCRIPTION_ID=72281667-6d54-46cb-8423-792d7bcb1234
-export AZURE_RESOURCE_GROUP=${ENV_ID}-rg
-export AZURE_LOCATION=uksouth
-export AZURE_SP=${ENV_ID}-sp
-```
+### Store Service Principal credentials
 
-### Create resource group, service principal and set permissions
-
-First the resource group must be created; this must be the same resource group as specified under `azure.resource_group.name` in the configuration file.
-```bash
-az group create \
-  --name ${AZURE_RESOURCE_GROUP} \
-  --location ${AZURE_LOCATION}
-```
-
-```output
-{
-  "id": "/subscriptions/72281667-6d54-46cb-8423-792d7bcb1234/resourceGroups/pluto-01-rg",
-  "location": "uksouth",
-  "managedBy": null,
-  "name": "pluto-01-rg",
-  "properties": {
-    "provisioningState": "Succeeded"
-  },
-  "tags": null,
-  "type": "Microsoft.Resources/resourceGroups"
-}
-```
-
-Then, create the service principal that will do the installation and assign the `Contributor role`
-```bash
-az ad sp create-for-rbac \
-  --role Contributor \
-  --name ${AZURE_SP} \
-  --scopes /subscriptions/${AZURE_SUBSCRIPTION_ID} > /tmp/${AZURE_SP}-credentials.json
-```
-
-If you only have Contributor access to a resource group, you must specify the resource group scope instead:
-```bash
-az ad sp create-for-rbac \
-  --role Contributor \
-  --name ${AZURE_SP} \
-  --scopes /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/pluto-01-rg > /tmp/${AZURE_SP}-credentials.json
-```
+You must run the OpenShift installation using an Azure Service Principal with sufficient permissions. The Azure account administrator will share the SP credentials as a JSON file. If you have subscription-level access you can also create the Service Principal yourself. See steps in [Create Azure service principal](./azure-service-principal.md).
 
 Example output in credentials file:
 ```output
@@ -170,94 +84,100 @@ Example output in credentials file:
 }
 ```
 
-Finally, set the permissions of the service principal to allow creation of the OpenShift cluster
-```bash
-az role assignment create \
-  --role "User Access Administrator" \
-  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID} \
-  --assignee-principal-type ServicePrincipal \
-  --assignee-object-id $(az ad sp list --display-name=${AZURE_SP} --query='[].id' -o tsv)
+Store this file as `/tmp/${AZURE_SP}-credentials.json`.
+
+### Login as Service Principal
+
+Login as the service principal:
+```
+az login --service-principal -u a4c39ae9-f9d1-4038-b4a4-ab011e769111 -p xyz-xyz --tenant 869930ac-17ee-4dda-bbad-7354c3e7629c8
 ```
 
-If you do not have permissions to list service principals, you can also run the following commands:
+### Create the resource group
+
+First the resource group must be created; this resource group must match the one configured in your OpenShift yaml config file.
 ```bash
-export AZURE_SP_ID=$(jq -r .appId /tmp/${AZURE_SP}-credentials.json)
-az role assignment create \
-  --role "User Access Administrator" \
-  --scope /subscriptions/${AZURE_SUBSCRIPTION_ID} \
-  --assignee-principal-type ServicePrincipal \
-  --assignee-object-id $(az ad sp show --id ${AZURE_SP_ID} --query='id' -o tsv)
+az group create \
+  --name ${AZURE_RESOURCE_GROUP} \
+  --location ${AZURE_LOCATION}
 ```
 
-## Prepare for running
+## 3. Acquire entitlement keys and secrets
 
-### Set environment variables for deployer
+### Acquire IBM Cloud Pak entitlement key
+
+If you want to pull the Cloud Pak images from the entitled registry (i.e. an online install), or if you want to mirror the images to your private registry, you need to download the entitlement key. You can skip this step if you're installing from a private registry and all Cloud Pak images have already been downloaded to the private registry.
+
+- Navigate to https://myibm.ibm.com/products-services/containerlibrary and login with your IBMId credentials
+- Select **Get Entitlement Key** and create a new key (or copy your existing key)
+- Copy the key value
+
+!!! warning
+    As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
+
+### Acquire an OpenShift pull secret
+
+To install OpenShift you need an OpenShift pull secret which holds your entitlement.
+
+- Navigate to https://console.redhat.com/openshift/install/pull-secret and download the pull secret into file `/tmp/ocp_pullsecret.json`
+
+### Optional: Locate or generate a public SSH Key
+To obtain access to the OpenShift nodes post-installation, you will need to specify the public SSH key of your server; typically this is `~/.ssh/id_rsa.pub`, where `~` is the home directory of your user. If you don't have an SSH key-pair yet, you can generate one using the steps documented here: https://cloud.ibm.com/docs/ssh-keys?topic=ssh-keys-generating-and-using-ssh-keys-for-remote-host-authentication#generating-ssh-keys-on-linux. Alternatively, deployer can generate SSH key-pair automatically if credential `ocp-ssh-pub-key` is not in the vault.
+
+## 4. Set environment variables and secrets
+
+### Set the Cloud Pak entitlement key
+If you want the Cloud Pak images to be pulled from the entitled registry, set the Cloud Pak entitlement key.
 
 ```
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
+- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string. **You don't need to set this environment variable when you install the Cloud Pak(s) from a private registry**
 
-### Set deployer status directory
-Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+### Create the secrets needed for self-managed OpenShift cluster
 
-```
-export STATUS_DIR=$HOME/cpd-status
-```
-
-- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory. If you don't specify a status directory, it is assumted to be `$HOME/cpd-status`.
-
-### Set deployer configuration location
-You can use a local directory to hold the deployer configuration or retrieve the configuration from a GitHub repository. If you don't specify any configuration directory or GitHub repository, the configuration directory are assumed to be `$HOME/cpd-config`.
-```
-export CONFIG_DIR=$HOME/cpd-config
-```
-
-- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory.
-
-Or, when using a GitHub repository for the configuration.
-```
-export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
-export CPD_CONFIG_GIT_REF="main"
-export CPD_CONFIG_GIT_CONTEXT=""
-```
-
-- `CPD_CONFIG_GIT_REPO`: The clone URL of the GitHub repository that holds the configuration.
-- `CPD_CONFIG_GIT_REF`: The branch, tag or commit ID to be cloned. If not specified, the repository's default branch will be cloned.
-- `CPD_CONFIG_GIT_CONTEXT`: The directory within the GitHub repository that holds the configuration. This directory must contain the `config` directory under which the YAML files are kept.
-
-!!! info
-    When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
-
-### Create the secrets needed for Azure deployment
-
-You need to store the below secrets in the vault so that the deployer has access to them when installing self-managed OpenShift cluster on Azure.
+You need to store the OpenShift pull secret and service principal credentials in the vault so that the deployer has access to it.
 
 ```
 ./cp-deploy.sh vault set \
     --vault-secret ocp-pullsecret \
     --vault-secret-file /tmp/ocp_pullsecret.json
 
+
 ./cp-deploy.sh vault set \
     --vault-secret ${AZURE_SP}-credentials \
     --vault-secret-file /tmp/${AZURE_SP}-credentials.json
+```
 
-# Optional if you would like to use your own public key
+### Optional: Create secret for public SSH key
+
+If you want to use your SSH key to access nodes in the cluster, set the Vault secret with the public SSH key.
+```
 ./cp-deploy.sh vault set \
     --vault-secret ocp-ssh-pub-key \
     --vault-secret-file ~/.ssh/id_rsa.pub
 ```
 
-## Run the Cloud Pak Deployer
+## 5. Run the deployer
+
+### Optional: validate the configuration
+
+If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
+
+```
+./cp-deploy.sh env apply --check-only --accept-all-licenses
+```
+
+### Run the Cloud Pak Deployer
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-./cp-deploy.sh env apply [--accept-all-licenses]
+./cp-deploy.sh env apply --accept-all-licenses
 ```
 
-For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
+You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -269,7 +189,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -277,9 +197,28 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ./cp-deploy.sh env kill
 ```
 
-## Finishing up
+### On failure
 
-Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified. The `admin` password can be retrieved from the vault as follows:
+If the Cloud Pak Deployer fails, for example because certain infrastructure components are temporarily not available, fix the cause if needed and then just re-run it with the same `CONFIG_DIR` and `STATUS_DIR` as well extra variables. The provisioning process has been designed to be idempotent and it will not redo actions that have already completed successfully.
+
+### Finishing up
+
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
+
+To retrieve the Cloud Pak URL(s):
+
+```
+cat $STATUS_DIR/cloud-paks/*
+```
+
+This will show the Cloud Pak URLs:
+
+```output
+Cloud Pak for Data URL for cluster pluto-01 and project cpd (domain name specified was example.com):
+https://cpd-cpd.apps.pluto-01.example.com
+```
+
+The `admin` password can be retrieved from the vault as follows:
 
 List the secrets in the vault:
 
@@ -294,7 +233,7 @@ Secret list for group sample:
 - ibm_cp_entitlement_key
 - sample-provision-ssh-key
 - sample-provision-ssh-pub-key
-- cp4d_admin_zen_sample_sample
+- cp4d_admin_cpd_demo
 ```
 
 You can then retrieve the Cloud Pak for Data admin password like this:
@@ -309,5 +248,5 @@ included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
-## Post-install configuration
+### Post-install configuration
 You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).

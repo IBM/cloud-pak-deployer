@@ -29,7 +29,7 @@ INFO     -  [11:55:49] Watching paths for changes: 'src', 'mkdocs.yml'
 INFO     -  [11:55:49] Serving on http://0.0.0.0:8000/cloud-pak-deployer/...
 ```
 
-## Starting the browswer
+## Starting the browser
 Now that the container has fully started, it automatically tracks all changes under the `docs` folder and updates the pages site automatically. You can view the site by opening a browswer for URL:
 
 http://localhost:8000
