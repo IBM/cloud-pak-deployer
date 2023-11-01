@@ -18,6 +18,14 @@ wait_ns_deleted() {
     done
 }
 
+wait_ns_deleted() {
+    NS=$1
+    log "Waiting for deletion of namespace ${NS} ..."
+    while $(oc get ns ${NS} > /dev/null 2>&1);do
+        sleep 1
+    done
+}
+
 delete_operator_ns() {
     CP4D_OPERATORS=$1
     oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
@@ -36,13 +44,10 @@ delete_operator_ns() {
 
         log "Deleting ${CP4D_OPERATORS} project"
         oc delete ns ${CP4D_OPERATORS} --ignore-not-found --wait=false
-        opreq_deleted=true
-        while [ opreq_deleted ];do
-            opreq_deleted=false
+        while [ $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers 2>/dev/null | wc -l) -ne 0  ];do
             for opreq in $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers | awk '{print $1}');do
                 oc delete operandrequest -n ${CP4D_OPERATORS} ${opreq} --ignore-not-found --wait=false
                 oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
-                opreq_deleted=true
             done
         done
         wait_ns_deleted ${CP4D_OPERATORS}
@@ -130,10 +135,17 @@ if [ $? -eq 0 ];then
     log "Deleting ${CP4D_PROJECT} namespace"
     oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
     wait_ns_deleted ${CP4D_PROJECT}
+    oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
+    wait_ns_deleted ${CP4D_PROJECT}
 else
     echo "Project ${CP4D_PROJECT} does not exist, skipping"
 fi
 
+# Delete operators in ibm-common-services
+delete_operator_ns ibm-common-services
+
+# Delete operators in new operators namespace
+delete_operator_ns ${CP4D_PROJECT}-operators
 # Delete operators in ibm-common-services
 delete_operator_ns ibm-common-services
 
@@ -151,6 +163,8 @@ if [ $? -eq 0 ];then
     log "Deleting ${IBM_SCHEDULING} project"
     oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
     wait_ns_deleted ${IBM_SCHEDULING}
+    oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_SCHEDULING}
 else
     echo "Project ${IBM_SCHEDULING} does not exist, skipping"
 fi
@@ -164,6 +178,8 @@ if [ $? -eq 0 ];then
     oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
 
     log "Deleting ${IBM_LICENSING} project"
+    oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_LICENSING}
     oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
     wait_ns_deleted ${IBM_LICENSING}
 else
@@ -182,6 +198,8 @@ if [ $? -eq 0 ];then
     oc delete csv -n ${IBM_CERT_MANAGER} --all --ignore-not-found
 
     log "Deleting ${IBM_CERT_MANAGER} project"
+    oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_CERT_MANAGER}
     oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
     wait_ns_deleted ${IBM_CERT_MANAGER}
 else
@@ -207,6 +225,8 @@ if [ $? -eq 0 ];then
     log "Deleting ${IBM_CS_CONTROL} project"
     oc delete ns ${IBM_CS_CONTROL} --ignore-not-found --wait=false
     wait_ns_deleted ${IBM_CS_CONTROL}
+    oc delete ns ${IBM_CS_CONTROL} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_CS_CONTROL}
 else
     echo "Project ${IBM_CS_CONTROL} does not exist, skipping"
 fi
@@ -220,7 +240,7 @@ oc delete cm -n kube-public common-service-maps --ignore-not-found
 log "Deleting IBM catalog sources"
 oc delete catsrc -n openshift-marketplace \
     $(oc get catsrc -n openshift-marketplace \
-    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found
+    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found 2>/dev/null
 
 #
 # Delete IBM CRDs that don't have an instance
