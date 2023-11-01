@@ -1,14 +1,37 @@
 ---
-- name: Check if the Tuned {{ cp4d_tuned_name }} exists
-  shell: "oc get Tuned -n openshift-cluster-node-tuning-operator | grep -i '^{{ cp4d_tuned_name }}' | wc -l"
-  register: oc_tuned_exists
+- name: Get first compute node in the cluster
+  shell: |
+    oc get no \
+      -l node-role.kubernetes.io/worker,cluster.ocs.openshift.io/openshift-storage!="" \
+      -o jsonpath='{.items[0].metadata.name}'
+  register: _first_compute_node
 
-- name: Configure Tuned {{ cp4d_tuned_name }}
-  block:
-    - name: Create Tuned yaml
-      template:
-        src: cp4d-tuned.j2
-        dest: "{{ status_dir }}/openshift/cp4d-tuned.yaml"
-    - name: Create Tuned cp4d_ipc
-      shell: "oc apply -f {{ status_dir }}/openshift/cp4d-tuned.yaml"
-  when: oc_tuned_exists.stdout == "0"
+- name: Get memory capacity of first compute node {{ _first_compute_node.stdout }}
+  shell:
+    oc get no {{ _first_compute_node.stdout }} -o jsonpath='{.status.capacity.memory}'
+  register: _compute_node_memory_raw
+
+- set_fact:
+    _compute_node_memory: "{{ _compute_node_memory_raw.stdout | regex_search('([0-9]+).*','\\1') | first }}"
+    _memory_unit: "{{ _compute_node_memory_raw.stdout | regex_search('([0-9]+)(.*)','\\2') | first }}"
+
+- set_fact:
+    _compute_node_memory_gb: "{{ (_compute_node_memory | int / (1024*1024)) | int }}"
+  when: _memory_unit=='Ki'
+
+- set_fact:
+    _compute_node_memory_gb: "{{ (_compute_node_memory | int / 1024) | int }}"
+  when: _memory_unit=='Mi'
+
+- debug:
+    var: _compute_node_memory_gb
+
+- name: Generate Tuned resource YAML file {{ status_dir }}/openshift/cp4d-tuned.yaml
+  shell: |
+    {{ role_path }}/files/cp4d-generate-tuned.sh \
+      --mem-limit {{ _compute_node_memory_gb }} \
+      -f {{ status_dir }}/openshift/cp4d-tuned.yaml
+
+- name: Create Tuned cp4d_ipc
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/cp4d-tuned.yaml
