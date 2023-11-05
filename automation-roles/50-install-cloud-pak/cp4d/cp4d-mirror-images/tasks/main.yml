@@ -86,6 +86,12 @@
       timeout: 30
   when: _p_target_registry_hostname == _v_portable_registry or (_p_source_registry_hostname | default('') == _v_portable_registry)
 
+- name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
+  template:
+    src: mirror-images-copy-log-files.j2
+    dest: "{{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh"
+    mode: u+rwx
+
 - name: Generate script to mirror images {{ _p_current_cp4d_cluster.project }}-mirror-images.sh
   template:
     src: mirror-images.j2
@@ -98,11 +104,22 @@
   debug:
     msg: "{{ lookup('file', status_dir + '/cp4d/' + _p_current_cp4d_cluster.project + '-mirror-images.sh' ) }}"
 
-- name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log. Detailed logs can be found in {{ status_dir }}/cp4d/mirror_*.log
+- name: Run script that copies mirror log files in background
+  shell: |
+    {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
+  async: 86400
+  poll: 0
+
+- name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log. Detailed logs can be found in {{ status_dir }}/log/mirror_*.log
   shell: |
     {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images.sh
   failed_when: False
   register: _mirror_images
+
+- name: Stop script that mirrors log files
+  file:
+    path: "/tmp/mirroring-complete.txt"
+    state: touch
 
 - name: Copy log files from the mirroring process
   copy:
