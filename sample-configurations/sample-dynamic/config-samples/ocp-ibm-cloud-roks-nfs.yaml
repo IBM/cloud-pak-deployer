@@ -37,34 +37,6 @@ subnet:
   address_prefix: "{{ env_id }}-zone"
   ipv4_cidr_block: 10.231.0.0/24
 
-vsi:
-- name: "{{ env_id }}-bastion"
-  infrastructure:
-    type: vpc
-    subnet: "{{ env_id }}-subnet"
-    primary_ipv4_address: 10.231.0.196
-    image: ibm-redhat-8-3-minimal-amd64-3
-    profile: cx2-2x4
-    public_ip: True
-    keys:
-    - "{{ env_id }}-provision"
-
-nfs_server:
-- name: "{{ env_id }}-nfs"
-  infrastructure:
-    type: vpc
-    subnet: "{{ env_id }}-subnet"
-    zone: "{{ ibm_cloud_region }}-1"
-    primary_ipv4_address: 10.231.0.197
-    image: ibm-redhat-8-3-minimal-amd64-3
-    profile: cx2-2x4
-    bastion_host: "{{ env_id }}-bastion"
-    storage_profile: 10iops-tier
-    volume_size_gb: 1000
-    storage_folder: /data/nfs 
-    keys:
-    - "{{ env_id }}-provision"
-
 cos:
 - name: "{{ env_id }}-cos"
   plan: standard
@@ -72,7 +44,7 @@ cos:
 
 openshift:
 - name: "{{ env_id }}"
-  ocp_version: 4.8
+  ocp_version: 4.12
   compute_flavour: bx2.16x64
   compute_nodes: 5
   infrastructure:
@@ -84,4 +56,3 @@ openshift:
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
-    nfs_server_name: "{{ env_id }}-nfs"

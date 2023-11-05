@@ -1,59 +1,59 @@
 ---
-- name: Validate if Dynamic NFS Storage {{ nfs_storage_class_name }}  class exists
+- name: Validate if Dynamic NFS Storage {{ nfs_storage_class_name }} class exists
   shell: |
     oc get sc {{ nfs_storage_class_name }}
   failed_when: False
-  register: oc_storage_class_exists
+  register: _oc_storage_class_exists
 
-- name: Install NFS Storage class {{ nfs_storage_class_name }}
+- name: Install VPC File CSI driver
   block:
-    - set_fact:
-        _nfs_server: "{{ all_config.nfs_server | json_query(query) | first | default({}) }}"
-      vars:
-        query: >-
-          [?name=='{{ current_openshift_storage.nfs_server_name }}']
 
-    - name: Retrieve Terraform tfstate from the vault
-      include_role: 
-        name: vault-get-secret
-      vars:
-        secret_name: "{{ environment_name }}-terraform-tfstate"
-        secret_group: "{{ environment_name }}"
-        _p_secret_variable: tfstate
+  - name: Login to IBM Cloud
+    include_role:
+      name: login-ibmcloud
 
-    - name: Show tfstate file
-      debug:
-        var: tfstate
+  - name: Check if vpc-file-csi-driver add-on is installed
+    shell: |
+      ibmcloud oc cluster addon get \
+        --addon vpc-file-csi-driver \
+        --cluster {{ current_openshift_cluster.name }} \
+        --output json
+    register: _vpc_file_csi_addon
+    failed_when: False
 
-    # Retrieve the private IP address of the NFS server
-    - name: Retrieving IP address of NFS mount point {{ _nfs_server.name }}-mount
-      set_fact:
-        _nfs_server_ip: "{{ tfstate.resources | json_query(query) | first }}"
-      vars:
-        query: >-
-          [?type=='ibm_is_share_mount_target' && instances[0].attributes.name=='{{ _nfs_server.name }}-mount'].instances[0].attributes.virtual_network_interface[0].primary_ip[0].address
+  - name: Show result of vpc-file-csi-driver add-on check
+    debug:
+      var: _vpc_file_csi_addon
 
-    - name: Retrieving mount path of NFS mount point {{ _nfs_server.name }}-mount
-      set_fact:
-        _nfs_mount_path: "{{ tfstate.resources | json_query(query) | first }}"
-      vars:
-        query: >-
-          [?type=='ibm_is_share_mount_target' && instances[0].attributes.name=='{{ _nfs_server.name }}-mount'].instances[0].attributes.mount_path
+  - name: Enable vpc-file-csi-driver add-on for ROKS cluster {{ current_openshift_cluster.name }}
+    shell: |
+      ibmcloud oc cluster addon enable vpc-file-csi-driver \
+        --cluster {{ current_openshift_cluster.name }}
+    when: _vpc_file_csi_addon.rc != 0
 
-    - name: NFS Server IP address
-      debug:
-        msg: "{{ _nfs_server_ip }}"
+  - name: Wait until vpc-file-csi-driver add-on is ready
+    shell: |
+      ibmcloud oc cluster addon get --addon vpc-file-csi-driver \
+        --cluster {{ current_openshift_cluster.name }} \
+        --output json
+    register: _vpc_file_csi_addon
+    failed_when: False
+    retries: 60
+    delay: 30
+    until: ((_vpc_file_csi_addon.stdout | from_json).healthState | default("")) == "normal"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-    - name: NFS Server mount path
-      debug:
-        msg: "{{ _nfs_mount_path }}"
+  - name: Create storage class {{ nfs_storage_class_name }} file in {{ status_dir }}/openshift/ibm-clou-{{ nfs_storage_class_name }}.yaml
+    template:
+      src: ibm-cloud-nfs-storage-class.j2
+      dest: "{{ status_dir }}/openshift/ibm-cloud-{{ nfs_storage_class_name }}.yaml"
 
-    - set_fact:
-        _nfs_storage_class: "{{ nfs_storage_class_name }}"
-        _nfs_storage_server_ip: "{{ _nfs_server_ip }}"
-        _nfs_storage_server_path: "{{ _nfs_mount_path | regex_search('^(.+):(.+)', '\\2') | first }}"
+  - name: Process {{ status_dir }}/openshift/ibm-cloud-{{ nfs_storage_class_name }}.yaml
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/ibm-cloud-{{ nfs_storage_class_name }}.yaml
 
-    - name: Create {{ nfs_storage_class_name }} storage class
-      include_tasks: create-nfs-storage-class.yml
-
-  when: oc_storage_class_exists.rc != 0
+  when: _oc_storage_class_exists.rc != 0

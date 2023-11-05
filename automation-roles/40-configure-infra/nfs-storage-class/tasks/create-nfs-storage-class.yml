@@ -28,16 +28,16 @@
     dest: "{{ nfs_temp_dir.path }}/class.yaml"
 
 - name: Process Dynamic NFS rbac.yaml
-  shell: "oc create -f {{ nfs_temp_dir.path }}/rbac.yaml"
+  shell: "oc apply -f {{ nfs_temp_dir.path }}/rbac.yaml"
 
 - name: Set scc to nfs-client-provisioner
   shell: "oc adm policy add-scc-to-user hostmount-anyuid system:serviceaccount:{{ nfs_storage_class_project }}:nfs-client-provisioner"
 
 - name: Create the Storage class
-  shell: "oc create -f {{ nfs_temp_dir.path }}/class.yaml"
+  shell: "oc apply -f {{ nfs_temp_dir.path }}/class.yaml"
 
 - name: Create the nfs-client-provisioner
-  shell: "oc create -f {{ nfs_temp_dir.path }}/deployment.yaml"
+  shell: "oc apply -f {{ nfs_temp_dir.path }}/deployment.yaml"
 
 - name: Wait 15 seconds for the dynamic NFS client to deploy
   pause:
