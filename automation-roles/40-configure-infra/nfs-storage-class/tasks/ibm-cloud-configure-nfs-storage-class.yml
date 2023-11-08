@@ -1,59 +1,50 @@
 ---
-- name: Validate if Dynamic NFS Storage {{ nfs_storage_class_name }} class exists
+- name: Login to IBM Cloud
+  include_role:
+    name: login-ibmcloud
+
+- name: Check if vpc-file-csi-driver add-on is installed
   shell: |
-    oc get sc {{ nfs_storage_class_name }}
+    ibmcloud oc cluster addon get \
+      --addon vpc-file-csi-driver \
+      --cluster {{ current_openshift_cluster.name }} \
+      --output json
+  register: _vpc_file_csi_addon
   failed_when: False
-  register: _oc_storage_class_exists
 
-- name: Install VPC File CSI driver
-  block:
+- name: Show result of vpc-file-csi-driver add-on check
+  debug:
+    var: _vpc_file_csi_addon
 
-  - name: Login to IBM Cloud
-    include_role:
-      name: login-ibmcloud
-
-  - name: Check if vpc-file-csi-driver add-on is installed
+- block:
+  - name: Get versions of the vpc-file-csi-driver add-on
     shell: |
-      ibmcloud oc cluster addon get \
-        --addon vpc-file-csi-driver \
-        --cluster {{ current_openshift_cluster.name }} \
-        --output json
-    register: _vpc_file_csi_addon
-    failed_when: False
+      ibmcloud oc cluster addon versions --addon vpc-file-csi-driver --output json
+    register: _vpc_file_csi_driver_versions
 
-  - name: Show result of vpc-file-csi-driver add-on check
-    debug:
-      var: _vpc_file_csi_addon
+  - name: Get latest version
+    set_fact:
+      _vpc_file_csi_driver_version: "{{ (_vpc_file_csi_driver_versions.stdout | from_json | last).version }}"
 
   - name: Enable vpc-file-csi-driver add-on for ROKS cluster {{ current_openshift_cluster.name }}
     shell: |
       ibmcloud oc cluster addon enable vpc-file-csi-driver \
-        --cluster {{ current_openshift_cluster.name }}
-    when: _vpc_file_csi_addon.rc != 0
-
-  - name: Wait until vpc-file-csi-driver add-on is ready
-    shell: |
-      ibmcloud oc cluster addon get --addon vpc-file-csi-driver \
         --cluster {{ current_openshift_cluster.name }} \
-        --output json
-    register: _vpc_file_csi_addon
-    failed_when: False
-    retries: 60
-    delay: 30
-    until: ((_vpc_file_csi_addon.stdout | from_json).healthState | default("")) == "normal"
-    vars:
-      ansible_callback_diy_runner_retry_msg: >-
-        {%- set result = ansible_callback_diy.result.output -%}
-        {%- set retries_left = result.retries - result.attempts -%}
-        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+        --version {{ _vpc_file_csi_driver_version }}
+  when: _vpc_file_csi_addon.rc != 0
 
-  - name: Create storage class {{ nfs_storage_class_name }} file in {{ status_dir }}/openshift/ibm-clou-{{ nfs_storage_class_name }}.yaml
-    template:
-      src: ibm-cloud-nfs-storage-class.j2
-      dest: "{{ status_dir }}/openshift/ibm-cloud-{{ nfs_storage_class_name }}.yaml"
-
-  - name: Process {{ status_dir }}/openshift/ibm-cloud-{{ nfs_storage_class_name }}.yaml
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/ibm-cloud-{{ nfs_storage_class_name }}.yaml
-
-  when: _oc_storage_class_exists.rc != 0
+- name: Wait until vpc-file-csi-driver add-on is ready
+  shell: |
+    ibmcloud oc cluster addon get --addon vpc-file-csi-driver \
+      --cluster {{ current_openshift_cluster.name }} \
+      --output json
+  register: _vpc_file_csi_addon
+  failed_when: False
+  retries: 60
+  delay: 30
+  until: ((_vpc_file_csi_addon.stdout | from_json).healthState | default("")) == "normal"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...

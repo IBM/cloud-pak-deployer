@@ -46,13 +46,14 @@
 - include_tasks: auto-detect-storage-type.yml
   when: _storage_type == 'auto'
 
-- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx', 'aws-elastic' and 'custom'"
+- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-vpc-storage' and 'custom'"
   when: 
     - _storage_type != 'nfs'
     - _storage_type != 'ocs'
     - _storage_type != 'pwx'
     - _storage_type != 'aws-elastic'
     - _storage_type != 'ibm-classic-storage'
+    - _storage_type != 'ibm-vpc-storage'
     - _storage_type != 'custom'
 
 - set_fact:
@@ -102,6 +103,11 @@
     ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ibmc-file-gold-gid') }}"
     ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ibmc-block-gold') }}"
   when: _storage_type == 'ibm-classic-storage'
+
+- set_fact:
+    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ibmc-vpc-file-dp2') }}"
+    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ibmc-vpc-block-10iops-tier') }}"
+  when: _storage_type == 'ibm-vpc-storage'
 
 - name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
   shell:
