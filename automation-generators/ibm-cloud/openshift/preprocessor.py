@@ -23,9 +23,8 @@ from packaging import version
 #     dns_servers:
 #     - 172.31.2.73:53
 #   openshift_storage:
-#   - storage_name: nfs-storage
-#     storage_type: nfs
-#     nfs_server_name: sample-nfs
+#   - storage_name: vpc-storage
+#     storage_type: ibm-cloud-vpc-storage
 #   - storage_name: ocs-storage
 #     storage_type: ocs
 #     ocs_storage_label: ocs
@@ -102,8 +101,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs','pwx']:
-                g.appendError(msg='storage_type must be nfs, ocs or pwx')
+            if "storage_type" in os and os['storage_type'] not in ['ibm-cloud-vpc-storage','ocs','pwx']:
+                g.appendError(msg='storage_type must be ibm-cloud-vpc-storage, ocs or pwx')
             if "storage_type" in os and os['storage_type']=='ocs':
                 if "ocs_storage_label" not in os:
                     g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')

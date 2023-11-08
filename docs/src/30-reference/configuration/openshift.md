@@ -6,7 +6,7 @@ Dependent on the cloud platform on which the OpenShift cluster will be provision
 
 ## `openshift`
 
-For OpenShift, there are 5 flavours:
+For OpenShift, there are 6 flavours:
 
 - [Existing OpenShift](#existing-openshift)
 - [OpenShift on IBM Cloud](#openshift-on-ibm-cloud-roks)
@@ -99,8 +99,7 @@ The `managed` attribute indicates whether the ROKS cluster is managed by the Clo
 | ------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ | --------------------- |
 | openshift_storage[] | List of storage definitions to be defined on OpenShift                                          | Yes                            |                       |
 | storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                               | Yes                            |                       |
-| storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | nfs, ocs or pwx       |
-| nfs_server_name     | Name of the NFS server within the VPC                                                           | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
+| storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | ibm-cloud-vpc-storage, ocs or pwx |
 | ocs_storage_label   | Label to be used for the dedicated OCS nodes in the cluster                                     | Yes if `storage_type` is `ocs` |                       |
 | ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                                                       | Yes if `storage_type` is `ocs` |                       |
 | ocs_version         | Version of OCS (ODF) to be deployed. If left empty, the latest version will be deployed         | No                             | >= 4.6                |
