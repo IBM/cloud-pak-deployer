@@ -1,5 +1,15 @@
 # Running the Cloud Pak Deployer on vSphere
 
+You can use Cloud Pak Deployer to create an OpenShift cluster on VMWare infrastructure.
+
+There are 5 main steps to run the deployer for vSphere:
+
+1. [Configure deployer](#1-configure-deployer)
+2. [Prepare the cloud environment](#2-prepare-the-cloud-environment)
+3. [Obtain entitlement keys and secrets](#3-acquire-entitlement-keys-and-secrets)
+4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
+5. [Run the deployer](#5-run-the-deployer)
+
 ## Topology
 
 A typical setup of the vSphere cluster with OpenShift is pictured below:
@@ -7,7 +17,39 @@ A typical setup of the vSphere cluster with OpenShift is pictured below:
 
 When deploying OpenShift and the Cloud Pak(s) on VMWare vSphere, there is a dependency on a DHCP server for issuing IP addresses to the newly configured cluster nodes. Also, once the OpenShift cluster has been installed, valid fully qualified host names are required to connect to the OpenShift API server at port `6443` and applications running behind the ingress server at port `443`. The Cloud Pak deployer cannot set up a DHCP server or a DNS server and to be able to connect to OpenShift or to reach the Cloud Pak after installation, name entries must be set up.
 
-### Pre-requisites
+## 1. Configure deployer
+
+### Deployer configuration and status directories
+Deployer reads the configuration from a directory you set in the `CONFIG_DIR` environment variable. A status directory (`STATUS_DIR` environment variable) is used to log activities, store temporary files, scripts. If you use a File Vault (default), the secrets are kept in the `$STATUS_DIR/vault` directory.
+
+You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). For vSphere installations, copy one of `ocp-vsphere-*.yaml` files into the `$CONFIG_DIR/config` directory. If you also want to install a Cloud Pak, copy one of the `cp4*.yaml` files.
+
+Example:
+```
+mkdir -p $HOME/cpd-config/config
+cp sample-configurations/sample-dynamic/config-samples/ocp-vsphere-ocs-nfs.yaml $HOME/cpd-config/config/
+cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
+```
+
+### Set configuration and status directories environment variables
+Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+
+```
+export CONFIG_DIR=$HOME/cpd-config
+export STATUS_DIR=$HOME/cpd-status
+```
+
+- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory which contains the configuration `yaml` files.
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files.
+
+#### Optional: advanced configuration
+If the deployer configuration is kept on GitHub, follow the instructions in [GitHub configuration](../../50-advanced/advanced-configuration.md#using-a-github-repository-for-the-configuration).
+
+For special configuration with defaults and dynamic variables, refer to [Advanced configuration](../../50-advanced/advanced-configuration.md#using-dynamic-variables-extra-variables).
+
+## 2. Prepare the cloud environment
+
+### Pre-requisites for vSphere
 In order to successfully install OpenShift on vSphere infrastructure, the following pre-requisites must have been met.
 
 | Pre-requisite       | Description 
@@ -32,8 +74,9 @@ There are also some optional settings, dependent on the specifics of the install
 | Certificates        | If the Cloud Pak URL must have a CA-signed certificate, the key, certificate and CA bundle must be available at instlalation time
 | Load balancer       | The OpenShift IPI install creates 2 VIPs and takes care of the routing to the services. In some implementations, a load balancer provided by the infrastructure team is preferred. This load balancer must be configured externally
 
-
 ### DNS configuration
+
+During the provisioning and configuration process, the deployer needs access to the OpenShift API and the ingress server for which the IP addresses are specified in the `openshift` object.
 
 Ensure that the DNS server has the following entries:
 
@@ -42,19 +85,23 @@ Ensure that the DNS server has the following entries:
 
 If you do not configure the DNS entries upfront, the deployer will still run and it will "spoof" the required entries in the container's `/etc/hosts` file. However to be able to connect to OpenShift and access the Cloud Pak, the DNS entries are required.
 
-## Obtain the vSphere user and password
+### Obtain the vSphere user and password
 
 In order for the Cloud Pak Deployer to create the infrastructure and deploy the IBM Cloud Pak, it must have provisioning access to vSphere and it needs the vSphere user and password. The user must have permissions to create VM folders and virtual machines.
 
-## Acquire an OpenShift pull secret
+### Set environment variables for vSphere
 
-To install OpenShift you need an OpenShift pull secret which holds your entitlement.
+```
+export VSPHERE_USER=your_vsphere_user
+export VSPHERE_PASSWORD=password_of_the_vsphere_user
+```
 
-When installing an IBM Cloud Pak, you can retrieve your Red Hat entitlement using instructions on this page: https://www.ibm.com/docs/en/cloud-paks/1.0?topic=iocpc-accessing-red-hat-entitlements-from-your-cloud-pak. Or, retrieve your pull secret from Red Hat: https://console.redhat.com/openshift/install/pull-secret.
+- `VSPHERE_USER`: This is the user name of the vSphere user, often this is something like `admin@vsphere.local`
+- `VSPHERE_PASSWORD`: The password of the vSphere user. Be careful with special characters like `$`, `!` as they are not accepted by the IPI provisioning of OpenShift
 
-Download the pull secret into file `/tmp/ocp_pullsecret.json`
+## 3. Acquire entitlement keys and secrets
 
-## Acquire an IBM Cloud Pak Entitlement Key
+### Acquire IBM Cloud Pak entitlement key
 
 If you want to pull the Cloud Pak images from the entitled registry (i.e. an online install), or if you want to mirror the images to your private registry, you need to download the entitlement key. You can skip this step if you're installing from a private registry and all Cloud Pak images have already been downloaded to the private registry.
 
@@ -65,91 +112,60 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 !!! warning
     As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
-## Optional: Locate or generate a public SSH Key
-To obtain access to the OpenShift nodes post-installation, you will need to specify the public SSH key of your server; typically this is `~/.ssh/id_rsa.pub`, where `~` is the home directory of your user. If you don't have an SSH key-pair yet, you can generate one using the steps documented here: https://docs.openshift.com/container-platform/4.10/installing/installing_aws/installing-aws-customizations.html#ssh-agent-using_installing-aws-customizations. Alternatively, deployer can generate SSH key-pair automatically if credential `ocp-ssh-pub-key` is not in the vault.
+### Acquire an OpenShift pull secret
 
-## Prepare for running
+To install OpenShift you need an OpenShift pull secret which holds your entitlement.
 
-### Set environment variables for vSphere OpenShift installation
+- Navigate to https://console.redhat.com/openshift/install/pull-secret and download the pull secret into file `/tmp/ocp_pullsecret.json`
+
+### Optional: Locate or generate a public SSH Key
+To obtain access to the OpenShift nodes post-installation, you will need to specify the public SSH key of your server; typically this is `~/.ssh/id_rsa.pub`, where `~` is the home directory of your user. If you don't have an SSH key-pair yet, you can generate one using the steps documented here: https://cloud.ibm.com/docs/ssh-keys?topic=ssh-keys-generating-and-using-ssh-keys-for-remote-host-authentication#generating-ssh-keys-on-linux. Alternatively, deployer can generate SSH key-pair automatically if credential `ocp-ssh-pub-key` is not in the vault.
+
+## 4. Set environment variables and secrets
+
+### Set the Cloud Pak entitlement key
+If you want the Cloud Pak images to be pulled from the entitled registry, set the Cloud Pak entitlement key.
 
 ```
-export VSPHERE_USER=your_vsphere_user
-export VSPHERE_PASSWORD=password_of_the_vsphere_user
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-- `VSPHERE_USER`: This is the user name of the vSphere user, often this is something like `admin@vsphere.local`
-- `VSPHERE_PASSWORD`: The password of the vSphere user. Be careful with special characters like `$`, `!` as they are not accepted by the IPI provisioning of OpenShift
-- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string
+- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string. **You don't need to set this environment variable when you install the Cloud Pak(s) from a private registry**
 
-### Set deployer status directory
-Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+### Create the secrets needed for vSphere deployment
 
-```
-export STATUS_DIR=$HOME/cpd-status
-```
-
-- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory. If you don't specify a status directory, it is assumted to be `$HOME/cpd-status`.
-
-### Set deployer configuration location
-You can use a local directory to hold the deployer configuration or retrieve the configuration from a GitHub repository. If you don't specify any configuration directory or GitHub repository, the configuration directory are assumed to be `$HOME/cpd-config`.
-```
-export CONFIG_DIR=$HOME/cpd-config
-```
-
-- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory.
-
-Or, when using a GitHub repository for the configuration.
-```
-export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
-export CPD_CONFIG_GIT_REF="main"
-export CPD_CONFIG_GIT_CONTEXT=""
-```
-
-- `CPD_CONFIG_GIT_REPO`: The clone URL of the GitHub repository that holds the configuration.
-- `CPD_CONFIG_GIT_REF`: The branch, tag or commit ID to be cloned. If not specified, the repository's default branch will be cloned.
-- `CPD_CONFIG_GIT_CONTEXT`: The directory within the GitHub repository that holds the configuration. This directory must contain the `config` directory under which the YAML files are kept.
-
-!!! info
-    When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
-
-### Create the secrets needed for vSphere
-
-You need to store the vSphere user and password in the vault so that the deployer has access to them when doing the IPI install.
+You need to store the OpenShift pull secret in the vault so that the deployer has access to it.
 
 ```
-./cp-deploy.sh vault set \
-    --vault-secret vsphere-user \
-    --vault-secret-value $VSPHERE_USER
-
-./cp-deploy.sh vault set \
-    --vault-secret vsphere-password \
-    --vault-secret-value $VSPHERE_PASSWORD
-
 ./cp-deploy.sh vault set \
     --vault-secret ocp-pullsecret \
     --vault-secret-file /tmp/ocp_pullsecret.json
+```
 
-# Optional if you would like to use your own public key
+### Optional: Create secret for public SSH key
+If you want to use your SSH key to access nodes in the cluster, set the Vault secret with the public SSH key.
+```
 ./cp-deploy.sh vault set \
     --vault-secret ocp-ssh-pub-key \
     --vault-secret-file ~/.ssh/id_rsa.pub
 ```
 
-## Optional: validate the configuration
+## 5. Run the deployer
+
+### Optional: validate the configuration
 
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
 ```
-./cp-deploy.sh env apply --check-only [--accept-all-liceneses]
+./cp-deploy.sh env apply --check-only --accept-all-licenses
 ```
 
-## Run the Cloud Pak Deployer
+### Run the Cloud Pak Deployer
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ```
-./cp-deploy.sh env apply [--accept-all-liceneses]
+./cp-deploy.sh env apply --accept-all-licenses
 ```
 
 You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
@@ -172,18 +188,11 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ./cp-deploy.sh env kill
 ```
 
-## DNS entries needed for vSphere provisioning
-
-During the provisioning and configuration process, the deployer needs access to the OpenShift API server and the ingress server. These have been specified in the `openshift` object. To avoid any dependencies on the DNS entries for these servers to be present prior to provisioning, the deployer will add `api.<cluster + domain name>` and several <.apps.<cluster + domain name>`entries to the`/etc/hosts` file within the container. Once the deployer has completed, but ideally even before, you must add the appropriate entries to our DNS server:
-
-\*.apps.<cluster + domain name> must be mapped to the `ingress_vip` address
-api.<cluster + domain name> must be mapped to the `api_vip` address
-
-## On failure
+### On failure
 
 If the Cloud Pak Deployer fails, for example because certain infrastructure components are temporarily not available, fix the cause if needed and then just re-run it with the same `CONFIG_DIR` and `STATUS_DIR` as well extra variables. The provisioning process has been designed to be idempotent and it will not redo actions that have already completed successfully.
 
-## Finishing up
+### Finishing up
 
 Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
 
@@ -196,7 +205,7 @@ cat $STATUS_DIR/cloud-paks/*
 This will show the Cloud Pak URLs:
 
 ```output
-Cloud Pak for Data URL for cluster pluto-01 and project cpd:
+Cloud Pak for Data URL for cluster pluto-01 and project cpd (domain name specified was example.com):
 https://cpd-cpd.apps.pluto-01.example.com
 ```
 
@@ -218,13 +227,13 @@ Secret list for group sample:
 - ocp-ssh-pub-key
 - ibm_cp_entitlement_key
 - sample-kubeadmin-password
-- cp4d_admin_zen_sample_sample
+- cp4d_admin_cpd_demo
 ```
 
 You can then retrieve the Cloud Pak for Data admin password like this:
 
 ```
-./cp-deploy.sh vault get --vault-secret cp4d_admin_zen_sample_sample
+./cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_demo
 ```
 
 ```output
@@ -233,5 +242,5 @@ included: /cloud-pak-deployer/automation-roles/99-generic/vault/vault-get-secret
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
-## Post-install configuration
+### Post-install configuration
 You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
