@@ -913,6 +913,8 @@ if ! $INSIDE_CONTAINER;then
 
   run_cmd+=" --cap-add=IPC_LOCK"
 
+  run_cmd+=" --privileged"
+
   if [ "${STATUS_DIR}" != "" ];then
     run_cmd+=" -v ${STATUS_DIR}:${STATUS_DIR}${SELINUX_OPTION}"
   fi
