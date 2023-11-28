@@ -18,10 +18,10 @@
     path: /tmp/work/offline
     state: absent
 
-- name: If air-gapped, copy case files from {{ status_dir }}/cp4d/case to /tmp/work/offline
+- name: If air-gapped, copy case files from {{ status_dir }}/cp4d/offline to /tmp/work/offline
   copy:
-    src: "{{ status_dir }}/cp4d/case/"
-    dest: /tmp/work/offline/
+    src: "{{ status_dir }}/cp4d/offline"
+    dest: /tmp/work/offline
     remote_src: True
   when: (cpd_airgap | default(False) | bool)
 
@@ -98,9 +98,9 @@
     shell: |
       {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc.log 2>&1
 
-- name: If not air-gapped, copy case files from /tmp/work/offline to {{ status_dir }}/cp4d/case
+- name: If not air-gapped, copy case files from /tmp/work/offline to {{ status_dir }}/cp4d/offline
   copy:
-    src: /tmp/work/offline/
-    dest: "{{ status_dir }}/cp4d/case/"
+    src: /tmp/work/offline
+    dest: "{{ status_dir }}/cp4d/offline"
     remote_src: True
-  when: (cpd_airgap | default(False) | bool)
+  when: not (cpd_airgap | default(False) | bool)

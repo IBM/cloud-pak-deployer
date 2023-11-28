@@ -16,7 +16,6 @@ log() {
 #
 # Initialization
 #
-fs_project=ibm-common-services
 temp_dir=$(mktemp -d)
 sub_file=${temp_dir}/sub.csv
 csv_file=${temp_dir}/csv.csv
@@ -29,6 +28,14 @@ ip_file=${temp_dir}/ip.csv
 # Checking for command jq to exist. This is required to parse the json output to recreate the subscriptions.
 if ! command -v jq &> /dev/null;then
   echo "The jq command is required for this script. Please install first."
+fi
+
+# Determine the project that runs the operators
+oc get project ibm-common-services > /dev/null 2>&1
+if [ $? -eq 0 ];then
+  fs_project="ibm-common-services"
+else
+  fs_project=cpd-operators"
 fi
 
 #
