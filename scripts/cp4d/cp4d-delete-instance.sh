@@ -32,8 +32,8 @@ delete_operator_ns() {
     if [ $? -eq 0 ];then
         log "Deleting everything in the ${CP4D_OPERATORS} project"
         oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
-        oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-        oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
+        oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
+        oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
 
         oc delete operandconfig -n ${CP4D_OPERATORS} --all --ignore-not-found
         oc delete operandregistry -n ${CP4D_OPERATORS} --all --ignore-not-found
@@ -141,10 +141,7 @@ else
     echo "Project ${CP4D_PROJECT} does not exist, skipping"
 fi
 
-# Delete operators in ibm-common-services
-delete_operator_ns ibm-common-services
-
-# Delete operators in new operators namespace
+# Delete operators in Cloud Pak for Data 4.7+ operators namespace
 delete_operator_ns ${CP4D_PROJECT}-operators
 # Delete operators in ibm-common-services
 delete_operator_ns ibm-common-services

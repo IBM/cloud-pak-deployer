@@ -65,7 +65,6 @@ while true;do
     cr_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
     cr_status_attribute=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
     cr_status_completed=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
-    cr_operator_label=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_operator_label')
 
     # Skip undefined cartridges
     if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then

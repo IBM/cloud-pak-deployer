@@ -1,0 +1,47 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: cloud-pak-deployer-debug
+  name: cloud-pak-deployer-debug
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 2
+  template:
+    metadata:
+      name: cloud-pak-deployer-debug
+      labels:
+        app: cloud-pak-deployer-debug
+    spec:
+      containers:
+      - name: cloud-pak-deployer-debug
+        image: quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
+        imagePullPolicy: Always
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
+        volumeMounts:
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
+        command: ["/bin/sh","-xc"]
+        args: 
+          - sleep infinity
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 0
+      serviceAccountName: cloud-pak-deployer-sa
+      volumes:
+      - name: config-volume
+        configMap:
+          name: cloud-pak-deployer-config
+      - name: status-volume
+        persistentVolumeClaim:
+          claimName: cloud-pak-deployer-status

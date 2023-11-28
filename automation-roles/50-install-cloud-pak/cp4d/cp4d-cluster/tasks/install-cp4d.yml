@@ -6,12 +6,6 @@
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
     _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"
 
-- name: Remove case directory in case it exists and not air-gapped
-  file:
-    path: "{{ status_dir }}/cp4d/case"
-    state: absent
-  when: not (cpd_airgap | bool)
-
 # TODO: Temporary patch
 - name: Patch version config file for CP4D 4.0.9
   copy:
@@ -20,60 +14,10 @@
     remote_src: True
   when: current_cp4d_cluster.cp4d_version == '4.0.9'
 
-# TODO: Remove cp4d-case-save role, no longer needed
-# - name: Save case files for Cloud Pak for Data when using private registry or when explicitly using case files
-#   include_role: 
-#     name: cp4d-case-save
-#   vars:
-#     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-#   when: 
-#   - not (cpd_airgap | bool)
-
-# Mirror from the entitled registry if not airgapped and entitlement key found in vault
-- block:
-  - name: Get IBM Entitled Registry key
-    include_role: 
-      name: vault-get-secret
-    vars:
-      secret_name: "ibm_cp_entitlement_key"
-      secret_group: "{{ environment_name }}"
-      _p_secret_variable: ibm_cp_entitlement_key
-
-  - name: Mirror images for Cloud Pak for Data from entitled to private registry {{ current_cp4d_cluster.image_registry_name }}
-    include_role: 
-      name: cp4d-mirror-images
-    vars:
-      _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-      _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
-      _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
-      _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
-      _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
-      _p_case_dir: "{{ status_dir }}/cp4d/case"
-      _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
+# Mirror container images if image registry name has been specified
+- include_tasks: cp4d-mirror-images.yml
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
-  - not (cpd_airgap | bool)
-  - not (cpd_skip_mirror | bool)
-
-# Mirror from portable registry if airgapped
-- block:
-  - name: Mirror images for Cloud Pak for Data from portable to private registry {{ current_cp4d_cluster.image_registry_name }}
-    include_role: 
-      name: cp4d-mirror-images
-    vars:
-      _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-      _p_source_registry_hostname: "{{ _v_portable_registry }}"
-      _p_source_registry_port: "{{ _v_portable_registry_port }}"
-      _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
-      _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
-      _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
-      _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
-      _p_case_dir: "{{ status_dir }}/cp4d/case"
-      _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
-      
-  when: 
-  - (current_cp4d_cluster.image_registry_name | default("")) != ""
-  - cpd_airgap | bool
   - not (cpd_skip_mirror | bool)
 
 - name: Migrate to private topology if upgrading to CP4D 4.7.0 or higher
