@@ -1,0 +1,9 @@
+oc patch Watsonxaiifm watsonxaiifm-cr \
+  -n {{ current_cp4d_cluster.project }} \
+  --type=merge \
+  --patch '{"spec": {"install_model_list": [{% for m in _configured_watsonxai_instances | default([]) -%}
+{%- if ((m.state | default('installed')) == 'installed') -%}
+{%- if not loop.first -%},{% endif -%}
+"{{ m.model_id }}"
+{%- endif -%}
+{%- endfor -%}] } }'
