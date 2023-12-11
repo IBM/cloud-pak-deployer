@@ -80,6 +80,7 @@ gpg --default-new-key-algo rsa4096 --gen-key
 ```
 
 You will be prompted to specify your user information:
+
 * Real name: Enter your full name
 * Email address: Your e-mail address that will be used to sign the commits
 
@@ -132,6 +133,7 @@ git config --global user.signingkey A83C67A6D7F71756
 ```
 
 Next, add your GPG key to your Git user.
+
 * Go to https://github.com/IBM/cloud-pak-deployer.git
 * Log in using your public GitHub user
 * Click on your user at the top right of the pages
@@ -153,6 +155,7 @@ git clone https://github.com/IBM/cloud-pak-deployer.git
 ```
 
 ### Connect VSCode to the development server
+
 * Install the **Remote - SSH** extension in VSCode
 * Click on the green icon in the lower left of VSCode
 * Open SSH Config file, choose the one in your home directory
@@ -164,6 +167,7 @@ Host nickname_of_your_server
 ```
 
 Once you have set up this server in the SSH config file, you can connect to it and start remote development. 
+
 * Open
 * Select the `cloud-pak-deployer` directory (this is the cloned repository)
 * As the directory is a cloned Git repo, VSCode will automatically open the default branch
