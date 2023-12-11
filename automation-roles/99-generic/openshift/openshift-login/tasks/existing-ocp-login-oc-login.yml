@@ -1,30 +1,15 @@
 ---
-# Log in using oc login command
-- name: Login to OpenShift cluster if oc login command was found in secret {{ _p_openshift_cluster_name }}-oc-login
-  shell: |
-    {{ _oc_login_cluster }}
-  register: _oc_login_result
-  failed_when: False
-  retries: "{{ _ocp_login_retries }}"
-  delay: "{{ _ocp_login_delay }}"
-  until: _oc_login_result.rc==0
+- include_tasks: existing-ocp-login-oc-login-specific.yml
   when: _oc_login_cluster != ''
 
-- name: Login to OpenShift cluster if oc login command was found in secret oc-login
-  shell: |
-    {{ _oc_login_generic }}
-  register: _oc_login_result
-  failed_when: False
-  retries: "{{ _ocp_login_retries }}"
-  delay: "{{ _ocp_login_delay }}"
-  until: _oc_login_result.rc==0
+- include_tasks: existing-ocp-login-oc-login-generic.yml
   when: 
   - _oc_login_generic != ''
   - _oc_login_cluster == ''
 
 - name: Show OpenShift login result
   debug:
-    msg: "{{_oc_login_result }}"
+    var: _oc_login_result
 
 - fail:
     msg: "OpenShift login to cluster {{ _p_openshift_cluster_name }} failed, details: {{ _oc_login_result }}"
