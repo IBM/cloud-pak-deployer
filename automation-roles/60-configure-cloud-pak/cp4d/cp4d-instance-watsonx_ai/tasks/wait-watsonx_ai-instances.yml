@@ -1,9 +1,14 @@
 ---
+- name: Wait for 1 minute to let the operator update the Watsonsaiifm CR if a change was made
+  pause:
+    seconds: 60
+  when: _patch_watsonxaiifm_result.changed | default(False)
+
 - name: Wait for Watsonxaiifm watsonxaiifm-cr to reach Completed status
   shell: |
     oc get Watsonxaiifm watsonxaiifm-cr -n {{ current_cp4d_cluster.project }} --output json | jq -r '.status.watsonxaiifmStatus' | grep -i 'completed' | wc -l 
   register: _deployed_watsonxaiifm_status
-  retries: 30
+  retries: 60
   delay: 60
   until: _deployed_watsonxaiifm_status.stdout == "1"
   vars:
