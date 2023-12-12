@@ -1,4 +1,11 @@
+{% if (_configured_watsonxai_instances | default([]) | selectattr('state','match','installed' ) | length) != 0 %}
 oc patch Watsonxaiifm watsonxaiifm-cr \
   -n {{ current_cp4d_cluster.project }} \
   --type=merge \
   --patch '{"spec": {"install_model_list": [ {{ '\"' + _configured_watsonxai_instances | default([]) | selectattr('state','match','installed' ) | map(attribute='model_id') | join('\",\"') + '\"' }} ] } }'
+{% else %}
+oc patch Watsonxaiifm watsonxaiifm-cr \
+  -n {{ current_cp4d_cluster.project }} \
+  --type=merge \
+  --patch '{"spec": {"install_model_list": [] } }'
+{% endif %}
