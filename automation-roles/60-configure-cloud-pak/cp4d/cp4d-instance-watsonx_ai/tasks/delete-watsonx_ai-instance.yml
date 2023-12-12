@@ -1,0 +1,8 @@
+---
+- name: Delete deployment for watsonx.ai instance {{ _watsonx_ai_instance.model_id }}
+  shell: |
+    oc delete deployment \
+      -n {{ current_cp4d_cluster.project }} \
+      {{ _watsonx_ai_instance.model_id }}-inference-server \
+      --ignore-not-found
+  when: (_watsonx_ai_instance.state | default('')) == 'removed'
