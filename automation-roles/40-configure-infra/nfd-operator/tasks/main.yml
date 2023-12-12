@@ -1,0 +1,51 @@
+---
+- name: Create openshift-nfd OpenShift project
+  shell: |
+    oc create ns openshift-nfd || true
+
+- name: Retrieve default channel for Node Feature Discovery manifest
+  shell:
+    oc get packagemanifest nfd -o jsonpath='{.status.defaultChannel}'
+  register: _nfd_packagemanifest
+
+- set_fact:
+    _nfd_channel: "{{ _nfd_packagemanifest.stdout }}"
+
+- name: Generate NFD operator file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-operator.yaml
+  template:
+    src: nfd-operator.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-operator.yaml"
+
+- name: Create NFD operator
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-operator.yaml
+
+- name: Wait until NFD Operator CSV has status Succeeded
+  shell: |
+     oc get csv -n openshift-nfd \
+      -l operators.coreos.com/nfd.openshift-nfd \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _nfd_csv_status
+  retries: 30
+  delay: 30
+  until: _nfd_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Get OpenShift version
+  include_role:
+    name: openshift-get-version
+
+- name: Generate NodeFeatureDiscovery CR file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-cr.yaml
+  template:
+    src: nfd-cr.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-cr.yaml"
+
+- name: Create NFD CR
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-cr.yaml
