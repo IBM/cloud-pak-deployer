@@ -5,4 +5,12 @@
       -n {{ current_cp4d_cluster.project }} \
       {{ _watsonx_ai_instance.model_id }}-inference-server \
       --ignore-not-found
-  when: (_watsonx_ai_instance.state | default('')) == 'removed'
+  when: (_watsonx_ai_instance.state | default('')) == 'removed' or (_p_delete_all_instances | default(False))
+
+- name: Delete Watsonxaiifm CR if watsonx.ai was removed
+  shell:
+    oc delete Watsonxaiifm \
+      -n {{ current_cp4d_cluster.project }} \
+      watsonxaiifm-cr \
+      --ignore-not-found
+  when: (_p_delete_all_instances | default(False))
