@@ -9,24 +9,24 @@
   debug:
     var: _watsonxai_cartridge
 
-- block:
-  - set_fact:
-      _configured_watsonxai_instances: []
-  - set_fact:
-      _configured_watsonxai_instances: "{{ _watsonxai_cartridge.models | default([]) }}"
-
-  - include_tasks: configure-watsonx_ai-instances.yml
-    when:
-    - (_p_delete_all_instances | default(False)) == False
-    - (_p_wait_instances | default(False)) == False
-
-  - include_tasks: wait-watsonx_ai-instances.yml
-    when:
-    - (_p_delete_all_instances | default(False)) == False
-    - _p_wait_instances | default(False)
-
+- set_fact:
+    _configured_watsonxai_instances: []
+- set_fact:
+    _configured_watsonxai_instances: "{{ _watsonxai_cartridge.models | default([]) }}"
   when:
   - _watsonxai_cartridge != {}
   - (_watsonxai_cartridge.state | default('installed')) == 'installed'
 
+- include_tasks: configure-watsonx_ai-instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
 - include_tasks: delete-watsonx_ai-instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait-watsonx_ai-instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
