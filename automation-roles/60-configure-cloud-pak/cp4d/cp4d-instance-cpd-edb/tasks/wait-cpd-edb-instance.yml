@@ -9,11 +9,19 @@
     method: GET
     headers:
       Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
     return_content: yes
     validate_certs: no
     status_code: 200
   register: _cpd_edb_instance_lookup_result
+  until: _cpd_edb_instance_lookup_result.json.total_count == 1
+  retries: 60
+  delay: 10
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
 - set_fact:
     _cpd_edb_instance_id: "{{ (_cpd_edb_instance_lookup_result.json.service_instances | first).id }}"
@@ -24,7 +32,7 @@
     method: GET
     headers:
       Content-Type: application/json
-      Authorization: "Bearer {{ cp4d_login.token }}"
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
     return_content: yes
     validate_certs: no
     status_code: 200

@@ -1,0 +1,35 @@
+---
+- set_fact:
+    _watsonxai_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "watsonx_ai"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show watsonx.ai cartridge
+  debug:
+    var: _watsonxai_cartridge
+
+- set_fact:
+    _configured_watsonx_ai_instances: []
+    _delete_all_watsonx_ai_instances: False
+- set_fact:
+    _configured_watsonx_ai_instances: "{{ _watsonxai_cartridge.models | default([]) }}"
+
+- set_fact:
+    _delete_all_watsonx_ai_instances: True
+  when:
+  - _watsonxai_cartridge == {} or (_watsonxai_cartridge.state | default('installed')) == 'removed'
+
+- include_tasks: configure-watsonx_ai-instances.yml
+  when:
+  - _delete_all_watsonx_ai_instances == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete-watsonx_ai-instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait-watsonx_ai-instances.yml
+  when:
+  - _delete_all_watsonx_ai_instances == False
+  - _p_wait_instances | default(False)

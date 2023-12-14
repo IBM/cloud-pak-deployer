@@ -1,23 +1,22 @@
 ---
-# Log in using oc login command
-- block:
-  - name: Login to OpenShift cluster if oc login command was found in secret {{ _p_openshift_cluster_name }}-oc-login
-    shell: |
-      {{ _oc_login_cluster }}
-  - name: Rename current context to {{ _p_openshift_cluster_name }}
-    shell: |
-      oc config delete-context {{ _p_openshift_cluster_name }} || true
-      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+- include_tasks: existing-ocp-login-oc-login-specific.yml
   when: _oc_login_cluster != ''
 
-- block:
-  - name: Login to OpenShift cluster if oc login command was found in secret oc-login
-    shell: |
-      {{ _oc_login_generic }}
-  - name: Rename current context to {{ _p_openshift_cluster_name }}
-    shell: |
-      oc config delete-context {{ _p_openshift_cluster_name }} || true
-      oc config rename-context $(oc config current-context) {{ _p_openshift_cluster_name }}
+- include_tasks: existing-ocp-login-oc-login-generic.yml
   when: 
   - _oc_login_generic != ''
   - _oc_login_cluster == ''
+
+- name: Show OpenShift login result
+  debug:
+    var: _oc_login_result
+
+- fail:
+    msg: "OpenShift login to cluster {{ _p_openshift_cluster_name }} failed, details: {{ _oc_login_result }}"
+  when:
+  - _oc_login_result.rc != 0
+  - _p_require_successful_ocp_login | default(True)
+
+- set_fact:
+    _p_oc_login_successful: False
+  when: _oc_login_result.rc != 0

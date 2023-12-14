@@ -15,12 +15,12 @@ Defines the Cloud Pak for Data instances to be configured on the OpenShift clust
 cp4d:
 - project: cpd
   openshift_cluster_name: sample
-  cp4d_version: 4.0.9
-  use_case_files: False
+  cp4d_version: 4.7.3
   sequential_install: False
+  use_fs_iam: False
   change_node_settings: True
+  db2u_limited_privileges: False
   accept_licenses: False
-  image_registry_name: cpd404
   openshift_storage_name: nfs-storage
   cp4d_entitlement: cpd-enterprise
   cp4d_production_license: True
@@ -36,9 +36,10 @@ cp4d:
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
 | openshift_cluster_name | Name of the OpenShift cluster                  | Yes, inferred from openshift       | Existing `openshift` cluster |
 | cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges that do not specify a version | Yes | 4.x.x |
-| use_case_files | This property indicates whether or not the case files will be used to install the catalog sources in case of an online install from the entitled registry. If `true`, operator case files are downloaded from the case repository to define the catalog sources. If a private registry has been specified (property `image_registry_name`), it is assumed that case file are used to install the catalog sources.                | No       | True, False (default) |
 | sequential_install | If set to `True` the deployer will run the **OLM utils** playbooks to install catalog sources, subscriptions and CRs. If set to `False`, deployer will use OLM utils to generate the scripts and then run them, which will cause the catalog sources, subscriptions and CRs to be created immediately and install in parallel | No | True (default), False |
+| use_fs_iam | If set to `True` the deployer will enable Foundational Services IAM for authentication | No | False (default), True |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
+| db2u_limited_privileges | Depicts whether Db2U containers run with limited privileges. If they do (`True`), Deployer will create KubeletConfig and Tuned OpenShift resources as per the documentation. | No | False (default), True |
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
 | cp4d_entitlement | Set to `cpd-enterprise` or `cpd-standard`, dependent on the deployed license | No | cpd-enterprise (default), cpd-standard |
 | cp4d_production_license | Whether the Cloud Pak for Data is a production license | No | True (default), False |
@@ -586,6 +587,9 @@ cp4ba:
                 gpu_enabled: false
                 nodelabel_key: nvidia.com/gpu.present
                 nodelabel_value: "true"
+              # [Tech Preview] Deploy OCR Engine 2 (IOCR) for ADP - https://www.ibm.com/support/pages/extraction-language-technology-preview-feature-available-automation-document-processing-2301
+              ocrextraction:
+                use_iocr: none # Allowed values: "none" to uninstall, "all" or "auto" to install (these are aliases)
       workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
         enabled: true
         optional_components:

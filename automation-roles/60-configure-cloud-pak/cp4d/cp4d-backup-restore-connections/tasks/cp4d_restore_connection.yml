@@ -15,7 +15,7 @@
     _cp4d_connection_ssl_certificate: "{{ _cp4d_restore_connection.entity.properties.ssl_certificate | default('') }}"
 
 - name: Validate if the connection to the'{{ _cp4d_connection_name }}' is available
-  shell: "curl -s -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials'"
+  shell: "curl -s -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X GET 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }}&entity.flags=personal_credentials'"
   register: _cp4d_connection_existing_result
 
 - set_fact:
@@ -40,7 +40,7 @@
           _connection_asset_id: "{{ _cp4d_connection_existing_connection[0].metadata.asset_id }}"
 
       - name: Delete existing {{ _cp4d_connection_name }}
-        shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X DELETE https://{{ cp4d_url.stdout }}/v2/connections/{{ _connection_asset_id }}?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }}"
+        shell: "curl -v -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X DELETE https://{{ cp4d_url.stdout }}/v2/connections/{{ _connection_asset_id }}?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }}"
         register: _delete_db_connection_result
 
 - when: _create_connection == True
@@ -51,7 +51,7 @@
           dest: "{{ _cp4d_restore_connection_temp_dir.path }}/db_connection.json"
   
       - name: Create Datasource connection {{ _cp4d_connection_name }}
-        shell: "curl -v -k -H 'Authorization: Bearer {{ cp4d_login.token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }} -T {{ _cp4d_restore_connection_temp_dir.path }}/db_connection.json"
+        shell: "curl -v -k -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' -X POST https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_catalog.catalogs[0].metadata.guid }} -T {{ _cp4d_restore_connection_temp_dir.path }}/db_connection.json"
         register: _create_db_connection_result       
 
       - set_fact:

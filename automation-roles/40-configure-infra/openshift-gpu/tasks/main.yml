@@ -1,0 +1,16 @@
+---
+- name: Validate mandatory variables for OpenShift NFD and GPU operators
+  assert:
+    that:
+      - _p_openshift_cluster is defined
+
+- block:
+  - name: Install Node Feature Discovery operator and CR
+    include_role: 
+      name: nfd-operator
+
+  - name: Install NVIDIA operator and CR
+    include_role: 
+      name: nvidia-operator
+
+  when: _p_openshift_cluster.gpu.install | default(False) | bool

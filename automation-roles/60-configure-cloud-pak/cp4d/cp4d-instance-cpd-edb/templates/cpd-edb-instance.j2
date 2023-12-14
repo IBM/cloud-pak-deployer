@@ -6,10 +6,12 @@ metadata:
   labels:
     managedByCpDeployer: "yes"
 spec:
-  type: {{ _cpd_edb_instance_type }}
-  members: {{ _cpd_edb_instance_members }}
+  type: {{ _cpd_edb_instance_type | default('Standard') }}
+  members: {{ _cpd_edb_instance_members | default(1) }}
+  oracleCompatibility: true
+  serviceInstanceName: {{ _cpd_edb_instance_name }}
   version: "{{ _cpd_edb_instance_version }}"
-  storageClass: {{ _cpd_edb_instance_storage_class }}
+  blockStorageClass: {{ _cpd_edb_instance_storage_class }}
   storageSize: {{ _cpd_edb_instance_storage_size_gb }}Gi
   resources:
     requests:
@@ -18,3 +20,4 @@ spec:
     limits:
       cpu: {{ _cpd_edb_instance_resource_limit_cpu }}
       memory: {{ _cpd_edb_instance_resource_limit_memory }}
+  

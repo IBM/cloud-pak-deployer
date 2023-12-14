@@ -1,0 +1,9 @@
+---
+- name: Login to OpenShift cluster if oc login command was found in secret oc-login
+  shell: |
+    {{ _oc_login_generic }}
+  register: _oc_login_result
+  failed_when: False
+  retries: "{{ _ocp_login_retries }}"
+  delay: "{{ _ocp_login_delay }}"
+  until: _oc_login_result.rc==0

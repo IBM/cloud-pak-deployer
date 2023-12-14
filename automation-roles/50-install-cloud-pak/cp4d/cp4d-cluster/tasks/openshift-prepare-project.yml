@@ -31,8 +31,13 @@
   command: oc new-project {{ current_cp4d_cluster.project }}
   when: _cp4d_cluster_project_exists.rc != 0
 
-# Authorize instance topology
+# Prepare CP4D for versions >= 4.7.0
 - block:
+  # Set configmap to control if Db2U must run with elevated or limited privileges
+  - include_tasks: cp4d-db2u-configmap.yml
+    when:
+    - _db2u_dependency | default(False)
+
   - name: Generate authorize instance script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-authorize-instance.sh
     template:
       src: authorize-instance.j2
@@ -42,16 +47,6 @@
   - name: Run script to authorize instance, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log
     shell: |
       {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-authorize-instance.sh
-
-  # TODO: Remove this step, should not be needed
-  - name: Delete resolver files
-    file:
-      path: "{{ item }}"
-      state: absent
-    loop:
-      - /tmp/auth/play_env.sh
-      - /tmp/auth/resolvers_auth.yaml
-      - /tmp/work/resolvers.yaml
 
   - name: Generate setup instance topology script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-setup-instance-topology.sh
     template:

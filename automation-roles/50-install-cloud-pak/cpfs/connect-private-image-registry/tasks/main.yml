@@ -1,0 +1,55 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - (current_cp4d_cluster.image_registry_name | default("")) != ""
+
+- name: Retrieve image registry details
+  set_fact:
+    current_image_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.image_registry_name }}']
+
+- name: Fail if the registry details for the image registry have not been found
+  fail:
+    msg: "Image registry details for image_registry_name {{ current_cp4d_cluster.image_registry_name }} not found."
+  when: 
+  - current_image_registry | default({}) == {}
+
+- name: Show current image registry
+  debug:
+    var: current_image_registry
+
+# Connect to IBM Container registry if on IBM Cloud
+- include_tasks: ibmcloud-cr-connect.yml
+  when: cloud_platform == 'ibm-cloud'
+
+- name: Get private registry authentication details
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: private_registry_auth
+
+- name: Fail if the credentials for the image registry have not been found in the vault
+  fail:
+    msg: "Credentials for specified image registry {{ current_cp4d_cluster.image_registry_name }} not found in vault"
+  when: private_registry_auth == ""
+
+- name: Fail if the credentials are not in the correct format of "user:password"
+  fail:
+    msg: "Private registry credentials in vault secret image-registry-{{ current_cp4d_cluster.image_registry_name }} must in the format of user:password"
+  when: not (private_registry_auth is search(':'))
+
+- set_fact:
+    private_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
+    private_registry_url_namespace: "{{ lookup('template','get_private_registry_with_namespace.j2') }}"
+
+- name: Try to login to the specified registry at {{ private_registry_url }}
+  shell: |
+    skopeo login {{ private_registry_url }} \
+      --username "{{ private_registry_auth.split(':')[0] }}" \
+      --password "{{ private_registry_auth.split(':')[1] }}" \
+      --tls-verify=false

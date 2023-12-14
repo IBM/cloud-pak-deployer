@@ -8,7 +8,49 @@ When running the Cloud Pak Deployer on an existing OpenShift cluster, the follow
 
 With the **Existing OpenShift** type of deployment you can install and configure the Cloud Pak(s) both on connected and disconnected (air-gapped) cluster. When using the deployer for a disconnected cluster, make sure you specify `--air-gapped` for the `cp-deploy.sh` command.
 
-## Acquire an IBM Cloud Pak Entitlement Key (connected cluster only)
+There are 5 main steps to run the deployer for existing OpenShift:
+
+1. [Configure deployer](#1-configure-deployer)
+2. [Prepare the cloud environment](#2-prepare-the-cloud-environment)
+3. [Obtain entitlement keys and secrets](#3-acquire-entitlement-keys-and-secrets)
+4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
+5. [Run the deployer](#5-run-the-deployer)
+
+## 1. Configure deployer
+
+### Deployer configuration and status directories
+Deployer reads the configuration from a directory you set in the `CONFIG_DIR` environment variable. A status directory (`STATUS_DIR` environment variable) is used to log activities, store temporary files, scripts. If you use a File Vault (default), the secrets are kept in the `$STATUS_DIR/vault` directory.
+
+You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). For existing OpenShift installations, copy one of `ocp-existing-ocp-*.yaml` files into the `$CONFIG_DIR/config` directory. If you also want to install a Cloud Pak, copy one of the `cp4*.yaml` files.
+
+Example:
+```
+mkdir -p $HOME/cpd-config/config
+cp sample-configurations/sample-dynamic/config-samples/ocp-existing-ocp-auto.yaml $HOME/cpd-config/config/
+cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
+```
+
+### Set configuration and status directories environment variables
+Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
+
+```
+export CONFIG_DIR=$HOME/cpd-config
+export STATUS_DIR=$HOME/cpd-status
+```
+
+- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory which contains the configuration `yaml` files.
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files.
+
+#### Optional: advanced configuration
+If the deployer configuration is kept on GitHub, follow the instructions in [GitHub configuration](../../50-advanced/advanced-configuration.md#using-a-github-repository-for-the-configuration).
+
+For special configuration with defaults and dynamic variables, refer to [Advanced configuration](../../50-advanced/advanced-configuration.md#using-dynamic-variables-extra-variables).
+
+## 2. Prepare the cloud environment
+
+No steps should be required to prepare the infrastructure; this type of installation expects the OpenShift cluster to be up and running with the supported storage classes.
+
+## 3. Acquire entitlement keys and secrets
 
 If you want to pull the Cloud Pak images from the entitled registry (i.e. an online install), or if you want to mirror the images to your private registry, you need to download the entitlement key. You can skip this step if you're installing from a private registry and all Cloud Pak images have already been downloaded to the private registry.
 
@@ -19,53 +61,25 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 !!! warning
     As stated for the API key, you can choose to download the entitlement key to a file. However, when we reference the entitlement key, we mean the 80+ character string that is displayed, not the file.
 
-## Prepare for running
 
-### Set environment variables for existing OpenShift
+## 4. Set environment variables and secrets
+
+### Set the Cloud Pak entitlement key
+If you want the Cloud Pak images to be pulled from the entitled registry, set the Cloud Pak entitlement key.
 
 ```
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
-- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string. **You don't need to set this environment variable when you do an air-gapped installation**
-
-### Set deployer status directory
-Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
-
-```
-export STATUS_DIR=$HOME/cpd-status
-```
-
-- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files. **Please note** that if you have chosen to use a File Vault, the properties file is keps under the `vault` directory within the status directory. If you don't specify a status directory, it is assumted to be `$HOME/cpd-status`.
-
-### Set deployer configuration location
-You can use a local directory to hold the deployer configuration or retrieve the configuration from a GitHub repository. If you don't specify any configuration directory or GitHub repository, the configuration directory are assumed to be `$HOME/cpd-config`.
-```
-export CONFIG_DIR=$HOME/cpd-config
-```
-
-- `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory.
-
-Or, when using a GitHub repository for the configuration.
-```
-export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
-export CPD_CONFIG_GIT_REF="main"
-export CPD_CONFIG_GIT_CONTEXT=""
-```
-
-- `CPD_CONFIG_GIT_REPO`: The clone URL of the GitHub repository that holds the configuration.
-- `CPD_CONFIG_GIT_REF`: The branch, tag or commit ID to be cloned. If not specified, the repository's default branch will be cloned.
-- `CPD_CONFIG_GIT_CONTEXT`: The directory within the GitHub repository that holds the configuration. This directory must contain the `config` directory under which the YAML files are kept.
-
-!!! info
-    When specifying a GitHub repository, the contents will be copied under `$STATUS_DIR/cpd-config` and this directory is then set as the configuration directory.    
+- `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string. **You don't need to set this environment variable when you install the Cloud Pak(s) from a private registry**
 
 ### Store the OpenShift login command or configuration
 
-Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. There are multiple methods for passing the login credentials of your OpenShift cluster(s) to the deployer process:
-- Generic `oc login` command
-- Specific `oc login` command(s)
-- `kubeconfig` file
+Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. There are thre methods for passing the login credentials of your OpenShift cluster(s) to the deployer process:
+
+1. [Generic `oc login` command (preferred)](#option-1---generic-oc-login-command)
+2. [Specific `oc login` command(s)](#option-2---specific-oc-login-commands)
+3. [`kubeconfig` file](#option-3---use-a-kubeconfig-file)
 
 Regardless of which authentication option you choose, the deployer will retrieve the secret from the vault when it requires access to OpenShift. If the secret cannot be found or if it is invalid or the OpenShift login token has expired, the deployer will fail and you will need to update the secret of your choice.
 
@@ -87,7 +101,7 @@ You have access to 65 projects, the list has been suppressed. You can list all p
 Using project "default".
 ```
 
-#### Option 1: specify the generic `oc login` command
+#### Option 1 - Generic `oc login` command
 This is the most straightforward option if you only have 1 OpenShift cluster in your configuration.
 
 Set the environment variable for the `oc login` command
@@ -100,7 +114,7 @@ export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ
 
 When the deployer is run, it automatically sets the `oc-login` vault secret to the specified `oc login` command. When logging in to OpenShift, the deployer first checks if there is a specific `oc login` secret for the cluster in question (see option 2). If there is not, it will default to the generic `oc-login` secret (option 1).
 
-#### Option 2: store the specific `oc login` command(s)
+#### Option 2 - Specific `oc login` command(s)
 Use this option if you have multiple OpenShift clusters configured in th deployer configuration.
 
 Store the login command in secret `<cluster name>-oc-login`
@@ -113,7 +127,7 @@ Store the login command in secret `<cluster name>-oc-login`
 !!! info
     Make sure you put the oc login command between quotes (single or double) to make sure the full command is stored.
 
-#### Option 3: store the kubeconfig file
+#### Option 3 - Use a kubeconfig file
 If you already have a "kubeconfig" file that holds the credentials of your cluster, you can use this, otherwise:
 - Log in to OpenShift as a cluster administrator using your method of choice
 - Locate the Kubernetes config file. If you have logged in with the OpenShift client, this is typically `~/.kube/config`
@@ -142,34 +156,22 @@ If the deployer manages multiple OpenShift clusters, you can specify a kubeconfi
 ```
 When connecting to the OpenShift cluster, a cluster-specific kubeconfig vault secret will take precedence over the generic `kubeconfig` secret.
 
-## Optional: validate the configuration
+## 5. Run the deployer
+
+### Optional: validate the configuration
 
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
-If the cluster is air-gapped, make sure you add the `--air-gapped` flag
-
 ```
-./cp-deploy.sh env apply --check-only [--accept-all-licenses]
+./cp-deploy.sh env apply --check-only --accept-all-licenses
 ```
 
-## Creating CP4D Storage Classes (If Portworx is Already Installed)
-If Portworx is already installed, CP4D will automatically create the necessary storage classes for its use during the installation process.
-
-
-## Run the Cloud Pak Deployer
+### Run the Cloud Pak Deployer
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
-If the cluster is air-gapped, make sure you add the `--air-gapped` flag
-
 ```
-./cp-deploy.sh env apply [--accept-all-licenses]
-```
-
-If you have chosen to use dynamic properties (extra variables), you can specify these on the command line, see below. Extra variables are covered in [advanced configuration](../../../50-advanced/advanced-configuration).
-
-```
-./cp-deploy.sh env apply [--accept-all-licenses]
+./cp-deploy.sh env apply --accept-all-licenses
 ```
 
 You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
@@ -184,7 +186,7 @@ You can return to view the logs as follows:
 ./cp-deploy.sh env logs
 ```
 
-Preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours, dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -192,11 +194,11 @@ If you need to interrupt the automation, use CTRL-C to stop the logging output a
 ./cp-deploy.sh env kill
 ```
 
-## On failure
+### On failure
 
 If the Cloud Pak Deployer fails, for example because certain infrastructure components are temporarily not available, fix the cause if needed and then just re-run it with the same `CONFIG_DIR` and `STATUS_DIR` as well extra variables. The provisioning process has been designed to be idempotent and it will not redo actions that have already completed successfully.
 
-## Finishing up
+### Finishing up
 
 Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
 
@@ -209,9 +211,11 @@ cat $STATUS_DIR/cloud-paks/*
 This will show the Cloud Pak URLs:
 
 ```output
-Cloud Pak for Data URL for cluster pluto-01 and project cpd:
+Cloud Pak for Data URL for cluster pluto-01 and project cpd (domain name specified was example.com):
 https://cpd-cpd.apps.pluto-01.example.com
 ```
+
+The `admin` password can be retrieved from the vault as follows:
 
 List the secrets in the vault:
 
@@ -224,14 +228,14 @@ This will show something similar to the following:
 ```output
 Secret list for group sample:
 - ibm_cp_entitlement_key
-- pluto-01-oc-login
-- cp4d_admin_zen_sample_sample
+- oc-login
+- cp4d_admin_cpd_demo
 ```
 
 You can then retrieve the Cloud Pak for Data admin password like this:
 
 ```
-./cp-deploy.sh vault get --vault-secret cp4d_admin_zen_sample_sample
+./cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_sample
 ```
 
 ```output
@@ -240,5 +244,5 @@ included: /cloud-pak-deployer/automation-roles/99-generic/vault/vault-get-secret
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
-## Post-install configuration
+### Post-install configuration
 You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).

@@ -35,9 +35,21 @@
       -u kubeadmin -p {{ _kubeadmin_password }} \
       --insecure-skip-tls-verify=true
   register: _oc_login_result
-  retries: 60
-  delay: 10
+  failed_when: False
+  retries: "{{ _ocp_login_retries }}"
+  delay: "{{ _ocp_login_delay }}"
   until: _oc_login_result.rc==0
 
-- debug:
-    msg: "{{ _oc_login_result }}"
+- name: Show OpenShift login result
+  debug:
+    msg: "{{_oc_login_result }}"
+
+- fail:
+    msg: "OpenShift login to cluster {{ _p_openshift_cluster_name }} failed, details: {{ _oc_login_result }}"
+  when:
+  - _oc_login_result.rc != 0
+  - _p_require_successful_ocp_login | default(True)
+
+- set_fact:
+    _p_oc_login_successful: False
+  when: _oc_login_result.rc != 0

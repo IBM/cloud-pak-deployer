@@ -73,8 +73,9 @@ Most custom resources defined by the cartridge operators require some back-end s
 ### Prepare the Cloud Pak for Data operator
 When using express install, the Cloud Pak for Data operator also installs the Cloud Pak Foundational Services. Consecutively, this part of the deployer:
 
-* Creates the `ibm-common-services` project if it doesn't exist already
+* Creates the operator project if it doesn't exist already
 * Creates an OperatorGroup
+* Installs the license service and certificate manager
 * Creates the platform operator subscription
 * Waits until the ClusterServerVersion objects for the platform operator and Operand Deployment Lifecycle Manager have been created
 
@@ -85,14 +86,11 @@ The Cloud Pak for Data control plane is a pre-requisite for all cartridges so at
 
 Once the control plane has been installed successfully, the deployer generates a new strong 25-character password for the Cloud Pak for Data `admin` user and stores this into the vault. Additionally, the `admin-user-details` secret in the OpenShift project is updated with the new password.
 
-### Install the license service
-If the `cpfs` cartridge specifies `license_service` and the `state` attribute is `enabled`, the OperandRequest for the license service is created in OpenShift project `ibm-common-services`. This automatically takes care of installing the operator and an instance of `IBMLicensing` and set the number of threads per core (default 1). The value of `threads_per_core` is applied to the `IBMLicensing` instance once it has been created by the operator.
-
 ### Install the specified Cloud Pak for Data cartridges
-Now that the control plane has been installed in the specified OpenShift project, cartridges can be installed. Every cartridge is controlled by its own operator subscription in the `ibm-common-services` project and a custom resource. The deployer iterates twice over the specified cartridges, first to create the operator subscriptions, then to create the custom resources.
+Now that the control plane has been installed in the specified OpenShift project, cartridges can be installed. Every cartridge is controlled by its own operator subscription in the operators project and a custom resource. The deployer iterates twice over the specified cartridges, first to create the operator subscriptions, then to create the custom resources.
 
 #### Create cartridge operator subscriptions
-This steps creates `subscription` objects for each cartridge in the `ibm-common-services` project, using a YAML template that is included in the deployer code and the `subscription_channel` specified in the cartridge definition. Keeping the subscription channel separate delivers flexibility when new subscription channels become available over time.
+This steps creates `subscription` objects for each cartridge in the operators project, using a YAML template that is included in the deployer code and the `subscription_channel` specified in the cartridge definition. Keeping the subscription channel separate delivers flexibility when new subscription channels become available over time.
 
 Once the subscription has been created, the deployer waits for the associate CSV(s) to be created and reach the `Installed` state.
 

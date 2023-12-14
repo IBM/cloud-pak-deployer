@@ -1,0 +1,74 @@
+---
+- name: Create ImageContentSourcePolicy for private registry
+  template:
+    src: cloud-pak-icsp.j2
+    dest: "{{ status_dir }}/openshift/cloud-pak-icsp.yaml"
+- name: Create ImageContentSourcePolicy {{ icsp_name }}
+  shell: "oc apply -f {{ status_dir }}/openshift/cloud-pak-icsp.yaml"  
+
+# Handle insecure registry
+- name: Patch OpenShift image object if insecure registry was specified
+  block:
+  - name: Check if insecureRegistries already in image specification
+    shell: |
+      oc get image.config.openshift.io/cluster -o json | jq -r '.spec.registrySources // ""'
+    register: _insecure_registries
+  - name: Add insecureRegistries specification
+    shell: |
+      oc patch image.config.openshift.io/cluster --type=merge --patch '{"spec": {"registrySources": {"insecureRegistries": []}}}'
+    when: not "insecureRegistries" in _insecure_registries.stdout
+
+  - name: Check if {{ private_registry_url }} already in insecure registries
+    shell: |
+      oc get image.config.openshift.io/cluster -o json | jq -r '.spec.registrySources.insecureRegistries // ""'
+    register: _private_registry_entries
+
+  - name: Add insecure registry entry
+    shell: |
+      oc patch image.config.openshift.io/cluster --type=json \
+      --patch '[{"op": "add", "path": "/spec/registrySources/insecureRegistries/-", "value": "{{ private_registry_url }}" }]'
+    when: not private_registry_url in _private_registry_entries.stdout
+  when: (current_image_registry.registry_insecure | default(False) | bool)
+
+# Handle registry with CA bundle
+- name: Patch OpenShift image object if trusted CA secret was specified
+  block:
+  - name: Get trusted CA secret from vault
+    include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "{{ current_image_registry.registry_trusted_ca_secret }}"
+      secret_group: "{{ environment_name }}"
+
+  - set_fact:
+      _registry_trusted_ca_secret: "{{ secret_value }}"
+
+  - name: Fail if secret {{ current_image_registry.registry_trusted_ca_secret }} was not found in the vault
+    fail:
+      msg: Secret "{{ current_image_registry.registry_trusted_ca_secret }}" was not found in the vault
+    when: _registry_trusted_ca_secret == ""
+
+  - name: Check if additionalTrustedCA already in image specification
+    shell: |
+      oc get image.config.openshift.io/cluster -o json | jq -r '.spec.additionalTrustedCA.name // ""'
+    register: _additional_trusted_ca_name_output
+  - set_fact:
+      _additional_trusted_ca_name: "{{ _additional_trusted_ca_name_output.stdout }}"
+  - set_fact:
+      _additional_trusted_ca_name: "{{ current_image_registry.registry_trusted_ca_secret }}"
+    when: _additional_trusted_ca_name == ""
+
+  - name: Create ConfigMap for additional trusted CA if non-existing
+    shell: |
+      oc create cm -n openshift-config {{ _additional_trusted_ca_name }}
+    failed_when: False
+  - name: Set data for registry hostname {{ current_image_registry.registry_host_name }}
+    shell: |
+      oc set data cm/{{ _additional_trusted_ca_name }} -n openshift-config \
+        "{{ private_registry_url | replace(':', '..') }}"="{{ _registry_trusted_ca_secret }}"
+
+  - name: Set additionalTrustedCA specification
+    shell: |
+      oc patch image.config.openshift.io/cluster --type=merge \
+        --patch '{"spec": {"additionalTrustedCA": {"name": "{{ _additional_trusted_ca_name }}"}}}'
+  when: current_image_registry.registry_trusted_ca_secret | default("") != ""

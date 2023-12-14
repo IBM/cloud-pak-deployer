@@ -10,6 +10,52 @@ log() {
   printf "[${LOG_TIME}] ${1}\n"
 }
 
+wait_ns_deleted() {
+    NS=$1
+    log "Waiting for deletion of namespace ${NS} ..."
+    while $(oc get ns ${NS} > /dev/null 2>&1);do
+        sleep 1
+    done
+}
+
+wait_ns_deleted() {
+    NS=$1
+    log "Waiting for deletion of namespace ${NS} ..."
+    while $(oc get ns ${NS} > /dev/null 2>&1);do
+        sleep 1
+    done
+}
+
+delete_operator_ns() {
+    CP4D_OPERATORS=$1
+    oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
+    if [ $? -eq 0 ];then
+        log "Deleting everything in the ${CP4D_OPERATORS} project"
+        oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
+        oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
+        oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
+
+        oc delete operandconfig -n ${CP4D_OPERATORS} --all --ignore-not-found
+        oc delete operandregistry -n ${CP4D_OPERATORS} --all --ignore-not-found
+        oc delete nss -n ${CP4D_OPERATORS} --all --ignore-not-found
+
+        oc delete sub -n ${CP4D_OPERATORS} --all --ignore-not-found
+        oc delete csv -n ${CP4D_OPERATORS} --all --ignore-not-found
+
+        log "Deleting ${CP4D_OPERATORS} project"
+        oc delete ns ${CP4D_OPERATORS} --ignore-not-found --wait=false
+        while [ $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers 2>/dev/null | wc -l) -ne 0  ];do
+            for opreq in $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers | awk '{print $1}');do
+                oc delete operandrequest -n ${CP4D_OPERATORS} ${opreq} --ignore-not-found --wait=false
+                oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+            done
+        done
+        wait_ns_deleted ${CP4D_OPERATORS}
+    else
+        echo "Project ${CP4D_OPERATORS} does not exist, skipping"
+    fi
+}
+
 CP4D_PROJECT=$1
 if [ -z "${CP4D_PROJECT}" ];then
     echo "Usage: $0 <cp4d-project>"
@@ -58,15 +104,6 @@ if [ $? -eq 0 ];then
         esac
     done < ${temp_dir}/cp4d-resources.out
 
-    # 
-    # Wait a bit to give OpenShift a chance to terminate the resources. You can check the pods in the CP4D project to see if
-    # they are terminating.
-    #
-    if ${resource_deleted};then
-        log "Waiting a jiffy for pods to start terminating"
-        sleep 10
-    fi
-
     #
     # Delete the remaining CP4D custom resources - Ibmcpd, CommonService and OperandRequest
     #
@@ -86,73 +123,31 @@ if [ $? -eq 0 ];then
         esac
     done < ${temp_dir}/cp4d-resources.out
 
-    if ${resource_deleted};then
-        log "Waiting a jiffy for remaining pods to start terminating"
-        sleep 10
-    fi
-
     log "Delete role binding if Cloud Pak for Data was connected to IAM"
     oc delete rolebinding -n ${CP4D_PROJECT} admin --ignore-not-found --wait=false
     oc patch -n ${CP4D_PROJECT} rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+    oc delete authentication.operator.ibm.com -n ${CP4D_PROJECT} example-authentication --ignore-not-found --wait=false
+    oc patch -n ${CP4D_PROJECT} authentication.operator.ibm.com/example-authentication --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
 
     #
     # Now the CP4D project should be empty and can be deleted, this may take a while (5-15 minutes)
     #
     log "Deleting ${CP4D_PROJECT} namespace"
-    oc delete ns ${CP4D_PROJECT}
+    oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
+    wait_ns_deleted ${CP4D_PROJECT}
+    oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
+    wait_ns_deleted ${CP4D_PROJECT}
 else
     echo "Project ${CP4D_PROJECT} does not exist, skipping"
 fi
 
-CP4D_OPERATORS=${CP4D_PROJECT}-operators
-oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
-if [ $? -eq 0 ];then
-    log "Deleting everything in the ${CP4D_OPERATORS} project"
-    oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
-    oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-    oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
+# Delete operators in Cloud Pak for Data 4.7+ operators namespace
+delete_operator_ns ${CP4D_PROJECT}-operators
+# Delete operators in ibm-common-services
+delete_operator_ns ibm-common-services
 
-    for opreq in $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers | awk '{print $1}');do
-        oc delete operandrequest -n ${CP4D_OPERATORS} --all --ignore-not-found --wait=false
-        oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
-    done
-    oc delete operandconfig -n ${CP4D_OPERATORS} --all --ignore-not-found
-    oc delete operandregistry -n ${CP4D_OPERATORS} --all --ignore-not-found
-    oc delete nss -n ${CP4D_OPERATORS} --all --ignore-not-found
-
-    oc delete sub -n ${CP4D_OPERATORS} --all --ignore-not-found
-    oc delete csv -n ${CP4D_OPERATORS} --all --ignore-not-found
-
-    log "Deleting ${CP4D_OPERATORS} project"
-    oc delete ns ${CP4D_OPERATORS}
-else
-    echo "Project ${CP4D_OPERATORS} does not exist, skipping"
-fi
-
-CP4D_OPERATORS=${CP4D_PROJECT}-operators
-oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
-if [ $? -eq 0 ];then
-    log "Deleting everything in the ${CP4D_OPERATORS} project"
-    oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
-    oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-    oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-
-    for opreq in $(oc get operandrequest -n ${CP4D_OPERATORS} --no-headers | awk '{print $1}');do
-        oc delete operandrequest -n ${CP4D_OPERATORS} --all --ignore-not-found --wait=false
-        oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
-    done
-    oc delete operandconfig -n ${CP4D_OPERATORS} --all --ignore-not-found
-    oc delete operandregistry -n ${CP4D_OPERATORS} --all --ignore-not-found
-    oc delete nss -n ${CP4D_OPERATORS} --all --ignore-not-found
-
-    oc delete sub -n ${CP4D_OPERATORS} --all --ignore-not-found
-    oc delete csv -n ${CP4D_OPERATORS} --all --ignore-not-found
-
-    log "Deleting ${CP4D_OPERATORS} project"
-    oc delete ns ${CP4D_OPERATORS}
-else
-    echo "Project ${CP4D_OPERATORS} does not exist, skipping"
-fi
+# Delete operators in new operators namespace
+delete_operator_ns ${CP4D_PROJECT}-operators
 
 IBM_SCHEDULING=ibm-scheduling
 oc get project ${IBM_SCHEDULING} > /dev/null 2>&1
@@ -163,7 +158,10 @@ if [ $? -eq 0 ];then
     oc delete csv -n ${IBM_SCHEDULING} --all --ignore-not-found
 
     log "Deleting ${IBM_SCHEDULING} project"
-    oc delete ns ${IBM_SCHEDULING}
+    oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_SCHEDULING}
+    oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_SCHEDULING}
 else
     echo "Project ${IBM_SCHEDULING} does not exist, skipping"
 fi
@@ -177,7 +175,10 @@ if [ $? -eq 0 ];then
     oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
 
     log "Deleting ${IBM_LICENSING} project"
-    oc delete ns ${IBM_LICENSING}
+    oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_LICENSING}
+    oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_LICENSING}
 else
     echo "Project ${IBM_LICENSING} does not exist, skipping"
 fi
@@ -194,7 +195,10 @@ if [ $? -eq 0 ];then
     oc delete csv -n ${IBM_CERT_MANAGER} --all --ignore-not-found
 
     log "Deleting ${IBM_CERT_MANAGER} project"
-    oc delete ns ${IBM_CERT_MANAGER}
+    oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_CERT_MANAGER}
+    oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_CERT_MANAGER}
 else
     echo "Project ${IBM_CERT_MANAGER} does not exist, skipping"
 fi
@@ -216,7 +220,10 @@ if [ $? -eq 0 ];then
     oc delete nss -n ${IBM_CS_CONTROL} --all --ignore-not-found
 
     log "Deleting ${IBM_CS_CONTROL} project"
-    oc delete ns ${IBM_CS_CONTROL}
+    oc delete ns ${IBM_CS_CONTROL} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_CS_CONTROL}
+    oc delete ns ${IBM_CS_CONTROL} --ignore-not-found --wait=false
+    wait_ns_deleted ${IBM_CS_CONTROL}
 else
     echo "Project ${IBM_CS_CONTROL} does not exist, skipping"
 fi
@@ -225,47 +232,12 @@ echo "Deleting common-service maps"
 oc delete cm -n kube-public common-service-maps --ignore-not-found
 
 #
-# Delete all CRs in the ibm-common-services project
-# Here we do wait for deletion to complete as it typically does finish ok in a few minutes
-#
-oc get project ibm-common-services > /dev/null 2>&1
-if [ $? -eq 0 ];then
-    log "Deleting everything in the ibm-common-services project"
-    oc project ibm-common-services
-    oc delete CommonService  -n ibm-common-services common-service --ignore-not-found
-    oc delete Scheduling -n ibm-common-services --all --ignore-not-found
-    oc delete sub -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-    oc delete csv -n ibm-common-services -l operators.coreos.com/ibm-common-service-operator.ibm-common-services --ignore-not-found
-
-    oc delete operandrequest -n ibm-common-services --all --ignore-not-found
-
-    oc delete operandconfig -n ibm-common-services --all --ignore-not-found
-
-    oc delete operandregistry -n ibm-common-services --all --ignore-not-found
-
-    oc delete nss -n ibm-common-services --all --ignore-not-found
-
-    oc delete sub -n ibm-common-services --all --ignore-not-found
-    oc delete csv -n ibm-common-services --all --ignore-not-found
-
-    log "Delete role binding in Foundation Services if Cloud Pak for Data was connected to IAM"
-    oc delete rolebinding -n ibm-common-services admin --ignore-not-found --wait=false
-    oc patch -n ibm-common-services rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
-
-    #
-    # Now the ibm-common-services project should be empty and can be deleted
-    #
-    log "Deleting ibm-common-services project"
-    oc delete ns ibm-common-services
-fi
-
-#
 # Delete all catalog sources belonging to CP4D
 #
 log "Deleting IBM catalog sources"
 oc delete catsrc -n openshift-marketplace \
     $(oc get catsrc -n openshift-marketplace \
-    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found
+    --no-headers | grep -E 'IBM|MANTA' | awk '{print $1}') --ignore-not-found 2>/dev/null
 
 #
 # Delete IBM CRDs that don't have an instance

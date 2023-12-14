@@ -1,0 +1,67 @@
+---
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
+    state: directory
+
+- name: Delete file servers associated with OpenShift cluster
+  include_tasks: aws-delete-file-servers.yml
+  loop: "{{ _current_openshift_cluster.openshift_storage }}"
+  loop_control:
+    loop_var: _current_openshift_storage
+
+- name: Download OpenShift installer for version {{ _current_openshift_cluster.ocp_version }}
+  include_role:
+    name: openshift-download-installer
+  vars:
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
+
+- name: Retrieve metadata json from the vault to check if OpenShift cluster still exist
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-metadata-json"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _aws_metadata_json
+
+- block:
+  - name: Ensure {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} directory exists
+    file:
+      path: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}"
+      state: directory
+
+  - name: Write {{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json file
+    copy:
+      content: "{{ secret_value }}"
+      dest: "{{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }}/metadata.json"
+
+  - name: Delete IPI cluster, logs can be found in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log
+    shell: |
+      openshift-install destroy cluster --dir={{ status_dir }}/aws-ipi/{{ _current_openshift_cluster.name }} --log-level debug >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-delete-cluster.log 2>&1
+    environment:
+      AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+      AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+      AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
+
+  when: _aws_metadata_json != '' 
+
+- name: Delete "{{ _current_openshift_cluster.name }}-kubeadmin-password" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+
+- name: Delete "{{ _current_openshift_cluster.name }}-metadata-json" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-metadata-json"
+    secret_group: "{{ environment_name }}"
+
+- name: Delete "{{ _current_openshift_cluster.name }}-install-config-yaml" secret from the vault
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-install-config-yaml"
+    secret_group: "{{ environment_name }}"

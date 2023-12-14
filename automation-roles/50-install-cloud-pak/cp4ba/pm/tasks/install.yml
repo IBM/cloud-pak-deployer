@@ -1,41 +1,41 @@
-- name: Get MySQL Pod
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Pod
-    namespace: mysql
-    label_selectors:
-      - app=mysql
-  register: pods
+- name: Add DB2 user
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-db2-user
+  vars:
+    common_db2_user: pm
+    common_db2_password: "{{ pm_db2_password }}"
+
+- name: PM DB Create
+  kubernetes.core.k8s_exec:
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
+    command: >
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CREATE DATABASE PM AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
+      db2 CONNECT TO PM;
+      "
+  register: command_status
   retries: 40
-  delay: 15
+  delay: 30
+  until: command_status.rc == 0
 
-- name: Add MySQL User
+- name: PM DB Configure
   kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
+    namespace: db2
+    pod: c-db2ucluster-db2u-0
     command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "CREATE USER 'pm'@'%' IDENTIFIED BY '{{ pm_universal_password }}';"
+      su - db2inst1 -s /usr/bin/bash -c "
+      db2 CONNECT TO PM;
+      db2 CREATE SCHEMA PM AUTHORIZATION pm;
+      db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER pm;
+      db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER pm;
+      db2 CONNECT RESET;
+      db2 activate db PM;
+      "
   register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
-    command_status.stderr is search('.*Operation CREATE USER failed.*'))
-
-- name: Prepare MySQL DB
-  kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "CREATE DATABASE pm;"
-  register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stderr is defined and
-    command_status.stderr is search('.*database exists.*'))
-
-- name: Set privileges
-  kubernetes.core.k8s_exec:
-    namespace: mysql
-    pod: "{{ pods.resources[0].metadata.name }}"
-    command: >
-      mysql -uroot -p{{ pm_universal_password }} -e "GRANT ALL PRIVILEGES ON pm.* TO 'pm'@'%';"
-  register: command_status
+  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
+    command_status.stdout is search('.*the database has already.*'))
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
@@ -210,38 +210,6 @@
     common_namespace_name: "{{ pm_project_name }}"
     common_output_to_var: "zen_token"
 
-- name: Get User profile
-  ansible.builtin.uri:
-    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile"
-    method: GET
-    headers:
-      Cookie: ibm-private-cloud-session={{ zen_token }}
-    validate_certs: false
-    status_code: 200
-  register: user_profile_response
-
-- name: Set user profile api key
-  ansible.builtin.set_fact:
-    api_key: "{{ user_profile_response.json.data.apiKey }}"
-
-# Based on https://www.ibm.com/docs/en/process-mining/latest?topic=manual-how-integrate-process-mining-task-mining
-- name: Setup master key for task mining
-  ansible.builtin.uri:
-    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/taskmining/api/pmMasterUser"
-    method: POST
-    headers:
-      Cookie: ibm-private-cloud-session={{ zen_token }}
-    body_format: json
-    body:
-      {
-        "userName": "{{ lc_principal_admin_user }}",
-        "apiKey": "{{ api_key }}"
-      }
-    validate_certs: false
-    return_content: true
-    status_code:
-      - 200
-
 - name: Get all groups
   ansible.builtin.uri:
     url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
@@ -250,9 +218,33 @@
       Cookie: ibm-private-cloud-session={{ zen_token }}
     validate_certs: false
     return_content: true
-    status_code:
-      - 200
   register: groups_response
+  until: groups_response.status == 200
+  retries: 10
+  delay: 60
+
+- name: Get Analysts Users group ID
+  ansible.builtin.set_fact:
+    analysts_users_group: "{{ groups_response.json | json_query(condition_query) }}"
+  vars:
+    condition_query: "data.groups[?name == 'Analysts Users']"
+
+- name: Get Analysts Users group ID
+  ansible.builtin.set_fact:
+    analysts_users_group_id: "{{ analysts_users_group | first | json_query('id') }}"    
+
+# Overwrites the current members of Analysts Users group
+# ansible.builtin.uri not working
+- name: Add admin to Analysts Users group
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ analysts_users_group_id }}' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'group={"id":"{{ analysts_users_group_id }}",
+    "name":"Analysts Users","tenantId":"-1",
+    "users":[{"username":"{{ lc_principal_admin_user }}"}],"groups":[],"authorizations":[]}'
+  changed_when: false
 
 - name: Get TaskMiningAdmins group
   ansible.builtin.set_fact:
@@ -294,7 +286,6 @@
         tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
       vars:
         condition_query: "data.groups[?name == 'TaskMiningAdmins']"
-
 
 - name: Get TaskMiningAdmins group ID
   ansible.builtin.set_fact:

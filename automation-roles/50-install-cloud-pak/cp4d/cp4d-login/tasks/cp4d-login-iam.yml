@@ -1,0 +1,73 @@
+---
+- name: Get route to identity provider when using Foundational Services IAM
+  shell: |
+    oc --namespace {{ _p_cp4d_project }} get route platform-id-provider \
+      -o jsonpath="{.spec.host}{.spec.path}"
+  register: _current_idp_url
+
+- set_fact:
+    _cp4d_user: "{{ _p_cp4d_user | default('cpadmin') }}"
+
+- name: Get IAM Access token when authenticating through Foundational Services IAM
+  uri:
+    url: 'https://{{ _current_idp_url.stdout }}v1/auth/identityToken'
+    method: POST
+    body_format: form-urlencoded
+    body:
+      grant_type: password
+      username: "{{ _cp4d_user }}"
+      password: "{{ _p_cp4d_password }}"
+      scope: openid
+    force: yes
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_login_iam_access_result
+  retries: 10
+  delay: 10
+  until: _cp4d_login_iam_access_result.status == 200
+
+- set_fact:
+    _iam_token: "{{ _cp4d_login_iam_access_result.json.access_token }}"
+
+- name: Login to Cloud Pak for Data using IAM access token
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/v1/preauth/validateAuth'
+    method: GET
+    # body_format: json
+    headers:
+      username: "{{ _cp4d_user }}"
+      iam-token: "{{ _iam_token }}"
+    force: yes
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_login_iam_result
+  retries: 3
+  delay: 5
+  failed_when: False
+  until: _cp4d_login_iam_result.status == 200
+
+- set_fact:
+    _cp4d_login_successful: True
+  when: 
+  - _cp4d_login_iam_result.status == 200
+
+- set_fact:
+    _cp4d_login_successful: False
+  when: 
+  - _cp4d_login_iam_result.status != 200
+
+- fail:
+    msg: |
+      "Failed to login to Cloud Pak for Data instance {{ _p_cp4d_project }}."
+      "{{ _cp4d_login_iam_result }}"
+  when:
+  - not _cp4d_login_successful
+  - (_p_fail_on_error | default(True))
+
+- set_fact:
+    _cp4d_login: "{{ _cp4d_login_iam_result.json | default({}) }}"
+
+- set_fact:
+    _cp4d_bearer_token: "{{ _cp4d_login.accessToken }}"
