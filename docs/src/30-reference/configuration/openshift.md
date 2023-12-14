@@ -475,6 +475,8 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  gpu:
+    install: False
   mcg:
     install: True
     storage_type: storage-class
@@ -500,6 +502,8 @@ openshift:
 | infrastructure.processor_architecture | Architecture of the processor that the OpenShift cluster is deployed on                                         | No               | amd64 (default), ppc64le, s390x |
 | openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                          | No               |                                 |
 | upstream_dns[]                        | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                   | No               |                                 |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
