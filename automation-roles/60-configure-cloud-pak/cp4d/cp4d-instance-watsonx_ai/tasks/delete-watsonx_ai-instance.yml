@@ -1,0 +1,27 @@
+---
+- name: Check if Watsonxaiifm CRD exists
+  shell: |
+    oc get crd watsonxaiifm.watsonxaiifm.cpd.ibm.com
+  failed_when: False
+  register: _watsonxiifm_crd_state
+
+- name: Delete deployment for watsonx.ai instance {{ _watsonx_ai_instance.model_id }}
+  shell: |
+    oc delete deployment \
+      -n {{ current_cp4d_cluster.project }} \
+      {{ _watsonx_ai_instance.model_id }}-inference-server \
+      --ignore-not-found
+  when: 
+  - _watsonxiifm_crd_state.rc == 0
+  - (_watsonx_ai_instance.state | default('')) == 'removed' or _delete_all_watsonx_ai_instances
+
+
+- name: Delete Watsonxaiifm CR if watsonx.ai was removed
+  shell:
+    oc delete Watsonxaiifm \
+      -n {{ current_cp4d_cluster.project }} \
+      watsonxaiifm-cr \
+      --ignore-not-found
+  when: 
+  - _watsonxiifm_crd_state.rc == 0
+  - _delete_all_watsonx_ai_instances
