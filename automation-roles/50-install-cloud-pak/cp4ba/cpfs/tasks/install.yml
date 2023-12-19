@@ -4,6 +4,30 @@
     state: directory
     mode: u+rwx
 
+- name: Create Project for cpfs cert manager
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "ibm-cert-manager"
+    common_output_directory: "{{ cpfs_output_directory }}"
+
+- name: Create Project for cpfs licensing
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "ibm-licensing"
+    common_output_directory: "{{ cpfs_output_directory }}"
+
+- name: Create Project for cpfs license reporter
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "ibm-lsr"
+    common_output_directory: "{{ cpfs_output_directory }}"
+
 - name: Prepare yaml file for CatalogSource
   ansible.builtin.template:
     src: catalogsource.yaml.j2
@@ -20,32 +44,38 @@
     wait_sleep: 15
     wait_timeout: 15
 
-- name: Wait for CatalogSource
+- name: Wait for CatalogSource ibm-lsr
   kubernetes.core.k8s_info:
     api_version: v1alpha1
     kind: CatalogSource
-    name: "{{ item }}"
-    namespace: openshift-marketplace
+    name: ibm-license-service-reporter-bundle-catalog
+    namespace: ibm-lsr
   register: catalogsource
   retries: 40
   delay: 5
   until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
-  with_items:
-    - opencloud-operators-v4-1
-    - bts-operator
-    - ibm-cs-flink-operator-catalog
-    - ibm-cs-elastic-operator-catalog
-    - ibm-cert-manager-catalog
-    - ibm-licensing-catalog
-    - cloud-native-postgresql-catalog
 
-- name: Create Project for cpfs cert manager
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "ibm-cert-manager"
-    common_output_directory: "{{ cpfs_output_directory }}"
+- name: Wait for CatalogSource ibm-licensing
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: ibm-licensing-catalog
+    namespace: ibm-licensing
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
+
+- name: Wait for CatalogSource ibm-cert-manager
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: ibm-cert-manager-catalog
+    namespace: ibm-cert-manager
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
 
 - name: Prepare yaml file for the cert manager Operator Group
   ansible.builtin.template:
@@ -101,14 +131,6 @@
       spec:
         license:
           accept: true
-
-- name: Create Project for cpfs licensing
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "ibm-licensing"
-    common_output_directory: "{{ cpfs_output_directory }}"
 
 - name: Prepare yaml file for the licensing Operator Group
   ansible.builtin.template:
@@ -202,51 +224,121 @@
       spec:
         httpsCertsSource: "custom"
 
-# TODO Based on https://www.ibm.com/docs/en/cpfs?topic=i3o-installing-cloud-pak-foundational-services-in-multiple-namespaces
-# currently not supported in multi instance deployment 2023-06-27
+- name: Prepare yaml file for the lsr Operator Group
+  ansible.builtin.template:
+    src: lsr-operatorgroup.yaml.j2
+    dest: "{{ cpfs_output_directory }}/lsr-operatorgroup.yaml"
+    mode: u+rwx
 
-# - name: Prepare yaml file for the License Service Reporter
-#   ansible.builtin.template:
-#     src: ibmlicenseservicereporter.yaml.j2
-#     dest: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
-#     mode: u+rwx
+- name: Add the lsr Operator Group
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/lsr-operatorgroup.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
 
-# # Based on Based on https://www.ibm.com/docs/en/cpfs?topic=reporter-deploying-license-service
+- name: Prepare yaml file for the lsr Operator Subscription
+  ansible.builtin.template:
+    src: lsr-subscription.yaml.j2
+    dest: "{{ cpfs_output_directory }}/lsr-subscription.yaml"
+    mode: u+rwx
 
-# - name: Apply License Service Reporter instance
-#   kubernetes.core.k8s:
-#     state: present
-#     force: false
-#     merge_type: merge
-#     src: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
-#     wait: true
-#     wait_sleep: 15
-#     wait_timeout: 15
+- name: Add the lsr Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/lsr-subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
 
-# - name: Patch common-service enable License Service Reporter
-#   kubernetes.core.k8s_json_patch:
-#     api_version: operator.ibm.com/v3
-#     kind: CommonService
-#     name: common-service
-#     namespace: "{{ cpfs_cp4ba_project_name }}"
-#     patch:
-#       - op: add
-#         path: "/spec/services/-"
-#         value:
-#           name: "ibm-licensing-operator"
-#           spec:
-#             IBMLicenseServiceReporter: {}
+- name: Prepare yaml file for the License Service Reporter
+  ansible.builtin.template:
+    src: ibmlicenseservicereporter.yaml.j2
+    dest: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
+    mode: u+rwx
 
-# - name: Wait for license reporter Deployment to be Available
-#   ansible.builtin.include_role:
-#     name: common
-#     tasks_from: wait-resource-condition
-#   vars:
-#     common_api_version: v1
-#     common_resource_kind: Deployment
-#     common_resource_name: ibm-license-service-reporter-instance
-#     common_resource_namespace: cs-control
-#     common_condition_name: Available
-#     common_retries: 80
-#     common_delay: 15
-# TODO END
+# Based on https://www.ibm.com/docs/en/cloud-paks/foundational-services/latest?topic=repository-installing-license-service-reporter-cli
+- name: Apply License Service Reporter instance
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/ibmlicenseservicereporter.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for license reporter Deployment to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: ibm-license-service-reporter-instance
+    common_resource_namespace: ibm-lsr
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+- name: Prepare yaml file for lsr credentials Secret
+  ansible.builtin.template:
+    src: lsr-credentials-secret.yaml.j2
+    dest: "{{ cpfs_output_directory }}/lsr-credentials-secret.yaml"
+    mode: u+rwx
+
+- name: Add lsr credentials Secret
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cpfs_output_directory }}/lsr-credentials-secret.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/foundational-services/latest?topic=reporter-configuring-data-sources#cluster
+- name: Fetch the secret from ibm-lsr
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: ibm-license-service-reporter-token
+    namespace: ibm-lsr
+  register: reporter_token
+
+- name: Copy the secret to the ibm-licensing
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: v1
+      kind: Secret
+      metadata:
+        namespace: ibm-licensing
+        name: "{{ reporter_token.resources[0].metadata.name }}"
+      type: "{{ reporter_token.resources[0].type }}"
+      data: "{{ reporter_token.resources[0].data }}"
+
+- name: Fetch the secret from ibm-lsr
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: ibm-license-service-reporter
+    namespace: ibm-lsr
+  register: reporter_route
+
+- name: Configure ibm-licensing to send data into ibm-lsr
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    namespace: ibm-licensing
+    definition:
+      sender:
+        reporterSecretToken: ibm-license-service-reporter-token
+        reporterURL: "https://{{ reporter_route.resources[0].spec.host }}"
