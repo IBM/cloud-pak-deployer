@@ -48,7 +48,7 @@
   kubernetes.core.k8s_info:
     api_version: v1alpha1
     kind: CatalogSource
-    name: ibm-license-service-reporter-bundle-catalog
+    name: ibm-license-service-reporter-operator-catalog
     namespace: ibm-lsr
   register: catalogsource
   retries: 40
@@ -256,6 +256,13 @@
     wait_sleep: 15
     wait_timeout: 15
 
+- name: Wait for IBMLicenseServiceReporter CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: ibmlicenseservicereporters.operator.ibm.com
+
 - name: Prepare yaml file for the License Service Reporter
   ansible.builtin.template:
     src: ibmlicenseservicereporter.yaml.j2
@@ -280,7 +287,7 @@
   vars:
     common_api_version: v1
     common_resource_kind: Deployment
-    common_resource_name: ibm-license-service-reporter-instance
+    common_resource_name: ibm-license-service-reporter-ibm-lsr-instance
     common_resource_namespace: ibm-lsr
     common_condition_name: Available
     common_retries: 80
@@ -339,6 +346,7 @@
     name: instance
     namespace: ibm-licensing
     definition:
-      sender:
-        reporterSecretToken: ibm-license-service-reporter-token
-        reporterURL: "https://{{ reporter_route.resources[0].spec.host }}"
+      spec:
+        sender:
+          reporterSecretToken: ibm-license-service-reporter-token
+          reporterURL: "https://{{ reporter_route.resources[0].spec.host }}"
