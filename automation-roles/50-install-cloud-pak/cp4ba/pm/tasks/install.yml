@@ -1,41 +1,29 @@
-- name: Add DB2 user
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: add-db2-user
-  vars:
-    common_db2_user: pm
-    common_db2_password: "{{ pm_db2_password }}"
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: postgresql
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
 
-- name: PM DB Create
+- name: PM DB
   kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
+    namespace: postgresql
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
-      su - db2inst1 -s /usr/bin/bash -c "
-      db2 CREATE DATABASE PM AUTOMATIC STORAGE YES USING CODESET UTF-8 TERRITORY DEFAULT COLLATE USING SYSTEM PAGESIZE 32768;
-      db2 CONNECT TO PM;
-      "
-  register: command_status
-  retries: 40
-  delay: 30
-  until: command_status.rc == 0
+      bash -c "
+        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        -- create a new user
+        create user pm with password '{{ pm_postgresql_password }}';
 
-- name: PM DB Configure
-  kubernetes.core.k8s_exec:
-    namespace: db2
-    pod: c-db2ucluster-db2u-0
-    command: >
-      su - db2inst1 -s /usr/bin/bash -c "
-      db2 CONNECT TO PM;
-      db2 CREATE SCHEMA PM AUTHORIZATION pm;
-      db2 GRANT CONNECT,DATAACCESS ON DATABASE TO USER pm;
-      db2 GRANT USE OF TABLESPACE USERSPACE1 TO USER pm;
-      db2 CONNECT RESET;
-      db2 activate db PM;
-      "
+        -- create database aaedb
+        create database pm owner pm;
+
+        -- The following grant is used for databases
+        grant all privileges on database pm to pm;
+      EOF"
   register: command_status
-  failed_when: command_status.rc != 0 and not (command_status.stdout is defined and
-    command_status.stdout is search('.*the database has already.*'))
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:

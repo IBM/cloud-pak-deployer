@@ -57,19 +57,20 @@
     - ibm-cloud-databases-redis-operator-catalog
     - ibm-db2uoperator-catalog
 
-- name: Remove DB2 users
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: remove-db2-user
-  vars:
-    common_db2_user: pm
 
-- name: Remove DB2 DBs
+- name: Remove PostgreSQL DBs
   ansible.builtin.include_role:
     name: common
-    tasks_from: remove-db2-db
+    tasks_from: remove-postgresql-db
   vars:
-    common_db2_db_name: PM
+    common_postgresql_db_name: pm
+
+- name: Remove PostgreSQL users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-postgresql-user
+  vars:
+    common_postgresql_user: pm
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
