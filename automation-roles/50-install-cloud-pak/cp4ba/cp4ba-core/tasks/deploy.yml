@@ -610,17 +610,6 @@
     common_delay: 120
   when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
-- name: Wait for {{ cp4ba_cr_meta_name }}-redis-ha-server StatefulSet to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-statefulset-available
-  vars:
-    common_resource_name: "{{ cp4ba_cr_meta_name }}-redis-ha-server"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_retries: 60
-    common_delay: 120
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
-
 - name: StatefulSets wait list
   ansible.builtin.set_fact:
     wait_list:
@@ -745,11 +734,7 @@
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
         current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-git-service','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-download-service','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
         current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-rest-api','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-front','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
         current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-embedded-build-service','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
