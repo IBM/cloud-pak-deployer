@@ -23,3 +23,16 @@
       data:
         devos1DBUsername: "{{ 'devos1' | b64encode }}"
         devos1DBPassword: "{{ cp4ba_postgresql_universal_password | b64encode }}"
+
+- name: Prepare yaml file for ADP allow db network policy
+  ansible.builtin.template:
+    src: adp/adp-permit-db-egress-network-policy.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/adp-permit-db-egress-network-policy.yaml"
+    mode: u+rwx
+
+- name: Add ADP allow db network policy
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ cp4ba_output_directory }}/adp-permit-db-egress-network-policy.yaml"
