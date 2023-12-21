@@ -1,18 +1,109 @@
 # https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cp-automation
-# CP4BA 23.0.1-IF003 catalog
+# CP4BA 23.0.2 catalog
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
   name: ibm-cp4a-operator-catalog
-  namespace: openshift-marketplace
+  namespace: "{{ cp4ba_project_name }}"
 spec:
   displayName: ibm-cp4a-operator
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-cp-automation-catalog@sha256:2a4fa724141a3bed68e03005e93f521a083791aaecc88092070bf72e9e3e4c43
+  image: icr.io/cpopen/ibm-cp-automation-catalog@sha256:14a5064116fcc69b64336888a61578054bcadbdaa73fb9ab8e5002070713875a
   updateStrategy:
     registryPoll:
       interval: 45m
+---
+# https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cs-flink
+# IBM CS Flink Operator Catalog 1.3.14
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: ibm-cs-flink-operator-catalog
+  namespace: "{{ cp4ba_project_name }}"
+spec:
+  displayName: IBM CS Flink Operator
+  publisher: IBM
+  sourceType: grpc
+  image: icr.io/cpopen/ibm-cs-flink-operator-catalog@sha256:732e3afb4c43bb3367175c0e2d4461faed9a29eb1ba47c63875efdcb7d6ae54f
+  updateStrategy:
+    registryPoll:
+      interval: 45m
+  priority: 100      
+---
+# https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cs-elastic
+# IBM CS Elastic Operator Catalog 1.3.14
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: ibm-cs-elastic-operator-catalog
+  namespace: "{{ cp4ba_project_name }}"
+spec:
+  displayName: IBM CS Elastic Search Operator
+  publisher: IBM
+  sourceType: grpc
+  image: icr.io/cpopen/ibm-cs-elastic-operator-catalog@sha256:a41ad89177f39a200f666310d7505848c7953965db08017a97781c5d51f78642
+  updateStrategy:
+    registryPoll:
+      interval: 45m
+  priority: 100
+---      
+# https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cp-common-services
+# Also update install waiting for catalog sources based on the name of this catalog source
+# IBM Cloud Foundational Services 4.2
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: opencloud-operators-v4-2
+  namespace: "{{ cp4ba_project_name }}"
+  annotations:
+    bedrock_catalogsource_priority: '1'
+spec:
+  displayName: IBMCS Operators
+  publisher: IBM
+  sourceType: grpc
+  image: icr.io/cpopen/ibm-common-service-catalog@sha256:ef9b76c30ff282d720f9d502a7001164a3f5c62f91843eb56d11da87abea6c1e
+  updateStrategy:
+    registryPoll:
+      interval: 45m
+  priority: 100
+---
+# https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-bts-bundle
+# IBM Business Teams Service version 3.31.0
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: bts-operator
+  namespace: "{{ cp4ba_project_name }}"
+  annotations:
+    bedrock_catalogsource_priority: '1'
+spec:
+  displayName: BTS Operator
+  publisher: IBM
+  sourceType: grpc
+  image: icr.io/cpopen/ibm-bts-operator-catalog@sha256:7f9c0a46f589d0e528d894ba9aba5875b208b4c7dfd08a9c040e76a7be61f8d4
+  updateStrategy:
+    registryPoll:
+      interval: 45m
+---
+# https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cloud-native-postgresql
+# Cloud Native PostgresSQL 4.14.0+20230614.093000
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: cloud-native-postgresql-catalog
+  namespace: "{{ cp4ba_project_name }}"
+  annotations:
+    bedrock_catalogsource_priority: '1'
+spec:
+  displayName: Cloud Native Postgresql Catalog
+  publisher: IBM
+  sourceType: grpc
+  image: icr.io/cpopen/ibm-cpd-cloud-native-postgresql-operator-catalog@sha256:e1f1fcecd58a944d6bb881d62e9d1c5f13cd39d7afdb02533ab64adc85b31d06
+  updateStrategy:
+    registryPoll:
+      interval: 45m
+  priority: 100      
 ---
 # https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cp-fncm-case
 # IBM FileNet Content Manager Standalone catalog.
@@ -20,12 +111,12 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
   name: ibm-fncm-operator-catalog
-  namespace: openshift-marketplace
+  namespace: "{{ cp4ba_project_name }}"
 spec:
   displayName: ibm-fncm-operator
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-fncm-catalog@sha256:9234d9c42073a072f224e26c970a4a96d4a002ee310c369370a5d94cf8386102
+  image: icr.io/cpopen/ibm-fncm-catalog@sha256:0ecc62f5e9eec5d1e0e58fd510fbb7110a1a175aa834ade2059c170792393863
   updateStrategy:
     registryPoll:
       interval: 45m

@@ -244,27 +244,3 @@
   register: cloudbeaver_create_response
   failed_when: cloudbeaver_create_response.status != 200 or cloudbeaver_create_response.json.errors is defined
   when: current_cp4ba_cluster.rpa.enabled and cloudbeaver_existing_response is not search('.*MSSQL.*')
-
-- name: Add PM DB2 to cloudbeaver
-  ansible.builtin.uri:
-    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
-    validate_certs: false
-    method: POST
-    headers:
-      content-type: "application/json"
-      Cookie: "cb-session-id={{ cb_session_id }}"
-    body_format: json
-    body:
-      query: 'mutation {
-          createConnection(
-            config: {credentials: {userName: "db2inst1", userPassword: "{{ cloudbeaver_db2_universal_password }}"},
-            saveCredentials: true, driverId: "db2:db2", host: "c-db2ucluster-db2u.db2.svc.cluster.local",
-            port: "50000", databaseName: "PM", name: "DB2 - PM" }
-            projectId: "g_GlobalConfiguration"
-          ) {
-            id
-          }
-        }'
-  register: cloudbeaver_create_response
-  failed_when: cloudbeaver_create_response.status != 200 or cloudbeaver_create_response.json.errors is defined
-  when: current_cp4ba_cluster.pm.enabled and cloudbeaver_existing_response is not search('.*DB2 - PM.*')

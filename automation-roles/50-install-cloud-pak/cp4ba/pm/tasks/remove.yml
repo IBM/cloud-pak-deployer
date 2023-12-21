@@ -57,19 +57,19 @@
     - ibm-cloud-databases-redis-operator-catalog
     - ibm-db2uoperator-catalog
 
-- name: Remove DB2 users
+- name: Remove PostgreSQL DBs
   ansible.builtin.include_role:
     name: common
-    tasks_from: remove-db2-user
+    tasks_from: remove-postgresql-db
   vars:
-    common_db2_user: pm
+    common_postgresql_db_name: pm
 
-- name: Remove DB2 DBs
+- name: Remove PostgreSQL users
   ansible.builtin.include_role:
     name: common
-    tasks_from: remove-db2-db
+    tasks_from: remove-postgresql-user
   vars:
-    common_db2_db_name: PM
+    common_postgresql_user: pm
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
@@ -100,6 +100,18 @@
     kind: ConfigMap
     name: cp4ba-pm-postdeploy
     namespace: "{{ pm_output_namespace }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Remove Allow Network Policy
+  kubernetes.core.k8s:
+    state: absent
+    api_version: networking.k8s.io/v1
+    kind: NetworkPolicy
+    name: process-mining-egress-allow-all
+    namespace: "{{ pm_project_name }}"
     force: false
     wait: true
     wait_sleep: 15
