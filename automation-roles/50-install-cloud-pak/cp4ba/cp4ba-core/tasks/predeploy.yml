@@ -27,13 +27,18 @@
     api_version: v1alpha1
     kind: CatalogSource
     name: "{{ item }}"
-    namespace: openshift-marketplace
+    namespace: "{{ cp4ba_project_name }}"
   register: catalogsource
   retries: 40
   delay: 5
   until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
   with_items:
     - ibm-cp4a-operator-catalog
+    - ibm-cs-flink-operator-catalog
+    - ibm-cs-elastic-operator-catalog
+    - opencloud-operators-v4-2
+    - bts-operator
+    - cloud-native-postgresql-catalog
     - ibm-fncm-operator-catalog
 
 - name: Manage Operator
