@@ -1,5 +1,7 @@
 # Running deployer on OpenShift using console
 
+See the deployer in action deploying IBM watsonx.ai on an existing OpenShift cluster in this video: https://ibm.box.com/v/cpd-wxai-existing-ocp
+
 ## Log in to the OpenShift cluster
 Log is as a cluster administrator to be able to run the deployer with the correct permissions.
 

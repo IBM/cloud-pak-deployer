@@ -6,6 +6,9 @@ When running the Cloud Pak Deployer on an existing OpenShift cluster, the follow
 - The appropriate storage class(es) have been pre-created
 - You have cluster administrator permissions to OpenShift
 
+!!! info
+    You can also choose to run Cloud Pak Deployer as a job on the OpenShift cluster. This removes the dependency on a separate server or workstation to run the deployer. **Please note that you may need unrestricted OpenShift entitlements for this.** To run the deployer on OpenShift via the OpenShift console, see [Run on OpenShift using console](../../50-advanced/run-on-openshift/run-deployer-on-openshift-using-console.md)
+
 With the **Existing OpenShift** type of deployment you can install and configure the Cloud Pak(s) both on connected and disconnected (air-gapped) cluster. When using the deployer for a disconnected cluster, make sure you specify `--air-gapped` for the `cp-deploy.sh` command.
 
 There are 5 main steps to run the deployer for existing OpenShift:
