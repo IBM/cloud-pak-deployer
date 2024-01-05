@@ -1,0 +1,10 @@
+---
+- name: Create Manta registry configuration (ImageContentSourcePolicy) on ROKS
+  template:
+    src: cloud-pak-icsp-registries-manta-conf.j2
+    dest: "{{ status_dir }}/openshift/cloud-pak-icsp-registries-manta.conf"
+
+- name: Set data for config map
+  shell: |
+    oc set data cm/cloud-pak-node-fix-config -n kube-system \
+      --from-file={{ status_dir }}/openshift/cloud-pak-icsp-registries-manta.conf

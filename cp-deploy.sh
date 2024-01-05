@@ -595,18 +595,6 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# If images have not been overridden, set the variables here
-if [ -z $CPD_OLM_UTILS_V1_IMAGE ];then
-  export CPD_OLM_UTILS_V1_IMAGE=icr.io/cpopen/cpd/olm-utils:latest
-else
-  echo "Custom olm-utils image ${CPD_OLM_UTILS_V1_IMAGE} will be used."
-fi
-if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-  export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
-else
-  echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
-fi
-
 if ! $INSIDE_CONTAINER;then
   # Check if podman or docker command was found
   if [ -z $CPD_CONTAINER_ENGINE ];then
@@ -638,6 +626,13 @@ if ! $INSIDE_CONTAINER;then
     chmod +x ${SCRIPT_DIR}/.version-info/version-info.sh
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
+    # If images have not been overridden, set the variables here
+    if [ -z $CPD_OLM_UTILS_V1_IMAGE ];then
+      export CPD_OLM_UTILS_V1_IMAGE=icr.io/cpopen/cpd/olm-utils:latest
+    fi
+    if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
+      export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
+    fi
     # Build the image
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
@@ -894,22 +889,12 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# If download action, save Deployer and olm-utils images
+# If download action, save Deployer image
 if [[ "${ACTION}" == "download" ]] && ! ${CHECK_ONLY};then
   echo "Removing old archives for deployer container image"
   rm -f ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar
   echo "Saving Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG} into ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
   ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
-
-  echo "Removing old archives for olm-utils container image"
-  rm -f ${STATUS_DIR}/downloads/olm-utils-image.tar
-  echo "Saving container image ${CPD_OLM_UTILS_V1_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-image.tar"
-  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-image.tar ${CPD_OLM_UTILS_V1_IMAGE}
-
-  echo "Removing old archives for olm-utils-v2 container image"
-  rm -f ${STATUS_DIR}/downloads/olm-utils-v2-image.tar
-  echo "Saving container image ${CPD_OLM_UTILS_V2_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-v2-image.tar"
-  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-v2-image.tar ${CPD_OLM_UTILS_V2_IMAGE}
 fi
 
 # Build command when not running inside container
