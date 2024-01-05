@@ -9,9 +9,9 @@ The below instructions are not limited to disconnected (air-gapped) OpenShift cl
 
 There are three use cases for mirroring images to a private registry and using this to install the Cloud Pak(s):
 
-* [Use case 1 - Mirror images and install using a bastion server](#use-case-1-mirror-images-and-install-using-a-bastion-server). The bastion server can connect to the internet (directly or via a proxy), to OpenShift and to the private registry used by the OpenShift cluster.
-* [Use case 2 - Mirror images with a connected server, install using a bastion](#use-case-2-mirror-images-with-an-internet-connected-server-install-using-a-bastion). The connected server can connect to the internet and to the private registry used by the OpenShift cluster. The server cannot connect to the OpenShift cluster. The bastion server can connect to the private registry and to the OpenShift cluster.
-* [Use case 3 - Mirror images using a portable image registry](#use-case-3-mirror-images-using-a-portable-image-registry). The private registry used by the OpenShift cluster cannot be reached from the server that is connected to the internet. You need a portable registry to download images and which you then ship to a server that can connect to the **existing** OpenShift cluster and its private registry.
+* [Use case 1 - Mirror images and install using a bastion server](#use-case-1---mirror-images-and-install-using-a-bastion-server). The bastion server can connect to the internet (directly or via a proxy), to OpenShift and to the private registry used by the OpenShift cluster.
+* [Use case 2 - Mirror images with a connected server, install using a bastion](#use-case-2---mirror-images-with-an-internet-connected-server-install-using-a-bastion). The connected server can connect to the internet and to the private registry used by the OpenShift cluster. The server cannot connect to the OpenShift cluster. The bastion server can connect to the private registry and to the OpenShift cluster.
+* [Use case 3 - Mirror images using a portable image registry](#use-case-3---mirror-images-using-a-portable-image-registry). The private registry used by the OpenShift cluster cannot be reached from the server that is connected to the internet. You need a portable registry to download images and which you then ship to a server that can connect to the **existing** OpenShift cluster and its private registry.
 
 Use cases 1 and 3 are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.5.x?topic=tasks-mirroring-images-your-private-container-registry
 
@@ -127,7 +127,7 @@ This will download all clients to the status directory and then mirror images fr
 * Before saving the status directory, you can optionally remove the entitlement key from the vault:
 ```
 ./cp-deploy.sh vault delete \
-    -vs cp_entitlement_key
+    -vs ibm_cp_entitlement_key
 ```
 
 #### Diagram step 2
@@ -205,8 +205,10 @@ This will download all clients, start the portable registry and then mirror imag
 * Before saving the status directory, you can optionally remove the entitlement key from the vault:
 ```
 ./cp-deploy.sh vault delete \
-    -vs cp_entitlement_key
+    -vs ibm_cp_entitlement_key
 ```
+
+See the download of watsonx.ai in action: https://ibm.box.com/v/cpd-air-gapped-download
 
 #### Diagram step 2
 When the download finished successfully, the status directory holds the deployer scripts, the configuration directory, the deployer container image and the portable registry.
@@ -220,6 +222,9 @@ You can use tar with gzip mode or any other compression technique. The status di
 The bastion server is not connected to the internet but is connected to the private registry and OpenShift cluster.
 
 #### Diagram step 4
+
+See the air-gapped installation of Cloud Pak for Data in action: https://ibm.box.com/v/cpd-air-gapped-install. For the demonstration video, the download of the previous step has first been re-run to only download the Cloud Pak for Data control plane to avoid having to ship and upload ~700 GB.
+
 We're using the instructions in [Run on existing OpenShift](../../10-use-deployer/3-run/existing-openshift), adding the CPD_AIRGAP environment variable.
 
 * Restore the status directory onto the bastion server. Make sure the volume to which you restore has enough space to hold the entire status directory, which includes the portable registry.
@@ -227,6 +232,7 @@ We're using the instructions in [Run on existing OpenShift](../../10-use-deploye
 * Untar the `cloud-pak-deployer` scripts, for example:
 ```
 tar xvzf $STATUS_DIR/cloud-pak-deployer.tar.gz
+cd cloud-pak-deployer
 ```
 
 * Set the CPD_AIRGAP environment variable to `true`
