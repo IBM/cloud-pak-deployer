@@ -81,6 +81,12 @@ if [ -e ${NODE_FIX_DIR}/cp4d-apply-crio-config.sh ];then
   fi
 fi
 
+if [ -e ${NODE_FIX_DIR}/apply-custom-node-settings.sh ];then
+  echo "Calling custom node update script ${NODE_FIX_DIR}/apply-custom-node-settings.sh" >> /tmp/cloud-pak-node-fix.log
+  source ${NODE_FIX_DIR}/apply-custom-node-settings.sh >> /tmp/cloud-pak-node-fix.log
+  echo "Custom script updated node settings (0=no, 1=yes): $NODE_UDPATED" >> /tmp/cloud-pak-node-fix.log
+fk
+
 if [ $NODE_UPDATED -eq 1 ];then
   echo "Restarting kubelet and crio daemons" >> /tmp/cloud-pak-node-fix.log
   systemctl restart kubelet

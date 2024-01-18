@@ -24,6 +24,17 @@
     oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
         --from-file={{ status_dir }}/openshift/cloud-pak-node-fix-timer.sh 
 
+- name: Check if custom script {{ config_dir }}/assets/apply-custom-node-settings.sh exists
+  stat:
+    path: "{{ config_dir }}/assets/apply-custom-node-settings.sh"
+  register: _custom_node_settings_script
+
+- name: Put apply-custom-node-settings.sh script into config map
+  shell:
+    oc set data -n kube-system cm/cloud-pak-node-fix-scripts \
+        --from-file={{ config_dir }}/assets/apply-custom-node-settings.sh
+  when: _custom_node_settings_script.stat.exists
+
 - name: Generate ServiceAccount for DaemonSet
   template:
     src: cloud-pak-node-fix-sa.j2
