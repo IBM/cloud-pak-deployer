@@ -2,6 +2,9 @@
 
 The Cloud Pak Deployer can implement demo assets and accelerators as part of the deployment process to standardize standing up fully-featured demo environments, or to test patches or new versions of the Cloud Pak using pre-defined assets.
 
+## Node changes for ROKS and Satellite clusters
+If you put a script named `apply-custom-node-settings.sh` in the `CONFIG_DIR/assets` directory, it will be run as part of applying the node settings. This way you can override the existing node settings applied by the deployer or update the compute nodes with new settings. For more information regarding the `apply-custom-node-settings.sh` script, go to [Prepare OpenShift cluster on IBM Cloud and IBM Cloud Satellite](../process/install-cloud-pak.md#prepare-openshift-cluster-on-ibm-cloud-and-ibm-cloud-satellite).
+
 ## `cp4d_asset`
 A `cp4d_asset` entry defines one or more assets to be deployed for a specific Cloud Pak for Data instance (OpenShift project). In the configuration, a directory relative to the configuration directory (`CONFIG_DIR`) is specified. For example, if the directory where the configuration is stored is `$HOME/cpd-config/sample` and you specify `assets` as the asset directory, all assets under `/cpd-config/sample/assets` are processed.
 
