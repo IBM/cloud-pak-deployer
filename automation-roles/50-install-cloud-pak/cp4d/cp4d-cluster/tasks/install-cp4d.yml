@@ -20,7 +20,7 @@
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - not (cpd_skip_mirror | bool)
 
-- name: Migrate to private topology if upgrading to CP4D 4.7.0 or higher
+- name: Migrate to private topology on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }} if upgrading to CP4D 4.7.0 or higher
   include_role: 
     name: cp4d-migrate-private-topology
   vars:
@@ -30,7 +30,7 @@
   - _installed_ibmcpd_version < "4.7.0"
   - current_cp4d_cluster.cp4d_version >= "4.7.0"
 
-- name: Activate license service and certificate manager for CP4D 4.7.0 and higher
+- name: Activate license service and certificate manager on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_role:
     name: cp-fs-cluster-components
   vars:
