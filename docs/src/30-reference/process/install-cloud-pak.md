@@ -63,6 +63,8 @@ By setting the `NODE_UPDATED` script variable to `1` you can tell the deployer t
 
 **WARNING:** You should never set the `NODE_UPDATED` script variable to `0` as this will cause previous changes to the pull secret, ImageContentSourcePolicy and others not to become effective.
 
+**WARNING:** Do not end the script with the `exit` command; this will stop the calling script from running and therefore not restart the daemons.
+
 Sample script:
 ```bash
 #!/bin/bash
@@ -77,8 +79,6 @@ if [ ! -e /tmp/apply-custom-node-settings-run ];then
     touch /tmp/apply-custom-node-settings-run
     NODE_UPDATED=1
 fi
-
-exit 0
 ```
 
 ### Mirror images to the private registry
