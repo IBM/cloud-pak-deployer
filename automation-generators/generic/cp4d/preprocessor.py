@@ -226,9 +226,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
-    openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('cp4d_version').isRequired()
-    g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional().mustBeOneOf([True, False])
     g('sequential_install').isOptional().mustBeOneOf([True, False])
@@ -236,6 +234,11 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('change_node_settings').isOptional()
     g('cp4d_entitlement').isOptional().mustBeOneOf(['cpd-enterprise', 'cpd-standard'])
     g('cp4d_production_license').isOptional().mustBeOneOf([True, False])
+
+    # Expand storage if no errors yet
+    if len(g.getErrors()) == 0:
+        openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
+        g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
