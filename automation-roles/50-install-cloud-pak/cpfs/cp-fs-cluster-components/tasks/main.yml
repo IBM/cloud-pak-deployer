@@ -10,16 +10,8 @@
     dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh"
     mode: u+rwx
 
-- name: Apply cluster components if not already done in an earlier step
-  block:
-
-  - name: Run shell script to apply cluster components, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cluster-components.log
-    shell: |
-      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
-
-  - set_fact:
-      _cp_fs_cluster_compontents_run: True
-
+- name: Run shell script to apply cluster components, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cluster-components.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
   when: 
   - not _p_preview
-  - not (_cp_fs_cluster_compontents_run | default(False))
