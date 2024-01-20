@@ -1,0 +1,12 @@
+---
+- name: Check if the license service runs in the {{ cs_control_project }} project
+  shell: |
+    oc get deploy ibm-licensing-service-instance \
+      -n {{ cs_control_project }}
+  failed_when: False
+  register: _get_license_service_instance
+
+- name: Set the license server project to {{ cs_control_project }} if it already runs there
+  set_fact:
+    license_service_project: "{{ cs_control_project }}"
+  when: _get_license_service_instance.rc == 0
