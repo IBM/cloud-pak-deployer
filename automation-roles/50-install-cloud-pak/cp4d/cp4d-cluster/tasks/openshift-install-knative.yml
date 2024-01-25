@@ -1,0 +1,17 @@
+---
+
+# Prepare CP4D for versions >= 4.8.0
+- block:
+  - name: Generate deploy KNative eventing script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-deployer-knative-eventing.sh
+    template:
+      src: deploy-knative-eventing.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-deployer-knative-eventing.sh"
+      mode: u+rwx
+
+  - name: Run script to deploy KNative eventing, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.log
+    shell: |
+      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.sh
+
+  when: 
+  - current_cp4d_cluster.cp4d_version >= '4.8.0'
+  - (_knative_eventing_dependency | default(False))

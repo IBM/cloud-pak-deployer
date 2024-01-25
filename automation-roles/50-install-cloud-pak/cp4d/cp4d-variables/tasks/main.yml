@@ -181,6 +181,17 @@
 - include_tasks: check-db2u-kubelet.yml
   when: _db2u_dependency
 
+- name: Determine if any of the cartridges has a knative eventing dependency
+  set_fact:
+    _knative_eventing_dependency: "{{ _knative_eventing_dependency or (item.knative_eventing_dependency | default(False)) }}"
+  when: (item.state | default('installed')) == 'installed'
+  loop: "{{ _cartridges_to_install }}"
+  no_log: True
+
+- name: Show if there is a knative eventing dependency
+  debug:
+    var: _knative_eventing_dependency
+
 - name: Determine cartridge dependencies
   set_fact:
     _cartridge_dependencies: >-
