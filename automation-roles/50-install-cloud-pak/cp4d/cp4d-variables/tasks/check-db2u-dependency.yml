@@ -1,0 +1,15 @@
+---
+# Determine if any cartridges with a db2u dependency are installed
+- set_fact:
+    _db2u_dependency: False
+
+- name: Determine if any of the cartridges has a db2u dependency
+  set_fact:
+    _db2u_dependency: "{{ _db2u_dependency or (item.db2u_dependency | default(False)) }}"
+  when: (item.state | default('installed')) == 'installed'
+  loop: "{{ _cartridges_to_install }}"
+  no_log: True
+
+- name: Show if there is a db2u dependency
+  debug:
+    var: _db2u_dependency
