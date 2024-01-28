@@ -52,6 +52,7 @@ command_usage() {
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
   echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
+  echo "  --clean-up                    Remove the container after the run is completed (\$CPD_CLEANUP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
   echo
@@ -83,7 +84,17 @@ run_env_logs() {
       sleep 0.5
     done
   else
-    ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
+    # If $CPD_CLEANUP was used for the previous run, the $CURRENT_CONTAINER_ID
+    # will not exist so we fall back to the previous log file if there is one.
+    if [ $( ${CPD_CONTAINER_ENGINE} ps -a --no-trunc 2>/dev/null | grep ${CURRENT_CONTAINER_ID} | wc -l ) -gt 0 ]; then
+      ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
+    else
+      if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ]; then
+        cat ${STATUS_DIR}/log/cloud-pak-deployer.log
+      else
+        echo "No previous log found"
+      fi
+    fi
   fi
 }
 
@@ -99,6 +110,7 @@ if [ "${CHECK_ONLY}" == "" ];then CHECK_ONLY=false;fi
 if [ "${CPD_AIRGAP}" == "" ];then CPD_AIRGAP=false;fi
 if [ "${CPD_SKIP_MIRROR}" == "" ];then CPD_SKIP_MIRROR=false;fi
 if [ "${CPD_SKIP_PORTABLE_REGISTRY}" == "" ];then CPD_SKIP_PORTABLE_REGISTRY=false;fi
+if [ "${CPD_CLEANUP}" == "" ];then CPD_CLEANUP=false;fi
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${CPD_TEST_CARTRIDGES}" == "" ];then CPD_TEST_CARTRIDGES=false;fi
 if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
@@ -555,6 +567,14 @@ while (( "$#" )); do
       command_usage 2
     fi
     export CPD_SKIP_PORTABLE_REGISTRY=true
+    shift 1
+    ;;
+  --clean-up)
+    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${ACTION}" != "download"  ]];then
+      echo "Error: --clean-up is only valid for environment subcommand with apply/destroy or download."
+      command_usage 2
+    fi
+    export CPD_CLEANUP=true
     shift 1
     ;;   
   -vv*)
@@ -1029,6 +1049,8 @@ if ! $INSIDE_CONTAINER;then
     run_cmd+=" -e EXTRA_PARMS=\"${arrExtraKey[*]}\""
   fi
 
+  if $CPD_CLEANUP; then run_cmd+=" --rm"; fi
+
   if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "command" ]];then
     run_cmd+=" -ti --entrypoint /cloud-pak-deployer/docker-scripts/env-command.sh"
   elif [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "wizard" ]];then
@@ -1039,7 +1061,7 @@ if ! $INSIDE_CONTAINER;then
   fi
   run_cmd+=" cloud-pak-deployer:${CPD_IMAGE_TAG}"
 
-  # echo $run_cmd
+   # echo $run_cmd
 
   # If running "environment" subcommand with apply/destroy, follow log
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
@@ -1049,7 +1071,13 @@ if ! $INSIDE_CONTAINER;then
       echo "${CURRENT_CONTAINER_ID}" > ${STATUS_DIR}/pid/container.id
     fi
     run_env_logs
-    PODMAN_EXIT_CODE=$(${CPD_CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
+    if $CPD_CLEANUP; then 
+      # We have no container to get an exit code from as it was automatically deleted with --rm
+      PODMAN_EXIT_CODE=$? 
+    else 
+      PODMAN_EXIT_CODE=$(${CPD_CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
+    fi
+
   else
     eval $run_cmd
     PODMAN_EXIT_CODE=$?
