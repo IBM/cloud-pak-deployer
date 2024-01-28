@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _dmc_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "dmc"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Data Management Console cartridge
+  debug:
+    var: _dmc_cartridge
+
+- set_fact:
+    _configured_dmc_instances: []
+- set_fact:
+    _configured_dmc_instances: "{{ _dmc_cartridge.instances | default([] )}}"
+  when:
+  - _dmc_cartridge != {}
+  - (_dmc_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_dmc_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_dmc_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_dmc_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
