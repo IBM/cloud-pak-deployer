@@ -22,6 +22,10 @@
 
 - when: _wa_instance_lookup_result.json.total_count == 0
   block:
+  - name: Obtain Watson Assistant Console version
+    shell: |
+      oc get wa -n {{ current_cp4d_cluster.project }} wa -o jsonpath='{.spec.version}'
+    register: _wa_version
 
   - name: Prepare Watson Assistant instance {{ _wa_instance.name }} json file
     template:
@@ -34,7 +38,7 @@
         -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
         -H 'Content-Type: application/json' \
         -X POST \
-        'https://{{ cp4d_url.stdout }}/watson/common/assistant/api/ibmcloud/resource-controller/resource_instances' \
+        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
         -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wa_instance.name }}-wa-instance.json
     register: _create_wa_instance_result
 
