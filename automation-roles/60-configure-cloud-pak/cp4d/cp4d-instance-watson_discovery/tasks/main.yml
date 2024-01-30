@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _wd_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "watson_discovery"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Watson Discovery cartridge
+  debug:
+    var: _wd_cartridge
+
+- set_fact:
+    _configured_wd_instances: []
+- set_fact:
+    _configured_wd_instances: "{{ _wd_cartridge.instances | default([] )}}"
+  when:
+  - _wd_cartridge != {}
+  - (_wd_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_wd_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_wd_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_wd_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
