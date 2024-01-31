@@ -22,9 +22,11 @@
   - (_p_delete_all_instances | default(False)) == False
   - (_p_wait_instances | default(False)) == False
 
+# Delete DMC instances if there is no longer a dependency by other cartridges
 - include_tasks: delete_dmc_instances.yml
   when:
   - (_p_wait_instances | default(False)) == False
+  - _surviving_cartridges | selectattr('CR_Kind','equalto',(_dmc_cartridge.CR_Kind | default(''))) | list | count == 0
 
 - include_tasks: wait_dmc_instances.yml
   when:
