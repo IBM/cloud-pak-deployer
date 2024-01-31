@@ -19,7 +19,7 @@ LABEL authors="Arthur Laimbock, \
 USER 0
 
 # Install required packages, including HashiCorp Vault client
-RUN yum install -y yum-utils python38 python38-pip && \
+RUN yum install -y yum-utils && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
     yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
