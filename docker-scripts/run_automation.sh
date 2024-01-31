@@ -1,6 +1,30 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 
+# --------------------------------------------------------------------------------------------------------- #
+# Functions                                                                                                 #
+# --------------------------------------------------------------------------------------------------------- #
+function prepare_logs {
+  # Make sure that the logs of the Ansible playbook are written to a log file
+  mkdir -p ${STATUS_DIR}/log
+  if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ];then
+    tar czf ${STATUS_DIR}/log/cloud-pak-deployer-log-$(date +%s).tar.gz ${STATUS_DIR}/log/cloud-pak-deployer.log 2>/dev/null
+    rm -f ${STATUS_DIR}/log/cloud-pak-deployer.log
+  fi
+}
+
+function output_result {
+  if [ ${1} -eq 0 ];then
+    echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  else
+    echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "====================================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  fi
+}
+
 error=0
 
 # Check mandatory parameters
@@ -106,11 +130,8 @@ env|environment)
     done
   fi
   # Make sure that the logs of the Ansible playbook are written to a log file
-  mkdir -p ${STATUS_DIR}/log
-  if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ];then
-    tar czf ${STATUS_DIR}/log/cloud-pak-deployer-log-$(date +%s).tar.gz ${STATUS_DIR}/log/cloud-pak-deployer.log 2>/dev/null
-    rm -f ${STATUS_DIR}/log/cloud-pak-deployer.log
-  fi
+  prepare_logs
+
   # Also delete mirror images log to not confuse state reporting
   rm -f ${STATUS_DIR}/log/cloud-pak-mirror-images.log
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
@@ -124,19 +145,14 @@ env|environment)
   set -o pipefail
   eval $run_cmd
   exit_code=$?
-  if [ ${exit_code} -eq 0 ];then
-    echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "Deployer completed SUCCESSFULLY. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-  else
-    echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "====================================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-    echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-  fi
+  output_result ${exit_code}
   exit ${exit_code}
   ;;
 
 vault)
+  # Make sure that the logs of the Ansible playbook are written to a log file
+  prepare_logs
+
   ANSIBLE_CONFIG_FILE=$PWD/ansible-vault.cfg
   if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
     ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
@@ -177,9 +193,14 @@ vault)
       run_cmd+=" --extra-vars $p=${!p}"
     done
   fi
+  
+  run_cmd+=" 2>&1 | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log"
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   # echo $run_cmd
   eval $run_cmd
+  exit_code=$?
+  output_result ${exit_code}
+  exit ${exit_code}
   ;;
 
 version)
@@ -196,5 +217,3 @@ version)
   ;;
 
 esac
-
-

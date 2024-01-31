@@ -76,7 +76,7 @@ command_usage() {
 # Show the logs of the currently running env process
 run_env_logs() {
   if [[ "${ACTIVE_CONTAINER_ID}" != "" ]];then
-    while ${CPD_CONTAINER_ENGINE} ps --no-trunc 2>/dev/null | grep -q ${ACTIVE_CONTAINER_ID};do
+    while ${CPD_CONTAINER_ENGINE} ps --no-trunc 2>/dev/null | grep -q ${ACTIVE_CONTAINER_ID} 2>/dev/null; do
       ${CPD_CONTAINER_ENGINE} logs -f --tail 10 ${ACTIVE_CONTAINER_ID}
       if [ $? -ne 0 ];then
         break
@@ -86,7 +86,7 @@ run_env_logs() {
   else
     # If $CPD_CLEANUP was used for the previous run, the $CURRENT_CONTAINER_ID
     # will not exist so we fall back to the previous log file if there is one.
-    if [ $( ${CPD_CONTAINER_ENGINE} ps -a --no-trunc 2>/dev/null | grep ${CURRENT_CONTAINER_ID} | wc -l ) -gt 0 ]; then
+    if [ $( ${CPD_CONTAINER_ENGINE} ps -a --no-trunc 2>/dev/null | grep ${CURRENT_CONTAINER_ID} 2>/dev/null | wc -l ) -gt 0 ]; then
       ${CPD_CONTAINER_ENGINE} logs ${CURRENT_CONTAINER_ID}
     else
       if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ]; then
@@ -570,8 +570,8 @@ while (( "$#" )); do
     shift 1
     ;;
   --clean-up)
-    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${ACTION}" != "download"  ]];then
-      echo "Error: --clean-up is only valid for environment subcommand with apply/destroy or download."
+    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${ACTION}" != "download" && "${SUBCOMMAND}" != "vault" ]];then
+      echo "Error: --clean-up is only valid for environment subcommand with apply/destroy or download or the vault subcommand."
       command_usage 2
     fi
     export CPD_CLEANUP=true
@@ -874,7 +874,7 @@ if ! $INSIDE_CONTAINER;then
       ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
       # If container ID was found, check if it is currently running
       if [ "${ACTIVE_CONTAINER_ID}" != "" ];then
-        if ! ${CPD_CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID};then
+        if ! ${CPD_CONTAINER_ENGINE} ps --no-trunc | grep -q ${ACTIVE_CONTAINER_ID} 2>/dev/null;then
           ACTIVE_CONTAINER_ID=""
         fi
       fi
@@ -942,7 +942,7 @@ if ! $INSIDE_CONTAINER;then
   fi
 
   # If running "environment" subcommand with some subcommands run as daemon
-  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
+  if [[ "$SUBCOMMAND" == "vault" ]] || [[ "$SUBCOMMAND" == "environment" && ( "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ) ]]; then
     run_cmd+=" -d"
   fi
 
@@ -1064,7 +1064,7 @@ if ! $INSIDE_CONTAINER;then
    # echo $run_cmd
 
   # If running "environment" subcommand with apply/destroy, follow log
-  if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
+  if [[ "$SUBCOMMAND" == "vault" ]] || [[ "$SUBCOMMAND" == "environment" && ( "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ) ]]; then
     CURRENT_CONTAINER_ID=$(eval $run_cmd)
     ACTIVE_CONTAINER_ID=${CURRENT_CONTAINER_ID}
     if [ "${STATUS_DIR}" != "" ];then
