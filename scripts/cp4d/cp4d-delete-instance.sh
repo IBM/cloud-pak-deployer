@@ -149,6 +149,44 @@ delete_operator_ns ibm-common-services
 # Delete operators in new operators namespace
 delete_operator_ns ${CP4D_PROJECT}-operators
 
+# Delete operators in ibm-knative-events
+delete_operator_ns ibm-knative-events
+
+KNATIVE_EVENTING=knative-eventing
+oc get project ${KNATIVE_EVENTING} > /dev/null 2>&1
+if [ $? -eq 0 ];then
+    log "Deleting everything in the ${KNATIVE_EVENTING} project"
+
+    log "Getting Custom Resources in OpenShift project ${KNATIVE_EVENTING}..."
+    oc get --no-headers -n $KNATIVE_EVENTING $(oc api-resources --namespaced=true --verbs=list -o name | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/knative-eventing-resources.out
+
+    log "Delete all Custom Resources"
+    while read -r line;do
+        read -r CR CR_NAME <<< "${line}"
+        log "Deleting $CR $CR_NAME"
+        oc delete -n ${KNATIVE_EVENTING} ${CR} ${CR_NAME} --wait=false --ignore-not-found
+        oc patch -n ${KNATIVE_EVENTING} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+    done < ${temp_dir}/knative-eventing-resources.out
+
+    log "Deleting ${KNATIVE_EVENTING} project"
+    oc delete ns ${KNATIVE_EVENTING} --ignore-not-found --wait=false
+    wait_ns_deleted ${KNATIVE_EVENTING}
+else
+    echo "Project ${KNATIVE_EVENTING} does not exist, skipping"
+fi
+
+KNATIVE_SERVING=knative-serving
+oc get project ${KNATIVE_SERVING} > /dev/null 2>&1
+if [ $? -eq 0 ];then
+    log "Deleting everything in the ${KNATIVE_SERVING} project"
+
+    log "Deleting ${KNATIVE_SERVING} project"
+    oc delete ns ${KNATIVE_SERVING} --ignore-not-found --wait=false
+    wait_ns_deleted ${KNATIVE_SERVING}
+else
+    echo "Project ${KNATIVE_SERVING} does not exist, skipping"
+fi
+
 IBM_SCHEDULING=ibm-scheduling
 oc get project ${IBM_SCHEDULING} > /dev/null 2>&1
 if [ $? -eq 0 ];then

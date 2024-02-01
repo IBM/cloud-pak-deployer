@@ -4,22 +4,26 @@
     that:
       - _p_cp4d_version is defined
 
-- name: Generate apply-cluster-components script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
+- name: Delete offline directory
+  file:
+    path: /tmp/work/offline
+    state: absent
+
+- name: If air-gapped, copy case files from {{ status_dir }}/cp4d/offline to /tmp/work/offline
+  copy:
+    src: "{{ status_dir }}/cp4d/offline"
+    dest: /tmp/work/
+    remote_src: True
+  when: (cpd_airgap | default(False) | bool)
+
+- name: Generate apply-cluster-components script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
   template:
     src: apply-cluster-components.j2
-    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh"
+    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.sh"
     mode: u+rwx
 
-- name: Apply cluster components if not already done in an earlier step
-  block:
-
-  - name: Run shell script to apply cluster components, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cluster-components.log
-    shell: |
-      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
-
-  - set_fact:
-      _cp_fs_cluster_compontents_run: True
-
+- name: Run shell script to apply cluster components on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.log
+  shell: |
+    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
   when: 
   - not _p_preview
-  - not (_cp_fs_cluster_compontents_run | default(False))

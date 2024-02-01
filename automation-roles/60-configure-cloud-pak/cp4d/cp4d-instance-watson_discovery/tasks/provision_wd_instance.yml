@@ -1,0 +1,51 @@
+---
+- name: Show Watson Discovery instance
+  debug:
+    var: _wd_instance
+
+- name: Check if the Watson Discovery instance is already running
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_wd_instance_addon_type }}&display_name={{ _wd_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _wd_instance_lookup_result
+
+- name: Determine if Watson Discovery instance already exists
+  debug:
+    msg: "Watson Discovery instance {{ _wd_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
+  when: _wd_instance_lookup_result.json.total_count != 0
+
+- when: _wd_instance_lookup_result.json.total_count == 0
+  block:
+
+  - name: Obtain Watson Discovery version
+    shell: |
+      oc get wd -n {{ current_cp4d_cluster.project }} wd -o jsonpath='{.spec.version}'
+    register: _wd_version
+
+  - name: Prepare Watson Discovery instance {{ _wd_instance.name }} json file
+    template:
+      src: wd-instance.j2
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wd_instance.name }}-wd-instance.json"
+
+  - name: Create Watson Discovery instance {{ _wd_instance.name }}
+    shell: |
+      curl -v -k \
+        -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+        -H 'Content-Type: application/json' \
+        -X POST \
+        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wd_instance.name }}-wd-instance.json
+    register: _create_wd_instance_result
+
+  - set_fact:
+      _create_wd_instance_result_json: "{{ _create_wd_instance_result.stdout | from_json }}"
+
+  - name: Show Watson Discovery instance result
+    debug:
+      var: _create_wd_instance_result_json
