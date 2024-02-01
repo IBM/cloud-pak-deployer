@@ -93,6 +93,12 @@ data:
       ocp_version: "4.12"
       cluster_name: cpd-demo
       domain_name: example.com
+      mcg:
+        install: False
+        storage_type: storage-class
+        storage_class: managed-nfs-storage
+      gpu:
+        install: False
       openshift_storage:
       - storage_name: auto-storage
         storage_type: auto
@@ -100,8 +106,8 @@ data:
     cp4d:
     - project: cpd
       openshift_cluster_name: cpd-demo
-      cp4d_version: 4.7.4
-      sequential_install: True
+      cp4d_version: 4.8.1
+      sequential_install: False
       accept_licenses: True
       cartridges:
       cartridges:
@@ -306,6 +312,31 @@ data:
         # noobaa_account_secret: noobaa-admin
         # noobaa_cert_secret: noobaa-s3-serving-cert
         state: removed
+
+      # Please note that for watsonx.ai foundation models, you neeed to install the
+      # Node Feature Discovery and NVIDIA GPU operators. You can do so by setting the openshift.gpu.install property to True
+      - name: watsonx_ai
+        description: watsonx.ai
+        state: removed
+        models:
+        - model_id: google-flan-t5-xxl
+          state: removed
+        - model_id: google-flan-ul2
+          state: removed
+        - model_id: eleutherai-gpt-neox-20b
+          state: removed
+        - model_id: ibm-granite-13b-chat-v1
+          state: removed
+        - model_id: ibm-granite-13b-instruct-v1
+          state: removed
+        - model_id: meta-llama-llama-2-70b-chat
+          state: removed
+        - model_id: ibm-mpt-7b-instruct2
+          state: removed
+        - model_id: bigscience-mt0-xxl
+          state: removed
+        - model_id: bigcode-starcoder
+          state: removed
 
       - name: watsonx_data
         description: watsonx.data

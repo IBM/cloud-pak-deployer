@@ -20,6 +20,9 @@
     foundational_services_project: "{{ _p_current_cp4d_cluster.operators_project | default('cpd-operators') }}"
   when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
 
+# Set the license server project to the correct value, dependent if the license service is already installed in cs-control
+- include_tasks: set-license-service-project.yml
+
 - debug:
     var: implemented_cloud_platform_types
 
@@ -157,26 +160,17 @@
   debug:
     var: _sequential_install
 
-# Determine if any cartridges with a db2u dependency are installed
-- set_fact:
-    _db2u_dependency: False
-
-- name: Determine if any of the cartridges has a db2u dependency
-  set_fact:
-    _db2u_dependency: "{{ _db2u_dependency or (item.db2u_dependency | default(False)) }}"
-  when: (item.state | default('installed')) == 'installed'
-  loop: "{{ _cartridges_to_install }}"
-  no_log: True
-
-- name: Show if there is a db2u dependency
-  debug:
-    var: _db2u_dependency
+# check if any of the cartridges have a db2u dependency
+- include_tasks: check-db2u-dependency.yml
 
 - include_tasks: check-db2u-node-tuning.yml
   when: _db2u_dependency
 
 - include_tasks: check-db2u-kubelet.yml
   when: _db2u_dependency
+
+# check if any of the cartridges have a knative-eventing dependency
+- include_tasks: check-knative-eventing.yml
 
 - name: Determine cartridge dependencies
   set_fact:

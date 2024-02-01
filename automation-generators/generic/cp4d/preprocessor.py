@@ -226,9 +226,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
-    openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('cp4d_version').isRequired()
-    g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('cartridges').isRequired()
     g('use_case_files').isOptional().mustBeOneOf([True, False])
     g('sequential_install').isOptional().mustBeOneOf([True, False])
@@ -236,6 +234,11 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('change_node_settings').isOptional()
     g('cp4d_entitlement').isOptional().mustBeOneOf(['cpd-enterprise', 'cpd-standard'])
     g('cp4d_production_license').isOptional().mustBeOneOf([True, False])
+
+    # Expand storage if no errors yet
+    if len(g.getErrors()) == 0:
+        openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
+        g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
@@ -337,12 +340,16 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                                     dep_found=True
                             if not dep_found:
                                 g.appendError(msg='Cartridge {} is selected to be installed but dependent cartridge {} is not'. format(c['name'],dep['name']))
+            # If instances for cartridge are specified, iterate over instances
+            if 'instances' in c and 'name' in c:
+                for i in c['instances']:
+                    if "name" not in i:
+                        g.appendError(msg='Instance name must be specifed for every instance in cartridge {}'.format(c['name']))        
         # Iteration over cartridges is done, now check if the required fields were found in the for-loop
         if cpfsFound==False:
             g.appendError(msg='You need to specify a cartridge for the Cloud Pak Foundational Services (cpfs or cp-foundation)')
         if cpdPlatformFound==False:
             g.appendError(msg='You need to specify a cartridge for the Cloud Pak for Data platform (cpd_platform or lite)')
-        
         
     result = {
         'attributes_updated': g.getExpandedAttributes(),

@@ -1,0 +1,59 @@
+---
+- include_role:
+    name: cp4d-variables
+
+- name: Create /tmp/work directory
+  file:
+    path: /tmp/work
+    state: directory
+
+- name: Generate mirror-images command preview script to save case files
+  set_fact:
+    _mirror_images_case_save: "{{ lookup('template', 'mirror-images-case-save.j2') }}" 
+
+- name: Show mirror-images command to save case files
+  debug:
+    var: _mirror_images_case_save
+
+- name: Write script to "{{ status_dir }}/cp4d/mirror-images-case-save.sh"
+  copy:
+    content: "{{ _mirror_images_case_save }}"
+    dest: "{{ status_dir }}/cp4d/mirror-images-case-save.sh"
+    mode: u+rwx
+
+- name: Run mirror-images command to identify case files, logs are in {{ status_dir }}/log/mirror-images-case-save.log
+  shell: |
+    {{ status_dir }}/cp4d/mirror-images-case-save.sh > {{ status_dir }}/log/mirror-images-case-save.log 2>&1
+
+- name: Copy preview script to {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh
+  copy:
+    content: "{{ lookup('file', '/tmp/work/preview.sh') }}"
+    dest: "{{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh"
+    mode: u+rwx
+
+- name: Comment out the mirroring of the images
+  replace:
+    path: "{{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh"
+    regexp: "{{ item }}"
+    replace: '#\1'
+  with_items:
+  - '(oc image mirror.*)'
+  - '(oc ibm-pak generate.*)'
+  - '(mv /tmp/work.*)'
+
+- name: Download case files, logs are in {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.log
+  shell: |
+    {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh > {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
+  args:
+    chdir: /tmp/work
+
+- name: Create {{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }} directory
+  file:
+    path: "{{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}"
+    state: directory
+
+- name: Copy case files to {{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}
+  copy:
+    src: "/opt/ansible/.ibm-pak"
+    dest: "{{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}/"
+    remote_src: True

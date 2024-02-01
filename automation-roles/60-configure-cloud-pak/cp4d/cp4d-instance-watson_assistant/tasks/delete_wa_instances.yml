@@ -1,0 +1,19 @@
+---
+- name: Get all current Watson Assistant instances
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_wa_instance_addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _all_wa_instances
+
+# Loop through all deployed Watson Assistant instance definitions to check if instance no longer exists in the config
+- name: Loop through each Watson Assistant instance to check if it must be deleted
+  include_tasks: delete_wa_instance.yml
+  loop: "{{ _all_wa_instances.json.service_instances | default([]) }}"
+  loop_control:
+    loop_var: _wa_instance
