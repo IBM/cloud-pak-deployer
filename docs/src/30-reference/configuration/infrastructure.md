@@ -105,7 +105,7 @@ Defines the virtual private cloud which groups the provisioned objects (includin
 vpc:
 - name: sample
   allow_inbound: ['ssh', 'https']
-  classic_access: False
+  classic_access: false
 ```
 
 #### Property explanation
@@ -115,7 +115,7 @@ vpc:
 | name          | Name of the Virtual Private Cloud                                                                                                                                        | Yes       |                           |
 | managed       | Controls whether the VPC is managed. The default is `True`. Only set to `False` if the VPC is not managed but only referenced by other objects such as transit gateways. | No        | True (default), False     |
 | allow_inbound | Security rules which are allowed for inbound traffic                                                                                                                     | No        | Existing `security_rule`  |
-| classic_access| Connect VPC to IBM Cloud classic infratructure resources                                                                                                                 | No        | False (default), True     |
+| classic_access| Connect VPC to IBM Cloud classic infratructure resources                                                                                                                 | No        | false (default), true     |
 
 ### IBM Cloud `address_prefix`
 
