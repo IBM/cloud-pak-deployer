@@ -1,0 +1,56 @@
+---
+apiVersion: datapower.ibm.com/v1beta3
+kind: DataPowerService
+metadata:
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  createServiceBinding: automatic
+  healthCheck:
+    logLevel: info
+    probe:
+      port: 7879
+    watchdog:
+      enabled: true
+      hardTimeoutSeconds: 80
+      softTimeoutSeconds: 60
+  imagePullPolicy: IfNotPresent
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+    use: nonproduction
+  livenessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /healthz
+      port: 7879
+      scheme: HTTP
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 5
+  podManagementPolicy: Parallel
+  readinessProbe:
+    failureThreshold: 3
+    httpGet:
+      path: /healthz
+      port: 7879
+      scheme: HTTP
+    initialDelaySeconds: 10
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 5
+  replicas: 1
+  resources:
+    limits:
+      memory: 4Gi
+    requests:
+      cpu: '1'
+      memory: 4Gi
+  terminationGracePeriodSeconds: 30
+  users:
+    - name: admin
+      accessLevel: privileged
+      passwordSecret: {{_dp_admin_password_secret}}
+  version: "{{instance_properties.version}}"
+      

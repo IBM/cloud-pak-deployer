@@ -1,9 +1,18 @@
+---
 apiVersion: appconnect.ibm.com/v1beta1
 kind: Dashboard
 metadata:
+  labels:
+    backup.appconnect.ibm.com/component: dashboard
   name: {{instance_properties.name}}
   namespace: {{current_cp4i_cluster.project}}
 spec:
+  authentication:
+    integrationKeycloak:
+      enabled: true
+  authorization:
+    integrationKeycloak:
+      enabled: true
   displayMode: IntegrationRuntimes
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
@@ -30,5 +39,4 @@ spec:
     size: 5Gi
     type: persistent-claim
     class: {{ocp_storage_class_file}}
-  useCommonServices: true
   version: "{{instance_properties.version}}"
