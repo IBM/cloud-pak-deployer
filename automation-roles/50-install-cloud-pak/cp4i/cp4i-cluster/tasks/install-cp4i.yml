@@ -1,7 +1,6 @@
 ---
 
-
-# ------------ SETTING PROCESSING FACTS -----------------------------
+# ------------ SETTING PROCESSING ENVIRONMENT -----------------------
 
 - name: Use CASE files by default
   set_fact:
@@ -30,6 +29,38 @@
 - debug:
     msg: "Operators visible in all namespaces: {{ _operators_in_all_namespaces }}"
 
+- name: "Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.openshift_storage_name }}"
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4i_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ current_cp4i_cluster.openshift_storage_name }}"
+  # returns:
+    # ocp_storage_class_file
+    # ocp_storage_class_block
+
+- name: "Retrieve cp4i version specification"
+  set_fact:
+    _version_spec: "{{ current_cp4i_cluster.cp4i_version | split('.') }}"
+
+- name: "Check if new installation style is needed"
+  set_fact:
+    _new_style: False
+
+- set_fact:
+    _new_style: True
+  when:
+  - _version_spec[0] | int == 2023
+  - _version_spec[1] | int == 4
+
+- set_fact:
+    _new_style: True
+  when:
+  - _version_spec[0] | int > 2023
+
+- debug:
+    var: _new_style
+
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
@@ -42,26 +73,17 @@
       loop_var: current_cp4i_instance
   when: _use_case_files and (_use_entitled_registry | bool)
 
-
-# ------------ OPENSHIFT OBJECTS ------------------------------------
-
-- name: "Get OpenShift storage classes to use for {{ current_cp4i_cluster.project }} and storage class name {{ current_cp4i_cluster.openshift_storage_name }}"
-  include_role: 
-    name: get-openshift-storage
-  vars:
-    _p_openshift_cluster_name: "{{ current_cp4i_cluster.openshift_cluster_name }}"
-    _p_openshift_storage_name: "{{ current_cp4i_cluster.openshift_storage_name }}"
-
-- name: "Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration"
-  include_tasks: openshift-prepare-project.yml
-
-- name: Create entitlement key secret when entitled registry is used
-  block:
-    # NOTE(SJ) This could be skipped because we add entitled key in 
-    # the cluster's global pull secret
-    - name: Create entitlement key secret
-      include_tasks: create-entitlement-key-secret.yml
-  when: (_use_entitled_registry | bool)
+- name: "Download Foundational Services CASE file"
+  include_tasks: download-foundational-svc-case.yml
+  when:
+  - _new_style
+  - _use_case_files
+  - _use_entitled_registry
+  # returns
+  # - _fs_case_file_name
+  # - _fs_catalog_source_yaml
+  # - _fs_case_version
+  # - _fs_channel
 
 # ------------ CREATING CATALOG SOURCES -----------------------------
 
@@ -69,26 +91,67 @@
   include_tasks: create-catalog-sources-entitled.yml
   when: not _use_case_files
 
-- name: Create catalog sources when using CASE files
-  include_tasks: create-catalog-source-case-file.yml
-  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-  loop_control:
-    loop_var: current_cp4i_instance
+- name: "Create catalog sources when using CASE files"
+  block:
+
+    - name: "Create instances catalog sources when using CASE files"
+      include_tasks: create-catalog-source-case-file.yml
+      loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+      loop_control:
+        loop_var: current_cp4i_instance
+
+    - name: "Create Foundational Services catalog source"
+      include_tasks: create-foundational-svc-catalog.yml
+      vars:
+        _p_case_file_name: "{{ _fs_case_file_name }}"
+        _p_catalog_source_yaml: "{{ _fs_catalog_source_yaml }}"
+        _p_case_version: "{{ _fs_case_version }}"
+      when:
+      - _new_style
+      - _use_case_files
+      - _use_entitled_registry
+
   when: _use_case_files
+
+# ------------ OPENSHIFT PROJECT ------------------------------------
+
+- name: "Prepare OpenShift project {{ current_cp4i_cluster.project }} for Cloud Pak for Integration"
+  include_tasks: openshift-prepare-project.yml
+
+- name: Create entitlement key secret when entitled registry is used
+  block:
+    - name: Create entitlement key secret
+      include_tasks: create-entitlement-key-secret.yml
+  when: (_use_entitled_registry | bool)
 
 # ------------ INSTALLING OPERATORS ---------------------------------
 
 - name: Prepare operator group if installing in specific namespace
   include_tasks: prepare-operator-group.yml
   when: not _operators_in_all_namespaces
+
+- name: "Operators for the new installation style"
+  block:
+
+    - name: "Installing cert-manager-operator"
+      include_tasks: install-cert-manager-operator.yml
+
+    - name: "Installing foundational service operator"
+      include_tasks: install-foundational-service-operator.yml
+
+  when: _new_style
   
 - name: Install operators for each needed instance type
-  include_tasks: install-operator.yml
+  include_tasks: install-instance-operator.yml
   loop: "{{ current_cp4i_cluster.instances | default([]) }}"
   loop_control:
     loop_var: current_cp4i_instance
 
 # ------------ INTEGRATION INSTANCES --------------------------------
+
+- name: "Setup prerequisites for Foundational Services instance"
+  include_tasks: setup-foundational-svc-prereq.yml
+  when: _new_style
 
 - name: Create instances of CP4I capabilities and runtimes
   include_tasks: create-instance.yml
@@ -98,11 +161,40 @@
 
 # ------------ FINALIZING -------------------------------------------
 
-- name: Output Cloud pak for Integration URL and admin password
+- name: "Output Cloud pak for Integration URL and admin password"
   include_role:
     name: cp4i-cluster-show
+  vars:
+    _p_new_style: "{{ _new_style }}"
+    _p_fs_namespace: "{{ 'ibm-common-services' if _operators_in_all_namespaces else current_cp4i_cluster.project }}"
 
-- name: Ensure the status log folder exists
+- name: "Ensure the status log folder exists"
   file:
     path: "{{status_dir}}/log"
     state: directory
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

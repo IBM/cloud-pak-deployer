@@ -1,17 +1,15 @@
+---
+
 apiVersion: integration.ibm.com/v1beta1
-kind: AssetRepository
+kind: PlatformNavigator
 metadata:
   name: {{instance_properties.name}}
+  labels:
+    backup.integration.ibm.com/component: platformnavigator
   namespace: {{current_cp4i_cluster.project}}
 spec:
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
     license: {{instance_properties.license}}
   replicas: 1
-  singleReplicaOnly: true
-  storage:
-    assetDataVolume:
-      class: {{ocp_storage_class_file}}
-    couchVolume:
-      class: {{ocp_storage_class_block}}
-  version: "{{instance_properties.version}}"
+  version: {{current_cp4i_cluster.cp4i_version}}
