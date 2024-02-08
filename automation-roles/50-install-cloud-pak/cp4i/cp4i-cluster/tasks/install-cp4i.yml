@@ -39,28 +39,20 @@
     # ocp_storage_class_file
     # ocp_storage_class_block
 
-- name: "Retrieve cp4i version specification"
-  set_fact:
-    _version_spec: "{{ current_cp4i_cluster.cp4i_version | split('.') }}"
+# - name: "Retrieve cp4i version specification"
+#   set_fact:
+#     _version_spec: "{{ current_cp4i_cluster.cp4i_version | split('.') }}"
 
-- name: "Check if new installation style is needed"
-  set_fact:
+- set_fact:
     _new_style: False
 
-- set_fact:
+- name: "Check if new installation style is needed based on specified Cloud Pak for Integration version {{ current_cp4i_cluster.cp4i_version }}"
+  set_fact:
     _new_style: True
-  when:
-  - _version_spec[0] | int == 2023
-  - _version_spec[1] | int == 4
-
-- set_fact:
-    _new_style: True
-  when:
-  - _version_spec[0] | int > 2023
+  when: current_cp4i_cluster.cp4i_version >= '2023.4'
 
 - debug:
     var: _new_style
-
 
 # ------------ DOWLOADING CASE FILES, MIRRORING IMAGES --------------
 
