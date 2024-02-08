@@ -244,7 +244,7 @@
 - name: Add AAE to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'aae/cr.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled
+  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae.enabled
 
 - name: Add AAE persistence to CR
   block:
@@ -583,7 +583,8 @@
       - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-cpds-deploy','') }}"
       - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-cds-deploy','') }}"
       - "{{ cp4ba_cr_meta_name+'-navigator-deploy' }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas | ternary(cp4ba_cr_meta_name+'-pbk-ae-deployment','') }}"
+      - "{{ current_cp4ba_cluster.cp4ba.patterns.application.enabled and
+        current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer | ternary(cp4ba_cr_meta_name+'-pbk-ae-deployment','') }}"
 
 - name: Wait for Deployments to be Available
   ansible.builtin.include_role:
