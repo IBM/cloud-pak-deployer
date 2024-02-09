@@ -236,11 +236,6 @@
     components: "{{ components + ['ae_data_persistence'] }}"
   when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
 
-- name: Set AAE data persistence to true in CR
-  ansible.builtin.set_fact:
-    aae_data_persistence: true
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
-
 - name: Add AAE to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'aae/cr.yaml.j2') | from_yaml, recursive=true) }}"
@@ -474,13 +469,12 @@
       dest: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
       mode: u+rwx
 
-# TODO patch secret with correct password
-# base64 encode and oc patch module
+    # TODO patch secret with correct password
+    # base64 encode and oc patch module
   - name: Add KafkaUser Secret
     kubernetes.core.k8s:
       state: present
       force: false
-      #merge_type: smerge
       src: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
 
   when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
@@ -556,7 +550,7 @@
     common_condition_value: ready
     common_retries: 30
     common_delay: 120
-  when: 
+  when:
     current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
     or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
     or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
