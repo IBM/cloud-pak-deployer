@@ -37,12 +37,14 @@
 
 - name: Gitea config variable
   ansible.builtin.set_fact:
-    gitea_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"
+    gitea_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and
+      (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled or )
+        else false }}"
   when: gitea_enabled is not defined
 
 - name: Nexus config variable
   ansible.builtin.set_fact:
-    nexus_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"
+    nexus_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled else false }}"
   when: nexus_enabled is not defined
 
 - name: Mail config variable
@@ -52,7 +54,8 @@
 
 - name: Mongodb config variable
   ansible.builtin.set_fact:
-    mongodb_enabled: "{{ true if (current_cp4ba_cluster.cp4ba.enabled or current_cp4ba_cluster.pm.enabled) else false }}"
+    mongodb_enabled: "{{ true if ((current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled) or
+      current_cp4ba_cluster.pm.enabled) else false }}"
   when: mongodb_enabled is not defined
 
 - name: Kibana config variable
