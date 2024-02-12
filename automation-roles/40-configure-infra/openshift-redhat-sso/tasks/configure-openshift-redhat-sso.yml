@@ -1,0 +1,44 @@
+---
+- name: Generate yaml for redhat-sso namespace
+  template:
+    src: redhat-sso-namespace.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-namespace.yaml"
+- name: Create redhat-sso namespace
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-namespace.yaml
+
+- name: Generate yaml for Red Hat SSO operator group
+  template:
+    src: redhat-sso-operatorgroup.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-operatorgroup.yaml"
+
+- name: Create redhat-sso operatorgroup
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-operatorgroup.yaml
+
+- name: Generate yaml for Red Hat SSO subscription
+  template:
+    src: redhat-sso-subscription.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-subscription.yaml"
+
+- name: Create redhat-sso operator
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-subscription.yaml
+
+# Wait until subscription has been successfully created
+- name: Wait until Red Hat SSO has status Succeeded
+  shell: |
+    oc get csv -n {{ _v_redhat_sso_project }} \
+      -l operators.coreos.com/rhsso-operator.redhat-sso \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _redhat_sso_csv_status
+  retries: 30
+  delay: 30
+  until: _redhat_sso_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
