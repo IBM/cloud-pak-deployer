@@ -1,0 +1,22 @@
+---
+- set_fact:
+    _p_openshift_redhat_sso: {}
+
+- when: "all_config.openshift_redhat_sso is defined"
+  block:
+  - debug:
+      var: all_config.openshift_redhat_sso
+  - set_fact:
+      _p_openshift_redhat_sso: "{{ all_config.openshift_redhat_sso | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?openshift_cluster_name=='{{ current_openshift_cluster.name }}']
+  - name: Show OpenShift Red Hat SSO for current cluster
+    debug:
+      var: _p_openshift_redhat_sso
+
+- include_tasks: configure-openshift-redhat-sso.yml
+  when: _p_openshift_redhat_sso != {}
+
+- include_tasks: configure-keycloaks.yml
+  when: _p_openshift_redhat_sso != {}

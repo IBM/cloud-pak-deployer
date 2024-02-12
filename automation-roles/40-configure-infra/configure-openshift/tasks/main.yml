@@ -21,6 +21,19 @@
   vars:
     _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
+- name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: prepare-openshift-storage
+  loop: "{{ current_openshift_cluster.openshift_storage | default([]) }}"
+  loop_control:
+    loop_var: current_openshift_storage
+
+- name: Configure Multi-Cloud Object Gateway
+  include_role:
+    name: openshift-mcg
+  vars:
+    _p_openshift_cluster: "{{ current_openshift_cluster }}"
+
 - name: OpenShift Advanced Data Protection operator
   include_role:
     name: openshift-adp
@@ -45,6 +58,10 @@
   vars:
     _p_upstream_dns: "{{ current_openshift_cluster.upstream_dns | default([]) }}"
 
+- name: Configure Red Hat SSO for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: openshift-redhat-sso
+
 - name: Configure logging for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-logging
@@ -52,19 +69,6 @@
 - name: Configure monitoring for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-monitoring
-
-- name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
-  include_role:
-    name: prepare-openshift-storage
-  loop: "{{ current_openshift_cluster.openshift_storage | default([]) }}"
-  loop_control:
-    loop_var: current_openshift_storage
-
-- name: Configure Multi-Cloud Object Gateway
-  include_role:
-    name: openshift-mcg
-  vars:
-    _p_openshift_cluster: "{{ current_openshift_cluster }}"
 
 - name: Configure GPU for the OpenShift cluster
   include_role:

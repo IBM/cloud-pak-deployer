@@ -1,0 +1,23 @@
+---
+- name: Generate yaml for Keycloak {{ _current_keycloak.name }}
+  template:
+    src: redhat-sso-keycloak.j2
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _current_keycloak.name }}-keycloak.yaml"
+
+- name: Create Keycloak from YAML file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _current_keycloak.name }}-keycloak.yaml
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _current_keycloak.name }}-keycloak.yaml
+
+- name: Wait until Keycloak {{ _current_keycloak.name }} is ready
+  shell: |
+    oc get Keycloak -n {{ _v_redhat_sso_project }} {{ _current_keycloak.name }} \
+      -o jsonpath='{.status.ready}'
+  register: _keycloak_status
+  retries: 30
+  delay: 30
+  until: (_keycloak_status.stdout | lower) == "true"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
