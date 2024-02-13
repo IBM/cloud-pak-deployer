@@ -496,13 +496,14 @@
 - name: Wait for ZenService instance Ready state
   ansible.builtin.include_role:
     name: common
-    tasks_from: wait-resource-condition
+    tasks_from: wait-resource-condition-generic
   vars:
     common_api_version: zen.cpd.ibm.com/v1
     common_resource_kind: ZenService
     common_resource_name: iaf-zen-cpdservice
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Successful
+    common_condition_query: resources[*].status.zenStatus
+    common_condition_value: Completed
     common_retries: 90
     common_delay: 60
 
