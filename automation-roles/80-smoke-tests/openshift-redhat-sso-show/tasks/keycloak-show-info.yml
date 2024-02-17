@@ -1,0 +1,37 @@
+---
+- name: Get Keycloak information for Keycloak {{ _current_keycloak.name }}
+  include_role:
+    name: get-keycloak-info
+  vars:
+    _p_keycloak_name: "{{ _current_keycloak.name }}"
+
+- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Write Red Hat SSO Keycloak info to {{ status_dir }}/cloud-paks/cloud-pak-info.txt
+  lineinfile:
+    path: "{{ status_dir }}/cloud-paks/cloud-pak-info.txt"
+    create: True
+    line: "{{ item }}"
+  with_items:
+  - '--- Keycloak instance {{ _current_keycloak.name }} ---'
+  - "Keycloak URL: {{ _keycloak_url }}"
+  - "Keycloak User: {{ _keycloak_admin_user }}"
+  - "Keycloak {{ _keycloak_admin_user }} password: {{ _keycloak_admin_password }}"
+
+# - name: Store Keycloak URL into log file
+#   copy:
+#     content: "Keycloak URL: {{ _keycloak_url }}"
+#     dest: "{{ status_dir }}/cloud-paks/cp4d-{{ _current_redhat_sso.openshift_cluster_name }}-{{ _current_keycloak.name }}-keycloak.url"
+
+# - name: Show Cloud Pak for Data URL and admin password
+#   debug:
+#     msg: 
+#     - "Keycloak URL: {{ _keycloak_url }}"
+#     - "Keycloak User: {{ _keycloak_admin_user }}"
+#     - "Keycloak {{ _keycloak_admin_user }} password: {{ _keycloak_admin_password }}"
+#   vars:
+#     ansible_callback_diy_runner_on_ok_msg: "{{ ansible_callback_diy.result.output.msg }}\n"
+
