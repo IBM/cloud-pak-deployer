@@ -21,3 +21,15 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Get Keycloak information
+  include_role:
+    name: get-keycloak-info
+  vars:
+    _p_keycloak_name: "{{ _current_keycloak.name }}"
+
+- name: Create Keycloak groups
+  include_tasks: create-keycloak-group.yml
+  loop: "{{ _current_keycloak.groups | default([]) }}"
+  loop_control:
+    loop_var: _current_keycloak_group
