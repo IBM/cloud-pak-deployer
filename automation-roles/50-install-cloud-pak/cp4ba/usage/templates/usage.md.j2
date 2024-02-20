@@ -164,13 +164,17 @@ If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service acco
 If you want to investigate the actual ansible code that is running in the operator, you can get it from running operator pod from /opt/ansible/roles directory.
 ```bash
 # CP4BA
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep cp4a-operator | awk '{print $1}'`:/opt/ansible/roles cp4ba-ansible-roles
+mkdir cp4ba-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=ibm-cp4a-operator | awk '{print $1}'`:/opt/ansible/roles cp4ba-ansible-roles
 # Content
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep ibm-content-operator | awk '{print $1}'`:/opt/ansible/roles content-ansible-roles
+mkdir content-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=ibm-content-operator | awk '{print $1}'`:/opt/ansible/roles content-ansible-roles
 # DPE
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep ibm-dpe-operator | awk '{print $1}'`:/opt/ansible/roles dpe-ansible-roles
+mkdir dpe-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=ibm-dpe-operator | awk '{print $1}'`:/opt/ansible/roles dpe-ansible-roles
 # Foundation
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep foundation-operator | awk '{print $1}'`:/opt/ansible/roles foundation-ansible-roles
+mkdir foundation-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=icp4a-foundation-operator | awk '{print $1}'`:/opt/ansible/roles foundation-ansible-roles
 ```
 
 Order of capabilities deployment can be found in operator code in */opt/ansible/roles/icp4a/tasks/main.yml*.
