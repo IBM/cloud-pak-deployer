@@ -2,11 +2,11 @@
 
 # ------------ SETTING PROCESSING ENVIRONMENT -----------------------
 
-- name: Use CASE files by default
+- name: "Use CASE files by default"
   set_fact:
     _use_case_files: True
 
-- name: Ignore False value for use_case_files when private registry is used
+- name: "Ignore False value for use_case_files when private registry is used"
   block:
   - name: Check the configuration for the use of CASE files
     set_fact:
@@ -14,14 +14,10 @@
     when: (not current_cp4i_cluster.use_case_files | default(True) | bool)
   when: not (_use_entitled_registry | bool)
 
-- name: Install operators in all namespaces by default
-  set_fact:
-    _operators_in_all_namespaces: True
 
-- name: Check the configuration for the operators visbility
+- name: "Check whether operators should be installed in all or specific namespace"
   set_fact:
-    _operators_in_all_namespaces: False
-  when: (not current_cp4i_cluster.operators_in_all_namespaces | default(True) | bool)
+    _operators_in_all_namespaces: "{{ current_cp4i_cluster.operators_in_all_namespaces | default(False) }}"
 
 - debug:
     msg: "Using CASE files: {{ _use_case_files }}"
@@ -38,10 +34,6 @@
   # returns:
     # ocp_storage_class_file
     # ocp_storage_class_block
-
-# - name: "Retrieve cp4i version specification"
-#   set_fact:
-#     _version_spec: "{{ current_cp4i_cluster.cp4i_version | split('.') }}"
 
 - set_fact:
     _new_style: False
@@ -172,5 +164,7 @@
   file:
     path: "{{status_dir}}/log"
     state: directory
+
+
 
 
