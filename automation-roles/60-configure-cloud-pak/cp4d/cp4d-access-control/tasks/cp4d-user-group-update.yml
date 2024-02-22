@@ -1,0 +1,39 @@
+---
+- debug:
+    var: _cp4d_user_group
+
+- name: Get roles for existing user group {{ _existing_cp4d_user_group.name }}
+  set_fact:
+    _existing_cp4d_user_group_roles: "{{ _existing_cp4d_user_group.roles | map(attribute='role_id') | default([]) }}"
+
+- name: Get roles for defined user group {{ _cp4d_user_group.name }}
+  set_fact:
+    _cp4d_user_group_roles: "{{ _cp4d_user_group.roles | default([]) }}"
+
+- name: Get roles to be deleted
+  set_fact:
+    _remove_role_identifiers: "{{ _existing_cp4d_user_group_roles | difference(_cp4d_user_group_roles) | default([]) }}"
+
+- name: Get roles to be added
+  set_fact:
+    _add_role_identifiers: "{{ _cp4d_user_group_roles | difference(_existing_cp4d_user_group_roles) | default([]) }}"
+
+- name: Update Cloud Pak for Data user group {{ _cp4d_user_group.name }} with new roles
+  uri:
+    url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups/{{ _existing_cp4d_user_group.group_id }}"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      description: "{{ _cp4d_user_group.description | default(_cp4d_user_group.name) }}"
+      add_role_identifiers: "{{ _add_role_identifiers }}"
+      remove_role_identifiers: "{{ _remove_role_identifiers }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_user_group_update
+
+- debug:
+    var: _cp4d_user_group_update

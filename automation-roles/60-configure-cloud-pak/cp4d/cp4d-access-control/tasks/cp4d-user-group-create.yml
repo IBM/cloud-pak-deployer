@@ -1,0 +1,32 @@
+---
+
+- set_fact:
+    _cp4d_user_group_roles: []
+- set_fact:
+    _cp4d_user_group_roles: "[ {{ '\"' + _cp4d_user_group.role_assigmnents | join('\",\"') + '\"'}} ]"
+  when: (_cp4d_user_group.role_assigmnents | default([])) != []
+
+- debug:
+    var: _cp4d_user_group_roles
+
+- name: Create Cloud Pak for Data user group {{ _cp4d_user_group.name }}
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups'
+    method: POST
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ _cp4d_user_group.name }}"
+      description: "{{ _cp4d_user_group.description | default(_cp4d_user_group.name) }}"
+      role_identifiers: "{{ _cp4d_user_group_roles }}"
+    return_content: yes
+    validate_certs: no
+    status_code:
+    - 200
+    - 201
+  register: _cp4d_user_group_create
+
+- debug:
+    var: _cp4d_user_group_create
