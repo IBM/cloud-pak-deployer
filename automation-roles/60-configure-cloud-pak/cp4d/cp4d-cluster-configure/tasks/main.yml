@@ -32,11 +32,6 @@
           Ensure the 'accept_licenses' of the 'cp4d' configuration yaml is set to true or run the deployer with the --accept-all-licenses flag"
   when: _cpd_accept_licenses == False
 
-- name: Login to IBM Cloud
-  include_role:
-    name: login-ibmcloud
-  when: cloud_platform == 'ibm-cloud'
-
 - name: Login to the OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_role:
     name: openshift-login
@@ -50,8 +45,28 @@
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
     _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"  
 
-- name: Login to Cloud Pak for Data
-  include_tasks: cluster-configure-prepare.yml
+- set_fact:
+    _cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Validate if an existing admin password for {{ _cp4d_admin_password_vault_key_name }} exists in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_password
+
+- name: Error if no secret value is returned
+  fail:
+    msg: Unable to acquire secret value for {{ _cp4d_admin_password_vault_key_name }}
+  when: "_cp4d_admin_password==''"
+
+- name: Login to Cloud Pak for Data as the admin user
+  include_role:
+    name: cp4d-login
+  vars:
+    _p_cp4d_project: "{{ current_cp4d_cluster.project }}"
+    _p_cp4d_password: "{{ _cp4d_admin_password }}"
 
 # Configure SSL certificate from the OpenShift Cluster to Cloud Pak for Data
 - name: Configure Cloud Pak for Data SSL certificate
@@ -75,30 +90,12 @@
   when: "all_config.cp4d_role is defined"  
 
 # Cloud Pak for Data User Groups Configuration
-- when: "all_config.cp4d_user_group_configuration is defined"
-  block:
-    - name: Show CP4D user group configuration
-      debug:
-        msg: "{{ all_config.cp4d_user_group_configuration }}"  
-
-    - set_fact:
-        cp4d_user_group_config: "{{ all_config.cp4d_user_group_configuration|json_query(query_user_group) | first }}"
-      vars:
-        query_user_group: "[?openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}' && project=='{{ current_cp4d_cluster.project }}']"
-
-    - name: Show found CP4D user group configuration
-      debug:
-        msg: "{{ cp4d_user_group_config }}"
-
-    - name: Create CP4D User Groups
-      include_role:
-        name: user_group
-      loop: "{{ cp4d_user_group_config.user_groups | default([]) }}"
-      loop_control:
-        loop_var: cp4d_user_group 
-
-- name: Configure CP4D SAML
-  include_tasks: configure-cp4d-saml.yml
+- name: Configure CP4D access control
+  include_role:
+    name: cp4d-access-control
+  loop: "{{ all_config.cp4d_access_control | default([]) }}"
+  loop_control:
+    loop_var: _cp4d_access_control 
 
 - name: Loop through all cartridges for instance configuration
   when: "current_cp4d_cluster.cartridges is defined"

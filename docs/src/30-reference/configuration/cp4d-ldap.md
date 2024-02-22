@@ -39,41 +39,56 @@ cp4d_ldap_config:
 
 The above configuration uses the LDAPS protocol to connect to port `636` on the `ldap-host` server. This server can be a private server if an upstream DNS server is also defined for the OpenShift cluster that runs Cloud Pak for Data. Common Name `uid=ibm_roks_bind_user,ou=users,dc=ibm,dc=com` is used as the bind user for the LDAP server and its password is retrieved from vault secret `ldap_bind_password`.
 
-### User Group configuration - `cp4d_user_group_configuration`
-The `cp4d_user_group_configuration:` can optionally create User Group(s) with references to LDAP Group(s). A `user_groups` entry must contain at least 1 `role_assignments` and 1 `ldap_groups` entry.
+### Access Control - `cp4d_access_control`
+The `cp4d_access_control` object controls the creation of Cloud Pak for Data user groups that map identify provider (IdP) groups and define the roles of teh user group. A `user_groups` entry must contain at least 1 `roles` and must reference the associated IdP grouop(s).
 
 ```
-# Each Cloud Pak for Data Deployment deployed in an OpenShift Project of an OpenShift cluster can have its own User Groups configuration
-cp4d_user_group_configuration:
-- project: zen-sample                                                    # Mandatory
-  openshift_cluster_name: sample                                         # Mandatory
+cp4d_access_control:
+- project: cpd
+  openshift_cluster_name: "{{ env_id }}"
+  keycloak_name: ibm-keycloak
   user_groups:
-  - name: CA_Analytics_Viewer
-    description: User Group for Cognos Analytics Viewers
-    role_assigmnents:
-    - name: zen_administrator_role
-    ldap_groups:
-    - name: cn=ca_viewers,ou=groups,dc=ibm,dc=com
-  - name: CA_Analytics_Administrators
-    description: User Group for Cognos Analytics Administrators
-    role_assigmnents:
-    - name: zen_administrator_role
-    ldap_groups:
-    - name: cn=ca_admins,ou=groups,dc=ibm,dc=com
+  - name: cp4d-admins
+    description: Cloud Pak for Data Administrators
+    roles:
+    - zen_administrator_role
+    keycloak_groups:
+    - kc-cp4d-admins
+  - name: cp4d-data-engineers
+    description: Cloud Pak for Data Data Engineers
+    roles:
+    - zen_user_role
+    keycloak_groups:
+    - kc-cp4d-data-engineers
+  - name: cp4d-data-scientists
+    description: Cloud Pak for Data Data Scientists
+    roles:
+    - zen_user_role
+    keycloak_groups:
+    - kc-cp4d-data-scientists
 ```
 
-**Role Assignment values:**
+#### Property explanation
+| Property               | Description                                                                            | Mandatory | Allowed values |
+| ---------------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
+| project                | `project` of the `cp4d` instance                                                       | Yes       |                |
+| openshift_cluster_name | Reference to the `openshift` name                                                      | Yes       |                |
+| keycloak_name          | Name of the Red Hat SSO (Keycloak) instance on the same OpenShift cluster              | No        |                |
+| user_groups[]          | Cloud Pak for Data user groups to be configured                                        | Yes       |                |
+| .name                  | Name of the CP4D user group                                                            | Yes       |                |
+| .description           | Description of the CP4D user group                                                     | No        |                |
+| .roles[]               | List of CP4D roles to assign to the user grouop                                        | Yes       |                |
+| .keycloak_groups[]     | List of Red Hat SSO (Keycloak) groups to assign to the CP4D user group                 | Yes if IdP is Keycloak |   |
+
+**`role` values:**
+The following roles are defined by default in Cloud Pak for Data:
 - zen_administrator_role
 - zen_user_role
-- wkc_data_scientist_role
-- zen_developer_role
-- zen_data_engineer_role (requires installation of DataStage cartridge to become available)
+
+Further roles can be defined in the `cp4d_roles` object and can be referenced by the `user_groups.roles[]` property.
 
 During the creation of User Group(s) the following validations are performed:
-- LDAP configuration is completed
-- The provided role assignment(s) are available in Cloud Pak for Data
-- The provided LDAP group(s) are available in the LDAP registry
-- If the User Group already exists, it ensures the provided LDAP Group(s) are assigned, but no changes to the existing role assignments are performed and no LDAP groups are removed from the User Group
+- The provided role(s) are available in Cloud Pak for Data
 
 ### Provisioned instance authorization - `cp4d_instance_configuration`
 When using Cloud Pak for Data LDAP connectivity and User Groups, the User Groups can be assigned to authorize the users of the LDAP groups access to the proviosioned instance(s).
