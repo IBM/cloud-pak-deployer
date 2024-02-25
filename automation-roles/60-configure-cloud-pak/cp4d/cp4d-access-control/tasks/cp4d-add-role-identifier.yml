@@ -1,0 +1,15 @@
+---
+- name: Get role identifier for role {{ _cp4d_user_group_role }}
+  set_fact:
+    _cp4d_user_group_role_id: >-
+      {{ (_cp4d_all_roles.json.rows | json_query(_query_role) | first).doc._id | default('') }}
+  vars:
+    _query_role: "[?doc.role_name=='{{ _cp4d_user_group_role }}']"
+
+- set_fact:
+    _cp4d_user_group_role_ids: "{{ _cp4d_user_group_role_ids + [_cp4d_user_group_role_id] }}"
+  when: _cp4d_user_group_role_id != ''
+
+- fail:
+    msg: "Cloud Pak for Data role {{ _cp4d_user_group_role }} does not exist"
+  when: _cp4d_user_group_role_id == ''
