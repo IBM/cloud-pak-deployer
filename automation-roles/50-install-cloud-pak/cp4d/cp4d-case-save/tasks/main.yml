@@ -39,21 +39,21 @@
   with_items:
   - '(oc image mirror.*)'
   - '(oc ibm-pak generate.*)'
-  - '(mv /tmp/work.*)'
 
-- name: Download case files, logs are in {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.log
+- name: Download case files, logs are in {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
   shell: |
+    HOME=/tmp/work/offline/{{ _p_current_cp4d_cluster.cp4d_version }} && \
     {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh > {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
   args:
     chdir: /tmp/work
 
-- name: Create {{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }} directory
+- name: Create {{ status_dir }}/cp4d directory
   file:
-    path: "{{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}"
+    path: "{{ status_dir }}/cp4d"
     state: directory
 
 - name: Copy case files to {{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}
   copy:
-    src: "/opt/ansible/.ibm-pak"
-    dest: "{{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}/"
+    src: "/tmp/work/offline"
+    dest: "{{ status_dir }}/cp4d/"
     remote_src: True
