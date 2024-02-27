@@ -1,0 +1,19 @@
+---
+- name: Get all current Data Management Console instances
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dmc_addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _all_dmc_instances
+
+# Loop through all deployed Data Management Console instance definitions to check if instance no longer exists in the config
+- name: Loop through each Data Management Console instance to check if it must be deleted
+  include_tasks: delete_dmc_instance.yml
+  loop: "{{ _all_dmc_instances.json.service_instances | default([]) }}"
+  loop_control:
+    loop_var: _dmc_instance

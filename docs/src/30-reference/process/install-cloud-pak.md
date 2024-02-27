@@ -33,7 +33,7 @@ If an image registry has been specified for the Cloud Pak using the `image_regis
 
 ## Install Cloud Pak for Data and cartridges
 
-### Prepare OpenShift cluster for Cloud Pak for Data installation
+### Prepare OpenShift cluster for Cloud Pak installation
 Cloud Pak for Data requires a number of cluster-wide settings:
 
 * Create an `ImageContentSourcePolicy` if images must be pulled from a private registry
@@ -46,7 +46,7 @@ For all OpenShift clusters, except ROKS on IBM Cloud, these settings are applied
 
 To avoid having to reload the nodes more than once, the Machine Config Operator is paused before the settings are applied. After all setup, the Machine Config Operator is released and the deployment process will then wait until all nodes are ready with the configuration applied.
 
-#### Prepare OpenShift cluster on IBM Cloud
+#### Prepare OpenShift cluster on IBM Cloud and IBM Cloud Satellite
 As mentioned before, ROKS on IBM Cloud does not include the Machine Config Operator and would normally require the compute nodes to be reloaded (classic ROKS) or replaced (ROKS on VPC) to make the changes effective. While implementing this process, we have experienced intermittent reliability issues where replacement of nodes never finished or the cluster ended up in a unusable state. To avoid this, the process is applying the settings in a different manner.
 
 On every node, a cron job is created which starts every 5 minutes. It runs a script that checks if any of the cluster-wide settings must be (re-)applied, then updates the local system and restarts the `crio` and `kubelet` daemons. If no settings are to be adjusted, the daemons will not be restarted and therefore the cron job has minimal or no effect on the running applications.
@@ -56,6 +56,30 @@ Compute node changes that are made by the cron job:
 **Kubelet**: File `/etc/kubernetes/kubelet.conf` is appended with the `allowedUnsafeSysctls` entries.
 **CRI-O**: `pids_limit` and `default_ulimit` changes are made to the `/etc/crio/crio.conf` file.
 **Pull secret**: The registry and credentials are appended to the `/.docker/config.json` configuration.
+
+There are scenarios, especially on IBM Cloud Satellite, where custom changes must be applied to the compute nodes. This is possible by adding the `apply-custom-node-settings.sh` to the `assets` directory within the `CONFIG_DIR` directory. Once Kubelet, CRI-O and other changes have been applied, this script (if existing) is run to apply any additional configuration changes to the compute node.
+
+By setting the `NODE_UPDATED` script variable to `1` you can tell the deployer to restart the `crio` and `kubelet` daemons.
+
+**WARNING:** You should never set the `NODE_UPDATED` script variable to `0` as this will cause previous changes to the pull secret, ImageContentSourcePolicy and others not to become effective.
+
+**WARNING:** Do not end the script with the `exit` command; this will stop the calling script from running and therefore not restart the daemons.
+
+Sample script:
+```bash
+#!/bin/bash
+
+#
+# This is a sample script that will cause the crio and kubelet daemons to be restarted once by checking
+# file /tmp/apply-custom-node-settings-run. If the file doesn't exist, it creates it and sets NODE_UPDATED to 1.
+# The deployer will observe that the node has been updated and restart the daemons.
+#
+
+if [ ! -e /tmp/apply-custom-node-settings-run ];then
+    touch /tmp/apply-custom-node-settings-run
+    NODE_UPDATED=1
+fi
+```
 
 ### Mirror images to the private registry
 If a private image registry is specified, and if the IBM Cloud Pak entitlement key is available in the vault (`cp_entitlement_key` secret), the Cloud Pak case files for the Foundational Services, the Cloud Pak control plane and cartridges are downloaded to a subdirectory of the status directory that was specified. Then all images defined for the cartridges are mirrored from the entitled registry to the private image registry. Dependent on network speed and how many cartridges have been configured, the mirroring can take a very long time (12+ hours). All images which have already been mirrored to the private registry are skipped by the mirroring process.

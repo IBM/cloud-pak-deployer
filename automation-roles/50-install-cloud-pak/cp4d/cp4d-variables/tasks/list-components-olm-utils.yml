@@ -43,13 +43,20 @@
     shell: |
       {{ _list_components_command }}
 
-  - name: Copy file to {{ _cp4d_components_file }}
-    copy:
-      src: /tmp/work/components.csv
-      dest: "{{ _cp4d_components_file }}"
-      remote_src: True
-      force: True
-      mode: u+rwx,g+rwx,o+rwx
+  # Try to copy the list-components output file. In certain situations (Windows, SELinux), the command may fail and has to be re-run without remote_src
+  - block:
+    - name: Copy file to {{ _cp4d_components_file }}
+      copy:
+        src: /tmp/work/components.csv
+        dest: "{{ _cp4d_components_file }}"
+        remote_src: True
+        force: True
+        mode: u+rwx,g+rwx,o+rwx
+    rescue:
+    - name: Rescue copy file to {{ _cp4d_components_file }}
+      copy:
+        src: /tmp/work/components.csv
+        dest: "{{ _cp4d_components_file }}"
 
   when:
   - not (cpd_airgap | bool)
@@ -70,11 +77,18 @@
     head -1 {{ _cp4d_components_file }}
   register: _csv_column_headers
 
-- name: Copy file to _cp4d_components_file
-  copy:
-    src: "{{ _cp4d_components_file }}"
-    dest: "{{ _cp4d_components_no_header_file }}"
-    remote_src: True
+# Try to copy the list-components output file. In certain situations (Windows, SELinux), the command may fail and has to be re-run without remote_src
+- block:
+  - name: Copy file to {{ _cp4d_components_no_header_file }}
+    copy:
+      src: "{{ _cp4d_components_file }}"
+      dest: "{{ _cp4d_components_no_header_file }}"
+      remote_src: True
+  rescue:
+  - name: Copy file to {{ _cp4d_components_no_header_file }}
+    copy:
+      src: "{{ _cp4d_components_file }}"
+      dest: "{{ _cp4d_components_no_header_file }}"
 
 - name: Remove first line from file
   lineinfile:

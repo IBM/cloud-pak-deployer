@@ -1,0 +1,32 @@
+---
+- set_fact:
+    _wa_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "watson_assistant"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Watson Assistant cartridge
+  debug:
+    var: _wa_cartridge
+
+- set_fact:
+    _configured_wa_instances: []
+- set_fact:
+    _configured_wa_instances: "{{ _wa_cartridge.instances | default([] )}}"
+  when:
+  - _wa_cartridge != {}
+  - (_wa_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_wa_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_wa_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_wa_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
