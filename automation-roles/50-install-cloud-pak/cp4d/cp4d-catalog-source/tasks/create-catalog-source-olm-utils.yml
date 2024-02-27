@@ -13,11 +13,6 @@
     path: /tmp/work/offline
     state: absent
 
-- name: Create offline directory
-  file:
-    path: /tmp/work/offline
-    state: absent
-
 - name: If air-gapped, copy case files from {{ status_dir }}/cp4d/offline to /tmp/work/offline
   copy:
     src: "{{ status_dir }}/cp4d/offline"
@@ -101,6 +96,6 @@
 - name: If not air-gapped, copy case files from /tmp/work/offline to {{ status_dir }}/cp4d/offline
   copy:
     src: /tmp/work/offline
-    dest: "{{ status_dir }}/cp4d/offline"
+    dest: "{{ status_dir }}/cp4d/"
     remote_src: True
   when: not (cpd_airgap | default(False) | bool)

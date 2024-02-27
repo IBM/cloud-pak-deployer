@@ -1,0 +1,63 @@
+---
+- set_fact:
+    _dmc_instance_name: "{{ _dmc_instance.display_name }}"
+    _dmc_instance_id: "{{ _dmc_instance.id }}"
+    _dmc_cartridge_listed: {}
+    _delete_dmc_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration
+- block:
+  - set_fact:
+      _dmc_cartridge_listed: "{{ _dmc_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _dmc_instance_name }}']" 
+    when: _dmc_cartridge.instances is defined
+  - set_fact:
+      _delete_dmc_instance: True
+    when: _dmc_cartridge_listed == {} or (_dmc_cartridge.state | default('installed')) == 'removed'
+  when: (_p_delete_all_instances | default(False)) == False
+
+- set_fact:
+    _delete_dmc_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
+- name: Fail if Data Management Console instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Destroy was not confirmed via --confirm-destroy or global_config confirm_destroy property, will not delete Data Management Console instance {{ _dmc_instance_name }}"
+  when:
+  - _delete_dmc_instance | bool
+  - _confirm_destroy | default (False) | bool == False
+
+- name: Deleting Data Management Console instance {{ _dmc_instance_name }}
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _dmc_instance_id }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 202
+  register: _dmc_instance_delete_result
+  when: _delete_dmc_instance | bool
+
+- name: Wait until Data Management Console instance {{ _dmc_instance_name }} has been deleted
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _dmc_instance_id }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 404
+  register: _dmc_instance_exists
+  until: _dmc_instance_exists.status == 404
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: _delete_dmc_instance | bool

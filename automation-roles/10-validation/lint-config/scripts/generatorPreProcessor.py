@@ -151,7 +151,7 @@ class GeneratorPreProcessor:
                 self.attributesDict[ self.recentCheck.get('pathToCheck') ]=listOfMatches[0]
             else:
                 #print(listOfMatches)
-                self.appendError(msg="Can't expand, result of given path ("+ matchPatternCombined +") not unique, found:" + ','.join(listOfMatches))
+                self.appendError(msg="Can't expand attribute "+self.recentCheck.get('pathToCheck')+", resource to infer from: " + matchPatternCombined + ") not unique, found: " + ','.join(listOfMatches))
         return self
 
     # matchPattern (string): should look like 'vpc[*].name'
