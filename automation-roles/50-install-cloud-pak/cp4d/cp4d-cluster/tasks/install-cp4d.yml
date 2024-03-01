@@ -6,6 +6,13 @@
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
     _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"
 
+- name: Retrieve Cloud Pak Foundational Services 
+  set_fact:
+    _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name == 'cpfs' || name == 'cp-foundation']
+
 # TODO: Temporary patch
 - name: Patch version config file for CP4D 4.0.9
   copy:
@@ -34,7 +41,9 @@
   include_role:
     name: cp-fs-cluster-components
   vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
     _p_cp4d_version: "{{ current_cp4d_cluster.cp4d_version }}"
+    _p_license_threads_per_core: "{{ _cp_fs.license_service.threads_per_core | default(1) }}"
     _p_migrate_topology: False
     _p_preview: False
   when: current_cp4d_cluster.cp4d_version >= "4.7.0"
@@ -89,13 +98,6 @@
 - name: Configure Cloud Pak for Data SSL certificate
   include_role:
     name: cp4d-configure-ssl-certificate
-
-- name: Retrieve Cloud Pak Foundational Services 
-  set_fact:
-    _cp_fs: "{{ current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?name == 'cpfs' || name == 'cp-foundation']
 
 - name: Show foundational services element
   debug:
