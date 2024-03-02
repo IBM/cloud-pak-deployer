@@ -1,13 +1,7 @@
 # Container image including olm-utils
-ARG CPD_OLM_UTILS_V1_IMAGE
 ARG CPD_OLM_UTILS_V2_IMAGE
 
 FROM registry.access.redhat.com/ubi8/ubi
-
-FROM ${CPD_OLM_UTILS_V1_IMAGE} as olm-utils-v1
-
-RUN cd /opt/ansible && \
-    tar czf /tmp/opt-ansible-v1.tar.gz *
 
 FROM ${CPD_OLM_UTILS_V2_IMAGE}
 
@@ -38,11 +32,6 @@ RUN mkdir -p /cloud-pak-deployer && \
 
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
-
-COPY --from=olm-utils-v1 /tmp/opt-ansible-v1.tar.gz /olm-utils/
-
-RUN cd /opt/ansible && \
-    tar czf /olm-utils/opt-ansible-v2.tar.gz *
 
 RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
