@@ -40,13 +40,18 @@
   - '(oc image mirror.*)'
   - '(oc ibm-pak generate.*)'
 
+- name: Ensure that the mv statements do not fail if the source and destination is the same
+  replace:
+    path: "{{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh"
+    regexp: "(mv /tmp/work/offline.*)"
+    replace: '\1 | true'
+
 - name: Download case files, logs are in {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
   shell: |
     HOME=/tmp/work/offline/{{ _p_current_cp4d_cluster.cp4d_version }} && \
     {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh > {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
   args:
     chdir: /tmp/work
-  failed_when: False
 
 - name: Create {{ status_dir }}/cp4d directory
   file:
