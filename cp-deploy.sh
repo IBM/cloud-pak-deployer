@@ -616,11 +616,6 @@ if ! $INSIDE_CONTAINER;then
 fi
 
 # If images have not been overridden, set the variables here
-if [ -z $CPD_OLM_UTILS_V1_IMAGE ];then
-  export CPD_OLM_UTILS_V1_IMAGE=icr.io/cpopen/cpd/olm-utils:latest
-else
-  echo "Custom olm-utils image ${CPD_OLM_UTILS_V1_IMAGE} will be used."
-fi
 if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
   export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
 else
@@ -662,7 +657,6 @@ if ! $INSIDE_CONTAINER;then
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
       -f ${SCRIPT_DIR}/Dockerfile \
-      --build-arg CPD_OLM_UTILS_V1_IMAGE=${CPD_OLM_UTILS_V1_IMAGE} \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       ${SCRIPT_DIR}
     exit $?
