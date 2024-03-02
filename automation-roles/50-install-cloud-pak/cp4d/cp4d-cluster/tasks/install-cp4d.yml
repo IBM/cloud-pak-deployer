@@ -6,14 +6,6 @@
     _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
     _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"
 
-# TODO: Temporary patch
-- name: Patch version config file for CP4D 4.0.9
-  copy:
-    src: "{{ role_path }}/templates/release-4.0.9.yml"
-    dest: /opt/ansible/ansible-play/config-vars/release-4.0.9.yml
-    remote_src: True
-  when: current_cp4d_cluster.cp4d_version == '4.0.9'
-
 # Mirror container images if image registry name has been specified
 - include_tasks: cp4d-mirror-images.yml
   when: 
@@ -100,14 +92,6 @@
 - name: Show foundational services element
   debug:
     var: _cp_fs
-
-- name: Activate or deactivate license service for older versions of Cloud Pak for Data
-  include_role:
-    name: cp-fs-license-service
-  vars:
-    _p_fs_project: "{{ foundational_services_project }}"
-    _p_license_service: "{{ _cp_fs.license_service | default({}) }}"
-  when: current_cp4d_cluster.cp4d_version < "4.7.0"
 
 - name: Apply the specified license to the Cloud Pak for Data installation
   include_tasks: cp4d-apply-license.yml
