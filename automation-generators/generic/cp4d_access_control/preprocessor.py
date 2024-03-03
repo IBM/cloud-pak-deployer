@@ -30,18 +30,14 @@ import sys
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
-    g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
+    g('project').expandWith('cp4d[*]',remoteIdentifier='project')
     g('user_groups').isRequired()
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
-
-        cp4d_projects = fc.match('cp4d[*].project')
-        if ge['project'] not in cp4d_projects:
-            g.appendError(msg="Wasn't able to find a cp4d element with project name: "+ge['project']+' ')
 
         for user_group in ge['user_groups']:
             if 'name' not in user_group:
