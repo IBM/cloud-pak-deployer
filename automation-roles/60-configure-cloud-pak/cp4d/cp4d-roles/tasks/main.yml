@@ -1,21 +1,48 @@
 ---
-- name: "Get all cp4d_role definitions"
-  set_fact:
-    _cp4d_roles: "{{ all_config.cp4d_role | json_query(_roles_current_cluster) | default([]) }}"
+- name: Show CP4D role definition
+  debug:
+    var: _cp4d_role
+
+- name: Get existing CP4D roles
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/roles'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _existing_cp4d_roles
+
+- name: Show existing CP4D roles
+  debug:
+    var: _existing_cp4d_roles
+
+- include_tasks: cp4d-check-permissions.yml
+  when: _cp4d_role.state | default('installed') != 'removed'
+
+- name: Show existing CP4D roles
+  debug:
+    var: _existing_cp4d_roles
+
+- set_fact:
+    _existing_cp4d_role: "{{ _existing_cp4d_roles.json.rows | json_query(query) | first | default({}) }}"
   vars:
-    _roles_current_cluster: "[? project=='{{ current_cp4d_cluster.project }}' && openshift_cluster_name=='{{ current_cp4d_cluster.openshift_cluster_name }}']"
+    query: >-
+      [?doc.role_name=='{{ _cp4d_role.name }}']
 
-- name: Adding execute permission to {{ role_path }}/files/create_cp4d_role.sh"
-  file: dest={{ role_path }}/files/create_cp4d_role.sh mode=a+x
+- include_tasks: cp4d-role-create.yml
+  when: 
+  - _cp4d_role.state | default('installed') == 'installed'
+  - _existing_cp4d_role == {}
 
-- name: Adding execute permission to {{ role_path }}/files/delete_cp4d_role.sh"
-  file: dest={{ role_path }}/files/delete_cp4d_role.sh mode=a+x
+- include_tasks: cp4d-role-update.yml
+  when: 
+  - _cp4d_role.state | default('installed') == 'installed'
+  - _existing_cp4d_role != {}
 
-- name: "Loop through each cp4d role CP4D cluster {{ current_cp4d_cluster.project }}"
-  include_tasks: handle-custom-role.yml
-  loop: "{{ _cp4d_roles | default([]) }}"
-  loop_control:
-    loop_var: _cp4d_role
-
-
-
+- include_tasks: cp4d-role-delete.yml
+  when: 
+  - _cp4d_role.state | default('installed') == 'removed'
+  - _existing_cp4d_role != {}
