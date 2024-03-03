@@ -1,0 +1,20 @@
+---
+- name: Get CP4D permissions
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/icp4d-api/v1/permissions'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _cp4d_permissions
+
+- name: Get non-existing permissions
+  set_fact:
+    _non_existent_permissions: "{{ _cp4d_role.permissions | difference(_cp4d_permissions.json.Permissions) | default([]) }}"
+
+- fail:
+    msg: "Non-existent permissions found in {{ _cp4d_role.name }}: {{ _non_existent_permissions }}"
+  when: _non_existent_permissions != []

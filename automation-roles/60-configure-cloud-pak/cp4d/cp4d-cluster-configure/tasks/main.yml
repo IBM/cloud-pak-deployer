@@ -87,7 +87,9 @@
 - name: Handle Cloud Pak for Data custom roles configuration
   include_role:
     name: cp4d-roles
-  when: "all_config.cp4d_role is defined"  
+  loop: "{{ all_config.cp4d_role | default([]) }}"
+  loop_control:
+    loop_var: _cp4d_role 
 
 # Cloud Pak for Data User Groups Configuration
 - name: Configure CP4D access control

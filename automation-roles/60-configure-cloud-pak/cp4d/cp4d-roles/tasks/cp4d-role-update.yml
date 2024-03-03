@@ -1,0 +1,22 @@
+---
+- name: Update Cloud Pak for Data role {{ _cp4d_role.name }}
+  uri:
+    url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/role/{{ _existing_cp4d_role.id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      role_name: "{{ _cp4d_role.name }}"
+      description: "{{ _cp4d_role.description | default(_cp4d_role.name) }}"
+      permissions:  "[ {{ '\"' + _cp4d_role.permissions | join('\",\"') + '\"'}} ]"
+    return_content: yes
+    validate_certs: no
+    status_code: 
+    - 200
+    - 201
+  register: _cp4d_role_update
+
+- debug:
+    var: _cp4d_role_update
