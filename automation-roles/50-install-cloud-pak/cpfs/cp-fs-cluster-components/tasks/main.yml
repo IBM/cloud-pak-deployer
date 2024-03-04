@@ -1,8 +1,6 @@
 ---
-- name: Validate that mandatory parameters have been specified
-  assert:
-    that:
-      - _p_cp4d_version is defined
+- set_fact:
+    _threads_per_core: "{{ _p_license_threads_per_core | default(1) }}"
 
 - name: Delete offline directory
   file:
@@ -16,14 +14,20 @@
     remote_src: True
   when: (cpd_airgap | default(False) | bool)
 
-- name: Generate apply-cluster-components script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
+- name: Generate apply-cluster-components script {{ status_dir }}/cp4d/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
   template:
     src: apply-cluster-components.j2
-    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh"
     mode: u+rwx
 
-- name: Run shell script to apply cluster components on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.log
+- name: Run shell script to apply cluster components on OpenShift cluster {{ _p_openshift_cluster_name }}, logs are in {{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log
   shell: |
-    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}-apply-cluster-components.sh
+    {{ status_dir }}/cp4d/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
   when: 
   - not _p_preview
+
+- name: Set number of threads per core to {{ _threads_per_core }}
+  shell: |
+    oc patch ibmlicensing instance \
+      --type=merge \
+      -p '{"spec": {"features": {"hyperThreading": {"threadsPerCore" : {{ _threads_per_core }}  }}}}'
