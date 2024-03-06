@@ -1,19 +1,49 @@
-- name: Remove Project postgresql
+- name: Remove Service
   kubernetes.core.k8s:
     state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
+    api_version: v1
+    kind: Service
     name: postgresql
     wait: true
     wait_sleep: 15
     wait_timeout: 120
 
-- name: Remove RB postgresql-privileged
+- name: Remove StatefulSet
   kubernetes.core.k8s:
     state: absent
-    api_version: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    name: postgresql-privileged
+    api_version: apps/v1
+    kind: StatefulSet
+    name: postgresql
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove ConfigMap
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: postgresql-extended-config
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Secret
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: postgresql-secret
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove PersistentVolumeClaim
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    name: data-postgresql-0
     wait: true
     wait_sleep: 15
     wait_timeout: 120
