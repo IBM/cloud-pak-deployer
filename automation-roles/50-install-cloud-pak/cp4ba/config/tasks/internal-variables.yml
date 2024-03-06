@@ -42,6 +42,8 @@ default_attempts_4: 36
 default_delay_4: 300
 
 generic_directory: "{{ status_dir }}/{{current_cp4ba_cluster.project}}"
+main_project_name: "{{ current_cp4ba_cluster.project | default('cp4ba)')}}"
+collateral_project_name: "{{ current_cp4ba_cluster.collateral_project | default('cp4ba-collateral')}}"
 
 # TODO move to variables when ext share works
     # ## Do NOT enable now. Set to true if you want to use FNCM External Share with Google ID.
@@ -89,7 +91,7 @@ lc_bind_admin_password: "{{ ldap_configuration.lc_bind_admin_password | default(
 ca_key_path: "{{ generic_directory }}/global-ca/global-ca.key"
 ca_crt_path: "{{ generic_directory }}/global-ca/global-ca.crt"
 ldap_hostname: "{{ lc_ldap_server }}"
-postgresql_hostname: postgresql.postgresql.svc.cluster.local
+postgresql_hostname: "postgresql.{{ collateral_project_name }}.svc.cluster.local"
 mongodb_hostname: mongodb.mongodb.svc.cluster.local
 mail_hostname: mailserver.mail.svc.cluster.local
 mssql_hostname: mssql.mssql.svc.cluster.local
@@ -157,9 +159,10 @@ mongo_express_mongodb_hostname: "{{ mongodb_hostname }}"
 mongo_express_admin_user: "{{ principal_admin_user }}"
 
 postgresql_action: "{{ global_action }}"
+postgresql_project_name: "{{ collateral_project_name }}"
+postgresql_storage_class_name: "{{ storage_class_name }}"
 postgresql_admin_user: "{{ principal_admin_user }}"
 postgresql_universal_password: "{{ universal_password }}"
-postgresql_storage_class_name: "{{ storage_class_name }}"
 
 cloudbeaver_action: "{{ global_action }}"
 cloudbeaver_universal_password: "{{ universal_password }}"
@@ -186,7 +189,7 @@ cp4ba_postgresql_universal_password: "{{ postgresql_universal_password }}"
 cp4ba_mongodb_hostname: "{{ mongodb_hostname }}"
 cp4ba_mail_hostname: "{{ mail_hostname }}"
 cp4ba_kibana_url: "{{ kibana_url }}"
-cp4ba_project_name: "{{current_cp4ba_cluster.project}}"
+cp4ba_project_name: "{{ main_project_name }}"
 cp4ba_cr_meta_name: icp4adeploy
 cp4ba_ca_key_path: "{{ ca_key_path }}"
 cp4ba_ca_crt_path: "{{ ca_crt_path }}"
@@ -208,12 +211,12 @@ rpa_universal_password: "{{ universal_password }}"
 rpa_storage_class_name: "{{ storage_class_name }}"
 rpa_mail_hostname: "{{ mail_hostname }}"
 rpa_mssql_hostname: "{{ mssql_hostname }}"
-rpa_project_name: "{{current_cp4ba_cluster.project}}"
+rpa_project_name: "{{ main_project_name }}"
 
 pm_action: "{{ global_action }}"
 pm_universal_password: "{{ universal_password }}"
 pm_storage_class_name: "{{ storage_class_name }}"
-pm_project_name: "{{current_cp4ba_cluster.project}}"
+pm_project_name: "{{ main_project_name }}"
 pm_postgresql_hostname: "{{ postgresql_hostname }}"
 pm_postgresql_password: "{{ postgresql_universal_password }}"
 pm_mongodb_hostname: "{{ mongodb_hostname }}"

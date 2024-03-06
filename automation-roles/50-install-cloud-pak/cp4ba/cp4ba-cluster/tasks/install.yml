@@ -21,88 +21,88 @@
   ansible.builtin.include_role:
     name: global_ca
 
-# - name: Install PostgreSQL
+- name: Install PostgreSQL
+  ansible.builtin.include_role:
+    name: postgresql
+  when: postgresql_enabled
+
+- name: Install openldap
+  ansible.builtin.include_role:
+    name: openldap
+  when: openldap_enabled
+
+- name: Install gitea
+  ansible.builtin.include_role:
+    name: gitea
+  when: gitea_enabled
+
+- name: Install nexus
+  ansible.builtin.include_role:
+    name: nexus
+  when: nexus_enabled
+
+- name: Install Mail
+  ansible.builtin.include_role:
+    name: mail
+  when: mail_enabled
+
+- name: Install MongoDB
+  ansible.builtin.include_role:
+    name: mongodb
+  when: mongodb_enabled
+
+- name: Install Kibana
+  ansible.builtin.include_role:
+    name: kibana
+  when: kibana_enabled
+
+- name: Install cloudbeaver
+  ansible.builtin.include_role:
+    name: cloudbeaver
+  when: (postgresql_enabled or mssql_enabled) and current_cp4ba_cluster.cloudbeaver_enabled
+
+- name: Install Roundcube
+  ansible.builtin.include_role:
+    name: roundcube
+  when: mail_enabled and current_cp4ba_cluster.roundcube_enabled
+
+- name: Install Cerebro
+  ansible.builtin.include_role:
+    name: cerebro
+  when: current_cp4ba_cluster.cp4ba.enabled and (current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
+    current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and current_cp4ba_cluster.cerebro_enabled
+
+- name: Install Mongo Express
+  ansible.builtin.include_role:
+    name: mongo_express
+  when: mongodb_enabled and current_cp4ba_cluster.mongo_express_enabled
+
+- name: Install CPFS
+  ansible.builtin.include_role:
+    name: cpfs
+
+- name: Install CP4BA
+  ansible.builtin.include_role:
+    name: cp4ba-core
+  when: current_cp4ba_cluster.cp4ba.enabled
+
+- name: Install AKHQ
+  ansible.builtin.include_role:
+    name: akhq
+  when: current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai and current_cp4ba_cluster.akhq_enabled
+
+# TODO enable when CPFS dependency is fixed
+# - name: Install MSSQL
 #   ansible.builtin.include_role:
-#     name: postgresql
-#   when: postgresql_enabled
+#     name: mssql
+#   when: mssql_enabled
 
-# - name: Install openldap
+# - name: Install RPA
 #   ansible.builtin.include_role:
-#     name: openldap
-#   when: openldap_enabled
+#     name: rpa
+#   when: current_cp4ba_cluster.rpa.enabled
 
-# - name: Install gitea
-#   ansible.builtin.include_role:
-#     name: gitea
-#   when: gitea_enabled
-
-# - name: Install nexus
-#   ansible.builtin.include_role:
-#     name: nexus
-#   when: nexus_enabled
-
-# - name: Install Mail
-#   ansible.builtin.include_role:
-#     name: mail
-#   when: mail_enabled
-
-# - name: Install MongoDB
-#   ansible.builtin.include_role:
-#     name: mongodb
-#   when: mongodb_enabled
-
-# - name: Install Kibana
-#   ansible.builtin.include_role:
-#     name: kibana
-#   when: kibana_enabled
-
-# - name: Install cloudbeaver
-#   ansible.builtin.include_role:
-#     name: cloudbeaver
-#   when: (postgresql_enabled or mssql_enabled) and current_cp4ba_cluster.cloudbeaver_enabled
-
-# - name: Install Roundcube
-#   ansible.builtin.include_role:
-#     name: roundcube
-#   when: mail_enabled and current_cp4ba_cluster.roundcube_enabled
-
-# - name: Install Cerebro
-#   ansible.builtin.include_role:
-#     name: cerebro
-#   when: current_cp4ba_cluster.cp4ba.enabled and (current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
-#     current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and current_cp4ba_cluster.cerebro_enabled
-
-# - name: Install Mongo Express
-#   ansible.builtin.include_role:
-#     name: mongo_express
-#   when: mongodb_enabled and current_cp4ba_cluster.mongo_express_enabled
-
-# - name: Install CPFS
-#   ansible.builtin.include_role:
-#     name: cpfs
-
-# - name: Install CP4BA
-#   ansible.builtin.include_role:
-#     name: cp4ba-core
-#   when: current_cp4ba_cluster.cp4ba.enabled
-
-# - name: Install AKHQ
-#   ansible.builtin.include_role:
-#     name: akhq
-#   when: current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai and current_cp4ba_cluster.akhq_enabled
-
-# # TODO enable when CPFS dependency is fixed
-# # - name: Install MSSQL
-# #   ansible.builtin.include_role:
-# #     name: mssql
-# #   when: mssql_enabled
-
-# # - name: Install RPA
-# #   ansible.builtin.include_role:
-# #     name: rpa
-# #   when: current_cp4ba_cluster.rpa.enabled
-
-# - name: Install PM
-#   ansible.builtin.include_role:
-#     name: pm
-#   when: current_cp4ba_cluster.pm.enabled
+- name: Install PM
+  ansible.builtin.include_role:
+    name: pm
+  when: current_cp4ba_cluster.pm.enabled
