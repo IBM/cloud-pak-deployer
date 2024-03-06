@@ -9,87 +9,101 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: openldap
+    common_namespace_name: "{{ openldap_project_name }}"
     common_output_directory: "{{ openldap_output_directory }}"
 
-- name: Prepare yaml file for anyuid RoleBinding
+- name: Prepare yaml file for Secret
   ansible.builtin.template:
-    src: anyuid-scc-rolebinding.yaml.j2
-    dest: "{{ openldap_output_directory }}/anyuid-scc-rolebinding.yaml"
+    src: secret.yaml.j2
+    dest: "{{ openldap_output_directory }}/secret.yaml"
     mode: u+rwx
 
-- name: Add anyuid RoleBinding
+- name: Add Secret
   kubernetes.core.k8s:
     state: present
     force: false
     merge_type: merge
-    src: "{{ openldap_output_directory }}/anyuid-scc-rolebinding.yaml"
+    src: "{{ openldap_output_directory }}/secret.yaml"
     wait: true
     wait_sleep: 15
     wait_timeout: 15
 
-- name: Add helm-openldap chart repo
-  kubernetes.core.helm_repository:
-    name: helm-openldap
-    repo_url: "https://jp-gouin.github.io/helm-openldap/"
-
-- name: Prepare yaml file for values of helm chart
+- name: Prepare yaml file for ConfigMap for env
   ansible.builtin.template:
-    src: values.yaml.j2
-    dest: "{{ openldap_output_directory }}/values.yaml"
+    src: configmap-env.yaml.j2
+    dest: "{{ openldap_output_directory }}/configmap-env.yaml"
     mode: u+rwx
 
-- name: Deploy openldap chart using values files on target
-  kubernetes.core.helm:
-    name: openldap-openldap-stack-ha
-    chart_ref: helm-openldap/openldap-stack-ha
-    chart_version: "{{ openldap_chart_version }}"
-    release_namespace: openldap
-    values_files:
-      - "{{ openldap_output_directory }}/values.yaml"
+- name: Add ConfigMap for env
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ openldap_output_directory }}/configmap-env.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
 
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
+- name: Prepare yaml file for ConfigMap for LDIF
+  ansible.builtin.template:
+    src: configmap-ldif.yaml.j2
+    dest: "{{ openldap_output_directory }}/configmap-ldif.yaml"
+    mode: u+rwx
 
-- name: Crete Edge Route
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-edge-route
-  vars:
-    common_namespace_name: openldap
-    common_route_name: openldap-phpldapadmin
-    common_service_name: openldap-openldap-stack-ha-phpldapadmin
-    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
-    common_output_directory: "{{ openldap_output_directory }}"
+- name: Add ConfigMap for LDIF
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ openldap_output_directory }}/configmap-ldif.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
 
-- name: Wait for openldap-openldap-stack-ha-phpldapadmin Deployment to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: apps/v1
-    common_resource_kind: Deployment
-    common_resource_name: openldap-openldap-stack-ha-phpldapadmin
-    common_resource_namespace: openldap
-    common_condition_name: Available
-    common_retries: 60
-    common_delay: 15
+- name: Prepare yaml file for PersistenceVolumeClaim
+  ansible.builtin.template:
+    src: pvc.yaml.j2
+    dest: "{{ openldap_output_directory }}/pvc.yaml"
+    mode: u+rwx
 
-- name: Wait for openldap-openldap-stack-ha StatefulSet ready replicas
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition-generic
-  vars:
-    common_api_version: apps/v1
-    common_resource_kind: StatefulSet
-    common_resource_name: openldap-openldap-stack-ha
-    common_resource_namespace: openldap
-    common_condition_query: resources[*].status.readyReplicas
-    common_condition_value: 1
-    common_retries: 30
-    common_delay: 120
+- name: Add PersistenceVolumeClaim
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ openldap_output_directory }}/pvc.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for Deployment
+  ansible.builtin.template:
+    src: deployment.yaml.j2
+    dest: "{{ openldap_output_directory }}/deployment.yaml"
+    mode: u+rwx
+
+- name: Add Deployment
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ openldap_output_directory }}/deployment.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 600
+
+- name: Prepare yaml file for Service
+  ansible.builtin.template:
+    src: service.yaml.j2
+    dest: "{{ openldap_output_directory }}/service.yaml"
+    mode: u+rwx
+
+- name: Add Service
+  kubernetes.core.k8s:
+    state: present
+    force: false
+    merge_type: merge
+    src: "{{ openldap_output_directory }}/service.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
