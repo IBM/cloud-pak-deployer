@@ -1,11 +1,11 @@
-replicaCount: 1
-env:
-  LDAP_ORGANISATION: "{{ lc_ldap_domain }}"
-  LDAP_DOMAIN: "{{ lc_ldap_domain }}"
-global:  
-  adminPassword: '{{ lc_bind_admin_password }}'
-  configPassword: '{{ lc_bind_admin_password }}'
-customLdifFiles:
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: openldap-customldif
+  namespace: "{{ openldap_project_name }}"
+  labels:
+    app: openldap
+data:
   01-default-users.ldif: |-
     # Units
     dn: {{ lc_ldap_user_base_dn }}
@@ -102,30 +102,3 @@ customLdifFiles:
     member: {{ lc_ldap_user_id_attribute }}=cpuser,{{ lc_ldap_user_base_dn }}
     member: {{ lc_ldap_user_id_attribute }}=cpuser1,{{ lc_ldap_user_base_dn }}
     member: {{ lc_ldap_user_id_attribute }}=cpuser2,{{ lc_ldap_user_base_dn }}
-replication:
-  enabled: false
-persistence:
-  enabled: true
-  accessModes:
-    - ReadWriteMany
-  size: 8Gi
-  storageClass: "{{ storage_class_name }}"
-livenessProbe:
-  initialDelaySeconds: 60
-readinessProbe:
-  initialDelaySeconds: 60
-resources:
-  requests:
-    cpu: 100m
-    memory: 256Mi
-  limits:
-    cpu: 500m
-    memory: 512Mi
-ltb-passwd:
-  enabled: false
-phpldapadmin:
-  enabled: true
-  ingress:
-    enabled: false
-  env:
-    PHPLDAPADMIN_LDAP_HOSTS: "{{ openldap_hostname }}"
