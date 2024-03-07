@@ -1,5 +1,6 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
+ARCH=$(uname -m)
 
 echo "-------------------------------------------------------------------------------"
 echo "Starting the Web UI in the container"
@@ -29,8 +30,8 @@ oc_tar=`ls -1 ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-* 2>/dev/nul
 if [ "$oc_tar" == "" ];then
     echo "Downloading OpenShift client..."
     mkdir -p ${STATUS_DIR}/downloads
-    curl -s -L -o ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-4.10 https://mirror.openshift.com/pub/openshift-v4/clients/ocp/latest-4.10/openshift-client-linux.tar.gz
-    oc_tar=${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-4.10
+    curl -s -L -o ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-stable https://mirror.openshift.com/pub/openshift-v4/${ARCH}/clients/ocp/stable/openshift-client-linux-${ARCH}.tar.gz
+    oc_tar=${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-stable
 fi
 
 echo "Unpacking OpenShift client from ${oc_tar}..."
