@@ -99,6 +99,14 @@
   loop_control:
     loop_var: _cp4d_access_control 
 
+# In case roles were set to state: removed, loop through the roles again to delete them
+- name: Delete obsolete Cloud Pak for Data custom roles
+  include_role:
+    name: cp4d-roles
+  loop: "{{ all_config.cp4d_role | default([]) }}"
+  loop_control:
+    loop_var: _cp4d_role 
+
 - name: Loop through all cartridges for instance configuration
   when: "current_cp4d_cluster.cartridges is defined"
   block:

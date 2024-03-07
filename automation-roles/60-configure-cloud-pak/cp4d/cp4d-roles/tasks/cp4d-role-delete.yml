@@ -1,17 +1,31 @@
 ---
-- name: Delete Cloud Pak for Data role {{ _cp4d_role.name }}
-  uri:
-    url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/role/{{ _existing_cp4d_role.id }}"
-    method: DELETE
-    headers:
-      Authorization: "Bearer {{ _cp4d_bearer_token }}"
-      Content-Type: "application/json"
-    return_content: yes
-    validate_certs: no
-    status_code: 
-    - 200
-    - 201
-  register: _cp4d_role_delete
+- set_fact:
+    _role_users_count: "{{ (_existing_cp4d_role.doc.users_count | default('0') | string) }}"
+    _role_platform_users_count: "{{ (_existing_cp4d_role.platform_users_count | default('0') | string) }}"
+    _role_user_groups_count: "{{ (_existing_cp4d_role.user_groups_count | default('0') | string) }}"
+
+- block:
+  - name: Delete Cloud Pak for Data role {{ _cp4d_role.name }}
+    uri:
+      url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/role/{{ _existing_cp4d_role.id }}"
+      method: DELETE
+      headers:
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+        Content-Type: "application/json"
+      return_content: yes
+      validate_certs: no
+      status_code: 
+      - 200
+      - 201
+    register: _cp4d_role_delete
+
+  - debug:
+      var: _cp4d_role_delete
+  when:
+  - _role_users_count == '0'
+  - _role_platform_users_count == '0'
+  - _role_user_groups_count == '0'
 
 - debug:
-    var: _cp4d_role_delete
+    msg: "Warning: Cloud Pak for Data role {{ _cp4d_role.name }} not deleted, there are still dependent users or groups"
+  when: (_role_users_count != '0') or (_role_platform_users_count != '0') or (_role_user_groups_count != '0') 
