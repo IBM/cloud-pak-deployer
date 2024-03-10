@@ -1,0 +1,25 @@
+---
+- set_fact:
+    _dmc_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "dmc"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Data Management Console cartridge
+  debug:
+    var: _dmc_cartridge
+
+- name: Check if Data Management Console has an instance
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dmc_addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _dmc_instances_lookup_result
+
+- include_tasks: create-dmc-profiles.yml
+  when: _dmc_instances_lookup_result.json.total_count | default('0') != '0'
