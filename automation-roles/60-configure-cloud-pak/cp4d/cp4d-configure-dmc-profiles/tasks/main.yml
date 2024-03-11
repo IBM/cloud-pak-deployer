@@ -22,4 +22,7 @@
   register: _dmc_instances_lookup_result
 
 - include_tasks: create-dmc-profiles.yml
-  when: _dmc_instances_lookup_result.json.total_count | default('0') != '0'
+  when:
+  - _dmc_cartridge != {}
+  - (_dmc_cartridge.state | default('installed')) == 'installed'
+  - _dmc_instances_lookup_result.json.total_count | default(0) != 0
