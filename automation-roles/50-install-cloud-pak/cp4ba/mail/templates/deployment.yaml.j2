@@ -1,23 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mailserver
-  namespace: mail
+  name: mail
+  namespace: "{{ mail_project_name }}"
+  labels:
+    app: mail
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mailserver
+      app: mail
   template:
     metadata:
       labels:
-        app: mailserver
+        app: mail
         role: mail
         tier: backend
     spec:
       containers:
         - name: docker-mailserver
-          image: "mailserver/docker-mailserver:{{mail_image_tag}}"
+          image: "{{ mail_image }}"
           imagePullPolicy: IfNotPresent
           securityContext:
             capabilities:
@@ -25,10 +27,16 @@ spec:
               # If you are running on CRI-O, you will need the SYS_CHROOT capability,
               # as it is no longer a default capability.
               add: ["SYS_PTRACE", "SYS_CHROOT" ]
+          startupProbe:
+            tcpSocket:
+              port: 25
+            timeoutSeconds: 2
+            periodSeconds: 45
+            successThreshold: 1
+            failureThreshold: 5
           readinessProbe:
             tcpSocket:
               port: 25
-            initialDelaySeconds: 45
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -36,7 +44,6 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 25
-            initialDelaySeconds: 45
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -89,11 +96,11 @@ spec:
               protocol: TCP
           envFrom:
             - configMapRef:
-                name: mailserver.env.config
+                name: mail-env-config
       volumes:
         - name: config
           configMap:
-            name: mailserver.config
+            name: mail-config
         - name: data
           persistentVolumeClaim:
             claimName: mail-storage
@@ -105,5 +112,5 @@ spec:
           emptyDir: {}
         - name: tls
           secret:
-            secretName: tls
+            secretName: mail-tls
             defaultMode: 256          

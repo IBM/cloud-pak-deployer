@@ -1,9 +1,65 @@
-- name: Remove Project mail
+- name: Remove Service
   kubernetes.core.k8s:
     state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
+    api_version: v1
+    kind: Service
+    namespace: "{{ mail_project_name }}"
     name: mail
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Deployment
+  kubernetes.core.k8s:
+    state: absent
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ mail_project_name }}"
+    name: mail
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove ConfigMap mail-config
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ mail_project_name }}"
+    name: mail-config
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove ConfigMap mail-env-config
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ mail_project_name }}"
+    name: mail-env-config
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Secret
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    namespace: "{{ mail_project_name }}"
+    name: mail-tls
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove PersistentVolumeClaim
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: "{{ mail_project_name }}"
+    name: mail-data
     wait: true
     wait_sleep: 15
     wait_timeout: 120
