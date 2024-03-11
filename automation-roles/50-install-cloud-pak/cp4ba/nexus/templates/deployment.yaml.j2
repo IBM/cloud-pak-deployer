@@ -1,0 +1,94 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: nexusrepo-sonatype-nexus
+  namespace: "{{ nexus_project_name }}"
+  labels:
+    app: nexus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexus
+  template:
+    metadata:
+      labels:
+        app: nexus
+    spec:
+      volumes:
+        - name: nexusrepo-sonatype-nexus-data
+          persistentVolumeClaim:
+            claimName: nexusrepo-sonatype-nexus-data
+        - name: nexusrepo-sonatype-nexus-backup
+          emptyDir: {}
+      containers:
+        - resources:
+            requests:
+              cpu: 100m
+              memory: 2048Mi
+            limits:
+              cpu: 500m
+              memory: 2048Mi
+          startupProbe:
+            httpGet:
+              path: /
+              port: 8081
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 45
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8081
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 45
+            successThreshold: 1
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8081
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 45
+            successThreshold: 1
+            failureThreshold: 6
+          terminationMessagePath: /dev/termination-log
+          name: nexus
+          env:
+            - name: install4jAddVmParams
+              value: >-
+                -Xms1200M -Xmx1200M -XX:MaxDirectMemorySize=2G
+                -XX:+UnlockExperimentalVMOptions
+                -XX:+UseCGroupMemoryLimitForHeap
+            - name: NEXUS_SECURITY_RANDOMPASSWORD
+              value: 'false'
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            allowPrivilegeEscalation: false
+          ports:
+            - name: nexus-docker-g
+              containerPort: 5003
+              protocol: TCP
+            - name: nexus-http
+              containerPort: 8081
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: nexusrepo-sonatype-nexus-data
+              mountPath: /nexus-data
+            - name: nexusrepo-sonatype-nexus-backup
+              mountPath: /nexus-data/backup
+          terminationMessagePolicy: File
+          image: "{{ nexus_image }}"
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 120
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600
