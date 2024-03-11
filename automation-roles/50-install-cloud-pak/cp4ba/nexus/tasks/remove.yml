@@ -1,31 +1,43 @@
-- name: Get NexusRepo CRD
-  kubernetes.core.k8s_info:
-    api_version: apiextensions.k8s.io/v1
-    kind: CustomResourceDefinition
-    name: nexusrepos.sonatype.com
-  register: nexusrepo_crd
-  retries: 10
-  delay: 1
-
-- name: Delete nexus instance
+- name: Remove Service
   kubernetes.core.k8s:
     state: absent
-    api_version: sonatype.com/v1alpha1
-    kind: NexusRepo
-    name: nexusrepo
-    namespace: nexus
+    api_version: v1
+    kind: Service
+    namespace: "{{ nexus_project_name }}"
+    name: nexus
     wait: true
     wait_sleep: 15
     wait_timeout: 120
-  when: nexusrepo_crd.resources | length != 0
 
-- name: Remove Project nexus
+- name: Remove Deployment
   kubernetes.core.k8s:
     state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ nexus_project_name }}"
     name: nexus
-    namespace: nexus
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove PersistentVolumeClaim
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: "{{ nexus_project_name }}"
+    name: nexusrepo-sonatype-nexus-data
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Route
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ nexus_project_name }}"
+    name: nexus
     wait: true
     wait_sleep: 15
     wait_timeout: 120
@@ -35,7 +47,7 @@
     state: absent
     api_version: v1
     kind: ConfigMap
-    name: cp4ba-nexus-maven-settings
+    name: "{{ current_cp4ba_cluster.project }}-nexus-maven-settings"
     namespace: "{{ nexus_output_namespace }}"
     force: false
     wait: true
