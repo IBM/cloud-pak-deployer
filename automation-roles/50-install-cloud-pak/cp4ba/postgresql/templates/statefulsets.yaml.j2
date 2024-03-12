@@ -3,6 +3,8 @@ apiVersion: apps/v1
 metadata:
   name: postgresql
   namespace: "{{ postgresql_project_name }}"
+  labels:
+    app: postgresql  
 spec:
   serviceName: postgresql
   replicas: 1
@@ -69,7 +71,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: postgresql-secret
+                  name: postgresql-password
                   key: postgres-password
             - name: POSTGRESQL_ENABLE_LDAP
               value: 'no'
@@ -114,7 +116,7 @@ spec:
             - name: empty-dir
               mountPath: /opt/bitnami/postgresql/logs
               subPath: app-logs-dir
-            - name: data
+            - name: postgresql-data
               mountPath: /bitnami/postgresql
             - name: postgresql-extended-config
               mountPath: /bitnami/postgresql/conf/conf.d/
@@ -131,7 +133,9 @@ spec:
     - kind: PersistentVolumeClaim
       apiVersion: v1
       metadata:
-        name: data
+        name: postgresql-data
+        labels:
+          app: postgresql  
       spec:
         accessModes:
           - ReadWriteOnce
