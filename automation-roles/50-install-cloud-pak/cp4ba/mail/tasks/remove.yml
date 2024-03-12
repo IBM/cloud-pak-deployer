@@ -1,75 +1,40 @@
-- name: Remove Service
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Service
-    namespace: "{{ mail_project_name }}"
-    name: mail
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ mail_output_directory }}"
+    state: directory
+    mode: u+rwx
 
-- name: Remove Deployment
-  kubernetes.core.k8s:
-    state: absent
-    api_version: apps/v1
-    kind: Deployment
-    namespace: "{{ mail_project_name }}"
-    name: mail
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ mail_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - rolebindings
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - deployments
+    - services
 
-- name: Remove ConfigMap mail-config
+- name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    api_version: v1
-    kind: ConfigMap
-    namespace: "{{ mail_project_name }}"
-    name: mail-config
+    src: "{{ mail_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
 
-- name: Remove ConfigMap mail-env-config
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: ConfigMap
-    namespace: "{{ mail_project_name }}"
-    name: mail-env-config
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove Secret
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Secret
-    namespace: "{{ mail_project_name }}"
-    name: mail-tls
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove PersistentVolumeClaim
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: PersistentVolumeClaim
-    namespace: "{{ mail_project_name }}"
-    name: mail-data
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove RB mail-privileged
-  kubernetes.core.k8s:
-    state: absent
-    api_version: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    name: mail-privileged
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ mail_project_name }}"
