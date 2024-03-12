@@ -1,44 +1,44 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: roundcubedb
-  namespace: roundcube
+  name: roundcube-db
+  namespace: "{{ roundcube_project_name }}"
   labels:
-    service: roundcubedb
+    app: roundcube
 spec:
   type: NodePort
   ports:
   - port: 5432
     protocol: TCP
   selector:
-    service: roundcubedb
+    service: roundcube-db
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: roundcubemail
-  namespace: roundcube
+  name: roundcube
+  namespace: "{{ roundcube_project_name }}"
   labels:
-    service: roundcubemail
+    app: roundcube
 spec:
   type: NodePort
   ports:
   - port: 9000
     protocol: TCP
   selector:
-    service: roundcubemail
+    service: roundcube
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: roundcubenginx
-  namespace: roundcube
+  name: roundcube-nginx
+  namespace: "{{ roundcube_project_name }}"
   labels:
-    service: roundcubenginx
+    app: roundcube
 spec:
   ports:
   - name: http
     port: 8080
     targetPort: 80
   selector:
-    service: roundcubenginx
+    service: roundcube-nginx

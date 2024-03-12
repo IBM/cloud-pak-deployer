@@ -12,133 +12,33 @@
     common_namespace_name: roundcube
     common_output_directory: "{{ roundcube_output_directory }}"
 
-- name: Prepare yaml file for anyuid ClusterRoleBinding
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: anyuid-scc-clusterrolebinding.yaml.j2
-    dest: "{{ roundcube_output_directory }}/anyuid-scc-clusterrolebinding.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ roundcube_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - secrets
+    - configmaps
+    - persistentvolumeclaims
+    - rolebindings
+    - deployments
+    - services
 
-- name: Add anyuid ClusterRoleBinding
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/anyuid-scc-clusterrolebinding.yaml"
+    src: "{{ roundcube_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for PVCs
-  ansible.builtin.template:
-    src: pvcs.yaml.j2
-    dest: "{{ roundcube_output_directory }}/pvcs.yaml"
-    mode: u+rwx
-
-- name: Add PVCs
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/pvcs.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Config Maps
-  ansible.builtin.template:
-    src: configmaps.yaml.j2
-    dest: "{{ roundcube_output_directory }}/configmaps.yaml"
-    mode: u+rwx
-
-- name: Add Config Maps
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/configmaps.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Secrets
-  ansible.builtin.template:
-    src: secrets.yaml.j2
-    dest: "{{ roundcube_output_directory }}/secrets.yaml"
-    mode: u+rwx
-
-- name: Add Secrets
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/secrets.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Services
-  ansible.builtin.template:
-    src: services.yaml.j2
-    dest: "{{ roundcube_output_directory }}/services.yaml"
-    mode: u+rwx
-
-- name: Add Services
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/services.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for DB Deployment
-  ansible.builtin.template:
-    src: db-deployment.yaml.j2
-    dest: "{{ roundcube_output_directory }}/db-deployment.yaml"
-    mode: u+rwx
-
-- name: Add DB Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/db-deployment.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ roundcube_output_directory }}/deployment.yaml"
-    mode: u+rwx
-
-- name: Add Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/deployment.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: nginx-deployment.yaml.j2
-    dest: "{{ roundcube_output_directory }}/nginx-deployment.yaml"
-    mode: u+rwx
-
-- name: Add NGINX Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ roundcube_output_directory }}/nginx-deployment.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
@@ -153,8 +53,8 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: roundcube
-    common_route_name: roundcube
-    common_service_name: roundcubenginx
+    common_namespace_name: "{{ roundcube_project_name }}"
+    common_route_name: "roundcube-{{ roundcube_project_name }}"
+    common_service_name: roundcube-nginx
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ roundcube_output_directory }}"
