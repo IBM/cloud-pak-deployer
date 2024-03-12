@@ -14,82 +14,26 @@
     common_namespace_name: mssql
     common_output_directory: "{{ mssql_output_directory }}"
 
-- name: Prepare yaml file for Secret
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: secret.yaml.j2
-    dest: "{{ mssql_output_directory }}/secret.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ mssql_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - rolebindings
+    - secrets
+    - statefulsets
+    - services
 
-- name: Add Secret
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ mssql_output_directory }}/secret.yaml"
+    src: "{{ mssql_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for PVC
-  ansible.builtin.template:
-    src: pvc.yaml.j2
-    dest: "{{ mssql_output_directory }}/pvc.yaml"
-    mode: u+rwx
-
-- name: Add PVC
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mssql_output_directory }}/pvc.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for anyuid RoleBinding
-  ansible.builtin.template:
-    src: anyuid-scc-rolebinding.yaml.j2
-    dest: "{{ mssql_output_directory }}/anyuid-scc-rolebinding.yaml"
-    mode: u+rwx
-
-- name: Add anyuid RoleBinding
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mssql_output_directory }}/anyuid-scc-rolebinding.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ mssql_output_directory }}/deployment.yaml"
-    mode: u+rwx
-
-- name: Add Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mssql_output_directory }}/deployment.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 1200
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ mssql_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mssql_output_directory }}/service.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}

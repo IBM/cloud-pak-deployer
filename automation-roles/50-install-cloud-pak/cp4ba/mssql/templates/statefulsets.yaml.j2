@@ -1,9 +1,12 @@
+kind: StatefulSet
 apiVersion: apps/v1
-kind: Deployment
 metadata:
   name: mssql
-  namespace: mssql
+  namespace: "{{ mssql_project_name }}"
+  labels:
+    app: mssql
 spec:
+  serviceName: mssql
   replicas: 1
   selector:
     matchLabels:
@@ -15,10 +18,10 @@ spec:
     spec:
       terminationGracePeriodSeconds: 10
       securityContext:
-        fsGroup: 10001      
+        fsGroup: 10001
       containers:
         - name: mssql
-          image: "mcr.microsoft.com/mssql/rhel/server:{{ mssql_image_tag }}"
+          image: "{{ mssql_image }}"
           ports:
             - name: db
               containerPort: 1433
@@ -33,12 +36,18 @@ spec:
                   name: mssql
                   key: SA_PASSWORD
           volumeMounts:
-            - name: mssqldb
+            - name: mssql-data
               mountPath: /var/opt/mssql
+          startupProbe:
+            tcpSocket:
+              port: 1433
+            timeoutSeconds: 1
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 5
           readinessProbe:
             tcpSocket:
               port: 1433
-            initialDelaySeconds: 30
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -46,12 +55,22 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 1433
-            initialDelaySeconds: 30
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
-            failureThreshold: 10                  
-      volumes:
-        - name: mssqldb
-          persistentVolumeClaim:
-            claimName: mssql-data
+            failureThreshold: 10
+  volumeClaimTemplates:
+    - kind: PersistentVolumeClaim
+      apiVersion: v1
+      metadata:
+        name: mssql-data
+        labels:
+          app: mssql
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: "{{ mssql_storage_class_name }}"
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem
