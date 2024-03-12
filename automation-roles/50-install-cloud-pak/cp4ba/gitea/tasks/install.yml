@@ -12,101 +12,30 @@
     common_namespace_name: "{{ gitea_project_name }}"
     common_output_directory: "{{ gitea_output_directory }}"
 
-- name: Prepare yaml file for Secret init
-  ansible.builtin.template:
-    src: secret-gitea-init.yaml.j2
-    dest: "{{ gitea_output_directory }}/secret-gitea-init.yaml"
-    mode: u+rwx
 
-- name: Add Secret init
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ gitea_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - secrets
+    - persistentvolumeclaims
+    - deployments
+    - services
+
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ gitea_output_directory }}/secret-gitea-init.yaml"
+    src: "{{ gitea_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for inline config
-  ansible.builtin.template:
-    src: secret-gitea-inline-config.yaml.j2
-    dest: "{{ gitea_output_directory }}/secret-gitea-inline-config.yaml"
-    mode: u+rwx
-
-- name: Add Secret inline config
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ gitea_output_directory }}/secret-gitea-inline-config.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Secret
-  ansible.builtin.template:
-    src: secret-gitea.yaml.j2
-    dest: "{{ gitea_output_directory }}/secret-gitea.yaml"
-    mode: u+rwx
-
-- name: Add Secret
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ gitea_output_directory }}/secret-gitea.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for PVC
-  ansible.builtin.template:
-    src: pvc.yaml.j2
-    dest: "{{ gitea_output_directory }}/pvc.yaml"
-    mode: u+rwx
-
-- name: Add PVC
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ gitea_output_directory }}/pvc.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ gitea_output_directory }}/deployment.yaml"
-    mode: u+rwx
-
-- name: Add Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ gitea_output_directory }}/deployment.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ gitea_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ gitea_output_directory }}/service.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
