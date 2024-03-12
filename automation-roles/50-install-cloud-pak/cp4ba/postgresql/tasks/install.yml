@@ -14,66 +14,26 @@
     common_namespace_name: "{{ postgresql_project_name }}"
     common_output_directory: "{{ postgresql_output_directory }}"
 
-- name: Prepare yaml file for Secret
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: secret.yaml.j2
-    dest: "{{ postgresql_output_directory }}/secret.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ postgresql_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - statefulsets
+    - services
 
-- name: Add Secret
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ postgresql_output_directory }}/secret.yaml"
+    src: "{{ postgresql_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for ConfigMap
-  ansible.builtin.template:
-    src: configmap.yaml.j2
-    dest: "{{ postgresql_output_directory }}/configmap.yaml"
-    mode: u+rwx
-
-- name: Add ConfigMap
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ postgresql_output_directory }}/configmap.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for StatefulSet
-  ansible.builtin.template:
-    src: statefulset.yaml.j2
-    dest: "{{ postgresql_output_directory }}/statefulset.yaml"
-    mode: u+rwx
-
-- name: Add StatefulSet
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ postgresql_output_directory }}/statefulset.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ postgresql_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ postgresql_output_directory }}/service.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}

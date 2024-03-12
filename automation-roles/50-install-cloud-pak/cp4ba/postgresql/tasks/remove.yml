@@ -1,49 +1,48 @@
-- name: Remove Service
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ postgresql_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ postgresql_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - statefulsets
+    - services
+
+- name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    api_version: v1
-    kind: Service
-    name: postgresql
+    src: "{{ postgresql_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
 
-- name: Remove StatefulSet
-  kubernetes.core.k8s:
-    state: absent
-    api_version: apps/v1
-    kind: StatefulSet
-    name: postgresql
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove ConfigMap
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: ConfigMap
-    name: postgresql-extended-config
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove Secret
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Secret
-    name: postgresql-secret
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove PersistentVolumeClaim
+- name: Remove PersistentVolumeClaims
   kubernetes.core.k8s:
     state: absent
     api_version: v1
     kind: PersistentVolumeClaim
-    name: data-postgresql-0
+    label_selectors:
+      - app = postgresql
+    namespace: "{{ postgresql_project_name }}"
     wait: true
     wait_sleep: 15
     wait_timeout: 120
+
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ postgresql_project_name }}"
