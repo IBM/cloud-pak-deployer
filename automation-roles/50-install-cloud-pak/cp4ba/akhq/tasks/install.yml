@@ -11,13 +11,8 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: akhq
+    common_namespace_name: "{{ akhq_project_name }}"
     common_output_directory: "{{ akhq_output_directory }}"
-
-- name: Add helm-akhq chart repo
-  kubernetes.core.helm_repository:
-    name: helm-akhq
-    repo_url: "https://akhq.io/"
 
 - name: Import trusted CA from SSL certificate
   community.general.java_cert:
@@ -37,6 +32,30 @@
   ansible.builtin.set_fact:
     _jks: "{{ slurped_jks_data.content }}"
 
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ akhq_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - deployments
+    - services
+
+- name: Add {{ item.name }}
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ akhq_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
     name: common
@@ -45,42 +64,14 @@
     common_output_to_var: "apps_endpoint_domain"
   when: apps_endpoint_domain is not defined
 
-- name: Prepare yaml file for values of helm chart
-  ansible.builtin.template:
-    src: values.yaml.j2
-    dest: "{{ akhq_output_directory }}/values.yaml"
-    mode: u+rwx
-
-- name: Deploy akhq chart using values files on target
-  kubernetes.core.helm:
-    name: akhq
-    chart_ref: helm-akhq/akhq
-    chart_version: "{{ akhq_chart_version }}"
-    release_namespace: akhq
-    values_files:
-      - "{{ akhq_output_directory }}/values.yaml"
-
 - name: Crete Edge Route
   ansible.builtin.include_role:
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: akhq
-    common_route_name: akhq
+    common_namespace_name: "{{ akhq_project_name }}"
+    common_route_name: "akhq-{{ akhq_project_name }}"
     common_service_name: akhq
     common_service_port: http
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ akhq_output_directory }}"
-
-- name: Wait for akhq Deployment to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: apps/v1
-    common_resource_kind: Deployment
-    common_resource_name: akhq
-    common_resource_namespace: akhq
-    common_condition_name: Available
-    common_retries: 60
-    common_delay: 15

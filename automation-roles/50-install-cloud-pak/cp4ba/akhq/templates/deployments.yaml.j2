@@ -1,0 +1,86 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: akhq
+  namespace: "{{ akhq_project_name }}"
+  labels:
+    app: akhq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: akhq
+  template:
+    metadata:
+      labels:
+        app: akhq
+    spec:
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      securityContext: {}
+      containers:
+        - resources: {}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: management
+              scheme: HTTP
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: management
+              scheme: HTTP
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: management
+              scheme: HTTP
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          terminationMessagePath: /dev/termination-log
+          name: akhq
+          env:
+            - name: MICRONAUT_ENVIRONMENTS
+              value: secrets
+            - name: MICRONAUT_CONFIG_FILES
+              value: '/app/application.yml,/app/application-secrets.yml'
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+            - name: management
+              containerPort: 28081
+              protocol: TCP
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: secrets
+              mountPath: /app/truststore.jks
+              subPath: truststorejks
+            - name: config
+              mountPath: /app/application.yml
+              subPath: application.yml
+            - name: secrets
+              mountPath: /app/application-secrets.yml
+              subPath: application-secrets.yml
+          terminationMessagePolicy: File
+          image: "{{ akhq_image }}"
+      volumes:
+        - name: config
+          configMap:
+            name: akhq
+            defaultMode: 420
+        - name: secrets
+          secret:
+            secretName: akhq-secrets
+            defaultMode: 420
+
