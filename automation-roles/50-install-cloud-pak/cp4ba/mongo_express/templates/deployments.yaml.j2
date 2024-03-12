@@ -2,7 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: mongo-express
-  namespace: mongo-express
+  namespace: "{{ mongo_project_name }}"
+  labels:
+    app: mongo-express  
 spec:
   replicas: 1
   selector:
@@ -15,12 +17,18 @@ spec:
     spec:
       containers:
         - name: mongo-express
-          image: "mongo-express:{{ mongo_express_image_tag }}"
+          image: "{{ mongo_express_image }}"
           imagePullPolicy: IfNotPresent
+          startupProbe:
+            tcpSocket:
+              port: 8081
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
           readinessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 10
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -28,11 +36,10 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 8081
-            initialDelaySeconds: 10
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
-            failureThreshold: 10                       
+            failureThreshold: 10
           ports:
             - name: ui
               containerPort: 8081
