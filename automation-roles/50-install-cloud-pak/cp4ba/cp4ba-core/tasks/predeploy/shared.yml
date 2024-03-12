@@ -35,8 +35,6 @@
 - name: Create Global CA Secret to trust other components like mail
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ cp4ba_output_directory }}/global-ca-secret.yaml"
 
 - name: Retrieve default certification
@@ -57,8 +55,6 @@
 - name: Create default CA Secret to trust other components like gitea, nexus
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ cp4ba_output_directory }}/default-ca-secret.yaml"
 
 - name: Prepare yaml file for LDAP bind Secret
@@ -70,8 +66,6 @@
 - name: Add LDAP bind Secret
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ cp4ba_output_directory }}/ldap-secret.yaml"
 
 - name: Manage LDAP SSL
@@ -98,8 +92,7 @@
     - name: Add LDAP SSL Certificate Secret to the {{ cp4ba_project_name }} namespace
       kubernetes.core.k8s:
         state: present
-        force: false
-        merge_type: merge
+
         src: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
 
   when: lc_ldap_ssl_secret_name | length > 0
