@@ -12,36 +12,26 @@
     common_namespace_name: kibana
     common_output_directory: "{{ kibana_output_directory }}"
 
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ kibana_output_directory }}/deployment.yaml"
-    mode: u+rwx
 
-- name: Add Deployment
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ kibana_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - deployments
+    - services
+
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    namespace: kibana
-    src: "{{ kibana_output_directory }}/deployment.yaml"
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ kibana_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    namespace: kibana
-    src: "{{ kibana_output_directory }}/service.yaml"
+    src: "{{ kibana_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
@@ -56,8 +46,8 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: kibana
-    common_route_name: kibana
+    common_namespace_name: " {{ kibana_project_name }} "
+    common_route_name: "kibana-{{ kibana_project_name }}"
     common_service_name: kibana
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ kibana_output_directory }}"
