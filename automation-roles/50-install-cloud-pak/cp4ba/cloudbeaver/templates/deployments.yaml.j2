@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cloudbeaver
-  namespace: cloudbeaver
+  namespace: "{{ cloudbeaver_project_name }}"
   labels:
     app: cloudbeaver
 spec:
@@ -17,12 +17,18 @@ spec:
     spec:
       containers:
         - name: cloudbeaver
-          image: "dbeaver/cloudbeaver:{{ cloudbeaver_image_tag }}"
+          image: "{{ cloudbeaver_image }}"
           imagePullPolicy: IfNotPresent
+          startupProbe:
+            tcpSocket:
+              port: 8978
+            timeoutSeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
           readinessProbe:
             tcpSocket:
               port: 8978
-            initialDelaySeconds: 10
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -30,7 +36,6 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 8978
-            initialDelaySeconds: 10
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -45,7 +50,7 @@ spec:
             - name: CB_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: cloudbeaver
+                  name: cloudbeaver-password
                   key: cloudbeaver-password          
           ports:
             - name: http

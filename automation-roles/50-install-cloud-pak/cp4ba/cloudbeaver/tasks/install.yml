@@ -16,93 +16,31 @@
     common_namespace_name: cloudbeaver
     common_output_directory: "{{ cloudbeaver_output_directory }}"
 
-- name: Prepare yaml file for PVC
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: pvc.yaml.j2
-    dest: "{{ cloudbeaver_output_directory }}/pvc.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ cloudbeaver_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - secrets
+    - persistentvolumeclaims
+    - rolebindings
+    - deployments
+    - services
 
-- name: Add PVC
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ cloudbeaver_output_directory }}/pvc.yaml"
+    src: "{{ cloudbeaver_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Secrets
-  ansible.builtin.template:
-    src: secrets.yaml.j2
-    dest: "{{ cloudbeaver_output_directory }}/secrets.yaml"
-    mode: u+rwx
-
-- name: Add Secrets
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cloudbeaver_output_directory }}/secrets.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for anyuid RoleBinding
-  ansible.builtin.template:
-    src: anyuid-scc-rolebinding.yaml.j2
-    dest: "{{ cloudbeaver_output_directory }}/anyuid-scc-rolebinding.yaml"
-    mode: u+rwx
-
-- name: Add anyuid RoleBinding
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cloudbeaver_output_directory }}/anyuid-scc-rolebinding.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ cloudbeaver_output_directory }}/deployment.yaml"
-    mode: u+rwx
-
-- name: Add Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cloudbeaver_output_directory }}/deployment.yaml"
-    wait: true
-    wait_sleep: 10
-    wait_timeout: 600
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ cloudbeaver_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ cloudbeaver_output_directory }}/service.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
@@ -117,8 +55,8 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: cloudbeaver
-    common_route_name: cloudbeaver
+    common_namespace_name: "{{ cloudbeaver_project_name }}"
+    common_route_name: "cloudbeaver-{{ cloudbeaver_project_name }}"
     common_service_name: cloudbeaver
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ cloudbeaver_output_directory }}"
@@ -136,7 +74,7 @@
 
 - name: Login to cloudbeaver
   ansible.builtin.uri:
-    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
+    url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
     validate_certs: false
     method: POST
     headers:
@@ -157,7 +95,7 @@
 
 - name: Delete PostgreSQL Template
   ansible.builtin.uri:
-    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
+    url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
     validate_certs: false
     method: POST
     headers:
@@ -175,7 +113,7 @@
 
 - name: Get existing connections
   ansible.builtin.uri:
-    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
+    url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
     validate_certs: false
     method: POST
     headers:
@@ -193,7 +131,7 @@
 
 - name: Add PostgreSQL to cloudbeaver
   ansible.builtin.uri:
-    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
+    url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
     validate_certs: false
     method: POST
     headers:
@@ -223,7 +161,7 @@
 
 - name: Add MSSQL to cloudbeaver
   ansible.builtin.uri:
-    url: https://cloudbeaver.{{ apps_endpoint_domain }}/api/gql
+    url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
     validate_certs: false
     method: POST
     headers:
