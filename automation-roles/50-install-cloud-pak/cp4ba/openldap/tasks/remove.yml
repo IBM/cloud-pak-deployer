@@ -1,65 +1,38 @@
-- name: Remove Service
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Service
-    namespace: "{{ openldap_project_name }}"
-    name: openldap
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ openldap_output_directory }}"
+    state: directory
+    mode: u+rwx
 
-- name: Remove Deployment
-  kubernetes.core.k8s:
-    state: absent
-    api_version: apps/v1
-    kind: Deployment
-    namespace: "{{ openldap_project_name }}"
-    name: openldap
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ openldap_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - deployments
+    - services
 
-- name: Remove ConfigMap env
+- name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    api_version: v1
-    kind: ConfigMap
-    namespace: "{{ openldap_project_name }}"
-    name: openldap-env
+    src: "{{ openldap_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
 
-- name: Remove ConfigMap LDIF
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: ConfigMap
-    namespace: "{{ openldap_project_name }}"
-    name: openldap-customldif
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove Secret
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Secret
-    namespace: "{{ openldap_project_name }}"
-    name: openldap
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
-
-- name: Remove PersistentVolumeClaim
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: PersistentVolumeClaim
-    namespace: "{{ openldap_project_name }}"
-    name: openldap-data
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ openldap_project_name }}"
