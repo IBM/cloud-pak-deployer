@@ -1,7 +1,7 @@
 kind: Deployment
 apiVersion: apps/v1
 metadata:
-  name: nexusrepo-sonatype-nexus
+  name: nexus
   namespace: "{{ nexus_project_name }}"
   labels:
     app: nexus
@@ -16,10 +16,10 @@ spec:
         app: nexus
     spec:
       volumes:
-        - name: nexusrepo-sonatype-nexus-data
+        - name: nexus-data
           persistentVolumeClaim:
-            claimName: nexusrepo-sonatype-nexus-data
-        - name: nexusrepo-sonatype-nexus-backup
+            claimName: nexus-data
+        - name: nexus-backup
           emptyDir: {}
       containers:
         - resources:
@@ -80,9 +80,9 @@ spec:
               protocol: TCP
           imagePullPolicy: IfNotPresent
           volumeMounts:
-            - name: nexusrepo-sonatype-nexus-data
+            - name: nexus-data
               mountPath: /nexus-data
-            - name: nexusrepo-sonatype-nexus-backup
+            - name: nexus-backup
               mountPath: /nexus-data/backup
           terminationMessagePolicy: File
           image: "{{ nexus_image }}"
