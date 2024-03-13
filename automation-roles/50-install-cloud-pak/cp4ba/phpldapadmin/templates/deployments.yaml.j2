@@ -17,6 +17,7 @@ spec:
     spec:
       containers:
         - name: phpldapadmin
+          image: "{{ phpldapadmin_image }}"
           resources:
             requests:
               cpu: 100m
@@ -51,19 +52,12 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 3
-          terminationMessagePath: /dev/termination-log
           ports:
             - name: http
               containerPort: 80
               protocol: TCP
-          imagePullPolicy: IfNotPresent
-          terminationMessagePolicy: File
           envFrom:
             - configMapRef:
                 name: phpldapadmin
-          image: "{{ phpldapadmin_image }}"
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
-      securityContext: {}
-  revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600

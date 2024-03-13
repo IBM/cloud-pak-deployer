@@ -17,6 +17,7 @@ spec:
     spec:
       containers:
         - name: openldap
+          image: "{{ openldap_image }}
           resources:
             requests:
               cpu: 100m
@@ -45,19 +46,15 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 10
-          terminationMessagePath: /dev/termination-log
           ports:
             - name: ldap-port
               containerPort: 1389
               protocol: TCP
-          image: "{{ openldap_image }}
-          imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: data
               mountPath: /bitnami/openldap/
             - name: custom-ldif-files
               mountPath: /ldifs/
-          terminationMessagePolicy: File
           envFrom:
             - configMapRef:
                 name: openldap-env

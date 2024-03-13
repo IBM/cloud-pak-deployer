@@ -29,22 +29,6 @@ spec:
             limits:
               cpu: 1000m
               memory: 1536Mi          
-          ports:
-            - name: db
-              containerPort: 1433
-          env:
-            - name: MSSQL_PID
-              value: "Developer"
-            - name: ACCEPT_EULA
-              value: "Y"
-            - name: MSSQL_SA_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: mssql
-                  key: SA_PASSWORD
-          volumeMounts:
-            - name: mssql-data
-              mountPath: /var/opt/mssql
           startupProbe:
             tcpSocket:
               port: 1433
@@ -66,6 +50,22 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 10
+          ports:
+            - name: db
+              containerPort: 1433
+          env:
+            - name: MSSQL_PID
+              value: "Developer"
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mssql
+                  key: SA_PASSWORD
+          volumeMounts:
+            - name: mssql-data
+              mountPath: /var/opt/mssql
   volumeClaimTemplates:
     - kind: PersistentVolumeClaim
       apiVersion: v1

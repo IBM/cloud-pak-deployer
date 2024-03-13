@@ -6,6 +6,7 @@ metadata:
   labels:
     app: mongodb
 spec:
+  serviceName: mongodb
   replicas: 1
   selector:
     matchLabels:
@@ -21,7 +22,9 @@ spec:
       terminationGracePeriodSeconds: 30
       securityContext: {}
       containers:
-        - resources:
+        - name: mongodb
+          image: "{{ mongodb_image }}"
+          resources:
             requests:
               cpu: 100m
               memory: 512Mi
@@ -45,7 +48,6 @@ spec:
             successThreshold: 1
             failureThreshold: 6
           terminationMessagePath: /dev/termination-log
-          name: mongodb
           livenessProbe:
             exec:
               command:
@@ -114,7 +116,6 @@ spec:
             - name: common-scripts
               mountPath: /bitnami/scripts
           terminationMessagePolicy: File
-          image: "{{ mongodb_image }}"
       volumes:
         - name: empty-dir
           emptyDir: {}
@@ -137,4 +138,3 @@ spec:
           requests:
             storage: 8Gi
         volumeMode: Filesystem
-  serviceName: mongodb

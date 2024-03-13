@@ -22,7 +22,9 @@ spec:
         - name: nexus-backup
           emptyDir: {}
       containers:
-        - resources:
+        - name: nexus
+          image: "{{ nexus_image }}"
+          resources:
             requests:
               cpu: 100m
               memory: 2048Mi
@@ -56,8 +58,6 @@ spec:
             periodSeconds: 45
             successThreshold: 1
             failureThreshold: 6
-          terminationMessagePath: /dev/termination-log
-          name: nexus
           env:
             - name: install4jAddVmParams
               value: >-
@@ -78,17 +78,10 @@ spec:
             - name: nexus-http
               containerPort: 8081
               protocol: TCP
-          imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: nexus-data
               mountPath: /nexus-data
             - name: nexus-backup
               mountPath: /nexus-data/backup
-          terminationMessagePolicy: File
-          image: "{{ nexus_image }}"
       restartPolicy: Always
       terminationGracePeriodSeconds: 120
-  strategy:
-    type: Recreate
-  revisionHistoryLimit: 10
-  progressDeadlineSeconds: 600
