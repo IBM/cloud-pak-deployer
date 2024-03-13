@@ -18,14 +18,26 @@ spec:
       containers:
         - name: kibana
           resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
             limits:
               cpu: 1000m
-              memory: 2Gi
-            requests:
-              cpu: 100m
-              memory: 1Gi
+              memory: 1536Mi
           terminationMessagePolicy: File
           terminationMessagePath: /dev/termination-log
+          startupProbe:
+            httpGet:
+              path: /app/kibana
+              port: 5601
+              scheme: HTTP
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ (kibana_admin_user + ':' + kibana_universal_password) | b64encode }}"
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 30
           readinessProbe:
             httpGet:
               path: /app/kibana
@@ -34,7 +46,6 @@ spec:
               httpHeaders:
                 - name: Authorization
                   value: "Basic {{ (kibana_admin_user + ':' + kibana_universal_password) | b64encode }}"
-            initialDelaySeconds: 120
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -47,7 +58,6 @@ spec:
               httpHeaders:
                 - name: Authorization
                   value: "Basic {{ (kibana_admin_user + ':' + kibana_universal_password) | b64encode }}"
-            initialDelaySeconds: 125
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1

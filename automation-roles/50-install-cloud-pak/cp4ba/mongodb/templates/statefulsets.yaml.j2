@@ -12,7 +12,6 @@ spec:
       app: mongodb
   template:
     metadata:
-      creationTimestamp: null
       labels:
         app: mongodb
     spec:
@@ -22,7 +21,13 @@ spec:
       terminationGracePeriodSeconds: 30
       securityContext: {}
       containers:
-        - resources: {}
+        - resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1536Mi        
           startupProbe:
             exec:
               command:
@@ -80,7 +85,7 @@ spec:
               drop:
                 - ALL
             privileged: false
-            runAsGroup: 0
+            #runAsGroup: 0
             runAsNonRoot: true
             readOnlyRootFilesystem: false
             allowPrivilegeEscalation: false

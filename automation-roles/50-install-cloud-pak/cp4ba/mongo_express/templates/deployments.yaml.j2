@@ -4,7 +4,7 @@ metadata:
   name: mongo-express
   namespace: "{{ mongo_project_name }}"
   labels:
-    app: mongo-express  
+    app: mongo-express
 spec:
   replicas: 1
   selector:
@@ -19,6 +19,13 @@ spec:
         - name: mongo-express
           image: "{{ mongo_express_image }}"
           imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi
           startupProbe:
             tcpSocket:
               port: 8081
