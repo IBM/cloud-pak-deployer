@@ -1,3 +1,79 @@
+- name: Enable parent Pattern for decisions
+  ansible.builtin.set_fact:
+    current_cp4ba_cluster: "{{ current_cp4ba_cluster | combine(insert, recursive=true) }}"
+  vars:
+    insert:
+      cp4ba:
+        patterns:
+          decisions:
+            enabled: true
+  when: current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center ||
+    current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner ||
+    current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime
+
+- name: Enable parent Pattern for decisions_ads
+  ansible.builtin.set_fact:
+    current_cp4ba_cluster: "{{ current_cp4ba_cluster | combine(insert, recursive=true) }}"
+  vars:
+    insert:
+      cp4ba:
+        patterns:
+          decisions_ads:
+            enabled: true
+  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer ||
+    current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime
+
+- name: Enable parent Pattern for content
+  ansible.builtin.set_fact:
+    current_cp4ba_cluster: "{{ current_cp4ba_cluster | combine(insert, recursive=true) }}"
+  vars:
+    insert:
+      cp4ba:
+        patterns:
+          content:
+            enabled: true
+  when: current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis ||
+    current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css ||
+    current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es ||
+    current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm ||
+    current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier ||
+    current_cp4ba_cluster.cp4ba.patterns.content.optional_components.icc4sap
+
+- name: Enable parent Pattern for application
+  ansible.builtin.set_fact:
+    current_cp4ba_cluster: "{{ current_cp4ba_cluster | combine(insert, recursive=true) }}"
+  vars:
+    insert:
+      cp4ba:
+        patterns:
+          application:
+            enabled: true
+  when: current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer ||
+    current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
+
+- name: Enable parent Pattern for document_processing
+  ansible.builtin.set_fact:
+    current_cp4ba_cluster: "{{ current_cp4ba_cluster | combine(insert, recursive=true) }}"
+  vars:
+    insert:
+      cp4ba:
+        patterns:
+          document_processing:
+            enabled: true
+  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer
+
+- name: Enable parent Pattern for workflow
+  ansible.builtin.set_fact:
+    current_cp4ba_cluster: "{{ current_cp4ba_cluster | combine(insert, recursive=true) }}"
+  vars:
+    insert:
+      cp4ba:
+        patterns:
+          workflow:
+            enabled: true
+  when: current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring ||
+    current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka
+
 # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=deployment-capability-patterns-production-deployments#concept_c2l_1ks_fnb__ads__title__1
 - name: Prerequisites for ADS
   ansible.builtin.set_fact:
