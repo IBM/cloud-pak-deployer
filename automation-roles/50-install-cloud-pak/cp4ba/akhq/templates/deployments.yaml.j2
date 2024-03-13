@@ -15,11 +15,10 @@ spec:
       labels:
         app: akhq
     spec:
-      restartPolicy: Always
-      terminationGracePeriodSeconds: 30
-      securityContext: {}
       containers:
-        - resources:
+        - name: akhq
+          image: "{{ akhq_image }}"
+          resources:
             requests:
               cpu: 50m
               memory: 512Mi
@@ -53,8 +52,6 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 3
-          terminationMessagePath: /dev/termination-log
-          name: akhq
           env:
             - name: MICRONAUT_ENVIRONMENTS
               value: secrets
@@ -67,7 +64,6 @@ spec:
             - name: management
               containerPort: 28081
               protocol: TCP
-          imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: secrets
               mountPath: /app/truststore.jks
@@ -79,7 +75,8 @@ spec:
               mountPath: /app/application-secrets.yml
               subPath: application-secrets.yml
           terminationMessagePolicy: File
-          image: "{{ akhq_image }}"
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: config
           configMap:

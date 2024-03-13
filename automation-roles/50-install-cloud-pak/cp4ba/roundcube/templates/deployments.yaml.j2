@@ -21,7 +21,6 @@ spec:
       containers:
         - name: roundcubedb
           image: "postgres:{{ roundcube_db_image}}"
-          imagePullPolicy: ""
           resources:
             requests:
               cpu: 50m
@@ -29,6 +28,36 @@ spec:
             limits:
               cpu: 500m
               memory: 1536Mi
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6              
           env:
             - name: POSTGRES_DB
               value: roundcube
@@ -48,7 +77,6 @@ spec:
             - mountPath: /var/lib/postgresql/data
               name: roundcubedb-volume
       restartPolicy: Always
-      serviceAccountName: ""
       volumes:
         - name: roundcubedb-volume
           persistentVolumeClaim:
@@ -67,8 +95,6 @@ spec:
   selector:
     matchLabels:
       service: roundcube
-  strategy:
-    type: Recreate
   template:
     metadata:
       labels:
@@ -78,14 +104,34 @@ spec:
       containers:
         - name: roundcubemail
           image: "{{ roundcube_image }}"
-          imagePullPolicy: ""
           resources:
             requests:
               cpu: 50m
               memory: 128Mi
             limits:
               cpu: 500m
-              memory: 1536Mi        
+              memory: 1536Mi
+          startupProbe:
+            tcpSocket:
+              port: 9000
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
+          livenessProbe:
+            tcpSocket:
+              port: 9000
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
           env:
             - name: ROUNDCUBEMAIL_DB_TYPE
               value: pgsql
@@ -127,7 +173,6 @@ spec:
               mountPath: /var/roundcube/config/custom.php
               subPath: custom.php
       restartPolicy: Always
-      # serviceAccountName: ""
       volumes:
         - name: www-data
           persistentVolumeClaim:
@@ -162,7 +207,6 @@ spec:
       containers:
         - name: roundcubenginx
           image: "{{ roundcube_nginx_image }}"
-          imagePullPolicy: IfNotPresent
           resources:
             requests:
               cpu: 50m
@@ -170,13 +214,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1536Mi
-          env:
-            - name: NGINX_HOST
-              value: localhost
-            - name: NGINX_PHP_CGI
-              value: roundcubemail:9000
-          ports:
-            - containerPort: 80
           startupProbe:
             tcpSocket:
               port: 80
@@ -198,6 +235,13 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 10            
+          env:
+            - name: NGINX_HOST
+              value: localhost
+            - name: NGINX_PHP_CGI
+              value: roundcubemail:9000
+          ports:
+            - containerPort: 80
           volumeMounts:
             - name: www-data
               mountPath: /var/www/html
@@ -205,7 +249,6 @@ spec:
               mountPath: /etc/nginx/conf.d/default.conf
               subPath: default.conf
       restartPolicy: Always
-      serviceAccountName: ""
       volumes:
         - name: www-data
           persistentVolumeClaim:

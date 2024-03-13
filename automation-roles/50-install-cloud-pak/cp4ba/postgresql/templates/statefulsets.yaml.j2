@@ -19,6 +19,7 @@ spec:
       terminationGracePeriodSeconds: 30
       containers:
         - name: postgresql
+          image: "{{ postgresql_image }}"
           resources:
             requests:
               cpu: 200m
@@ -102,7 +103,6 @@ spec:
             - name: tcp-postgresql
               containerPort: 5432
               protocol: TCP
-          imagePullPolicy: IfNotPresent
           volumeMounts:
             - name: empty-dir
               mountPath: /tmp
@@ -120,8 +120,6 @@ spec:
               mountPath: /bitnami/postgresql
             - name: postgresql-extended-config
               mountPath: /bitnami/postgresql/conf/conf.d/
-          terminationMessagePolicy: File
-          image: "{{ postgresql_image }}"
       volumes:
         - name: empty-dir
           emptyDir: {}

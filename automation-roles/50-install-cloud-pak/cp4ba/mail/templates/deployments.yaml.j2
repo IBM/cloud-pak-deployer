@@ -18,7 +18,6 @@ spec:
       containers:
         - name: docker-mailserver
           image: "{{ mail_image }}"
-          imagePullPolicy: IfNotPresent
           resources:
             requests:
               cpu: 50m
@@ -26,12 +25,6 @@ spec:
             limits:
               cpu: 500m
               memory: 1536Mi
-          securityContext:
-            capabilities:
-              # If Fail2Ban is not enabled, you can remove NET_ADMIN.
-              # If you are running on CRI-O, you will need the SYS_CHROOT capability,
-              # as it is no longer a default capability.
-              add: ["SYS_PTRACE", "SYS_CHROOT" ]
           startupProbe:
             tcpSocket:
               port: 25
@@ -53,6 +46,12 @@ spec:
             periodSeconds: 10
             successThreshold: 1
             failureThreshold: 10
+          securityContext:
+            capabilities:
+              # If Fail2Ban is not enabled, you can remove NET_ADMIN.
+              # If you are running on CRI-O, you will need the SYS_CHROOT capability,
+              # as it is no longer a default capability.
+              add: ["SYS_PTRACE", "SYS_CHROOT" ]
           volumeMounts:
             - name: config
               subPath: postfix-accounts.cf
