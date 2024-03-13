@@ -19,6 +19,13 @@ spec:
         - name: docker-mailserver
           image: "{{ mail_image }}"
           imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi
           securityContext:
             capabilities:
               # If Fail2Ban is not enabled, you can remove NET_ADMIN.
@@ -45,7 +52,7 @@ spec:
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
-            failureThreshold: 10            
+            failureThreshold: 10
           volumeMounts:
             - name: config
               subPath: postfix-accounts.cf
@@ -56,7 +63,7 @@ spec:
               mountPath: /tmp/docker-mailserver/postfix-virtual.cf
               readOnly: true
             - name: config
-              subPath: postfix-main.cf            
+              subPath: postfix-main.cf
               mountPath: /tmp/docker-mailserver/postfix-main.cf
               readOnly: true
             - name: data
@@ -76,7 +83,7 @@ spec:
               subPath: log
             - name: tls
               readOnly: true
-              mountPath: /tmp/ssl            
+              mountPath: /tmp/ssl
           ports:
             - name: smtp
               containerPort: 25
@@ -111,4 +118,4 @@ spec:
         - name: tls
           secret:
             secretName: mail-tls
-            defaultMode: 256          
+            defaultMode: 256

@@ -23,10 +23,23 @@ spec:
           imagePullPolicy: IfNotPresent
           args: 
             - "-Dplay.ws.ssl.loose.acceptAnyCertificate=true"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi            
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 45
+            successThreshold: 1
+            failureThreshold: 5
           readinessProbe:
             tcpSocket:
               port: 8080
-            initialDelaySeconds: 45
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
@@ -34,7 +47,6 @@ spec:
           livenessProbe:
             tcpSocket:
               port: 8080
-            initialDelaySeconds: 45
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1

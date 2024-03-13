@@ -43,12 +43,12 @@ spec:
             privileged: false
             runAsNonRoot: true
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
             requests:
               cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
         - name: init-app-ini
           image: "{{ gitea_image }}"
           imagePullPolicy: IfNotPresent
@@ -76,12 +76,12 @@ spec:
             privileged: false
             runAsNonRoot: true
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi            
             requests:
               cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
         - name: configure-gitea
           image: "{{ gitea_image }}"
           command: ["/usr/sbin/configure_gitea.sh"]
@@ -117,12 +117,12 @@ spec:
             - name: data
               mountPath: /data
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
             requests:
               cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
       terminationGracePeriodSeconds: 60
       containers:
         - name: gitea
@@ -151,9 +151,9 @@ spec:
               containerPort: 2222
             - name: http
               containerPort: 3000
-          livenessProbe:
+          startupProbe:
             failureThreshold: 10
-            initialDelaySeconds: 200
+            initialDelaySeconds: 60
             periodSeconds: 10
             successThreshold: 1
             tcpSocket:
@@ -167,21 +167,21 @@ spec:
             tcpSocket:
               port: http
             timeoutSeconds: 1
-          startupProbe:
+          livenessProbe:
             failureThreshold: 10
-            initialDelaySeconds: 60
+            initialDelaySeconds: 200
             periodSeconds: 10
             successThreshold: 1
             tcpSocket:
               port: http
             timeoutSeconds: 1
           resources:
-            limits:
-               cpu: 500m
-               memory: 512Mi
              requests:
                cpu: 100m
                memory: 128Mi
+            limits:
+               cpu: 500m
+               memory: 512Mi
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false

@@ -18,6 +18,13 @@ spec:
       containers:
         - name: cloudbeaver
           image: "{{ cloudbeaver_image }}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi
           imagePullPolicy: IfNotPresent
           startupProbe:
             tcpSocket:
@@ -39,23 +46,23 @@ spec:
             timeoutSeconds: 1
             periodSeconds: 10
             successThreshold: 1
-            failureThreshold: 10           
+            failureThreshold: 10
           env:
             - name: CB_SERVER_NAME
               value: CloudBeaver
             - name: CB_SERVER_URL
               value: http://cloudbeaver.cloudbeaver.svc.cluster.local
             - name: CB_ADMIN_NAME
-              value: "{{ lc_principal_admin_user }}"              
+              value: "{{ lc_principal_admin_user }}"
             - name: CB_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: cloudbeaver-password
-                  key: cloudbeaver-password          
+                  key: cloudbeaver-password
           ports:
             - name: http
               containerPort: 8978
-              protocol: TCP             
+              protocol: TCP
           volumeMounts:
             - name: cloudbeaver-data
               mountPath: /opt/cloudbeaver/workspace
