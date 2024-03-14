@@ -5,6 +5,7 @@ metadata:
   namespace: "{{ roundcube_project_name }}"
   labels:
     app: roundcube
+    service: roundcube-db
 spec:
   replicas: 1
   selector:
@@ -20,7 +21,7 @@ spec:
     spec:
       containers:
         - name: roundcubedb
-          image: "postgres:{{ roundcube_db_image}}"
+          image: "{{ roundcube_db_image}}"
           resources:
             requests:
               cpu: 50m
@@ -192,7 +193,8 @@ metadata:
   name: roundcube-nginx
   namespace: "{{ roundcube_project_name }}"
   labels:
-    app: roundcube  
+    app: roundcube
+    service: roundcube-nginx
 spec:
   replicas: 1
   selector:
@@ -203,7 +205,7 @@ spec:
   template:
     metadata:
       labels:
-        app: roundcube      
+        app: roundcube
         service: roundcube-nginx
     spec:
       containers:

@@ -12,7 +12,6 @@
     common_namespace_name: "{{ kibana_project_name }}"
     common_output_directory: "{{ kibana_output_directory }}"
 
-
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
@@ -26,12 +25,12 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ kibana_output_directory }}/{{ item.name }}.yaml"
-    wait: true
+    wait: "{{ item. wait }}"
     wait_sleep: "{{ item.wait_sleep }}"
     wait_timeout: "{{ item.wait_timeout }}"
   with_items:
-    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
-    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 0, wait_timeout: 0, wait: false}
+    - {name: services, wait_sleep: 15, wait_timeout: 15, wait: true}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
@@ -46,7 +45,7 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: " {{ kibana_project_name }} "
+    common_namespace_name: "{{ kibana_project_name }}"
     common_route_name: "kibana-{{ kibana_project_name }}"
     common_service_name: kibana
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
