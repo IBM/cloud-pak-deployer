@@ -20,12 +20,12 @@ spec:
         - name: init-directories
           image: "{{ gitea_image }}"
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
             requests:
               cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           command: ["/usr/sbin/init_directory_structure.sh"]
           env:
             - name: GITEA_APP_INI
@@ -50,12 +50,12 @@ spec:
         - name: init-app-ini
           image: "{{ gitea_image }}"
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
             requests:
               cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           command: ["/usr/sbin/config_environment.sh"]
           env:
             - name: GITEA_APP_INI
@@ -82,12 +82,12 @@ spec:
         - name: configure-gitea
           image: "{{ gitea_image }}"
           resources:
-            limits:
-              cpu: 500m
-              memory: 512Mi
             requests:
               cpu: 100m
               memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
           command: ["/usr/sbin/configure_gitea.sh"]
           securityContext:
             allowPrivilegeEscalation: false
@@ -119,17 +119,16 @@ spec:
               mountPath: /tmp
             - name: data
               mountPath: /data
-      terminationGracePeriodSeconds: 60
       containers:
         - name: gitea
           image: "{{ gitea_image }}"
           resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
             limits:
-               cpu: 500m
-               memory: 512Mi
-             requests:
-               cpu: 100m
-               memory: 128Mi
+              cpu: 500m
+              memory: 512Mi
           startupProbe:
             failureThreshold: 10
             initialDelaySeconds: 60
@@ -203,3 +202,4 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: gitea-shared-storage
+      terminationGracePeriodSeconds: 60
