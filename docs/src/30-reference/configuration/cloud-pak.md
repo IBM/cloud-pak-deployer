@@ -516,13 +516,12 @@ See sample config for remainder of properties.
 ## `cp4ba`
 Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
 See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.  
-RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
-There is cp4ba-22.0.2 branch which would have to be built manually and contains both RPA and IPM.
 
 ```yaml
 ---
 cp4ba:
 - project: cp4ba
+  collateral_project: cp4ba-collateral
   openshift_cluster_name: "{{ env_id }}"
   openshift_storage_name: auto-storage
   accept_licenses: false
@@ -636,6 +635,9 @@ cp4ba:
 
   # Set to false if you don't want to install (or remove) Mongo Express
   mongo_express_enabled: true
+
+  # Set to false if you don't want to install (or remove) phpLDAPAdmin
+  phpldapadmin_enabled: true
 ```
 
 ## Main properties
@@ -644,7 +646,8 @@ The following properties are defined on the project level.
 
 | Property            | Description                    | Mandatory            | Allowed values |
 |---------------------|--------------------------------|----------------------|----------------|
-| project                         | The name of the OpenShift project that will be created and used for the installation of the defined instances. Currently always `cp4ba`. | Yes  | cp4ba |
+| project                         | The name of the OpenShift project that will be created and used for the installation of the defined instances. | Yes  | Valid OCP project name |
+| collateral_project              | The name of the OpenShift project that will be created and used for the installation of all collateral (prerequisites and extras). | Yes  | Valid OCP project name |
 | openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. | No, only if multiple OpenShift clusters defined | Existing `openshift` cluster |
 | openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). | No, inferred from openshift->openshift_storage | |
 | accept_licenses | Set to `true` to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | true, false |
@@ -717,7 +720,7 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.css          | Set to `true` to enable Content Search Services | Yes | true, false |
 | optional_components.es          | Set to `true` to enable External Share. Currently not functional. | Yes | true, false |
 | optional_components.tm          | Set to `true` to enable Task Manager | Yes | true, false |
-| optional_components.ier          | Set to `true` to enable IBm Enterprise Records | Yes | true, false |
+| optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
 
 ### Application pattern properties
@@ -791,3 +794,4 @@ The following properties are defined on the project level.
 | cerebro_enabled                         | Set to `true` to enable Cerebro. Client for ElasticSearch in CP4BA. | Yes  | true, false |
 | akhq_enabled                         | Set to `true` to enable AKHQ. Client for Kafka in CP4BA. | Yes  | true, false |
 | mongo_express_enabled                         | Set to `true` to enable Mongo Express. Client for MongoDB. | Yes  | true, false |
+| phpldapadmin_enabled                         | Set to `true` to enable phpLDApAdmin. Client for OpenLDAP. | Yes  | true, false |

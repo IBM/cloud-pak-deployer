@@ -1,8 +1,9 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 23.0.2 iFix 1.  
-Contains IPM version 1.14.3.
-Currently RPA is not available due to CPFS incompatibility.
+Contains CP4BA version 23.0.2 iFix 2.  
+RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
+~~Contains IPM version 1.14.3.~~
+~~Contains RPA version 23.0.14.~~
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
