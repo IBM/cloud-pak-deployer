@@ -2,14 +2,14 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ pm_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
 
 - name: PM DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ pm_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "

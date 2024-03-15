@@ -6,19 +6,20 @@
 #     tasks_from: remove-postgresql-db
 #   vars:
 #     common_postgresql_db_name: _postgresql_db_name
+#     common_postgresql_project: _postgresql_project
 
 - name: Get postgresql pod
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ common_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
 
 - name: Delete PostgreSQL DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ common_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
