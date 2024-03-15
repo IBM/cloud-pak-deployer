@@ -31,47 +31,46 @@
 
 - name: PostgreSQL config variable
   ansible.builtin.set_fact:
-    postgresql_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"
-  when: postgresql_enabled is not defined
+    postgresql_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled or urrent_cp4ba_cluster.pm.enabled else false }}"
 
 - name: Openldap config variable
   ansible.builtin.set_fact:
     openldap_enabled: true
-  when: openldap_enabled is not defined
 
 - name: Gitea config variable
   ansible.builtin.set_fact:
     gitea_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and
       (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled )
         else false }}"
-  when: gitea_enabled is not defined
 
 - name: Nexus config variable
   ansible.builtin.set_fact:
     nexus_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled else false }}"
-  when: nexus_enabled is not defined
 
 - name: Mail config variable
   ansible.builtin.set_fact:
     mail_enabled: "{{ true if (current_cp4ba_cluster.cp4ba.enabled or current_cp4ba_cluster.rpa.enabled) else false }}"
-  when: mail_enabled is not defined
 
 - name: Mongodb config variable
   ansible.builtin.set_fact:
     mongodb_enabled: "{{ true if ((current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled) or
       current_cp4ba_cluster.pm.enabled) else false }}"
-  when: mongodb_enabled is not defined
 
 - name: Kibana config variable
   ansible.builtin.set_fact:
     kibana_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai else false }}"
-  when: kibana_enabled is not defined
 
 - name: MSSQL config variable
   ansible.builtin.set_fact:
     mssql_enabled: "{{ true if current_cp4ba_cluster.rpa.enabled else false }}"
-  when: mssql_enabled is not defined
 
 - name: Config External LDAP
   ansible.builtin.include_tasks: external-ldap.yml
   when: not openldap_enabled
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
