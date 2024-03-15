@@ -53,6 +53,7 @@
   changed_when: true
 
 - name: Restart and reupload
+  when: import_curl_result.stdout != "204"
   block:
 
     - name: Restart Nexus pod if upload failed
@@ -110,5 +111,3 @@
       register: import_curl_result
       failed_when: import_curl_result.stdout != "204"
       changed_when: true
-
-  when: import_curl_result.stdout != "204"

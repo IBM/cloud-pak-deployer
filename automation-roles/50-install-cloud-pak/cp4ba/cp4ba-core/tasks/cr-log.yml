@@ -18,6 +18,7 @@
   delay: 1
 
 - name: Save cr contents
+  when: cp4ba_cr.resources | length != 0
   block:
     - name: Set current CP4BA CR contents
       ansible.builtin.set_fact:
@@ -36,9 +37,9 @@
         wait: true
         wait_sleep: 15
         wait_timeout: 15
-  when: cp4ba_cr.resources | length != 0
 
 - name: Log
+  when: _cp4ba_run_deploy_failed
   block:
 
     - name: Get log of CP4BA Operator
@@ -81,5 +82,3 @@
         wait: true
         wait_sleep: 15
         wait_timeout: 15
-
-  when: _cp4ba_run_deploy_failed

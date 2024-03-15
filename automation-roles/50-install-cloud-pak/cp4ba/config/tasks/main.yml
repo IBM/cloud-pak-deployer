@@ -8,25 +8,27 @@
 - name: Set ldap configuration TDS
   ansible.builtin.set_fact:
     lc_tds_user_filter: "{{ ldap_configuration.tds.lc_user_filter
-      | default('(&('+lc_ldap_user_id_attribute+'=%v)(objectclass='+lc_ldap_user_object_class+'))' ) }}"
+      | default('(&(' + lc_ldap_user_id_attribute + '=%v)(objectclass=' + lc_ldap_user_object_class + '))') }}"
     lc_tds_group_filter: "{{ ldap_configuration.tds.lc_group_filter
-      | default('(&('+lc_ldap_group_id_attribute+'=%v)(|(objectclass='+lc_ldap_group_object_class+')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
+      | default('(&(' + lc_ldap_group_id_attribute + '=%v)(|(objectclass=' +
+      lc_ldap_group_object_class + ')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
   when: ('IBM Security Directory Server' in lc_selected_ldap_type)
 
 - name: Set ldap configuration AD
   ansible.builtin.set_fact:
     lc_ad_user_filter: "{{ ldap_configuration.ad.lc_user_filter
-      | default('(&('+lc_ldap_user_id_attribute+'=%v)(objectcategory='+lc_ldap_user_object_class+'))') }}"
+      | default('(&(' + lc_ldap_user_id_attribute + '=%v)(objectcategory=' + lc_ldap_user_object_class + '))') }}"
     lc_ad_group_filter: "{{ ldap_configuration.ad.lc_group_filter
-      | default('(&('+lc_ldap_group_id_attribute+'=%v)(objectcategory='+lc_ldap_group_object_class+'))') }}"
+      | default('(&(' + lc_ldap_group_id_attribute + '=%v)(objectcategory=' + lc_ldap_group_object_class + '))') }}"
   when: ('Microsoft Active Directory' in lc_selected_ldap_type)
 
 - name: Set ldap configuration Custom
   ansible.builtin.set_fact:
     lc_custom_user_filter: "{{ ldap_configuration.custom.lc_user_filter
-      | default('(&('+lc_ldap_user_id_attribute+'=%v)(objectclass='+lc_ldap_user_object_class+'))' ) }}"
+      | default('(&(' + lc_ldap_user_id_attribute + '=%v)(objectclass=' + lc_ldap_user_object_class + '))') }}"
     lc_custom_group_filter: "{{ ldap_configuration.custom.lc_group_filter
-      | default('(&('+lc_ldap_group_id_attribute+'=%v)(|(objectclass='+lc_ldap_group_object_class+')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
+      | default('(&(' + lc_ldap_group_id_attribute + '=%v)(|(objectclass=' +
+      lc_ldap_group_object_class + ')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
   when: ('Custom' in lc_selected_ldap_type)
 
 - name: PostgreSQL config variable
@@ -40,7 +42,7 @@
 - name: Gitea config variable
   ansible.builtin.set_fact:
     gitea_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and
-      (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled )
+      (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled)
         else false }}"
 
 - name: Nexus config variable

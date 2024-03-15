@@ -31,7 +31,8 @@
 
 - name: Check if plugin exists
   ansible.builtin.uri:
-    url: "https://nexus-{{ cp4ba_nexus_project }}.{{ apps_endpoint_domain }}/repository/maven-releases/{{ item.value.maven_coordinates.groupId | replace('.', '/') }}/\
+    url: "https://nexus-{{ cp4ba_nexus_project }}.{{ apps_endpoint_domain }}/repository/maven-releases/\
+      {{ item.value.maven_coordinates.groupId | replace('.', '/') }}/\
       {{ item.value.maven_coordinates.artifactId }}/{{ item.value.maven_coordinates.version }}/{{ plugin_file_name }}"
     method: GET
     user: "{{ lc_principal_admin_user }}"
@@ -44,8 +45,8 @@
   register: ads_maven_plugin_response
 
 - name: Get plugin to nexus
+  when: ads_maven_plugin_response.status == 404
   block:
-
     - name: Download plugin
       ansible.builtin.get_url:
         url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/{{ item.value.path }}"
@@ -94,5 +95,3 @@
       register: ads_curl_result
       changed_when: true
       failed_when: ads_curl_result.stdout != "204"
-
-  when: ads_maven_plugin_response.status == 404

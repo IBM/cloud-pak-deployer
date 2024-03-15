@@ -81,8 +81,8 @@
       "rows[?doc.role_name == 'ADS Admin'].id"
 
 - name: Create ADS admin role
+  when: ads_admin_role_id | length == 0
   block:
-
     - name: ADS permissions
       ansible.builtin.set_fact:
         ads_perms_list:
@@ -114,8 +114,6 @@
     - name: Set ADS admin role ID
       ansible.builtin.set_fact:
         ads_admin_role_id: "{{ admin_role_response.json | json_query('id') }}"
-
-  when: ads_admin_role_id | length == 0
 
 - name: Get groups
   ansible.builtin.uri:

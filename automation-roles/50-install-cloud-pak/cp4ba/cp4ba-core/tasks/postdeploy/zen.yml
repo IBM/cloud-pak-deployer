@@ -1,4 +1,3 @@
-
 - name: Retrieve default certification
   ansible.builtin.include_role:
     name: common
@@ -410,6 +409,7 @@
     zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
 
 - name: Generate new Zen Api key
+  when: zen_api_key | length == 0
   block:
     - name: Get IAM token
       ansible.builtin.include_role:
@@ -454,5 +454,3 @@
     - name: Assign zen api key for further post deploy task
       ansible.builtin.set_fact:
         zen_api_key: "{{ zen_api_key_new }}"
-
-  when: zen_api_key | length == 0
