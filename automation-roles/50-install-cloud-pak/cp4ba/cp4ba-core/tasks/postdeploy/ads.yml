@@ -28,7 +28,7 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=gst-task-2-connecting-git-repository-sharing-decision-service
 - name: Create ADS organization in Gitea
   ansible.builtin.uri:
-    url: "https://gitea.{{ apps_endpoint_domain }}/api/v1/orgs"
+    url: "https://gitea-{{ cp4ba_gitea_project }}.{{ apps_endpoint_domain }}/api/v1/orgs"
     method: POST
     headers:
       Content-Type: application/json
@@ -173,7 +173,7 @@
     body_format: json
     body: |
       {
-        "serverUri": "https://nexus.{{ apps_endpoint_domain }}/repository/maven-releases/",
+        "serverUri": "https://nexus-{{ cp4ba_nexus_project }}.{{ apps_endpoint_domain }}/repository/maven-releases/",
         "authType": "CREDENTIALS",
         "credentialsType": "USERNAME",
         "username": "{{ lc_principal_admin_user }}",
@@ -198,7 +198,7 @@
     body: |
       {
         "name": "git-provider",
-        "uri": "https://gitea.{{ apps_endpoint_domain }}/api/v1",
+        "uri": "https://gitea-{{ cp4ba_gitea_project }}.{{ apps_endpoint_domain }}/api/v1",
         "type": "GITEA",
         "usePrivateFlag": true,
         "apiCredentialsType": "USERNAME_PASSWORD",
