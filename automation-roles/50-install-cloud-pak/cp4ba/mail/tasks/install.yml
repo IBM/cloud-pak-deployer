@@ -13,11 +13,11 @@
     common_output_directory: "{{ mail_output_directory }}"
 
 - name: Generate an OpenSSL private key
-  openssl_privatekey:
+  community.crypto.openssl_privatekey:
     path: "{{ mail_output_directory }}/mailserver.key"
 
 - name: Generate an OpenSSL Certificate Signing Request with Subject information
-  openssl_csr:
+  community.crypto.openssl_csr:
     path: "{{ mail_output_directory }}/mailserver.csr"
     privatekey_path: "{{ mail_output_directory }}/mailserver.key"
     subject: "CN=mailserver"
@@ -39,7 +39,7 @@
   when: not mail_ca_key_file.stat.exists or not mail_ca_crt_file.stat.exists
 
 - name: Generate a Self Signed OpenSSL certificate
-  openssl_certificate:
+  community.crypto.x509_certificate:
     path: "{{ mail_output_directory }}/mailserver.crt"
     privatekey_path: "{{ mail_output_directory }}/mailserver.key"
     csr_path: "{{ mail_output_directory }}/mailserver.csr"

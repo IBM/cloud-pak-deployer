@@ -13,8 +13,8 @@
   register: global_ca_secret
 
 - name: Save Global CA if already present
+  when: global_ca_secret.resources | length != 0 and (global_ca_secret.resources[0].data['global_ca_tls.crt'] is defined)
   block:
-
     - name: Save Global CA key
       ansible.builtin.copy:
         dest: "{{ global_ca_output_directory }}/global-ca.key"
@@ -27,17 +27,15 @@
         content: "{{ global_ca_secret.resources[0].data['global_ca_tls.crt'] | b64decode }}"
         mode: u+rwx
 
-  when: global_ca_secret.resources | length != 0 and (global_ca_secret.resources[0].data['global_ca_tls.crt'] is defined)
-
 - name: Generate & save Global CA if not provided
+  when: global_ca_secret.resources | length == 0 or (global_ca_secret.resources[0].data['global_ca_tls.crt'] is not defined)
   block:
-
     - name: Generate an OpenSSL private key
-      openssl_privatekey:
+      commnity.crypto.openssl_privatekey:
         path: "{{ global_ca_output_directory }}/global-ca.key"
 
     - name: Generate an OpenSSL Certificate Signing Request with Subject information
-      openssl_csr:
+      commnity.crypto.openssl_csr:
         path: "{{ global_ca_output_directory }}/global-ca.csr"
         privatekey_path: "{{ global_ca_output_directory }}/global-ca.key"
         subject: "CN='Global CA'"
@@ -46,7 +44,7 @@
         basic_constraints_critical: true
 
     - name: Generate a Self Signed OpenSSL certificate
-      openssl_certificate:
+      commnity.crypto.openssl_certificate:
         path: "{{ global_ca_output_directory }}/global-ca.crt"
         privatekey_path: "{{ global_ca_output_directory }}/global-ca.key"
         csr_path: "{{ global_ca_output_directory }}/global-ca.csr"
@@ -71,9 +69,8 @@
       ansible.builtin.set_fact:
         _global_ca_crt: "{{ slurped_crt_data.content }}"
 
-  when: global_ca_secret.resources | length == 0 or (global_ca_secret.resources[0].data['global_ca_tls.crt'] is not defined)
-
 - name: Create secret
+  when: global_ca_secret.resources | length == 0
   block:
     - name: Create Project
       ansible.builtin.include_role:
@@ -98,5 +95,3 @@
         wait: true
         wait_sleep: 15
         wait_timeout: 15
-
-  when: global_ca_secret.resources | length == 0

@@ -69,8 +69,8 @@
     src: "{{ cp4ba_output_directory }}/ldap-secret.yaml"
 
 - name: Manage LDAP SSL
+  when: lc_ldap_ssl_secret_name | length > 0
   block:
-
     - name: Load LDAP SSL Certificate Secret
       kubernetes.core.k8s_info:
         kind: Secret
@@ -92,7 +92,4 @@
     - name: Add LDAP SSL Certificate Secret to the {{ cp4ba_project_name }} namespace
       kubernetes.core.k8s:
         state: present
-
         src: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
-
-  when: lc_ldap_ssl_secret_name | length > 0
