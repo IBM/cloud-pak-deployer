@@ -33,7 +33,7 @@
 
 - name: PostgreSQL config variable
   ansible.builtin.set_fact:
-    postgresql_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled or urrent_cp4ba_cluster.pm.enabled else false }}"
+    postgresql_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled or urrent_cp4ba_cluster.pm.enabled else false }}"
 
 - name: Openldap config variable
   ansible.builtin.set_fact:
@@ -41,30 +41,30 @@
 
 - name: Gitea config variable
   ansible.builtin.set_fact:
-    gitea_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and
-      (current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled)
+    gitea_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled and
+      (_current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled)
         else false }}"
 
 - name: Nexus config variable
   ansible.builtin.set_fact:
-    nexus_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled else false }}"
+    nexus_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled else false }}"
 
 - name: Mail config variable
   ansible.builtin.set_fact:
-    mail_enabled: "{{ true if (current_cp4ba_cluster.cp4ba.enabled or current_cp4ba_cluster.rpa.enabled) else false }}"
+    mail_enabled: "{{ true if (_current_cp4ba_cluster.cp4ba.enabled or _current_cp4ba_cluster.rpa.enabled) else false }}"
 
 - name: Mongodb config variable
   ansible.builtin.set_fact:
-    mongodb_enabled: "{{ true if ((current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled) or
-      current_cp4ba_cluster.pm.enabled) else false }}"
+    mongodb_enabled: "{{ true if ((_current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled) or
+      _current_cp4ba_cluster.pm.enabled) else false }}"
 
 - name: Kibana config variable
   ansible.builtin.set_fact:
-    kibana_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai else false }}"
+    kibana_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai else false }}"
 
 - name: MSSQL config variable
   ansible.builtin.set_fact:
-    mssql_enabled: "{{ true if current_cp4ba_cluster.rpa.enabled else false }}"
+    mssql_enabled: "{{ true if _current_cp4ba_cluster.rpa.enabled else false }}"
 
 - name: Config External LDAP
   ansible.builtin.include_tasks: external-ldap.yml

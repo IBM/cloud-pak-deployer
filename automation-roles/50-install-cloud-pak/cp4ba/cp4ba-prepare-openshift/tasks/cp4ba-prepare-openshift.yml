@@ -12,16 +12,16 @@
 - name: Set global pull secret for specified private registry
   when: not (use_entitled_registry | bool)
   block:
-    - name: Get pull secret for image registry {{ current_cp4ba_cluster.image_registry_name }} from the vault
+    - name: Get pull secret for image registry {{ _current_cp4ba_cluster.image_registry_name }} from the vault
       ansible.builtin.include_role:
         name: vault-get-secret
       vars:
-        secret_name: "image-registry-{{ current_cp4ba_cluster.image_registry_name }}"
+        secret_name: "image-registry-{{ _current_cp4ba_cluster.image_registry_name }}"
         secret_group: "{{ environment_name }}"
     - name: Validate if container registry credentials secret is available
       ansible.builtin.fail:
         msg: "Container registry credentials secret image-registry-
-          {{ current_cp4ba_cluster.image_registry_name }} from group {{ environment_name }} is empty"
+          {{ _current_cp4ba_cluster.image_registry_name }} from group {{ environment_name }} is empty"
       when: secret_value== ""
     - name: Set the global pull secret for the private registry
       ansible.builtin.include_role:
