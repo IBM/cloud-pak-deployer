@@ -31,11 +31,11 @@
   when: global_ca_secret.resources | length == 0 or (global_ca_secret.resources[0].data['global_ca_tls.crt'] is not defined)
   block:
     - name: Generate an OpenSSL private key
-      commnity.crypto.openssl_privatekey:
+      community.crypto.openssl_privatekey:
         path: "{{ global_ca_output_directory }}/global-ca.key"
 
     - name: Generate an OpenSSL Certificate Signing Request with Subject information
-      commnity.crypto.openssl_csr:
+      community.crypto.openssl_csr:
         path: "{{ global_ca_output_directory }}/global-ca.csr"
         privatekey_path: "{{ global_ca_output_directory }}/global-ca.key"
         subject: "CN='Global CA'"
@@ -44,7 +44,7 @@
         basic_constraints_critical: true
 
     - name: Generate a Self Signed OpenSSL certificate
-      commnity.crypto.openssl_certificate:
+      community.crypto.openssl_certificate:
         path: "{{ global_ca_output_directory }}/global-ca.crt"
         privatekey_path: "{{ global_ca_output_directory }}/global-ca.key"
         csr_path: "{{ global_ca_output_directory }}/global-ca.csr"
