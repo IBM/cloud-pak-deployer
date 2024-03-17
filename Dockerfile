@@ -15,11 +15,16 @@ USER 0
 # Install required packages, including HashiCorp Vault client
 RUN yum install -y yum-utils && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
-    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
+    # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
+    yum install -y gcc python3.11-devel && \
     pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
     alternatives --set python /usr/bin/python3 && \
-    yum install -y vault && \
+    # vault for ppc64le not in offcial repo 
+    #yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
+    #yum install -y vault && \
+    curl -O https://downloads.power-devops.com/vault_1.12.4_linux_ppc64le.zip && \
+    unzip -d /usr/local/bin vault_1.12.4_linux_ppc64le.zip && rm vault_1.12.4_linux_ppc64le.zip && \
     yum install -y nginx && \
     yum clean all
 
@@ -35,7 +40,9 @@ RUN mkdir -p /cloud-pak-deployer && \
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
 
-RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+# BUG with building whell 
+#RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
 ENV USER_UID=1001
 
