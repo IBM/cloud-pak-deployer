@@ -29,6 +29,28 @@
   delay: 30
   until: insightsengines.resources | length == 0
 
+# wait for the ICP4AOperationalDecisionManager instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for ICP4AOperationalDecisionManager intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: icp4a.ibm.com/v1
+    kind: ICP4AOperationalDecisionManager
+    namespace: "{{ cp4ba_project_name }}"
+  register: odms
+  retries: 10
+  delay: 30
+  until: odms.resources | length == 0
+  ignore_errors: true
+
+- name: Clear ICP4AOperationalDecisionManager instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: icp4a.ibm.com/v1
+    common_kind: ICP4AOperationalDecisionManager
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: odms.resources | length != 0
+
 # wait for the Client instances to disappear as if we do not wait, they will have finalizers left
 - name: Wait for Client intances to disappear
   kubernetes.core.k8s_info:
@@ -325,7 +347,7 @@
     state: absent
     api_version: v1
     kind: ConfigMap
-    name: cp4ba-postdeploy
+    name: "{{ cp4ba_project_name }}-postdeploy"
     namespace: "{{ cp4ba_output_namespace }}"
     force: false
     wait: true
@@ -337,7 +359,7 @@
     state: absent
     api_version: v1
     kind: ConfigMap
-    name: cp4ba-cr
+    name: "{{ cp4ba_project_name }}-cr"
     namespace: "{{ cp4ba_output_namespace }}"
     force: false
     wait: true
@@ -349,7 +371,7 @@
     state: absent
     api_version: v1
     kind: ConfigMap
-    name: cp4ba-opertor-log
+    name: "{{ cp4ba_project_name }}-opertor-log"
     namespace: "{{ cp4ba_output_namespace }}"
     force: false
     wait: true
