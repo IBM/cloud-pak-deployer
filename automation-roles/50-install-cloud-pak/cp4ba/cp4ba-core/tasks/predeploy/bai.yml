@@ -10,3 +10,14 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ cp4ba_output_directory }}/bai-secret.yaml"
+
+- name: Prepare yaml file for BAI external app network policy
+  ansible.builtin.template:
+    src: bai/bai-external-app-network-policy.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/bai-external-app-network-policy.yaml"
+    mode: u+rwx
+
+- name: Add BAI external app network policy
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/bai-external-app-network-policy.yaml"
