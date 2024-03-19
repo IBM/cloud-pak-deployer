@@ -11,6 +11,16 @@
   ansible.builtin.include_tasks: install.yml
   when: "cpfs_action == 'install'"
 
+- name: Get ICP4ACluster CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: icp4aclusters.icp4a.ibm.com
+  register: icp4acluster_crd
+  retries: 60
+  delay: 30
+  when: "cpfs_action == 'remove'"
+
 - name: Remove CPFS
   ansible.builtin.include_tasks: remove.yml
-  when: "cpfs_action == 'remove'"
+  when: "cpfs_action == 'remove' and icp4acluster_crd.resources | length == 0"
