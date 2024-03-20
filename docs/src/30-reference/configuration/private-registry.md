@@ -90,7 +90,7 @@ An example of configuring the private registry for a `cp4d` object is below:
 cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
-  cp4d_version: 4.6.3
+  cp4d_version: 4.8.3
   image_registry_name: cpd463
 ```
 
@@ -144,7 +144,7 @@ An example of configuring the private registry for a `cp4d` object is below:
 cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
-  cp4d_version: 4.6.3
+  cp4d_version: 4.8.3
   image_registry_name: cpd463
 ```
 
