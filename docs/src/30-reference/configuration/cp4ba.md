@@ -1,8 +1,9 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 23.0.2.  
-Contains IPM version 1.14.3.
-Currently RPA is not available due to CPFS incompatibility.
+Contains CP4BA version 23.0.2 iFix 2.  
+RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
+~~Contains IPM version 1.14.3.~~
+~~Contains RPA version 23.0.14.~~
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -81,7 +82,7 @@ Contains extra software which makes working with the platform even easier.
 - Kibana - Web UI elastic search dashboard tool automatically connected to ES instance deployed with CP4BA.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
 - Mongo Express - Web UI for Mongo DB databases for CP4BA and Process Mining to easier troubleshoot DB.
-- CloudBeaver - Web UI for Postgresql, MSSQL and DB2 databases making it easier to admin and troubleshoot the DBs.
+- CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
 
 ### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
 
@@ -122,11 +123,10 @@ Contains prerequisites for the whole platform.
 - OpenLDAP - Directory solution for users and groups definition.
 - MSSQL server - Database storage for RPA server.
 - MongoDB - Database storage for ADS and Process Mining.
-- DB2 - Database storage for Task Mining.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.10.46+ with Worker Nodes which in total have (104 CPU, 256GB Memory).
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.12 with Worker Nodes which in total have (60 CPU, 128GB Memory).
 
 ## Automated post-deployment tasks ✅
 
