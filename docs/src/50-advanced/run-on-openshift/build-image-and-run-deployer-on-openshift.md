@@ -23,7 +23,7 @@ openshift:
 cp4d:
 - project: cpd-instance
   openshift_cluster_name: cpd-demo
-  cp4d_version: 4.6.0
+  cp4d_version: 4.8.3
   sequential_install: True
   accept_licenses: True
   cartridges:

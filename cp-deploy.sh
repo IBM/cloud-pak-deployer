@@ -619,13 +619,6 @@ fi
 ARCH=$(uname -m)
 
 # If images have not been overridden, set the variables here
-if [ -z $CPD_OLM_UTILS_V1_IMAGE ];then
-  if [ "$ARCH" == "amd64" ] || [ "$ARCH" == "x86_64" ]; then
-    export CPD_OLM_UTILS_V1_IMAGE=icr.io/cpopen/cpd/olm-utils:latest
-  fi
-else
-  echo "Custom olm-utils image ${CPD_OLM_UTILS_V1_IMAGE} will be used."
-fi
 if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
   if [ "$ARCH" == "amd64" ] || [ "$ARCH" == "x86_64" ]; then
     export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
@@ -675,8 +668,7 @@ if ! $INSIDE_CONTAINER;then
     fi
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
-      -f ${SCRIPT_DIR}/$DOCKERFILE \
-      --build-arg CPD_OLM_UTILS_V1_IMAGE=${CPD_OLM_UTILS_V1_IMAGE} \
+      -f ${SCRIPT_DIR}/Dockerfile \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       ${SCRIPT_DIR}
     exit $?
