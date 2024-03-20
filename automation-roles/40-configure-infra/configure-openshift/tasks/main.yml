@@ -28,6 +28,12 @@
   loop_control:
     loop_var: current_openshift_storage
 
+- name: Get OpenShift storage classes to use for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
 - name: Configure Multi-Cloud Object Gateway
   include_role:
     name: openshift-mcg
@@ -61,6 +67,10 @@
 - name: Configure Red Hat SSO for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-redhat-sso
+
+- name: Install openldap on OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: openldap
 
 - name: Configure logging for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
