@@ -19,12 +19,9 @@ RUN yum install -y yum-utils && \
     # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
     yum install -y gcc python3.11-devel && \
     pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
-    alternatives --set python /usr/bin/python3 && \
-    # vault for ppc64le not in offcial repo 
-    #yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
-    #yum install -y vault && \
-    curl -O https://downloads.power-devops.com/vault_1.12.4_linux_ppc64le.zip && \
-    unzip -d /usr/local/bin vault_1.12.4_linux_ppc64le.zip && rm vault_1.12.4_linux_ppc64le.zip && \
+    sed -i 's|#!/usr/bin/python.*|#!/usr/bin/python3.9|g' /usr/bin/yum-config-manager && \
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
+    yum install -y vault && \
     yum install -y nginx && \
     yum clean all
 
