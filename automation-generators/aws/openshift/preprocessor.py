@@ -70,8 +70,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             if type(ge['infrastructure']['use_sts']) != bool:
                 g.appendError(msg='use_sts must be True or False if specified')
         if "credentials_mode" in ge['infrastructure']:
-            if ge['infrastructure']['credentials_mode'] not in ['Manual','Mint']:
-                g.appendError(msg='credentials_mode must be Manual or Mint if specified')
+            if ge['infrastructure']['credentials_mode'] not in ['Manual','Mint','Passthrough']:
+                g.appendError(msg='credentials_mode must be Manual, Mint or Passthrough if specified')
         
         # Check upstream DNS server
         if 'upstream_dns' in ge:
