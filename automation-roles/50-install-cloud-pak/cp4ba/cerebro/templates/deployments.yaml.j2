@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cerebro
+  namespace: "{{ cerebro_project_name }}"
+  labels:
+    app: cerebro
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cerebro
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: cerebro
+    spec:
+      containers:
+        - name: cerebro
+          image: "{{ cerebro_image }}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi            
+          startupProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 45
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+          args:
+            - "-Dplay.ws.ssl.loose.acceptAnyCertificate=true"
+          ports:
+            - name: cerebro
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: CEREBRO_PORT
+              value: "8080"
+          volumeMounts:
+            - name: config
+              mountPath: /opt/cerebro/conf/application.conf
+              subPath: application.conf
+      restartPolicy: Always
+      serviceAccountName: cerebro
+      volumes:
+        - name: config
+          configMap:
+            name: cerebro

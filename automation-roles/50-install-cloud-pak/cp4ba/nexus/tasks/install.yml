@@ -1,4 +1,4 @@
-# Used Operator source at https://github.com/sonatype/operator-nxrm3
+# Based on Operator at https://github.com/sonatype/operator-nxrm3 and docker page at https://hub.docker.com/r/sonatype/nexus3/
 
 - name: Create directory for generated files
   ansible.builtin.file:
@@ -11,100 +11,30 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: nexus
+    common_namespace_name: "{{ nexus_project_name }}"
     common_output_directory: "{{ nexus_output_directory }}"
 
-- name: Prepare yaml file for privileged ClusterRoleBinding
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: privileged-scc-clusterrolebinding.yaml.j2
-    dest: "{{ nexus_output_directory }}/privileged-scc-clusterrolebinding.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ nexus_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - persistentvolumeclaims
+    - deployments
+    - services
 
-- name: Add privileged ClusterRoleBinding
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ nexus_output_directory }}/privileged-scc-clusterrolebinding.yaml"
+    src: "{{ nexus_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for the Operator Group
-  ansible.builtin.template:
-    src: operatorgroup.yaml.j2
-    dest: "{{ nexus_output_directory }}/operatorgroup.yaml"
-    mode: u+rwx
-
-- name: Add the Operator Group
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ nexus_output_directory }}/operatorgroup.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for the Operator Subscription
-  ansible.builtin.template:
-    src: subscription.yaml.j2
-    dest: "{{ nexus_output_directory }}/subscription.yaml"
-    mode: u+rwx
-
-- name: Add the Operator Subscription
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ nexus_output_directory }}/subscription.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Manage Manual Operator Nexus
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: manage-manual-operator
-  vars:
-    common_namespace_name: nexus
-    common_label_selector_stub: nxrm-operator-certified
-
-- name: Wait for NexusRepo CRD to be Established
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-crd
-  vars:
-    common_crd_name: nexusrepos.sonatype.com
-
-- name: Prepare yaml file for the Nexus Repo
-  ansible.builtin.template:
-    src: nexusrepo.yaml.j2
-    dest: "{{ nexus_output_directory }}/nexusrepo.yaml"
-    mode: u+rwx
-
-- name: Add the Nexus Repo Instance
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ nexus_output_directory }}/nexusrepo.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Wait for Nexus Repo Deployment to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: nexusrepo-sonatype-nexus
-    common_resource_namespace: nexus
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
@@ -119,15 +49,15 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: nexus
-    common_route_name: nexus
-    common_service_name: nexusrepo-sonatype-nexus-service
+    common_namespace_name: "{{ nexus_project_name }}"
+    common_route_name: "nexus-{{ nexus_project_name }}"
+    common_service_name: nexus
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ nexus_output_directory }}"
 
 - name: Change default admin password
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/security/users/admin/change-password"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/security/users/admin/change-password"
     method: PUT
     headers:
       Content-Type: text/plain
@@ -143,7 +73,7 @@
 
 - name: Check if we have the new admin password
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/security/users/admin/change-password"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/security/users/admin/change-password"
     method: PUT
     headers:
       Content-Type: text/plain
@@ -163,7 +93,7 @@
 
 - name: Create LDAP Connection
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/security/ldap"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/security/ldap"
     method: POST
     headers:
       Content-Type: application/json
@@ -187,7 +117,7 @@
 
 - name: Create Nexus role as Nexus admins for {{ lc_principal_admin_group }}
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/security/roles"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/security/roles"
     method: POST
     headers:
       Content-Type: application/json
@@ -205,7 +135,7 @@
 
 - name: Disable Anonymous access
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/security/anonymous"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/security/anonymous"
     method: PUT
     headers:
       Content-Type: application/json
@@ -244,8 +174,6 @@
 - name: Add the Nexus maven config map
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ nexus_output_directory }}/nexus-maven-settings-configmap.yaml"
     wait: true
     wait_sleep: 15
@@ -253,7 +181,7 @@
 
 - name: Check if raw repository exists
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/repositories/raw/hosted/raw-hosted"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/repositories/raw/hosted/raw-hosted"
     method: GET
     headers:
       Content-Type: application/json
@@ -268,7 +196,7 @@
 
 - name: Create raw repository
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/repositories/raw/hosted"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/repositories/raw/hosted"
     method: POST
     headers:
       Content-Type: application/json
@@ -297,7 +225,7 @@
 
 - name: Update maven-releases repository
   ansible.builtin.uri:
-    url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/repositories/maven/hosted/maven-releases"
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/repositories/maven/hosted/maven-releases"
     method: PUT
     headers:
       Content-Type: application/json

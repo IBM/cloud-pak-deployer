@@ -5,10 +5,10 @@ This file contains endpoints, credentials and other useful information about cap
 - [Extras](#extras)
 - [CP4BA - CP4BA capabilities](#cp4ba---cp4ba-capabilities)
 - [CP4BA - CPFS dedicated capabilities](#cp4ba---cpfs-dedicated-capabilities) 
-{% if current_cp4ba_cluster.pm.enabled == true %}
+{% if _current_cp4ba_cluster.pm.enabled == true %}
 - [Process Mining](#process-mining)
 {% endif %}
-{% if current_cp4ba_cluster.rpa.enabled == true %}
+{% if _current_cp4ba_cluster.rpa.enabled == true %}
 - [RPA](#rpa)
 {% endif %}
 - [CPFS](#cpfs)
@@ -23,8 +23,8 @@ As Git server provider.
 
 #### Endpoints
 
-UI: https://gitea.{{ apps_endpoint_domain }}
-OAS: https://gitea.{{ apps_endpoint_domain }}/api/swagger#/
+UI: https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}
+OAS: https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}/api/swagger#/
 
 #### Credentials
 
@@ -39,8 +39,8 @@ As package manager.
 
 #### Endpoints
 
-UI: https://nexus.{{ apps_endpoint_domain }}/
-OAS: https://nexus.{{ apps_endpoint_domain }}/service/rest/swagger.json
+UI: https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/
+OAS: https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/swagger.json
 
 #### Credentials
 
@@ -48,14 +48,14 @@ OAS: https://nexus.{{ apps_endpoint_domain }}/service/rest/swagger.json
 - Initial administrative user credentials: admin / {{ universal_password }}
 
 {% endif %}
-{% if mail_enabled == true and current_cp4ba_cluster.roundcube_enabled == true %}
+{% if mail_enabled == true and _current_cp4ba_cluster.roundcube_enabled == true %}
 ### Roundcube
 
 As mail client.
 
 #### Endpoints
 
-- UI: https://roundcube.{{ apps_endpoint_domain }}
+- UI: https://roundcube-{{ roundcube_project_name }}.{{ apps_endpoint_domain }}
 
 #### Credentials
 
@@ -63,8 +63,8 @@ As mail client.
 - for other users: cpadmin1, cpadmin2, cpuser, cpuser1, cpuser2 with domain @{{ lc_ldap_domain }} / {{ universal_password }} (you can also use only the usernames without domain to login)
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.enabled == true and (current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true or 
-current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true) and current_cp4ba_cluster.cerebro_enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.enabled == true and (_current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true or 
+_current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true) and _current_cp4ba_cluster.cerebro_enabled == true %}
 ### Cerebro
 
 As elastic search browser.
@@ -73,14 +73,14 @@ Pre-configured for CPFS elastic search.
 
 #### Endpoints
 
-- UI: https://cerebro.{{ apps_endpoint_domain }}
+- UI: https://cerebro-{{ cerebro_project_name }}.{{ apps_endpoint_domain }}
 
 #### Credentials
 
 - {{ cerebro_elasticsearch_admin_user }} / {{ cerebro_elasticsearch_universal_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.enabled == true and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true and current_cp4ba_cluster.akhq_enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.enabled == true and _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true and _current_cp4ba_cluster.akhq_enabled == true %}
 ### AKHQ
 
 As kafka browser.
@@ -89,7 +89,7 @@ Pre-configured for CPFS Kafka with custom user ( {{ lc_principal_admin_user }} /
 
 #### Endpoints
 
-- UI: https://akhq.{{ apps_endpoint_domain }}
+- UI: https://akhq-{{ akhq_project_name }}.{{ apps_endpoint_domain }}
 
 {% endif %}
 {% if kibana_enabled == true %}
@@ -99,7 +99,7 @@ As elastic search content browser and for BAI dashboards.
 
 #### Endpoints
 
-- UI: https://kibana.{{ apps_endpoint_domain }}
+- UI: https://kibana-{{ kibana_project_name }}.{{ apps_endpoint_domain }}
 
 #### Credentials
 
@@ -115,7 +115,7 @@ Emails sent to cpadmin@{{ lc_ldap_domain }}, cpadmin1@{{ lc_ldap_domain }}, cpad
 
 #### Endpoints
 
-Not exposed outside the cluster.
+- Exposed as NodePort as found in Project *{{ mail_project_name }}* in Service *mail*.
 
 #### Credentials
 
@@ -123,35 +123,49 @@ Not exposed outside the cluster.
 - for user: cpuser@{{ lc_ldap_domain }} / {{ mail_universal_password }}
 
 {% endif %}
-{% if mongodb_enabled == true and current_cp4ba_cluster.mongo_express_enabled == true %}
+{% if mongodb_enabled == true and _current_cp4ba_cluster.mongo_express_enabled == true %}
 ### Mongo Express
 
 As UI for MongoDB
 
 #### Endpoints
 
-- Mongo Express UI: https://mongo-express.{{ apps_endpoint_domain }}
+- Mongo Express UI: https://mongo-express-{{ mongo_express_project_name }}.{{ apps_endpoint_domain }}
 
 #### Credentials
 
 - {{ principal_admin_user }} / {{ universal_password }}
 
 {% endif %}
-{% if (postgresql_enabled == true or mssql_enabled == true) and current_cp4ba_cluster.cloudbeaver_enabled == true %}
+{% if openldap_enabled == true and _current_cp4ba_cluster.phpldapadmin_enabled == true %}
+### phpLDAPadmin
+
+As LDAP management tool.
+
+#### Endpoints
+
+- PHP LDAP admin management console: https://phpldapadmin-{{ phpldapadmin_project_name }}.{{ apps_endpoint_domain }}/
+
+#### Credentials
+
+- {{ lc_bind_admin_user }} / {{ lc_bind_admin_password }}
+
+{% endif %}
+{% if (postgresql_enabled == true or mssql_enabled == true) and _current_cp4ba_cluster.cloudbeaver_enabled == true %}
 ### CloudBeaver
 
 As DB UI for PostgreSQL, MSSQL
 
 #### Endpoints
 
-- CloudBeaver UI: https://cloudbeaver.{{ apps_endpoint_domain }}
+- CloudBeaver UI: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}
 
 #### Credentials
 
 - UI: {{ principal_admin_user }} / {{ universal_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.enabled == true  %}
+{% if _current_cp4ba_cluster.cp4ba.enabled == true  %}
 ## CP4BA - CP4BA capabilities
 
 ### Zen service account credentials
@@ -164,13 +178,17 @@ If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service acco
 If you want to investigate the actual ansible code that is running in the operator, you can get it from running operator pod from /opt/ansible/roles directory.
 ```bash
 # CP4BA
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep cp4a-operator | awk '{print $1}'`:/opt/ansible/roles cp4ba-ansible-roles
+mkdir cp4ba-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=ibm-cp4a-operator | awk '{print $1}'`:/opt/ansible/roles cp4ba-ansible-roles
 # Content
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep ibm-content-operator | awk '{print $1}'`:/opt/ansible/roles content-ansible-roles
+mkdir content-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=ibm-content-operator | awk '{print $1}'`:/opt/ansible/roles content-ansible-roles
 # DPE
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep ibm-dpe-operator | awk '{print $1}'`:/opt/ansible/roles dpe-ansible-roles
+mkdir dpe-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=ibm-dpe-operator | awk '{print $1}'`:/opt/ansible/roles dpe-ansible-roles
 # Foundation
-oc cp -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers | grep foundation-operator | awk '{print $1}'`:/opt/ansible/roles foundation-ansible-roles
+mkdir foundation-ansible-roles
+oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers -l name=icp4a-foundation-operator | awk '{print $1}'`:/opt/ansible/roles foundation-ansible-roles
 ```
 
 Order of capabilities deployment can be found in operator code in */opt/ansible/roles/icp4a/tasks/main.yml*.
@@ -213,7 +231,7 @@ etcdctl get --from-key '' --insecure-skip-tls-verify=true --user="root:{{ univer
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-{% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
 ### Business Automation Studio (BAS) (foundation pattern)
 
 #### Endpoints
@@ -225,7 +243,7 @@ etcdctl get --from-key '' --insecure-skip-tls-verify=true --user="root:{{ univer
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
 ### Business Automation Insights (BAI) (foundation pattern)
 
 #### Endpoints
@@ -247,7 +265,7 @@ oc cp -n {{ cp4ba_project_name }} `oc get pod --no-headers -n {{ cp4ba_project_n
 ```
 {% endif %}
 
-{% if current_cp4ba_cluster.cp4ba.patterns.decisions.enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled == true %}
 ### Operational Decision Manager (ODM) (decisions pattern)
 
 You may get 400 not authorized error when accessing endpoints. In this case clear cookies and refresh browser.
@@ -272,7 +290,7 @@ You may get 400 not authorized error when accessing endpoints. In this case clea
 - For ODM REST auth with {{ lc_principal_admin_user }} user or other LDAP users, follow guide on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=access-using-zen-api-key-authentication with REST Authorization header with ZenApiKey type
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled == true %}
 ### Automation Decision Services (ADS) (decisions_ads pattern)
 
 #### Endpoints
@@ -287,7 +305,7 @@ You may get 400 not authorized error when accessing endpoints. In this case clea
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.patterns.content.enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.content.enabled == true %}
 ### FileNet Content Manager (FNCM) (content pattern)
 
 #### Endpoints
@@ -333,7 +351,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 ```
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.patterns.application.enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae == true %}
 ### Automation Application Engine (AAE) (application pattern)
 
 #### Endpoints
@@ -346,7 +364,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled == true %}
 ### Automation Document Processing (ADP) (document_processing pattern)
 
 #### Endpoints
@@ -360,7 +378,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
 {% endif %}
-{% if current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring == true %}
 ### Business Automation Workflow Authoring (BAWAUT)
 
 #### Endpoints
@@ -370,9 +388,11 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - Process Inspector: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/ProcessInspector
 - OAS REST API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpm/explorer
 - OAS REST API Operations: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpm/explorer/?url=/bas/ops/docs
+- OAS REST API Case: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpm/explorer/?url=/bas/case/docs
 - Original REST API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpmrest-ui
 - PFS federated systems: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/federated/v1/systems
-- Workplace: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=workplace (If you encounter error stating that you are using self-signed certificates, clear you cookies)
+- Workplace on App Engine: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=workplace (If you encounter error stating that you are using self-signed certificates, clear you cookies)
+- Workplace on BAS: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/Workplace
 - Case monitor: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=bawmonitor
 - Case Client: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=baw
 - Case administration: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=bawadmin
@@ -415,7 +435,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 
 - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-{% if current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true or current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
+{% if _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
 ### Elastic Search
 
 #### Endpoints
@@ -427,7 +447,7 @@ If you want FDM to connect to CPE, you need to provide it with Zen certificate. 
 - {{ elasticsearch_admin_user }} / {{ elasticsearch_universal_password }}
 
 {% endif %}
-{% if (current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka == true) or current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
+{% if (_current_cp4ba_cluster.cp4ba.patterns.workflow.enabled == true and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka == true) or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai == true %}
 ### Kafka
 
 #### Endpoints
@@ -449,7 +469,7 @@ Alternative custom user: cpadmin / {{ universal_password }}
 
 {% endif %}
 {% endif %}
-{% if current_cp4ba_cluster.pm.enabled == true %}
+{% if _current_cp4ba_cluster.pm.enabled == true %}
 ## Process Mining
 
 ### Endpoints
@@ -477,7 +497,7 @@ To get logs for Operator.
 oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-controller | xargs oc logs > process-mining-operator.log
 ```
 
-{% if current_cp4ba_cluster.rpa.enabled == true %}
+{% if _current_cp4ba_cluster.rpa.enabled == true %}
 ## RPA
 
 ### Endpoints
@@ -531,7 +551,7 @@ As PostgreSQL database storage for the platform.
 
 #### Endpoints
 
-- Exposed as NodePort as found in Project *postgresql* in Service *postgresql*.
+- Exposed as NodePort as found in Project *{{ postgresql_project_name }}* in Service *postgresql*.
 
 #### Credentials
 
@@ -540,18 +560,18 @@ As PostgreSQL database storage for the platform.
 #### CLI in container
 
 ```bash
-psql postgresql://{{ lc_principal_admin_user }}:{{ universal_password }}@localhost:5432/postgres
+psql postgresql://postgres:{{ universal_password }}@localhost:5432
 ```
 
 {% endif %}
 {% if openldap_enabled == true %}
-### OpenLDAP + phpLDAPadmin
+### OpenLDAP
 
-As LDAP directory provider and management tool.
+As LDAP directory provider.
 
 #### Endpoints
 
-- PHP LDAP admin management console: https://openldap-phpldapadmin.{{ apps_endpoint_domain }}/
+- Exposed as NodePort as found in Project *{{ openldap_project_name }}* in Service *openldap*.
 
 #### Credentials
 
@@ -572,10 +592,13 @@ LDAP contains the following groups in {{ lc_ldap_group_base_dn }}:
 - cpusers - members: {{ lc_ldap_user_id_attribute }}={{ lc_principal_admin_user }},{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpadmin1,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpadmin2,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser1,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser2,{{ lc_ldap_user_base_dn }}
 - cpusers1 - members: {{ lc_ldap_user_id_attribute }}=cpuser,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser1,{{ lc_ldap_user_base_dn }}; {{ lc_ldap_user_id_attribute }}=cpuser2,{{ lc_ldap_user_base_dn }}
 
-#### CLI in OpenLDAP container
+#### CLI in OpenLDAP Pod
 
 ```bash
-ldapsearch -x -b "dc=cp,dc=internal" -H ldap://localhost:389 -D 'cn=admin,dc=cp,dc=internal' -W "objectclass=*"
+#Search for regular attributes
+ldapsearch -x -b "{{ lc_ldap_base_dn }}" -H ldap://localhost:1389 -D '{{ lc_bind_admin_user }}' -w {{ lc_bind_admin_password }} "objectclass=*"
+#Search for hidden attributes
+ldapsearch -x -b "{{ lc_ldap_base_dn }}" -H ldap://localhost:1389 -D '{{ lc_bind_admin_user }}' -w {{ lc_bind_admin_password }} "objectclass=*" '+'
 ```
 
 {% endif %}
@@ -586,7 +609,7 @@ As DB server for RPA.
 
 #### Endpoints
 
-- Exposed as NodePort as found in Project *mssql* in Service *mssql*.
+- Exposed as NodePort as found in Project *{{ mssql_project_name }}* in Service *mssql*.
 
 #### Credentials
 
@@ -606,7 +629,7 @@ As MongoDB database storage for the platform.
 
 #### Endpoints
 
-- Exposed as NodePort as found in Project *mongodb* in Service *mongodb*.
+- Exposed as NodePort as found in Project *{{ mongodb_project_name }}* in Service *mongodb*.
 
 #### Credentials
 

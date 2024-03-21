@@ -1,0 +1,40 @@
+# Example of the functionality call
+#
+# - name: Remove Empty Project
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: remove-empty-project
+#   vars:
+#     common_project_name: _project_name
+
+- name: Get Deployments
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    namespace: "{{ common_project_name }}"
+  register: deployments
+
+- name: Get StatefulSets
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: StatefulSet
+    namespace: "{{ common_project_name }}"
+  register: statefulsets
+
+- name: Get PersistentVolumeClaims
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: "{{ common_project_name }}"
+  register: persistent_volume_claims
+
+- name: Remove Project
+  kubernetes.core.k8s:
+    state: absent
+    api_version: project.openshift.io/v1
+    kind: Project
+    name: "{{ common_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  when: deployments.resources | length == 0 and statefulsets.resources | length == 0 and persistent_volume_claims.resources | length == 0

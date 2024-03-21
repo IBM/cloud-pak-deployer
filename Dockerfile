@@ -20,11 +20,11 @@ USER 0
 
 # Install required packages, including HashiCorp Vault client
 RUN yum install -y yum-utils && \
-    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
     yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
     pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
-    alternatives --set python /usr/bin/python3 && \
+    sed -i 's|#!/usr/bin/python.*|#!/usr/bin/python3.9|g' /usr/bin/yum-config-manager && \
+    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y vault && \
     yum install -y nginx && \
     curl -O https://download.java.net/java/GA/jdk9/9/binaries/openjdk-9_linux-x64_bin.tar.gz && \

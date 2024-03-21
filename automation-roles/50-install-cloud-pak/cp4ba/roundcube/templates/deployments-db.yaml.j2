@@ -1,0 +1,85 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: roundcube-db
+  namespace: "{{ roundcube_project_name }}"
+  labels:
+    app: roundcube
+    service: roundcube-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      service: roundcube-db
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: roundcube
+        service: roundcube-db
+    spec:
+      containers:
+        - name: roundcubedb
+          image: "{{ roundcube_db_image}}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready
+            timeoutSeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 6              
+          env:
+            - name: POSTGRES_DB
+              value: roundcube
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: roundcube-shared-secret
+                  key: DB_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: roundcube-shared-secret
+                  key: DB_PASSWORD
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: roundcubedb-volume
+      restartPolicy: Always
+      serviceAccountName: roundcube
+      volumes:
+        - name: roundcubedb-volume
+          persistentVolumeClaim:
+            claimName: roundcube-db

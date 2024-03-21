@@ -2,7 +2,7 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
@@ -11,26 +11,19 @@
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-space-content-platform-engine-gcd
 - name: GCDDB DB prepare tablespace
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/gcddb
+    command: mkdir -p /bitnami/postgresql/tablespaces/gcddb
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: GCDDB DB prepare tablespace permissions
-  kubernetes.core.k8s_exec:
-    namespace: postgresql
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/gcddb
-  register: command_status
-
 - name: GCDDB DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user gcddb
         CREATE ROLE gcddb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -41,7 +34,7 @@
         grant connect, temp, create on database gcddb to gcddb;
 
         -- please modify location follow your requirement
-        create tablespace gcddb_tbs owner gcddb location '/pgsqldata/gcddb';
+        create tablespace gcddb_tbs owner gcddb location '/bitnami/postgresql/tablespaces/gcddb';
         grant create on tablespace gcddb_tbs to gcddb;
       EOF"
   register: command_status
@@ -50,26 +43,19 @@
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
 - name: OS1DB DB prepare tablespace
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/os1db
+    command: mkdir -p /bitnami/postgresql/tablespaces/os1db
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
 
-- name: OS1DB DB prepare tablespace permissions
-  kubernetes.core.k8s_exec:
-    namespace: postgresql
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/os1db
-  register: command_status
-
 - name: OS1DB DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user os1db
         CREATE ROLE os1db WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -80,7 +66,7 @@
         grant connect, temp, create on database os1db to os1db;
 
         -- please modify location follow your requirement
-        create tablespace os1db_tbs owner os1db location '/pgsqldata/os1db';
+        create tablespace os1db_tbs owner os1db location '/bitnami/postgresql/tablespaces/os1db';
         grant create on tablespace os1db_tbs to os1db;
       EOF"
   register: command_status
