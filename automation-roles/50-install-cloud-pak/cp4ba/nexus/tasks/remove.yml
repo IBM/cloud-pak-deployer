@@ -16,8 +16,7 @@
     dest: "{{ nexus_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
   with_items:
-    - persistentvolumeclaims
-    - deployments
+    - statefulsets
     - services
 
 - name: Remove {{ item.name }}
@@ -29,8 +28,7 @@
     wait_timeout: "{{ item.wait_timeout }}"
   with_items:
     - {name: services, wait_sleep: 15, wait_timeout: 15}
-    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
-    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
 
 - name: Remove Route
   kubernetes.core.k8s:
@@ -54,6 +52,18 @@
     wait: true
     wait_sleep: 15
     wait_timeout: 15
+
+- name: Remove PersistentVolumeClaims
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    label_selectors:
+      - app = nexus
+    namespace: "{{ nexus_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
 
 - name: Remove Empty Project
   ansible.builtin.include_role:
