@@ -9,54 +9,29 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: mongodb
+    common_namespace_name: "{{ mongodb_project_name }}"
     common_output_directory: "{{ mongodb_output_directory }}"
 
-- name: Prepare yaml file for anyuid ClusterRoleBinding
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: anyuid-scc-clusterrolebinding.yaml.j2
-    dest: "{{ mongodb_output_directory }}/anyuid-scc-clusterrolebinding.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ mongodb_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - statefulsets
+    - services
 
-- name: Add anyuid ClusterRoleBinding
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ mongodb_output_directory }}/anyuid-scc-clusterrolebinding.yaml"
+    src: "{{ mongodb_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Add bitnami chart repo
-  kubernetes.core.helm_repository:
-    name: bitnami
-    repo_url: "https://charts.bitnami.com/bitnami"
-
-- name: Prepare yaml file for values of helm chart
-  ansible.builtin.template:
-    src: values.yaml.j2
-    dest: "{{ mongodb_output_directory }}/values.yaml"
-    mode: u+rwx
-
-- name: Deploy mongodb chart using values files on target
-  kubernetes.core.helm:
-    name: mongodb
-    chart_ref: bitnami/mongodb
-    chart_version: "{{ mongodb_chart_version }}"
-    release_namespace: mongodb
-    values_files:
-      - "{{ mongodb_output_directory }}/values.yaml"
-
-- name: Wait for mongodb Deployment to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: mongodb
-    common_resource_namespace: mongodb
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}

@@ -6,23 +6,24 @@
 #     tasks_from: remove-postgresql-user
 #   vars:
 #     common_postgresql_user: _postgresql_user
+#     common_postgresql_project: _postgresql_project
 
 - name: Get postgresql pod
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ common_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
 
 - name: Delete PostgreSQL user
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ common_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         DROP USER IF EXISTS {{ common_postgresql_user }};
       EOF"
   register: command_status

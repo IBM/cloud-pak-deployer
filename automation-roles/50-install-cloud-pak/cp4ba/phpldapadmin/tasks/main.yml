@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    phpldapadmin_output_directory: "{{ phpldapadmin_base_dir }}/{{ phpldapadmin_dir_name }}"
+
+- name: Remove phpldapadmin directory for generated files
+  ansible.builtin.file:
+    path: "{{ phpldapadmin_output_directory }}"
+    state: absent
+
+- name: Install phpldapadmin
+  ansible.builtin.include_tasks: install.yml
+  when: "phpldapadmin_action == 'install'"
+
+- name: Remove phpldapadmin
+  ansible.builtin.include_tasks: remove.yml
+  when: "phpldapadmin_action == 'remove'"
