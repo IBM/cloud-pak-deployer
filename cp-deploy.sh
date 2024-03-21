@@ -668,7 +668,7 @@ if ! $INSIDE_CONTAINER;then
     fi
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
-      -f ${SCRIPT_DIR}/Dockerfile \
+      -f ${SCRIPT_DIR}/${DOCKERFILE} \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       ${SCRIPT_DIR}
     exit $?
