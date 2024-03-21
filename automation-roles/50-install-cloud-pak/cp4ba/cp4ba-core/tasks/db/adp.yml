@@ -67,7 +67,7 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: mkdir -p /bitnami/postgresql/tablespaces/devos1
   register: command_status
-  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
 - name: DEVOS1 DB
   kubernetes.core.k8s_exec:
@@ -141,6 +141,7 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
+  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
 
 - name: ADP init proj1 DB
   kubernetes.core.k8s_exec:
@@ -180,6 +181,7 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
+  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
 
 - name: ADP init proj2 DB
   kubernetes.core.k8s_exec:
@@ -219,3 +221,4 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
+  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
