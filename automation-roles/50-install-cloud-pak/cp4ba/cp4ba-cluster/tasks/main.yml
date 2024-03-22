@@ -119,16 +119,45 @@
   ansible.builtin.set_fact:
     deployment_platform: "{{ 'ROKS' if _existing_ocp_infra_type == 'ibm-roks' else 'OCP' }}"
 
-- name: Generate universal password if not provided
-  when: (global_config.universal_password | default('')) == ''
+- ansible.builtin.set_fact:
+    _cp4ba_admin_password_vault_key_name: "cp4ba_admin_{{ _current_cp4ba_cluster.project| replace('-','_') }}_{{ _current_cp4ba_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Validate if an existing admin password for {{ _cp4ba_admin_password_vault_key_name }} exists in the vault
+  ansible.builtin.include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cp4ba_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: universal_password
+
+- name: Set new password if none is available yet
+  when: universal_password==""
   block:
     - name: Generate new password
       ansible.builtin.include_role:
         name: generate-password
+      when: (global_config.universal_password | default('')) == ''
 
-    - name: Set universal password
+    - ansible.builtin.set_fact:
+        _cp4ba_admin_password_new: "{{ _p_generated_password }}"
+      when: (global_config.universal_password | default('')) == ''
+
+    - name: Set password to universal password
       ansible.builtin.set_fact:
-        universal_password: "{{ _p_generated_password }}"
+        _cp4ba_admin_password_new: "{{ global_config.universal_password }}"
+      when: (global_config.universal_password | default('')) != ''
+
+    - name: Store the cp4ba admin password into the vault as {{ _cp4ba_admin_password_vault_key_name }}
+      ansible.builtin.include_role:
+        name: vault-set-secret
+      vars:
+        secret_name: "{{ _cp4ba_admin_password_vault_key_name }}"
+        secret_description: "cp4ba admin password for namespace {{ _current_cp4ba_cluster.project }}, cluster {{ _current_cp4ba_cluster.openshift_cluster_name }}"
+        secret_payload: "{{ _cp4ba_admin_password_new }}"
+        secret_group: "{{ environment_name }}"
+
+    - ansible.builtin.set_fact:
+        universal_password: "{{ _cp4ba_admin_password_new }}"
 
 - name: Prepare the Playbook Configuration variables
   ansible.builtin.include_role:
