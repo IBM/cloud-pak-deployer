@@ -14,51 +14,85 @@ cp4d_role:
   - monitor_platform
 ```
 
-To check the permissions that are allows, you can use the following REST API (GET) after authenticating to the platform: https://$CP4D_URL/icp4d-api/v1/permissions.
+#### Property explanation
+| Property               | Description                                                                            | Mandatory | Allowed values |
+| ---------------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
+| name                   | Name of the Cloud Pak for Data role                                                    | Yes       |                |
+| description            | Description of the Cloud Pak for Data role                                             | Yes       |                |
+| state                  | Indicates if the role must be installed or removed same OpenShift cluster              | No        | installed (default), removed |
+| permissions[]          | List of permissions to grant to the role                                               | Yes       |                |
+
+To find the permissions that are allows, you can use the following REST API (GET) after authenticating to the platform: https://$CP4D_URL/icp4d-api/v1/permissions.
 
 ### Access Control - `cp4d_access_control`
 The `cp4d_access_control` object controls the creation of Cloud Pak for Data user groups that map identify provider (IdP) groups and define the roles of the user group. A `user_groups` entry must contain at least 1 `roles` and must reference the associated IdP grouop(s).
 
+Example with Red Hat SSO (Keycloak) authentication
 ```
 cp4d_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
   keycloak_name: ibm-keycloak
-  # demo_openldap_name: ibm-openldap
   user_groups:
   - name: cp4d-admins
     description: Cloud Pak for Data Administrators
     roles:
-    - zen_administrator_role
+    - Administrator
     keycloak_groups:
     - kc-cp4d-admins
-    # ldap_groups:
-    # - cn=cp4d-admins,ou=Groups,dc=cp,dc=internal
   - name: cp4d-data-engineers
     description: Cloud Pak for Data Data Engineers
     roles:
-    - zen_user_role
+    - User
     keycloak_groups:
     - kc-cp4d-data-engineers
-    # ldap_groups:
-    # - cn=cp4d-data-engineers,ou=Groups,dc=cp,dc=internal
   - name: cp4d-data-scientists
     description: Cloud Pak for Data Data Scientists
     roles:
-    - zen_user_role
+    - User
     keycloak_groups:
     - kc-cp4d-data-scientists
-    # ldap_groups:
-    # - cn=cp4d-data-scientists,ou=Groups,dc=cp,dc=internal
   - name: cp4d-monitor
     description: Cloud Pak for Data monitoring
     roles:
     - monitor-role
     keycloak_groups:
     - kc-cp4d-monitor
-    # ldap_groups:
-    # - cn=cp4d-monitor,ou=Groups,dc=cp,dc=internal
 ```
+
+Example with OpenLDAP authentication
+```
+cp4d_access_control:
+- project: cpd
+  openshift_cluster_name: "{{ env_id }}"
+  demo_openldap_name: ibm-openldap
+  user_groups:
+  - name: cp4d-admins
+    description: Cloud Pak for Data Administrators
+    roles:
+    - Administrator
+    ldap_groups:
+    - cn=cp4d-admins,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-data-engineers
+    description: Cloud Pak for Data Data Engineers
+    roles:
+    - User
+    ldap_groups:
+    - cn=cp4d-data-engineers,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-data-scientists
+    description: Cloud Pak for Data Data Scientists
+    roles:
+    - User
+    ldap_groups:
+    - cn=cp4d-data-scientists,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-monitor
+    description: Cloud Pak for Data monitoring
+    roles:
+    - monitor-role
+    ldap_groups:
+    - cn=cp4d-monitor,ou=Groups,dc=cp,dc=internal
+```
+
 
 #### Property explanation
 | Property               | Description                                                                            | Mandatory | Allowed values |
@@ -76,8 +110,8 @@ cp4d_access_control:
 
 **`role` values:**
 The following roles are defined by default in Cloud Pak for Data:
-- zen_administrator_role
-- zen_user_role
+- Administrator
+- User
 
 Further roles can be defined in the `cp4d_roles` object and can be referenced by the `user_groups.roles[]` property.
 
