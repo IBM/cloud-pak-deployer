@@ -39,6 +39,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
+        if 'keycloak_name' in ge and 'demo_openldap_name' in ge:
+             g.appendError(msg="If keycloak_name is defined, demo_openldap_name must not be defined. You cannot reference more than 1 external IdP.")
+
         for user_group in ge['user_groups']:
             if 'name' not in user_group:
                 g.appendError(msg="The name attribute is mandatory for each user_group")
@@ -50,7 +53,10 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
             if 'keycloak_groups' in user_group and 'keycloak_name' not in ge:
                 g.appendError(msg="If keycloak_groups are defined, the cp4d_access_control must reference a keycloak_name")
-    
+
+            if 'ldap_groups' in user_group and 'demo_openldap_name' not in ge:
+                g.appendError(msg="If ldap_groups are defined, the cp4d_access_control must reference a demo_openldap_name")
+
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()
