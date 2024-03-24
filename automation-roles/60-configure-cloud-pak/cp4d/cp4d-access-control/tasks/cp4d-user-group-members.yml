@@ -12,32 +12,28 @@
     - 200
   register: _cp4d_user_group_membership_rules
 
-- name: Get existing LDAP groups for user group {{ _existing_cp4d_user_group.name }}
+- name: Get existing group members for user group {{ _existing_cp4d_user_group.name }}
   set_fact:
-    _existing_cp4d_ldap_groups: "{{ _cp4d_user_group_membership_rules.json.results | map(attribute='ldap_group') | default([]) }}"
+    _existing_cp4d_group_members: "{{ _cp4d_user_group_membership_rules.json.results | map(attribute='ldap_group') | default([]) }}"
 
 - debug:
-    var: _existing_cp4d_ldap_groups
+    var: _existing_cp4d_group_members
 
 - set_fact:
-    _idp_groups: []
-    _ldap_groups: []
+    _idp_groups: "{{ _cp4d_user_group.keycloak_groups | default([]) }}"
+    _ldap_groups: "{{ _cp4d_user_group.ldap_groups | default([]) }}"
+    _add_group_members_list: []
 
 - set_fact:
-    _idp_groups: "[ {{ '\"' + _cp4d_user_group.keycloak_groups | join('\",\"') + '\"'}} ]"
-  when: (_cp4d_user_group.keycloak_groups | default([])) != []
+    _group_members: "{{ _idp_groups | union(_ldap_groups) }}"
 
-- name: Get LDAP gruops to be added
+- name: Get group members to be added
   set_fact:
-    _add_ldap_groups_list: []
-    _add_ldap_groups: "{{ _ldap_groups | difference(_existing_cp4d_ldap_groups) | default([]) }}"
+    _add_group_members: "{{ _group_members | difference(_existing_cp4d_group_members) | default([]) }}"
 
 - set_fact:
-    _add_ldap_groups_list: "[ {{ '\"' + _add_ldap_groups | join('\",\"') + '\"'}} ]"
-  when: _add_ldap_groups != []
-
-- debug:
-    var: _add_ldap_groups_list
+    _add_group_members_list: "[ {{ '\"' + _add_group_members | join('\",\"') + '\"'}} ]"
+  when: _add_group_members != []
 
 - name: Add group members to Cloud Pak for Data user group {{ _cp4d_user_group.name }}
   uri:
@@ -48,15 +44,24 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      idp_groups: "{{ _idp_groups }}"
-      ldap_groups: "{{ _add_ldap_groups_list }}"
+      ldap_groups: "{{ _add_group_members_list }}"
     return_content: yes
     validate_certs: no
     status_code:
     - 200
     - 201
   register: _cp4d_user_group_members
-  when: _add_ldap_groups != [] or _idp_groups != []
+  when: _add_group_members_list != []
 
 - debug:
     var: _cp4d_user_group_members
+
+- name: Get group members to be removed
+  set_fact:
+    _remove_group_members: "{{ _existing_cp4d_group_members | difference(_group_members) | default([]) }}"
+
+- name: Remove group member
+  include_tasks: cp4d-user-group-members-remove.yml
+  loop: "{{ _remove_group_members }}"
+  loop_control:
+    loop_var: _remove_group_member
