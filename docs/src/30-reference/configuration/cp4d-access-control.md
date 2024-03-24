@@ -24,6 +24,7 @@ cp4d_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
   keycloak_name: ibm-keycloak
+  # demo_openldap_name: ibm-openldap
   user_groups:
   - name: cp4d-admins
     description: Cloud Pak for Data Administrators
@@ -31,24 +32,32 @@ cp4d_access_control:
     - zen_administrator_role
     keycloak_groups:
     - kc-cp4d-admins
+    # ldap_groups:
+    # - cn=cp4d-admins,ou=Groups,dc=cp,dc=internal
   - name: cp4d-data-engineers
     description: Cloud Pak for Data Data Engineers
     roles:
     - zen_user_role
     keycloak_groups:
     - kc-cp4d-data-engineers
+    # ldap_groups:
+    # - cn=cp4d-data-engineers,ou=Groups,dc=cp,dc=internal
   - name: cp4d-data-scientists
     description: Cloud Pak for Data Data Scientists
     roles:
     - zen_user_role
     keycloak_groups:
     - kc-cp4d-data-scientists
+    # ldap_groups:
+    # - cn=cp4d-data-scientists,ou=Groups,dc=cp,dc=internal
   - name: cp4d-monitor
     description: Cloud Pak for Data monitoring
     roles:
     - monitor-role
     keycloak_groups:
     - kc-cp4d-monitor
+    # ldap_groups:
+    # - cn=cp4d-monitor,ou=Groups,dc=cp,dc=internal
 ```
 
 #### Property explanation
@@ -57,11 +66,13 @@ cp4d_access_control:
 | project                | `project` of the `cp4d` instance                                                       | Yes       |                |
 | openshift_cluster_name | Reference to the `openshift` name                                                      | Yes       |                |
 | keycloak_name          | Name of the Red Hat SSO (Keycloak) instance on the same OpenShift cluster              | No        |                |
+| demo_openldap_name     | Name of the OpenLDAP instance defined in the `demo_openldap` resoureester              | No        |                |
 | user_groups[]          | Cloud Pak for Data user groups to be configured                                        | Yes       |                |
 | .name                  | Name of the CP4D user group                                                            | Yes       |                |
 | .description           | Description of the CP4D user group                                                     | No        |                |
 | .roles[]               | List of CP4D roles to assign to the user grouop                                        | Yes       |                |
 | .keycloak_groups[]     | List of Red Hat SSO (Keycloak) groups to assign to the CP4D user group                 | Yes if IdP is Keycloak |   |
+| .ldap_groups[]         | List of OpenLDAP groups to assign to the CP4D user group                               | Yes if IdP is OpenLDAP |   |
 
 **`role` values:**
 The following roles are defined by default in Cloud Pak for Data:
