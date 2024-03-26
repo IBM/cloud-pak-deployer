@@ -1,0 +1,339 @@
+<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Automated deployer of OpenShift cluster and IBM Cloud Paks"><meta name=author content=Author><link href=https://ibm.github.io/cloud-pak-deployer/50-advanced/run-on-openshift/build-image-and-run-deployer-on-openshift/ rel=canonical><link rel=icon href=../../../assets/images/favicon.png><meta name=generator content="mkdocs-1.3.1, mkdocs-material-8.5.3"><title>Build image and run deployer on OpenShift - Cloud Pak Deployer</title><link rel=stylesheet href=../../../assets/stylesheets/main.7a952b86.min.css><link rel=stylesheet href=../../../assets/stylesheets/palette.cbb835fc.min.css><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style><link rel=stylesheet href=../../../css/extra.css><script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr data-md-color-scheme data-md-color-primary=none data-md-color-accent=none> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> <a href=#build-image-and-run-deployer-on-openshift class=md-skip> Skip to content </a> </div> <div data-md-component=announce> </div> <header class=md-header data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../../.. title="Cloud Pak Deployer" class="md-header__button md-logo" aria-label="Cloud Pak Deployer" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> Cloud Pak Deployer </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> Build image and run deployer on OpenShift </span> </div> </div> </div> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/IBM/cloud-pak-deployer title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg> </div> <div class=md-source__repository> Cloud Pak Deployer </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../../.. title="Cloud Pak Deployer" class="md-nav__button md-logo" aria-label="Cloud Pak Deployer" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg> </a> Cloud Pak Deployer </label> <div class=md-nav__source> <a href=https://github.com/IBM/cloud-pak-deployer title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg> </div> <div class=md-source__repository> Cloud Pak Deployer </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../.. class=md-nav__link> Home </a> </li> <li class=md-nav__item> <a href=../../../01-introduction/current-state/ class=md-nav__link> Current state </a> </li> <li class=md-nav__item> <a href=../../../05-install/install/ class=md-nav__link> Installing Cloud Pak Deployer </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_4 type=checkbox id=__nav_4> <label class=md-nav__link for=__nav_4> Using Cloud Pak Deployer <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Using Cloud Pak Deployer" data-md-level=1> <label class=md-nav__title for=__nav_4> <span class="md-nav__icon md-icon"></span> Using Cloud Pak Deployer </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../10-use-deployer/1-overview/overview/ class=md-nav__link> Overview </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_4_2 type=checkbox id=__nav_4_2> <label class=md-nav__link for=__nav_4_2> Run <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Run data-md-level=2> <label class=md-nav__title for=__nav_4_2> <span class="md-nav__icon md-icon"></span> Run </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/run/ class=md-nav__link> Running Cloud Pak Deployer </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/existing-openshift/ class=md-nav__link> Existing OpenShift </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/ibm-cloud/ class=md-nav__link> IBM Cloud </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/aws-rosa/ class=md-nav__link> AWS ROSA </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/aws-self-managed/ class=md-nav__link> AWS Self-managed </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/azure-aro/ class=md-nav__link> Azure ARO </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/azure-self-managed/ class=md-nav__link> Azure Self-managed </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/3-run/vsphere/ class=md-nav__link> vSphere </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_4_3 type=checkbox id=__nav_4_3> <label class=md-nav__link for=__nav_4_3> Post-run <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Post-run data-md-level=2> <label class=md-nav__title for=__nav_4_3> <span class="md-nav__icon md-icon"></span> Post-run </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../10-use-deployer/5-post-run/post-run/ class=md-nav__link> Post-run changes </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/7-command/command/ class=md-nav__link> Running commands </a> </li> <li class=md-nav__item> <a href=../../../10-use-deployer/9-destroy/destroy/ class=md-nav__link> Destroy cluster </a> </li> </ul> </nav> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5 type=checkbox id=__nav_5> <label class=md-nav__link for=__nav_5> Reference <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Reference data-md-level=1> <label class=md-nav__title for=__nav_5> <span class="md-nav__icon md-icon"></span> Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1 type=checkbox id=__nav_5_1> <label class=md-nav__link for=__nav_5_1> Configuration <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Configuration data-md-level=2> <label class=md-nav__title for=__nav_5_1> <span class="md-nav__icon md-icon"></span> Configuration </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/topologies/ class=md-nav__link> Topologies </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cpd-objects/ class=md-nav__link> Objects overview </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cpd-global-config/ class=md-nav__link> Global config </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/vault/ class=md-nav__link> Vault </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/infrastructure/ class=md-nav__link> Infrastructure </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1_6 type=checkbox id=__nav_5_1_6> <label class=md-nav__link for=__nav_5_1_6> OpenShift <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=OpenShift data-md-level=3> <label class=md-nav__title for=__nav_5_1_6> <span class="md-nav__icon md-icon"></span> OpenShift </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/openshift/ class=md-nav__link> OpenShift </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> Monitoring </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> Logging and auditing </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/dns/ class=md-nav__link> DNS </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cloud-pak/ class=md-nav__link> Cloud Paks </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1_8 type=checkbox id=__nav_5_1_8> <label class=md-nav__link for=__nav_5_1_8> Cloud Pak for Data <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Cloud Pak for Data" data-md-level=3> <label class=md-nav__title for=__nav_5_1_8> <span class="md-nav__icon md-icon"></span> Cloud Pak for Data </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-cartridges/ class=md-nav__link> Cartridges </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-instances/ class=md-nav__link> Instances </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-connections/ class=md-nav__link> Platform connections </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-ldap/ class=md-nav__link> LDAP </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-saml/ class=md-nav__link> SAML </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-assets/ class=md-nav__link> Assets </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> Monitoring </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/logging-auditing/ class=md-nav__link> Logging and auditing </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4ba/ class=md-nav__link> Cloud Pak for Business Automation </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/private-registry/ class=md-nav__link> Private registries </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_2 type=checkbox id=__nav_5_2> <label class=md-nav__link for=__nav_5_2> Process <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Process data-md-level=2> <label class=md-nav__title for=__nav_5_2> <span class="md-nav__icon md-icon"></span> Process </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/process/overview/ class=md-nav__link> Overview </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/validate/ class=md-nav__link> Validate </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/prepare/ class=md-nav__link> Prepare </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/provision-infra/ class=md-nav__link> Provision infra </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/configure-infra/ class=md-nav__link> Configure infra </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/install-cloud-pak/ class=md-nav__link> Install Cloud Paks </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/configure-cloud-pak/ class=md-nav__link> Configure Cloud Paks </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/deploy-assets/ class=md-nav__link> Deploy assets </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/smoke-tests/ class=md-nav__link> Smoke tests </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/timings/ class=md-nav__link> Timings </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_6 type=checkbox id=__nav_6> <label class=md-nav__link for=__nav_6> Troubleshooting <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Troubleshooting data-md-level=1> <label class=md-nav__title for=__nav_6> <span class="md-nav__icon md-icon"></span> Troubleshooting </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../40-troubleshooting/cp4d-uninstall/ class=md-nav__link> Cloud Pak for Data uninstall </a> </li> <li class=md-nav__item> <a href=../../../40-troubleshooting/ibm-cloud-access-nfs-server/ class=md-nav__link> Access NFS server on IBM Cloud </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_7 type=checkbox id=__nav_7 checked> <label class=md-nav__link for=__nav_7> Advanced <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Advanced data-md-level=1> <label class=md-nav__title for=__nav_7> <span class="md-nav__icon md-icon"></span> Advanced </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_7_1 type=checkbox id=__nav_7_1 checked> <label class=md-nav__link for=__nav_7_1> Run on OpenShift <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Run on OpenShift" data-md-level=2> <label class=md-nav__title for=__nav_7_1> <span class="md-nav__icon md-icon"></span> Run on OpenShift </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../run-deployer-on-openshift-using-console/ class=md-nav__link> Run deployer on OpenShift using Console </a> </li> <li class="md-nav__item md-nav__item--active"> <input class="md-nav__toggle md-toggle" data-md-toggle=toc type=checkbox id=__toc> <label class="md-nav__link md-nav__link--active" for=__toc> Build image and run deployer on OpenShift <span class="md-nav__icon md-icon"></span> </label> <a href=./ class="md-nav__link md-nav__link--active"> Build image and run deployer on OpenShift </a> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#create-configuration class=md-nav__link> Create configuration </a> </li> <li class=md-nav__item> <a href=#log-in-to-the-openshift-cluster class=md-nav__link> Log in to the OpenShift cluster </a> </li> <li class=md-nav__item> <a href=#prepare-the-deployer-project class=md-nav__link> Prepare the deployer project </a> </li> <li class=md-nav__item> <a href=#build-deployer-image-and-push-to-the-internal-registry class=md-nav__link> Build deployer image and push to the internal registry </a> </li> <li class=md-nav__item> <a href=#set-configuration class=md-nav__link> Set configuration </a> </li> <li class=md-nav__item> <a href=#start-the-deployer-job class=md-nav__link> Start the deployer job </a> </li> <li class=md-nav__item> <a href=#optional-start-debug-job class=md-nav__link> Optional: start debug job </a> </li> <li class=md-nav__item> <a href=#follow-the-logs-of-the-deployment class=md-nav__link> Follow the logs of the deployment </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../run-deployer-wizard-on-openshift/ class=md-nav__link> Run deployer wizard on OpenShift </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../private-registry-and-air-gapped/ class=md-nav__link> Private registry and air-gapped </a> </li> <li class=md-nav__item> <a href=../../alternative-repo-reg/ class=md-nav__link> Using alternative CASE repositories and registries </a> </li> <li class=md-nav__item> <a href=../../advanced-configuration/ class=md-nav__link> Advanced configuration </a> </li> <li class=md-nav__item> <a href=../../locations-to-whitelist/ class=md-nav__link> Locations to whitelist </a> </li> <li class=md-nav__item> <a href=../../apply-node-settings-non-mco/ class=md-nav__link> Apply node settings to non-MCO clusters </a> </li> <li class=md-nav__item> <a href=../../gitops/ class=md-nav__link> GitOps </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_8 type=checkbox id=__nav_8> <label class=md-nav__link for=__nav_8> Development <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Development data-md-level=1> <label class=md-nav__title for=__nav_8> <span class="md-nav__icon md-icon"></span> Development </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../80-development/deployer-development-setup/ class=md-nav__link> Deployer development setup </a> </li> <li class=md-nav__item> <a href=../../../80-development/doc-development-setup/ class=md-nav__link> Deployer documentation development setup </a> </li> <li class=md-nav__item> <a href=../../../80-development/doc-guidelines/ class=md-nav__link> Deployer documentation guidelines </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class="md-sidebar md-sidebar--secondary" data-md-component=sidebar data-md-type=toc> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#create-configuration class=md-nav__link> Create configuration </a> </li> <li class=md-nav__item> <a href=#log-in-to-the-openshift-cluster class=md-nav__link> Log in to the OpenShift cluster </a> </li> <li class=md-nav__item> <a href=#prepare-the-deployer-project class=md-nav__link> Prepare the deployer project </a> </li> <li class=md-nav__item> <a href=#build-deployer-image-and-push-to-the-internal-registry class=md-nav__link> Build deployer image and push to the internal registry </a> </li> <li class=md-nav__item> <a href=#set-configuration class=md-nav__link> Set configuration </a> </li> <li class=md-nav__item> <a href=#start-the-deployer-job class=md-nav__link> Start the deployer job </a> </li> <li class=md-nav__item> <a href=#optional-start-debug-job class=md-nav__link> Optional: start debug job </a> </li> <li class=md-nav__item> <a href=#follow-the-logs-of-the-deployment class=md-nav__link> Follow the logs of the deployment </a> </li> </ul> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <article class="md-content__inner md-typeset"> <a href=https://github.com/IBM/cloud-pak-deployer/edit/main/docs/50-advanced/run-on-openshift/build-image-and-run-deployer-on-openshift.md title="Edit this page" class="md-content__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg> </a> <h1 id=build-image-and-run-deployer-on-openshift>Build image and run deployer on OpenShift<a class=headerlink href=#build-image-and-run-deployer-on-openshift title="Permanent link">🔗</a></h1> <h2 id=create-configuration>Create configuration<a class=headerlink href=#create-configuration title="Permanent link">🔗</a></h2> <div class=codehilite><pre><span></span><code>export CONFIG_DIR=$HOME/cpd-config &amp;&amp; mkdir -p $CONFIG_DIR/config
+
+cat &lt;&lt; EOF &gt; $CONFIG_DIR/config/cpd-config.yaml
+---
+global_config:
+  environment_name: demo
+  cloud_platform: existing-ocp
+  confirm_destroy: False
+
+openshift:
+- name: cpd-demo
+  ocp_version: &quot;4.10&quot;
+  cluster_name: cpd-demo
+  domain_name: example.com
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+
+cp4d:
+- project: cpd-instance
+  openshift_cluster_name: cpd-demo
+  cp4d_version: 4.6.0
+  sequential_install: True
+  accept_licenses: True
+  cartridges:
+  - name: cp-foundation
+    license_service:
+      state: disabled
+      threads_per_core: 2
+  - name: lite
+
+#
+# All tested cartridges. To install, change the &quot;state&quot; property to &quot;installed&quot;. To uninstall, change the state
+# to &quot;removed&quot; or comment out the entire cartridge. Make sure that the &quot;-&quot; and properties are aligned with the lite
+# cartridge; the &quot;-&quot; is at position 3 and the property starts at position 5.
+#
+
+  - name: analyticsengine 
+    size: small 
+    state: removed
+
+  - name: bigsql
+    state: removed
+
+  - name: ca
+    size: small
+    instances:
+    - name: ca-instance
+      metastore_ref: ca-metastore
+    state: removed
+
+  - name: cde
+    state: removed
+
+  - name: datagate
+    state: removed
+
+  - name: datastage-ent-plus
+    state: removed
+    # instances:
+    #   - name: ds-instance
+    #     # Optional settings
+    #     description: &quot;datastage ds-instance&quot;
+    #     size: medium
+    #     storage_class: efs-nfs-client
+    #     storage_size_gb: 60
+    #     # Custom Scale options
+    #     scale_px_runtime:
+    #       replicas: 2
+    #       cpu_request: 500m
+    #       cpu_limit: 2
+    #       memory_request: 2Gi
+    #       memory_limit: 4Gi
+    #     scale_px_compute:
+    #       replicas: 2
+    #       cpu_request: 1
+    #       cpu_limit: 3
+    #       memory_request: 4Gi
+    #       memory_limit: 12Gi    
+
+  - name: db2
+    size: small
+    instances:
+    - name: ca-metastore
+      metadata_size_gb: 20
+      data_size_gb: 20
+      backup_size_gb: 20  
+      transactionlog_size_gb: 20
+    state: removed
+
+  - name: db2wh
+    state: removed
+
+  - name: dmc
+    state: removed
+
+  - name: dods
+    size: small
+    state: removed
+
+  - name: dp
+    size: small
+    state: removed
+
+  - name: dv
+    size: small 
+    instances:
+    - name: data-virtualization
+    state: removed
+
+  - name: hadoop
+    size: small
+    state: removed
+
+  - name: mdm
+    size: small
+    wkc_enabled: true
+    state: removed
+
+  - name: openpages
+    state: removed
+
+  - name: planning-analytics
+    state: removed
+
+  - name: rstudio
+    size: small
+    state: removed
+
+  - name: spss
+    state: removed
+
+  - name: voice-gateway
+    replicas: 1
+    state: removed
+
+  - name: watson-assistant
+    size: small
+    state: removed
+
+  - name: watson-discovery
+    state: removed
+
+  - name: watson-ks
+    size: small
+    state: removed
+
+  - name: watson-openscale
+    size: small
+    state: removed
+
+  - name: watson-speech
+    stt_size: xsmall
+    tts_size: xsmall
+    state: removed
+
+  - name: wkc
+    size: small
+    state: removed
+
+  - name: wml
+    size: small
+    state: installed
+
+  - name: wml-accelerator
+    replicas: 1
+    size: small
+    state: removed
+
+  - name: wsl
+    state: installed
+
+EOF
+</code></pre></div> <h2 id=log-in-to-the-openshift-cluster>Log in to the OpenShift cluster<a class=headerlink href=#log-in-to-the-openshift-cluster title="Permanent link">🔗</a></h2> <p>Log is as a cluster administrator to be able to run the deployer with the correct permissions.</p> <h2 id=prepare-the-deployer-project>Prepare the deployer project<a class=headerlink href=#prepare-the-deployer-project title="Permanent link">🔗</a></h2> <div class=codehilite><pre><span></span><code>oc new-project cloud-pak-deployer 
+
+oc project cloud-pak-deployer
+oc create serviceaccount cloud-pak-deployer-sa
+oc adm policy add-scc-to-user privileged -z cloud-pak-deployer-sa
+oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
+</code></pre></div> <h2 id=build-deployer-image-and-push-to-the-internal-registry>Build deployer image and push to the internal registry<a class=headerlink href=#build-deployer-image-and-push-to-the-internal-registry title="Permanent link">🔗</a></h2> <p>Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.</p> <div class=codehilite><pre><span></span><code>cat &lt;&lt; EOF | oc apply -f -
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: cloud-pak-deployer
+spec:
+  lookupPolicy:
+    local: true
+EOF
+
+cat &lt;&lt; EOF | oc create -f -
+kind: Build
+apiVersion: build.openshift.io/v1
+metadata:
+  generateName: cloud-pak-deployer-bc-
+  namespace: cloud-pak-deployer
+spec:
+  serviceAccount: builder
+  source:
+    type: Git
+    git:
+      uri: &#39;https://github.com/IBM/cloud-pak-deployer&#39;
+      ref: wizard
+  strategy:
+    type: Docker
+    dockerStrategy:
+      buildArgs:
+      - name: CPD_OLM_UTILS_V1_IMAGE
+        value: icr.io/cpopen/cpd/olm-utils:latest
+      - name: CPD_OLM_UTILS_V2_IMAGE
+        value: icr.io/cpopen/cpd/olm-utils-v2:latest
+  output:
+    to:
+      kind: ImageStreamTag
+      name: &#39;cloud-pak-deployer:latest&#39;
+  triggeredBy:
+    - message: Manually triggered
+EOF
+</code></pre></div> <p>Now, wait until the deployer image has been built. <div class=codehilite><pre><span></span><code>oc get build -n cloud-pak-deployer -w
+</code></pre></div></p> <h2 id=set-configuration>Set configuration<a class=headerlink href=#set-configuration title="Permanent link">🔗</a></h2> <div class=codehilite><pre><span></span><code>oc create cm -n cloud-pak-deployer cloud-pak-deployer-config
+oc set data -n cloud-pak-deployer cm/cloud-pak-deployer-config \
+  --from-file=$CONFIG_DIR/config
+</code></pre></div> <h2 id=start-the-deployer-job>Start the deployer job<a class=headerlink href=#start-the-deployer-job title="Permanent link">🔗</a></h2> <div class=codehilite><pre><span></span><code>export CP_ENTITLEMENT_KEY=your_entitlement_key
+
+cat &lt;&lt; EOF | oc apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: cloud-pak-deployer-status
+  namespace: cloud-pak-deployer
+spec:
+  accessModes:
+  - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+
+cat &lt;&lt; EOF | oc apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: cloud-pak-deployer
+  name: cloud-pak-deployer
+  namespace: cloud-pak-deployer
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
+  template:
+    metadata:
+      name: cloud-pak-deployer
+      labels:
+        app: cloud-pak-deployer
+    spec:
+      containers:
+      - name: cloud-pak-deployer
+        image: cloud-pak-deployer:latest
+        imagePullPolicy: Always
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
+        - name: CP_ENTITLEMENT_KEY
+          value: ${CP_ENTITLEMENT_KEY}
+        volumeMounts:
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
+        command: [&quot;/bin/sh&quot;,&quot;-xc&quot;]
+        args: 
+          - /cloud-pak-deployer/cp-deploy.sh env apply -v
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 0
+      serviceAccountName: cloud-pak-deployer-sa
+      volumes:
+      - name: config-volume
+        configMap:
+          name: cloud-pak-deployer-config
+      - name: status-volume
+        persistentVolumeClaim:
+          claimName: cloud-pak-deployer-status        
+EOF
+</code></pre></div> <h2 id=optional-start-debug-job>Optional: start debug job<a class=headerlink href=#optional-start-debug-job title="Permanent link">🔗</a></h2> <p>The debug job can be useful if you want to access the status directory of the deployer if the deployer job has failed. <div class=codehilite><pre><span></span><code>cat &lt;&lt; EOF | oc apply -f -
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: cloud-pak-deployer-debug
+  name: cloud-pak-deployer-debug
+  namespace: cloud-pak-deployer
+spec:
+  parallelism: 1
+  completions: 1
+  backoffLimit: 0
+  template:
+    metadata:
+      name: cloud-pak-deployer-debug
+      labels:
+        app: cloud-pak-deployer-debug
+    spec:
+      containers:
+      - name: cloud-pak-deployer-debug
+        image: cloud-pak-deployer:latest
+        imagePullPolicy: Always
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        env:
+        - name: CONFIG_DIR
+          value: /Data/cpd-config
+        - name: STATUS_DIR
+          value: /Data/cpd-status
+        volumeMounts:
+        - name: config-volume
+          mountPath: /Data/cpd-config/config
+        - name: status-volume
+          mountPath: /Data/cpd-status
+        command: [&quot;/bin/sh&quot;,&quot;-xc&quot;]
+        args: 
+          - sleep infinity
+      restartPolicy: Never
+      securityContext:
+        runAsUser: 0
+      serviceAccountName: cloud-pak-deployer-sa
+      volumes:
+      - name: config-volume
+        configMap:
+          name: cloud-pak-deployer-config
+      - name: status-volume
+        persistentVolumeClaim:
+          claimName: cloud-pak-deployer-status        
+EOF
+</code></pre></div></p> <h2 id=follow-the-logs-of-the-deployment>Follow the logs of the deployment<a class=headerlink href=#follow-the-logs-of-the-deployment title="Permanent link">🔗</a></h2> <div class=codehilite><pre><span></span><code>oc logs -f -n cloud-pak-deployer job/cloud-pak-deployer
+</code></pre></div> <p>In some cases, especially if the OpenShift cluster is remote from where the <code>oc</code> command is running, the <code>oc logs -f</code> command may terminate abruptly. </p> </article> </div> </div> </main> <footer class=md-footer> <nav class="md-footer__inner md-grid" aria-label=Footer> <a href=../run-deployer-on-openshift-using-console/ class="md-footer__link md-footer__link--prev" aria-label="Previous: Run deployer on OpenShift using Console" rel=prev> <div class="md-footer__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg> </div> <div class=md-footer__title> <div class=md-ellipsis> <span class=md-footer__direction> Previous </span> Run deployer on OpenShift using Console </div> </div> </a> <a href=../run-deployer-wizard-on-openshift/ class="md-footer__link md-footer__link--next" aria-label="Next: Run deployer wizard on OpenShift" rel=next> <div class=md-footer__title> <div class=md-ellipsis> <span class=md-footer__direction> Next </span> Run deployer wizard on OpenShift </div> </div> <div class="md-footer__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg> </div> </a> </nav> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.5bf1dace.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script> <script src=../../../assets/javascripts/bundle.37e9125f.min.js></script> <script src=../../../js/open_in_new_tab.js></script> </body> </html>
