@@ -5,32 +5,17 @@
   register: _cpdctl_command
 
 - block:
-    - name: Get latest version of cpdctl
-      uri:
-        url: https://api.github.com/repos/IBM/cpdctl/releases/latest
-        return_content: yes
-        method: GET
-        status_code: 200
-      register: _cpdctl_releases
+  - include_tasks: cpdctl-download.yml
+    when: (_github_ibm_pat | default('')) == ''
 
-    - set_fact:
-        _cpdctl_tag_name: "{{ _cpdctl_releases.json.tag_name }}"
+  - include_tasks: cpdctl-download-github-pat.yml
+    when: (_github_ibm_pat | default('')) != ''
 
-    - name: Download and install cpdctl version {{ _cpdctl_releases.json.tag_name }}
-      get_url:
-        url: "https://github.com/IBM/cpdctl/releases/download/{{ _cpdctl_releases.json.tag_name }}/cpdctl_linux_amd64.tar.gz"
-        dest: "{{ status_dir }}/cp4d/cpdctl_linux_amd64.tar.gz"
-        owner: root
-        mode: 0644
-      register: _download_result
-      until: _download_result is succeeded
-      retries: 5
-      delay: 30
+  - name: Unpack cpdctl client
+    unarchive:
+      src: "{{ status_dir }}/cp4d/cpdctl_linux_amd64.tar.gz"
+      dest: "/usr/local/bin"
 
-    - name: Unpack cpdctl client
-      unarchive:
-        src: "{{ status_dir }}/cp4d/cpdctl_linux_amd64.tar.gz"
-        dest: "/usr/local/bin"
   when: not _cpdctl_command.stat.exists
 
 - name: Get cpdctl version version
