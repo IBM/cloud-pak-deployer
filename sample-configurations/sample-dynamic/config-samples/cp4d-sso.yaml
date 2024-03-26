@@ -1,4 +1,25 @@
 ---
+openshift_redhat_sso:
+- openshift_cluster_name: "{{ env_id }}"
+  keycloak:
+  - name: ibm-keycloak
+    groups:
+    - name: kc-cp4d-admins
+      state: present
+    - name: kc-cp4d-data-engineers
+      state: present
+    - name: kc-cp4d-data-scientists
+      state: present
+    - name: kc-cp4d-monitors
+      state: present
+
+cp4d_role:
+- name: cp4d-monitoring-role
+  description: Cloud Pak for Data monitoring role
+  state: installed
+  permissions:
+  - monitor_platform
+
 cp4d_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
@@ -22,3 +43,9 @@ cp4d_access_control:
     - User
     keycloak_groups:
     - kc-cp4d-data-scientists
+  - name: cp4d-monitors
+    description: Cloud Pak for Data Monitoring
+    roles:
+    - cp4d-monitoring-role
+    keycloak_groups:
+    - kc-cp4d-monitors
