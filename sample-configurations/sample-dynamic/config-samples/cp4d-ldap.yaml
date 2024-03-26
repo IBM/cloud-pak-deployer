@@ -1,36 +1,95 @@
----
-# Each Cloud Pak for Data Deployment deployed in an OpenShift Project of an OpenShift cluster can have its own LDAP configuration
-cp4d_ldap_config:
-- project: cpd                                                        # Mandatory
-  openshift_cluster_name: "{{ env_id }}"
-  ldap_host: ldaps://ldap-host                                           # Mandatory
-  ldap_port: 636                                                         # Mandatory
-  ldap_user_search_base: ou=users,dc=ibm,dc=com                          # Mandatory
-  ldap_user_search_field: uid                                            # Mandatory
-  ldap_domain_search_user: uid=ibm_roks_bind_user,ou=users,dc=ibm,dc=com # Mandatory
-  ldap_domain_search_password_vault: ldap_bind_password                  # Mandatory, Password vault reference
-  auto_signup: "false"                                                   # Mandatory
-  ldap_group_search_base: ou=groups,dc=ibm,dc=com                        # Optional, but mandatory when using user groups
-  ldap_group_search_field: cn                                            # Optional, but mandatory when using user groups
-  ldap_mapping_first_name: cn                                            # Optional, but mandatory when using user groups
-  ldap_mapping_last_name: sn                                             # Optional, but mandatory when using user groups
-  ldap_mapping_email: mail                                               # Optional, but mandatory when using user groups
-  ldap_mapping_group_membership: memberOf                                # Optional, but mandatory when using user groups
-  ldap_mapping_group_member: member                                      # Optional, but mandatory when using user groups
+demo_openldap:
+- name: cp4d-openldap
+  ldap_config:
+    bind_admin_user: cn=admin,dc=cp,dc=internal
+    base_dn: dc=cp,dc=internal
+    base_dc: cp
+    base_domain: cp.internal
+    user_ou: Users
+    user_id_attribute: uid
+    user_display_name_attribute: cn
+    user_base_dn: ou=Users,dc=cp,dc=internal
+    user_object_class: inetOrgPerson
+    group_ou: Groups
+    group_id_attribute: cn
+    group_display_name_attribute: cn
+    group_base_dn: ou=Groups,dc=cp,dc=internal
+    group_object_class: groupOfUniqueNames
+    group_member_attribute: uniqueMember
+  users:
+  - uid: ttoussaint
+    givenName: Tara
+    sn: Toussaint
+    mail: ttoussaint@cp.internal
+  - uid: rramones
+    givenName: Rosa
+    sn: Ramones
+    mail: rramones@cp.internal
+  - uid: ssharpe
+    givenName: Shelly
+    sn: Sharpe
+    mail: ssharpe@cp.internal
+  - uid: pprimo
+    givenName: Paco
+    sn: Primo
+    mail: pprimo@cp.internal
+  - uid: rroller
+    givenName: Rico
+    sn: Roller
+    mail: rroller@cp.internal
+    password: R1c0Roll3rP4ssw0rd
+  groups:
+  - cn: cp4d-admins
+    members:
+    - uid=ttoussaint,ou=Users,dc=cp,dc=internal
+  - cn: cp4d-data-engineers
+    members:
+    - uid=rramones,ou=Users,dc=cp,dc=internal
+    - uid=ssharpe,ou=Users,dc=cp,dc=internal
+  - cn: cp4d-data-scientists
+    members:
+    - uid=pprimo,ou=Users,dc=cp,dc=internal
+    - uid=ssharpe,ou=Users,dc=cp,dc=internal
+    - uid=rroller,ou=Users,dc=cp,dc=internal
+  - cn: cp4d-monitors
+    members:
+    - uid=pprimo,ou=Users,dc=cp,dc=internal
+  state: installed
 
-cp4d_user_group_configuration:
-- project: cpd            # Mandatory
-  openshift_cluster_name: "{{ env_id }}"
+cp4d_role:
+- name: cp4d-monitoring-role
+  description: Cloud Pak for Data monitoring role
+  state: installed
+  permissions:
+  - monitor_platform
+
+cp4d_access_control:
+- demo_openldap_name: cp4d-openldap
   user_groups:
-  - name: CA_Analytics_Viewer
-    description: User Group for Cognos Analytics Viewers
-    role_assigmnents:
-    - name: zen_administrator_role
+  - name: cp4d-admins
+    description: Cloud Pak for Data Administrators
+    roles:
+    - Administrator
+    - User
     ldap_groups:
-    - name: cn=ca_viewers,ou=groups,dc=ibm,dc=com
-  - name: CA_Analytics_Administrators
-    description: User Group for Cognos Analytics Administrators
-    role_assigmnents:
-    - name: zen_administrator_role
+    - cn=cp4d-admins,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-data-engineers
+    description: Cloud Pak for Data Data Engineers
+    roles:
+    - User
     ldap_groups:
-    - name: cn=ca_admins,ou=groups,dc=ibm,dc=com
+    - cn=cp4d-data-engineers,ou=Groups,dc=cp,dc=internal
+    - cn=cp4d-data-scientists,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-data-scientists
+    description: Cloud Pak for Data Data Scientists
+    roles:
+    - User
+    - Administrator
+    ldap_groups:
+    - cn=cp4d-data-scientists,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-monitors
+    description: Cloud Pak for Data Monitoring
+    roles:
+    - cp4d-monitoring-role
+    ldap_groups:
+    - cn=cp4d-monitors,ou=Groups,dc=cp,dc=internal
