@@ -3,7 +3,7 @@ import sys
 
 # Validating:
 # ---
-# cp4d_access_control:
+# zen_access_control:
 # - project: cpd
 #   openshift_cluster_name: "{{ env_id }}"
 #   keycloak_name: cp-keycloak
@@ -52,10 +52,10 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg="Every user group must have at least one role")
 
             if 'keycloak_groups' in user_group and 'keycloak_name' not in ge:
-                g.appendError(msg="If keycloak_groups are defined, the cp4d_access_control must reference a keycloak_name")
+                g.appendError(msg="If keycloak_groups are defined, the zen_access_control must reference a keycloak_name")
 
             if 'ldap_groups' in user_group and 'demo_openldap_name' not in ge:
-                g.appendError(msg="If ldap_groups are defined, the cp4d_access_control must reference a demo_openldap_name")
+                g.appendError(msg="If ldap_groups are defined, the zen_access_control must reference a demo_openldap_name")
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

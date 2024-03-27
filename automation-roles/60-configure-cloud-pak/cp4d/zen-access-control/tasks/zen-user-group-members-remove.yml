@@ -1,17 +1,17 @@
 ---
 - set_fact:
-    _group_member_to_remove: "{{ _cp4d_user_group_membership_rules.json.results | json_query(query) | first | default({}) }}"
+    _group_member_to_remove: "{{ _zen_user_group_membership_rules.json.results | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?ldap_group=='{{ _remove_group_member }}']
 
 - debug:
-    var: _cp4d_user_group_membership_rules.json.results
+    var: _zen_user_group_membership_rules.json.results
 
 - debug:
     var: _group_member_to_remove
 
-- name: Remove group member {{ _remove_group_member }} from Cloud Pak for Data user group {{ _cp4d_user_group.name }}
+- name: Remove group member {{ _remove_group_member }} from Zen user group {{ _zen_user_group.name }}
   uri:
     url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups/membership_rules/{{ _group_member_to_remove.rule_id }}'
     method: DELETE
@@ -21,8 +21,8 @@
     return_content: yes
     validate_certs: no
     status_code: 200
-  register: _cp4d_remove_user_group_member
+  register: _zen_remove_user_group_member
   when: _group_member_to_remove != {}
 
 - debug:
-    var: _cp4d_remove_user_group_member
+    var: _zen_remove_user_group_member

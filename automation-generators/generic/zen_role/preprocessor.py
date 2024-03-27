@@ -3,7 +3,7 @@ import sys
 
 # Validating:
 # ---
-# cp4d_role:
+# zen_role:
 # - project: cpd
 #   openshift_cluster_name: {{ env_id }}
 #   name: My Test Role
@@ -32,7 +32,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             g.appendError(msg="Every role must at least have 1 permission")
 
         if ge['state'] not in ['installed','removed']:
-            g.appendError(msg='cp4d_role state must be "installed" or "removed"')
+            g.appendError(msg='zen_role state must be "installed" or "removed"')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

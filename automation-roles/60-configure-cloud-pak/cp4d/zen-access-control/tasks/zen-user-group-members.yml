@@ -1,0 +1,67 @@
+---
+- name: Get group membership rules for Zen user group {{ _zen_user_group.name }}
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups/{{ _zen_user_group_id }}/membership_rules'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+    status_code:
+    - 200
+  register: _zen_user_group_membership_rules
+
+- name: Get existing group members for user group {{ _existing_zen_user_group.name }}
+  set_fact:
+    _existing_zen_group_members: "{{ _zen_user_group_membership_rules.json.results | map(attribute='ldap_group') | default([]) }}"
+
+- debug:
+    var: _existing_zen_group_members
+
+- set_fact:
+    _idp_groups: "{{ _zen_user_group.keycloak_groups | default([]) }}"
+    _ldap_groups: "{{ _zen_user_group.ldap_groups | default([]) }}"
+    _add_group_members_list: []
+
+- set_fact:
+    _group_members: "{{ _idp_groups | union(_ldap_groups) }}"
+
+- name: Get group members to be added
+  set_fact:
+    _add_group_members: "{{ _group_members | difference(_existing_zen_group_members) | default([]) }}"
+
+- set_fact:
+    _add_group_members_list: "[ {{ '\"' + _add_group_members | join('\",\"') + '\"'}} ]"
+  when: _add_group_members != []
+
+- name: Add group members to Zen user group {{ _zen_user_group.name }}
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups/{{ _zen_user_group_id }}/members'
+    method: POST
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      ldap_groups: "{{ _add_group_members_list }}"
+    return_content: yes
+    validate_certs: no
+    status_code:
+    - 200
+    - 201
+  register: _zen_user_group_members
+  when: _add_group_members_list != []
+
+- debug:
+    var: _zen_user_group_members
+
+- name: Get group members to be removed
+  set_fact:
+    _remove_group_members: "{{ _existing_zen_group_members | difference(_group_members) | default([]) }}"
+
+- name: Remove group member
+  include_tasks: zen-user-group-members-remove.yml
+  loop: "{{ _remove_group_members }}"
+  loop_control:
+    loop_var: _remove_group_member

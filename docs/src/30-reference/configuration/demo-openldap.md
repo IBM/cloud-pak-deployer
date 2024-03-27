@@ -78,7 +78,7 @@ The OpenLDAP name is referenced in the [Cloud Pak for Data Access Control](./cp4
 ### Property explanation
 | Property                | Description                                                                | Mandatory | Allowed values |
 | ----------------------- | -------------------------------------------------------------------------- | --------- | -------------- |
-| name                    | Name of the OpenLDAP server, for reference by `cp4d_access_control`        | Yes       |                |
+| name                    | Name of the OpenLDAP server, for reference by `zen_access_control`         | Yes       |                |
 | openshift_cluster_name  | Name of OpenShift cluster into which the OpenLDAP service is installed     |Yes. if more than 1 `openshift` resource in the configuration |                |
 | openldap_project        | OpenShift project into which the OpenLDAP server is installed              | No, default is `openldap` | |
 | ldap_config             | LDAP configuration                                                         | Yes       |                |

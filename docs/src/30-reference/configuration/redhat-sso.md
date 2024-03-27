@@ -25,7 +25,7 @@ The above configuration installs the Red Hat SSO operator and creates a Keycloak
 
 Currently you can only define Keycloak groups which are later mapped to Cloud Pak for Data user groups. Creating users and setting up federated identity providers must be done by logging into Keycloak.
 
-The Keycloak name is referenced in the [Cloud Pak for Data Access Control](./cp4d-access-control.md#access-control---cp4d_access_control) resource and this is also where the mapping from Keycloak groups to Cloud Pak for Data groups takes place. 
+The Keycloak name is referenced in the [Zen Access Control](./cp4d-access-control.md#access-control---zen_access_control) resource and this is also where the mapping from Keycloak groups to Cloud Pak for Data groups takes place. 
 
 ### Property explanation
 | Property                | Description                                                                | Mandatory | Allowed values |
