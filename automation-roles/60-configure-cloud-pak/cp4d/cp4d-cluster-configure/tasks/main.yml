@@ -86,26 +86,26 @@
 # Cloud Pak for Data Custom role configuration
 - name: Handle Cloud Pak for Data custom roles configuration
   include_role:
-    name: cp4d-roles
-  loop: "{{ all_config.cp4d_role | default([]) }}"
+    name: zen-roles
+  loop: "{{ all_config.zen_role | default([]) }}"
   loop_control:
-    loop_var: _cp4d_role 
+    loop_var: _zen_role 
 
 # Cloud Pak for Data User Groups Configuration
-- name: Configure CP4D access control
+- name: Configure Cloud Pak for Data access control
   include_role:
-    name: cp4d-access-control
-  loop: "{{ all_config.cp4d_access_control | default([]) }}"
+    name: zen-access-control
+  loop: "{{ all_config.zen_access_control | default([]) }}"
   loop_control:
-    loop_var: _cp4d_access_control 
+    loop_var: _zen_access_control 
 
 # In case roles were set to state: removed, loop through the roles again to delete them
 - name: Delete obsolete Cloud Pak for Data custom roles
   include_role:
-    name: cp4d-roles
-  loop: "{{ all_config.cp4d_role | default([]) }}"
+    name: zen-roles
+  loop: "{{ all_config.zen_role | default([]) }}"
   loop_control:
-    loop_var: _cp4d_role 
+    loop_var: _zen_role 
 
 - name: Loop through all cartridges for instance configuration
   when: "current_cp4d_cluster.cartridges is defined"

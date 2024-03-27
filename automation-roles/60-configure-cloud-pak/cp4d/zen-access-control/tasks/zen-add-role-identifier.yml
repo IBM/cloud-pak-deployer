@@ -1,0 +1,15 @@
+---
+- name: Get role identifier for role {{ _zen_user_group_role }}
+  set_fact:
+    _zen_user_group_role_id: >-
+      {{ (_zen_all_roles.json.rows | json_query(_query_role) | first).doc._id | default('') }}
+  vars:
+    _query_role: "[?doc.role_name=='{{ _zen_user_group_role }}']"
+
+- set_fact:
+    _zen_user_group_role_ids: "{{ _zen_user_group_role_ids + [_zen_user_group_role_id] }}"
+  when: _zen_user_group_role_id != ''
+
+- fail:
+    msg: "Zen role {{ _zen_user_group_role }} does not exist"
+  when: _zen_user_group_role_id == ''

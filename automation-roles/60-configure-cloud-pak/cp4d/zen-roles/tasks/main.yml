@@ -1,0 +1,48 @@
+---
+- name: Show Zen role definition
+  debug:
+    var: _zen_role
+
+- name: Get existing Zen roles
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/roles?include_users_count=true&include_platform_users_count=true&include_user_groups_count=true'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _existing_zen_roles
+
+- name: Show existing Zen roles
+  debug:
+    var: _existing_zen_roles
+
+- include_tasks: zen-check-permissions.yml
+  when: _zen_role.state | default('installed') != 'removed'
+
+- name: Show existing Zen roles
+  debug:
+    var: _existing_zen_roles
+
+- set_fact:
+    _existing_zen_role: "{{ _existing_zen_roles.json.rows | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?doc.role_name=='{{ _zen_role.name }}']
+
+- include_tasks: zen-role-create.yml
+  when: 
+  - _zen_role.state | default('installed') == 'installed'
+  - _existing_zen_role == {}
+
+- include_tasks: zen-role-update.yml
+  when: 
+  - _zen_role.state | default('installed') == 'installed'
+  - _existing_zen_role != {}
+
+- include_tasks: zen-role-delete.yml
+  when: 
+  - _zen_role.state | default('installed') == 'removed'
+  - _existing_zen_role != {}

@@ -1,6 +1,6 @@
 ---
 
-- name: Create Cloud Pak for Data role {{ _cp4d_role.name }}
+- name: Create Zen role {{ _zen_role.name }}
   uri:
     url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/role"
     method: POST
@@ -9,15 +9,15 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      role_name: "{{ _cp4d_role.name }}"
-      description: "{{ _cp4d_role.description | default(_cp4d_role.name) }}"
-      permissions:  "[ {{ '\"' + _cp4d_role.permissions | join('\",\"') + '\"'}} ]"
+      role_name: "{{ _zen_role.name }}"
+      description: "{{ _zen_role.description | default(_zen_role.name) }}"
+      permissions:  "[ {{ '\"' + _zen_role.permissions | join('\",\"') + '\"'}} ]"
     return_content: yes
     validate_certs: no
     status_code: 
     - 200
     - 201
-  register: _cp4d_role_create
+  register: _zen_role_create
 
 - debug:
-    var: _cp4d_role_create
+    var: _zen_role_create

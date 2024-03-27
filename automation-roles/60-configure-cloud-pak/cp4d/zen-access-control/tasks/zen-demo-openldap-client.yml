@@ -6,9 +6,9 @@
     _current_demo_openldap: "{{ all_config.demo_openldap | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?openshift_cluster_name=='{{ _cp4d_access_control.openshift_cluster_name }}' && name=='{{ _cp4d_access_control.demo_openldap_name }}']
+      [?openshift_cluster_name=='{{ _zen_access_control.openshift_cluster_name }}' && name=='{{ _zen_access_control.demo_openldap_name }}']
 
-- name: Show configured openldap {{ _cp4d_access_control.demo_openldap_name }}
+- name: Show configured openldap {{ _zen_access_control.demo_openldap_name }}
   debug:
     var: _current_demo_openldap
 
@@ -20,9 +20,9 @@
     oc extract secret/openldap-password -n {{ _openldap_project_name }} --to=-
   register: _openldap_bind_password
 
-- name: Check if OpenLDAP identity provider {{ _cp4d_access_control.demo_openldap_name }} already exists in Foundational Services
+- name: Check if OpenLDAP identity provider {{ _zen_access_control.demo_openldap_name }} already exists in Foundational Services
   uri:
-    url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource?name={{ _cp4d_access_control.demo_openldap_name }}'
+    url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource?name={{ _zen_access_control.demo_openldap_name }}'
     method: GET
     headers:
       Authorization: "Bearer {{ _iam_token }}"
@@ -35,7 +35,7 @@
     _fs_iam_ldap_idp_uid: "{{ _fs_iam_ldap_idp.json.idp[0].uid }}"
   when: (_fs_iam_ldap_idp.json.idp | default([])) != []
 
-- name: Validate connection to OpenLDAP {{ _cp4d_access_control.demo_openldap_name }}
+- name: Validate connection to OpenLDAP {{ _zen_access_control.demo_openldap_name }}
   uri:
     url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource/ldap/validateConnection'
     method: POST
@@ -44,7 +44,7 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      name: "{{ _cp4d_access_control.demo_openldap_name }}"
+      name: "{{ _zen_access_control.demo_openldap_name }}"
       idp_config:
         ldap_url: "ldap://openldap.{{ _openldap_project_name }}.svc:389"
         ldap_basedn: "{{ _current_demo_openldap.ldap_config.base_dn }}"
@@ -54,7 +54,7 @@
     validate_certs: no
     status_code: 200
 
-- name: Create Foundational Services OpenLDAP identity provider {{ _cp4d_access_control.demo_openldap_name }}
+- name: Create Foundational Services OpenLDAP identity provider {{ _zen_access_control.demo_openldap_name }}
   uri:
     url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource/'
     method: POST
@@ -63,8 +63,8 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      name: "{{ _cp4d_access_control.demo_openldap_name }}"
-      description: "OpenLDAP authentication, identity provider {{ _cp4d_access_control.demo_openldap_name }}"
+      name: "{{ _zen_access_control.demo_openldap_name }}"
+      description: "OpenLDAP authentication, identity provider {{ _zen_access_control.demo_openldap_name }}"
       protocol: ldap
       type: "Custom"
       idp_config:
@@ -98,8 +98,8 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      name: "{{ _cp4d_access_control.demo_openldap_name }}"
-      description: "OpenLDAP authentication, identity provider {{ _cp4d_access_control.demo_openldap_name }}"
+      name: "{{ _zen_access_control.demo_openldap_name }}"
+      description: "OpenLDAP authentication, identity provider {{ _zen_access_control.demo_openldap_name }}"
       protocol: ldap
       type: "Custom"
       idp_config:

@@ -2,11 +2,11 @@
 
 Cloud Pak for Data can connect to an external identity provider (IdP) for user authentication. This function is delegated to Foundational Services IAM. Additional to user authentication, the IdP's groups can be mapped to Cloud Pak for Data user groups for access control.
 
-### Roles - `cp4d_role`
+### Roles - `zen_role`
 Cloud Pak Deployer can be used to define user-defined roles in Cloud Pak for Data. Roles identify the permissions that a user or user group has on the platform.
 
 ```
-cp4d_role:
+zen_role:
 - name: monitor-role
   description: User-defined role for monitoring the platform
   state: installed
@@ -24,12 +24,12 @@ cp4d_role:
 
 To find the permissions that are allows, you can use the following REST API (GET) after authenticating to the platform: https://$CP4D_URL/icp4d-api/v1/permissions.
 
-### Access Control - `cp4d_access_control`
-The `cp4d_access_control` object controls the creation of Cloud Pak for Data user groups that map identify provider (IdP) groups and define the roles of the user group. A `user_groups` entry must contain at least 1 `roles` and must reference the associated IdP grouop(s).
+### Access Control - `zen_access_control`
+The `zen_access_control` object controls the creation of Zen user groups that map identify provider (IdP) groups and define the roles of the user group. A `user_groups` entry must contain at least 1 `roles` and must reference the associated IdP grouop(s).
 
 Example with Red Hat SSO (Keycloak) authentication
 ```
-cp4d_access_control:
+zen_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
   keycloak_name: ibm-keycloak
@@ -62,7 +62,7 @@ cp4d_access_control:
 
 Example with OpenLDAP authentication
 ```
-cp4d_access_control:
+zen_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
   demo_openldap_name: ibm-openldap
@@ -113,7 +113,7 @@ The following roles are defined by default in Cloud Pak for Data:
 - Administrator
 - User
 
-Further roles can be defined in the `cp4d_roles` object and can be referenced by the `user_groups.roles[]` property.
+Further roles can be defined in the `zen` object and can be referenced by the `user_groups.roles[]` property.
 
 During the creation of User Group(s) the following validations are performed:
 - The provided role(s) are available in Cloud Pak for Data
