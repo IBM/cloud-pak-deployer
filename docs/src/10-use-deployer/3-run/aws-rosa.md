@@ -151,6 +151,15 @@ export AWS_SESSION_TOKEN=your_session_token
 !!! warning
     If your `AWS_SESSION_TOKEN` is expires while the deployer is still running, the deployer may end abnormally. In such case, you can just issue new temporary credentials (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and `AWS_SESSION_TOKEN`) and restart the deployer. Alternatively, you can update the 3 vault secrets, respectively `aws-access-key`, `aws-secret-access-key` and `aws-session-token` with new values as they are re-retrieved by the deployer on a regular basis.
 
+### Optional: Set the GitHub Personal Access Token (PAT)
+In some cases, download of the `cloudctl` and `cpd-cli` clients from https://github.com/IBM will fail because GitHub limits the number of API calls from non-authenticated clients. You can remediate this issue by creating a [Personal Access Token on github.com](https://github.com/settings/tokens) and creating a secret in the vault.
+
+```
+./cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
+```
+
+Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` to the `./cp-deploy.sh env apply` command.
+
 ## 5. Run the deployer  
 
 ### Optional: validate the configuration
