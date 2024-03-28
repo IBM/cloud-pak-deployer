@@ -12,8 +12,8 @@ RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pa
 - [What is in the package 📦](#what-is-in-the-package-)
 - [Environments used for installation 💻](#environments-used-for-installation-)
 - [Automated post-deployment tasks ✅](#automated-post-deployment-tasks-)
-- [Post installation steps ➡️](#post-installation-steps-️)
 - [Usage \& operations 📇](#usage--operations-)
+- [Optional post deployment steps ➡️](#optional-post-deployment-steps-️)
 
 ## Disclaimer ✋
 
@@ -156,17 +156,17 @@ For your convenience the following post-deployment setup tasks have been automat
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 
-## Post installation steps ➡️
-
-CP4BA  
-Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. 
-
-RPA  
-Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
-Process Mining  
-Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
 ## Usage & operations 📇
 
-Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
+Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+## Optional post deployment steps ➡️
+
+CP4BA  
+Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+RPA  
+Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+Process Mining  
+Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
