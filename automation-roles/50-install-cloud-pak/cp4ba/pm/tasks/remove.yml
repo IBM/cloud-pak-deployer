@@ -87,11 +87,11 @@
     namespace: mongodb
     pod: "{{ mongodb_pod.resources[0].metadata.name }}"
     command: >
-      mongo --username root --password {{ pm_universal_password }} --authenticationDatabase admin
+      mongo --username {{ pm_mongodb_admin_user }} --password {{ pm_universal_password }} --authenticationDatabase admin
       --eval '{{ item }}' mongodb://localhost:27017/processmining
   register: command_status
   with_items:
-    - db.dropUser("root")
+    - db.dropUser("{{ pm_mongodb_admin_user }}")
     - db.dropDatabase()
   when: mongodb_pod.resources | length != 0
 
