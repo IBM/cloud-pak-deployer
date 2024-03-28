@@ -126,7 +126,7 @@ Contains prerequisites for the whole platform.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.12 with Worker Nodes which in total have (60 CPU, 128GB Memory).
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.14 with Worker Nodes which in total have free 60 CPU, 128GB Memory for requests.
 
 ## Automated post-deployment tasks ✅
 
