@@ -36,15 +36,15 @@
 
 - name: Create PM Mongo DB
   kubernetes.core.k8s_exec:
-    namespace: mongodb
+    namespace: "{{ pm_mongodb_project }}"
     pod: "{{ mongodb_pod.resources[0].metadata.name }}"
     command: |
       mongo --username {{ pm_mongodb_admin_user }} --password {{ pm_universal_password }} --authenticationDatabase admin
       --eval 'db.createUser({user: "{{ pm_mongodb_admin_user }}", pwd: "{{ pm_universal_password }}", roles: [ { role: "readWrite", db: "processmining" } ]})'
       mongodb://localhost:27017/processmining
   register: command_status
-  failed_when: command_status.result.rc != 0 and
-    command_status.result.stdout is not search('.*User \"' + pm_mongodb_admin_user + '@processmining\" already exists.*')
+  failed_when: command_status.rc != 0 and
+    command_status.stdout is not search('.*User \"' + pm_mongodb_admin_user + '@processmining\" already exists.*')
 
 - name: Prepare yaml file for CatalogSource
   ansible.builtin.template:
