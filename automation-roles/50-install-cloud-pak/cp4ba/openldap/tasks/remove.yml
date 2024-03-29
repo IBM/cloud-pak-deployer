@@ -1,19 +1,38 @@
-- name: Remove Project openldap
-  kubernetes.core.k8s:
-    state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
-    name: openldap
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ openldap_output_directory }}"
+    state: directory
+    mode: u+rwx
 
-- name: Remove RB openldap-anyuid
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ openldap_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - deployments
+    - services
+
+- name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    api_version: rbac.authorization.k8s.io/v1
-    kind: RoleBinding
-    name: openldap-anyuid
+    src: "{{ openldap_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ openldap_project_name }}"

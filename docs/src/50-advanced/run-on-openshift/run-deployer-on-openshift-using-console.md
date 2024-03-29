@@ -3,9 +3,9 @@
 See the deployer in action deploying IBM watsonx.ai on an existing OpenShift cluster in this video: https://ibm.box.com/v/cpd-wxai-existing-ocp
 
 ## Log in to the OpenShift cluster
-Log is as a cluster administrator to be able to run the deployer with the correct permissions.
+Log in as a cluster administrator to be able to run the deployer with the correct permissions.
 
-## Prepare the deployer project and the storage
+## Prepare the deployer Project
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly) into the window
@@ -52,10 +52,10 @@ subjects:
 ```
 
 ## Set the entitlement key
-* Update the secret below with your Cloud Pak entitlement key. Make sure the key is indented exactly as below.
+* Update the secret below with your container software Entitlement key from https://myibm.ibm.com/products-services/containerlibrary. Make sure the key is indented exactly as below.
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the follliwng block, **adjust where needed**
+* Paste the follliwng block with **replaced YOUR_ENTITLEMENT_KEY**
 ```
 ---
 apiVersion: v1
@@ -69,7 +69,7 @@ stringData:
     YOUR_ENTITLEMENT_KEY
 ```
 
-## Configure the Cloud Paks and service to be deployed
+## Configure the Cloud Paks and services to be deployed
 * Update the configuration below to match what you want to deploy, do not change indent
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
@@ -415,13 +415,13 @@ spec:
 
 ## Follow the logs of the deployment
 * Open the OpenShift console
-* Go to Compute --> Pods
+* Go to Workloads --> Pods
 * Select `cloud-pak-deployer` as the project at the top of the page
-* Click the deployer pod
-* Click logs
+* Click the deployer Pod
+* Click Logs tab
 
 !!! info
-    When running the deployer installing Cloud Pak for Data, the first run will fail. This is because the deployer applies the node configuration to OpenShift, which will cause all nodes to restart one by one, including the node that runs the deployer. Because of the job setting, a new deployer pod will automatically start and resume from where it was stopped.  
+    When running the deployer installing Cloud Pak for Data, the first run will fail. This is because the deployer applies the node configuration to OpenShift, which will cause all nodes to restart one by one, including the node that runs the deployer. Because of the Job setting, a new deployer pod will automatically start and resume from where it was stopped.  
 
 ## Re-run deployer when failed or if you want to update the configuration
 If the deployer has failed or if you want to make changes to the configuration after the successful run, you can do the following:
@@ -430,4 +430,4 @@ If the deployer has failed or if you want to make changes to the configuration a
 * Go to Workloads --> Jobs
 * Check the logs of the `cloud-pak-deployer` job
 * If needed, make changes to the `cloud-pak-deployer-config` Config Map by going to Workloads --> ConfigMaps
-* [Re-run the deployer](#run-the-deployer)
+* [Re-run the deployer](#start-the-deployer)

@@ -51,6 +51,7 @@
     trusted_ca_name: "{{ proxy.resources[0].spec.trustedCA.name }}"
 
 - name: Get trusted CAs from OCP
+  when: trusted_ca_name | length > 0
   block:
 
     - name: Get trusted CAs config map
@@ -64,7 +65,6 @@
     - name: Retrieve trusted CAs
       ansible.builtin.set_fact:
         "{{ common_ca_output_to_var }}": "{{ trusted_ca.resources[0].data['ca-bundle.crt'] | b64encode }}"
-  when: trusted_ca_name | length > 0
 
 - name: Use tls.crt as ca.crt
   ansible.builtin.set_fact:

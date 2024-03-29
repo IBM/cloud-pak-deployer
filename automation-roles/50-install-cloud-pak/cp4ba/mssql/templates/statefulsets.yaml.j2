@@ -1,0 +1,84 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: mssql
+  namespace: "{{ mssql_project_name }}"
+  labels:
+    app: mssql
+spec:
+  serviceName: mssql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mssql
+  template:
+    metadata:
+      labels:
+        app: mssql
+    spec:
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        fsGroup: 10001
+      containers:
+        - name: mssql
+          image: "{{ mssql_image }}"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 1024Mi
+            limits:
+              cpu: 1000m
+              memory: 2048Mi
+          startupProbe:
+            tcpSocket:
+              port: 1433
+            timeoutSeconds: 1
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+          ports:
+            - name: db
+              containerPort: 1433
+          env:
+            - name: MSSQL_PID
+              value: "Developer"
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mssql
+                  key: SA_PASSWORD
+          volumeMounts:
+            - name: mssql-data
+              mountPath: /var/opt/mssql
+      serviceAccountName: mssql
+  volumeClaimTemplates:
+    - kind: PersistentVolumeClaim
+      apiVersion: v1
+      metadata:
+        name: mssql-data
+        labels:
+          app: mssql
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: "{{ mssql_storage_class_name }}"
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem

@@ -1,4 +1,4 @@
-- name: Wait for Authentication Ready state 
+- name: Wait for Authentication Ready state
   kubernetes.core.k8s_info:
     api_version: operator.ibm.com/v1alpha1
     kind: Authentication
@@ -23,8 +23,10 @@
   delay: 30
 
 - name: Update cpfs admin password
+  when: cpfs_admin_secret | json_query(condition_query) | b64decode != cp4ba_universal_password
+  vars:
+    condition_query: 'resources[0].data.admin_password'
   block:
-
     # Based on https://www.ibm.com/docs/en/cpfs?topic=configurations-changing-cluster-administrator-access-credentials#pwd
     # cloudctl command replaced with actual Secret and Pod restarts because per
     # https://www.ibm.com/docs/en/cloud-paks/cp-integration/2020.3?topic=SSGT7J_20.3/cloudctl/3.x.x/cli_pm_commands.html#update-secret
@@ -83,7 +85,3 @@
         common_condition_name: Available
         common_retries: 80
         common_delay: 15
-
-  when: cpfs_admin_secret | json_query(condition_query) | b64decode != cp4ba_universal_password
-  vars:
-    condition_query: 'resources[0].data.admin_password'
