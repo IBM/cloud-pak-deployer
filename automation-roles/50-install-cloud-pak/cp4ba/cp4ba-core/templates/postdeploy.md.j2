@@ -109,43 +109,26 @@ After you have some rule project ready, configure it to emit BAI events using ht
 
 ### Rule designer in eclipse
 
-Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-installing-rule-designer
-
-Download Eclipse IDE 2020-06 R (4.16) Modeling Tools Packages from https://archive.eclipse.org/technology/epp/downloads/release/2020-06/R/eclipse-modeling-2020-06-R-win32-x86_64.zip
-Follow this topic https://github.com/DecisionsDev/ruledesigner/tree/master#installation in GitHub.  
-
-Note: You may face JAXB exceptions when connecting to ODM. Using JDK8 resolve this error.  
-In you eclise.ini before -vmargs the following
-```text
--vm 
-<path_to_jdk>\bin\javaw.exe
-```
+Follow https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-installing-rule-designer
 
 ### Rule designer Zen connection
 
-Based on https://www.ibm.com/docs/en/odm/latest?topic=parties-configuring-rule-designer  
-Download truststore.jks from https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/truststore.jks and copy the file to your eclipse directory.  
-
-Based on https://www.ibm.com/docs/en/odm/latest?topic=designer-passing-parameters-rule
-Add the following to eclipse.ini
-```text
--Djavax.net.ssl.trustStore=truststore.jks
-```
+Follow https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-importing-security-certificate-in-rule-designer  
+The truststore.jks can be downloaded from https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/truststore.jks  
 
 Please note that after using this trust store, eclipse marketplace and updates might stop to work. To overcome this, you can to extract the certificates from downloaded truststore.jks, make a copy of java cacerts, import the extracted certificates into it and use the newly created cacerts.
-
 
 When configuring RES connection in Deployment use  
 URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res  
 Method: Zen API Key  
-UserID: "{{ lc_principal_admin_user }}"  
-API Key: As generated following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=users-generating-api-keys-authentication
+UserID: cpadminservice  
+API Key: As found in Project cloud-pak-deployer, ConfigMap {{ cp4ba_project_name }}-usage, key zen-api-key
 
 When configuring Decision Center use  
 URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter  
 Authentication: Zen API Key  
-User ID: "{{ lc_principal_admin_user }}"  
-API Key: As generated following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=users-generating-api-keys-authentication
+User ID: cpadminservice  
+API Key: As found in Project cloud-pak-deployer, ConfigMap {{ cp4ba_project_name }}-usage, key zen-api-key
 
 ## Automation Decision Services (ADS) (decisions_ads pattern)
 
