@@ -58,6 +58,18 @@
   loop_control:
     loop_var: _machine_set_name
 
+- name: Label storage nodes as infra nodes so they are not used for customer workload
+  shell: |
+    oc label nodes \
+      $(oc get machine -n openshift-machine-api -l machine.openshift.io/cluster-api-machineset={{ _machine_set_name }} -o jsonpath='{.items[0].metadata.name}') \
+      node-role.kubernetes.io/infra="" --overwrite
+  with_items:
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}1"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}2"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}3"
+  loop_control:
+    loop_var: _machine_set_name    
+
 - name: Install ODF operator
   include_role: 
     name: odf-operator

@@ -1,10 +1,10 @@
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: mailserver.config
-  namespace: mail
+  name: mail-config
+  namespace: "{{ mail_project_name }}"
   labels:
-    app: mailserver
+    app: mail
 data:
   postfix-accounts.cf: |
     {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}|{PLAIN}{{mail_universal_password}}
@@ -30,15 +30,14 @@ data:
 
   postfix-main.cf: |
     smtpd_recipient_restrictions = permit_sasl_authenticated,permit_mynetworks
-
 ---
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: mailserver.env.config
-  namespace: mail
+  name: mail-env-config
+  namespace: "{{ mail_project_name }}"
   labels:
-    app: mailserver
+    app: mail
 data:
   # Cannot be set to cp.internal, otherwise postfix is eating mails, some details at https://github.com/docker-mailserver/docker-mailserver/issues/968
   OVERRIDE_HOSTNAME: relay.local

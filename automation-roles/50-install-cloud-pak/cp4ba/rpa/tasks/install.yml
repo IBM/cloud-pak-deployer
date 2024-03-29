@@ -16,8 +16,6 @@
 - name: Add CatalogSource
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ rpa_output_directory }}/catalogsource.yaml"
     wait: true
     wait_sleep: 15
@@ -47,8 +45,6 @@
 - name: Add the MQ Operator Subscription
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ rpa_output_directory }}/mq-subscription.yaml"
     wait: true
     wait_sleep: 15
@@ -71,8 +67,6 @@
 - name: Add the Operator Subscription
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ rpa_output_directory }}/subscription.yaml"
     wait: true
     wait_sleep: 15
@@ -126,8 +120,6 @@
 - name: Add Secrets
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ rpa_output_directory }}/secrets.yaml"
     wait: true
     wait_sleep: 15
@@ -139,8 +131,8 @@
 
 - name: Merge customizations
   ansible.builtin.set_fact:
-    cr: "{{ cr | combine(current_cp4ba_cluster.rpa.cr_custom | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.rpa.cr_custom is defined
+    cr: "{{ cr | combine(_current_cp4ba_cluster.rpa.cr_custom | from_yaml, recursive=true) }}"
+  when: _current_cp4ba_cluster.rpa.cr_custom is defined
 
 - name: Write CR to file
   ansible.builtin.copy:
@@ -359,8 +351,6 @@
 - name: Add post-deploy.md Config Map
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ rpa_output_directory }}/postdeploy-configmap.yaml"
     wait: true
     wait_sleep: 15

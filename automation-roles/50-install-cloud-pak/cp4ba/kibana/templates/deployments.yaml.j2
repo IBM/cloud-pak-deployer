@@ -1,0 +1,79 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kibana
+  namespace: "{{ kibana_project_name }}"
+  labels:
+    app: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    restartPolicy: Always
+    spec:
+      containers:
+        - name: kibana
+          image: "{{ kibana_image }}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1536Mi
+          startupProbe:
+            httpGet:
+              path: /app/kibana
+              port: 5601
+              scheme: HTTP
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ (kibana_admin_user + ':' + kibana_universal_password) | b64encode }}"
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /app/kibana
+              port: 5601
+              scheme: HTTP
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ (kibana_admin_user + ':' + kibana_universal_password) | b64encode }}"
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          livenessProbe:
+            httpGet:
+              path: /app/kibana
+              port: 5601
+              scheme: HTTP
+              httpHeaders:
+                - name: Authorization
+                  value: "Basic {{ (kibana_admin_user + ':' + kibana_universal_password) | b64encode }}"
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: 'https://iaf-system-elasticsearch-es.{{ kibana_cp4ba_project_name }}.svc.cluster.local:9200'
+            - name: ELASTICSEARCH_USERNAME
+              value: '{{ kibana_elasticsearch_admin_user }}'
+            - name: ELASTICSEARCH_PASSWORD
+              value: '{{ kibana_elasticsearch_universal_password }}'
+            - name: ELASTICSEARCH_SSL_VERIFICATIONMODE
+              value: 'none'
+            - name: LOGGING_VERBOSE
+              value: 'true'
+          ports:
+            - name: kibana-ui
+              containerPort: 5601
+              protocol: TCP

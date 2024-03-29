@@ -9,7 +9,7 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: gitea
+    common_namespace_name: "{{ gitea_project_name }}"
     common_output_directory: "{{ gitea_output_directory }}"
 
 - name: Get OCP Apps Endpoint
@@ -20,53 +20,44 @@
     common_output_to_var: "apps_endpoint_domain"
   when: apps_endpoint_domain is not defined
 
-- name: Add gitea chart repo
-  kubernetes.core.helm_repository:
-    name: gitea-charts
-    repo_url: "https://dl.gitea.io/charts/"
-
-- name: Prepare yaml file for values of helm chart
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: values.yaml.j2
-    dest: "{{ gitea_output_directory }}/values.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ gitea_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - secrets
+    - persistentvolumeclaims
+    - deployments
+    - services
 
-- name: Deploy gitea chart using values files on target
-  kubernetes.core.helm:
-    name: gitea
-    chart_ref: gitea-charts/gitea
-    chart_version: "{{ gitea_chart_version }}"
-    release_namespace: gitea
-    values_files:
-      - "{{ gitea_output_directory }}/values.yaml"
+- name: Add {{ item.name }}
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ gitea_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Crete Edge Route
   ansible.builtin.include_role:
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: gitea
-    common_route_name: gitea
-    common_service_name: gitea-http
+    common_namespace_name: "{{ gitea_project_name }}"
+    common_route_name: "gitea-{{ gitea_project_name }}"
+    common_service_name: gitea
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ gitea_output_directory }}"
 
-- name: Wait for gitea pod to be ready
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Pod
-    common_resource_name: gitea-0
-    common_resource_namespace: gitea
-    common_condition_name: Ready
-    common_retries: 80
-    common_delay: 15
-
 - name: Sync LDAP Users
   ansible.builtin.uri:
-    url: "https://gitea.{{ apps_endpoint_domain }}/api/v1/admin/cron/sync_external_users"
+    url: "https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}/api/v1/admin/cron/sync_external_users"
     method: POST
     headers:
       Accept: application/json
