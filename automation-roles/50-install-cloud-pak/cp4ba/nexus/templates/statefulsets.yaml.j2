@@ -1,4 +1,4 @@
-kind: Deployment
+kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   name: nexus
@@ -6,6 +6,7 @@ metadata:
   labels:
     app: nexus
 spec:
+  serviceName: nexus
   replicas: 1
   selector:
     matchLabels:
@@ -15,12 +16,6 @@ spec:
       labels:
         app: nexus
     spec:
-      volumes:
-        - name: nexus-data
-          persistentVolumeClaim:
-            claimName: nexus-data
-        - name: nexus-backup
-          emptyDir: {}
       containers:
         - name: nexus
           image: "{{ nexus_image }}"
@@ -85,3 +80,21 @@ spec:
               mountPath: /nexus-data/backup
       restartPolicy: Always
       terminationGracePeriodSeconds: 120
+      volumes:
+        - name: nexus-backup
+          emptyDir: {}
+  volumeClaimTemplates:
+    - kind: PersistentVolumeClaim
+      apiVersion: v1
+      metadata:
+        name: nexus-data
+        labels:
+          app: nexus
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: "{{ nexus_storage_class_name }}"
+        resources:
+          requests:
+            storage: 8Gi
+        volumeMode: Filesystem          
