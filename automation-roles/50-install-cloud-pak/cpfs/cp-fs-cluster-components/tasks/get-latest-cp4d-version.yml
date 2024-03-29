@@ -1,0 +1,18 @@
+---
+- name: Get all release files in directory /opt/ansible/ansible-play/config-vars
+  find:
+    paths: /opt/ansible/ansible-play/config-vars
+    recurse: False
+    patterns: "release*.yml"
+  register: _cp4d_release_files
+
+- debug:
+    var: _cp4d_release_files
+
+- name: Show latest release
+  debug:
+    msg: "Last file: {{ _cp4d_release_files.files | last | default({}) }}"
+
+- name: Extract release from {{ (_cp4d_release_files.files | last).path }} file
+  set_fact:
+    _p_cp4d_version: "{{ (_cp4d_release_files.files | last).path | regex_search('([0-9].[0-9]+.[0-9]+)','\\1') | first }}"
