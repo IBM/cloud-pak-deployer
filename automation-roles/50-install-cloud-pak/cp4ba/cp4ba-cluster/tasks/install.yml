@@ -4,7 +4,7 @@
     tasks_from: create-project
   vars:
     common_namespace_name: cloud-pak-deployer
-    common_output_directory: "{{ status_dir }}/cp4ba"
+    common_output_directory: "{{ generic_directory }}"
 
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
@@ -59,23 +59,28 @@
 - name: Install cloudbeaver
   ansible.builtin.include_role:
     name: cloudbeaver
-  when: (postgresql_enabled or mssql_enabled) and current_cp4ba_cluster.cloudbeaver_enabled
+  when: (postgresql_enabled or mssql_enabled) and _current_cp4ba_cluster.cloudbeaver_enabled
 
 - name: Install Roundcube
   ansible.builtin.include_role:
     name: roundcube
-  when: mail_enabled and current_cp4ba_cluster.roundcube_enabled
+  when: mail_enabled and _current_cp4ba_cluster.roundcube_enabled
 
 - name: Install Cerebro
   ansible.builtin.include_role:
     name: cerebro
-  when: current_cp4ba_cluster.cp4ba.enabled and (current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
-    current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and current_cp4ba_cluster.cerebro_enabled
+  when: _current_cp4ba_cluster.cp4ba.enabled and (_current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and _current_cp4ba_cluster.cerebro_enabled
 
 - name: Install Mongo Express
   ansible.builtin.include_role:
     name: mongo_express
-  when: mongodb_enabled and current_cp4ba_cluster.mongo_express_enabled
+  when: mongodb_enabled and _current_cp4ba_cluster.mongo_express_enabled
+
+- name: Install phpLDAPadmin
+  ansible.builtin.include_role:
+    name: phpldapadmin
+  when: openldap_enabled and _current_cp4ba_cluster.phpldapadmin_enabled
 
 - name: Install CPFS
   ansible.builtin.include_role:
@@ -84,25 +89,25 @@
 - name: Install CP4BA
   ansible.builtin.include_role:
     name: cp4ba-core
-  when: current_cp4ba_cluster.cp4ba.enabled
+  when: _current_cp4ba_cluster.cp4ba.enabled
 
 - name: Install AKHQ
   ansible.builtin.include_role:
     name: akhq
-  when: current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai and current_cp4ba_cluster.akhq_enabled
+  when: _current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai and
+    _current_cp4ba_cluster.akhq_enabled
 
-# TODO enable when CPFS dependency is fixed
-# - name: Install MSSQL
-#   ansible.builtin.include_role:
-#     name: mssql
-#   when: mssql_enabled
+- name: Install MSSQL
+  ansible.builtin.include_role:
+    name: mssql
+  when: mssql_enabled
 
 # - name: Install RPA
 #   ansible.builtin.include_role:
 #     name: rpa
-#   when: current_cp4ba_cluster.rpa.enabled
+#   when: _current_cp4ba_cluster.rpa.enabled
 
-- name: Install PM
-  ansible.builtin.include_role:
-    name: pm
-  when: current_cp4ba_cluster.pm.enabled
+# - name: Install PM
+#   ansible.builtin.include_role:
+#     name: pm
+#   when: _current_cp4ba_cluster.pm.enabled

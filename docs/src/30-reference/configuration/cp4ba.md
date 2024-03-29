@@ -1,8 +1,9 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 23.0.2.  
-Contains IPM version 1.14.3.
-Currently RPA is not available due to CPFS incompatibility.
+Contains CP4BA version 23.0.2 iFix 2.  
+RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
+~~Contains IPM version 1.14.3.~~
+~~Contains RPA version 23.0.14.~~
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -11,8 +12,8 @@ Currently RPA is not available due to CPFS incompatibility.
 - [What is in the package 📦](#what-is-in-the-package-)
 - [Environments used for installation 💻](#environments-used-for-installation-)
 - [Automated post-deployment tasks ✅](#automated-post-deployment-tasks-)
-- [Post installation steps ➡️](#post-installation-steps-️)
 - [Usage \& operations 📇](#usage--operations-)
+- [Optional post deployment steps ➡️](#optional-post-deployment-steps-️)
 
 ## Disclaimer ✋
 
@@ -81,7 +82,7 @@ Contains extra software which makes working with the platform even easier.
 - Kibana - Web UI elastic search dashboard tool automatically connected to ES instance deployed with CP4BA.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
 - Mongo Express - Web UI for Mongo DB databases for CP4BA and Process Mining to easier troubleshoot DB.
-- CloudBeaver - Web UI for Postgresql, MSSQL and DB2 databases making it easier to admin and troubleshoot the DBs.
+- CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
 
 ### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
 
@@ -122,11 +123,10 @@ Contains prerequisites for the whole platform.
 - OpenLDAP - Directory solution for users and groups definition.
 - MSSQL server - Database storage for RPA server.
 - MongoDB - Database storage for ADS and Process Mining.
-- DB2 - Database storage for Task Mining.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.10.46+ with Worker Nodes which in total have (104 CPU, 256GB Memory).
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.12 with Worker Nodes which in total have (60 CPU, 128GB Memory).
 
 ## Automated post-deployment tasks ✅
 
@@ -156,17 +156,17 @@ For your convenience the following post-deployment setup tasks have been automat
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 
-## Post installation steps ➡️
-
-CP4BA  
-Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. 
-
-RPA  
-Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
-Process Mining  
-Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
-
 ## Usage & operations 📇
 
-Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
+Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+## Optional post deployment steps ➡️
+
+CP4BA  
+Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+RPA  
+Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+Process Mining  
+Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.

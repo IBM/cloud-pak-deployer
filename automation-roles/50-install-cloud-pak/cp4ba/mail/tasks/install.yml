@@ -9,31 +9,15 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: mail
+    common_namespace_name: "{{ mail_project_name }}"
     common_output_directory: "{{ mail_output_directory }}"
 
-- name: Prepare yaml file for privileged RoleBinding
-  ansible.builtin.template:
-    src: privileged-scc-rolebinding.yaml.j2
-    dest: "{{ mail_output_directory }}/privileged-scc-rolebinding.yaml"
-    mode: u+rwx
-
-- name: Add privileged RoleBinding
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mail_output_directory }}/privileged-scc-rolebinding.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
 - name: Generate an OpenSSL private key
-  openssl_privatekey:
+  community.crypto.openssl_privatekey:
     path: "{{ mail_output_directory }}/mailserver.key"
 
 - name: Generate an OpenSSL Certificate Signing Request with Subject information
-  openssl_csr:
+  community.crypto.openssl_csr:
     path: "{{ mail_output_directory }}/mailserver.csr"
     privatekey_path: "{{ mail_output_directory }}/mailserver.key"
     subject: "CN=mailserver"
@@ -55,7 +39,7 @@
   when: not mail_ca_key_file.stat.exists or not mail_ca_crt_file.stat.exists
 
 - name: Generate a Self Signed OpenSSL certificate
-  openssl_certificate:
+  community.crypto.x509_certificate:
     path: "{{ mail_output_directory }}/mailserver.crt"
     privatekey_path: "{{ mail_output_directory }}/mailserver.key"
     csr_path: "{{ mail_output_directory }}/mailserver.csr"
@@ -82,82 +66,32 @@
   ansible.builtin.set_fact:
     _tls_crt: "{{ slurped_crt_data.content }}"
 
-- name: Prepare yaml file for Secret
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: secret.yaml.j2
-    dest: "{{ mail_output_directory }}/secret.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ mail_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - serviceaccounts
+    - rolebindings
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - deployments
+    - services
 
-- name: Add Secret
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ mail_output_directory }}/secret.yaml"
+    src: "{{ mail_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for PVC
-  ansible.builtin.template:
-    src: pvc.yaml.j2
-    dest: "{{ mail_output_directory }}/pvc.yaml"
-    mode: u+rwx
-
-- name: Add PVC
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mail_output_directory }}/pvc.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Config Maps
-  ansible.builtin.template:
-    src: configmaps.yaml.j2
-    dest: "{{ mail_output_directory }}/configmaps.yaml"
-    mode: u+rwx
-
-- name: Add Config Maps
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mail_output_directory }}/configmaps.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
-
-- name: Prepare yaml file for Deployment
-  ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ mail_output_directory }}/deployment.yaml"
-    mode: u+rwx
-
-- name: Add Deployment
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mail_output_directory }}/deployment.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ mail_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mail_output_directory }}/service.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: serviceaccounts, wait_sleep: 15, wait_timeout: 15}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}

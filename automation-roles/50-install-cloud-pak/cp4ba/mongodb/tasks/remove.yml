@@ -1,20 +1,48 @@
-- name: Remove Project mongodb
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ mongodb_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ mongodb_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - statefulsets
+    - services
+
+- name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
-    name: mongodb
-    namespace: mongodb
+    src: "{{ mongodb_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+
+- name: Remove PersistentVolumeClaims
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    label_selectors:
+      - app = mongodb
+    namespace: "{{ mongodb_project_name }}"
     wait: true
     wait_sleep: 15
     wait_timeout: 120
 
-- name: Remove CRB mongodb-anyuid
-  kubernetes.core.k8s:
-    state: absent
-    api_version: rbac.authorization.k8s.io/v1
-    kind: ClusterRoleBinding
-    name: mongodb-anyuid
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ mongodb_project_name }}"

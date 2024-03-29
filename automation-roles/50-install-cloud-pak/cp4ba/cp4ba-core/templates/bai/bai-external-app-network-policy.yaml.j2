@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: "{{ cp4ba_cr_meta_name }}-cp4a-egress-external-app-bai"
+  namespace: "{{ cp4ba_project_name }}"
+spec:
+  podSelector:
+    matchLabels:
+      com.ibm.cp4a.networking/egress-external-app-component: BAI
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - podSelector: {}
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: "{{ cp4ba_kibana_project }}"
