@@ -1,0 +1,60 @@
+---
+- set_fact:
+    _app_connect: "{{ _current_cp4d_cartridge.app_connect }}"
+
+- name: Download IBM App Connect case file version {{ _app_connect.app_connect_case_version }}
+  get_url:
+    url: "https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-appconnect/{{ _app_connect.app_connect_case_version }}/ibm-appconnect-{{ _app_connect.app_connect_case_version }}.tgz"
+    dest: "{{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz"
+    owner: root
+    mode: 0644
+  register: _case_download_result
+  until: _case_download_result is succeeded
+  retries: 5
+  delay: 30
+
+- name: Unpack IBM App Connect case file {{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz
+  unarchive:
+    src: "{{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz"
+    dest: "{{ status_dir }}/cp4d/"
+
+- name: Create IBM App Connect catalog source
+  shell: |
+    oc patch --filename={{ status_dir }}/cp4d/ibm-appconnect/inventory/ibmAppconnect/files/op-olm/catalog_source.yaml \
+      --type=merge \
+      -o yaml \
+      --patch='{"metadata": {"namespace": "{{ _app_connect.app_connect_project }}"}}' \
+      --dry-run=client | oc apply -n {{ _app_connect.app_connect_project }} -f -
+
+- name: Generate yaml for IBM App Connect operator
+  template:
+    src: ibm-app-connect.j2
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml"
+
+- name: Create IBM App Connect operator
+  shell: |
+    oc apply -f {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml
+
+- name: Wait for IBM App Connect operator to be installed
+  shell: |
+    oc wait csv --namespace={{ _app_connect.app_connect_project }} \
+    --labels=operators.coreos.com/ibm-appconnect.{{ _app_connect.app_connect_project }}='' \
+    --for='jsonpath={.status.phase}'=Succeeded
+
+- name: Create IBM App Connect instance for watsonx watsonx.orchestrate
+  shell: |
+    setup-appconnect \
+      --appconnect_ns={{ _app_connect.app_connect_project }} \
+      --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
+      --release={{ _p_current_cp4d_cluster.cp4d_version }} \
+      --components=watsonx_orchestrate \
+      --file_storage_class={{ ocp_storage_class_block }}
+
+- name: Setup watsonx Assistant instances for watsonx watsonx.orchestrate
+  shell: |
+    setup-wxo-assistant \
+      --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
+      --create_assistants=true \
+      --user=${CPD_USERNAME} \
+      --password= \
+      --auth_type=password
