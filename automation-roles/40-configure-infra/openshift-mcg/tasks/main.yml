@@ -4,45 +4,46 @@
     that:
       - _p_openshift_cluster is defined
 
-- block:
-  - name: Install ODF operator
-    include_role: 
-      name: odf-operator
+- name: Check if StorageCluster ocs-storagecluster already exists
+  shell:
+    oc get StorageCluster ocs-storagecluster -n openshift-storage
+  failed_when: false
+  register: _get_storage_cluster
 
+- block:
   - name: Check if specified storage class {{ _p_openshift_cluster.mcg.storage_class }} exists
     shell: |
       oc get sc {{ _p_openshift_cluster.mcg.storage_class }}
     when:  _p_openshift_cluster.mcg.storage_type == 'storage-class'
-  
-  - name: Check if StorageCluster ocs-storagecluster already exists
-    shell:
-      oc get StorageCluster ocs-storagecluster -n openshift-storage
-    failed_when: false
-    register: _get_storage_cluster
 
-  - block:
-    - name: Generate MCG StorageCluster ocs-storagecluster into {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
-      template:
-        src: openshift-mcg-storagecluster.j2
-        dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
+  - name: Install ODF operator
+    include_role: 
+      name: odf-operator
 
-    - name: Apply yaml for MCG StorageCluster ocs-storagecluster
-      shell: |
-        oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
+  - name: Generate MCG StorageCluster ocs-storagecluster into {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
+    template:
+      src: openshift-mcg-storagecluster.j2
+      dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
 
-    - name: Wait until MCG StorageCluster has status Ready
-      shell: |
-        oc get StorageCluster ocs-storagecluster -n openshift-storage \
-        --no-headers \
-        -o custom-columns='phase:status.phase'
-      register: _storage_cluster_status
-      retries: 60
-      delay: 30
-      until: _storage_cluster_status.stdout == "Ready"
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  - name: Apply yaml for MCG StorageCluster ocs-storagecluster
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
 
-  when: _p_openshift_cluster.mcg.install | default(False) | bool
+  - name: Wait until MCG StorageCluster has status Ready
+    shell: |
+      oc get StorageCluster ocs-storagecluster -n openshift-storage \
+      --no-headers \
+      -o custom-columns='phase:status.phase'
+    register: _storage_cluster_status
+    retries: 60
+    delay: 30
+    until: _storage_cluster_status.stdout == "Ready"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+  when: 
+  - _p_openshift_cluster.mcg.install | default(False) | bool
+  - _get_storage_cluster.rc != 0
