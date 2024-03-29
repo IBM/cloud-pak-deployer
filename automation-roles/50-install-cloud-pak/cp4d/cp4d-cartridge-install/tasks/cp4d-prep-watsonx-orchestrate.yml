@@ -18,6 +18,10 @@
     src: "{{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz"
     dest: "{{ status_dir }}/cp4d/"
 
+- name: Create OpenShift Project {{ _app_connect.app_connect_project }}
+  shell: 
+    oc new-project {{ _app_connect.app_connect_project }} || true
+
 - name: Create IBM App Connect catalog source
   shell: |
     oc patch --filename={{ status_dir }}/cp4d/ibm-appconnect/inventory/ibmAppconnect/files/op-olm/catalog_source.yaml \
