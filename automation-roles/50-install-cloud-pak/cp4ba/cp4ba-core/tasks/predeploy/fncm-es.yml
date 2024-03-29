@@ -1,6 +1,6 @@
 - name: Create Google TLS secret
+  when: cp4ba_external_share_google | bool
   block:
-
     # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-configuring-identity-provider-connection point 4.
     - name: Prepare yaml file for FNCM IDP Secret
       ansible.builtin.template:
@@ -11,13 +11,12 @@
     - name: Add FNCM IDP Secret
       kubernetes.core.k8s:
         state: present
-        force: false
-        merge_type: merge
         src: "{{ cp4ba_output_directory }}/fncm-google-idp-secret.yaml"
 
     - name: Get the cert from an RDP port
       community.crypto.get_certificate:
-            port: 443
+        port: 443
+        host: ""
       run_once: true
       register: cert
 
@@ -34,8 +33,4 @@
     - name: Add FNCM Google TLS Secret
       kubernetes.core.k8s:
         state: present
-        force: false
-        merge_type: merge
         src: "{{ cp4ba_output_directory }}/fncm-google-tls-secret.yaml"
-
-  when: cp4ba_external_share_google | bool

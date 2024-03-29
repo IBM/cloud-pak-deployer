@@ -5,33 +5,26 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
 
 - name: AAE Data persistence DB prepare tablespace
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/aeos
+    command: mkdir -p /bitnami/postgresql/tablespaces/aeos
   register: command_status
-  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
-
-- name: AAE Data persistence DB prepare tablespace permissions
-  kubernetes.core.k8s_exec:
-    namespace: postgresql
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/aeos
-  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
 - name: AAE Data persistence DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user aeos
         CREATE ROLE aeos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -42,7 +35,7 @@
         grant connect, temp, create on database aeos to aeos;
 
         -- please modify location follow your requirement
-        create tablespace aeos_tbs owner aeos location '/pgsqldata/aeos';
+        create tablespace aeos_tbs owner aeos location '/bitnami/postgresql/tablespaces/aeos';
         grant create on tablespace aeos_tbs to aeos;
       EOF"
   register: command_status

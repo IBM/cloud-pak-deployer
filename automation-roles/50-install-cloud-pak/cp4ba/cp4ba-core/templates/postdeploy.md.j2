@@ -109,43 +109,26 @@ After you have some rule project ready, configure it to emit BAI events using ht
 
 ### Rule designer in eclipse
 
-Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-installing-rule-designer
-
-Download Eclipse IDE 2020-06 R (4.16) Modeling Tools Packages from https://archive.eclipse.org/technology/epp/downloads/release/2020-06/R/eclipse-modeling-2020-06-R-win32-x86_64.zip
-Follow this topic https://github.com/DecisionsDev/ruledesigner/tree/master#installation in GitHub.  
-
-Note: You may face JAXB exceptions when connecting to ODM. Using JDK8 resolve this error.  
-In you eclise.ini before -vmargs the following
-```text
--vm 
-<path_to_jdk>\bin\javaw.exe
-```
+Follow https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-installing-rule-designer
 
 ### Rule designer Zen connection
 
-Based on https://www.ibm.com/docs/en/odm/latest?topic=parties-configuring-rule-designer  
-Download truststore.jks from https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/truststore.jks and copy the file to your eclipse directory.  
-
-Based on https://www.ibm.com/docs/en/odm/latest?topic=designer-passing-parameters-rule
-Add the following to eclipse.ini
-```text
--Djavax.net.ssl.trustStore=truststore.jks
-```
+Follow https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-importing-security-certificate-in-rule-designer  
+The truststore.jks can be downloaded from https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/truststore.jks  
 
 Please note that after using this trust store, eclipse marketplace and updates might stop to work. To overcome this, you can to extract the certificates from downloaded truststore.jks, make a copy of java cacerts, import the extracted certificates into it and use the newly created cacerts.
-
 
 When configuring RES connection in Deployment use  
 URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res  
 Method: Zen API Key  
-UserID: "{{ lc_principal_admin_user }}"  
-API Key: As generated following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=users-generating-api-keys-authentication
+UserID: cpadminservice  
+API Key: As found in Project cloud-pak-deployer, ConfigMap {{ cp4ba_project_name }}-usage, key zen-api-key
 
 When configuring Decision Center use  
 URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter  
 Authentication: Zen API Key  
-User ID: "{{ lc_principal_admin_user }}"  
-API Key: As generated following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=users-generating-api-keys-authentication
+User ID: cpadminservice  
+API Key: As found in Project cloud-pak-deployer, ConfigMap {{ cp4ba_project_name }}-usage, key zen-api-key
 
 ## Automation Decision Services (ADS) (decisions_ads pattern)
 
@@ -156,7 +139,7 @@ Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=t
 ADS is set up to create repositories for Projects automatically. If you need to switch to specifically named repo, you can use the following procedure.  
 Create Repository. Change *name* in the payload to correspond to your project name.
 ```bash
-curl --insecure --request POST "https://gitea.{{ apps_endpoint_domain }}/api/v1/orgs/ads/repos" \
+curl --insecure --request POST "https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}/api/v1/orgs/ads/repos" \
 --header  "Content-Type: application/json" \
 --user '{{ lc_principal_admin_user }}:{{ lc_principal_admin_password }}' \
 --data-raw '
@@ -179,7 +162,7 @@ curl --insecure --request POST "https://gitea.{{ apps_endpoint_domain }}/api/v1/
 Open your ADS Sandbox project  
 On the top right, click Connect  
 
-Repository URI: https://gitea.{{ apps_endpoint_domain }}/ads/sandbox.git  (adjust *sandbox*)  
+Repository URI: https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}/ads/sandbox.git  (adjust *sandbox*)  
 Username: {{ lc_principal_admin_user }}  
 Password: {{ lc_principal_admin_password }}  
 Click Connect
@@ -190,7 +173,7 @@ To find out how to create and add External libraries to ADS, follow https://gith
 
 To be able to follow the above guide from my environment, I needed to perform the following.
 
-Add settings for Nexus in my local maven settings .m2\settings.xml (Available in Project *cloud-pak-deployer*, in ConfigMap *cp4ba-nexus-maven-settings* in *settings.xml* file)  
+Add settings for Nexus in my local maven settings .m2\settings.xml (Available in Project *cloud-pak-deployer*, in ConfigMap *{{ _current_cp4ba_cluster.project }}-nexus-maven-settings* in *settings.xml* file)  
 
 
 Installed JDK 16 Oracle, added to path.

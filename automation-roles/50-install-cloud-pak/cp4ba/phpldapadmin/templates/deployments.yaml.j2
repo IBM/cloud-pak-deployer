@@ -1,0 +1,64 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: phpldapadmin
+  namespace: "{{ phpldapadmin_project_name }}"
+  labels:
+    app: phpldapadmin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: phpldapadmin
+  template:
+    metadata:
+      labels:
+        app: phpldapadmin
+    spec:
+      containers:
+        - name: phpldapadmin
+          image: "{{ phpldapadmin_image }}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+              scheme: HTTP
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: phpldapadmin
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      serviceAccountName: phpldapadmin      
