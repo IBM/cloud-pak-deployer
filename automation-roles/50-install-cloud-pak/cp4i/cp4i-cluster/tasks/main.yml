@@ -1,9 +1,10 @@
 ---
 
-# INPUT VARIABLES:
-# The following variables are prepared in roles 10 and 20:
+# INPUT PARAMETERS
 #
-# all_config          : loaded all configuration yamls
+# all_config            : loaded all configuration yamls
+# current_cp4i_cluster  : currently selected cluster from configuration
+#
 # status_dir          : from environment variable STATUS_DIR
 # cloud_platform
 #
@@ -15,7 +16,6 @@
 # vault with the entitlement key or private registry credentials
 
 
-
 - debug:
     msg: "Handling CP4I cluster {{ current_cp4i_cluster.project }}"
 
@@ -23,60 +23,49 @@
 # Check if license is accepted and fail if it is not
 #
 
-- set_fact:
-    _cpd_accept_licenses: "False"
+- name: Check if license is accepted and fail if it is not
+  block:    
+  - set_fact:
+      _cpd_accept_licenses: "False"
 
-- set_fact:
-    _cpd_accept_licenses: "True"
-  when: (cpd_accept_licenses | default(False) | bool) or (current_cp4i_cluster.accept_licenses | default(False) | bool)
+  - set_fact:
+      _cpd_accept_licenses: "True"
+    when: (cpd_accept_licenses | default(False) | bool) or (current_cp4i_cluster.accept_licenses | default(False) | bool)
 
-- name: Fail if licenses were not accepted
-  fail:
-    msg: "You must accept the licenses, either in the cp4i object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
-  when: 
-  - not (cpd_accept_licenses | default(False) | bool)
-  - not (current_cp4i_cluster.accept_licenses | default(False) | bool)
+  - name: Fail if licenses were not accepted
+    fail:
+      msg: "You must accept the licenses, either in the cp4i object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
+    when: not _cpd_accept_licenses
 
 # 
 # Check which registry is used. Entitled or private?
 #
+# --> _use_entitled_registry
 
 - name: Check if Entitled or private registry is used
-  set_fact:
-    _use_entitled_registry: False
-
-- set_fact:
-    _use_entitled_registry: True
-  when:
-  - (current_cp4i_cluster.image_registry_name | default("")) == ""
-
-- debug:
-    msg: "Using Entitled registry"
-  when: (_use_entitled_registry | bool)
-
-- debug:
-    msg: "Using private registry"
-  when: not (_use_entitled_registry | bool)
-
-#
-# If private registry is used, check if {{ status_dir }}/ibm-pak exists
-#
-
-- name: "If private registry is used, check if {{ status_dir }}/ibm-pak exists"
   block:
-  - stat:
-      path: "{{ status_dir }}/ibm-pak"
-    register: _ibm_pak_dir
-  - fail:
-      msg: "Directory {{ status_dir }}/ibm-pak needed for private registry does not exist"
-    when: _ibm_pak_dir.stat.exists==false
-  when: not (_use_entitled_registry | bool)
+  - set_fact:
+      _use_entitled_registry: False
+
+  - set_fact:
+      _use_entitled_registry: True
+    when:
+    - (current_cp4i_cluster.image_registry_name | default("")) == ""
+
+  - debug:
+      msg: "Using Entitled registry"
+    when: (_use_entitled_registry | bool)
+
+  - debug:
+      msg: "Using private registry"
+    when: not (_use_entitled_registry | bool)
 
 #
 # If Entitled registry is used obtain its key from vault
 # and prepare authentication credentials.
 # Fail if the key does not exist in the vault
 #
+# --> _entitled_reg_auth
 
 - name: Obtain Entitled registry key and prepare authentication credentials
   block:
@@ -100,9 +89,12 @@
 
   when: (_use_entitled_registry | bool)   
 
-
+#
 # If private registry is used obtain its authentication credentials
 # from the vault. Fail if they don't exist
+#
+# --> _private_reg_auth
+#     _private_reg_url
 
 - name: Obtain private registry authentication credentials
   block:
@@ -147,19 +139,20 @@
 
   when: not (_use_entitled_registry | bool)
 
-
 #
-# Detect current openshift cluster from config
+# Detect current openshift cluster from config (!!env_id)
 #
+# --> _current_openshift_cluster
 
-- set_fact:
+- name: Detect current openshift cluster from config
+  set_fact:
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?name=='{{ current_cp4i_cluster.openshift_cluster_name }}']
 
 #
-# Download OpenShift client for current version
+# Download OpenShift client for current version  
 #
 
 - name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
@@ -167,7 +160,6 @@
     name: openshift-download-client
   vars:
     _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
-
 
 # If airgapped installation defined mirror from portable to private registry
 
@@ -256,7 +248,7 @@
   when: (cpd_airgap | bool)
 
 #
-# Login to OpenShift cluster
+# Login to OpenShift cluster (!!env_id)
 #
 
 - name: Login to the OpenShift cluster
@@ -270,13 +262,16 @@
 #
 
 - name: Reset CP4I directory for generated files
-  file:
-    path: "{{ status_dir }}/cp4i"
-    state: absent
+  block:
 
-- file:
-    path: "{{ status_dir }}/cp4i"
-    state: directory
+  - file:
+      path: "{{ status_dir }}/cp4i"
+      state: absent
+
+  - name: Create directory status/cp4i
+    file:
+      path: "{{ status_dir }}/cp4i"
+      state: directory
 
 #
 # Prepare OpenShift cluster
@@ -298,3 +293,4 @@
 - name: Run cp4i installation
   include_tasks: install-cp4i.yml
   when: not (cpd_skip_cp_install | bool)
+

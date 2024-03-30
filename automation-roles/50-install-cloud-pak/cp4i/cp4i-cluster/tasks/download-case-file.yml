@@ -30,13 +30,14 @@
   - name: Create mirror manifest when Entitled registry is used
     shell: |
       oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }} icr.io
+    when: _use_entitled_registry
 
   #
   # Mirror manifest when private registry is used
   #    
-  # - name: Create mirror manifest when private registry is used
-  #   shell: |
-  #     oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }} {{ current_cp4i_cluster.image_registry_url }}
-  #   when: not (_use_entitled_registry | bool)  
+  - name: Create mirror manifest when private registry is used
+    shell: |
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }} {{ current_cp4i_cluster.image_registry_url }}
+    when: not (_use_entitled_registry | bool)  
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'

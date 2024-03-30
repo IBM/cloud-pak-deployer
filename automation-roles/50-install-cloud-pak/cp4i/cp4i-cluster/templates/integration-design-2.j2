@@ -1,0 +1,28 @@
+---
+apiVersion: appconnect.ibm.com/v1beta1
+kind: DesignerAuthoring
+metadata:
+  labels:
+    backup.appconnect.ibm.com/component: designerauthoring
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  authentication:
+    integrationKeycloak:
+      enabled: true
+  authorization:
+    integrationKeycloak:
+      enabled: true
+  couchdb:
+    replicas: 1
+    storage:
+      size: 10Gi
+      type: persistent-claim
+      class: {{ocp_storage_class_block}}
+  designerFlowsOperationMode: local
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+    use: CloudPakForIntegrationNonProduction
+  replicas: 1
+  version: "{{instance_properties.version}}"
