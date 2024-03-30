@@ -1,0 +1,33 @@
+---
+
+# Global variables:
+# - ocp_storage_class_file
+# - _operators_in_all_namespaces
+# - _foundational_services_namespace
+
+- name: "Check if default storage class is defined"
+  shell: |
+    oc get sc | grep "(default)"
+  register: _storage_class_exists
+  ignore_errors: yes
+
+- name: "Define a default storage class if it does not exist"
+  shell: |
+    oc patch storageclass {{ ocp_storage_class_file }} -p '{"metadata": {"annotations":{"storageclass.kubernetes.io/is-default-class":"true"}}}'
+  when: _storage_class_exists.rc != 0
+
+- name: "If operators are installed in all namespaces, create extra namespace for FS"
+  block:
+
+    - name: "Patch common-service CR"
+      shell: |
+        oc patch CommonService common-service -n openshift-operators --type merge -p '{"spec": {"servicesNamespace": "{{ _foundational_services_namespace }}"}}'
+      when: _foundational_services_namespace != "ibm-common-services"
+
+    - name: "Create ibm-common-services project if installing in all namespaces"
+      include_tasks: create-project.yml
+      vars:
+        _p_project_name: "{{ _foundational_services_namespace }}"
+
+  when: _operators_in_all_namespaces   
+  

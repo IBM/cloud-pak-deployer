@@ -1,0 +1,11 @@
+---
+# Parameters:
+# - _p_project_name
+
+- name: "Validate if OpenShift project {{ _p_project_name }} exists"
+  shell: "oc get projects | grep -i '^{{ _p_project_name }}' | wc -l"
+  register: _project_exists
+
+- name: "Create OpenShift Project {{ _p_project_name }} if it does not exist"
+  command: "oc new-project {{ _p_project_name }}"
+  when: "_project_exists.stdout | trim == '0'"

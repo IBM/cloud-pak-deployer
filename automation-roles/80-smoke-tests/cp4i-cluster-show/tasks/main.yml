@@ -1,19 +1,28 @@
 ---
+# Parameters:
+# - _p_new_style
+# - _p_fs_namespace
 
-- name: Extract admin password from OpenShift secret
+- name: "Extract admin password when using versions prior to 2023.4.1"
   shell: |
     oc get secrets -n ibm-common-services platform-auth-idp-credentials -ojsonpath='{.data.admin_password}' | base64 -d && echo ""
   register: admin_pwd
+  when: not _p_new_style
 
-- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+- name: "Extract admin password when using versions 2023.4.1 and later"
+  shell: |
+    oc get secrets -n {{ _p_fs_namespace }} integration-admin-initial-temporary-credentials -ojsonpath='{.data.password}' | base64 -d && echo ""
+  register: admin_pwd
+  when: _p_new_style
+
+- name: "Make sure that directory {{ status_dir }}/cloud-paks exists"
   file:
     path: "{{ status_dir }}/cloud-paks"
     state: directory
 
-- name: Store CP4I Platform Navigator into log file
-  copy:
-    content: "admin password: {{ admin_pwd.stdout }}"
-    dest: "{{ status_dir }}/cloud-paks/cp4i-{{ current_cp4i_cluster.openshift_cluster_name }}-{{ current_cp4i_cluster.project }}-PN-access.txt"
+- name: "Determine admin user name"
+  set_fact:
+    admin_user: "{{ 'integration-admin' if _p_new_style else 'admin' }}"
 
 - name: Write Cloud Pak for Integration info to {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
   lineinfile:

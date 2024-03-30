@@ -1,4 +1,5 @@
 ---
+
 - name: Validate mandatory variables are defined
   assert:
     that:
@@ -8,13 +9,12 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: "Validate if OpenShift project {{ current_cp4i_cluster.project }} exists"
-  shell: "oc get projects | grep -i '^{{ current_cp4i_cluster.project }}' | wc -l"
-  register: cp4i_cluster_project_exists
-
-- name: "Create OpenShift Project {{ current_cp4i_cluster.project }} if it does not exist"
-  command: "oc new-project {{ current_cp4i_cluster.project }}"
-  when: cp4i_cluster_project_exists.stdout == "0"
+- name: "Create project {{ current_cp4i_cluster.project }}"
+  include_tasks: create-project.yml
+  vars:
+    _p_project_name: "{{ current_cp4i_cluster.project }}"
 
 - name: "Set OpenShift project {{ current_cp4i_cluster.project }} active"
-  command: "oc project {{ current_cp4i_cluster.project }}"
+  include_tasks: set-default-project.yml
+  vars:
+    _p_project_name: "{{ current_cp4i_cluster.project }}"

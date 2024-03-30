@@ -1,88 +1,46 @@
 ---
 
-- name: "Install operator for {{ current_cp4i_instance.type }}"
-  block:
+# Parameters:
+# - _p_subscr_name
+# - _p_namespace
+# - _p_channel
+# - _p_subscr_source
 
-  - name: Find version specific instance type properties
-    include_tasks: get-instance-properties.yml
+# ------------ CHECK IF SUBSCRIPTION EXISTS -------------------------  
 
-  # ------------ FIND INSTANCE TYPE DEFINITION ----------------------
+- name: "Check if subscription {{ _p_subscr_name }} already exists"
+  shell: | 
+    oc get subscriptions -n {{ _p_namespace }} | grep {{ _p_subscr_name }} | wc -l
+  register: subscription_exists
 
-  - name: Get instance type details
-    set_fact:
-      _inst_type_def: "{{ instance_types | json_query(query) | first | default({}) }}"
+- name: Create subscription if it does not already exist
+  block:  
+
+  # ------------ PREPARE AND APPLY YAML -----------------------------
+
+  - name: "Create subscription"
+    include_tasks: apply-template.yml
     vars:
-      query: >-
-        [?type=='{{ instance_properties.type }}']
+      _p_template: "subscription.j2"
+      _p_dest_name: "{{ _p_subscr_name }}.yml"
+      _subscr_name: "{{ _p_subscr_name }}"
+      _subscr_namespace: "{{ _p_namespace }}"
+      _subscr_channel: "{{ _p_channel }}"
+      _subscr_source: "{{ _p_subscr_source }}"
 
-  - name: Fail if the instance type cannot be found
-    fail:
-      msg: "Case instance type for instance {{ instance_properties.name }} not found."
-    when: _inst_type_def=={}
+  # ---------- WAIT FOR SUBSCRIPTION TO BECOME READY ----------------
 
+  - name: "Waiting for subscription {{ _p_subscr_name }} in project {{ _p_namespace }} to become ready"
+    shell: |
+      csv=$(oc get subscription -n {{ _p_namespace }} {{ _p_subscr_name }} -o json | jq -r .status.currentCSV)
+      if [[ "$csv" == "null" ]]; then
+        echo "null"
+      else
+        oc get csv -n {{ _p_namespace }} ${csv} -o json 2>/dev/null | jq -r .status.phase
+      fi
+    register: pn_phase
+    retries: 100
+    delay: 20
+    until: pn_phase.stdout == "Succeeded"
 
-  # ------------ CHECK IF SUBSCRIPTION EXISTS -------------------------  
-
-  - name: "Check if subscription {{ _inst_type_def.package_name }} already exists"
-    shell: | 
-      oc get subscriptions -n openshift-operators | grep {{ _inst_type_def.package_name }} | wc -l
-    register: subscription_exists
-
-  - name: Create subscription if it does not already exist
-    block:  
-
-    # ------------ SUBSCRIPTION VARIABLES -----------------------------
-
-    - set_fact:
-        _subscr_name: "{{ _inst_type_def.package_name }}"
-
-    - set_fact:
-        _subscr_namespace: "openshift-operators"
-      when: _operators_in_all_namespaces
-
-    - set_fact:
-        _subscr_namespace: "{{ current_cp4i_cluster.project }}"
-      when: not _operators_in_all_namespaces
-
-    - set_fact:
-        _subscr_channel: "{{ instance_properties.channel }}"
-
-    - set_fact:
-        _subscr_source: "{{ _inst_type_def.source_catalog_case }}"
-      when: _use_case_files
-
-    - set_fact:
-        _subscr_source: "{{ _inst_type_def.source_catalog_online }}"
-      when: not _use_case_files
-
-    # ------------ PREPARE AND APPLY YAML -----------------------------
-
-    - name: Prepare yaml file for creating subscription
-      template:
-        src: subscription.j2
-        dest: "{{ status_dir }}/cp4i/{{ _subscr_name }}.yml"
-
-    - name: "Create subscription using {{ status_dir }}/cp4i/{{ _subscr_name }}.yml"
-      shell: |
-        oc apply -f {{ status_dir }}/cp4i/{{ _subscr_name }}.yml
-
-    # ---------- WAIT FOR SUBSCRIPTION TO BECOME READY ----------------
-
-    - name: "Wait for subscription {{ _subscr_name }} to become ready"
-      shell: |
-        csv=$(oc get subscription -n openshift-operators {{ _subscr_name }} -o json | jq -r .status.currentCSV)
-        if [[ "$csv" == "null" ]]; then
-          echo "null"
-        else
-          oc get csv -n openshift-operators ${csv} -o json 2>/dev/null | jq -r .status.phase
-        fi
-      register: pn_phase
-      retries: 100
-      delay: 20
-      until: pn_phase.stdout == "Succeeded"
-
-
-    when: subscription_exists.stdout == "0"
-      
-  when: (current_cp4i_instance.state | default('installed')) == 'installed'
-
+  when: "subscription_exists.stdout | trim == '0'"

@@ -1,70 +1,68 @@
+---
 apiVersion: eventstreams.ibm.com/v1beta2
 kind: EventStreams
 metadata:
   annotations:
     eventstreams.ibm.com/apicurio-registry-version: '>=2.4'
-  name: {{instance_properties.name}}
   labels:
     backup.eventstreams.ibm.com/component: eventstreams
+  name: {{instance_properties.name}}
   namespace: {{current_cp4i_cluster.project}}
 spec:
-  version: "{{instance_properties.version}}"
+  adminApi: {}
+  adminUI:
+    authentication:
+      - type: integrationKeycloak
+  apicurioRegistry: {}
+  collector: {}
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
     license: {{instance_properties.license}}
     use: CloudPakForIntegrationNonProduction
-  adminApi: {}
-  adminUI: {}
-  apicurioRegistry: {}
-  collector: {}
   restProducer: {}
   strimziOverrides:
     kafka:
-      replicas: 3
       authorization:
-        type: custom
-        supportsAdminApi: true
-        authorizerClass: com.ibm.eventstreams.runas.authorizer.RunAsAuthorizer
+        type: simple
       config:
+        default.replication.factor: 3
         inter.broker.protocol.version: '3.5'
         log.cleaner.threads: 6
+        min.insync.replicas: 2
         num.io.threads: 24
         num.network.threads: 9
         num.replica.fetchers: 3
         offsets.topic.replication.factor: 3
-        default.replication.factor: 3
-        min.insync.replicas: 2
       listeners:
         - name: external
-          port: 9094
-          tls: true
           authentication:
             type: scram-sha-512
+          port: 9094
+          tls: true
           type: route
         - name: tls
-          port: 9093
           authentication:
             type: tls
-          type: internal
+          port: 9093
           tls: true
+          type: internal
       metricsConfig:
         type: jmxPrometheusExporter
         valueFrom:
           configMapKeyRef:
             key: kafka-metrics-config.yaml
             name: {{instance_properties.name}}-metrics-config
+      replicas: 3
       storage:
         type: ephemeral
     zookeeper:
-      replicas: 3
       metricsConfig:
         type: jmxPrometheusExporter
         valueFrom:
           configMapKeyRef:
             key: zookeeper-metrics-config.yaml
             name: {{instance_properties.name}}-metrics-config
+      replicas: 3
       storage:
         type: ephemeral
-  requestIbmServices:
-    iam: true
-    monitoring: true
+  version: "{{instance_properties.version}}"
