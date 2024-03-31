@@ -3,17 +3,16 @@
 # - _p_new_style
 # - _p_fs_namespace
 
-- name: "Extract admin password when using versions prior to 2023.4.1"
-  shell: |
-    oc get secrets -n ibm-common-services platform-auth-idp-credentials -ojsonpath='{.data.admin_password}' | base64 -d && echo ""
-  register: admin_pwd
+- include_tasks: cp4i-get-admin-cpfs.yml
   when: not _p_new_style
 
-- name: "Extract admin password when using versions 2023.4.1 and later"
-  shell: |
-    oc get secrets -n {{ _p_fs_namespace }} integration-admin-initial-temporary-credentials -ojsonpath='{.data.password}' | base64 -d && echo ""
-  register: admin_pwd
+- include_tasks: cp4i-get-admin-new-style.yml
   when: _p_new_style
+
+- name: Get route for Cloud Pak for Integration Platform platform-navigator
+  shell: |
+    oc get route -n {{ current_cp4i_cluster.project }} integration-navigator-pn -o jsonpath='{.spec.host}'
+  register: _cp4i_pn_host
 
 - name: "Make sure that directory {{ status_dir }}/cloud-paks exists"
   file:
@@ -31,4 +30,6 @@
     line: "{{ item }}"
   with_items:
   - '--- Cloud Pak for Integration instance {{ current_cp4i_cluster.project }} ---'
-  - "Cloud Pak for Integration admin password: {{ admin_pwd.stdout }}"
+  - 'Platform Navigator URL: https://{{ _cp4i_pn_host.stdout }}'
+  - "admin user: {{ _cp4i_admin_user.stdout }}"
+  - "{{ _cp4i_admin_user.stdout }} password: {{ _cp4i_admin_password.stdout }}"
