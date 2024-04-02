@@ -39,22 +39,22 @@ demo_openldap:
     givenName: Rosa
     sn: Ramones
     mail: rramones@cp.internal
-    password: abcdef123
+    # password: specific_password_for_the_user
   - uid: ssharpe
     givenName: Shelly
     sn: Sharpe
     mail: ssharpe@cp.internal
-    password: abcdef123
+    # password: specific_password_for_the_user
   - uid: pprimo
     givenName: Paco
     sn: Primo
     mail: pprimo@cp.internal
-    password: abcdef123
+    # password: specific_password_for_the_user
   - uid: rroller
     givenName: Rico
     sn: Roller
     mail: rroller@cp.internal
-    password: abcdef123
+    # password: specific_password_for_the_user
   groups:
   - cn: cp4d-admins
     members:
