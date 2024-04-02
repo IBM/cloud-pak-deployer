@@ -42,8 +42,8 @@
 - name: Wait for IBM App Connect operator to be installed
   shell: |
     oc wait csv --namespace={{ _app_connect.app_connect_project }} \
-    --labels=operators.coreos.com/ibm-appconnect.{{ _app_connect.app_connect_project }}='' \
-    --for='jsonpath={.status.phase}'=Succeeded
+    -l=operators.coreos.com/ibm-appconnect.{{ _app_connect.app_connect_project }}='' \
+    --for='jsonpath={.status.phase}'=Succeeded --timeout=600s
 
 - name: Create IBM App Connect instance for watsonx watsonx.orchestrate
   shell: |
@@ -52,13 +52,13 @@
       --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
       --release={{ _p_current_cp4d_cluster.cp4d_version }} \
       --components=watsonx_orchestrate \
-      --file_storage_class={{ ocp_storage_class_block }}
+      --file_storage_class={{ ocp_storage_class_file }}
 
 - name: Setup watsonx Assistant instances for watsonx watsonx.orchestrate
   shell: |
     setup-wxo-assistant \
       --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
       --create_assistants=true \
-      --user=${CPD_USERNAME} \
-      --password= \
+      --user={{ _cp4d_user }} \
+      --password={{ _current_cp4d_admin_password }} \
       --auth_type=password
