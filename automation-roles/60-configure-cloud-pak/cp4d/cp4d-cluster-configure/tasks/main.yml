@@ -107,53 +107,53 @@
   loop_control:
     loop_var: _zen_role 
 
-- name: Loop through all cartridges for instance configuration
-  when: "current_cp4d_cluster.cartridges is defined"
-  block:
-    # First provision DB2 OLTP instance(s) and wait for it to cpmplete
-    - name: Provision or remove Db2 OLTP instances
-      include_role:
-        name: cp4d-instance-db2oltp
-    - name: Wait for Db2 OLTP instances to be provisioned
-      include_role:
-        name: cp4d-instance-db2oltp
-      vars:
-        _p_wait_instances: True
+# First provision DB2 OLTP instance(s) and wait for it to cpmplete
+- name: Provision or remove Db2 OLTP instances
+  include_role:
+    name: cp4d-instance-db2oltp
+- name: Wait for Db2 OLTP instances to be provisioned
+  include_role:
+    name: cp4d-instance-db2oltp
+  vars:
+    _p_wait_instances: True
 
-    # Now provision remainder of the cartridge instances
-    - name: Provision or remove {{ item }} instances
-      include_role:
-        name: cp4d-instance-{{ item }}
-      loop:
-        - analyticsengine
-        - cognos
-        - cpd-edb
-        - datastage
-        - dv
-        - dmc
-        - openpages
-        - watsonx_ai
-        - watson_assistant
-        - watson_discovery
+# Now provision remainder of the cartridge instances
+- name: Provision or remove {{ item }} instances
+  include_role:
+    name: cp4d-instance-{{ item }}
+  loop:
+    - analyticsengine
+    - cognos
+    - cpd-edb
+    - datastage
+    - dv
+    - dmc
+    - openpages
+    - watsonx_ai
+    - watson_assistant
+    - watson_discovery
 
-    # Wait for provisioning to complete
-    - name: Wait for provisioning of {{ item }} instances to complete
-      include_role:
-        name: cp4d-instance-{{ item }}
-      vars:
-        _p_wait_instances: True
-      loop:
-        - analyticsengine
-        - cognos
-        - cpd-edb
-        - datastage
-        - dv
-        - dmc
-        - openpages
-        - watsonx_ai
-        - watson_assistant
-        - watson_discovery
+# Wait for provisioning to complete
+- name: Wait for provisioning of {{ item }} instances to complete
+  include_role:
+    name: cp4d-instance-{{ item }}
+  vars:
+    _p_wait_instances: True
+  loop:
+    - analyticsengine
+    - cognos
+    - cpd-edb
+    - datastage
+    - dv
+    - dmc
+    - openpages
+    - watsonx_ai
+    - watson_assistant
+    - watson_discovery
 
+- name: Create Data Management Console profiles
+  include_role:
+    name: cp4d-configure-dmc-profiles
 
 # Handle instance configurations
 - when: "all_config.cp4d_instance_configuration is defined"
