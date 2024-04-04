@@ -1,4 +1,31 @@
 ---
+- name: Check if Watson Assistant has been installed {{ _p_current_cp4d_cluster.project }}
+  shell: |
+    oc get WatsonAssistant wa -n {{ _p_current_cp4d_cluster.project }}
+  failed_when: False
+  register: _wa_installed
+
+- name: Fail if Watson Assistant has not been installed in project {{ _p_current_cp4d_cluster.project }}
+  fail:
+    msg: Watson Assistant has not been installed in project {{ _p_current_cp4d_cluster.project }}
+  when: _wa_installed.rc != 0
+
+- name: Generate OLM utils command to create watsonx Orchestrate subscription
+  set_fact:
+    _apply_olm_wxo_command: "{{ lookup('template', 'apply-olm-cartridge-wxo.j2') }}" 
+
+- name: Show apply-olm command to create watsonx Orchestrate subscription
+  debug:
+    var: _apply_olm_wxo_command
+
+- name: Run apply-olm command to install watsonx Orchestrate subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-wxo.log
+  shell: |
+    {{ _apply_olm_wxo_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-wxo.log 2>&1
+  retries: 2
+  delay: 10
+  until: _apply_olm_wxo_result.rc==0
+  register: _apply_olm_wxo_result
+
 - set_fact:
     _app_connect: "{{ _current_cp4d_cartridge.app_connect }}"
 

@@ -3,6 +3,19 @@
   debug:
     msg: ""
 
+- set_fact:
+    _apply_cr_cartridges: >-
+      {{  _cartridges_to_install | 
+            rejectattr('olm_utils_name','==','scheduler') |
+            selectattr('separate_install','undefined') |
+            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+
+- set_fact:
+    _apply_cr_cartridges_list: >-
+      {{  _apply_cr_cartridges | 
+            map(attribute='olm_utils_name') | 
+            join(',')}}
+
 # Always generate the preview script to log what will be done
 - name: Generate command preview script to install cartridges
   set_fact:
