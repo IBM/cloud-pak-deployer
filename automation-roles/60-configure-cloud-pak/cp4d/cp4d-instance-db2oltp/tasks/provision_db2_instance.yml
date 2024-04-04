@@ -29,7 +29,6 @@
         add-cluster-role-to-user system:controller:persistent-volume-binder \
         system:serviceaccount:{{ current_cp4d_cluster.project }}:zen-databases-sa
 
-  # TODO: Check if the https://.../icp4data/api/v1/databases/ URL also works for CP4D 4.6
   - name: Get CP4D Database specifications
     uri:
       url: 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases'
@@ -41,6 +40,9 @@
       validate_certs: no
       status_code: 200
     register: _databases_details_result_v1
+    until: _databases_details_result_v1.status == 200
+    retries: 12
+    delay: 5
     when: current_cp4d_cluster.cp4d_version < '4.7.0'
 
   - name: Get CP4D Database specifications
@@ -54,6 +56,9 @@
       validate_certs: no
       status_code: 200
     register: _databases_details_result_v2
+    until: _databases_details_result_v2.status == 200
+    retries: 12
+    delay: 5
     when: current_cp4d_cluster.cp4d_version >= '4.7.0'
 
   - set_fact:
