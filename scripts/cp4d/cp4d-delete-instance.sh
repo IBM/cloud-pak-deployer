@@ -187,6 +187,18 @@ else
     echo "Project ${KNATIVE_SERVING} does not exist, skipping"
 fi
 
+APP_CONNECT=ibm-app-connect
+oc get project ${APP_CONNECT} > /dev/null 2>&1
+if [ $? -eq 0 ];then
+    log "Deleting everything in the ${APP_CONNECT} project"
+
+    log "Deleting ${APP_CONNECT} project"
+    oc delete ns ${APP_CONNECT} --ignore-not-found --wait=false
+    wait_ns_deleted ${APP_CONNECT}
+else
+    echo "Project ${APP_CONNECT} does not exist, skipping"
+fi
+
 IBM_SCHEDULING=ibm-scheduling
 oc get project ${IBM_SCHEDULING} > /dev/null 2>&1
 if [ $? -eq 0 ];then
