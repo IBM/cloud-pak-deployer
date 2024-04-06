@@ -9,40 +9,28 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: mongo-express
+    common_namespace_name: "{{ mongo_express_project_name }}"
     common_output_directory: "{{ mongo_express_output_directory }}"
 
-- name: Prepare yaml file for Deployment
+- name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
-    src: deployment.yaml.j2
-    dest: "{{ mongo_express_output_directory }}/deployment.yaml"
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ mongo_express_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
+  with_items:
+    - deployments
+    - services
 
-- name: Add Deployment
+- name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
-    src: "{{ mongo_express_output_directory }}/deployment.yaml"
+    src: "{{ mongo_express_output_directory }}/{{ item.name }}.yaml"
     wait: true
-    wait_sleep: 15
-    wait_timeout: 600
-
-- name: Prepare yaml file for Service
-  ansible.builtin.template:
-    src: service.yaml.j2
-    dest: "{{ mongo_express_output_directory }}/service.yaml"
-    mode: u+rwx
-
-- name: Add Service
-  kubernetes.core.k8s:
-    state: present
-    force: false
-    merge_type: merge
-    src: "{{ mongo_express_output_directory }}/service.yaml"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 15
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:
@@ -57,8 +45,8 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: mongo-express
-    common_route_name: mongo-express
+    common_namespace_name: "{{ mongo_express_project_name }}"
+    common_route_name: "mongo-express-{{ mongo_express_project_name }}"
     common_service_name: mongo-express
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ mongo_express_output_directory }}"

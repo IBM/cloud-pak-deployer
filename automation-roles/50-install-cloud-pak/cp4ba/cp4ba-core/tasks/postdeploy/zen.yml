@@ -1,4 +1,3 @@
-
 - name: Retrieve default certification
   ansible.builtin.include_role:
     name: common
@@ -17,8 +16,6 @@
 - name: Add custom Zen TLS Secret
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ cp4ba_output_directory }}/zen-tls-secret.yaml"
     wait: true
     wait_sleep: 15
@@ -79,9 +76,9 @@
     state: absent
     api_version: v1
     kind: Pod
-    namespace: kibana
+    namespace: "{{ cp4ba_kibana_project }}"
     label_selectors:
-      - app=kibana-app
+      - app=kibana
   when: kibana_enabled
 
 - name: Wait for Kibana Deployment Available State
@@ -92,7 +89,7 @@
     common_api_version: v1
     common_resource_kind: Deployment
     common_resource_name: kibana
-    common_resource_namespace: kibana
+    common_resource_namespace: "{{ cp4ba_kibana_project }}"
     common_condition_name: Available
     common_retries: 80
     common_delay: 15
@@ -402,7 +399,7 @@
     api_version: v1
     kind: ConfigMap
     namespace: "{{ cp4ba_output_namespace }}"
-    name: cp4ba-usage
+    name: "{{ _current_cp4ba_cluster.project }}-usage"
   register: usage
   retries: 40
   delay: 15
@@ -412,6 +409,7 @@
     zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
 
 - name: Generate new Zen Api key
+  when: zen_api_key | length == 0
   block:
     - name: Get IAM token
       ansible.builtin.include_role:
@@ -456,5 +454,3 @@
     - name: Assign zen api key for further post deploy task
       ansible.builtin.set_fact:
         zen_api_key: "{{ zen_api_key_new }}"
-
-  when: zen_api_key | length == 0

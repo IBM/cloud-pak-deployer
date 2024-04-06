@@ -63,6 +63,7 @@
     tasks_from: remove-postgresql-db
   vars:
     common_postgresql_db_name: pm
+    common_postgresql_project: "{{ pm_postgresql_project }}"
 
 - name: Remove PostgreSQL users
   ansible.builtin.include_role:
@@ -70,26 +71,27 @@
     tasks_from: remove-postgresql-user
   vars:
     common_postgresql_user: pm
+    common_postgresql_project: "{{ pm_postgresql_project }}"
 
 - name: Get Mongo DB pod
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: mongodb
+    namespace: "{{ pm_mongodb_project }}"
     label_selectors:
-      - app.kubernetes.io/component=mongodb
+      - app=mongodb
   register: mongodb_pod
 
 - name: Delete PM Mongo DB
   kubernetes.core.k8s_exec:
-    namespace: mongodb
+    namespace: "{{ pm_mongodb_project }}"
     pod: "{{ mongodb_pod.resources[0].metadata.name }}"
     command: >
-      mongo --username root --password {{ pm_universal_password }} --authenticationDatabase admin
+      mongo --username {{ pm_mongodb_admin_user }} --password {{ pm_universal_password }} --authenticationDatabase admin
       --eval '{{ item }}' mongodb://localhost:27017/processmining
   register: command_status
   with_items:
-    - db.dropUser("root")
+    - db.dropUser("{{ pm_mongodb_admin_user }}")
     - db.dropDatabase()
   when: mongodb_pod.resources | length != 0
 
