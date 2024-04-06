@@ -25,7 +25,7 @@ RUN yum install -y yum-utils && \
     yum install -y nginx && \
     yum clean all
 
-RUN ansible-galaxy collection install community.general community.crypto ansible.utils community.vmware kubernetes.core
+RUN ansible-galaxy collection install community.crypto community.vmware
 
 VOLUME ["/Data"]
 
@@ -36,7 +36,7 @@ RUN mkdir -p /cloud-pak-deployer && \
 
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
-
+wheel
 # BUG with building whell 
 #RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1

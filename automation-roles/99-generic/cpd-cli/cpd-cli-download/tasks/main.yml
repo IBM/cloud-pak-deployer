@@ -24,14 +24,14 @@
     vars:
       query: >-
         [?starts_with(name,'cpd-cli-linux-EE')].browser_download_url
-    when: ARCH == "amd64"
+    when: ARCH == "x86_64"
 
   - set_fact:
       _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
     vars:
       query: >-
         [?starts_with(name,'cpd-cli-{{ ARCH }}-EE')].browser_download_url
-    when: ARCH != "amd64"
+    when: ARCH != "x86_64"
 
   - name: Download latest cpd-cli release
     get_url:

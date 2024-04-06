@@ -1,6 +1,9 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 ARCH=$(uname -m)
+if [ "${ARCH}" == "amd64" ];then
+  ARCH="x86_64"
+fi
 
 echo "-------------------------------------------------------------------------------"
 echo "Starting the Web UI in the container"

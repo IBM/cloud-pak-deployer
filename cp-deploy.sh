@@ -617,10 +617,13 @@ fi
 
 # Get the CPU ARCH of the current system
 ARCH=$(uname -m)
+if [ "${ARCH}" == "amd64" ];then
+  ARCH="x86_64"
+fi
 
 # If images have not been overridden, set the variables here
 if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-  if [ "$ARCH" == "amd64" ] || [ "$ARCH" == "x86_64" ]; then
+  if [ "${ARCH}" == "x86_64" ]; then
     export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
   else
     export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.$ARCH
@@ -661,10 +664,10 @@ if ! $INSIDE_CONTAINER;then
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
     # Build the image
-    if [ "$ARCH" == "amd64" ] || [ "$ARCH" == "x86_64" ]; then
+    if [ "${ARCH}" == "x86_64" ]; then
       DOCKERFILE=Dockerfile
     else
-      DOCKERFILE=Dockerfile.$ARCH
+      DOCKERFILE=Dockerfile.${ARCH}
     fi
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
@@ -972,6 +975,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
   run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
   run_cmd+=" -e CP_ENTITLEMENT_KEY=${CP_ENTITLEMENT_KEY}"
+  run_cmd+=" -e ARCH=${ARCH}"
 
   if [ ! -z $VAULT_GROUP ];then
     run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"
