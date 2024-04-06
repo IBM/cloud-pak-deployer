@@ -1,5 +1,9 @@
 ---
 - block:
+
+  - name: Run pre-processing script
+    include_tasks: cp4d-install-cr-pre-processing.yml
+
   - ansible.builtin.stat:
       path: "{{ role_path }}/tasks/cp4d-install-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.yml"
     register: _install_cr_script
@@ -13,5 +17,4 @@
     when: _install_cr_script.stat.exists
 
   when: 
-  - (_current_cp4d_cartridge.state | default('installed')) == 'installed'
   - (_current_cp4d_cartridge.separate_install | default(False) | bool)
