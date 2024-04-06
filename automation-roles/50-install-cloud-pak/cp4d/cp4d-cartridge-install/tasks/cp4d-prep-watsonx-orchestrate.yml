@@ -109,15 +109,17 @@
   delay: 10
   until: _setup_wxo_assistant.rc == 0
 
-- name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log
-  shell: |
-    {{ role_path }}/files/temp-patch-wxo.sh \
-      {{ status_dir }} \
-      {{ _p_current_cp4d_cluster.project }}
-  async: 86400
-  poll: 0
-  register: _patch_wxo_48
+- block:
+  - name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log
+    shell: |
+      {{ role_path }}/files/temp-patch-wxo.sh \
+        {{ status_dir }} \
+        {{ _p_current_cp4d_cluster.project }}
+    async: 86400
+    poll: 0
+    register: _patch_wxo_48
 
-- name: Show details of background task to patch watsonx Orchestrate
-  debug:
-    var: _patch_wxo_48
+  - name: Show details of background task to patch watsonx Orchestrate
+    debug:
+      var: _patch_wxo_48
+  when: _p_current_cp4d_cluster.cp4d_version == "4.8.4"
