@@ -28,7 +28,7 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=gst-task-2-connecting-git-repository-sharing-decision-service
 - name: Create ADS organization in Gitea
   ansible.builtin.uri:
-    url: "https://gitea.{{ apps_endpoint_domain }}/api/v1/orgs"
+    url: "https://gitea-{{ cp4ba_gitea_project }}.{{ apps_endpoint_domain }}/api/v1/orgs"
     method: POST
     headers:
       Content-Type: application/json
@@ -81,15 +81,19 @@
       "rows[?doc.role_name == 'ADS Admin'].id"
 
 - name: Create ADS admin role
+  when: ads_admin_role_id | length == 0
   block:
-
     - name: ADS permissions
       ansible.builtin.set_fact:
         ads_perms_list:
-          - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary('administer_ads_platform', '') }}"
-          - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('execute_ads_decision', '') }}"
-          - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('manage_ads_decision', '') }}"
-          - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('monitor_ads_runtime', '') }}"
+          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary('administer_ads_platform', '') }}"
+          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('execute_ads_decision', '') }}"
+          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('manage_ads_decision', '') }}"
+          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('monitor_ads_runtime', '') }}"
 
     # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-managing-user-permissions
     - name: Create ADS admin role
@@ -110,8 +114,6 @@
     - name: Set ADS admin role ID
       ansible.builtin.set_fact:
         ads_admin_role_id: "{{ admin_role_response.json | json_query('id') }}"
-
-  when: ads_admin_role_id | length == 0
 
 - name: Get groups
   ansible.builtin.uri:
@@ -169,7 +171,7 @@
     body_format: json
     body: |
       {
-        "serverUri": "https://nexus.{{ apps_endpoint_domain }}/repository/maven-releases/",
+        "serverUri": "https://nexus-{{ cp4ba_nexus_project }}.{{ apps_endpoint_domain }}/repository/maven-releases/",
         "authType": "CREDENTIALS",
         "credentialsType": "USERNAME",
         "username": "{{ lc_principal_admin_user }}",
@@ -194,7 +196,7 @@
     body: |
       {
         "name": "git-provider",
-        "uri": "https://gitea.{{ apps_endpoint_domain }}/api/v1",
+        "uri": "https://gitea-{{ cp4ba_gitea_project }}.{{ apps_endpoint_domain }}/api/v1",
         "type": "GITEA",
         "usePrivateFlag": true,
         "apiCredentialsType": "USERNAME_PASSWORD",

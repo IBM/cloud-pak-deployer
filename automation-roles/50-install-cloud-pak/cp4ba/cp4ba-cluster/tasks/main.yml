@@ -1,14 +1,18 @@
 ---
 
+- name: Create private variable for cp4ba configuration
+  ansible.builtin.set_fact:
+    _current_cp4ba_cluster: "{{ current_cp4ba_cluster }}"
+
 # ------------ PREPARATION ------------------------------------------
 
 - name: Debug message
   ansible.builtin.debug:
-    msg: "Handling CP4BA cluster {{ current_cp4ba_cluster.project }}"
+    msg: "Handling CP4BA cluster {{ _current_cp4ba_cluster.project }}"
 
 - name: License acceptance determination
   ansible.builtin.set_fact:
-    _cpd_accept_licenses: "{{ current_cp4ba_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
+    _cpd_accept_licenses: "{{ _current_cp4ba_cluster.accept_licenses | default(cpd_accept_licenses) | default(False) }}"
 
 - name: Fail if licenses were not accepted
   ansible.builtin.fail:
@@ -20,7 +24,7 @@
     _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='{{ current_cp4ba_cluster.openshift_cluster_name }}']
+      [?name=='{{ _current_cp4ba_cluster.openshift_cluster_name }}']
 
 - name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
   ansible.builtin.include_role:
@@ -32,7 +36,7 @@
   ansible.builtin.include_role:
     name: openshift-login
   vars:
-    _p_openshift_cluster_name: "{{ current_cp4ba_cluster.openshift_cluster_name }}"
+    _p_openshift_cluster_name: "{{ _current_cp4ba_cluster.openshift_cluster_name }}"
 
 - name: Get IBM Entitled Registry key
   ansible.builtin.include_role:
@@ -48,7 +52,7 @@
 - name: Fail if icr wrong
   ansible.builtin.fail:
     msg: "No image registry name specified for CP4BA but cannot pull from entitled registry because of missing entitlement key in vault"
-  when: ibm_cp_entitlement_key == "" and (current_cp4ba_cluster.image_registry_name | default("")) == ""
+  when: ibm_cp_entitlement_key == "" and (_current_cp4ba_cluster.image_registry_name | default("")) == ""
 
 - name: Determine entitled_auth
   ansible.builtin.set_fact:
@@ -63,35 +67,35 @@
   ansible.builtin.set_fact:
     use_entitled_registry: true
   when:
-    - (current_cp4ba_cluster.image_registry_name | default("")) == ""
+    - (_current_cp4ba_cluster.image_registry_name | default("")) == ""
 
 - name: Connect to private image registry
   ansible.builtin.include_role:
     name: connect-private-image-registry
   when:
-    - (current_cp4ba_cluster.image_registry_name | default("")) != ""
+    - (_current_cp4ba_cluster.image_registry_name | default("")) != ""
 
 - name: Remove Cloud Pak for Business Automation directory for generated files
   ansible.builtin.file:
-    path: "{{ status_dir }}/cp4ba"
+    path: "{{ status_dir }}/{{ _current_cp4ba_cluster.project }}"
     state: absent
 
 - name: Create Cloud Pak for Business Automation directory for generated files
   ansible.builtin.file:
-    path: "{{ status_dir }}/cp4ba"
+    path: "{{ status_dir }}/{{ _current_cp4ba_cluster.project }}"
     state: directory
     mode: u+rwx
 
-- name: Get OpenShift storage classes to use for {{ current_cp4ba_cluster.project }} and storage class name {{ current_cp4ba_cluster.openshift_storage_name }}
+- name: Get OpenShift storage classes to use for {{ _current_cp4ba_cluster.project }} and storage class name {{ _current_cp4ba_cluster.openshift_storage_name }}
   ansible.builtin.include_role:
     name: get-openshift-storage
   vars:
-    _p_openshift_cluster_name: "{{ current_cp4ba_cluster.openshift_cluster_name }}"
-    _p_openshift_storage_name: "{{ current_cp4ba_cluster.openshift_storage_name }}"
+    _p_openshift_cluster_name: "{{ _current_cp4ba_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ _current_cp4ba_cluster.openshift_storage_name }}"
 
 - name: Create global_action variable
   ansible.builtin.set_fact:
-    global_action: "{{ 'install' if current_cp4ba_cluster.state == 'installed' else 'remove' }}"
+    global_action: "{{ 'install' if _current_cp4ba_cluster.state == 'installed' else 'remove' }}"
 
 - name: Create icr_password variable
   ansible.builtin.set_fact:
@@ -109,22 +113,51 @@
   ansible.builtin.include_role:
     name: retrieve-cloud-infra-type
   vars:
-    _p_openshift_cluster_name: "{{ current_cp4ba_cluster.openshift_cluster_name }}"
+    _p_openshift_cluster_name: "{{ _current_cp4ba_cluster.openshift_cluster_name }}"
 
 - name: Create deployment_platform variable
   ansible.builtin.set_fact:
     deployment_platform: "{{ 'ROKS' if _existing_ocp_infra_type == 'ibm-roks' else 'OCP' }}"
 
-# - name: Get universal_password key from vault
-#   ansible.builtin.include_role:
-#     name: vault-get-secret
-#   vars:
-#     secret_name: "universal_password"
-#     secret_group: "{{ environment_name }}"
+- ansible.builtin.set_fact:
+    _cp4ba_admin_password_vault_key_name: "cp4ba_admin_{{ _current_cp4ba_cluster.project| replace('-','_') }}_{{ _current_cp4ba_cluster.openshift_cluster_name| replace('-','_') }}"
 
-# - name: Create universal_password variable
-#   ansible.builtin.set_fact:
-#     universal_password: "{{ secret_value }}"
+- name: Validate if an existing admin password for {{ _cp4ba_admin_password_vault_key_name }} exists in the vault
+  ansible.builtin.include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cp4ba_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: universal_password
+
+- name: Set new password if none is available yet
+  when: universal_password==""
+  block:
+    - name: Generate new password
+      ansible.builtin.include_role:
+        name: generate-password
+      when: (global_config.universal_password | default('')) == ''
+
+    - ansible.builtin.set_fact:
+        _cp4ba_admin_password_new: "{{ _p_generated_password }}"
+      when: (global_config.universal_password | default('')) == ''
+
+    - name: Set password to universal password
+      ansible.builtin.set_fact:
+        _cp4ba_admin_password_new: "{{ global_config.universal_password }}"
+      when: (global_config.universal_password | default('')) != ''
+
+    - name: Store the cp4ba admin password into the vault as {{ _cp4ba_admin_password_vault_key_name }}
+      ansible.builtin.include_role:
+        name: vault-set-secret
+      vars:
+        secret_name: "{{ _cp4ba_admin_password_vault_key_name }}"
+        secret_description: "cp4ba admin password for namespace {{ _current_cp4ba_cluster.project }}, cluster {{ _current_cp4ba_cluster.openshift_cluster_name }}"
+        secret_payload: "{{ _cp4ba_admin_password_new }}"
+        secret_group: "{{ environment_name }}"
+
+    - ansible.builtin.set_fact:
+        universal_password: "{{ _cp4ba_admin_password_new }}"
 
 - name: Prepare the Playbook Configuration variables
   ansible.builtin.include_role:

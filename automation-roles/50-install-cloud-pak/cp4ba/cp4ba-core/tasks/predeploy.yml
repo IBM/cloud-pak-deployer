@@ -15,8 +15,6 @@
 - name: Add CatalogSource
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ cp4ba_output_directory }}/catalogsource.yaml"
     wait: true
     wait_sleep: 15
@@ -36,7 +34,7 @@
     - ibm-cp4a-operator-catalog
     - ibm-cs-flink-operator-catalog
     - ibm-cs-elastic-operator-catalog
-    - opencloud-operators-v4-2
+    - opencloud-operators-{{ cpfs_cs_version }}
     - bts-operator
     - cloud-native-postgresql-catalog
     - ibm-fncm-operator-catalog
@@ -58,48 +56,48 @@
 
 - name: Manage BAS
   ansible.builtin.include_tasks: predeploy/bas.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
 - name: Manage AutomationBase Elastic Search
   ansible.builtin.include_tasks: predeploy/iaf-automationbase.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Manage BAI
   ansible.builtin.include_tasks: predeploy/bai.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
 - name: Manage ODM
   ansible.builtin.include_tasks: predeploy/odm.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
 
 - name: Manage ADS
   ansible.builtin.include_tasks: predeploy/ads.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
 
 - name: Manage FNCM ES Google ID
   ansible.builtin.include_tasks: predeploy/bai.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 - name: Manage FNCM
   ansible.builtin.include_tasks: predeploy/fncm.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
 
 - name: Manage IER
   ansible.builtin.include_tasks: predeploy/ier.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
 - name: Manage AAE
   ansible.builtin.include_tasks: predeploy/aae.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae
 
-- name: Manage AAE
+- name: Manage AAE Data persistence
   ansible.builtin.include_tasks: predeploy/aae-data-persistence.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
+  when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
 
 - name: Manage ADP
   ansible.builtin.include_tasks: predeploy/adp.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
 
 - name: Manage BAWAUT
   ansible.builtin.include_tasks: predeploy/bawaut.yml
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring

@@ -18,6 +18,7 @@
   delay: 1
 
 - name: Save cr contents
+  when: cp4ba_cr.resources | length != 0
   block:
     - name: Set current CP4BA CR contents
       ansible.builtin.set_fact:
@@ -32,15 +33,13 @@
     - name: Add the current CP4BA CR Config Map
       kubernetes.core.k8s:
         state: present
-        force: false
-        merge_type: merge
         src: "{{ cp4ba_output_directory }}/cp4ba-cr-configmap.yaml"
         wait: true
         wait_sleep: 15
         wait_timeout: 15
-  when: cp4ba_cr.resources | length != 0
 
 - name: Log
+  when: _cp4ba_run_deploy_failed
   block:
 
     - name: Get log of CP4BA Operator
@@ -79,11 +78,7 @@
     - name: Add failed tasks log Config Map
       kubernetes.core.k8s:
         state: present
-        force: false
-        merge_type: merge
         src: "{{ cp4ba_output_directory }}/cp4ba-operator-log-configmap.yaml"
         wait: true
         wait_sleep: 15
         wait_timeout: 15
-
-  when: _cp4ba_run_deploy_failed
