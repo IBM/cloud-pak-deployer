@@ -81,7 +81,7 @@ oc get project ${CP4D_PROJECT} > /dev/null 2>&1
 if [ $? -eq 0 ];then
 
     log "Getting Custom Resources in OpenShift project ${CP4D_PROJECT}..."
-    oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verbs=list -o name | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
+    oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verbs=list -o name | grep -E 'ibm|caikitruntimestacks' | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
 
     # 
     # First the script deletes all CP4D custom resources in the specified project
