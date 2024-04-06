@@ -58,8 +58,8 @@ while true;do
     if [[ "$patch_result" != *"(no change)"* ]];then
       echo "OpsManager has been patched." | tee -a ${status_dir}/log/$project-wxo-48-patch.log
       oc delete sts -n ${project} mongodb-wo-mongo-ops-manager-db --ignore-not-found
-      ops_manager_patched=1
     fi
+    ops_manager_patched=1
   fi
 
   log "----------"
@@ -88,8 +88,8 @@ while true;do
     if [[ "$patch_result" != *"(no change)"* ]];then
       echo "RabbitMQCluster has been patched." | tee -a ${status_dir}/log/$project-wxo-48-patch.log
       oc delete job -n ${project} wo-rabbitmq-orchestrate-backup-label --ignore-not-found
-      rabbit_mq_cluster_patched=1
     fi
+    rabbit_mq_cluster_patched=1
   fi
 
   if [[ ${ops_manager_patched} -eq 1 && ${rabbit_mq_cluster_patched} -eq 1 ]];then
