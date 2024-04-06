@@ -70,7 +70,11 @@
   shell: |
     oc wait csv --namespace={{ _app_connect.app_connect_project }} \
     -l=operators.coreos.com/ibm-appconnect.{{ _app_connect.app_connect_project }}='' \
-    --for='jsonpath={.status.phase}'=Succeeded --timeout=600s
+    --for='jsonpath={.status.phase}'=Succeeded --timeout=30s
+  register: _ibm_app_connect_csv
+  retries: 20
+  delay: 10
+  until: _ibm_app_connect_csv.rc == 0
 
 - name: Create IBM App Connect instance for watsonx watsonx.orchestrate
   shell: |
@@ -81,11 +85,39 @@
       --components=watsonx_orchestrate \
       --file_storage_class={{ ocp_storage_class_file }}
 
+- set_fact:
+    _cp4d_admin_password_vault_key_name: "cp4d_admin_{{ _p_current_cp4d_cluster.project| replace('-','_') }}_{{ _p_current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Retrieve CP4D admin password from vault secret {{ _cp4d_admin_password_vault_key_name }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_password_vault
+
 - name: Setup watsonx Assistant instances for watsonx watsonx.orchestrate
   shell: |
     setup-wxo-assistant \
       --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
       --create_assistants=true \
       --user={{ _cp4d_user }} \
-      --password={{ _current_cp4d_admin_password }} \
+      --password={{ _cp4d_admin_password_vault }} \
       --auth_type=password
+  register: _setup_wxo_assistant
+  retries: 5
+  delay: 10
+  until: _setup_wxo_assistant.rc == 0
+
+- name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log
+  shell: |
+    {{ role_path }}/files/temp-patch-wxo.sh \
+      {{ status_dir }} \
+      {{ _p_current_cp4d_cluster.project }}
+  async: 86400
+  poll: 0
+  register: _patch_wxo_48
+
+- name: Show details of background task to patch watsonx Orchestrate
+  debug:
+    var: _patch_wxo_48

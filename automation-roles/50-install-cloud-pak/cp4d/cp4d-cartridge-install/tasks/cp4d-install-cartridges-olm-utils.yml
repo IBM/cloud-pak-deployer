@@ -16,6 +16,12 @@
             map(attribute='olm_utils_name') | 
             join(',')}}
 
+- name: Run pre-processing scripts
+  include_tasks: cp4d-install-cr-pre-processing.yml
+  loop: "{{ _apply_cr_cartridges | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+
 # Always generate the preview script to log what will be done
 - name: Generate command preview script to install cartridges
   set_fact:
