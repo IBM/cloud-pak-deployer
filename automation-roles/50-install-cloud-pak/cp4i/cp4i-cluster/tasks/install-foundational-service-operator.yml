@@ -1,0 +1,81 @@
+---
+
+# Global variables:
+# - current_cp4i_cluster
+# - _use_case_files
+# - _operators_in_all_namespaces
+
+
+
+- name: "Find Foundational Services instance type"
+  set_fact:
+    _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='foundational-services']
+
+- fail:
+    msg: "An instance type foundational-services was not found"
+  when: _instance_type_details == {}
+
+- name: "Include version details variables"
+  include_vars: versions.yml
+
+- name: "Select cloud pak version"
+  set_fact:
+    _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?cp4i_version=='{{ current_cp4i_cluster.cp4i_version }}']
+
+- fail:
+    msg: "Cloud Pak version {{ current_cp4i_cluster.cp4i_version }} not defined"
+  when: _cloud_pak_ver == {}
+
+- name: "Get Foundational Services version specific details"
+  set_fact:
+    _foundational_services_details: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='foundational-services']
+
+- fail:
+    msg: "Foundational Services not defined in CP4I version {{ current_cp4i_cluster.cp4i_version }}"
+  when: _foundational_services_details == {}
+
+- name: "Set Foundational Services subscription name"
+  set_fact:
+    _fs_subscr_name: "{{ _instance_type_details.package_name }}"
+
+- name: "Set Foundational channel"
+  set_fact:
+    _fs_channel: "{{ _foundational_services_details.channel }}"
+
+- name: "Set Foundation Services namespace when installing in all nxamespaces"
+  set_fact:
+    _fs_namespace: "openshift-operators"
+  when: _operators_in_all_namespaces
+
+- name: "Set Foundation Services namespace when installing in specific namespace"
+  set_fact:
+    _fs_namespace: "{{ current_cp4i_cluster.project }}"
+  when: not _operators_in_all_namespaces
+
+- name: "Set Foundational Services subscription source when using CASE files"
+  set_fact:
+    _fs_subscr_source: "{{ _instance_type_details.source_catalog_case }}"
+  when: _use_case_files
+
+- name: "Set Foundational Services subscription source when using online catalog"
+  set_fact:
+    _fs_subscr_source: "{{ _instance_type_details.source_catalog_online }}"
+  when: not _use_case_files
+
+- name: "Install operator"
+  include_tasks: install-operator.yml
+  vars:
+    _p_subscr_name: "{{ _fs_subscr_name }}"
+    _p_namespace: "{{ _fs_namespace }}"
+    _p_channel: "{{ _fs_channel }}"
+    _p_subscr_source: "{{ _fs_subscr_source }}"
+
