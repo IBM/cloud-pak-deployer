@@ -85,3 +85,9 @@
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
   when: not _sequential_install
+
+- name: Wait for cartridges to finish installation
+  include_tasks: cp4d-wait-cartridges-ready.yml
+  loop: "{{ _apply_cr_cartridges | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
