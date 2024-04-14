@@ -1,0 +1,30 @@
+---
+
+- name: "Create project cert-manager-operator"
+  include_tasks: create-project.yml
+  vars:
+    _p_project_name: "cert-manager-operator"
+
+- name: "Create operator group for cert-manager-operator"
+  include_tasks: apply-template.yml
+  vars:
+    _p_template: "operator-group.j2"
+    _p_dest_name: "cert-manager-operator-group.yml"
+    operator_group_name: "cert-manager-operator-group"
+    operator_group_namespace: "cert-manager-operator"
+
+- name: "Install cert manager operator"
+  # Note: this step is architecture dependent
+  # In case of installing on Power or Z an IBM operator 
+  # should be used instead of one provided by RedHat
+  include_tasks: install-operator.yml
+  vars:
+    _p_subscr_name: "openshift-cert-manager-operator"
+    _p_namespace: "cert-manager-operator"
+    _p_channel: "stable-v1"
+    _p_subscr_source: "redhat-operators"
+
+- name: "Return default project back to {{ current_cp4i_cluster.project }}"
+  include_tasks: set-default-project.yml
+  vars:
+    _p_project_name: "{{ current_cp4i_cluster.project }}"
