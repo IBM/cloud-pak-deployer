@@ -1,9 +1,12 @@
 ---
-implemented_cloud_platform_types: ['ibm-cloud','existing-ocp','vsphere','aws']
+implemented_cloud_platform_types: ['ibm-cloud','existing-ocp','vsphere','aws','azure']
 
 _v_entitled_registry: cp.icr.io
 _v_entitled_registry_username: cp
 case_github_url: "https://github.com/IBM/cloud-pak/raw/master/repo/case"
+
+license_service_project: ibm-licensing
+_v_template_dest_directory: "{{ status_dir }}/cp4i"
 
 instance_types:
 
@@ -78,14 +81,15 @@ instance_types:
   catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
 
 - type: event-endpoint-management
-  package_name: ibm-apiconnect
-  kind: EventEndpointManager
-  case_file_name: ibm-apiconnect
-  case_inventory: apiconnectOperatorSetup
+  # NOTE: Not compatible with cp4i 2022.4 and older
+  package_name: ibm-eventendpointmanagement
+  kind: EventEndpointManagement
+  case_file_name: ibm-eventendpointmanagement
+  case_inventory: eemOperatorSetup
   source_catalog_online: ibm-operator-catalog
-  source_catalog_case: ibm-apiconnect-catalog
-  default_template: event-endpoint-management-one-node-minimum
-  catalog_source_yaml_name: catalog-sources.yaml
+  source_catalog_case: ibm-eventendpointmanagement-catalog
+  default_template: event-endpoint-management-one-node-minimum # ??
+  catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
 
 - type: event-streams
   package_name: ibm-eventstreams
@@ -116,4 +120,12 @@ instance_types:
   source_catalog_case: ibm-integration-operations-dashboard-catalog
   default_template: integration-tracing-development
   catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
+
+- type: foundational-services
+  package_name: ibm-common-service-operator
+  case_file_name: ibm-cp-common-services
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: opencloud-operators
+  catalog_source_yaml_name: catalog-sources.yaml
+
   

@@ -1,0 +1,70 @@
+---
+
+# Global variables:
+# - current_cp4i_cluster
+# - _use_entitled_registry
+
+# Returns:
+# - _fs_case_file_name
+# - _fs_catalog_source_yaml
+# - _fs_case_version
+# - _fs_channel
+
+- name: "Find Foundational Services instance type"
+  set_fact:
+    _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='foundational-services']
+
+- fail:
+    msg: "An instance type foundational-services was not found"
+  when: _instance_type_details == {}
+
+- name: "Include version details variables"
+  include_vars: versions.yml
+
+- name: "Select cloud pak version"
+  set_fact:
+    _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?cp4i_version=='{{ current_cp4i_cluster.cp4i_version }}']
+
+- fail:
+    msg: "Cloud Pak version {{ current_cp4i_cluster.cp4i_version }} not defined"
+  when: _cloud_pak_ver == {}
+
+- name: "Get Foundational Services version specific details"
+  set_fact:
+    _foundational_services_details: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='foundational-services']
+
+- fail:
+    msg: "Foundational Services not defined in CP4I version {{ current_cp4i_cluster.cp4i_version }}"
+  when: _foundational_services_details == {}
+
+- name: "Get Foundational Services CASE name, CASE version and channel"
+  set_fact:
+    _fs_case_file_name: "{{ _instance_type_details.case_file_name }}"
+    _fs_catalog_source_yaml: "{{ _instance_type_details.catalog_source_yaml_name }}"
+    _fs_case_version: "{{ _foundational_services_details.case_version }}"
+    _fs_channel: "{{ _foundational_services_details.channel }}"
+
+- name: "Save Foundational Services CASE file"
+  shell: |
+    oc ibm-pak get {{ _fs_case_file_name }} --version {{ _fs_case_version }}
+
+- name: "Create Foundational Services mirror manifest when Entitled registry is used"
+  shell: |
+    oc ibm-pak generate mirror-manifests {{ _fs_case_file_name }} --version {{ _fs_case_version }} icr.io
+  when: _use_entitled_registry
+
+- name: "Create Foundational Services mirror manifest when private registry is used"
+  shell: |
+    oc ibm-pak generate mirror-manifests {{ _fs_case_file_name }} --version {{ _fs_case_version }} {{ current_cp4i_cluster.image_registry_url }}
+  when: not _use_entitled_registry
+
+  

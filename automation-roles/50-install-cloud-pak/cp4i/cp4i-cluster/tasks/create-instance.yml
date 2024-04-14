@@ -1,6 +1,5 @@
 ---
-
-- name: Create instance
+- name: "Create instance"
   block:
 
   - debug:
@@ -8,22 +7,23 @@
 
   # ---------- FIND INSTANCE TYPE DEFINITION --------------
 
-  - name: Get instance type details
+  - name: "Get instance type details"
     set_fact:
       _inst_type_def: "{{ instance_types | json_query(query) | first | default({}) }}"
     vars:
       query: >-
         [?type=='{{ current_cp4i_instance.type }}']
 
-  - name: Fail if the instance type cannot be found
+  - name: "Fail if the instance type cannot be found"
     fail:
       msg: "Case instance type for instance {{ current_cp4i_instance.name }} not found."
     when: _inst_type_def=={}
 
   # ---------- FIND VERSION PROPERTIES -----------------------
 
-  - name: Find version specific instance type properties
+  - name: "Find version specific instance type properties"
     include_tasks: get-instance-properties.yml
+    # returns: instance_properties
 
   # ---------- CREATE INSTANCE ----------------------------
 
@@ -32,19 +32,20 @@
       oc get {{_inst_type_def.kind}} {{instance_properties.name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{instance_properties.name}}' | wc -l
     register: instance_exists  
 
-  - name: Create instance if it does not already exist
+  - name: "Create instance if it does not already exist"
     block:
 
-    - name: If instance type is enterprise-gateway create admin password secret
+    - name: "If instance type is enterprise-gateway create admin password secret"
       include_tasks: create-dp-admin-password-secret.yml
       when: instance_properties.type == 'enterprise-gateway'
-      
-    - set_fact:
+
+    - name: "Get template from instance properties or use a default one defined for the instance type"
+      set_fact:
         instance_template: "{{ instance_properties.template | default(default_template_name) }}"
       vars:
         default_template_name: "{{ _inst_type_def.default_template }}"
 
-    - name: Prepare yaml file for creating instance
+    - name: "Prepare yaml file for creating instance"
       template:
         src: "{{instance_template}}.j2"
         dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
@@ -53,12 +54,11 @@
       shell: |
         oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
 
-    when: instance_exists.stdout == "0"
-
+    when: "instance_exists.stdout | trim == '0'"
 
   # ---------- WAITING FOR PLATFORM NAVIGATOR TO BECOME READY -------
   
-  - name: "Wait for the {{_inst_type_def.kind}} to become ready"
+  - name: "Waiting for the {{_inst_type_def.kind}} to become ready"
     shell: |
       oc get {{_inst_type_def.kind}} -n {{current_cp4i_cluster.project}} {{instance_properties.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
     register: instance_status
@@ -67,7 +67,4 @@
     until: instance_status.stdout == "True"
     when: instance_properties.type == 'platform-navigator'
 
-
   when: (current_cp4i_instance.state | default('installed')) == 'installed'
-
-

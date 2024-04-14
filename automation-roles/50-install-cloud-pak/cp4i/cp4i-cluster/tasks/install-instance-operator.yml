@@ -1,0 +1,55 @@
+---
+
+# Global variables:
+# - current_cp4i_instance
+# - _use_case_files
+# - _operators_in_all_namespaces
+
+- name: "Install operator for {{ current_cp4i_instance.type }}"
+  block:
+
+  - name: Find version specific instance type properties
+    include_tasks: get-instance-properties.yml
+    # --> instance_properties
+
+  # ------------ FIND INSTANCE TYPE DEFINITION ----------------------
+
+  - name: Get instance type details
+    set_fact:
+      _inst_type_def: "{{ instance_types | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?type=='{{ instance_properties.type }}']
+
+  - name: Fail if the instance type cannot be found
+    fail:
+      msg: "Case instance type for instance {{ instance_properties.name }} not found."
+    when: _inst_type_def=={}
+
+  # ------------ INSTALL OPERATOR ------------------------------------
+
+  - set_fact:
+      _source: "{{ _inst_type_def.source_catalog_case }}"
+    when: _use_case_files
+
+  - set_fact:
+      _source: "{{ _inst_type_def.source_catalog_online }}"
+    when: not _use_case_files
+
+  - set_fact:
+      _subscription_namespace: "openshift-operators"
+    when: _operators_in_all_namespaces
+
+  - set_fact:
+      _subscription_namespace: "{{ current_cp4i_cluster.project }}"
+    when: not _operators_in_all_namespaces
+    
+  - name: "Install operator"
+    include_tasks: install-operator.yml
+    vars:
+      _p_subscr_name: "{{ _inst_type_def.package_name }}"
+      _p_namespace: "{{ _subscription_namespace }}"
+      _p_channel: "{{ instance_properties.channel }}"
+      _p_subscr_source: "{{ _source }}"
+
+  when: (current_cp4i_instance.state | default('installed')) == 'installed'
