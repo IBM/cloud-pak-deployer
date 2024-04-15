@@ -1,5 +1,9 @@
 ---
 - block:
+  - name: Write status of cartridges to {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges-status.csv
+    shell: |
+      get-cr-status --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges-status.csv
+      
   - name: Write cartridge information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
     copy:
       content: "{{ _cartridges_to_install | default([]) | to_json }}"
@@ -35,6 +39,5 @@
     - not (cpd_test_cartridges | default(False) | bool)
 
   when: 
-  - (_current_cp4d_cartridge.state | default('installed')) == 'installed'
   - not _current_cp4d_cartridge.name in ['cpfs','cp-foundation','cpd_platform','lite','scheduler']
   - not (_current_cp4d_cartridge.cr_internal | default(False) | bool)

@@ -23,11 +23,9 @@
 # Set the license server project to the correct value, dependent if the license service is already installed in cs-control
 - include_tasks: set-license-service-project.yml
 
-- debug:
-    var: implemented_cloud_platform_types
-
 - set_fact:
     _cartridges_with_olm_utils_name: []
+    _all_cartridges: []
     _cartridges_to_install: []
     _cartridge_dependencies: []
 
@@ -60,7 +58,7 @@
   no_log: True
 
 - set_fact:
-    _undefined_cartridges: "{{ _cartridges_with_olm_utils_name | rejectattr('olm_utils_name','defined') }}"
+    _undefined_cartridges: "{{ _cartridges_with_olm_utils_name | rejectattr('olm_utils_name','defined') | map(attribute='name') }}"
 
 - name: Fail if there were undefined cartridges found
   fail:
@@ -69,8 +67,8 @@
 
 - name: Add versions details from olm-utils
   set_fact:
-    _cartridges_to_install: >-
-      {{ _cartridges_to_install | default([]) 
+    _all_cartridges: >-
+      {{ _all_cartridges | default([]) 
         + [ item | combine(_list_components_json_item) ]
       }}
   vars:
@@ -85,27 +83,39 @@
 
 # Remove any cartridges without a defined Component_name
 - set_fact:
-    _tmp_cartridges: "{{ _cartridges_to_install | rejectattr('Component_name','undefined') }}"
+    _tmp_cartridges: "{{ _all_cartridges | rejectattr('Component_name','undefined') }}"
 
 - set_fact:
-    _cartridges_to_install: "{{ _tmp_cartridges }}"
+    _all_cartridges: "{{ _tmp_cartridges }}"
 
+# Make sure that the dp cartridge is placed at the end
 - set_fact:
     _dp_cartridge: >-
-      {{ _cartridges_to_install | selectattr('Component_name','match','dp') | default({}) }}
-
-- debug:
-    var: _dp_cartridge
+      {{ _all_cartridges | selectattr('Component_name','match','dp') | default({}) }}
 
 - set_fact:
-    _tmp_cartridges: "{{ _cartridges_to_install | rejectattr('Component_name','match','dp') }}"
+    _tmp_cartridges: "{{ _all_cartridges | rejectattr('Component_name','match','dp') }}"
 
 - set_fact:
-    _cartridges_to_install: >-
+    _all_cartridges: >-
       {{ _tmp_cartridges + _dp_cartridge }}
 
 - set_fact:
-    _all_cartridges: "{{ _cartridges_to_install }}"
+    _cartridges_to_install: "{{ _all_cartridges }}"
+  when: (cpd_test_cartridges | default(False) | bool)
+
+- set_fact:
+    _cartridges_to_install: >-
+      {{  _all_cartridges | 
+            selectattr('state','undefined') | 
+            union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
+  when: not(cpd_test_cartridges | default(False) | bool)
+
+- set_fact:
+    _cartridges_to_install_list: >-
+      {{  _cartridges_to_install | 
+            map(attribute='olm_utils_name') | 
+            join(',')}}
 
 - set_fact:
     _upgrade_cp4d: False
@@ -115,7 +125,6 @@
   loop_control:
     loop_var: _current_cartridge_details
   when: 
-  - (_current_cartridge_details.state | default('installed')) == 'installed'
   - (_current_cartridge_details.CR_Kind | default('')) != ''
   - (_current_cartridge_details.CR_Kind | default('')) != '--'
   loop: "{{ _cartridges_to_install }}"
@@ -152,7 +161,6 @@
 - name: Determine if CP4D services must be installed sequentially
   set_fact:
     _sequential_install: "{{ _sequential_install or item.force_sequential_install }}"
-  when: (item.state | default('installed')) == 'installed'
   loop: "{{ _cartridges_to_install }}"
   no_log: True
 
@@ -176,7 +184,6 @@
   set_fact:
     _cartridge_dependencies: >-
       {{ _cartridge_dependencies + ( item.Dependencies.split('+') | map("trim") | list | reject('match','^$') | list ) | unique }}
-  when: (item.state | default('installed')) == 'installed'
   loop: "{{ _cartridges_to_install }}"
   no_log: True
 
@@ -189,25 +196,15 @@
   debug:
     var: _cartridge_dependencies
 
-- name: Show full cartridge information
+- name: Show full information of cartridges to be installed
   debug:
     var: _cartridges_to_install
-
-- name: Generate CP4D components based on cartridges to install
-  set_fact:
-    _cp4d_components: "{{ lookup('template','generate-cp4d-components.j2') }}"
-
-- debug: 
-    var: _cp4d_components
 
 - name: Obtain surviving cartridges
   set_fact:
     _surviving_cartridges_names: "{{ _cartridges_to_install | json_query(jmes_query) }} + {{ _cartridge_dependencies }}"
   vars:
     jmes_query: "[?state=='installed'].olm_utils_name"
-
-- debug:
-    var: _surviving_cartridges_names
 
 - name: Determine the surviving cartridges
   set_fact:
@@ -217,7 +214,7 @@
       }}
   vars:
     _cartridges_to_install_item: >-
-          {{ _cartridges_to_install
+          {{ _all_cartridges
             | selectattr('olm_utils_name','equalto',item)
             | list
             | first
@@ -231,7 +228,7 @@
 - debug:
     var: _surviving_cartridges
 
-- name: Write cartridge information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
+- name: Write cartridge to install information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
   copy:
     content: "{{ _cartridges_to_install | default([]) | to_json }}"
     dest: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json"
