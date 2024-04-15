@@ -19,12 +19,6 @@
           cloudpakfordata: true
           iamIntegration: {{ _p_current_cp4d_cluster.use_fs_iam | default(False) | bool }}
 
-- name: Run pre-processing scripts
-  include_tasks: cp4d-install-cr-pre-processing.yml
-  loop: "{{ _cartridges_to_install | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
-
 - name: Starting background task to patch Db2U clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-db2u-temp-patch.log
   shell: |
     {{ role_path }}/files/temp-patch-db2u.sh \
