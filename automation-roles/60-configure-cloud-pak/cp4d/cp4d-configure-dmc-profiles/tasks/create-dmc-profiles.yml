@@ -1,0 +1,39 @@
+---
+- name: Retrieve first DMC instance
+  set_fact:
+    _dmc_instance: "{{ _dmc_instances_lookup_result.json.service_instances | first }}"
+
+- name: Retrieve DMC profiles for the instance
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/icp4data-addons/dmc-{{ _dmc_instance.id }}/cpd/dbapi/v4/dbprofiles'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _existing_dmc_profiles
+
+- debug:
+    var: _existing_dmc_profiles
+
+# Create DMC profiles for Db2 OLTP
+- set_fact:
+    _db2_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "db2oltp"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- set_fact:
+    _configured_db2_instances: []
+- set_fact:
+    _configured_db2_instances: "{{ _db2_cartridge.instances | default([] )}}"
+  when:
+  - _db2_cartridge != {}
+  - (_db2_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: create-dmc-profile-db2oltp.yml
+  loop: "{{ _configured_db2_instances }}"
+  loop_control:
+    loop_var: _db2_instance
