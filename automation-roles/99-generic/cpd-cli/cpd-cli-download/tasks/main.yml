@@ -4,9 +4,9 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
-- name: Check if cpdcli was already downloaded
+- name: Check if cpd-cli was already downloaded
   stat:
-    path: "{{ status_dir }}/downloads/cpd-cli-linux-amd64.tar.gz"
+    path: "{{ status_dir }}/downloads/cpd-cli-linux-{{ ARCH }}.tar.gz"
   register: _cpd_cli_download
 
 - block:
@@ -19,9 +19,9 @@
 
   when: not _cpd_cli_download.stat.exists
 
-- name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli-linux-amd64.tar.gz
+- name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli-linux-{{ ARCH }}.tar.gz
   unarchive:
-    src: "{{ status_dir }}/downloads/cpd-cli-linux-amd64.tar.gz"
+    src: "{{ status_dir }}/downloads/cpd-cli-linux-{{ ARCH }}.tar.gz"
     dest: /usr/local/bin/
     extra_opts: 
     - --strip-components=1
