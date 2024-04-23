@@ -1,0 +1,33 @@
+---
+apiVersion: apiconnect.ibm.com/v1beta1
+kind: APIConnectCluster
+metadata:
+  annotations:
+    apiconnect-operator/backups-not-configured: 'true'
+  labels:
+    app.kubernetes.io/instance: apiconnect
+    app.kubernetes.io/managed-by: ibm-apiconnect
+    app.kubernetes.io/name: apiconnect-small
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  analytics:
+    mtlsValidateClient: true
+  imagePullSecrets:
+    - ibm-entitlement-key
+  imageRegistry: cp.icr.io/cp/apic
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+    metric: VIRTUAL_PROCESSOR_CORE
+    use: nonproduction
+  portal:
+    adminClientSubjectDN: ''
+    mtlsValidateClient: true
+    originalUID: ''
+    portalAdminEndpoint: {}
+    portalUIEndpoint: {}
+  profile: n1xc7.m48
+  storageClassName: {{ocp_storage_class_block}}
+  version: "{{instance_properties.version}}"
+  

@@ -2,27 +2,37 @@
 - set_fact:
     _threads_per_core: "{{ _p_license_threads_per_core | default(1) }}"
 
+- include_tasks: get-latest-cp4d-version.yml
+  when: (_p_cp4d_version | default('')) == ''
+
 - name: Delete offline directory
   file:
     path: /tmp/work/offline
     state: absent
 
-- name: If air-gapped, copy case files from {{ status_dir }}/cp4d/offline to /tmp/work/offline
+- name: If air-gapped, copy case files from {{ _v_template_dest_directory }}/offline to /tmp/work/offline
   copy:
-    src: "{{ status_dir }}/cp4d/offline"
+    src: "{{ _v_template_dest_directory }}/offline"
     dest: /tmp/work/
     remote_src: True
   when: (cpd_airgap | default(False) | bool)
 
-- name: Generate apply-cluster-components script {{ status_dir }}/cp4d/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
+- set_fact:
+    _cert_manager_project: 'ibm-cert-manager'
+
+- set_fact:
+    _cert_manager_project: 'cert-manager'
+  when: (_p_cert_manager | default('ibm')) != 'ibm'
+
+- name: Generate apply-cluster-components script {{ _v_template_dest_directory }}/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
   template:
     src: apply-cluster-components.j2
-    dest: "{{ status_dir }}/cp4d/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh"
+    dest: "{{ _v_template_dest_directory }}/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh"
     mode: u+rwx
 
 - name: Run shell script to apply cluster components on OpenShift cluster {{ _p_openshift_cluster_name }}, logs are in {{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log
   shell: |
-    {{ status_dir }}/cp4d/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
+    {{ _v_template_dest_directory }}/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
   when: 
   - not _p_preview
 

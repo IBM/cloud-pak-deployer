@@ -1,0 +1,26 @@
+---
+- name: Get latest version of cpdctl (with GitHub PAT)
+  uri:
+    url: https://api.github.com/repos/IBM/cpdctl/releases/latest
+    headers:
+      Authorization: "Bearer {{ _github_ibm_pat | default(omit) }}"
+    return_content: yes
+    method: GET
+    status_code: 200
+  register: _cpdctl_releases
+
+- set_fact:
+    _cpdctl_tag_name: "{{ _cpdctl_releases.json.tag_name }}"
+
+- name: Download and install cpdctl version {{ _cpdctl_releases.json.tag_name }} (with GitHub PAT)
+  get_url:
+    url: "https://github.com/IBM/cpdctl/releases/download/{{ _cpdctl_releases.json.tag_name }}/cpdctl_linux_amd64.tar.gz"
+    dest: "{{ status_dir }}/cp4d/cpdctl_linux_amd64.tar.gz"
+    owner: root
+    mode: 0644
+    headers:
+      Authorization: "Bearer {{ _github_ibm_pat | default(omit) }}"
+  register: _download_result
+  until: _download_result is succeeded
+  retries: 5
+  delay: 30

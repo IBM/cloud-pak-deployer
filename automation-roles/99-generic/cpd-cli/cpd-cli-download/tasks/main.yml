@@ -11,38 +11,11 @@
 
 - block:
 
-  - name: Get current version number of cpd-cli
-    uri:
-      url: "{{ _v_cpd_cli_releases }}"
-      return_content: yes
-      method: GET
-      status_code: 200
-    register: _cpd_cli_releases
+  - include_tasks: cpd-cli-download.yml
+    when: (_github_ibm_pat | default('')) == ''
 
-  - set_fact:
-      _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
-    vars:
-      query: >-
-        [?starts_with(name,'cpd-cli-linux-EE')].browser_download_url
-    when: ARCH == "x86_64"
-
-  - set_fact:
-      _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
-    vars:
-      query: >-
-        [?starts_with(name,'cpd-cli-{{ ARCH }}-EE')].browser_download_url
-    when: ARCH != "x86_64"
-
-  - name: Download latest cpd-cli release
-    get_url:
-      url: "{{ _cpd_cli_download_url }}"
-      dest: "{{ status_dir }}/downloads/cpd-cli-linux-{{ ARCH }}.tar.gz"
-      owner: root
-      mode: 0644
-    register: _download_result
-    until: _download_result is succeeded
-    retries: 5
-    delay: 30
+  - include_tasks: cpd-cli-download-github-pat.yml
+    when: (_github_ibm_pat | default('')) != ''
 
   when: not _cpd_cli_download.stat.exists
 
