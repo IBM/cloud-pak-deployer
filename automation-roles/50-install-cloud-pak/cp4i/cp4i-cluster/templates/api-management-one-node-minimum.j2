@@ -4,14 +4,19 @@ metadata:
   labels:
     app.kubernetes.io/instance: apiconnect
     app.kubernetes.io/managed-by: ibm-apiconnect
-    app.kubernetes.io/name: apiconnect-minimum
+    app.kubernetes.io/name: apiconnect-small
   name: {{instance_properties.name}}
   namespace: {{current_cp4i_cluster.project}}
 spec:
+  analytics:
+    mtlsValidateClient: true
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
-    use: nonproduction
     license: {{instance_properties.license}}
+    metric: VIRTUAL_PROCESSOR_CORE
+    use: nonproduction
+  portal:
+    mtlsValidateClient: true
   profile: n1xc7.m48
   version: "{{instance_properties.version}}"
   storageClassName: {{ocp_storage_class_block}}

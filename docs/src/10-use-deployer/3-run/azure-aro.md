@@ -148,6 +148,16 @@ You need to store the OpenShift pull secret and service principal credentials in
     --vault-secret-file /tmp/${AZURE_SP}-credentials.json
 ```
 
+### Optional: Set the GitHub Personal Access Token (PAT)
+In some cases, download of the `cloudctl` and `cpd-cli` clients from https://github.com/IBM will fail because GitHub limits the number of API calls from non-authenticated clients. You can remediate this issue by creating a [Personal Access Token on github.com](https://github.com/settings/tokens) and creating a secret in the vault.
+
+```
+./cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
+```
+
+Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` to the `./cp-deploy.sh env apply` command.
+
+
 ## 5. Run the deployer  
 
 ### Optional: validate the configuration

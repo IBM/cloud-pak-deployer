@@ -40,7 +40,7 @@ while true;do
   current_ts=$(date +%s)
 
   log "Collecting OLM information"
-  oc get sub -n ${fs_project} \
+  oc get subscriptions.operators.coreos.com -n ${fs_project} \
     --sort-by=.metadata.creationTimestamp \
     --no-headers \
     -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' > ${sub_file}
@@ -86,7 +86,7 @@ while true;do
     while IFS=, read -r sub sub_ts csv sub_state;do
       if [[ "${csv}" == "" ]];then
         log "DIAG: Exporting subscription ${sub} to ${diag_dir}/sub-${sub}.yaml and deleting"
-        oc get sub -n ${fs_project} ${sub} -o yaml > ${diag_dir}/sub-${sub}.yaml
+        oc get subscriptions.operators.coreos.com -n ${fs_project} ${sub} -o yaml > ${diag_dir}/sub-${sub}.yaml
         oc delete sub -n ${fs_project} ${sub}
       fi
     done < ${diag_dir}/sub-diag.csv

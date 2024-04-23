@@ -1,0 +1,25 @@
+---
+- name: Get current version number of clouctl (with GitHub PAT)
+  uri:
+    url: https://api.github.com/repos/IBM/cloud-pak-cli/releases/latest
+    headers:
+      Authorization: "Bearer {{ _github_ibm_pat | default(omit) }}"
+    return_content: yes
+    method: GET
+    status_code: 200
+  register: _cloudctl_version
+  when: (_github_ibm_pat | default('')) != ''
+
+- name: Download cloudctl tool (with GitHub PAT)
+  get_url:
+    url: "https://github.com/IBM/cloud-pak-cli/releases/download/{{ _cloudctl_version.json.tag_name }}/cloudctl-linux-amd64.tar.gz"
+    dest: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
+    owner: root
+    mode: 0644
+    headers:
+      Authorization: "Bearer {{ _github_ibm_pat | default(omit) }}"
+  register: _download_result
+  until: _download_result is succeeded
+  retries: 5
+  delay: 30
+  when: (_github_ibm_pat | default('')) != ''

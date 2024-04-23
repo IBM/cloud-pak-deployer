@@ -91,6 +91,15 @@ export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 
 - `CP_ENTITLEMENT_KEY`: This is the entitlement key you acquired as per the instructions above, this is a 80+ character string. **You don't need to set this environment variable when you install the Cloud Pak(s) from a private registry**
 
+### Optional: Set the GitHub Personal Access Token (PAT)
+In some cases, download of the `cloudctl` and `cpd-cli` clients from https://github.com/IBM will fail because GitHub limits the number of API calls from non-authenticated clients. You can remediate this issue by creating a [Personal Access Token on github.com](https://github.com/settings/tokens) and creating a secret in the vault.
+
+```
+./cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
+```
+
+Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` to the `./cp-deploy.sh env apply` command.
+
 ## 5. Run the deployer
 
 ### Optional: validate the configuration
