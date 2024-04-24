@@ -1,21 +1,4 @@
 ---
-- set_fact:
-    _openpages_cartridge: "{{ _cartridges_to_install | json_query(_query_cartridge) | first | default({}) }}"
-  vars:
-    _query_cartridge: "[?olm_utils_name=='openpages']"  
-
-- block:
-  - name: Loop through each openpages instance to provision
-    include_tasks: provision_openpages_instance.yml
-    loop: "{{ _openpages_cartridge.instances | default([]) }}"
-    loop_control:
-      loop_var: _openpages_instance
-  when:
-  - _openpages_cartridge != {}
-  - (_openpages_cartridge.state | default('installed')) == 'installed'
-  - _openpages_cartridge.instances is defined
-  - (_p_delete_all_instances | default(False)) == False
-
 - name: Get all current OpenPages Engine instances
   uri:
     url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ addon_type }}'
