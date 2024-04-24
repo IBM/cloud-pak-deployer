@@ -9,6 +9,15 @@
     var: _openpages_cartridge
 
 - set_fact:
+    _wxg_cartridge: "{{ _cartridges_to_install | json_query(_query_cartridge) | first | default({}) }}"
+  vars:
+    _query_cartridge: "[?olm_utils_name=='watsonx_governance']"
+
+- name: Show watsonx.governance cartridge
+  debug:
+    var: _wxg_cartridge
+
+- set_fact:
     _configured_openpages_instances: []
 - set_fact:
     _configured_openpages_instances: "{{ _openpages_cartridge.instances | default([] )}}"
