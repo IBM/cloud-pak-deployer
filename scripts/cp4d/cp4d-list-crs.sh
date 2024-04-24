@@ -22,7 +22,7 @@ oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verb
 while read -r line;do
     read -r CR CR_NAME <<< "${line}"
     case $CR in
-        Ibmcpd|CommonService|OperandRequest)
+        CommonService|OperandRequest|OperandConfig|OperandRegistry|ZenExtension)
         ;;
         *)
         cr_status=$(oc get -n $CP4D_PROJECT $CR $CR_NAME -o jsonpath='{.status}' | jq -r '. | to_entries | map(select(.key | match("Status"))) | map(.value) | first')
