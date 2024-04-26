@@ -31,147 +31,147 @@
 #         navigator_configuration:
 #           icn_production_setting:
 #             jvm_customize_options: DELIM=;-Dcom.filenet.authentication.ExShareGID.AuthTokenOrder=oidc,oauth,ltpa
-#   when: cp4ba_external_share_google and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+#   when: cp4ba_external_share_google and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-studio
 - name: Add BAS component
   ansible.builtin.set_fact:
     components: "{{ components + ['bas'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
 - name: Add BAS to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'bas/cr.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-insights
 - name: Add BAI component
   ansible.builtin.set_fact:
     components: "{{ components + ['bai'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
 - name: Add BAI to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'bai/cr.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-operational-decision-manager
 - name: Add ODM pattern
   ansible.builtin.set_fact:
     patterns: "{{ patterns + ['decisions'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
 
 - name: Add ODM components
   ansible.builtin.set_fact:
     components: "{{ components + ['decisionCenter'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center
 
 - name: Add ODM components
   ansible.builtin.set_fact:
     components: "{{ components + ['decisionRunner'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner
 
 - name: Add ODM components
   ansible.builtin.set_fact:
     components: "{{ components + ['decisionServerRuntime'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime
 
 - name: Add ODM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'odm/cr.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
 
 - name: Merge ODM customizations
   ansible.builtin.set_fact:
-    cr: "{{ cr | combine(current_cp4ba_cluster.cp4ba.patterns.decisions.cr_custom , recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and (current_cp4ba_cluster.cp4ba.patterns.decisions.cr_custom is defined)
+    cr: "{{ cr | combine(_current_cp4ba_cluster.cp4ba.patterns.decisions.cr_custom, recursive=true) }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and (_current_cp4ba_cluster.cp4ba.patterns.decisions.cr_custom is defined)
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-automation-decision-services
 - name: Add ADS pattern
   ansible.builtin.set_fact:
     patterns: "{{ patterns + ['decisions_ads'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
 
 - name: Add ADS components
   ansible.builtin.set_fact:
     components: "{{ components + ['ads_designer'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer
 
 - name: Add ADS components
   ansible.builtin.set_fact:
     components: "{{ components + ['ads_runtime'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime
 
 - name: Add ADS to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'ads/cr-designer.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer
 
 - name: Add ADS to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'ads/cr-runtime.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-filenet-content-manager
 - name: Add FNCM pattern
   ansible.builtin.set_fact:
     patterns: "{{ patterns + ['content'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
 
 - name: Add FNCM components
   ansible.builtin.set_fact:
     components: "{{ components + ['cmis'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis
 
 - name: Add FNCM components
   ansible.builtin.set_fact:
     components: "{{ components + ['css'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
 # - name: Add FNCM components
 #   ansible.builtin.set_fact:
 #     components: "{{ components + ['es'] }}"
-#   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+#   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 - name: Add FNCM components
   ansible.builtin.set_fact:
     components: "{{ components + ['tm'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
 
 - name: Add FNCM components
   ansible.builtin.set_fact:
     components: "{{ components + ['ier'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-cpe.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-graphql.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.enabled
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-css.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
 # - name: Add FNCM to CR
 #   ansible.builtin.set_fact:
 #     cr: "{{ cr | combine(lookup('template', 'fncm/cr-es.yaml.j2') | from_yaml, recursive=true) }}"
-#   when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+#   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-tm.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
 
 
 - name: Add IER
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
   block:
-
     - name: Backup CR
       ansible.builtin.set_fact:
         cr_bck: "{{ cr }}"
@@ -199,7 +199,6 @@
             verify_configuration:
               vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
 
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
 # - name: Google and IDP for External Share
 #   block:
@@ -218,37 +217,32 @@
 #       ansible.builtin.set_fact:
 #         cr: "{{ cr | combine(lookup('template', 'fncm/cr-es-gid.yaml.j2') | from_yaml, recursive=true) }}"
 
-#   when: cp4ba_external_share_google and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
+#   when: cp4ba_external_share_google and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-application
 - name: Add AAE pattern
   ansible.builtin.set_fact:
     patterns: "{{ patterns + ['application'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled
 
 - name: Add AAE components
   ansible.builtin.set_fact:
     components: "{{ components + ['app_designer'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer
+  when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer
 
 - name: Add AAE components
   ansible.builtin.set_fact:
     components: "{{ components + ['ae_data_persistence'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
-
-- name: Set AAE data persistence to true in CR
-  ansible.builtin.set_fact:
-    aae_data_persistence: true
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
+  when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
 
 - name: Add AAE to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'aae/cr.yaml.j2') | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae
 
 - name: Add AAE persistence to CR
+  when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
   block:
-
     - name: Backup CR
       ansible.builtin.set_fact:
         cr_bck: "{{ cr }}"
@@ -276,23 +270,21 @@
             verify_configuration:
               vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
 
-  when: current_cp4ba_cluster.cp4ba.patterns.application.enabled and current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
-
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-document-processing
 - name: Add ADP pattern
   ansible.builtin.set_fact:
     patterns: "{{ patterns + ['document_processing'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
 
 - name: Add ADP component
   ansible.builtin.set_fact:
     components: "{{ components + ['document_processing_designer'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and
-    current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled and
+    _current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer
 
 - name: Add ADP to CR
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
   block:
-
     - name: Backup CR
       ansible.builtin.set_fact:
         cr_bck: "{{ cr }}"
@@ -303,8 +295,8 @@
 
     - name: Merge ADP customizations
       ansible.builtin.set_fact:
-        cr: "{{ cr | combine(current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom , recursive=true) }}"
-      when: current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom is defined
+        cr: "{{ cr | combine(_current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom, recursive=true) }}"
+      when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom is defined
 
     - name: Combine lists back to CR
       ansible.builtin.set_fact:
@@ -335,30 +327,28 @@
               ic_css_index_area: "{{ cr_bck.spec.initialize_configuration.ic_css_index_area +
                   cr.spec.initialize_configuration.ic_css_index_area }}"
               ic_enable_cbr: "{{ cr_bck.spec.initialize_configuration.ic_enable_cbr + cr.spec.initialize_configuration.ic_enable_cbr }}"
-      when: current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
-
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+      when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-workflow-authoring
 - name: Add BAWAUT pattern
   ansible.builtin.set_fact:
     patterns: "{{ patterns + ['workflow'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Add BAWAUT component
   ansible.builtin.set_fact:
     components: "{{ components + ['baw_authoring', 'pfs'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.1?topic=services-kafka
 - name: Add BAWAUT kafka component
   ansible.builtin.set_fact:
     components: "{{ components + ['kafka'] }}"
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka
 
-- name: Add AAE persistence to CR
+- name: Add BAWAUT to CR
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
   block:
-
     - name: Backup CR
       ansible.builtin.set_fact:
         cr_bck: "{{ cr }}"
@@ -385,8 +375,6 @@
                   cr.spec.initialize_configuration.ic_icn_init_info.icn_desktop }}"
             verify_configuration:
               vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
-
-  when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Add patterns to CR
   ansible.builtin.set_fact:
@@ -420,70 +408,67 @@
     apply: true
     src: "{{ cp4ba_output_directory }}/cr.yaml"
 
-- block:
-  - name: Wait for Kafka instance Ready state
-    ansible.builtin.include_role:
-      name: common
-      tasks_from: wait-resource-condition
-    vars:
-      common_api_version: ibmevents.ibm.com/v1beta2
-      common_resource_kind: Kafka
-      common_resource_name: iaf-system
-      common_resource_namespace: "{{ cp4ba_project_name }}"
-      common_condition_name: Ready
-      common_retries: 60
-      common_delay: 60
+- name: Wait for Kafka
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  block:
+    - name: Wait for Kafka instance Ready state
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: ibmevents.ibm.com/v1beta2
+        common_resource_kind: Kafka
+        common_resource_name: iaf-system
+        common_resource_namespace: "{{ cp4ba_project_name }}"
+        common_condition_name: Ready
+        common_retries: 60
+        common_delay: 60
 
-  - name: Wait for KafkaUser CRD to be Established
-    ansible.builtin.include_role:
-      name: common
-      tasks_from: wait-crd
-    vars:
-      common_crd_name: kafkausers.ibmevents.ibm.com
+    - name: Wait for KafkaUser CRD to be Established
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-crd
+      vars:
+        common_crd_name: kafkausers.ibmevents.ibm.com
 
-  # Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-administration-guide#day-2-operations-for-kafka reference for Strimzi in Kafka Day 2
-  - name: Prepare yaml file for KafkaUser CR
-    ansible.builtin.template:
-      src: iaf/kafkauser.yaml.j2
-      dest: "{{ cp4ba_output_directory }}/kafkauser.yaml"
-      mode: u+rwx
+    # Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-administration-guide#day-2-operations-for-kafka reference for Strimzi in Kafka Day 2
+    - name: Prepare yaml file for KafkaUser CR
+      ansible.builtin.template:
+        src: iaf/kafkauser.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/kafkauser.yaml"
+        mode: u+rwx
 
-  - name: Add KafkaUser CR
-    kubernetes.core.k8s:
-      state: present
-      force: false
-      merge_type: merge
-      src: "{{ cp4ba_output_directory }}/kafkauser.yaml"
+    - name: Add KafkaUser CR
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ cp4ba_output_directory }}/kafkauser.yaml"
 
-  - name: Wait for KafkaUser instance Ready state
-    ansible.builtin.include_role:
-      name: common
-      tasks_from: wait-resource-condition
-    vars:
-      common_api_version: ibmevents.ibm.com/v1beta2
-      common_resource_kind: KafkaUser
-      common_resource_name: "{{ principal_admin_user }}"
-      common_resource_namespace: "{{ cp4ba_project_name }}"
-      common_condition_name: Ready
-      common_retries: 80
-      common_delay: 15
+    - name: Wait for KafkaUser instance Ready state
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: ibmevents.ibm.com/v1beta2
+        common_resource_kind: KafkaUser
+        common_resource_name: "{{ principal_admin_user }}"
+        common_resource_namespace: "{{ cp4ba_project_name }}"
+        common_condition_name: Ready
+        common_retries: 80
+        common_delay: 15
 
-  - name: Prepare yaml file for KafkaUser Secret
-    ansible.builtin.template:
-      src: iaf/kafkauser-secret.yaml.j2
-      dest: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
-      mode: u+rwx
+    - name: Prepare yaml file for KafkaUser Secret
+      ansible.builtin.template:
+        src: iaf/kafkauser-secret.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
+        mode: u+rwx
 
-# TODO patch secret with correct password
-# base64 encode and oc patch module
-  - name: Add KafkaUser Secret
-    kubernetes.core.k8s:
-      state: present
-      force: false
-      #merge_type: smerge
-      src: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
-
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+      # TODO patch secret with correct password
+      # base64 encode and oc patch module
+    - name: Add KafkaUser Secret
+      kubernetes.core.k8s:
+        state: present
+        force: false
+        src: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
 
 - name: Wait for ElasticSearch instance Ready state
   ansible.builtin.include_role:
@@ -497,18 +482,19 @@
     common_condition_name: Ready
     common_retries: 30
     common_delay: 60
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Wait for ZenService instance Ready state
   ansible.builtin.include_role:
     name: common
-    tasks_from: wait-resource-condition
+    tasks_from: wait-resource-condition-generic
   vars:
     common_api_version: zen.cpd.ibm.com/v1
     common_resource_kind: ZenService
     common_resource_name: iaf-zen-cpdservice
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Successful
+    common_condition_query: resources[*].status.zenStatus
+    common_condition_value: Completed
     common_retries: 90
     common_delay: 60
 
@@ -556,34 +542,35 @@
     common_condition_value: ready
     common_retries: 30
     common_delay: 120
-  when: 
-    current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
-    or current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
-    or current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
-    or current_cp4ba_cluster.cp4ba.patterns.application.enabled
-    or current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  when:
+    _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
+    or _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+    or _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+    or _current_cp4ba_cluster.cp4ba.patterns.application.enabled
+    or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
 - name: Deployments wait list
   ansible.builtin.set_fact:
     wait_list:
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name+'-cpe-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css | ternary(cp4ba_cr_meta_name+'-css-deploy-1','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name+'-cmis-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name+'-graphql-deploy','') }}"
-      # - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-      #   current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name+'-tm-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-mongo-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-gitgateway-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-viewone-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-cpds-deploy','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-cds-deploy','') }}"
-      - "{{ cp4ba_cr_meta_name+'-navigator-deploy' }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas | ternary(cp4ba_cr_meta_name+'-pbk-ae-deployment','') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-cpe-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css | ternary(cp4ba_cr_meta_name + '-css-deploy-1', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name + '-cmis-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-graphql-deploy', '') }}"
+      # - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
+      #   _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name + '-tm-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-mongo-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-gitgateway-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-viewone-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-cpds-deploy', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-cds-deploy', '') }}"
+      - "{{ cp4ba_cr_meta_name + '-navigator-deploy' }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.application.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer | ternary(cp4ba_cr_meta_name + '-pbk-ae-deployment', '') }}"
 
 - name: Wait for Deployments to be Available
   ansible.builtin.include_role:
@@ -608,12 +595,12 @@
     common_resource_namespace: "{{ cp4ba_project_name }}"
     common_retries: 60
     common_delay: 120
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
 - name: StatefulSets wait list
   ansible.builtin.set_fact:
     wait_list:
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name+'-rabbitmq-ha','') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-rabbitmq-ha', '') }}"
 
 - name: Wait for StatefulSets to be Available
   ansible.builtin.include_role:
@@ -640,7 +627,7 @@
     common_delay: 120
   with_items:
     - "{{ cp4ba_cr_meta_name }}-ier-deploy"
-  when: current_cp4ba_cluster.cp4ba.patterns.content.enabled and current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
 - name: Wait for ADP Deployments Available state
   ansible.builtin.include_role:
@@ -663,7 +650,7 @@
     - "{{ cp4ba_cr_meta_name }}-processing-extraction"
     - "{{ cp4ba_cr_meta_name }}-setup"
     - "{{ cp4ba_cr_meta_name }}-spbackend"
-  when: current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
 
 - name: Wait for BAI InsightsEngine Ready state
   ansible.builtin.include_role:
@@ -677,26 +664,26 @@
     common_condition_name: Ready
     common_retries: 60
     common_delay: 120
-  when: current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
 - name: Deployment wait list
   ansible.builtin.set_fact:
     wait_list:
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-itp','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name+'-mls-wfi','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center | ternary(cp4ba_cr_meta_name+'-odm-decisioncenter','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
-        ternary(cp4ba_cr_meta_name+'-odm-decisionserverruntime','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
-        ternary(cp4ba_cr_meta_name+'-odm-decisionserverconsole','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name+'-odm-decisionrunner','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name+'-workspace-aae-ae-deployment','') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name + '-mls-itp', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name + '-mls-wfi', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center | ternary(cp4ba_cr_meta_name + '-odm-decisioncenter', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
+        ternary(cp4ba_cr_meta_name + '-odm-decisionserverruntime', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
+        ternary(cp4ba_cr_meta_name + '-odm-decisionserverconsole', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name + '-odm-decisionrunner', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name + '-workspace-aae-ae-deployment', '') }}"
 
 - name: Wait for Deployments to be Available
   ansible.builtin.include_role:
@@ -722,25 +709,26 @@
 #     common_resource_namespace: "{{ cp4ba_project_name }}"
 #     common_retries: 60
 #     common_delay: 120
-#   when: current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+#   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Deployment wait list
   ansible.builtin.set_fact:
     wait_list:
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name+'-ads-run-service','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-parsing-service','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-git-service','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-rest-api','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-embedded-build-service','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name+'-ads-credentials-service','') }}"
-      - "{{ current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name+'-ads-runtime-service','') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name + '-ads-run-service', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-parsing-service', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-git-service', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-rest-api', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer |
+        ternary(cp4ba_cr_meta_name + '-ads-embedded-build-service', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-credentials-service', '') }}"
+      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
+        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name + '-ads-runtime-service', '') }}"
 
 - name: Wait for Deployments to be Available
   ansible.builtin.include_role:

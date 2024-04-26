@@ -6,12 +6,7 @@
     -v \
     --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
     --param-file={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml \
-    --components={% for c in _cartridges_to_install -%}
-{%- if (c.state | default('installed')) == 'installed' and (not c.separate_install | default(False | bool) and (c.olm_utils_name != 'scheduler')) -%}
-{%- if not loop.first -%},{% endif -%}
-{{ c.olm_utils_name }}
-{%- endif -%}
-{%- endfor %} \
+    --components={{ _apply_cr_cartridges_list }} \
 {%- if _storage_type == "pwx" -%}
     --storage_vendor=portworx
 {%- else -%}

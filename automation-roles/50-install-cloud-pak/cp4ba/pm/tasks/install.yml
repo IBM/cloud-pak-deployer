@@ -2,18 +2,18 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ pm_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
 
 - name: PM DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ pm_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create a new user
         create user pm with password '{{ pm_postgresql_password }}';
 
@@ -29,21 +29,22 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: mongodb
+    namespace: "{{ pm_mongodb_project }}"
     label_selectors:
-      - app.kubernetes.io/component=mongodb
+      - app=mongodb
   register: mongodb_pod
 
 - name: Create PM Mongo DB
   kubernetes.core.k8s_exec:
-    namespace: mongodb
+    namespace: "{{ pm_mongodb_project }}"
     pod: "{{ mongodb_pod.resources[0].metadata.name }}"
     command: |
-      mongo --username root --password {{ pm_universal_password }} --authenticationDatabase admin
-      --eval 'db.createUser({user: "root", pwd: "{{ pm_universal_password }}", roles: [ { role: "readWrite", db: "processmining" } ]})'
+      mongo --username {{ pm_mongodb_admin_user }} --password {{ pm_universal_password }} --authenticationDatabase admin
+      --eval 'db.createUser({user: "{{ pm_mongodb_admin_user }}", pwd: "{{ pm_universal_password }}", roles: [ { role: "readWrite", db: "processmining" } ]})'
       mongodb://localhost:27017/processmining
   register: command_status
-  failed_when: command_status.rc != 0 and command_status.stdout is not search('.*User \"root@processmining\" already exists.*')
+  failed_when: command_status.rc != 0 and
+    command_status.stdout is not search('.*User \"' + pm_mongodb_admin_user + '@processmining\" already exists.*')
 
 - name: Prepare yaml file for CatalogSource
   ansible.builtin.template:
@@ -54,8 +55,6 @@
 - name: Add CatalogSource
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ pm_output_directory }}/catalogsource.yaml"
     wait: true
     wait_sleep: 15
@@ -85,8 +84,6 @@
 - name: Add the Operator Subscription
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ pm_output_directory }}/subscription.yaml"
     wait: true
     wait_sleep: 15
@@ -125,8 +122,6 @@
 - name: Add Secrets
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ pm_output_directory }}/secrets.yaml"
     wait: true
     wait_sleep: 15
@@ -141,8 +136,6 @@
 - name: Add the Allow Network Policy
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ pm_output_directory }}/process-mining-egress-allow-all-network-policy.yaml"
     wait: true
     wait_sleep: 15
@@ -154,8 +147,8 @@
 
 - name: Merge customizations
   ansible.builtin.set_fact:
-    cr: "{{ cr | combine(current_cp4ba_cluster.pm.cr_custom | from_yaml, recursive=true) }}"
-  when: current_cp4ba_cluster.pm.cr_custom is defined
+    cr: "{{ cr | combine(_current_cp4ba_cluster.pm.cr_custom | from_yaml, recursive=true) }}"
+  when: _current_cp4ba_cluster.pm.cr_custom is defined
 
 - name: Write CR to file
   ansible.builtin.copy:
@@ -235,7 +228,7 @@
 
 - name: Get Analysts Users group ID
   ansible.builtin.set_fact:
-    analysts_users_group_id: "{{ analysts_users_group | first | json_query('id') }}"    
+    analysts_users_group_id: "{{ analysts_users_group | first | json_query('id') }}"
 
 # Overwrites the current members of Analysts Users group
 # ansible.builtin.uri not working
@@ -499,7 +492,7 @@
 
 - name: Enable agent for admin user
   ansible.builtin.set_fact:
-    admin_user: "{{ admin_user | combine({'agentEnabled': true }) }}"
+    admin_user: "{{ admin_user | combine({'agentEnabled': true}) }}"
 
 - name: Update admin user
   ansible.builtin.uri:
@@ -539,8 +532,6 @@
 - name: Add post-deploy.md Config Map
   kubernetes.core.k8s:
     state: present
-    force: false
-    merge_type: merge
     src: "{{ pm_output_directory }}/postdeploy-configmap.yaml"
     wait: true
     wait_sleep: 15

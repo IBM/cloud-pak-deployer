@@ -74,8 +74,8 @@ for c in $(echo $cartridges | jq -r '.[].name');do
   cartridge_internal=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_internal // false')
   if [[ "$cartridge_internal" == "true" ]];then
     continue
-  fi  
-  
+  fi 
+
   cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .name')
   cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
   cr_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
@@ -98,12 +98,14 @@ for c in $(echo $cartridges | jq -r '.[].name');do
     continue
   fi
 
-  # Check if object exists
-  oc get --namespace $project $cr_cr $cr_name
-  if [ $? -ne 0 ];then
-    log "Error: $cr_cr object $cr_name does not exist in project $project"
-    exit_code=3
-    continue
+  # Check if object exists (only for current cartridge)
+  if [[ "$c" == "$current_cartridge_name" ]];then
+    oc get --namespace $project $cr_cr $cr_name
+    if [ $? -ne 0 ];then
+      log "Error: $cr_cr object $cr_name does not exist in project $project"
+      exit_code=3
+      continue
+    fi
   fi
 
   # TODO: Remove the patching of Db2 statefulsets once tty issue has been resolved

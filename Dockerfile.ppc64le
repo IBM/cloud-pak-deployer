@@ -1,0 +1,54 @@
+# Container image including olm-utils
+ARG CPD_OLM_UTILS_V2_IMAGE
+
+FROM registry.access.redhat.com/ubi8/ubi
+
+FROM ${CPD_OLM_UTILS_V2_IMAGE}
+
+LABEL authors="Arthur Laimbock, \
+            Markus Wiegleb, \
+            Frank Ketelaars, \ 
+            Jiri Petnik"
+
+USER 0
+
+# Install required packages, including HashiCorp Vault client
+RUN yum install -y yum-utils && \
+    yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
+    yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
+    yum install -y gcc python3.11-devel && \
+    pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
+    curl -O https://downloads.power-devops.com/vault_1.12.4_linux_ppc64le.zip && \
+    unzip -d /usr/local/bin vault_1.12.4_linux_ppc64le.zip && rm vault_1.12.4_linux_ppc64le.zip && \
+    yum install -y nginx && \
+    yum clean all
+
+RUN ansible-galaxy collection install community.crypto community.vmware
+
+VOLUME ["/Data"]
+
+# Prepare directory that runs automation scripts
+RUN mkdir -p /cloud-pak-deployer && \
+    mkdir -p /Data && \
+    mkdir -p /olm-utils
+
+COPY . /cloud-pak-deployer/
+COPY ./deployer-web/nginx.conf   /etc/nginx/
+
+RUN cd /opt/ansible && \
+    tar czf /olm-utils/opt-ansible-v2.tar.gz *
+
+# BUG with building wheel 
+#RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+
+ENV USER_UID=1001
+
+RUN chown -R ${USER_ID}:0 /Data && \
+    chown -R ${USER_ID}:0 /cloud-pak-deployer && \
+    chmod -R ug+rwx /cloud-pak-deployer/docker-scripts && \
+    chmod ug+rwx /cloud-pak-deployer/*.sh
+
+# USER ${USER_UID}
+
+ENTRYPOINT ["/cloud-pak-deployer/docker-scripts/container-bash.sh"]

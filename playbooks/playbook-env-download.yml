@@ -24,10 +24,6 @@
       include_role:
         name: load-vault-config
 
-    - name: Load vault config
-      include_role:
-        name: load-vault-config
-
     - set_fact:
         secret_group: "{{ secret_group_param }}"
 
@@ -88,6 +84,11 @@
     - name: Download CLIs
       include_role:
         name: download-cli
+      when: not (cpd_check_only | default(False) | bool)
+
+    - name: Download dependent CLIs and commands for the Cloud Paks
+      include_role:
+        name: download-cp-dependencies
       when: not (cpd_check_only | default(False) | bool)
 
 # --- Mirroring with ibm-pak tool - BEGIN -----------------

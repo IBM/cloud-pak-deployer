@@ -1,70 +1,78 @@
 - name: Load internal variables
   ansible.builtin.include_vars: internal-variables.yml
 
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=deployment-capability-patterns-production-deployments
+- name: Fill capabilities enabled flags based on documantation
+  ansible.builtin.include_tasks: fill-capabilities.yml
+
 - name: Set ldap configuration TDS
   ansible.builtin.set_fact:
     lc_tds_user_filter: "{{ ldap_configuration.tds.lc_user_filter
-      | default('(&('+lc_ldap_user_id_attribute+'=%v)(objectclass='+lc_ldap_user_object_class+'))' ) }}"
+      | default('(&(' + lc_ldap_user_id_attribute + '=%v)(objectclass=' + lc_ldap_user_object_class + '))') }}"
     lc_tds_group_filter: "{{ ldap_configuration.tds.lc_group_filter
-      | default('(&('+lc_ldap_group_id_attribute+'=%v)(|(objectclass='+lc_ldap_group_object_class+')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
+      | default('(&(' + lc_ldap_group_id_attribute + '=%v)(|(objectclass=' +
+      lc_ldap_group_object_class + ')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
   when: ('IBM Security Directory Server' in lc_selected_ldap_type)
 
 - name: Set ldap configuration AD
   ansible.builtin.set_fact:
     lc_ad_user_filter: "{{ ldap_configuration.ad.lc_user_filter
-      | default('(&('+lc_ldap_user_id_attribute+'=%v)(objectcategory='+lc_ldap_user_object_class+'))') }}"
+      | default('(&(' + lc_ldap_user_id_attribute + '=%v)(objectcategory=' + lc_ldap_user_object_class + '))') }}"
     lc_ad_group_filter: "{{ ldap_configuration.ad.lc_group_filter
-      | default('(&('+lc_ldap_group_id_attribute+'=%v)(objectcategory='+lc_ldap_group_object_class+'))') }}"
+      | default('(&(' + lc_ldap_group_id_attribute + '=%v)(objectcategory=' + lc_ldap_group_object_class + '))') }}"
   when: ('Microsoft Active Directory' in lc_selected_ldap_type)
 
 - name: Set ldap configuration Custom
   ansible.builtin.set_fact:
     lc_custom_user_filter: "{{ ldap_configuration.custom.lc_user_filter
-      | default('(&('+lc_ldap_user_id_attribute+'=%v)(objectclass='+lc_ldap_user_object_class+'))' ) }}"
+      | default('(&(' + lc_ldap_user_id_attribute + '=%v)(objectclass=' + lc_ldap_user_object_class + '))') }}"
     lc_custom_group_filter: "{{ ldap_configuration.custom.lc_group_filter
-      | default('(&('+lc_ldap_group_id_attribute+'=%v)(|(objectclass='+lc_ldap_group_object_class+')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
+      | default('(&(' + lc_ldap_group_id_attribute + '=%v)(|(objectclass=' +
+      lc_ldap_group_object_class + ')(objectclass=groupofuniquenames)(objectclass=groupofurls)))') }}"
   when: ('Custom' in lc_selected_ldap_type)
 
 - name: PostgreSQL config variable
   ansible.builtin.set_fact:
-    postgresql_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"
-  when: postgresql_enabled is not defined
+    postgresql_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled or urrent_cp4ba_cluster.pm.enabled else false }}"
 
 - name: Openldap config variable
   ansible.builtin.set_fact:
     openldap_enabled: true
-  when: openldap_enabled is not defined
 
 - name: Gitea config variable
   ansible.builtin.set_fact:
-    gitea_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"
-  when: gitea_enabled is not defined
+    gitea_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled and
+      (_current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled or _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled)
+        else false }}"
 
 - name: Nexus config variable
   ansible.builtin.set_fact:
-    nexus_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled else false }}"
-  when: nexus_enabled is not defined
+    nexus_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled else false }}"
 
 - name: Mail config variable
   ansible.builtin.set_fact:
-    mail_enabled: "{{ true if (current_cp4ba_cluster.cp4ba.enabled or current_cp4ba_cluster.rpa.enabled) else false }}"
-  when: mail_enabled is not defined
+    mail_enabled: "{{ true if (_current_cp4ba_cluster.cp4ba.enabled or _current_cp4ba_cluster.rpa.enabled) else false }}"
 
 - name: Mongodb config variable
   ansible.builtin.set_fact:
-    mongodb_enabled: "{{ true if (current_cp4ba_cluster.cp4ba.enabled or current_cp4ba_cluster.pm.enabled) else false }}"
-  when: mongodb_enabled is not defined
+    mongodb_enabled: "{{ true if ((_current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled) or
+      _current_cp4ba_cluster.pm.enabled) else false }}"
 
 - name: Kibana config variable
   ansible.builtin.set_fact:
-    kibana_enabled: "{{ true if current_cp4ba_cluster.cp4ba.enabled and current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai else false }}"
-  when: kibana_enabled is not defined
+    kibana_enabled: "{{ true if _current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai else false }}"
 
 - name: MSSQL config variable
   ansible.builtin.set_fact:
-    mssql_enabled: "{{ true if current_cp4ba_cluster.rpa.enabled else false }}"
-  when: mssql_enabled is not defined
+    mssql_enabled: "{{ true if _current_cp4ba_cluster.rpa.enabled else false }}"
 
 - name: Config External LDAP
   ansible.builtin.include_tasks: external-ldap.yml
   when: not openldap_enabled
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"

@@ -14,12 +14,16 @@
     when: _openpages_cartridge.instances is defined
   - set_fact:
       _delete_openpages_instance: True
-    when: _openpages_cartridge_listed == {}
+    when: 
+    - _openpages_cartridge_listed == {}
+    - _wxg_cartridge == {}
   when: (_p_delete_all_instances | default(False)) == False
 
 - set_fact:
     _delete_openpages_instance: True
-  when: (_p_delete_all_instances | default(False)) == True
+  when: 
+  - (_p_delete_all_instances | default(False)) == True
+  - _wxg_cartridge == {}
 
 - name: Fail if OpenPages instance will be deleted and destroy is not confirmed
   fail:

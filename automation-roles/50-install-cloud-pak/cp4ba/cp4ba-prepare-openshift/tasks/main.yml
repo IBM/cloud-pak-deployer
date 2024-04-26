@@ -1,16 +1,16 @@
----
 - name: Validate mandatory variables are defined
-  assert:
+  ansible.builtin.assert:
     that:
       - cloud_platform is defined
 
 - name: Validate cloud_platform is implemented
-  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  ansible.builtin.fail:
+    msg: "cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
 - name: Make a temporary work folder available
-  tempfile:
-    path: "{{status_dir}}/cp4ba"
+  ansible.builtin.tempfile:
+    path: "{{ status_dir }}/cp4ba"
     state: directory
   register: cloud_pak_prepare_ocp_temp_dir
 

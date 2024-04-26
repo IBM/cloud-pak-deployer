@@ -2,14 +2,7 @@
     --release={{ _p_current_cp4d_cluster.cp4d_version }} \
     --case_download=false \
     --catsrc=false --sub=true \
-{% if _p_current_cp4d_cluster.cp4d_version >= '4.7.0' -%}
     --cpd_operator_ns={{ _p_current_cp4d_cluster.operators_project | default('cpd-operators') }} \
-{% endif -%}
     --upgrade={%- if _upgrade_cp4d -%}true{%- else -%}false{%- endif %} \
     --preview={%- if _p_preview_script -%}true{%- else -%}false{%- endif %} \
-    --components={% for c in _cartridges_to_install -%}
-{%- if ((c.state | default('installed')) == 'installed') or (cpd_test_cartridges | default(False) | bool) -%}
-{%- if not loop.first -%},{% endif -%}
-{{ c.olm_utils_name }}
-{%- endif -%}
-{%- endfor -%}
+    --components={{ _apply_olm_cartridges_list }}

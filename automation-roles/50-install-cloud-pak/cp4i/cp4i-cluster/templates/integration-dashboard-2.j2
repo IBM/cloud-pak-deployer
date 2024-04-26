@@ -1,0 +1,42 @@
+---
+apiVersion: appconnect.ibm.com/v1beta1
+kind: Dashboard
+metadata:
+  labels:
+    backup.appconnect.ibm.com/component: dashboard
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  authentication:
+    integrationKeycloak:
+      enabled: true
+  authorization:
+    integrationKeycloak:
+      enabled: true
+  displayMode: IntegrationRuntimes
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+    use: CloudPakForIntegrationNonProduction
+  pod:
+    containers:
+      content-server:
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 50Mi
+      control-ui:
+        resources:
+          limits:
+            memory: 512Mi
+          requests:
+            cpu: 50m
+            memory: 125Mi
+  replicas: 1
+  storage:
+    size: 5Gi
+    type: persistent-claim
+    class: {{ocp_storage_class_file}}
+  version: "{{instance_properties.version}}"

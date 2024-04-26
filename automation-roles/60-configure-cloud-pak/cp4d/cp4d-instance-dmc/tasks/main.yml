@@ -10,6 +10,15 @@
     var: _dmc_cartridge
 
 - set_fact:
+    _dv_cartridge: "{{ _cartridges_to_install | json_query(_query_cartridge) | first | default({}) }}"
+  vars:
+    _query_cartridge: "[?olm_utils_name=='dv']"
+
+- name: Show Data Virtualization cartridge
+  debug:
+    var: _dv_cartridge
+
+- set_fact:
     _configured_dmc_instances: []
 - set_fact:
     _configured_dmc_instances: "{{ _dmc_cartridge.instances | default([] )}}"
