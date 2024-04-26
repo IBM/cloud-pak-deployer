@@ -1,118 +1,101 @@
-# Retrieve the openshift storage definitions from passed OpenShift cluster
+# Retrieve the openshift storage definitions from the specified OpenShift cluster
 - set_fact:
     _openshift_storage: "{{ all_config.openshift | json_query(query) | first }}"
   vars:
     query: >-
       [?name=='{{ _p_openshift_cluster_name }}'].openshift_storage
 
-- name: Show OpenShift storage objects
+- name: Display OpenShift storage objects
   debug:
     msg: "{{ _openshift_storage }}"
 
-# Obtain the OpenShift storage element from the openshift storage definitions
+# Obtain the OpenShift storage element corresponding to the specified storage name
 - set_fact:
     _selected_openshift_storage: "{{ _openshift_storage | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?storage_name=='{{ _p_openshift_storage_name }}']
-  when: (_p_openshift_storage_name | default('')) != ''
+  when: _p_openshift_storage_name | default('') != ''
 
 # Default to the first storage definition found if no storage name passed
 - set_fact:
     _selected_openshift_storage: "{{ _openshift_storage | first | default({}) }}"
-  when: (_p_openshift_storage_name | default('')) == ''
+  when: _p_openshift_storage_name | default('') == ''
 
-- name: Fail if the storage information for the passed storage name cannot be found
+# Fail if the storage information for the passed storage name cannot be found
+- name: Fail if storage information cannot be found
   fail:
-    msg: "Storage information for storage name {{ _p_openshift_storage_name }} specified for OpenShift cluster {{ _p_openshift_cluster_name }} not found. Check the configuration."
+    msg: "Storage information for '{{ _p_openshift_storage_name }}' in OpenShift cluster '{{ _p_openshift_cluster_name }}' not found. Please verify the configuration."
   when: _selected_openshift_storage == {}
 
-- name: Show storage class construct
+# Display the selected storage class construct
+- name: Display selected storage class
   debug:
     var: _selected_openshift_storage
 
-- name: Get storage classes from cluster
+# Get all storage classes available in the OpenShift cluster
+- name: Retrieve available storage classes
   shell:
     oc get sc -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'
   register: _openshift_storage_classes
 
-- name: Show found storage classes
+# Display found storage classes
+- name: Display found storage classes
   debug:
     var: _openshift_storage_classes
 
+# Determine the storage type
 - set_fact:
     _storage_type: "{{ _selected_openshift_storage.storage_type }}"
 
+# Include tasks to auto-detect storage type if set to 'auto'
 - include_tasks: auto-detect-storage-type.yml
   when: _storage_type == 'auto'
 
-- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx', 'aws-elastic' and 'custom'"
-  when: 
-    - _storage_type != 'nfs'
-    - _storage_type != 'ocs'
-    - _storage_type != 'pwx'
-    - _storage_type != 'aws-elastic'
-    - _storage_type != 'ibm-classic-storage'
-    - _storage_type != 'custom'
+# Fail if the detected storage type is not supported
+- fail:
+    msg: "Valid storage types are 'nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-storage-fdf', and 'custom'"
+  when: _storage_type not in ['nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-storage-fdf', 'custom']
 
-- set_fact:
-    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('managed-nfs-storage') }}"
-    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('managed-nfs-storage') }}"
-  when: _storage_type == 'nfs'
-
-- set_fact:
-    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
-    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
-  when: _storage_type == 'ocs'
-
-- fail: msg="ocp_storage_class_file and ocp_storage_class_block are required when storage_type is set to 'custom'"
-  when:
-    - _selected_openshift_storage.ocp_storage_class_file is undefined
-    - _selected_openshift_storage.ocp_storage_class_block is undefined
-    - _storage_type == 'custom'
-  
+# Set storage class variables based on the detected storage type
 - set_fact:
     ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file }}"
     ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block }}"
   when: _storage_type == 'custom'
 
-# Portworx storage classes vary according to cartridge, so are set in the relevant CR templates
 - set_fact:
-   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('px-replicated') }}"
-   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('px-db') }}"
-  when: _storage_type == 'pwx'
+    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default({
+        'nfs': 'managed-nfs-storage',
+        'ocs': 'ocs-storagecluster-cephfs',
+        'pwx': 'px-replicated',
+        'aws-elastic': 'efs-nfs-client',
+        'ibm-classic-storage': 'ibmc-file-gold-gid',
+        'ibm-storage-fdf': 'ibm-storage-fusion-cp-sc'
+      }[_storage_type]) }}"
+    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default({
+        'nfs': 'managed-nfs-storage',
+        'ocs': 'ocs-storagecluster-ceph-rbd',
+        'pwx': 'px-db',
+        'aws-elastic': 'gp2',
+        'ibm-classic-storage': 'ibmc-block-gold',
+        'ibm-storage-fdf': 'ibm-storage-fusion-cp-sc'
+      }[_storage_type]) }}"
+  when: _storage_type != 'custom'
 
-# Choose appropriate AWS storage class
-- set_fact:
-   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
-   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2') }}"
-  when: _storage_type == 'aws-elastic' and (_openshift_storage_classes.stdout | regex_search('^gp2$', multiline=True)) != None
-
-- set_fact:
-   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
-   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2-csi') }}"
-  when: _storage_type == 'aws-elastic' and (_openshift_storage_classes.stdout | regex_search('^gp2-csi$', multiline=True)) != None
-
-- set_fact:
-   ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
-   ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp3-csi') }}"
-  when: _storage_type == 'aws-elastic' and (_openshift_storage_classes.stdout | regex_search('^gp3-csi$', multiline=True)) != None
-
-- set_fact:
-    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ibmc-file-gold-gid') }}"
-    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ibmc-block-gold') }}"
-  when: _storage_type == 'ibm-classic-storage'
-
+# Display the selected storage class variables
 - debug:
     msg:
-    - "ocp_storage_class_file: {{ ocp_storage_class_file }}"
-    - "ocp_storage_class_block: {{ ocp_storage_class_block}}"
+      - "ocp_storage_class_file: {{ ocp_storage_class_file }}"
+      - "ocp_storage_class_block: {{ ocp_storage_class_block }}"
 
-- name: Check if file storage class {{ ocp_storage_class_file }} exists in OpenShift
+# Check if the file and block storage classes exist in OpenShift
+- name: Check if file storage class exists in OpenShift
   shell:
     oc get sc {{ ocp_storage_class_file }}
+  register: file_class_status
 
-- name: Check if block storage class {{ ocp_storage_class_block }} exists in OpenShift
+- name: Check if block storage class exists in OpenShift
   shell:
     oc get sc {{ ocp_storage_class_block }}
+  register: block_class_status
   when: ocp_storage_class_block != ocp_storage_class_file
