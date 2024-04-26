@@ -2,21 +2,4 @@
 - include_role:
     name: cp4d-variables
 
-# Create Foundational Services project for Cloud Pak for Data if CP4D < 4.7.0
-- block:
-  - name: Create OpenShift Project {{ foundational_services_project }} if it does not exist and Cloud Pak for Data < 4.7.0
-    shell: 
-      oc new-project {{ foundational_services_project }} || true
-
-  # Create Operator Group
-  - name: Generate definition for OperatorGroup for Foundational Services project
-    template:
-      src: operator-group.j2
-      dest: "{{ status_dir }}/cp4d/operator-group.yml"
-
-  - name: Create OperatorGroup
-    command: |
-      oc apply -f "{{ status_dir }}/cp4d/operator-group.yml"
-  when: _p_current_cp4d_cluster.cp4d_version < "4.7.0"
-
 - include_tasks: cp4d-create-subscriptions-olm-utils.yml

@@ -1,9 +1,52 @@
-- name: Remove Project akhq
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ akhq_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Mock variables
+  ansible.builtin.set_fact:
+    apps_endpoint_domain: mock
+    _jks: mock
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ akhq_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - deployments
+    - services
+
+- name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
+    src: "{{ akhq_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+
+- name: Remove Route
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ akhq_project_name }}"
     name: akhq
     wait: true
     wait_sleep: 15
     wait_timeout: 120
+
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ akhq_project_name }}"

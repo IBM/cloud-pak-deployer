@@ -1,0 +1,54 @@
+---
+- name: Retrieve running Db2 OLTP instance {{ _db2_instance.name }}
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2oltp_instance_addon_type }}&display_name={{ _db2_instance.name }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _db2_instance_lookup_result
+
+- set_fact:
+    _db2_running_instance: '{{ _db2_instance_lookup_result.json.service_instances | first }}'
+
+- set_fact:
+    _dmc_profile: "{{ _existing_dmc_profiles.json | json_query(query_profile) | first | default({}) }}"
+  vars:
+    query_profile: "[?name=='db2oltp-{{ _db2_running_instance.id }}']"
+
+- block:
+
+  - name: Get password for Db2 instance {{ _db2_instance.name }}
+    shell: |
+      oc extract secret/c-db2oltp-{{ _db2_running_instance.id }}-instancepassword --to=-
+    register: _db2_instance_password
+
+  - name: Generate JSON payload for DMC profile
+    template:
+      src: dmc-profile-db2oltp.j2
+      dest: "{{ status_dir }}/cp4d/dmc-db2oltp-profile-{{ _db2_instance.name }}.json"
+
+  - name: Create DMC profile for Db2 OLTP instance {{ _db2_instance.name }}
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/addon-dmc/v1/profiles'
+      method: POST
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      body_format: json
+      body: "{{ lookup('file', status_dir + '/cp4d/dmc-db2oltp-profile-' + _db2_instance.name + '.json') }}"
+      return_content: yes
+      validate_certs: no
+      status_code:
+      - 200
+      - 201
+      - 202
+    register: _dmc_db2oltp_profile_result
+
+  - debug:
+      var: _dmc_db2oltp_profile_result
+
+  when: _dmc_profile=={}

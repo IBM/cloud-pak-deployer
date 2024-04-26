@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudbeaver
+  namespace: "{{ cloudbeaver_project_name }}"
+  labels:
+    app: cloudbeaver
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudbeaver
+  template:
+    metadata:
+      labels:
+        app: cloudbeaver
+    spec:
+      containers:
+        - name: cloudbeaver
+          image: "{{ cloudbeaver_image }}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1536Mi
+          startupProbe:
+            tcpSocket:
+              port: 8978
+            timeoutSeconds: 15
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: 8978
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 5
+          livenessProbe:
+            tcpSocket:
+              port: 8978
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 10
+          env:
+            - name: CB_SERVER_NAME
+              value: CloudBeaver
+            - name: CB_SERVER_URL
+              value: "http://cloudbeaver.{{ cloudbeaver_project_name }}.svc.cluster.local"
+            - name: CB_ADMIN_NAME
+              value: "{{ lc_principal_admin_user }}"
+            - name: CB_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: cloudbeaver-password
+                  key: cloudbeaver-password
+          ports:
+            - name: http
+              containerPort: 8978
+              protocol: TCP
+          volumeMounts:
+            - name: cloudbeaver-data
+              mountPath: /opt/cloudbeaver/workspace
+      serviceAccountName: cloudbeaver
+      volumes:
+        - name: cloudbeaver-data
+          persistentVolumeClaim:
+            claimName: cloudbeaver-data

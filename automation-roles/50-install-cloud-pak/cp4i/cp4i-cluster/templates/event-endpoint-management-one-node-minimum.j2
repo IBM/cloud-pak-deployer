@@ -1,20 +1,28 @@
-apiVersion: eventendpointmanager.apiconnect.ibm.com/v1beta1
-kind: EventEndpointManager
+apiVersion: events.ibm.com/v1beta1
+kind: EventEndpointManagement
 metadata:
-  labels:
-    app.kubernetes.io/instance: eventendpointmanager-minimum
-    app.kubernetes.io/managed-by: ibm-apiconnect
-    app.kubernetes.io/name: eventendpointmanager-minimum
   name: {{instance_properties.name}}
   namespace: {{current_cp4i_cluster.project}}
 spec:
-  endpointTypes:
-    - Events
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
     license: {{instance_properties.license}}
     metric: VIRTUAL_PROCESSOR_CORE
-    use: nonproduction
-  profile: n1xc10.m48
-  version: "{{instance_properties.version}}"
-  storageClassName: {{ocp_storage_class_block}}
+    use: CloudPakForIntegrationNonProduction
+  manager:
+    authConfig:
+      authType: LOCAL
+    storage:
+      type: ephemeral
+    template:
+      pod:
+        spec:
+          containers:
+            - name: manager
+              resources:
+                requests:
+                  cpu: '0.25'
+                  memory: 256Mi
+                limits:
+                  cpu: '0.5'
+                  memory: 512Mi

@@ -1,12 +1,17 @@
 apiVersion: eventstreams.ibm.com/v1beta2
 kind: EventStreams
 metadata:
+  annotations:
+    eventstreams.ibm.com/apicurio-registry-version: '>=2.4'
   name: {{instance_properties.name}}
+  labels:
+    backup.eventstreams.ibm.com/component: eventstreams
   namespace: {{current_cp4i_cluster.project}}
 spec:
   version: "{{instance_properties.version}}"
   license:
     accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
     use: CloudPakForIntegrationNonProduction
   adminApi: {}
   adminUI: {}
@@ -21,9 +26,8 @@ spec:
         supportsAdminApi: true
         authorizerClass: com.ibm.eventstreams.runas.authorizer.RunAsAuthorizer
       config:
-        inter.broker.protocol.version: '3.2'
+        inter.broker.protocol.version: '3.5'
         log.cleaner.threads: 6
-        log.message.format.version: '3.2'
         num.io.threads: 24
         num.network.threads: 9
         num.replica.fetchers: 3
@@ -48,7 +52,7 @@ spec:
         valueFrom:
           configMapKeyRef:
             key: kafka-metrics-config.yaml
-            name: metrics-config
+            name: {{instance_properties.name}}-metrics-config
       storage:
         type: ephemeral
     zookeeper:
@@ -58,7 +62,7 @@ spec:
         valueFrom:
           configMapKeyRef:
             key: zookeeper-metrics-config.yaml
-            name: metrics-config
+            name: {{instance_properties.name}}-metrics-config
       storage:
         type: ephemeral
   requestIbmServices:

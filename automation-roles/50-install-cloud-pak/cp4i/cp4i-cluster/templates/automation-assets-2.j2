@@ -1,0 +1,20 @@
+---
+apiVersion: integration.ibm.com/v1beta1
+kind: AssetRepository
+metadata:
+  labels:
+    backup.integration.ibm.com/component: assetrepository
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+  replicas: 1
+  singleReplicaOnly: true
+  storage:
+    assetDataVolume:
+      class: {{ocp_storage_class_file}}
+    couchVolume:
+      class: {{ocp_storage_class_block}}
+  version: "{{instance_properties.version}}"

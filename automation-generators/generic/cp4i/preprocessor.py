@@ -61,9 +61,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
     g('project').isRequired()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
-    openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
     g('cp4i_version').isRequired()
-    g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
     g('instances').isRequired()
     g('use_case_files').isOptional().mustBeOneOf([True, False])
     g('olm_utils').isOptional().mustBeOneOf([True, False])
@@ -74,7 +72,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
-        # Check for cp4i:     
+        # Check for cp4i:
+        openshift_cluster_name=g('openshift_cluster_name').getExpandedAttributes()['openshift_cluster_name']
+        g('openshift_storage_name').expandWithSub('openshift', remoteIdentifier='name', remoteValue=openshift_cluster_name, listName='openshift_storage',listIdentifier='storage_name')
 
         # Check that version matches x.y.z pattern
         if not re.match(r"[0-9]+\.[0-9]\.[0-9]+",str(ge['cp4i_version'])):

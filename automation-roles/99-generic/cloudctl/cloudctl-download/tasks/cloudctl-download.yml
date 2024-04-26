@@ -1,0 +1,19 @@
+---
+- name: Get current version number of clouctl
+  uri:
+    url: https://api.github.com/repos/IBM/cloud-pak-cli/releases/latest
+    return_content: yes
+    method: GET
+    status_code: 200
+  register: _cloudctl_version
+
+- name: Download cloudctl tool
+  get_url:
+    url: "https://github.com/IBM/cloud-pak-cli/releases/download/{{ _cloudctl_version.json.tag_name }}/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
+    dest: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
+    owner: root
+    mode: 0644
+  register: _download_result
+  until: _download_result is succeeded
+  retries: 5
+  delay: 30

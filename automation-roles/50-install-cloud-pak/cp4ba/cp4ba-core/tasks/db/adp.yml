@@ -2,18 +2,18 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     label_selectors:
       - app=postgresql
   register: postgresql_pod
 
 - name: ADPBASE DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user adpbase
         CREATE ROLE adpbase WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -26,11 +26,11 @@
 
 - name: ADP proj1 DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user proj1
         CREATE ROLE proj1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -43,11 +43,11 @@
 
 - name: ADP proj2 DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user proj2
         CREATE ROLE proj2 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -63,26 +63,19 @@
 # https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
 - name: DEVOS1 DB prepare tablespace
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir /pgsqldata/devos1
+    command: mkdir -p /bitnami/postgresql/tablespaces/devos1
   register: command_status
-  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists*')
-
-- name: DEVOS1 DB prepare tablespace permissions
-  kubernetes.core.k8s_exec:
-    namespace: postgresql
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: chown postgres:postgres /pgsqldata/devos1
-  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
 - name: DEVOS1 DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://$POSTGRES_USER:$POSTGRES_PASSWORD@localhost:5432/postgres <<-EOF
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user devos1
         CREATE ROLE devos1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -93,14 +86,14 @@
         grant connect, temp, create on database devos1 to devos1;
 
         -- please modify location follow your requirement
-        create tablespace devos1_tbs owner devos1 location '/pgsqldata/devos1';
+        create tablespace devos1_tbs owner devos1 location '/bitnami/postgresql/tablespaces/devos1';
         grant create on tablespace devos1_tbs to devos1;
       EOF"
   register: command_status
 
 - name: ADP copy DB init files
   kubernetes.core.k8s_cp:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: postgresql-0
     remote_path: /tmp/_adp_tmp/PG
     local_path: "{{ cp4ba_output_directory }}/cert-kubernetes/ACA/configuration-ha/PG"
@@ -110,7 +103,7 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=engine-preparing-postgresql-databases
 - name: ADP make init scripts executable
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: postgresql-0
     command: >
       bash -c "
@@ -122,7 +115,7 @@
 
 - name: ADP init ADPBase DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: postgresql-0
     command: >
       bash -c '
@@ -148,10 +141,11 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
+  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
 
 - name: ADP init proj1 DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: postgresql-0
     command: >
       bash -c '
@@ -187,10 +181,11 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
+  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
 
 - name: ADP init proj2 DB
   kubernetes.core.k8s_exec:
-    namespace: postgresql
+    namespace: "{{ cp4ba_postgresql_project }}"
     pod: postgresql-0
     command: >
       bash -c '
@@ -226,3 +221,4 @@
   register: command_status
   until: command_status.rc == 0
   retries: 5
+  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
