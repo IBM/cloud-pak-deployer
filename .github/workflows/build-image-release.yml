@@ -16,18 +16,19 @@ jobs:
     # Sequence of tasks that will be executed as part of the job
     steps:
 
-      # - name: Check-out repository
-      #   uses: actions/checkout@v3
+      - name: Check-out repository
+        uses: actions/checkout@v3
 
-      - name: Show the release
+      - name: Build the image with tag ${GITHUB_REF_NAME}
         run: |
-          echo "${GITHUB_REF_NAME}"
+          export CPD_IMAGE_TAG=${GITHUB_REF_NAME}
+          ./cp-deploy.sh build
 
-      # - name: Push to quay.io
-      #   env:
-      #     QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
-      #     QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
-      #   run: |
-      #     podman login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
-      #     podman tag cloud-pak-deployer:latest quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
-      #     podman push quay.io/cloud-pak-deployer/cloud-pak-deployer:latest
+      - name: Push to quay.io
+        env:
+          QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
+          QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
+        run: |
+          podman login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
+          podman tag cloud-pak-deployer:${GITHUB_REF_NAME} quay.io/cloud-pak-deployer/cloud-pak-deployer:${GITHUB_REF_NAME}
+          podman push quay.io/cloud-pak-deployer/cloud-pak-deployer:${GITHUB_REF_NAME}
