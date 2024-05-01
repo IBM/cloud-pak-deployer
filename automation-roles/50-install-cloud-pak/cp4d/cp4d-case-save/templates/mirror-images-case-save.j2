@@ -2,9 +2,4 @@ mirror-images \
     --release={{ _p_current_cp4d_cluster.cp4d_version }} \
     --target_registry=127.0.0.1:12443 \
     --preview=True \
-    --components={% for c in _cartridges_to_install -%}
-{%- if ((c.state | default('installed')) == 'installed') or (cpd_test_cartridges | default(False) | bool) -%}
-{%- if not loop.first -%},{% endif -%}
-{{ c.olm_utils_name }}
-{%- endif -%}
-{%- endfor -%}
+    --components={{ _cartridges_to_install_list }}

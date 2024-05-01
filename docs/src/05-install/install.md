@@ -62,7 +62,7 @@ Then run the following command to build the container image.
 
 This process will take 5-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Python and required operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
 
-### Downloading the Cloud Pak Deployer Image
+## Downloading the Cloud Pak Deployer Image from Registry
 
 To download the Cloud Pak Deployer image from the Quay.io registry, you can use the Docker command-line interface (CLI) or Podman.
 
@@ -72,7 +72,7 @@ podman pull quay.io/cloud-pak-deployer/cloud-pak-deployer
 
 This command pulls the latest version of the Cloud Pak Deployer image from the Quay.io repository. Once downloaded, you can use this image to deploy Cloud Paks
 
-### Tags and Versions
+## Tags and Versions
 
 By default, the above command pulls the latest version of the Cloud Pak Deployer image. If you want to specify a particular version or tag, you can append it to the image name. For example:
 

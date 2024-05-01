@@ -1,9 +1,9 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 23.0.2 iFix 2.  
+Contains CP4BA version 23.0.2 iFix 3.  
 RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
-~~Contains IPM version 1.14.3.~~
-~~Contains RPA version 23.0.14.~~
+Contains IPM version 1.14.4.
+~~Contains RPA version 23.0.15.~~
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -126,7 +126,7 @@ Contains prerequisites for the whole platform.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.12 with Worker Nodes which in total have (60 CPU, 128GB Memory).
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.14 with Worker Nodes which in total have free 60 CPU, 128GB Memory for requests.
 
 ## Automated post-deployment tasks ✅
 

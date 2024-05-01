@@ -27,7 +27,7 @@ In the Cloud Pak Deployer, we have chosen to reference the CASE versions in the 
 cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
-  cp4d_version: 4.6.0
+  cp4d_version: 4.8.3
   openshift_storage_name: ocs-storage
   sequential_install: True
   cartridges:

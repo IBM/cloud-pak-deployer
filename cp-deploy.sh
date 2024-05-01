@@ -615,14 +615,19 @@ if ! $INSIDE_CONTAINER;then
   fi
 fi
 
-# If images have not been overridden, set the variables here
-if [ -z $CPD_OLM_UTILS_V1_IMAGE ];then
-  export CPD_OLM_UTILS_V1_IMAGE=icr.io/cpopen/cpd/olm-utils:latest
-else
-  echo "Custom olm-utils image ${CPD_OLM_UTILS_V1_IMAGE} will be used."
+# Get the CPU ARCH of the current system
+ARCH=$(uname -m)
+if [ "${ARCH}" == "amd64" ];then
+  ARCH="x86_64"
 fi
+
+# If images have not been overridden, set the variables here
 if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-  export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
+  if [ "${ARCH}" == "x86_64" ]; then
+    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
+  else
+    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.$ARCH
+  fi
 else
   echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
 fi
@@ -659,10 +664,14 @@ if ! $INSIDE_CONTAINER;then
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
     # Build the image
+    if [ "${ARCH}" == "x86_64" ]; then
+      DOCKERFILE=Dockerfile
+    else
+      DOCKERFILE=Dockerfile.${ARCH}
+    fi
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
-      -f ${SCRIPT_DIR}/Dockerfile \
-      --build-arg CPD_OLM_UTILS_V1_IMAGE=${CPD_OLM_UTILS_V1_IMAGE} \
+      -f ${SCRIPT_DIR}/${DOCKERFILE} \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       ${SCRIPT_DIR}
     exit $?
@@ -966,6 +975,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e STATUS_DIR=${STATUS_DIR}"
   run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
   run_cmd+=" -e CP_ENTITLEMENT_KEY=${CP_ENTITLEMENT_KEY}"
+  run_cmd+=" -e ARCH=${ARCH}"
 
   if [ ! -z $VAULT_GROUP ];then
     run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"

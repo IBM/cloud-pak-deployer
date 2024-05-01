@@ -4,9 +4,15 @@
     path: "{{ status_dir }}/downloads"
     state: directory
 
+- set_fact:
+    _cloudctl_arch: 'amd64'
+- set_fact:
+    _cloudctl_arch: '{{ ARCH }}'
+  when: ARCH != 'x86_64'
+
 - name: Check if cloudctl was already downloaded
   stat:
-    path: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
+    path: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
   register: _cloudctl_download
 
 - block:
@@ -19,14 +25,14 @@
 
   when: not _cloudctl_download.stat.exists
 
-- name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz
+- name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz
   unarchive:
-    src: "{{ status_dir }}/downloads/cloudctl-linux-amd64.tar.gz"
+    src: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
     dest: "/usr/local/bin"
 
 - name: Rename to cloudctl
   shell: |
-    mv -f /usr/local/bin/cloudctl-linux-amd64 /usr/local/bin/cloudctl
+    mv -f /usr/local/bin/cloudctl-linux-{{ _cloudctl_arch }} /usr/local/bin/cloudctl
 
 - name: Get cloudctl version
   shell: |

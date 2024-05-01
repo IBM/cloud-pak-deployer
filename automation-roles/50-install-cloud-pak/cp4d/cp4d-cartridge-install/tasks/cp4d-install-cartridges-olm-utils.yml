@@ -3,6 +3,25 @@
   debug:
     msg: ""
 
+- set_fact:
+    _apply_cr_cartridges: >-
+      {{  _cartridges_to_install | 
+            rejectattr('olm_utils_name','==','scheduler') |
+            selectattr('separate_install','undefined') |
+            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+
+- set_fact:
+    _apply_cr_cartridges_list: >-
+      {{  _apply_cr_cartridges | 
+            map(attribute='olm_utils_name') | 
+            join(',')}}
+
+- name: Run pre-processing scripts
+  include_tasks: cp4d-install-cr-pre-processing.yml
+  loop: "{{ _apply_cr_cartridges | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+
 # Always generate the preview script to log what will be done
 - name: Generate command preview script to install cartridges
   set_fact:
@@ -66,3 +85,9 @@
   shell: |
     {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
   when: not _sequential_install
+
+- name: Wait for cartridges to finish installation
+  include_tasks: cp4d-wait-cartridges-ready.yml
+  loop: "{{ _apply_cr_cartridges | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge

@@ -14,12 +14,16 @@
     when: _dmc_cartridge.instances is defined
   - set_fact:
       _delete_dmc_instance: True
-    when: _dmc_cartridge_listed == {} or (_dmc_cartridge.state | default('installed')) == 'removed'
+    when: 
+    - _dmc_cartridge_listed == {} or (_dmc_cartridge.state | default('installed')) == 'removed'
+    - _dv_cartridge == {}
   when: (_p_delete_all_instances | default(False)) == False
 
 - set_fact:
     _delete_dmc_instance: True
-  when: (_p_delete_all_instances | default(False)) == True
+  when: 
+  - (_p_delete_all_instances | default(False)) == True
+  - _dv_cartridge == {}
 
 - name: Fail if Data Management Console instance will be deleted and destroy is not confirmed
   fail:
