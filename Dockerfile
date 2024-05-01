@@ -1,13 +1,7 @@
 # Container image including olm-utils
-ARG CPD_OLM_UTILS_V1_IMAGE
 ARG CPD_OLM_UTILS_V2_IMAGE
 
 FROM registry.access.redhat.com/ubi8/ubi
-
-FROM ${CPD_OLM_UTILS_V1_IMAGE} as olm-utils-v1
-
-RUN cd /opt/ansible && \
-    tar czf /tmp/opt-ansible-v1.tar.gz *
 
 FROM ${CPD_OLM_UTILS_V2_IMAGE}
 
@@ -22,25 +16,16 @@ USER 0
 RUN yum install -y yum-utils && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
     yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
+    # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
+    yum install -y gcc python3.11-devel && \
     pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
     sed -i 's|#!/usr/bin/python.*|#!/usr/bin/python3.9|g' /usr/bin/yum-config-manager && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y vault && \
     yum install -y nginx && \
-    curl -O https://download.java.net/java/GA/jdk9/9/binaries/openjdk-9_linux-x64_bin.tar.gz && \
-    tar -xvf openjdk-9_linux-x64_bin.tar.gz -C /usr && \
-    ln -fs /usr/jdk-9/bin/java /usr/bin/java && \
-    ln -fs /usr/jdk-9/bin/keytool /usr/bin/keytool && \
-    rm -f openjdk-9_linux-x64_bin.tar.gz && \
-    curl -O https://get.helm.sh/helm-v3.6.0-linux-amd64.tar.gz && \
-    tar -zxvf helm-v3.6.0-linux-amd64.tar.gz linux-amd64/helm && \
-    mv linux-amd64/helm helm && \
-    rm -f helm-v3.6.0-linux-amd64.tar.gz && \
-    chmod u+x helm && \
-    mv helm /usr/bin/ && \
     yum clean all
 
-RUN ansible-galaxy collection install community.general community.crypto ansible.utils community.vmware kubernetes.core
+RUN ansible-galaxy collection install community.crypto community.vmware kubernetes.core
 
 VOLUME ["/Data"]
 
@@ -52,12 +37,9 @@ RUN mkdir -p /cloud-pak-deployer && \
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
 
-COPY --from=olm-utils-v1 /tmp/opt-ansible-v1.tar.gz /olm-utils/
-
-RUN cd /opt/ansible && \
-    tar czf /olm-utils/opt-ansible-v2.tar.gz *
-
-RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+# BUG with building wheel 
+#RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
 ENV USER_UID=1001
 

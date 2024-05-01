@@ -10,7 +10,7 @@
 
 - name: "Check if subscription {{ _p_subscr_name }} already exists"
   shell: | 
-    oc get subscriptions -n {{ _p_namespace }} | grep {{ _p_subscr_name }} | wc -l
+    oc get subscriptions.operators.coreos.com -n {{ _p_namespace }} | grep {{ _p_subscr_name }} | wc -l
   register: subscription_exists
 
 - name: Create subscription if it does not already exist
@@ -32,11 +32,11 @@
 
   - name: "Waiting for subscription {{ _p_subscr_name }} in project {{ _p_namespace }} to become ready"
     shell: |
-      csv=$(oc get subscription -n {{ _p_namespace }} {{ _p_subscr_name }} -o json | jq -r .status.currentCSV)
+      csv=$(oc get subscriptions.operators.coreos.com -n {{ _p_namespace }} {{ _p_subscr_name }} -o json | jq -r .status.currentCSV)
       if [[ "$csv" == "null" ]]; then
         echo "null"
       else
-        oc get csv -n {{ _p_namespace }} ${csv} -o json 2>/dev/null | jq -r .status.phase
+        oc get clusterserviceversions.operators.coreos.com -n {{ _p_namespace }} ${csv} -o json 2>/dev/null | jq -r .status.phase
       fi
     register: pn_phase
     retries: 100

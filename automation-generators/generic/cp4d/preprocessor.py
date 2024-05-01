@@ -326,7 +326,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     check_cp_foundation(c)
             if "state" in c:
                 if c['state'] not in ['installed','removed']:
-                    g.appendError(msg='Cartridge state must be "installed" or "removed"')
+                    g.appendError(msg='Cartridge state {} invalid, must be "installed" or "removed"'.format(c['state']))
             if "state" not in c or c['state']=='installed':
                 # Check if there are dependencies and the depencies will be installed too
                 if "dependencies" in c:

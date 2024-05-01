@@ -1,0 +1,35 @@
+# Build the Deployer image
+
+name: build-deployer-image-release
+
+# Trigger the workflow on publishing of a new release
+on:
+  release:
+    types: [published]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Check-out repository
+        uses: actions/checkout@v3
+
+      - name: Build the image with tag ${GITHUB_REF_NAME}
+        run: |
+          git log -1
+          export CPD_IMAGE_TAG=${GITHUB_REF_NAME}
+          ./cp-deploy.sh build
+
+      - name: Push to quay.io
+        env:
+          QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
+          QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
+        run: |
+          podman login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
+          podman tag cloud-pak-deployer:${GITHUB_REF_NAME} quay.io/cloud-pak-deployer/cloud-pak-deployer:${GITHUB_REF_NAME}
+          podman push quay.io/cloud-pak-deployer/cloud-pak-deployer:${GITHUB_REF_NAME}

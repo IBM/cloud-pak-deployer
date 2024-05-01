@@ -1,4 +1,13 @@
 ---
+- set_fact:
+    _apply_olm_cartridges: "{{ _cartridges_to_install | rejectattr('olm_utils_name','==','watsonx_orchestrate') }}"
+
+- set_fact:
+    _apply_olm_cartridges_list: >-
+      {{  _apply_olm_cartridges | 
+            map(attribute='olm_utils_name') | 
+            join(',')}}
+
 - name: Generate preview script to create cartridge subscriptions
   set_fact:
     _apply_olm_command_script: "{{ lookup('template', 'apply-olm-cartridge-sub.j2') }}" 
@@ -53,7 +62,7 @@
   block:
   - name: Retrieving state of all operators in project {{ foundational_services_project }}
     shell: |
-      oc get sub -n {{ foundational_services_project }} \
+      oc get subscriptions.operators.coreos.com -n {{ foundational_services_project }} \
         --no-headers \
         --sort-by=.metadata.creationTimestamp \
         -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 

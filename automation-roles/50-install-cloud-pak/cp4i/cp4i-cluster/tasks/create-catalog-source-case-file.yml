@@ -22,17 +22,11 @@
       msg: The definition of instance type {{ instance_properties.type }} not found
     when: _instance_type_details=={}
 
-
   # -------------------- ENTITLED REGISTRY ----------------------------
 
   - name: Create catalog source from CASE - entitled registry
     block:
 
-    - name: Create separate DataPower catalog source to support API Connect
-      shell: |
-        oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/catalog-sources-linux-amd64.yaml
-      when: _instance_type_details.case_file_name == 'ibm-apiconnect'
-      
     - name: "Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for entitled registry"
       shell: |
         oc apply -f ~/.ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/{{ _instance_type_details.catalog_source_yaml_name }}
@@ -43,11 +37,6 @@
 
   - name: Create catalog source from CASE - private registry
     block:
-
-    - name: Create separate DataPower catalog source to support API Connect
-      shell: |
-        oc apply -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ instance_properties.case_version }}/catalog-sources-linux-amd64.yaml
-      when: _instance_type_details.case_file_name == 'ibm-apiconnect'
 
     - name: "Create catalog source from CASE {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }} for private registry"
       shell: |
