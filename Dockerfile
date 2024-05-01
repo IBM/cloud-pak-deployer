@@ -23,7 +23,7 @@ RUN yum install -y yum-utils && \
     yum install -y nginx && \
     yum clean all
 
-RUN ansible-galaxy collection install community.crypto community.vmware
+RUN ansible-galaxy collection install community.crypto community.vmware kubernetes.core
 
 VOLUME ["/Data"]
 
