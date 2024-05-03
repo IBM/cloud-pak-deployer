@@ -112,7 +112,12 @@
   failed_when: False
   register: _mirror_images
 
-- name: Copy case files from /tmp/work/offline to {{ status_dir }}/cp4d/
+- name: Remove {{ status_dir }}/cp4d/offline
+  ansible.builtin.file:
+    path: "{{ status_dir }}/cp4d/offline"
+    state: absent
+
+- name: Copy mirror-images assets from /tmp/work/offline to {{ status_dir }}/cp4d/
   copy:
     src: /tmp/work/offline
     dest: "{{ status_dir }}/cp4d/"
