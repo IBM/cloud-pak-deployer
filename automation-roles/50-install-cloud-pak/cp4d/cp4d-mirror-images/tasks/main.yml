@@ -75,12 +75,27 @@
   - debug:
       var: _portable_registry_job
 
-  - name: Wait until registry is available at port 12443
+  - name: Wait until portable registry is available at port 12443
     wait_for:
       host: "127.0.0.1"
       port: 12443
       timeout: 30
   when: _p_target_registry_hostname == _v_portable_registry or (_p_source_registry_hostname | default('') == _v_portable_registry)
+
+# TODO Remove temporary patching of yml file
+- block:
+  - name: Remove lines with default_image_groups
+    ansible.builtin.lineinfile:
+      path: /opt/ansible/ansible-play/config-vars/release-4.8.5.yml
+      regexp: '(.*)default_image_groups:(.*)'
+      state: absent
+
+  - name: Remove lines with ibm*Runtimes
+    ansible.builtin.lineinfile:
+      path: /opt/ansible/ansible-play/config-vars/release-4.8.5.yml
+      regexp: '(.*)- ibm(.*)Runtimes(.*)'
+      state: absent
+  when: _p_current_cp4d_cluster.cp4d_version == '4.8.5'
 
 - name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
   template:
@@ -106,7 +121,7 @@
   async: 86400
   poll: 0
 
-- name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log. Detailed logs can be found in {{ status_dir }}/log/mirror_*.log
+- name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
   shell: |
     {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images.sh
   failed_when: False
