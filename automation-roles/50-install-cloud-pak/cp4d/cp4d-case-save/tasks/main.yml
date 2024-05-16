@@ -7,56 +7,35 @@
     path: /tmp/work
     state: directory
 
-- name: Generate mirror-images command preview script to save case files
+- name: Generate case-download command preview script to download case files
   set_fact:
-    _mirror_images_case_save: "{{ lookup('template', 'mirror-images-case-save.j2') }}" 
+    _case_download_command: "{{ lookup('template', 'case-download.j2') }}" 
 
-- name: Show mirror-images command to save case files
+- name: Show case-download command to download case files
   debug:
-    var: _mirror_images_case_save
+    var: _case_download_command
 
-- name: Write script to "{{ status_dir }}/cp4d/mirror-images-case-save.sh"
+- name: Write script to "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.sh"
   copy:
-    content: "{{ _mirror_images_case_save }}"
-    dest: "{{ status_dir }}/cp4d/mirror-images-case-save.sh"
+    content: "{{ _case_download_command }}"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.sh"
     mode: u+rwx
 
-- name: Run mirror-images command to identify case files, logs are in {{ status_dir }}/log/mirror-images-case-save.log
+- name: Download case files, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.log
   shell: |
-    {{ status_dir }}/cp4d/mirror-images-case-save.sh > {{ status_dir }}/log/mirror-images-case-save.log 2>&1
-
-- name: Copy preview script to {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh
-  copy:
-    content: "{{ lookup('file', '/tmp/work/preview.sh') }}"
-    dest: "{{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh"
-    mode: u+rwx
-
-- name: Comment out the mirroring of the images
-  replace:
-    path: "{{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh"
-    regexp: "{{ item }}"
-    replace: '#\1'
-  with_items:
-  - '(oc image mirror.*)'
-  - '(oc ibm-pak generate.*)'
-
-- name: Ensure that the mv statements do not fail if the source and destination is the same
-  replace:
-    path: "{{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh"
-    regexp: "(mv /tmp/work/offline.*)"
-    replace: '\1 | true'
-
-- name: Download case files, logs are in {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
-  shell: |
-    HOME=/tmp/work/offline/{{ _p_current_cp4d_cluster.cp4d_version }} && \
-    {{ status_dir }}/cp4d/mirror-images-case-save-ibm-pak.sh > {{ status_dir }}/log/mirror-images-case-save-ibm-pak.log
+    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.sh > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.log
   args:
     chdir: /tmp/work
 
-- name: Create {{ status_dir }}/cp4d directory
+- name: Create {{ status_dir }}/cp4d directory if not present yet
   file:
     path: "{{ status_dir }}/cp4d"
     state: directory
+
+- name: Remove {{ status_dir }}/cp4d/offline to remove any previous CASE files
+  ansible.builtin.file:
+    path: "{{ status_dir }}/cp4d/offline"
+    state: absent
 
 - name: Copy case files to {{ status_dir }}/cp4d/offline/{{ _p_current_cp4d_cluster.cp4d_version }}
   copy:

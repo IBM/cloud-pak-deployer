@@ -1,8 +1,6 @@
 # Container image including olm-utils
 ARG CPD_OLM_UTILS_V2_IMAGE
 
-FROM registry.access.redhat.com/ubi8/ubi
-
 FROM ${CPD_OLM_UTILS_V2_IMAGE}
 
 LABEL authors="Arthur Laimbock, \
