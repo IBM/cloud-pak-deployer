@@ -110,7 +110,6 @@ data:
       sequential_install: False
       accept_licenses: True
       cartridges:
-      cartridges:
       - name: cp-foundation
         license_service:
           state: disabled
