@@ -315,4 +315,5 @@ for crd in $(oc get crd --no-headers | awk '{print $1}' | grep -E '\.ibm|mantafl
     fi
 done
 
+
 exit 0
