@@ -73,7 +73,7 @@ fi
 # Ask for final confirmation to delete the CP4D instance
 if [ -z "${CPD_CONFIRM_DELETE}" ];then
     read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT} and Cloud Pak Foundational Services (y/N)? " -r
-    case "${REPLY}" in
+    case "${REPLY}" in 
     y|Y)
     ;;
     * )
@@ -89,9 +89,9 @@ oc get project ${CP4D_PROJECT} > /dev/null 2>&1
 if [ $? -eq 0 ];then
 
     log "Getting Custom Resources in OpenShift project ${CP4D_PROJECT}..."
-    oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verbs=list -o name | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
+    oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verbs=list -o name | grep -E 'ibm|caikitruntimestacks' | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
 
-    #
+    # 
     # First the script deletes all CP4D custom resources in the specified project
     # Some of these may take too long or they may fail to delete, hence --wait=false it specified so that the command doesn't wait
     # Then the finalizer is removed using oc patch, which will delete the custom resource and all OpenShift resources it owns
@@ -195,6 +195,18 @@ else
     echo "Project ${KNATIVE_SERVING} does not exist, skipping"
 fi
 
+APP_CONNECT=ibm-app-connect
+oc get project ${APP_CONNECT} > /dev/null 2>&1
+if [ $? -eq 0 ];then
+    log "Deleting everything in the ${APP_CONNECT} project"
+
+    log "Deleting ${APP_CONNECT} project"
+    oc delete ns ${APP_CONNECT} --ignore-not-found --wait=false
+    wait_ns_deleted ${APP_CONNECT}
+else
+    echo "Project ${APP_CONNECT} does not exist, skipping"
+fi
+
 IBM_SCHEDULING=ibm-scheduling
 oc get project ${IBM_SCHEDULING} > /dev/null 2>&1
 if [ $? -eq 0 ];then
@@ -212,9 +224,26 @@ else
     echo "Project ${IBM_SCHEDULING} does not exist, skipping"
 fi
 
+if [ "${DELETE_LICENSING}" -eq 1 ]; then
+    IBM_LICENSING=ibm-licensing
+    oc get project ${IBM_LICENSING} > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log "Deleting everything in the ${IBM_LICENSING} project"
+        oc delete ibmlicensing  --all --ignore-not-found
+        oc delete sub -n ${IBM_LICENSING} --all --ignore-not-found
+        oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
 
-check_shared_resources certificates.cert-manager.io ibm-cert-manager DELETE_CERT_MANAGER
-check_shared_resources ibmlicensingdefinitions.operator.ibm.com ibm-licensing DELETE_LICENSING
+        log "Deleting ${IBM_LICENSING} project"
+        oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+        wait_ns_deleted ${IBM_LICENSING}
+        oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+        wait_ns_deleted ${IBM_LICENSING}
+    else
+        echo "Project ${IBM_LICENSING} does not exist, skipping"
+    fi
+else
+    echo "Keeping ${IBM_LICENSING} namespace due to shared resources"
+fi
 
 if [ "${DELETE_CERT_MANAGER}" -eq 1 ]; then
     IBM_CERT_MANAGER=ibm-cert-manager
@@ -238,27 +267,6 @@ if [ "${DELETE_CERT_MANAGER}" -eq 1 ]; then
     fi
 else
     echo "Keeping ${IBM_CERT_MANAGER} namespace due to shared resources"
-fi
-
-if [ "${DELETE_LICENSING}" -eq 1 ]; then
-    IBM_LICENSING=ibm-licensing
-    oc get project ${IBM_LICENSING} > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-        log "Deleting everything in the ${IBM_LICENSING} project"
-        oc delete ibmlicensing  --all --ignore-not-found
-        oc delete sub -n ${IBM_LICENSING} --all --ignore-not-found
-        oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
-
-        log "Deleting ${IBM_LICENSING} project"
-        oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
-        wait_ns_deleted ${IBM_LICENSING}
-        oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
-        wait_ns_deleted ${IBM_LICENSING}
-    else
-        echo "Project ${IBM_LICENSING} does not exist, skipping"
-    fi
-else
-    echo "Keeping ${IBM_LICENSING} namespace due to shared resources"
 fi
 
 # Delete other elements belonging to CP4D install
