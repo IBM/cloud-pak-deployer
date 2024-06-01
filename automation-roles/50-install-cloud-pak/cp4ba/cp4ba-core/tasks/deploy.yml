@@ -549,7 +549,7 @@
     or _current_cp4ba_cluster.cp4ba.patterns.application.enabled
     or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
-- name: Deployments wait list
+- name: Deployments wait_list - content / document_processing prereq
   ansible.builtin.set_fact:
     wait_list:
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-cpe-deploy', '') }}"
@@ -572,7 +572,7 @@
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.application.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer | ternary(cp4ba_cr_meta_name + '-pbk-ae-deployment', '') }}"
 
-- name: Wait for Deployments to be Available
+- name: Wait for Deployments wait_list - content / document_processing prereq to be Available
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -597,12 +597,12 @@
     common_delay: 120
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
-- name: StatefulSets wait list
+- name: StatefulSets wait_list - document_processing
   ansible.builtin.set_fact:
     wait_list:
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-rabbitmq-ha', '') }}"
 
-- name: Wait for StatefulSets to be Available
+- name: Wait for StatefulSets wait_list - document_processing to be Available
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-statefulset-available
@@ -613,7 +613,7 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
-- name: Wait for Deployments to be Available
+- name: Wait for Deployment IER to be Available
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -629,7 +629,7 @@
     - "{{ cp4ba_cr_meta_name }}-ier-deploy"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
-- name: Wait for ADP Deployments Available state
+- name: Wait for Deployments document_processing_core to be Available
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -652,7 +652,7 @@
     - "{{ cp4ba_cr_meta_name }}-spbackend"
   when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
 
-- name: Wait for BAI InsightsEngine Ready state
+- name: Wait for BAI InsightsEngine instance Ready state
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -666,7 +666,7 @@
     common_delay: 120
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
 
-- name: Deployment wait list
+- name: Deployments wait_list - bai / decision_odm / app
   ansible.builtin.set_fact:
     wait_list:
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
@@ -685,7 +685,7 @@
         _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name + '-odm-decisionrunner', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name + '-workspace-aae-ae-deployment', '') }}"
 
-- name: Wait for Deployments to be Available
+- name: Wait for Deployments wait_list - bai / decision_odm / app to be Available
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -711,7 +711,7 @@
 #     common_delay: 120
 #   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
-- name: Deployment wait list
+- name: Deployments wait_list - decision_ads
   ansible.builtin.set_fact:
     wait_list:
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
@@ -730,7 +730,7 @@
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name + '-ads-runtime-service', '') }}"
 
-- name: Wait for Deployments to be Available
+- name: Wait for Deployments wait_list - decision_ads to be Available
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -744,7 +744,7 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
-- name: Wait for CP4BA to be Ready
+- name: Wait for CP4BA instance Ready state
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
