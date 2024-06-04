@@ -11,7 +11,7 @@
 
 - name: Init variable for patterns
   ansible.builtin.set_fact:
-    patterns: ['foundation']
+    patterns: ["foundation"]
 
 - name: Init variable for components
   ansible.builtin.set_fact:
@@ -396,7 +396,7 @@
 
 - name: Write CR to file
   ansible.builtin.copy:
-    content: '{{ cr | to_nice_yaml(indent=2, width=1337) }}'
+    content: "{{ cr | to_nice_yaml(indent=2, width=1337) }}"
     dest: "{{ cp4ba_output_directory }}/cr.yaml"
     mode: u+rwx
 
@@ -643,7 +643,6 @@
     common_delay: 300
   with_items:
     - "{{ cp4ba_cr_meta_name }}-classifyprocess-classify"
-    - "{{ cp4ba_cr_meta_name }}-deep-learning"
     - "{{ cp4ba_cr_meta_name }}-natural-language-extractor"
     - "{{ cp4ba_cr_meta_name }}-ocr-extraction"
     - "{{ cp4ba_cr_meta_name }}-postprocessing"
@@ -651,6 +650,22 @@
     - "{{ cp4ba_cr_meta_name }}-setup"
     - "{{ cp4ba_cr_meta_name }}-spbackend"
   when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+
+- name: Wait for Deployment document_processing_deeplearning to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 36
+    common_delay: 300
+  with_items:
+    - "{{ cp4ba_cr_meta_name }}-deep-learning"
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom.spec.ca_configuration.ocrextraction.deep_learning_object_detection.enabled | default(false) | bool
 
 - name: Wait for BAI InsightsEngine instance Ready state
   ansible.builtin.include_role:
