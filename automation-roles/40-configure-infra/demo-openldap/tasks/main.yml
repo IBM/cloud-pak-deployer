@@ -1,25 +1,13 @@
 ---
 - set_fact:
-    _current_demo_openldap: {}
-
-- when: "all_config.demo_openldap is defined"
-  block:
-  - set_fact:
-      _current_demo_openldap: "{{ all_config.demo_openldap | json_query(query) | first | default({}) }}"
-    vars:
-      query: >-
-        [?openshift_cluster_name=='{{ current_openshift_cluster.name }}']
-  - name: Show openldap for current cluster
-    debug:
-      var: _current_demo_openldap
-
-- set_fact:
-    _openldap_project_name: "{{ _current_demo_openldap.openldap_project | default('openldap') }}"
+    _openldap_project_name: "{{ _current_demo_openldap.openldap_project | default(_current_demo_openldap.name) }}"
 
 - ansible.builtin.include_tasks: install-openldap.yml
-  when: 
-  - _current_demo_openldap != {}
+  when:
+  - _current_demo_openldap.openshift_cluster_name == _p_openshift_cluster_name
   - _current_demo_openldap.state | default('installed') == 'installed'
 
 - ansible.builtin.include_tasks: remove-openldap.yml
-  when: _current_demo_openldap == {} or _current_demo_openldap.state | default('installed') != 'installed'
+  when: 
+  - _current_demo_openldap.openshift_cluster_name == _p_openshift_cluster_name
+  - _current_demo_openldap.state | default('installed') != 'installed'

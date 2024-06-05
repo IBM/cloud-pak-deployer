@@ -71,6 +71,11 @@
 - name: Install OpenLDAP on OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: demo-openldap
+  loop: "{{ all_config.demo_openldap | default([]) }}"
+  loop_control:
+    loop_var: _current_demo_openldap
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
 - name: Configure logging for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
