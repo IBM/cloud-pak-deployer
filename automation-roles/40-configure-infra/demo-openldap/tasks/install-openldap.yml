@@ -1,11 +1,11 @@
 - set_fact:
     _openldap_bind_password_new: ''
 
-- name: Retrieve OpenLDAP bind password from vault secret {{ current_openshift_cluster.name }}-openldap-bind-password
+- name: Retrieve OpenLDAP bind password from vault secret {{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-bind-password
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "{{ current_openshift_cluster.name }}-openldap-bind-password"
+    secret_name: "{{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-bind-password"
     secret_group: "{{ environment_name }}" 
     _p_secret_variable: _openldap_bind_password
 
@@ -23,11 +23,11 @@
   - _openldap_bind_password==''
   - _openldap_bind_password_new==''
 
-- name: Set OpenLDAP bind password into secret {{ current_openshift_cluster.name }}-openldap-bind-password
+- name: Set OpenLDAP bind password into secret {{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-bind-password
   include_role:
     name: vault-set-secret
   vars:
-    secret_name: "{{ current_openshift_cluster.name }}-openldap-bind-password"
+    secret_name: "{{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-bind-password"
     secret_group: "{{ environment_name }}"
     secret_payload: "{{ _openldap_bind_password_new }}"
   when: _openldap_bind_password_new!=''
@@ -42,7 +42,7 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
+- name: Create Project {{ _openldap_project_name }}
   ansible.builtin.include_role:
     name: common
     tasks_from: create-project
@@ -53,7 +53,7 @@
 - name: Prepare OpenLDAP yaml file for cluster {{ current_openshift_cluster.name }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
-    dest: "{{ _v_openldap_base_dir }}/{{ current_openshift_cluster.name }}-openldap-{{ item }}.yaml"
+    dest: "{{ _v_openldap_base_dir }}/{{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-{{ item }}.yaml"
     mode: u+rwx
   with_items:
     - configmaps
@@ -65,7 +65,7 @@
 - name: Add OpenLDAP item {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    src: "{{ _v_openldap_base_dir }}/{{ current_openshift_cluster.name }}-openldap-{{ item.name }}.yaml"
+    src: "{{ _v_openldap_base_dir }}/{{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-{{ item.name }}.yaml"
     wait: true
     wait_sleep: "{{ item.wait_sleep }}"
     wait_timeout: "{{ item.wait_timeout }}"

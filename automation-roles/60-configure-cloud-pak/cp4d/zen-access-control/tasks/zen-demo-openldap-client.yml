@@ -15,7 +15,7 @@
 - set_fact:
     _openldap_project_name: "{{ _current_demo_openldap.openldap_project | default('openldap') }}"
 
-- name: Get OpenLDAP bind password
+- name: Get OpenLDAP bind password from project  {{ _openldap_project_name }}
   shell:
     oc extract secret/openldap-password -n {{ _openldap_project_name }} --to=-
   register: _openldap_bind_password
@@ -30,6 +30,9 @@
     return_content: yes
     validate_certs: no
   register: _fs_iam_ldap_idp
+
+- debug:
+    var: _fs_iam_ldap_idp
   
 - set_fact:
     _fs_iam_ldap_idp_uid: "{{ _fs_iam_ldap_idp.json.idp[0].uid }}"
@@ -68,13 +71,10 @@
       protocol: ldap
       type: "Custom"
       idp_config:
-        ldap_id: openldap
-        ldap_realm: "REALM"
         ldap_url: "ldap://openldap.{{ _openldap_project_name }}.svc:389"
         ldap_basedn: "{{ _current_demo_openldap.ldap_config.base_dn }}"
         ldap_binddn: "{{ _current_demo_openldap.ldap_config.bind_admin_user }}"
         ldap_bindpassword: "{{ _openldap_bind_password.stdout | b64encode }}"
-        ldap_type: "Custom"
         ldap_ignorecase: "false"
         ldap_userfilter: "(&(uid=%v)(objectclass={{ _current_demo_openldap.ldap_config.user_object_class }}))"
         ldap_useridmap: "*:{{ _current_demo_openldap.ldap_config.user_id_attribute }}"
@@ -89,7 +89,7 @@
   register: _fs_iam_ldap_idp_create
   when: (_fs_iam_ldap_idp.json.idp | default([])) == []
 
-- name: Update Foundational Services OpenID Connect provider for Keycloak client {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}
+- name: Update Foundational Services OpenLDAP identity provider {{ _zen_access_control.demo_openldap_name }}
   uri:
     url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource/{{ _fs_iam_ldap_idp_uid }}'
     method: PUT
@@ -103,13 +103,10 @@
       protocol: ldap
       type: "Custom"
       idp_config:
-        ldap_id: openldap
-        ldap_realm: "REALM"
         ldap_url: "ldap://openldap.{{ _openldap_project_name }}.svc:389"
         ldap_basedn: "{{ _current_demo_openldap.ldap_config.base_dn }}"
         ldap_binddn: "{{ _current_demo_openldap.ldap_config.bind_admin_user }}"
         ldap_bindpassword: "{{ _openldap_bind_password.stdout | b64encode }}"
-        ldap_type: "Custom"
         ldap_ignorecase: "false"
         ldap_userfilter: "(&(uid=%v)(objectclass={{ _current_demo_openldap.ldap_config.user_object_class }}))"
         ldap_useridmap: "*:{{ _current_demo_openldap.ldap_config.user_id_attribute }}"

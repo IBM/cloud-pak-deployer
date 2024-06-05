@@ -5,11 +5,11 @@
   vars:
     _p_keycloak_name: "{{ _zen_access_control.keycloak_name }}"
 
-- name: Create Keycloak client {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}
+- name: Create Keycloak client {{ _zen_access_control.keycloak_name }}
   community.general.keycloak_client:
-    client_id: "{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
+    client_id: "{{ _zen_access_control.keycloak_name }}"
     secret: "{{ _cp4d_admin_password }}"
-    description: "Keycloak OpenID Connect client for project {{ current_cp4d_cluster.project }} in OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}"
+    description: "Keycloak OpenID Connect client {{ _zen_access_control.keycloak_name }} for project {{ current_cp4d_cluster.project }} in OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}"
     redirect_uris:
     - "*"
     protocol_mappers:
@@ -33,9 +33,9 @@
 - debug:
     var: _keycloak_client
 
-- name: Check if OpenID Connect provider {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }} already exists in Foundational Services
+- name: Check if OpenID Connect provider {{ _zen_access_control.keycloak_name }} already exists in Foundational Services
   uri:
-    url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource?name={{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}'
+    url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource?name={{ _zen_access_control.keycloak_name }}'
     method: GET
     headers:
       Authorization: "Bearer {{ _iam_token }}"
@@ -52,7 +52,7 @@
     _fs_iam_oidc_client_uid: "{{ _fs_iam_oidc_client.json.idp[0].uid }}"
   when: (_fs_iam_oidc_client.json.idp | default([])) != []
 
-- name: Create Foundational Services OpenID Connect provider for Keycloak client {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}
+- name: Create Foundational Services OpenID Connect provider for Keycloak client {{ _zen_access_control.keycloak_name }}
   uri:
     url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource/'
     method: POST
@@ -61,13 +61,13 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      name: "{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
-      description: "Keycloak authentication, client {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
+      name: "{{ _zen_access_control.keycloak_name }}"
+      description: "Keycloak authentication, client {{ _zen_access_control.keycloak_name }}"
       protocol: oidc
       type: "OIDC"
       idp_config:
         discovery_url: "{{ _keycloak_auth_url }}/realms/master/.well-known/openid-configuration"
-        client_id: "{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
+        client_id: "{{ _zen_access_control.keycloak_name }}"
         client_secret: "{{ _cp4d_admin_password }}"
         token_attribute_mappings:
           groups: "groupIds"
@@ -83,7 +83,7 @@
   register: _fs_iam_keycloak_client
   when: (_fs_iam_oidc_client.json.idp | default([])) == []
 
-- name: Update Foundational Services OpenID Connect provider for Keycloak client {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}
+- name: Update Foundational Services OpenID Connect provider for Keycloak client {{ _zen_access_control.keycloak_name }}
   uri:
     url: 'https://{{ _current_idp_url.stdout }}v3/auth/idsource/{{ _fs_iam_oidc_client_uid }}'
     method: PUT
@@ -92,13 +92,13 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      name: "{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
-      description: "Keycloak authentication, client {{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
+      name: "{{ _zen_access_control.keycloak_name }}"
+      description: "Keycloak authentication, client {{ _zen_access_control.keycloak_name }}"
       protocol: oidc
       type: "OIDC"
       idp_config:
         discovery_url: "{{ _keycloak_auth_url }}/realms/master/.well-known/openid-configuration"
-        client_id: "{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}"
+        client_id: "{{ _zen_access_control.keycloak_name }}"
         client_secret: "{{ _cp4d_admin_password }}"
         token_attribute_mappings:
           groups: "groupIds"
