@@ -3,14 +3,18 @@
   debug:
     var: _zen_access_control
 
-- include_tasks: zen-keycloak-client.yml
-  when: (_zen_access_control.keycloak_name | default('')) != ''
+- block:
+  - include_tasks: zen-keycloak-client.yml
+    when: (_zen_access_control.keycloak_name | default('')) != ''
 
-- include_tasks: zen-demo-openldap-client.yml
-  when: (_zen_access_control.demo_openldap_name | default('')) != ''
+  - include_tasks: zen-demo-openldap-client.yml
+    when: (_zen_access_control.demo_openldap_name | default('')) != ''
 
-- name: Configure Zen user group
-  include_tasks: zen-user-group.yml
-  loop: "{{ _zen_access_control.user_groups | default([]) }}"
-  loop_control:
-    loop_var: _zen_user_group
+  - name: Configure Zen user group
+    include_tasks: zen-user-group.yml
+    loop: "{{ _zen_access_control.user_groups | default([]) }}"
+    loop_control:
+      loop_var: _zen_user_group
+  when: 
+    - _zen_access_control.project == current_cp4d_cluster.project
+    - _zen_access_control.openshift_cluster_name == current_cp4d_cluster.openshift_cluster_name

@@ -1,16 +1,16 @@
 ---
-- name: Generate yaml for Keycloak {{ _current_keycloak.name }}
+- name: Generate yaml for Keycloak {{ _keycloak_name }} in namespace {{ _keycloak_name }}
   template:
     src: redhat-sso-keycloak.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _current_keycloak.name }}-keycloak.yaml"
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml"
 
-- name: Create Keycloak from YAML file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _current_keycloak.name }}-keycloak.yaml
+- name: Create Keycloak from YAML file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _current_keycloak.name }}-keycloak.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml
 
-- name: Wait until Keycloak {{ _current_keycloak.name }} is ready
+- name: Wait until Keycloak {{ _keycloak_name }} is ready
   shell: |
-    oc get keycloaks.keycloak.org -n {{ _v_redhat_sso_project }} {{ _current_keycloak.name }} \
+    oc get keycloaks.keycloak.org -n {{ _keycloak_name }} {{ _keycloak_name }} \
       -o jsonpath='{.status.ready}'
   register: _keycloak_status
   retries: 30
@@ -26,10 +26,10 @@
   include_role:
     name: get-keycloak-info
   vars:
-    _p_keycloak_name: "{{ _current_keycloak.name }}"
+    _p_keycloak_name: "{{ _keycloak_name }}"
 
 - name: Create Keycloak groups
   include_tasks: create-keycloak-group.yml
-  loop: "{{ _current_keycloak.groups | default([]) }}"
+  loop: "{{ _current_openshift_redhat_sso.groups | default([]) }}"
   loop_control:
     loop_var: _current_keycloak_group

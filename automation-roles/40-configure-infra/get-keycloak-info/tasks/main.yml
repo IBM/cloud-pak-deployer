@@ -6,7 +6,7 @@
 
 - name: Get Keycloak URL
   shell: |
-    oc get route -n {{ _v_redhat_sso_project }} keycloak -o jsonpath='{.spec.host}'
+    oc get route -n {{ _p_keycloak_name }} keycloak -o jsonpath='{.spec.host}'
   register: _get_keycloak_route_output
 
 - set_fact:
@@ -15,7 +15,7 @@
 
 - name: Get Keycloak admin user
   shell: |
-    oc extract secret/credential-{{ _p_keycloak_name }} -n {{ _v_redhat_sso_project }} --keys=ADMIN_USERNAME --to=- 2>/dev/null 
+    oc extract secret/credential-{{ _p_keycloak_name }} -n {{ _p_keycloak_name }} --keys=ADMIN_USERNAME --to=- 2>/dev/null 
   register: _get_keycloak_admin_user
 
 - set_fact:
@@ -23,7 +23,7 @@
 
 - name: Get Keycloak admin password
   shell: |
-    oc extract secret/credential-{{ _p_keycloak_name }} -n {{ _v_redhat_sso_project }} --keys=ADMIN_PASSWORD --to=- 2>/dev/null 
+    oc extract secret/credential-{{ _p_keycloak_name }} -n {{ _p_keycloak_name }} --keys=ADMIN_PASSWORD --to=- 2>/dev/null 
   register: _get_keycloak_admin_password
 
 - set_fact:
