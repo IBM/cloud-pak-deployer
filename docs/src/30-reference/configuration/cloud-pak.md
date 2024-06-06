@@ -9,9 +9,11 @@ Defines the Cloud Pak(s) which is/are layed out on the OpenShift cluster, typica
 - [Cloud Pak for Watson AIOps](#cp4waiops)
 - [Cloud Pak for Business Automation](#cp4ba)
 
-### `cp4d`
+## `cp4d`
+
 Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
-```
+
+```yaml
 cp4d:
 - project: cpd
   openshift_cluster_name: sample
@@ -30,7 +32,8 @@ cp4d:
   - name: cpd_platform
 ```
 
-#### Properties
+### Properties
+
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
@@ -48,11 +51,11 @@ cp4d:
 | cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](../../../30-reference/configuration/cp4d-cartridges) for more details | Yes | |
 
 ## `cp4i`
+
 Defines the Cloud Pak for Integration installation to be configured on the OpenShift cluster(s).
 
-```
+```yaml
 cp4i:
-
 - project: cp4i
   openshift_cluster_name: {{ env_id }}
   openshift_storage_name: nfs-rook-ceph
@@ -64,7 +67,6 @@ cp4i:
   operators_in_all_namespaces: True
  
   instances:
-
   - name: integration-navigator
     type: platform-navigator
     license: L-RJON-C7QG3S
@@ -72,8 +74,7 @@ cp4i:
     case_version: 1.5.0
 ```
 
-
-#### OpenShift projects
+### OpenShift projects
 
 The immediate content of the cp4i object is actually a list of OpenShift projects (namespaces). There can be more than one project and instances can be created in separate projects.
 
@@ -92,15 +93,14 @@ cp4i:
 
 #### Operator channels, CASE versions, license IDs
 
-Before you run the Cloud Pak Deployer be sure that the correct operator channels are defined for the selected instance types. Some products require a license ID, please check the documentation of each product for the correct license. If you decide to use CASE files instead of the IBM Operator Catalog (more on that below) make sure that you selected the correct CASE versions - please refer: https://github.com/IBM/cloud-pak/tree/master/repo/case 
+Before you run the Cloud Pak Deployer be sure that the correct operator channels are defined for the selected instance types. Some products require a license ID, please check the documentation of each product for the correct license. If you decide to use CASE files instead of the IBM Operator Catalog (more on that below) make sure that you selected the correct CASE versions - please refer: <https://github.com/IBM/cloud-pak/tree/master/repo/case>
 
-
-### Main properties
+### CP4I main properties
 
 The following properties are defined on the project level:
 
 | Property                        | Description |  Mandatory  | Allowed values |
-|---------------------------------|-------------|-------------|----------------| 
+|---------------------------------|-------------|-------------|----------------|
 | project                         | The name of the OpenShift project that will be created and used for the installation of the defined instances. | Yes  | |
 | openshift_cluster_name          | Dynamically defined form the `env_id` parameter during the execution. | Yes, inferred from openshift       | Existing `openshift` cluster |
 | openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). The definition must include the class name of the file storage type and the class name of the block storage type. | No, inferred from openshift->openshift_storage | |
@@ -113,8 +113,8 @@ The following properties are defined on the project level:
 | operators_in_all_namespaces     | It defines whether the operators are visible in all namespaces or just in the specific namespace where they are needed.  | No | True, False (default) |
 | instances                       | List of the instances that are going to be created (please see below). | Yes | |
 
-!!! warning
-    Despite the properties *use_case_files*, *use_top_level_operator* and *operators_in_all_namespaces* are defined as optional, they are actually crucial for the way of execution of the installation process. If any of them is omitted, it is assumed that the default *False* value is used. If none of them exists, it means that all are *False*. In this case, it means that the *IBM Operator Catalog* is used and only the needed operators for specified instance types are installed in the specific namespace. 
+!!! warning  
+    Despite the properties *use_case_files*, *use_top_level_operator* and *operators_in_all_namespaces* are defined as optional, they are actually crucial for the way of execution of the installation process. If any of them is omitted, it is assumed that the default *False* value is used. If none of them exists, it means that all are *False*. In this case, it means that the *IBM Operator Catalog* is used and only the needed operators for specified instance types are installed in the specific namespace.
 
 ### Properties of the individual instances
 
@@ -123,7 +123,6 @@ The *instance* property contains one or more instances definitions. Each instanc
 #### Naming convention for instance types
 
 For each instance definition, an **instance type** must be specified. We selected the type names that are as much as possible similar to the naming convention used in the Platform Navigator use interface. The following table shows all existing types:
-
 
 | Instance type              | Description/Product name |
 |----------------------------|-------------|
@@ -139,12 +138,11 @@ For each instance definition, an **instance type** must be specified. We selecte
 | integration-tracing        | Operations Dashboard |
 | messaging                  | IBM MQ |
 
-
 #### Platform navigator
 
 The Platform Navigator is defined as one of the instance types. There is typically only one instance of it. The exception would be an installation in two or more completely separate namespaces (see the CP4I documentation). Special attention is paid to the installation of the Navigator. The Cloud Pak Deployer will install the Navigator instance first, before any other instance, and it will wait until the instance is ready (this could take up to 45 minutes).  
 
-When the installation is completed, you will find the **admin** user password in the **status/cloud-paks/cp4i-<cluster_name>-cp4i-PN-access.txt** file. Of course, you can obtain the password also from the **platform-auth-idp-credentials** secret in **ibm-common-services** namespace. 
+When the installation is completed, you will find the **admin** user password in the **status/cloud-paks/cp4i-<cluster_name>-cp4i-PN-access.txt** file. Of course, you can obtain the password also from the **platform-auth-idp-credentials** secret in **ibm-common-services** namespace.
 
 | Property                   | Description | Sample value for 2021.4.1 |
 |----------------------------|-------------|----------------------------|
@@ -153,7 +151,6 @@ When the installation is completed, you will find the **admin** user password in
 | license                    | License ID           | L-RJON-C7QG3S |
 | channel                    | Subscription channel | v5.2          |
 | case_version               | CASE version         | 1.5.0         |
-
 
 #### API management (IBM API Connect)
 
@@ -166,7 +163,6 @@ When the installation is completed, you will find the **admin** user password in
 | channel                    | Subscription channel   | v2.4          |
 | case_version               | CASE version           | 3.0.5         |
 
-
 #### Automation assets (Asset repo)
 
 | Property                   | Description | Sample value for 2021.4.1 |
@@ -177,7 +173,6 @@ When the installation is completed, you will find the **admin** user password in
 | version                    | Version of Asset repo  | 2021.4.1-2 |
 | channel                    | Subscription channel   | v1.4 |
 | case_version               | CASE version           | 1.4.2 |
-
 
 #### Enterprise gateway (IBM Data Power)
 
@@ -191,7 +186,6 @@ When the installation is completed, you will find the **admin** user password in
 | channel                    | Subscription channel   | v1.5 |
 | case_version               | CASE version           | 1.5.0 |
 
-
 #### Event endpoint management
 
 | Property                   | Description | Sample value for 2021.4.1 |
@@ -203,7 +197,6 @@ When the installation is completed, you will find the **admin** user password in
 | channel                    | Subscription channel   | v2.4 |
 | case_version               | CASE version           | 3.0.5 |
 
-
 #### Event streams
 
 | Property                   | Description | Sample value for 2021.4.1 |
@@ -213,7 +206,6 @@ When the installation is completed, you will find the **admin** user password in
 | version                    | Version of Event streams | 10.5.0 |
 | channel                    | Subscription channel   | v2.5 |
 | case_version               | CASE version           | 1.5.2 |
-
 
 #### High speed transfer server (Aspera HSTS)
 
@@ -227,7 +219,6 @@ When the installation is completed, you will find the **admin** user password in
 | channel                    | Subscription channel   | v1.4 |
 | case_version               | CASE version           | 1.4.0 |
 
-
 #### Integration dashboard (IBM App Connect Dashboard)
 
 | Property                   | Description | Sample value for 2021.4.1 |
@@ -238,7 +229,6 @@ When the installation is completed, you will find the **admin** user password in
 | version                    | Version of IBM App Connect | 12.0 |
 | channel                    | Subscription channel   | v3.1 |
 | case_version               | CASE version           | 3.1.0 |
-
 
 #### Integration design (IBM App Connect Designer)
 
@@ -251,7 +241,6 @@ When the installation is completed, you will find the **admin** user password in
 | channel                    | Subscription channel   | v3.1 |
 | case_version               | CASE version           | 3.1.0 |
 
-
 #### Integration tracing (Operation dashborad)
 
 | Property                   | Description | Sample value for 2021.4.1 |
@@ -261,7 +250,6 @@ When the installation is completed, you will find the **admin** user password in
 | version                    | Version of Integration tracing | 2021.4.1-2 |
 | channel                    | Subscription channel   | v2.5 |
 | case_version               | CASE version           | 2.5.2 |
-
 
 #### Messaging (IBM MQ)
 
@@ -276,19 +264,20 @@ When the installation is completed, you will find the **admin** user password in
 | case_version               | CASE version           | 1.7.0 |
 
 ## `cp4waiops`
+
 Defines the Cloud Pak for Watson AIOps installation to be configured on the OpenShift cluster(s). The following instances can be installed by the deployer:
-* AI Manager
-* Event Manager
-* Turbonomic
-* Instana
-* Infrastructure management
-* ELK stack (ElasticSearch, Logstash, Kibana)
+
+- AI Manager
+- Event Manager
+- Turbonomic
+- Instana
+- Infrastructure management
+- ELK stack (ElasticSearch, Logstash, Kibana)
 
 Aside from the base install, the deployer can also install ready-to-use demos for each of the instances
 
-```
+```yaml
 cp4waiops:
-
 - project: cp4waiops
   openshift_cluster_name: "{{ env_id }}"
   openshift_storage_name: auto-storage
@@ -301,7 +290,7 @@ cp4waiops:
   ...
 ```
 
-## Main properties
+### AIOPS main properties
 
 The following properties are defined on the project level:
 
@@ -312,12 +301,13 @@ The following properties are defined on the project level:
 | openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). | No, inferred from openshift->openshift_storage | |
 | accept_licenses | Set to `True` to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | True, False |
 
-## Service instances
+### Service instances
+
 The project that is specified at the `cp4waiops` level defines the OpenShift project into which the instances of each of the services will be installed. Below is a list of instance "kinds" that can be installed. For every "service instance" there can also be a "demo content" entry to prepare the demo content for the capability.
 
 ### AI Manager
 
-```
+```yaml
   instances:
   - name: cp4waiops-aimanager
     kind: AIManager
@@ -329,7 +319,6 @@ The project that is specified at the `cp4waiops` level defines the OpenShift pro
     subscription_channel: v3.6
     freeze_catalog: false
 ```
-
 
 | Property            | Description                    | Mandatory            | Allowed values |
 |---------------------|--------------------------------|----------------------|----------------|
@@ -349,7 +338,7 @@ The project that is specified at the `cp4waiops` level defines the OpenShift pro
 
 ### AI Manager - Demo Content
 
-```
+```yaml
   instances:
   - name: cp4waiops-aimanager-demo-content
     kind: AIManagerDemoContent
@@ -367,7 +356,7 @@ See sample config for remainder of properties.
 
 ### Event Manager
 
-```
+```yaml
   instances:
   - name: cp4waiops-eventmanager
     kind: EventManager
@@ -388,7 +377,7 @@ See sample config for remainder of properties.
 
 ### Event Manager Demo Content
 
-```
+```yaml
   instances:
   - name: cp4waiops-eventmanager
     kind: EventManagerDemoContent
@@ -403,14 +392,13 @@ See sample config for remainder of properties.
 
 ### Infrastructure Management
 
-```
+```yaml
   instances:
   - name: cp4waiops-infrastructure-management
     kind: InfrastructureManagement
     install: false
     subscription_channel: v3.5
 ```
-
 
 | Property            | Description                    | Mandatory            | Allowed values |
 |---------------------|--------------------------------|----------------------|----------------|
@@ -419,11 +407,11 @@ See sample config for remainder of properties.
 | install             | Must the service be installed? | Yes | true, false |
 | subscription_channel | Subscription channel of the operator | Yes | |
 
-
 ### ELK stack
+
 ElasticSearch, Logstash and Kibana stack.
 
-```
+```yaml
   instances:
   - name: cp4waiops-elk
     kind: ELK
@@ -438,7 +426,7 @@ ElasticSearch, Logstash and Kibana stack.
 
 ### Instana
 
-```
+```yaml
   instances:
   - name: cp4waiops-instana
     kind: Instana
@@ -473,7 +461,7 @@ ElasticSearch, Logstash and Kibana stack.
 
 ### Turbonomic
 
-```
+```yaml
   instances:
   - name: cp4waiops-turbonomic
     kind: Turbonomic
@@ -490,7 +478,7 @@ ElasticSearch, Logstash and Kibana stack.
 
 ### Turbonomic Demo Content
 
-```
+```yaml
   instances:
   - name: cp4waiops-turbonomic-demo-content
     kind: TurbonomicDemoContent
@@ -514,6 +502,7 @@ ElasticSearch, Logstash and Kibana stack.
 See sample config for remainder of properties.
 
 ## `cp4ba`
+
 Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
 See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.  
 
@@ -581,14 +570,20 @@ cp4ba:
         cr_custom:
           spec:
             ca_configuration:
-              # GPU config as described on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-document-processing
-              deeplearning:
-                gpu_enabled: false
+              ## NB: All config parameters for ADP are described here ==> https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=parameters-automation-document-processing
+              ocrextraction:
+                # [Tech Preview] OCR Engine 2 (IOCR) for ADP - Starts the Watson Document Understanding (WDU) pods to process documents.
+                use_iocr: auto # Allowed values: auto, all, none. Refer to doc for option details: https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=parameters-automation-document-processing#:~:text=ocrextraction.use_iocr
+                deep_learning_object_detection: # When enabled, ca_configuration.deeplearning parameters will be used (ignored otherwise), and deep-learning pods will be deployed to enhance object detection.
+                  # If disabled, all training will automatically be done in "fast-training" mode and should finish in less than 10 min.
+                  # Warn: If you enable this option and don't select the "fast training" mode in ADP before starting training, training could take hours (or more if you don't have GPUs).
+                  #       See "Important" note here for usage recommandation on using "fast/deeplarning" training: https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=project-creating-data-extraction-model#:~:text=Training%20takes%20time
+                  enabled: true
+              deeplearning: # Only used if deep_learning_object_detection is enabled. Configure usage of GPU-enabled Nodes.
+                gpu_enabled: false # Use GPUs for deeplearning training instead of CPUs.
                 nodelabel_key: nvidia.com/gpu.present
                 nodelabel_value: "true"
-              # [Tech Preview] Deploy OCR Engine 2 (IOCR) for ADP - https://www.ibm.com/support/pages/extraction-language-technology-preview-feature-available-automation-document-processing-2301
-              ocrextraction:
-                use_iocr: none # Allowed values: "none" to uninstall, "all" or "auto" to install (these are aliases)
+                replica_count: 1 # Controls the number of deep learning pod replicas. NB: The number of GPUs available on your cluster should be ≥ to replica_count.
       workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
         enabled: true
         optional_components:
@@ -640,7 +635,7 @@ cp4ba:
   phpldapadmin_enabled: true
 ```
 
-## Main properties
+### CP4BA main properties
 
 The following properties are defined on the project level.
 
@@ -652,9 +647,9 @@ The following properties are defined on the project level.
 | openshift_storage_name          | Reference to the storage definition that exists in the `openshift` object (please see above). | No, inferred from openshift->openshift_storage | |
 | accept_licenses | Set to `true` to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | Yes | true, false |
 | state | Set to `installed` to install `enabled` capabilities, set to `removed` to remove `enabled` capabilities. | Yes | installed, removed |
-| cpfs_profile_size                         | Profile size which affect replicas and resources of Pods of CPFS as per https://www.ibm.com/docs/en/cpfs?topic=operator-hardware-requirements-recommendations-foundational-services | Yes  | starterset, small, medium, large |
+| cpfs_profile_size                         | Profile size which affect replicas and resources of Pods of CPFS as per <https://www.ibm.com/docs/en/cpfs?topic=operator-hardware-requirements-recommendations-foundational-services> | Yes  | starterset, small, medium, large |
 
-## Cloud Pak for Business Automation properties
+### Cloud Pak for Business Automation properties
 
 Used to configure CP4BA.  
 Placed in `cp4ba` key on the project level.
@@ -662,13 +657,13 @@ Placed in `cp4ba` key on the project level.
 | Property            | Description                    | Mandatory            | Allowed values |
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to enable CP4BA. Currently always `true`. | Yes  | true |
-| profile_size                         | Profile size which affect replicas and resources of Pods as per https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=pcmppd-system-requirements | Yes  | small, medium, large |
-| patterns          | Section where CP4BA patterns are configured. Please make sure to select all that is needed as a dependencies. Dependencies can be determined from documentation at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments | Yes | Object - see details below |
+| profile_size                         | Profile size which affect replicas and resources of Pods as per <https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=pcmppd-system-requirements> | Yes  | small, medium, large |
+| patterns          | Section where CP4BA patterns are configured. Please make sure to select all that is needed as a dependencies. Dependencies can be determined from documentation at <https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments> | Yes | Object - see details below |
 
-### Foundation pattern properties
+#### Foundation pattern properties
 
 Always configure in CP4BA.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation>  
 Placed in `cp4ba.patterns.foundation` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -678,10 +673,10 @@ Placed in `cp4ba.patterns.foundation` key.
 | optional_components.bai          | Set to `true` to enable Business Automation Insights | Yes | true, false |
 | optional_components.ae          | Set to `true` to enable Application Engine | Yes | true, false |
 
-### Decisions pattern properties
+#### Decisions pattern properties
 
 Used to configure Operation Decision Manager.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm>  
 Placed in `cp4ba.patterns.decisions` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -693,10 +688,10 @@ Placed in `cp4ba.patterns.decisions` key.
 | optional_components.decision_server_runtime          | Set to `true` to enable Decision Server | Yes | true, false |
 | cr_custom          | Additional customization for Operational Decision Management. Contents will be merged into ODM part of CP4BA CR yaml file. Arrays are overwritten. | No | Object |
 
-### Decisions ADS pattern properties
+#### Decisions ADS pattern properties
 
 Used to configure Automation Decision Services.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ads>  
 Placed in `cp4ba.patterns.decisions_ads` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -706,10 +701,10 @@ Placed in `cp4ba.patterns.decisions_ads` key.
 | optional_components.ads_designer          | Set to `true` to enable Designer | Yes | true, false |
 | optional_components.ads_runtime          | Set to `true` to enable Runtime | Yes | true, false |
 
-### Content pattern properties
+#### Content pattern properties
 
 Used to configure FileNet Content Manager.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm>  
 Placed in `cp4ba.patterns.content` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -723,10 +718,10 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
 
-### Application pattern properties
+#### Application pattern properties
 
 Used to configure Business Automation Application.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa>  
 Placed in `cp4ba.patterns.application` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -736,10 +731,10 @@ Placed in `cp4ba.patterns.application` key.
 | optional_components.app_designer          | Set to `true` to enable Application Designer | Yes | true, false |
 | optional_components.ae_data_persistence          | Set to `true` to enable App Engine data persistence | Yes | true, false |
 
-### Document Processing pattern properties
+#### Document Processing pattern properties
 
 Used to configure Automation Document Processing.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa>  
 Placed in `cp4ba.patterns.document_processing` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -749,10 +744,10 @@ Placed in `cp4ba.patterns.document_processing` key.
 | optional_components.document_processing_designer          | Set to `true` to enable Designer | Yes | true |
 | cr_custom          | Additional customization for Automation Document Processing. Contents will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten. | No | Object |
 
-### Workflow pattern properties
+#### Workflow pattern properties
 
 Used to configure Business Automation Workflow.  
-https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw  
+<https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw>  
 Placed in `cp4ba.patterns.workflow` key.
 
 | Property            | Description                    | Mandatory            | Allowed values |
@@ -762,7 +757,7 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
 | optional_components.kafka          | Set to `true` to install a kafka cluster and enable kafka service for workflow authoring. | Yes | true, false |
 
-## Process Mining properties
+### Process Mining properties
 
 Used to configure IBM Process Mining.  
 Placed in `pm` key on the project level.
@@ -772,7 +767,7 @@ Placed in `pm` key on the project level.
 | enabled                         | Set to `true` to enable `process mining`. | Yes  | true, false |
 | cr_custom          | Additional customization for Process Mining. Contents will be merged into PM CR yaml file. Arrays are overwritten. | No | Object |
 
-## Robotic Process Automation properties
+### Robotic Process Automation properties
 
 Used to configure IBM Robotic Process Automation.  
 Placed in `rpa` key on the project level.
@@ -782,7 +777,7 @@ Placed in `rpa` key on the project level.
 | enabled                         | Set to `true` to enable `rpa`. | Yes  | true, false |
 | cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
 
-## Other properties
+### Other properties
 
 Used to configure extra UIs.  
 The following properties are defined on the project level.  
