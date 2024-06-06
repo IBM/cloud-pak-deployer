@@ -64,9 +64,14 @@
   vars:
     _p_upstream_dns: "{{ current_openshift_cluster.upstream_dns | default([]) }}"
 
-- name: Configure Red Hat SSO for OpenShift cluster {{ current_openshift_cluster.name }}
+- name: Configure Red Hat SSO (Keycloak) for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-redhat-sso
+  loop: "{{ all_config.openshift_redhat_sso | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_redhat_sso
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
 - name: Install OpenLDAP on OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:

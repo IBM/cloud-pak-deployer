@@ -78,7 +78,7 @@
     name: cp4d-configure-ldap
 
 # Cloud Pak for Data Custom role configuration
-- name: Handle Cloud Pak for Data custom roles configuration
+- name: Handle Cloud Pak for Data custom roles configuration for project {{ current_cp4d_cluster.project }}
   include_role:
     name: zen-roles
   loop: "{{ all_config.zen_role | default([]) }}"
@@ -86,7 +86,7 @@
     loop_var: _zen_role 
 
 # Cloud Pak for Data User Groups Configuration
-- name: Configure Cloud Pak for Data access control
+- name: Configure Cloud Pak for Data access control for project {{ current_cp4d_cluster.project }}
   include_role:
     name: zen-access-control
   loop: "{{ all_config.zen_access_control | default([]) }}"
@@ -94,7 +94,7 @@
     loop_var: _zen_access_control 
 
 # In case roles were set to state: removed, loop through the roles again to delete them
-- name: Delete obsolete Cloud Pak for Data custom roles
+- name: Delete obsolete Cloud Pak for Data custom roles for project {{ current_cp4d_cluster.project }}
   include_role:
     name: zen-roles
   loop: "{{ all_config.zen_role | default([]) }}"

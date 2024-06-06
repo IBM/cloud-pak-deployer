@@ -1,35 +1,33 @@
 ---
-- name: Generate yaml for redhat-sso namespace
+- name: Generate yaml for {{ _keycloak_name }} namespace
   template:
     src: redhat-sso-namespace.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-namespace.yaml"
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
 - name: Create redhat-sso namespace
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-namespace.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml
 
-- name: Generate yaml for Red Hat SSO operator group
+- name: Generate yaml for Red Hat SSO operator group in project {{ _keycloak_name }}
   template:
     src: redhat-sso-operatorgroup.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-operatorgroup.yaml"
-
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
 - name: Create redhat-sso operatorgroup
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-operatorgroup.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml
 
-- name: Generate yaml for Red Hat SSO subscription
+- name: Generate yaml for Red Hat SSO subscription in project {{ _keycloak_name }}
   template:
     src: redhat-sso-subscription.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-subscription.yaml"
-
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml"
 - name: Create redhat-sso operator
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-redhat-sso-subscription.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml
 
 # Wait until subscription has been successfully created
 - name: Wait until Red Hat SSO has status Succeeded
   shell: |
-    oc get csv -n {{ _v_redhat_sso_project }} \
-      -l operators.coreos.com/rhsso-operator.redhat-sso \
+    oc get csv -n {{ _keycloak_name }} \
+      -l operators.coreos.com/rhsso-operator.{{ _keycloak_name }} \
       --no-headers \
       -o custom-columns='name:metadata.name,phase:status.phase' | \
       grep -i succeeded | wc -l
