@@ -16,7 +16,7 @@ cp4ba:
     patterns:
       foundation: # Foundation pattern, always true - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__foundation
         optional_components:
-          bas: true # Business Automation Studio (BAS) 
+          bas: true # Business Automation Studio (BAS)
           bai: true # Business Automation Insights (BAI)
           ae: true # Application Engine (AE)
       decisions: # Operational Decision Manager (ODM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__odm
@@ -54,27 +54,33 @@ cp4ba:
           ae_data_persistence: true # App Engine data persistence (BAA)
       document_processing: # Automation Document Processing (ADP) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__adp
         enabled: true
-        optional_components: 
+        optional_components:
           document_processing_designer: true # Designer (ADP)
         # Additional customization for Automation Document Processing
         # Contents of the following will be merged into ADP part of CP4BA CR yaml file. Arrays are overwritten.
         cr_custom:
           spec:
             ca_configuration:
-              # GPU config as described on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-document-processing
-              deeplearning:
-                gpu_enabled: false
+              ## NB: All config parameters for ADP are described here ==> https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=parameters-automation-document-processing
+              ocrextraction:
+                # [Tech Preview] OCR Engine 2 (IOCR) for ADP - Starts the Watson Document Understanding (WDU) pods to process documents.
+                use_iocr: auto # Allowed values: auto, all, none. Refer to doc for option details: https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=parameters-automation-document-processing#:~:text=ocrextraction.use_iocr
+                deep_learning_object_detection: # When enabled, ca_configuration.deeplearning parameters will be used (ignored otherwise), and deep-learning pods will be deployed to enhance object detection.
+                  # If disabled, all training will automatically be done in "fast-training" mode and should finish in less than 10 min.
+                  # Warn: If you enable this option and don't select the "fast training" mode in ADP before starting training, training could take hours (or more if you don't have GPUs).
+                  #       See "Important" note here for usage recommandation on using "fast/deeplarning" training: https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=project-creating-data-extraction-model#:~:text=Training%20takes%20time
+                  enabled: true
+              deeplearning: # Only used if deep_learning_object_detection is enabled. Configure usage of GPU-enabled Nodes.
+                gpu_enabled: false # Use GPUs for deeplearning training instead of CPUs.
                 nodelabel_key: nvidia.com/gpu.present
                 nodelabel_value: "true"
-              # [Tech Preview] Deploy OCR Engine 2 (IOCR) for ADP - https://www.ibm.com/support/pages/extraction-language-technology-preview-feature-available-automation-document-processing-2301
-              ocrextraction:
-                use_iocr: none # Allowed values: "none" to uninstall, "all" or "auto" to install (these are aliases)
+                replica_count: 1 # Controls the number of deep learning pod replicas. NB: The number of GPUs available on your cluster should be ≥ to replica_count.
       workflow: # Business Automation Workflow (BAW) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baw
         enabled: true
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
           kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
-  
+
   # Section for IBM Process mining
   pm:
     # Set to false if you don't want to install (or remove) Process Mining
