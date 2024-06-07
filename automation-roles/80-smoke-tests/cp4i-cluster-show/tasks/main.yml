@@ -24,12 +24,13 @@
     admin_user: "{{ 'integration-admin' if _p_new_style else 'admin' }}"
 
 - name: Write Cloud Pak for Integration info to {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
-  lineinfile:
+  blockinfile:
     path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
     create: True
-    line: "{{ item }}"
-  with_items:
-  - '--- Cloud Pak for Integration instance {{ current_cp4i_cluster.project }} ---'
-  - 'Platform Navigator URL: https://{{ _cp4i_pn_host.stdout }}'
-  - "admin user: {{ _cp4i_admin_user.stdout }}"
-  - "{{ _cp4i_admin_user.stdout }} password: {{ _cp4i_admin_password.stdout }}"
+    insertafter: EOF
+    marker: ""
+    block: |
+      --- Cloud Pak for Integration instance {{ current_cp4i_cluster.project }} ---
+      Platform Navigator URL: https://{{ _cp4i_pn_host.stdout }}
+      admin user: {{ _cp4i_admin_user.stdout }}
+      {{ _cp4i_admin_user.stdout }} password: {{ _cp4i_admin_password.stdout }}
