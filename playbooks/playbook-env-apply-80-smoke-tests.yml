@@ -22,6 +22,28 @@
       secret_payload: "{{ all_config }}"
       secret_group: "{{ environment_name }}"
 
+  - name: Delete Cloud Pak Deployer info file {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
+    file:
+      path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+      state: absent
+
+  - name: Ensure {{ status_dir }}/cloud-paks directory exists
+    file:
+      path: "{{ status_dir }}/cloud-paks"
+      state: directory
+
+  - name: Create Cloud Pak Deployer info file {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
+    file:
+      path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+      state: touch
+
+  - name: OpenShift Red Hat SSO smoke tests
+    include_role:
+      name: openshift-redhat-sso-smoke-tests
+    loop: "{{ all_config.openshift_redhat_sso | default([]) }}"
+    loop_control:
+      loop_var: _current_redhat_sso
+
   - name: Cloud Pak for Business Automation smoke tests
     include_role:
       name: cp4ba-cluster-smoke-tests
@@ -42,3 +64,7 @@
     loop: "{{ all_config.cp4i | default([]) }}"
     loop_control:
       loop_var: current_cp4i_cluster
+
+  - name: Show Cloud Pak info from {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
+    include_role:
+      name: deployer-show-info

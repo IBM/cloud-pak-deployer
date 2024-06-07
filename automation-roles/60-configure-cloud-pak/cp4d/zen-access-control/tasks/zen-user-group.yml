@@ -1,0 +1,33 @@
+---
+- debug:
+    var: _zen_user_group
+
+- name: Get existing Zen user groups
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _existing_zen_user_groups
+
+- name: Show existing Zen user groups
+  debug:
+    var: _existing_zen_user_groups
+
+- set_fact:
+    _existing_zen_user_group: "{{ _existing_zen_user_groups.json.results | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ _zen_user_group.name }}']
+
+- include_tasks: zen-user-group-create.yml
+  when: _existing_zen_user_group == {}
+
+- include_tasks: zen-user-group-update.yml
+  when: _existing_zen_user_group != {}
+
+- include_tasks: zen-user-group-members.yml

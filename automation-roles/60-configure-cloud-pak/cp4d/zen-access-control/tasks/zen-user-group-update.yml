@@ -1,0 +1,64 @@
+---
+- debug:
+    var: _zen_user_group
+
+- name: Get roles for existing user group {{ _existing_zen_user_group.name }}
+  set_fact:
+    _existing_zen_user_group_roles: "{{ _existing_zen_user_group.roles | map(attribute='role_name') | default([]) }}"
+
+- name: Get roles for defined user group {{ _zen_user_group.name }}
+  set_fact:
+    _zen_user_group_roles: "{{ _zen_user_group.roles | default([]) }}"
+
+- name: Get roles to be added
+  set_fact:
+    _zen_add_roles: "{{ _zen_user_group_roles | difference(_existing_zen_user_group_roles) | default([]) }}"
+
+- name: Get role IDs for the roles to be added
+  include_tasks: zen-get-role-identifiers.yml
+  vars:
+    _zen_user_group_roles: "{{ _zen_add_roles }}"
+
+- set_fact:
+    _zen_add_role_ids_list: "{{ _zen_user_group_role_ids_list }}"
+
+- debug:
+    var: _zen_add_role_ids_list
+
+- name: Get roles to be removed
+  set_fact:
+    _zen_remove_roles: "{{ _existing_zen_user_group_roles | difference(_zen_user_group_roles) | default([]) }}"
+
+- name: Get role IDs for the roles to be removed
+  include_tasks: zen-get-role-identifiers.yml
+  vars:
+    _zen_user_group_roles: "{{ _zen_remove_roles }}"
+
+- set_fact:
+    _zen_remove_role_ids_list: "{{ _zen_user_group_role_ids_list }}"
+
+- debug:
+    var: _zen_remove_role_ids_list
+
+- name: Update Zen user group {{ _zen_user_group.name }} with new roles
+  uri:
+    url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v2/groups/{{ _existing_zen_user_group.group_id }}"
+    method: PATCH
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      description: "{{ _zen_user_group.description | default(_zen_user_group.name) }}"
+      add_role_identifiers: "{{ _zen_add_role_ids_list }}"
+      remove_role_identifiers: "{{ _zen_remove_role_ids_list }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _zen_user_group_update
+
+- debug:
+    var: _zen_user_group_update
+
+- set_fact:
+    _zen_user_group_id: "{{ _existing_zen_user_group.group_id }}"

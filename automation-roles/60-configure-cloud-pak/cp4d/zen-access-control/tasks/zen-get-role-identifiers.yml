@@ -1,0 +1,34 @@
+---
+- name: Get Zen role identifiers for all roles
+  uri:
+    url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/roles'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _zen_all_roles
+
+- debug:
+    var: _zen_user_group_roles
+
+- debug:
+    var: _zen_all_roles
+
+- set_fact:
+    _zen_user_group_role_ids: []
+    _zen_user_group_role_ids_list: []
+
+- include_tasks: zen-add-role-identifier.yml
+  loop: "{{ _zen_user_group_roles }}"
+  loop_control:
+    loop_var: _zen_user_group_role
+
+- debug:
+    var: _zen_user_group_role_ids
+
+- set_fact:
+    _zen_user_group_role_ids_list: "[ {{ '\"' + _zen_user_group_role_ids | join('\",\"') + '\"'}} ]"
+  when: _zen_user_group_role_ids != []

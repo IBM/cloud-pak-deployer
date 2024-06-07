@@ -21,6 +21,25 @@
   vars:
     _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
+- name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: prepare-openshift-storage
+  loop: "{{ current_openshift_cluster.openshift_storage | default([]) }}"
+  loop_control:
+    loop_var: current_openshift_storage
+
+- name: Get OpenShift storage classes to use for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
+- name: Configure Multi-Cloud Object Gateway
+  include_role:
+    name: openshift-mcg
+  vars:
+    _p_openshift_cluster: "{{ current_openshift_cluster }}"
+
 - name: OpenShift Advanced Data Protection operator
   include_role:
     name: openshift-adp
@@ -45,6 +64,24 @@
   vars:
     _p_upstream_dns: "{{ current_openshift_cluster.upstream_dns | default([]) }}"
 
+- name: Configure Red Hat SSO (Keycloak) for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: openshift-redhat-sso
+  loop: "{{ all_config.openshift_redhat_sso | default([]) }}"
+  loop_control:
+    loop_var: _current_openshift_redhat_sso
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
+- name: Install OpenLDAP on OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: demo-openldap
+  loop: "{{ all_config.demo_openldap | default([]) }}"
+  loop_control:
+    loop_var: _current_demo_openldap
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
 - name: Configure logging for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-logging
@@ -52,19 +89,6 @@
 - name: Configure monitoring for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: openshift-monitoring
-
-- name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
-  include_role:
-    name: prepare-openshift-storage
-  loop: "{{ current_openshift_cluster.openshift_storage | default([]) }}"
-  loop_control:
-    loop_var: current_openshift_storage
-
-- name: Configure Multi-Cloud Object Gateway
-  include_role:
-    name: openshift-mcg
-  vars:
-    _p_openshift_cluster: "{{ current_openshift_cluster }}"
 
 - name: Configure GPU for the OpenShift cluster
   include_role:

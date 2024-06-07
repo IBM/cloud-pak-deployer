@@ -1,0 +1,62 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: openldap-env
+  namespace: "{{ _openldap_project_name }}"
+  labels:
+    app: openldap
+data:
+  LDAP_ORGANISATION: "{{ _current_demo_openldap.ldap_config.base_domain }}"
+  LDAP_DOMAIN: "{{ _current_demo_openldap.ldap_config.base_domain }}"
+  LDAP_ROOT: "{{ _current_demo_openldap.ldap_config.base_dn }}"
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: openldap-customldif
+  namespace: "{{ _openldap_project_name }}"
+  labels:
+    app: openldap
+data:
+  01-default-users.ldif: |-
+    dn: {{ _current_demo_openldap.ldap_config.base_dn }}
+    objectClass: top
+    objectClass: dcObject
+    objectClass: organization
+    o: {{ _current_demo_openldap.ldap_config.base_domain }}
+    dc: {{ _current_demo_openldap.ldap_config.base_dc }}
+  
+    # Organizational Units
+    dn: {{ _current_demo_openldap.ldap_config.user_base_dn }}
+    objectClass: organizationalUnit
+    ou: {{ _current_demo_openldap.ldap_config.user_ou }}
+
+    dn: {{ _current_demo_openldap.ldap_config.group_base_dn }}
+    objectClass: organizationalUnit
+    ou: {{ _current_demo_openldap.ldap_config.group_ou }}
+
+    # Users
+{% for _ldap_user in _current_demo_openldap.users %}
+    dn: {{ _current_demo_openldap.ldap_config.user_id_attribute }}={{ _ldap_user.uid }},{{ _current_demo_openldap.ldap_config.user_base_dn }}
+    objectClass: {{ _current_demo_openldap.ldap_config.user_object_class }}
+    objectClass: top
+    cn: {{ _ldap_user.givenName }}
+    sn: {{ _ldap_user.sn }}
+    {{ _current_demo_openldap.ldap_config.user_id_attribute }}: {{ _ldap_user.uid }}
+    mail: {{ _ldap_user.mail }}
+    userpassword:: {{ _ldap_user.password | default(_openldap_bind_password) | b64encode }}
+    employeeType: admin
+
+{% endfor %}
+
+    # Groups
+{% for _ldap_group in _current_demo_openldap.groups %}
+    dn: {{ _current_demo_openldap.ldap_config.group_id_attribute }}={{ _ldap_group.cn }},{{ _current_demo_openldap.ldap_config.group_base_dn }}
+    objectClass: {{ _current_demo_openldap.ldap_config.group_object_class }}
+    objectClass: top
+    cn: {{ _ldap_group.cn }}
+{% for _ldap_group_member in _ldap_group.members %}
+    {{ _current_demo_openldap.ldap_config.group_member_attribute | default('uniqueMember') }}: {{ _ldap_group_member }}
+{% endfor %}
+
+{% endfor %}

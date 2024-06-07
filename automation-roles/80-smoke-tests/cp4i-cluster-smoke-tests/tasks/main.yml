@@ -2,3 +2,20 @@
 - debug:
     msg: "Cloud Pak for Integration smoke tests"
 
+- set_fact:
+    _new_style: False
+
+- set_fact:
+    _new_style: True
+  when: current_cp4i_cluster.cp4i_version >= '2023.4'
+
+- name: "Check whether operators should be installed in all or specific namespace"
+  set_fact:
+    _operators_in_all_namespaces: "{{ current_cp4i_cluster.operators_in_all_namespaces | default(False) }}"
+
+- name: "Output Cloud pak for Integration URL and admin password"
+  include_role:
+    name: cp4i-cluster-show
+  vars:
+    _p_new_style: "{{ _new_style }}"
+    _p_fs_namespace: "{{ 'ibm-common-services' if _operators_in_all_namespaces else current_cp4i_cluster.project }}"

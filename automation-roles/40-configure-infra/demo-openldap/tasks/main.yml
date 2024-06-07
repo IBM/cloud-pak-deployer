@@ -1,0 +1,13 @@
+---
+- set_fact:
+    _openldap_project_name: "{{ _current_demo_openldap.openldap_project | default(_current_demo_openldap.name) }}"
+
+- ansible.builtin.include_tasks: install-openldap.yml
+  when:
+  - _current_demo_openldap.openshift_cluster_name == _p_openshift_cluster_name
+  - _current_demo_openldap.state | default('installed') == 'installed'
+
+- ansible.builtin.include_tasks: remove-openldap.yml
+  when: 
+  - _current_demo_openldap.openshift_cluster_name == _p_openshift_cluster_name
+  - _current_demo_openldap.state | default('installed') != 'installed'

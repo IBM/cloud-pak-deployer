@@ -1,0 +1,13 @@
+---
+- name: Create ImageDigestMirrorSet for alternative registries into {{ status_dir }}/openshift/cloud-pak-idms.yaml
+  template:
+    src: cloud-pak-idms-alt.j2
+    dest: "{{ status_dir }}/openshift/cloud-pak-idms.yaml"
+
+- name: Create ImageDigestMirrorSet {{ icsp_name }}
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/cloud-pak-idms.yaml
+
+- name: Delete ImageContentSourcePolicy {{ icsp_name }} if still existing
+  shell: |
+    oc delete imagecontentsourcepolicies.operator.openshift.io {{ icsp_name }} --ignore-not-found
