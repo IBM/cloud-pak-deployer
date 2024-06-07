@@ -23,13 +23,16 @@
 
   - name: Get password for Db2 instance {{ _db2_instance.name }}
     shell: |
-      oc extract secret/c-db2oltp-{{ _db2_running_instance.id }}-instancepassword --to=-
+      oc extract -n {{ current_cp4d_cluster.project }} secret/c-db2oltp-{{ _db2_running_instance.id }}-instancepassword --to=-
     register: _db2_instance_password
+
+  - set_fact:
+      _dmc_json_payload_file: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-dmc-db2oltp-profile-{{ _db2_instance.name }}.json"
 
   - name: Generate JSON payload for DMC profile
     template:
       src: dmc-profile-db2oltp.j2
-      dest: "{{ status_dir }}/cp4d/dmc-db2oltp-profile-{{ _db2_instance.name }}.json"
+      dest: "{{ _dmc_json_payload_file }}"
 
   - name: Create DMC profile for Db2 OLTP instance {{ _db2_instance.name }}
     uri:
@@ -39,7 +42,7 @@
         Content-Type: application/json
         Authorization: "Bearer {{ _cp4d_bearer_token }}"
       body_format: json
-      body: "{{ lookup('file', status_dir + '/cp4d/dmc-db2oltp-profile-' + _db2_instance.name + '.json') }}"
+      body: "{{ lookup('file', _dmc_json_payload_file) }}"
       return_content: yes
       validate_certs: no
       status_code:

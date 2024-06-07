@@ -1,0 +1,30 @@
+---
+- name: Validate that _p_keycloak_name has been set
+  assert:
+    that:
+      - _p_keycloak_name is defined
+
+- name: Get Keycloak URL
+  shell: |
+    oc get route -n {{ _p_keycloak_name }} keycloak -o jsonpath='{.spec.host}'
+  register: _get_keycloak_route_output
+
+- set_fact:
+    _keycloak_url: "https://{{ _get_keycloak_route_output.stdout }}"
+    _keycloak_auth_url: "https://{{ _get_keycloak_route_output.stdout }}/auth"
+
+- name: Get Keycloak admin user
+  shell: |
+    oc extract secret/credential-{{ _p_keycloak_name }} -n {{ _p_keycloak_name }} --keys=ADMIN_USERNAME --to=- 2>/dev/null 
+  register: _get_keycloak_admin_user
+
+- set_fact:
+    _keycloak_admin_user: "{{ _get_keycloak_admin_user.stdout }}"
+
+- name: Get Keycloak admin password
+  shell: |
+    oc extract secret/credential-{{ _p_keycloak_name }} -n {{ _p_keycloak_name }} --keys=ADMIN_PASSWORD --to=- 2>/dev/null 
+  register: _get_keycloak_admin_password
+
+- set_fact:
+    _keycloak_admin_password: "{{ _get_keycloak_admin_password.stdout }}"

@@ -25,5 +25,5 @@ For more details about extended deployment, refer to:
 * [Logging and auditing](../../../30-reference/configuration/logging-auditing)
 * [Private registry](../../../30-reference/configuration/private-registry)
 * [DNS Servers](../../../30-reference/configuration/dns)
-* [Cloud Pak for Data LDAP integration](../../../30-reference/configuration/cp4d-ldap)
+* [Cloud Pak for Data access control](../../../30-reference/configuration/cp4d-access-control)
 * [Cloud Pak for Data SAML](../../../30-reference/configuration/cp4d-saml)

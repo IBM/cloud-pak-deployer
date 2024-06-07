@@ -36,16 +36,14 @@
     path: "{{ status_dir }}/cloud-paks"
     state: directory
 
-- name: Store Cloud Pak for Data URL into log file
-  copy:
-    content: "Cloud Pak for Data URL for cluster {{ current_cp4d_cluster.openshift_cluster_name }} and project {{ current_cp4d_cluster.project }}: \nhttps://{{ cp4d_url.stdout }}\n"
-    dest: "{{ status_dir }}/cloud-paks/cp4d-{{ current_cp4d_cluster.openshift_cluster_name }}-{{ current_cp4d_cluster.project }}.url"
-
-- name: Show Cloud Pak for Data URL and admin password
-  debug:
-    msg: 
-    - "CP4D URL: https://{{ cp4d_url.stdout }}"
-    - "CP4D User: {{ _cp4d_admin_user }}"
-    - "CP4D {{ _cp4d_admin_user }} password: {{ _cp4d_admin_password }}"
-  vars:
-    ansible_callback_diy_runner_on_ok_msg: "{{ ansible_callback_diy.result.output.msg }}\n"
+- name: Write Cloud Pak for Data info to {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
+  blockinfile:
+    path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+    create: True
+    insertafter: EOF
+    marker: ""
+    block: |
+      --- Cloud Pak for Data project {{ current_cp4d_cluster.project }} ---
+      CP4D URL: https://{{ cp4d_url.stdout }}
+      CP4D User: {{ _cp4d_admin_user }}
+      CP4D {{ _cp4d_admin_user }} password: {{ _cp4d_admin_password }}

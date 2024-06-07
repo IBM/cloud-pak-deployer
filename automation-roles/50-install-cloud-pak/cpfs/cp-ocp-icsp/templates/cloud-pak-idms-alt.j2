@@ -1,0 +1,14 @@
+apiVersion: config.openshift.io/v1
+kind: ImageDigestMirrorSet
+metadata:
+  name: {{ idms_name }}
+spec:
+  imageDigestMirrors:
+{% for registry_mirror in all_config.cp_alt_repo.registry_mirrors %}
+  - source: {{ registry_mirror.source}}
+    mirrors:
+{% for mirror in registry_mirror.mirrors %}
+    - {{ mirror }}
+{% endfor %}
+    mirrorSourcePolicy: AllowContactingSource
+{% endfor %}

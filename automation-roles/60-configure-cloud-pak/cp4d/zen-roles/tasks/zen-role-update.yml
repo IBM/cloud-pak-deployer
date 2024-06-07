@@ -1,0 +1,22 @@
+---
+- name: Update Zen role {{ _zen_role.name }}
+  uri:
+    url: "https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/role/{{ _existing_zen_role.id }}"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      role_name: "{{ _zen_role.name }}"
+      description: "{{ _zen_role.description | default(_zen_role.name) }}"
+      permissions:  "[ {{ '\"' + _zen_role.permissions | join('\",\"') + '\"'}} ]"
+    return_content: yes
+    validate_certs: no
+    status_code: 
+    - 200
+    - 201
+  register: _zen_role_update
+
+- debug:
+    var: _zen_role_update

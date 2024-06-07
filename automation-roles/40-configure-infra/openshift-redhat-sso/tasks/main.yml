@@ -1,0 +1,14 @@
+---
+- block:
+  - name: Show current OpenShift Red Hat SSO
+    debug:
+      var: _current_openshift_redhat_sso
+
+  - set_fact:
+      _keycloak_name: "{{ _current_openshift_redhat_sso.keycloak_name }}"
+
+  - include_tasks: configure-openshift-redhat-sso.yml
+
+  - include_tasks: configure-keycloak.yml
+
+  when: _current_openshift_redhat_sso.openshift_cluster_name == _p_openshift_cluster_name

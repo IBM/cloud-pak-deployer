@@ -68,7 +68,6 @@
         'nfs': 'managed-nfs-storage',
         'ocs': 'ocs-storagecluster-cephfs',
         'pwx': 'px-replicated',
-        'aws-elastic': 'efs-nfs-client',
         'ibm-classic-storage': 'ibmc-file-gold-gid',
         'ibm-storage-fdf': 'ibm-storage-fusion-cp-sc'
       }[_storage_type]) }}"
@@ -76,11 +75,30 @@
         'nfs': 'managed-nfs-storage',
         'ocs': 'ocs-storagecluster-ceph-rbd',
         'pwx': 'px-db',
-        'aws-elastic': 'gp2',
         'ibm-classic-storage': 'ibmc-block-gold',
         'ibm-storage-fdf': 'ibm-storage-fusion-cp-sc'
       }[_storage_type]) }}"
-  when: _storage_type != 'custom'
+  when:
+  - _storage_type != 'aws-elastic'
+  - _storage_type != 'custom'
+
+# Choose appropriate AWS storage class, depending on the available storage classes in the cluster
+- block:
+  - set_fact:
+      ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+      ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2') }}"
+    when: (_openshift_storage_classes.stdout | regex_search('^gp2$', multiline=True)) != None
+
+  - set_fact:
+      ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+      ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp2-csi') }}"
+    when: (_openshift_storage_classes.stdout | regex_search('^gp2-csi$', multiline=True)) != None
+
+  - set_fact:
+      ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('efs-nfs-client') }}"
+      ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('gp3-csi') }}"
+    when: (_openshift_storage_classes.stdout | regex_search('^gp3-csi$', multiline=True)) != None
+  when: _storage_type == 'aws-elastic'
 
 # Display the selected storage class variables
 - debug:
