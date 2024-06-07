@@ -3,7 +3,7 @@
   template:
     src: redhat-sso-namespace.j2
     dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
-- name: Create redhat-sso namespace
+- name: Create Red Hat SSO namespace {{ _keycloak_name }}
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml
 
@@ -11,7 +11,7 @@
   template:
     src: redhat-sso-operatorgroup.j2
     dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
-- name: Create redhat-sso operatorgroup
+- name: Create Red Hat SSO operatorgroup in project {{ _keycloak_name }}
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml
 
@@ -19,12 +19,12 @@
   template:
     src: redhat-sso-subscription.j2
     dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml"
-- name: Create redhat-sso operator
+- name: Create Red Hat SSO operator in project {{ _keycloak_name }}
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml
 
 # Wait until subscription has been successfully created
-- name: Wait until Red Hat SSO has status Succeeded
+- name: Wait until Red Hat SSO operator in project {{ _keycloak_name }} has status Succeeded
   shell: |
     oc get csv -n {{ _keycloak_name }} \
       -l operators.coreos.com/rhsso-operator.{{ _keycloak_name }} \
