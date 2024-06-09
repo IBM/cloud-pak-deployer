@@ -632,6 +632,18 @@ else
   echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
 fi
 
+# If images have not been overridden, set the variables here
+if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
+  if [ "${ARCH}" == "x86_64" ]; then
+    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest
+  else
+    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.$ARCH
+  fi
+else
+  echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
+fi
+
+
 if ! $INSIDE_CONTAINER;then
   # Check if podman or docker command was found
   if [ -z $CPD_CONTAINER_ENGINE ];then
@@ -673,6 +685,7 @@ if ! $INSIDE_CONTAINER;then
       --pull \
       -f ${SCRIPT_DIR}/${DOCKERFILE} \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
+      --build-arg CPD_OLM_UTILS_V3_IMAGE=${CPD_OLM_UTILS_V3_IMAGE} \
       ${SCRIPT_DIR}
     exit $?
   fi
