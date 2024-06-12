@@ -224,6 +224,7 @@ else
     echo "Project ${IBM_SCHEDULING} does not exist, skipping"
 fi
 
+check_shared_resources ibmlicensingdefinition.operator.ibm.com ibm-licensing DELETE_LICENSING
 if [ "${DELETE_LICENSING}" -eq 1 ]; then
     IBM_LICENSING=ibm-licensing
     oc get project ${IBM_LICENSING} > /dev/null 2>&1
@@ -245,6 +246,7 @@ else
     echo "Keeping ${IBM_LICENSING} namespace due to shared resources"
 fi
 
+check_shared_resources certificaterequests.cert-manager.io ibm-cert-manager DELETE_CERT_MANAGER
 if [ "${DELETE_CERT_MANAGER}" -eq 1 ]; then
     IBM_CERT_MANAGER=ibm-cert-manager
     oc get project ${IBM_CERT_MANAGER} > /dev/null 2>&1
@@ -310,7 +312,15 @@ oc delete catsrc -n openshift-marketplace \
 #
 log "Deleting IBM CRDs that don't have an instance anymore"
 for crd in $(oc get crd --no-headers | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl');do
-    if [[ "$(oc get ${crd} --no-headers -A 2>/dev/null)" == "" ]] && [[ "${crd}" != *ocscluster* ]];then
+    if [[ "$(oc get ${crd} --no-headers -A 2>/dev/null)" != "" ]] ;then
+        log "Not deleting CRD ${crd}, still has some instances"
+    elif [[ "${crd}" == *ocscluster* ]];then
+        log "Not deleting OpenShift Data Foundation CRD ${crd}, still needed"
+    elif [[ "${crd}" == *ibmlicensing* ]] && [ "${DELETE_LICENSING}" -ne 1 ];then
+        log "Not deleting license server CRD ${crd}, still needed"
+    elif [[ "${crd}" == *cert* ]] && [ "${DELETE_CERT_MANAGER}" -ne 1 ];then
+        log "Not deleting certificate manager CRD ${crd}, still needed"
+    else
         oc delete crd $crd
     fi
 done
