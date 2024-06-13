@@ -640,7 +640,7 @@ if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
     export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.$ARCH
   fi
 else
-  echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
+  echo "Custom olm-utils-v3 image ${CPD_OLM_UTILS_V3_IMAGE} will be used."
 fi
 
 
