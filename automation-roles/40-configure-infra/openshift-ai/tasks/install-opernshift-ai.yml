@@ -1,8 +1,4 @@
 ---
-- name: Create OpenShift AI operator namespace
-  shell: |
-    oc create ns redhat-ods-operator || true
-
 - name: Generate OpenShift AI operator {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-operator.yaml
   template:
     src: openshift-ai-operator.j2
@@ -23,6 +19,31 @@
   retries: 30
   delay: 30
   until: _openshift_ai_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+- name: Generate OpenShift AI DataScienceCluster {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml
+  template:
+    src: datasciencecluster.j2
+    dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml"
+
+- name: Apply yaml for OpenShift AI DataScienceCluster
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml
+
+- name: Wait until OpenShift AI DataScienceCluster default-dsc is ready
+  shell: |
+     oc get DataScienceCluster default-dsc \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i ready | wc -l
+  register: _openshift_ai_dsc_status
+  retries: 30
+  delay: 30
+  until: _openshift_ai_dsc_status.stdout == "1"
   vars:
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
