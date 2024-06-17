@@ -98,24 +98,6 @@
   failed_when: group_response.status == 500 and group_response.json | json_query('exception') is not search('.*duplicate key value*')
   with_items: "{{ lc_general_groups }}"
 
-- name: Add ODM Admin role to service user
-  ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/cpadminservice?add_roles=true"
-    method: PUT
-    headers:
-      Authorization: "Bearer {{ zen_token }}"
-    body_format: json
-    body:
-      username: cpadminservice
-      user_roles:
-        - odm_admin_role
-        - odm_runtime_admin_role
-        - odm_runtime_user_role
-        - odm_business_user_role
-    validate_certs: false
-    status_code:
-      - 200
-
 - name: Regenerate Zen token for new permissions
   ansible.builtin.include_role:
     name: common
@@ -154,7 +136,8 @@
 
 - name: Find zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
+    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key']
+      if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
 
 - name: Update credentials for server
   ansible.builtin.uri:
