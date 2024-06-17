@@ -385,3 +385,31 @@
     - name: Assign zen api key for further post deploy task
       ansible.builtin.set_fact:
         zen_api_key: "{{ zen_api_key_new }}"
+
+- name: Get Zen PostgreSQL secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: zen-metastore-edb-app
+  register: zen_pg_secret
+  retries: 40
+  delay: 15
+
+- name: Set Zen PosgreSQL password
+  ansible.builtin.set_fact:
+    zen_pg_password: "{{ zen_pg_secret.resources[0].data.password | b64decode }}"
+
+- name: Add PG to cloudbeaver
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: cloudbeaver-add-pg
+  vars:
+    common_cloudbeaver_project: "{{ cp4ba_cloudbeaver_project }}"
+    common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
+    common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
+    common_cloudbeaver_connection_name: Zen PostgreSQL
+    common_pg_host: "zen-metastore-edb-rw.{{ cp4ba_project_name }}.svc.cluster.local"
+    common_pg_port: "5432"
+    common_pg_username: zen_user
+    common_pg_password: "{{ zen_pg_password }}"

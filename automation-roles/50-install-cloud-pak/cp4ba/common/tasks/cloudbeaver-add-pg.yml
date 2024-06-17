@@ -1,0 +1,95 @@
+# Example of the functionality call
+#
+# - name: Add PG to cloudbeaver
+#   ansible.builtin.include_role:
+#     name: common
+#     tasks_from: cloudbeaver-add-pg
+#   vars:
+#     common_cloudbeaver_project: _cloudbeaver_project
+#     common_cloudbeaver_username: _cloudbeaver_username
+#     common_cloudbeaver_password: _cloudbeaver_password
+#     common_cloudbeaver_connection_name: _cloudbeaver_connection_name
+#     common_pg_host: _pg_host
+#     common_pg_port: _pg_port
+#     common_pg_username: _pg_username
+#     common_pg_password: _pg_password
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Hash universal password MD5
+  ansible.builtin.set_fact:
+    cb_universal_password_md5: "{{ common_cloudbeaver_password | md5 | upper }}"
+
+- name: Login to cloudbeaver
+  ansible.builtin.uri:
+    url: https://cloudbeaver-{{ common_cloudbeaver_project }}.{{ apps_endpoint_domain }}/api/gql
+    validate_certs: false
+    method: POST
+    headers:
+      content-type: "application/json"
+    body_format: json
+    body:
+      query: 'query {
+          authLogin(credentials: {user: "{{ common_cloudbeaver_username }}", password: "{{ cb_universal_password_md5 }}"}, provider: "local") {
+            authStatus
+          }
+        }'
+  register: cloudbeaver_login_response
+  failed_when: cloudbeaver_login_response.status != 200 or cloudbeaver_login_response.json.errors is defined
+
+- name: Get session id
+  ansible.builtin.set_fact:
+    cb_session_id: "{{ cloudbeaver_login_response.cookies['cb-session-id'] }}"
+
+- name: Get existing connections
+  ansible.builtin.uri:
+    url: https://cloudbeaver-{{ common_cloudbeaver_project }}.{{ apps_endpoint_domain }}/api/gql
+    validate_certs: false
+    method: POST
+    headers:
+      content-type: "application/json"
+      Cookie: "cb-session-id={{ cb_session_id }}"
+    body_format: json
+    body:
+      query: 'query {
+          userConnections {
+            name
+          }
+        }'
+  register: cloudbeaver_existing_response
+  failed_when: cloudbeaver_existing_response.status != 200 or cloudbeaver_existing_response.json.errors is defined
+
+- name: Add PostgreSQL to cloudbeaver
+  ansible.builtin.uri:
+    url: https://cloudbeaver-{{ common_cloudbeaver_project }}.{{ apps_endpoint_domain }}/api/gql
+    validate_certs: false
+    method: POST
+    headers:
+      content-type: "application/json"
+      Cookie: "cb-session-id={{ cb_session_id }}"
+    body_format: json
+    body:
+      query: 'mutation createConnection($providerProperties: Object) {
+          createConnection(
+            config: { credentials: {userName: "{{ common_pg_username }}", userPassword: "{{ common_pg_password }}"},
+            saveCredentials: true, driverId: "postgresql:postgres-jdbc", host: "{{ common_pg_host }}", port: "{{ common_pg_port }}",
+            databaseName: "postgres" name:"{{ common_cloudbeaver_connection_name }}",
+            providerProperties: $providerProperties}
+            projectId: "g_GlobalConfiguration"
+          ) {
+            id
+          }
+        }'
+      variables: {
+        "providerProperties": {
+          "@dbeaver-show-non-default-db@": true
+        }
+      }
+  register: cloudbeaver_create_response
+  failed_when: cloudbeaver_create_response.status != 200 or cloudbeaver_create_response.json.errors is defined
+  when: cloudbeaver_existing_response is not search('.*' + common_cloudbeaver_connection_name + '.*')
