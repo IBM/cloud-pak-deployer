@@ -71,30 +71,6 @@
     common_retries: 80
     common_delay: 15
 
-- name: Delete Kibana pods
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Pod
-    namespace: "{{ cp4ba_kibana_project }}"
-    label_selectors:
-      - app=kibana
-  when: kibana_enabled
-
-- name: Wait for Kibana Deployment Available State
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: kibana
-    common_resource_namespace: "{{ cp4ba_kibana_project }}"
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
-  when: kibana_enabled
-
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
     name: common

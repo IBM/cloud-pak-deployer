@@ -1,13 +1,13 @@
 - name: Create directory for generated files
   ansible.builtin.file:
-    path: "{{ kibana_output_directory }}"
+    path: "{{ opensearch_dashboards_output_directory }}"
     state: directory
     mode: u+rwx
 
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
-    dest: "{{ kibana_output_directory }}/{{ item }}.yaml"
+    dest: "{{ opensearch_dashboards_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
   with_items:
     - deployments
@@ -16,7 +16,7 @@
 - name: Remove {{ item.name }}
   kubernetes.core.k8s:
     state: absent
-    src: "{{ kibana_output_directory }}/{{ item.name }}.yaml"
+    src: "{{ opensearch_dashboards_output_directory }}/{{ item.name }}.yaml"
     wait: true
     wait_sleep: "{{ item.wait_sleep }}"
     wait_timeout: "{{ item.wait_timeout }}"
@@ -29,8 +29,8 @@
     state: absent
     api_version: route.openshift.io/v1
     kind: Route
-    namespace: "{{ kibana_project_name }}"
-    name: kibana
+    namespace: "{{ opensearch_dashboards_project_name }}"
+    name: opensearch_dashboards
     wait: true
     wait_sleep: 15
     wait_timeout: 120
@@ -40,4 +40,4 @@
     name: common
     tasks_from: remove-empty-project
   vars:
-    common_project_name: "{{ kibana_project_name }}"
+    common_project_name: "{{ opensearch_dashboards_project_name }}"
