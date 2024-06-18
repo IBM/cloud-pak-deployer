@@ -85,3 +85,61 @@
         common_condition_name: Available
         common_retries: 80
         common_delay: 15
+
+- name: Get IM PostgreSQL secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: common-service-db-app
+  register: im_pg_secret
+  retries: 40
+  delay: 15
+
+- name: Set IM PosgreSQL password
+  ansible.builtin.set_fact:
+    im_pg_password: "{{ im_pg_secret.resources[0].data.password | b64decode }}"
+
+- name: Add PG to cloudbeaver
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: cloudbeaver-add-pg
+  vars:
+    common_cloudbeaver_project: "{{ cp4ba_cloudbeaver_project }}"
+    common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
+    common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
+    common_cloudbeaver_connection_name: IM PostgreSQL
+    common_pg_host: "common-service-db-rw.{{ cp4ba_project_name }}.svc.cluster.local"
+    common_pg_port: "5432"
+    common_pg_username: cpadmin
+    common_pg_password: "{{ im_pg_password }}"
+  when: _current_cp4ba_cluster.cloudbeaver_enabled
+
+- name: Get BTS PostgreSQL secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: "ibm-bts-cnpg-{{ cp4ba_project_name }}-{{ cp4ba_project_name }}-bts-app"
+  register: bts_pg_secret
+  retries: 40
+  delay: 15
+
+- name: Set BTS PosgreSQL password
+  ansible.builtin.set_fact:
+    bts_pg_password: "{{ bts_pg_secret.resources[0].data.password | b64decode }}"
+
+- name: Add PG to cloudbeaver
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: cloudbeaver-add-pg
+  vars:
+    common_cloudbeaver_project: "{{ cp4ba_cloudbeaver_project }}"
+    common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
+    common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
+    common_cloudbeaver_connection_name: BTS PostgreSQL
+    common_pg_host: "ibm-bts-cnpg-{{ cp4ba_project_name }}-{{ cp4ba_project_name }}-bts-rw.{{ cp4ba_project_name }}.svc.cluster.local"
+    common_pg_port: "5432"
+    common_pg_username: postgresadmin
+    common_pg_password: "{{ bts_pg_password }}"
+  when: _current_cp4ba_cluster.cloudbeaver_enabled
