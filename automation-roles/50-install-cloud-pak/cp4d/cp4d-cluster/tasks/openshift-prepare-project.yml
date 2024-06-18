@@ -9,14 +9,14 @@
   when: "cloud_platform not in implemented_cloud_platform_types"
 
 # Create project that will run operators of Cloud Pak for Data
-- name: Validate if OpenShift project {{ current_cp4d_cluster.operators_project | default('cpd-operators') }} exists
-  shell: oc project {{ current_cp4d_cluster.operators_project | default('cpd-operators') }}
+- name: Validate if OpenShift project {{ current_cp4d_cluster.operators_project }} exists
+  shell: oc project {{ current_cp4d_cluster.operators_project }}
   failed_when: False
   register: _cp4d_operators_project_exists
   when: current_cp4d_cluster.cp4d_version >= '4.7.0'
 
-- name: Create OpenShift Project {{ current_cp4d_cluster.operators_project | default('cpd-operators') }} if it does not exist
-  command: oc new-project {{current_cp4d_cluster.operators_project | default('cpd-operators') }}
+- name: Create OpenShift Project {{ current_cp4d_cluster.operators_project }} if it does not exist
+  command: oc new-project {{current_cp4d_cluster.operators_project }}
   when:
   - current_cp4d_cluster.cp4d_version >= '4.7.0'
   - _cp4d_operators_project_exists.rc != 0

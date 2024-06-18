@@ -221,10 +221,10 @@ spec:
     type: Docker
     dockerStrategy:
       buildArgs:
-      - name: CPD_OLM_UTILS_V1_IMAGE
-        value: icr.io/cpopen/cpd/olm-utils:latest
       - name: CPD_OLM_UTILS_V2_IMAGE
         value: icr.io/cpopen/cpd/olm-utils-v2:latest
+      - name: CPD_OLM_UTILS_V3_IMAGE
+        value: icr.io/cpopen/cpd/olm-utils-v3:latest
   output:
     to:
       kind: ImageStreamTag

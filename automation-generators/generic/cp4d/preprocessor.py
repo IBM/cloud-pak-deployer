@@ -225,6 +225,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('project').isRequired()
+    g('operators_project').isOptional()
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
     g('cp4d_version').isRequired()
     g('cartridges').isRequired()
@@ -272,6 +273,10 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         # Handle deprecated olm_utils property
         if 'olm_utils' in ge and not 'sequential_install' in ge:
             g('sequential_install').set(ge['olm_utils'])
+
+        # Set operators project to <project>-operators if not explicitly configure
+        if not 'operators_project' in ge:
+            g('operators_project').set('{}-operators'.format(ge['project']))
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name

@@ -21,6 +21,115 @@ Additionally, one can configure [Upstream DNS Servers](./dns.md) and [OpenShift 
 
 The Multicloud Object Gateway (MCG) supports access to s3-compatible object storage via an underpinning block/file storage class, through the Noobaa operator. Some Cloud Pak for Data services such as Watson Assistant need object storage to run. MCG does not need to be installed if OpenShift Data Foundation (fka OCS) is also installed as the operator includes Noobaa.
 
+### Existing OpenShift
+
+When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts assume that the cluster is already operational and that any storage classes have been pre-created. The deployer accesses the cluster through a vault secret with the kubeconfig information; the name of the secret is `<name>-kubeconfig`.
+
+```
+openshift:
+- name: sample
+  ocp_version: 4.8
+  cluster_name: sample
+  domain_name: example.com
+  cloud_native_toolkit: False
+  oadp: False
+  infrastructure:
+    type: standard
+    processor_architecture: amd64
+  upstream_dns:
+  - name: sample-dns
+     zones:
+     - example.com
+     dns_servers:
+     - 172.31.2.73:53
+  gpu:
+    install: False
+  openshift_ai:
+    install: False
+    channel: fast
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: managed-nfs-storage
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+    # ocp_storage_class_file: managed-nfs-storage
+    # ocp_storage_class_block: managed-nfs-storage
+```
+
+#### Property explanation for existing OpenShift clusters
+
+| Property             | Description                                                                                                     | Mandatory | Allowed values        |
+|----------------------|-----------------------------------------------------------------------------------------------------------------|-----------|-----------------------|
+| name                 | Name of the OpenShift cluster                                                                                   | Yes       |                       |
+| ocp_version          | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes       | >= 4.6                |
+| cluster_name         | Name of the cluster (part of the FQDN)                                                                          | Yes       |                       |
+| domain_name          | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                       |
+| cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                  | No        | True, False (default) |
+| oadp                 | Must the OpenShift Advanced Data Protection operator be installed                                               | No        | True, False (default) |
+| infrastructure.type                   | Infrastructure OpenShfit is deployed on. See below for additional explanation                                   | detect (default) |
+| infrastructure.processor_architecture | Architecture of the processor that the OpenShift cluster is deployed on                                         | No               | amd64 (default), ppc64le, s390x |
+| openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                          | No               |                                 |
+| upstream_dns[]                        | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                   | No               |                                 |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
+| openshift_storage[]                   | List of storage definitions to be defined on OpenShift, see below for further explanation                       | Yes              |                                 |
+
+##### infastructure.type - Type of infrastructure
+When deploying on existing OpenShift, the underlying infrastructure can pose some restrictions on capabilities available. For example, Red Hat OpenShift on IBM Cloud (aka ROKS) does not include the Machine Config Operator and ROSA on AWS does not allow to set labels for Machine Config Pools. This means that node settings required for Cloud Pak for Data must be applied in a non-standard manner.
+
+The following values are allowed for `infrastructure.type`:
+
+* `detect` (default): The deployer will attempt to detect the underlying cloud infrastructure. This is done by retrieving the existing storage classes and then inferring the cloud type.
+* `standard`: The deployer will assume a standard OpenShift cluster with no further restrictions. This is the fallback value for `detect` if the underlying infra cannot be detected. 
+* `aws-self-managed`: A self-managed OpenShift cluster on AWS. No restrictions.
+* `aws-rosa`: Managed Red Hat OpenShift on AWS. Some restrictions with regards to Machine Config Pools apply.
+* `azure-aro`: Managed Red Hat OpenShift on Azure. No known restrictions.
+* `vsphere`: OpenShift on vSphere. No known restrictions.
+
+##### openshift_storage[] - OpenShift storage definitions
+
+| Property                | Description                                                                                 | Mandatory                         | Allowed values                      |
+|-------------------------|---------------------------------------------------------------------------------------------|-----------------------------------|-------------------------------------|
+| storage_name            | Name of the storage definition, to be referenced by the Cloud Pak                           | Yes                               |                                     |
+| storage_type            | Type of storage class to use in the OpenShift cluster                                       | Yes                               | nfs, ocs, aws-elastic, auto, custom |
+| ocp_storage_class_file  | OpenShift storage class to use for file storage if different from default for storage_type  | Yes if `storage_type` is `custom` |                                     |
+| ocp_storage_class_block | OpenShift storage class to use for block storage if different from default for storage_type | Yes if `storage_type` is `custom` |                                     |
+
+!!! info
+    The custom storage_type can be used in case you want to use a non-standard storage class(es). In this case the storage class(es) must be already configured on the OCP cluster and set in the respective ocp_storage_class_file and ocp_storage_class_block variables
+
+!!! info
+    The auto storage_type will let the deployer automatically detect the storage type based on the existing storage classes in the OpenShift cluster.
+
+## Supported storage types
+An `openshift` definition always includes the type(s) of storage that it will provide. When the OpenShift cluster is provisioned by the deployer, the necessary infrastructure and storage class(es) are also configured. In case an existing OpenShift cluster is referenced by the configuration, the storage classes are expected to exist already.
+
+The table below indicates which storage classes are supported by the Cloud Pak Deployer per cloud infrastructure.
+
+!!! warning
+    The ability to provision or use certain storage types does not imply support by the Cloud Paks or by OpenShift itself. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
+
+| Cloud Provider | NFS Storage | OCS/ODF Storage | Portworx | Elastic | Custom (2) |
+|----------------|-------------|-----------------|----------|---------|------------|
+| ibm-cloud      | Yes         | Yes             | Yes      | No      | Yes        |
+| vsphere        | Yes (1)     | Yes             | No       | No      | Yes        |
+| aws            | No          | Yes             | No       | Yes (3) | Yes        |
+| azure          | No          | Yes             | No       | No      | Yes        |
+| existing-ocp   | Yes         | Yes             | No       | Yes     | Yes        |
+
+* (1) An existing NFS server can be specified so that the deployer configures the `managed-nfs-storage` storage class. The deployer will not provision or change the NFS server itself.
+* (2) If you specify a `custom` storage type, you must specify the storage class to be used for block (RWO) and file (RWX) storage.
+* (3) Specifying this storage type means that Elastic File Storage (EFS) and Elastic Block Storage (EBS) storage classes will be used. For EFS, an `nfs_server` object is required to define the "file server" storage on AWS.
+
 ### OpenShift on IBM Cloud (ROKS)
 VPC-based OpenShift cluster on IBM Cloud, using the Red Hat OpenShift Kubernetes Services (ROKS).
 ```
@@ -52,6 +161,9 @@ openshift:
     install: True
     storage_type: storage-class
     storage_class: managed-nfs-storage
+  openshift_ai:
+    install: False
+    channel: fast
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -92,6 +204,11 @@ openshift:
 | infrastructure.secondary_storage | Reference to the storage flavour to be used as secondary storage, for example `"900gb.5iops-tier"`                                                                                               | No                      | Valid secondary storage flavour                                                  |
 | openshift_logging[]              | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                           | No                      |                                                                                  |
 | upstream_dns[]                   | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                                    | No                      |                                                                                  |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -148,6 +265,11 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  gpu:
+    install: False
+  openshift_ai:
+    install: False
+    channel: fast
   mcg:
     install: True
     storage_type: storage-class
@@ -183,6 +305,11 @@ openshift:
 | infrastructure.openshift_cluster_network_cidr | Network CIDR used by the OpenShift pods. Normally you would not have to change this, unless other systems in the network are in the 10.128.0.0/14 subnet. | No        | CIDR                     |
 | openshift_logging[]                           | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                    | No        |                          |
 | upstream_dns[]                                | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                             | No        |                          |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -273,6 +400,11 @@ openshift:
 | infrastructure.compute_iam_role               | If not standard, specify the IAM role that the OpenShift installer must use for the compute nodes during cluster creation                                                                                                                                   | No        |                          |
 | infrastructure.ami_id                         | ID of the AWS AMI to boot all images                                                                                                                                                                                                                        | No        |                          |
 | openshift_logging[]                           | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                                                                                      | No        |                          |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -332,6 +464,11 @@ openshift:
      - example.com
      dns_servers:
      - 172.31.2.73:53
+  gpu:
+    install: False
+  openshift_ai:
+    install: False
+    channel: fast
   mcg:
     install: True
     storage_type: storage-class
@@ -366,6 +503,11 @@ openshift:
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                | No        |                          |
 | openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                       | No        |                          |
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                   | No        |                          |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -410,6 +552,11 @@ openshift:
   network:
     pod_cidr: "10.128.0.0/14"
     service_cidr: "172.30.0.0/16"
+  gpu:
+    install: False
+  openshift_ai:
+    install: False
+    channel: fast
   openshift_storage:
   - storage_name: ocs-storage
     storage_type: ocs
@@ -436,6 +583,11 @@ openshift:
 | network.service_cidr | CIDR of service network                                                                   | Yes       | Must be a minimum of /18 or larger. |
 | openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)    | No        |                                     |
 | upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                             | No        |                                     |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -453,106 +605,3 @@ openshift:
 | ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `ocs` |                   |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `ocs` |                   |
 | ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select `managed-premium`                                            | Yes if `storage_type` is `ocs` | `managed-premium` |
-
-### Existing OpenShift
-
-When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts assume that the cluster is already operational and that any storage classes have been pre-created. The deployer accesses the cluster through a vault secret with the kubeconfig information; the name of the secret is `<name>-kubeconfig`.
-
-```
-openshift:
-- name: sample
-  ocp_version: 4.8
-  cluster_name: sample
-  domain_name: example.com
-  cloud_native_toolkit: False
-  oadp: False
-  infrastructure:
-    type: standard
-    processor_architecture: amd64
-  upstream_dns:
-  - name: sample-dns
-     zones:
-     - example.com
-     dns_servers:
-     - 172.31.2.73:53
-  gpu:
-    install: False
-  mcg:
-    install: True
-    storage_type: storage-class
-    storage_class: managed-nfs-storage
-  openshift_storage:
-  - storage_name: nfs-storage
-    storage_type: nfs
-    # ocp_storage_class_file: managed-nfs-storage
-    # ocp_storage_class_block: managed-nfs-storage
-```
-
-#### Property explanation for existing OpenShift clusters
-
-| Property             | Description                                                                                                     | Mandatory | Allowed values        |
-|----------------------|-----------------------------------------------------------------------------------------------------------------|-----------|-----------------------|
-| name                 | Name of the OpenShift cluster                                                                                   | Yes       |                       |
-| ocp_version          | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes       | >= 4.6                |
-| cluster_name         | Name of the cluster (part of the FQDN)                                                                          | Yes       |                       |
-| domain_name          | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                       |
-| cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                  | No        | True, False (default) |
-| oadp                 | Must the OpenShift Advanced Data Protection operator be installed                                               | No        | True, False (default) |
-| infrastructure.type                   | Infrastructure OpenShfit is deployed on. See below for additional explanation                                   | detect (default) |
-| infrastructure.processor_architecture | Architecture of the processor that the OpenShift cluster is deployed on                                         | No               | amd64 (default), ppc64le, s390x |
-| openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                          | No               |                                 |
-| upstream_dns[]                        | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                   | No               |                                 |
-| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
-| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
-| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
-| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
-| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
-| openshift_storage[]                   | List of storage definitions to be defined on OpenShift, see below for further explanation                       | Yes              |                                 |
-
-##### infastructure.type - Type of infrastructure
-When deploying on existing OpenShift, the underlying infrastructure can pose some restrictions on capabilities available. For example, Red Hat OpenShift on IBM Cloud (aka ROKS) does not include the Machine Config Operator and ROSA on AWS does not allow to set labels for Machine Config Pools. This means that node settings required for Cloud Pak for Data must be applied in a non-standard manner.
-
-The following values are allowed for `infrastructure.type`:
-
-* `detect` (default): The deployer will attempt to detect the underlying cloud infrastructure. This is done by retrieving the existing storage classes and then inferring the cloud type.
-* `standard`: The deployer will assume a standard OpenShift cluster with no further restrictions. This is the fallback value for `detect` if the underlying infra cannot be detected. 
-* `aws-self-managed`: A self-managed OpenShift cluster on AWS. No restrictions.
-* `aws-rosa`: Managed Red Hat OpenShift on AWS. Some restrictions with regards to Machine Config Pools apply.
-* `azure-aro`: Managed Red Hat OpenShift on Azure. No known restrictions.
-* `vsphere`: OpenShift on vSphere. No known restrictions.
-
-##### openshift_storage[] - OpenShift storage definitions
-
-| Property                | Description                                                                                 | Mandatory                         | Allowed values                      |
-|-------------------------|---------------------------------------------------------------------------------------------|-----------------------------------|-------------------------------------|
-| storage_name            | Name of the storage definition, to be referenced by the Cloud Pak                           | Yes                               |                                     |
-| storage_type            | Type of storage class to use in the OpenShift cluster                                       | Yes                               | nfs, ocs, aws-elastic, auto, custom |
-| ocp_storage_class_file  | OpenShift storage class to use for file storage if different from default for storage_type  | Yes if `storage_type` is `custom` |                                     |
-| ocp_storage_class_block | OpenShift storage class to use for block storage if different from default for storage_type | Yes if `storage_type` is `custom` |                                     |
-
-!!! info
-    The custom storage_type can be used in case you want to use a non-standard storage class(es). In this case the storage class(es) must be already configured on the OCP cluster and set in the respective ocp_storage_class_file and ocp_storage_class_block variables
-
-!!! info
-    The auto storage_type will let the deployer automatically detect the storage type based on the existing storage classes in the OpenShift cluster.
-
-## Supported storage types
-An `openshift` definition always includes the type(s) of storage that it will provide. When the OpenShift cluster is provisioned by the deployer, the necessary infrastructure and storage class(es) are also configured. In case an existing OpenShift cluster is referenced by the configuration, the storage classes are expected to exist already.
-
-The table below indicates which storage classes are supported by the Cloud Pak Deployer per cloud infrastructure.
-
-!!! warning
-    The ability to provision or use certain storage types does not imply support by the Cloud Paks or by OpenShift itself. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
-
-| Cloud Provider | NFS Storage | OCS/ODF Storage | Portworx | Elastic | Custom (2) |
-|----------------|-------------|-----------------|----------|---------|------------|
-| ibm-cloud      | Yes         | Yes             | Yes      | No      | Yes        |
-| vsphere        | Yes (1)     | Yes             | No       | No      | Yes        |
-| aws            | No          | Yes             | No       | Yes (3) | Yes        |
-| azure          | No          | Yes             | No       | No      | Yes        |
-| existing-ocp   | Yes         | Yes             | No       | Yes     | Yes        |
-
-* (1) An existing NFS server can be specified so that the deployer configures the `managed-nfs-storage` storage class. The deployer will not provision or change the NFS server itself.
-* (2) If you specify a `custom` storage type, you must specify the storage class to be used for block (RWO) and file (RWX) storage.
-* (3) Specifying this storage type means that Elastic File Storage (EFS) and Elastic Block Storage (EBS) storage classes will be used. For EFS, an `nfs_server` object is required to define the "file server" storage on AWS.
