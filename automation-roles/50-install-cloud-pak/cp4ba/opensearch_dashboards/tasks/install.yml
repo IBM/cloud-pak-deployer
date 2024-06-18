@@ -1,6 +1,6 @@
 - name: Create directory for generated files
   ansible.builtin.file:
-    path: "{{ kibana_output_directory }}"
+    path: "{{ opensearch_dashboards_output_directory }}"
     state: directory
     mode: u+rwx
 
@@ -9,13 +9,13 @@
     name: common
     tasks_from: create-project
   vars:
-    common_namespace_name: "{{ kibana_project_name }}"
-    common_output_directory: "{{ kibana_output_directory }}"
+    common_namespace_name: "{{ opensearch_dashboards_project_name }}"
+    common_output_directory: "{{ opensearch_dashboards_output_directory }}"
 
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
-    dest: "{{ kibana_output_directory }}/{{ item }}.yaml"
+    dest: "{{ opensearch_dashboards_output_directory }}/{{ item }}.yaml"
     mode: u+rwx
   with_items:
     - deployments
@@ -24,7 +24,7 @@
 - name: Add {{ item.name }}
   kubernetes.core.k8s:
     state: present
-    src: "{{ kibana_output_directory }}/{{ item.name }}.yaml"
+    src: "{{ opensearch_dashboards_output_directory }}/{{ item.name }}.yaml"
     wait: "{{ item.wait }}"
     wait_sleep: "{{ item.wait_sleep }}"
     wait_timeout: "{{ item.wait_timeout }}"
@@ -45,8 +45,8 @@
     name: common
     tasks_from: create-edge-route
   vars:
-    common_namespace_name: "{{ kibana_project_name }}"
-    common_route_name: "kibana-{{ kibana_project_name }}"
-    common_service_name: kibana
+    common_namespace_name: "{{ opensearch_dashboards_project_name }}"
+    common_route_name: "opensearch-dashboards-{{ opensearch_dashboards_project_name }}"
+    common_service_name: opensearch-dashboards
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
-    common_output_directory: "{{ kibana_output_directory }}"
+    common_output_directory: "{{ opensearch_dashboards_output_directory }}"

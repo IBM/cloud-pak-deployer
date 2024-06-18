@@ -1,0 +1,64 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: opensearch-dashboards
+  namespace: "{{ opensearch_dashboards_project_name }}"
+  labels:
+    app: opensearch-dashboards
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch-dashboards
+  template:
+    metadata:
+      labels:
+        app: opensearch-dashboards
+    restartPolicy: Always
+    spec:
+      containers:
+        - name: opensearch-dashboards
+          image: "{{ opensearch_dashboards_image }}"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 512Mi
+            limits:
+              cpu: 1000m
+              memory: 1536Mi
+          startupProbe:
+            tcpSocket:
+              port: 5601
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: 5601
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: 5601
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          env:
+            - name: OPENSEARCH_HOSTS
+              value: 'https://opensearch-ibm-elasticsearch-srv.{{ opensearch_dashboards_cp4ba_project_name }}.svc.cluster.local:443'
+            - name: OPENSEARCH_USERNAME
+              value: 'elastic'
+            - name: OPENSEARCH_PASSWORD
+              value: '{{ os_password }}'
+            - name: OPENSEARCH_SSL_VERIFICATIONMODE
+              value: 'none'
+            - name: LOGGING_VERBOSE
+              value: 'true'
+          ports:
+            - name: opensearch-dashboards-ui
+              containerPort: 5601
+              protocol: TCP
