@@ -8,50 +8,58 @@
             map(attribute='olm_utils_name') | 
             join(',')}}
 
-- name: Generate preview script to create cartridge subscriptions
+- set_fact:
+    _subscription_cartridges_to_install_list: "{{ _apply_olm_cartridges_list }}"
+
+- set_fact:
+    _subscription_cartridges_to_install_list: "cpfs,cpd_platform"
+  when: _p_subscription_scope == 'platform'
+
+- name: Generate preview script to create cartridge subscriptions for Cloud Pak for Data {{ _p_subscription_scope }}
   set_fact:
     _apply_olm_command_script: "{{ lookup('template', 'apply-olm-cartridge-sub.j2') }}" 
   vars:
     _p_preview_script: True
 
-- name: Show apply-olm command to create cartridge subscriptions
+- name: Show apply-olm command to create cartridge subscriptions for Cloud Pak for Data {{ _p_subscription_scope }}
   debug:
     var: _apply_olm_command_script
 
-- name: Generate preview script to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
+- name: Generate preview script to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log
   shell: |
-    {{ _apply_olm_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
+    {{ _apply_olm_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log 2>&1
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh
+- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.sh
   copy:
     src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.sh"
+    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.sh"
     remote_src: True
     mode: u+rwx
 
-- name: Generate OLM utils command to create cartridge subscriptions
+- name: Generate OLM utils command to create cartridge subscriptions for Cloud Pak for Data {{ _p_subscription_scope }}
   set_fact:
     _apply_olm_command: "{{ lookup('template', 'apply-olm-cartridge-sub.j2') }}" 
   vars:
     _p_preview_script: False
 
-- name: Show apply-olm command to create cartridge subscriptions
+- name: Show apply-olm command to create cartridge subscriptions for Cloud Pak for Data {{ _p_subscription_scope }}
   debug:
     var: _apply_olm_command
 
-- name: Starting background task to patch OLM artifacts in project {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ foundational_services_project }}-patch-olm.log
+- name: Starting background task to patch OLM artifacts in operators project {{ _p_current_cp4d_cluster.operators_project }}. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.operators_project }}-patch-olm.log
   shell: |
     {{ role_path }}/files/temp-patch-olm.sh \
       {{ status_dir }} \
-      {{ foundational_services_project }} \
+      {{ _p_current_cp4d_cluster.operators_project }} \
       {{ _p_current_cp4d_cluster.project }}
   async: 86400
   poll: 0
   register: _patch_olm
+  when: _p_subscription_scope == 'platform'
 
-- name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log
+- name: Run apply-olm command to install cartridge subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log
   shell: |
-    {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-cartridge-sub.log 2>&1
+    {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log 2>&1
   failed_when: False
   retries: 2
   delay: 10
@@ -60,9 +68,9 @@
 
 - name: Show subscriptions state if apply-olm failed
   block:
-  - name: Retrieving state of all operators in project {{ foundational_services_project }}
+  - name: Retrieving state of all operators in project {{ _p_current_cp4d_cluster.operators_project }}
     shell: |
-      oc get subscriptions.operators.coreos.com -n {{ foundational_services_project }} \
+      oc get subscriptions.operators.coreos.com -n {{ _p_current_cp4d_cluster.operators_project }} \
         --no-headers \
         --sort-by=.metadata.creationTimestamp \
         -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
