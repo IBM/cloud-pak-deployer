@@ -12,6 +12,11 @@ By default the Cloud Pak Deployer image is built on top of the `olm-utils` image
 export CPD_OLM_UTILS_V2_IMAGE=cp.staging.acme.com:4.8.0
 ```
 
+Or, for Cloud Pak for Data 5.0:
+```
+export CPD_OLM_UTILS_V3_IMAGE=cp.staging.acme.com:5.0.0
+```
+
 Subsequently, run the install commmand:
 ```
 ./cp-deploy.sh build
@@ -86,7 +91,7 @@ You can also set these tokens on the `cp-deploy.sh env apply` command line.
 ./cp-deploy.sh env apply -f -vs github-internal-repo=abc123def456 -vs cp-staging="cp-staging-user:cp-staging-password
 ```
 
-## Running the deploy
+## Running the deployer
 To run the deployer you can now use the standard process:
 ```
 ./cp-deploy.sh env apply -v

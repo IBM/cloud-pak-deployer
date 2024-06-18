@@ -41,6 +41,7 @@ cp4d:
 | cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges that do not specify a version | Yes | 4.x.x |
 | sequential_install | If set to `True` the deployer will run the **OLM utils** playbooks to install catalog sources, subscriptions and CRs. If set to `False`, deployer will use OLM utils to generate the scripts and then run them, which will cause the catalog sources, subscriptions and CRs to be created immediately and install in parallel | No | True (default), False |
 | use_fs_iam | If set to `True` the deployer will enable Foundational Services IAM for authentication | No | False (default), True |
+| use_cp_alt_repo | When set to `False`, deployer will use use the alternative repo specified in `cp_alt_repo` resource | No | True (default), False |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
 | db2u_limited_privileges | Depicts whether Db2U containers run with limited privileges. If they do (`True`), Deployer will create KubeletConfig and Tuned OpenShift resources as per the documentation. | No | False (default), True |
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |

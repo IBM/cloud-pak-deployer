@@ -18,14 +18,6 @@ wait_ns_deleted() {
     done
 }
 
-wait_ns_deleted() {
-    NS=$1
-    log "Waiting for deletion of namespace ${NS} ..."
-    while $(oc get ns ${NS} > /dev/null 2>&1);do
-        sleep 1
-    done
-}
-
 delete_operator_ns() {
     CP4D_OPERATORS=$1
     oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
@@ -53,6 +45,22 @@ delete_operator_ns() {
         wait_ns_deleted ${CP4D_OPERATORS}
     else
         echo "Project ${CP4D_OPERATORS} does not exist, skipping"
+    fi
+}
+
+#When running cp4d-delete-instance.sh, the script always deletes the Certificate Manager and the License Manager.
+#This should not be done if these shared services are still in use, for example in another CP4D instance.
+check_shared_resources() {
+    SHARED_RESOURCE_TYPE=$1
+    SHARED_RESOURCE_NAMESPACE=$2
+    STATE_VAR=$3
+
+    if [ "$(oc get ${SHARED_RESOURCE_TYPE} --all-namespaces --no-headers 2>/dev/null)" != "" ]; then
+        echo "Found instances of ${SHARED_RESOURCE_TYPE}, keeping ${SHARED_RESOURCE_NAMESPACE} namespace"
+        eval "${STATE_VAR}=0"
+    else
+        echo "No instances of ${SHARED_RESOURCE_TYPE} found"
+        eval "${STATE_VAR}=1"
     fi
 }
 
@@ -216,41 +224,51 @@ else
     echo "Project ${IBM_SCHEDULING} does not exist, skipping"
 fi
 
-IBM_LICENSING=ibm-licensing
-oc get project ${IBM_LICENSING} > /dev/null 2>&1
-if [ $? -eq 0 ];then
-    log "Deleting everything in the ${IBM_LICENSING} project"
-    oc delete ibmlicensing  --all --ignore-not-found
-    oc delete sub -n ${IBM_LICENSING} --all --ignore-not-found
-    oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
+check_shared_resources ibmlicensingdefinition.operator.ibm.com ibm-licensing DELETE_LICENSING
+if [ "${DELETE_LICENSING}" -eq 1 ]; then
+    IBM_LICENSING=ibm-licensing
+    oc get project ${IBM_LICENSING} > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log "Deleting everything in the ${IBM_LICENSING} project"
+        oc delete ibmlicensing  --all --ignore-not-found
+        oc delete sub -n ${IBM_LICENSING} --all --ignore-not-found
+        oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
 
-    log "Deleting ${IBM_LICENSING} project"
-    oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
-    wait_ns_deleted ${IBM_LICENSING}
-    oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
-    wait_ns_deleted ${IBM_LICENSING}
+        log "Deleting ${IBM_LICENSING} project"
+        oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+        wait_ns_deleted ${IBM_LICENSING}
+        oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+        wait_ns_deleted ${IBM_LICENSING}
+    else
+        echo "Project ${IBM_LICENSING} does not exist, skipping"
+    fi
 else
-    echo "Project ${IBM_LICENSING} does not exist, skipping"
+    echo "Keeping ${IBM_LICENSING} namespace due to shared resources"
 fi
 
-IBM_CERT_MANAGER=ibm-cert-manager
-oc get project ${IBM_CERT_MANAGER} > /dev/null 2>&1
-if [ $? -eq 0 ];then
-    log "Deleting everything in the ${IBM_CERT_MANAGER} project"
-    oc delete lease -n ${IBM_CERT_MANAGER} --all --ignore-not-found
-    oc delete endpointslice -n ${IBM_CERT_MANAGER}  --all --ignore-not-found
-    oc delete endpoints -n ${IBM_CERT_MANAGER}  --all --ignore-not-found
-    
-    oc delete sub -n ${IBM_CERT_MANAGER} --all --ignore-not-found
-    oc delete csv -n ${IBM_CERT_MANAGER} --all --ignore-not-found
+check_shared_resources certificaterequests.cert-manager.io ibm-cert-manager DELETE_CERT_MANAGER
+if [ "${DELETE_CERT_MANAGER}" -eq 1 ]; then
+    IBM_CERT_MANAGER=ibm-cert-manager
+    oc get project ${IBM_CERT_MANAGER} > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        log "Deleting everything in the ${IBM_CERT_MANAGER} project"
+        oc delete lease -n ${IBM_CERT_MANAGER} --all --ignore-not-found
+        oc delete endpointslice -n ${IBM_CERT_MANAGER}  --all --ignore-not-found
+        oc delete endpoints -n ${IBM_CERT_MANAGER}  --all --ignore-not-found
 
-    log "Deleting ${IBM_CERT_MANAGER} project"
-    oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
-    wait_ns_deleted ${IBM_CERT_MANAGER}
-    oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
-    wait_ns_deleted ${IBM_CERT_MANAGER}
+        oc delete sub -n ${IBM_CERT_MANAGER} --all --ignore-not-found
+        oc delete csv -n ${IBM_CERT_MANAGER} --all --ignore-not-found
+
+        log "Deleting ${IBM_CERT_MANAGER} project"
+        oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
+        wait_ns_deleted ${IBM_CERT_MANAGER}
+        oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
+        wait_ns_deleted ${IBM_CERT_MANAGER}
+    else
+        echo "Project ${IBM_CERT_MANAGER} does not exist, skipping"
+    fi
 else
-    echo "Project ${IBM_CERT_MANAGER} does not exist, skipping"
+    echo "Keeping ${IBM_CERT_MANAGER} namespace due to shared resources"
 fi
 
 # Delete other elements belonging to CP4D install
@@ -294,9 +312,18 @@ oc delete catsrc -n openshift-marketplace \
 #
 log "Deleting IBM CRDs that don't have an instance anymore"
 for crd in $(oc get crd --no-headers | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl');do
-    if [[ "$(oc get ${crd} --no-headers -A 2>/dev/null)" == "" ]] && [[ "${crd}" != *ocscluster* ]];then
+    if [[ "$(oc get ${crd} --no-headers -A 2>/dev/null)" != "" ]] ;then
+        log "Not deleting CRD ${crd}, still has some instances"
+    elif [[ "${crd}" == *ocscluster* ]];then
+        log "Not deleting OpenShift Data Foundation CRD ${crd}, still needed"
+    elif [[ "${crd}" == *ibmlicensing* ]] && [ "${DELETE_LICENSING}" -ne 1 ];then
+        log "Not deleting license server CRD ${crd}, still needed"
+    elif [[ "${crd}" == *cert* ]] && [ "${DELETE_CERT_MANAGER}" -ne 1 ];then
+        log "Not deleting certificate manager CRD ${crd}, still needed"
+    else
         oc delete crd $crd
     fi
 done
+
 
 exit 0
