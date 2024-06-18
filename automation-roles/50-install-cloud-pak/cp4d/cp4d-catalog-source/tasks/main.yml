@@ -1,9 +1,11 @@
 ---
-- include_role:
-    name: cp4d-variables
+- set_fact:
+    _catsrc_cartridges_to_install_list: "{{ _cartridges_to_install_list }}"
+
+- set_fact:
+    _catsrc_cartridges_to_install_list: "cpfs,cpd_platform"
+  when: _p_catsrc_scope == 'platform'
 
 - include_tasks: create-catalog-source-olm-utils.yml
-  when: 
-  - _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
 
 - include_tasks: wait-catalog-sources-ready.yml
