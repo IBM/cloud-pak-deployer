@@ -97,7 +97,7 @@
     secret_group: "{{ environment_name }}"
     _p_secret_variable: _cp4d_admin_password_vault
 
-- name: Setup watsonx Assistant instances for watsonx watsonx.orchestrate
+- name: Setup watsonx Assistant instances for watsonx watsonx.orchestrate for releases < 5.0.0
   shell: |
     setup-wxo-assistant \
       --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
@@ -109,6 +109,7 @@
   retries: 5
   delay: 10
   until: _setup_wxo_assistant.rc == 0
+  when: _p_current_cp4d_cluster.cp4d_release < "5.0.0"
 
 - block:
   - name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log
