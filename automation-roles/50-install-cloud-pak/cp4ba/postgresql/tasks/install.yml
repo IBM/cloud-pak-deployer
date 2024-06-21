@@ -37,3 +37,32 @@
     - {name: secrets, wait_sleep: 15, wait_timeout: 15}
     - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Pre-requisites-PostgreSQL
+    usage_entry_value:
+      "# PostgreSQL
+
+      As PostgreSQL database storage for the platform.
+
+      ## Endpoints
+
+      - Exposed as NodePort as found in Project *{{ postgresql_project_name }}* in Service *postgresql*.
+
+      ## Credentials
+
+      - postgres / {{ postgresql_universal_password }}
+
+      ## CLI in container
+
+      ```bash
+
+      psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432
+
+      ```
+
+      "

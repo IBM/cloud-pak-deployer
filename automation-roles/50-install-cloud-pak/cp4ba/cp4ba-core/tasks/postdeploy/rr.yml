@@ -1,0 +1,31 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Resource-Registry-RR
+    usage_entry_value:
+      "# Resource Registry (RR) (foundation pattern)
+
+      ## Endpoints
+
+      - Version info: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/resreg/version
+
+      ## Reading content of ETCD from RR container terminal
+
+      ```bash
+
+      etcdctl get --from-key '' --insecure-skip-tls-verify=true --user=\"root:{{ universal_password }}\" \
+      --endpoints=https://{{ cp4ba_project_name }}-dba-rr-client.{{ cp4ba_project_name }}.svc:2379 \
+      --insecure-transport=true --cacert=¨\"/shared/resources/tls/ca-cert.pem\"
+
+      ```
+
+      "

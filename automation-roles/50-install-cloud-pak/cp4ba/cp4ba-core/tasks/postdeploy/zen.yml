@@ -290,15 +290,29 @@
       - 409
   register: cpfsadmin_response
 
-- name: Get IAM token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: iam-token-user
-  vars:
-    common_cpfs_project: "{{ cp4ba_project_name }}"
-    common_user: "cpfsadmin"
-    common_password: "{{ cp4ba_universal_password }}"
-    common_output_to_var: "iam_token"
+- name: Add cpadminservice to zen
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      username: cpadminservice
+      displayName: cpadminservice
+      user_roles:
+        - zen_administrator_role
+        - iaf-automation-admin
+        - iaf-automation-analyst
+        - iaf-automation-developer
+        - iaf-automation-operator
+        - zen_user_role
+    validate_certs: false
+    status_code:
+      - 201
+      - 409
+  register: cpadminservice_response
 
 - name: Get Usage configmap
   kubernetes.core.k8s_info:
@@ -354,13 +368,22 @@
         zen_api_key_new: "{{ zen_api_key_response.json.apiKey }}"
 
     # Regenerate usage with zen_api_key
-    - name: Generate usage
+    - name: Set usage entry for cpadminservice user
       ansible.builtin.include_role:
         name: usage
+        tasks_from: set-entry
+      vars:
+        usage_entry_name: cpadminservice-zen-api-key
+        usage_entry_value:
+          "Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=access-using-zen-api-key-authentication
+          If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service account with username \
+          *cpadminservice* has been prepared for you with the generated api key.
 
-    - name: Assign zen api key for further post deploy task
-      ansible.builtin.set_fact:
-        zen_api_key: "{{ zen_api_key_new }}"
+          Zen API key for cpadminservice user as generated in the UI: {{ zen_api_key_new }}
+
+          Zen API key for cpadminservice user in the form of header: ZenApiKey {{ 'cpadminservice:' + zen_api_key_new | b64encode }}
+
+          "
 
 - name: Get Zen PostgreSQL secret
   kubernetes.core.k8s_info:

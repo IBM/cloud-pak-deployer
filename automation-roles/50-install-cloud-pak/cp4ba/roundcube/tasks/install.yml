@@ -62,3 +62,28 @@
     common_service_name: roundcube-nginx
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ roundcube_output_directory }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Extras-Roundcube
+    usage_entry_value:
+      "# Roundcube
+
+      As mail client.
+
+      ## Endpoints
+
+      - UI: https://roundcube-{{ roundcube_project_name }}.{{ apps_endpoint_domain }}
+
+      ## Credentials
+
+      - for admin: {{ lc_principal_admin_user }}@{{ lc_ldap_domain }} / {{ roundcube_universal_password }} \
+        (you can also use only *{{ lc_principal_admin_user }}* without domain as username to login)
+      
+      - for other users: cpadmin1, cpadmin2, cpuser, cpuser1, cpuser2 with domain @{{ lc_ldap_domain }} / {{ roundcube_universal_password }} \
+        (you can also use only the usernames without domain to login)
+
+      "
