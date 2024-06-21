@@ -8,7 +8,21 @@
     oc get -n openshift-ingress-operator ingresscontrollers/default -o jsonpath='{.spec.defaultCertificate.name}'
   register: _current_ingress_certificate_result
 
+- set_fact:
+    _current_certificate: "{{ _current_ingress_certificate_result.stdout }}"
+
+- name: Check if secret {{ _current_certificate }} exists
+  shell: |
+    oc get secret {{ _current_certificate }} -n openshift-ingress
+  failed_when: False
+  register: _ocp_get_tls_crt_result
+  when: 
+  - _current_certificate != ""
+
 - name: Configure TLS Certificate Cloud Pak for Data 
   include_tasks: configure-ssl-certificate.yml
-  when: _current_ingress_certificate_result.rc == 0 and _current_ingress_certificate_result.stdout != ""
+  when: 
+  - _current_ingress_certificate_result.rc == 0
+  - _current_certificate != ""
+  - _ocp_get_tls_crt_result.rc == 0
 
