@@ -58,7 +58,16 @@ spec:
               value: 'none'
             - name: LOGGING_VERBOSE
               value: 'true'
+            - name: DISABLE_SECURITY_DASHBOARDS_PLUGIN
+              value: 'true'
           ports:
-            - name: opensearch-dashboards-ui
+            - name: dashboards-ui
               containerPort: 5601
               protocol: TCP
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 1000
+      serviceAccountName: opensearch-dashboards
