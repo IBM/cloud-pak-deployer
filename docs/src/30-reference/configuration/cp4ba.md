@@ -79,7 +79,7 @@ Contains extra software which makes working with the platform even easier.
 - Roundcube - Web UI for included Mail server to be able to browse incoming emails.
 - Cerebro - Web UI elastic search browser automatically connected to ES instance deployed with CP4BA.
 - AKHQ - Web UI kafka browser automatically connected to Kafka instance deployed with CP4BA.
-- Kibana - Web UI elastic search dashboard tool automatically connected to ES instance deployed with CP4BA.
+- OpenSearch Dashboards - Web UI OpenSearch dashboard tool automatically connected to OpenSearch instance deployed with CP4BA.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
 - Mongo Express - Web UI for Mongo DB databases for CP4BA and Process Mining to easier troubleshoot DB.
 - CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
