@@ -1,20 +1,10 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=operator-preparing-log-file-storage
 
-- name: Download installation repository
-  ansible.builtin.get_url:
-    url: https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-cp-automation/{{ cp4ba_case_version }}/ibm-cp-automation-{{ cp4ba_case_version }}.tgz
-    dest: "{{ cp4ba_output_directory }}/ibm-cp-automation-{{ cp4ba_case_version }}.tgz"
-    mode: u+rw
-    timeout: 60
-  retries: 10
-  delay: 1
-
-- name: Extract installation repository
-  ansible.builtin.unarchive:
-    src: "{{ cp4ba_output_directory }}/ibm-cp-automation-{{ cp4ba_case_version }}.tgz"
-    dest: "{{ cp4ba_output_directory }}"
-
-- name: Extract cert k8s repository
-  ansible.builtin.unarchive:
-    src: "{{ cp4ba_output_directory }}/ibm-cp-automation/inventory/cp4aOperatorSdk/files/deploy/crs/cert-k8s-{{ cp4ba_case_cert_k8s_version }}.tar"
-    dest: "{{ cp4ba_output_directory }}"
+- name: Clone cert-kubernetes repo
+  ansible.builtin.git:
+    repo: https://github.com/Vincent-Le/cert-kubernetes-beta.git
+    #repo: https://github.com/icp4a/cert-kubernetes.git
+    dest: "{{ cp4ba_output_directory }}/cert-kubernetes"
+    # single_branch: true from 2.11 only
+    version: "{{ cp4ba_cert_k8s_branch }}"
+  retries: 5
