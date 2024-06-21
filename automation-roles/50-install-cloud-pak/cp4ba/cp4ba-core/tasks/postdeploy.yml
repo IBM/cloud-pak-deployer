@@ -4,17 +4,35 @@
 - name: Manage Zen
   ansible.builtin.include_tasks: postdeploy/zen.yml
 
+- name: Manage RR
+  ansible.builtin.include_tasks: postdeploy/rr.yml
+
+- name: Manage BAN
+  ansible.builtin.include_tasks: postdeploy/ban.yml
+
+- name: Manage BAS
+  ansible.builtin.include_tasks: postdeploy/bas.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
+
+- name: Manage BAI
+  ansible.builtin.include_tasks: postdeploy/bai.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+
 - name: Manage BAML
   ansible.builtin.include_tasks: postdeploy/baml.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai and _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
+
+- name: Manage ODM
+  ansible.builtin.include_tasks: postdeploy/odm.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
 
 - name: Manage ADS
   ansible.builtin.include_tasks: postdeploy/ads.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
 
-- name: Manage ODM
-  ansible.builtin.include_tasks: postdeploy/odm.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled
+- name: Manage AAE
+  ansible.builtin.include_tasks: postdeploy/aae.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae
 
 - name: Manage ADP
   ansible.builtin.include_tasks: postdeploy/adp.yml
