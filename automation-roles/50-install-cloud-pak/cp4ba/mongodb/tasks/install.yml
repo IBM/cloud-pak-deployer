@@ -35,3 +35,32 @@
     - {name: secrets, wait_sleep: 15, wait_timeout: 15}
     - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Pre-requisites-MongoDB
+    usage_entry_value:
+      "# MongoDB
+
+      As MongoDB database storage for the platform.
+
+      ## Endpoints
+
+      - Exposed as NodePort as found in Project *{{ mongodb_project_name }}* in Service *mongodb*.
+
+      ## Credentials
+
+      - root / {{ mongodb_universal_password }} / authentication database is *admin*
+
+      ## CLI in container
+
+      ```bash
+
+      mongo --username root --password {{ mongodb_universal_password }} --authenticationDatabase admin
+
+      ```
+
+      "

@@ -154,12 +154,15 @@
       Authorization: "Bearer {{ zen_token }}"
     body_format: json
     body:
-      username: "{{ lc_principal_admin_user }}"
+      username: "{{ item }}"
       user_roles:
         - "{{ ads_admin_role_id }}"
     validate_certs: false
     status_code:
       - 200
+  with_items:
+    - cpadminservice
+    - "{{ lc_principal_admin_user }}"
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=credentials-configuring-maven-repository-manager
 - name: Add Maven credential
@@ -212,3 +215,31 @@
   register: git_provider_response
   failed_when: git_provider_response.status != 200 and
     git_provider_response.json.message is not search('It is not allowed to create more than one git provider.')
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Automation-Decision-Services-ADS
+    usage_entry_value:
+      "# Automation Decision Services (ADS) (decisions_ads pattern)
+
+      ## Endpoints
+
+      - Administration: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/admin-platform
+
+      - Runtime OAS: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/swagger-ui
+
+      - Runtime OAS JSON file: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/v1/openapi.json
+
+      - Runtime service invocation template: \
+        https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/v1/deploymentSpaces/embedded/decisions/\
+        {decisionId}/operations/{operation}/execute (using ZenApiKey Authentication with Zen token \
+        (https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=administering-authorizing-http-requests-by-using-zen-api-key))
+
+      ## Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      "
