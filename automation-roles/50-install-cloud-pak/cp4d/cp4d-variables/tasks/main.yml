@@ -202,6 +202,11 @@
   vars:
     jmes_query: "[?state=='installed'].olm_utils_name"
 
+- name: Make sure that ikc_standard is added to dependencies if ikc_premium is installed
+  set_fact:
+    _surviving_cartridges_names: "{{ _surviving_cartridges_names }} + ['ikc_standard']"
+  when: '"ikc_premium" in _surviving_cartridges_names'
+
 - name: Determine the surviving cartridges
   set_fact:
     _surviving_cartridges: >-
