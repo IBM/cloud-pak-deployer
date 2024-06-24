@@ -73,6 +73,28 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
   when: clients.resources | length != 0
 
+# wait for the FlinkDeployment instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for FlinkDeployment intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: flink.ibm.com/v1beta1
+    kind: FlinkDeployment
+    namespace: "{{ cp4ba_project_name }}"
+  register: flink_deployments
+  retries: 10
+  delay: 30
+  until: flink_deployments.resources | length == 0
+  ignore_errors: true
+
+- name: Clear FlinkDeployment instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: flink.ibm.com/v1beta1
+    common_kind: FlinkDeployment
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: flink_deployments.resources | length != 0
+
 - name: Remove Catalog Sources
   kubernetes.core.k8s:
     state: absent
