@@ -1,0 +1,89 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-FileNet-Content-Manager-FNCM
+    usage_entry_value:
+      "# FileNet Content Manager (FNCM) (content pattern)
+
+      ## Endpoints
+
+      For external share you need to use ingress prefixed set of endpoints.
+
+      - ACCE console UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/acce
+
+      - CPE WSI endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/wsi/FNCEWS40MTOM \
+      (https://cpe-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/wsi/FNCEWS40MTOM)
+
+      - CPE health check: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/P8CE/Health
+
+      - CPE ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/FileNet/Engine
+
+      - CPE automatic upgrade status endpoint: https://cpe-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/FileNet/AutomaticUpgradeStatus
+
+      - PE ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/peengine/IOR/ping
+
+      - PE details page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/peengine/IOR/admin/help
+
+      - CSS health check: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/P8CE/Health/CBRDashboard \
+      (https://cpe-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/P8CE/Health/CBRDashboard)
+
+      - CMIS definitions UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cmis/openfncmis_wlp
+
+      - CMIS endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cmis/openfncmis_wlp/services (e.g. for BAW CMIS)
+
+      - GraphiQL UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql
+
+      - GraphQL endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql
+
+      - OS1 Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=OS1
+
+      - External Share ingress for navigator: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/navigator/?desktop=admin
+
+      - External Share ingress for plugin: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/contentapi/plugins/sharePlugin.jar
+
+      - External Share ingress for rest endpoint: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/contentapi/rest/share/v1/info
+
+      - External Share ingress for desktop: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/navigator/?desktop=OS1
+
+      - External Share ingress for external desktop: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/navigator/?desktop=ExternalShareOS1
+
+      - Task Manager API endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/tm/api/v1
+
+      - Task Manager Ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/tm/api/v1/tasks/ping
+
+      - IER application plugin: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ier/EnterpriseRecordsPlugin/IERApplicationPlugin.jar
+
+      #### Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      ## Other
+
+      If you want FDM to connect to CPE, you need to provide it with Zen certificate. To do it update DeploymentManager.ini file and add to it
+
+      ```text
+
+      # Overrides default TLS.
+
+      -Dcom.ibm.jsse2.overrideDefaultTLS=true
+
+      # Path to your truststrore.jks containing Zen certificate chain. Can be download e.g. from ODM Decision center.
+
+      -Djavax.net.ssl.trustStore=C:\\truststore.jks
+
+      # Password for the truststore if any. If none completely omit the line.
+
+      -Djavax.net.ssl.trustStorePassword=password
+
+      ```
+
+      "

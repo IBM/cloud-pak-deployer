@@ -462,8 +462,6 @@
         dest: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
         mode: u+rwx
 
-      # TODO patch secret with correct password
-      # base64 encode and oc patch module
     - name: Add KafkaUser Secret
       kubernetes.core.k8s:
         state: present
@@ -475,11 +473,11 @@
     name: common
     tasks_from: wait-resource-condition
   vars:
-    common_api_version: elastic.automation.ibm.com/v1beta1
-    common_resource_kind: Elasticsearch
-    common_resource_name: iaf-system
+    common_api_version: elasticsearch.opencontent.ibm.com/v1
+    common_resource_kind: ElasticsearchCluster
+    common_resource_name: opensearch
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Ready
+    common_condition_name: Started
     common_retries: 30
     common_delay: 60
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
@@ -665,7 +663,8 @@
     common_delay: 300
   with_items:
     - "{{ cp4ba_cr_meta_name }}-deep-learning"
-  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom.spec.ca_configuration.ocrextraction.deep_learning_object_detection.enabled | default(false) | bool
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom.spec.ca_configuration.ocrextraction.deep_learning_object_detection.enabled
+    | default(false) | bool
 
 - name: Wait for BAI InsightsEngine instance Ready state
   ansible.builtin.include_role:
@@ -737,9 +736,6 @@
         _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-git-service', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-rest-api', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer |
-        ternary(cp4ba_cr_meta_name + '-ads-embedded-build-service', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-credentials-service', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and

@@ -1,11 +1,12 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mail
   namespace: "{{ mail_project_name }}"
   labels:
     app: mail
 spec:
+  serviceName: mail
   replicas: 1
   selector:
     matchLabels:
@@ -65,10 +66,10 @@ spec:
               subPath: postfix-main.cf
               mountPath: /tmp/docker-mailserver/postfix-main.cf
               readOnly: true
-            - name: data
+            - name: mail-storage
               mountPath: /var/mail
               subPath: data
-            - name: data
+            - name: mail-storage
               mountPath: /var/mail-state
               subPath: state
             - name: public-dir-pipe-folder
@@ -77,7 +78,7 @@ spec:
             - name: private-dir-pipe-folder
               mountPath: /var/mail-state/spool-postfix/private
               subPath: public
-            - name: data
+            - name: mail-storage
               mountPath: /var/log/mail
               subPath: log
             - name: tls
@@ -106,9 +107,6 @@ spec:
         - name: config
           configMap:
             name: mail-config
-        - name: data
-          persistentVolumeClaim:
-            claimName: mail-storage
         # Cannot create named pipes on connected storage class, must be in. Risk of loosing data.
         - name: public-dir-pipe-folder
           emptyDir: {}
@@ -119,3 +117,18 @@ spec:
           secret:
             secretName: mail-tls
             defaultMode: 256
+  volumeClaimTemplates:
+    - kind: PersistentVolumeClaim
+      apiVersion: v1
+      metadata:
+        name: mail-storage
+        labels:
+          app: mail
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        storageClassName: "{{ mail_storage_class_name }}"
+        resources:
+          requests:
+            storage: 5Gi
+        volumeMode: Filesystem            

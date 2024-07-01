@@ -12,6 +12,20 @@
     common_namespace_name: "{{ cerebro_project_name }}"
     common_output_directory: "{{ cerebro_output_directory }}"
 
+- name: Get OpenSearch password
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cerebro_cp4ba_project_name }}"
+    name: "opensearch-ibm-elasticsearch-cred-secret"
+  register: os_secret
+  retries: 40
+  delay: 15
+
+- name: Set OpenSearch password
+  ansible.builtin.set_fact:
+    os_password: "{{ os_secret.resources[0].data.elastic | b64decode }}"
+
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
@@ -56,3 +70,20 @@
     common_service_name: cerebro
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ cerebro_output_directory }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Extras-Cerebro
+    usage_entry_value:
+      "# Cerebro
+
+      As OpenSearch browser.
+
+      ## Endpoints
+
+      - UI: https://cerebro-{{ cerebro_project_name }}.{{ apps_endpoint_domain }}
+
+      "

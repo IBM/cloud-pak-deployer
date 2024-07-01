@@ -1,0 +1,56 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get flink password secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: "{{ cp4ba_cr_meta_name }}-insights-engine-flink-admin-user"
+  register: flink_secret
+  retries: 40
+  delay: 15
+
+- name: Set flink password
+  ansible.builtin.set_fact:
+    flink_password: "{{ flink_secret.resources[0].data.password | b64decode }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Business-Automation-Insights-BAI
+    usage_entry_value:
+      "# Business Automation Insights (BAI) (foundation pattern)
+
+      ## Endpoints
+
+      - Business Performance Center UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bai-bpc
+
+      - Business Performance Center About JSON: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bai-bpc/about.json
+
+      - Business Performance Center UI in BAN: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=BAI
+
+      - Flink: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bai-flink-ui
+
+      ## Credentials
+
+      - for BAI - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      - for Flink - eventprocessing-admin / {{ flink_password }}
+
+      #### Extracting generated templates from operator for debug
+
+      ```bash
+
+      oc cp -n {{ cp4ba_project_name }} `oc get pod --no-headers -n {{ cp4ba_project_name }} -l name=ibm-insights-engine-operator | \
+      awk '{print $1}'`:/tmp/ansible-operator/runner/tmp/insightsengine/templates/insights_engine_all_in_one.yaml insights_engine_all_in_one.yaml
+
+      ```
+
+      "

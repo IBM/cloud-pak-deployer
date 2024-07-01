@@ -76,8 +76,7 @@
     - rolebindings
     - configmaps
     - secrets
-    - persistentvolumeclaims
-    - deployments
+    - statefulsets
     - services
 
 - name: Add {{ item.name }}
@@ -92,6 +91,33 @@
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
     - {name: secrets, wait_sleep: 15, wait_timeout: 15}
-    - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
-    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Extras-Mail
+    usage_entry_value:
+      "# Mail
+
+      As mail server.
+
+      Emails sent to cpadmin@{{ lc_ldap_domain }}, cpadmin1@{{ lc_ldap_domain }}, cpadmin2@{{ lc_ldap_domain }}, \
+      cpuser@{{ lc_ldap_domain }}, cpuser1@{{ lc_ldap_domain }}, cpuser2@{{ lc_ldap_domain }} \
+      will be delivered in their respective mailboxes. \
+      Any email received at other *\\*@{{ lc_ldap_domain }} will be delivered to *{{ lc_principal_admin_user }}*.
+
+      ## Endpoints
+
+      - Exposed as NodePort as found in Project *{{ mail_project_name }}* in Service *mail*.
+
+      ## Credentials
+
+      - for admin: {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}/ {{ mail_universal_password }}
+
+      - for user: cpuser@{{ lc_ldap_domain }} / {{ mail_universal_password }}
+
+      "

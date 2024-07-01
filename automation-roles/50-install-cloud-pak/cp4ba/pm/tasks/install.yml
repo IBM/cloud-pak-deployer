@@ -215,8 +215,9 @@
       Cookie: ibm-private-cloud-session={{ zen_token }}
     validate_certs: false
     return_content: true
+    status_code:
+      - 200
   register: groups_response
-  until: groups_response.status == 200
   retries: 10
   delay: 60
 
@@ -277,6 +278,8 @@
         status_code:
           - 200
       register: groups_response
+      retries: 10
+      delay: 60
 
     - name: Get TaskMiningAdmins group
       ansible.builtin.set_fact:
@@ -536,3 +539,52 @@
     wait: true
     wait_sleep: 15
     wait_timeout: 15
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Process-Mining
+    usage_entry_value:
+      "# Process Mining
+
+      ## Endpoints
+
+      - Process Mining UI & API base: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining
+
+      - Process Mining User Profile (to determine user API key) \
+        https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile
+
+      - Task Mining UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/taskmining
+
+      - Process Mining non Zen Route: https://processmining-pm-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/
+
+      ## Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      ## Useful info
+
+      If you want to investigate the actual ansible code that is running in the operator,\
+      you can get it from running operator pod from /opt/ansible/roles directory.
+
+      ```bash
+
+      mkdir pm-ansible-roles
+
+      oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers |\
+      grep processmining-operator-controller-manager | awk '{print $1}'`:/opt/ansible/roles pm-ansible-roles
+
+      ```
+
+      To get logs for Operator.
+
+      ```bash
+
+      oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-controller |\
+      xargs oc logs -n {{ cp4ba_project_name }} > process-mining-operator.log
+
+      ```
+
+      "

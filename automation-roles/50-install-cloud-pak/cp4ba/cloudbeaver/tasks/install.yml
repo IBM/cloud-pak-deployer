@@ -131,36 +131,6 @@
   register: cloudbeaver_existing_response
   failed_when: cloudbeaver_existing_response.status != 200 or cloudbeaver_existing_response.json.errors is defined
 
-- name: Add PostgreSQL to cloudbeaver
-  ansible.builtin.uri:
-    url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
-    validate_certs: false
-    method: POST
-    headers:
-      content-type: "application/json"
-      Cookie: "cb-session-id={{ cb_session_id }}"
-    body_format: json
-    body:
-      query: 'mutation createConnection($providerProperties: Object) {
-          createConnection(
-            config: { credentials: {userName: "postgres", userPassword: "{{ cloudbeaver_postgresql_universal_password }}"},
-            saveCredentials: true, driverId: "postgresql:postgres-jdbc", host: "{{ cloudbeaver_postgresql_hostname }}", port: "5432",
-            databaseName: "postgres" name:"PostgreSQL",
-            providerProperties: $providerProperties}
-            projectId: "g_GlobalConfiguration"
-          ) {
-            id
-          }
-        }'
-      variables: {
-        "providerProperties": {
-          "@dbeaver-show-non-default-db@": true
-        }
-      }
-  register: cloudbeaver_create_response
-  failed_when: cloudbeaver_create_response.status != 200 or cloudbeaver_create_response.json.errors is defined
-  when: cloudbeaver_existing_response is not search('.*PostgreSQL.*')
-
 - name: Add MSSQL to cloudbeaver
   ansible.builtin.uri:
     url: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}/api/gql
@@ -184,3 +154,38 @@
   register: cloudbeaver_create_response
   failed_when: cloudbeaver_create_response.status != 200 or cloudbeaver_create_response.json.errors is defined
   when: _current_cp4ba_cluster.rpa.enabled and cloudbeaver_existing_response is not search('.*MSSQL.*')
+
+- name: Add PG to cloudbeaver
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: cloudbeaver-add-pg
+  vars:
+    common_cloudbeaver_project: "{{ cloudbeaver_project_name }}"
+    common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
+    common_cloudbeaver_password: "{{ cloudbeaver_universal_password }}"
+    common_cloudbeaver_connection_name: CP4BA PostgreSQL
+    common_pg_host: "{{ cloudbeaver_postgresql_hostname }}"
+    common_pg_port: "5432"
+    common_pg_username: postgres
+    common_pg_password: "{{ cloudbeaver_postgresql_universal_password }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Extras-CloudBeaver
+    usage_entry_value:
+      "# CloudBeaver
+
+      As DB UI for PostgreSQL, MSSQL
+
+      ## Endpoints
+
+      - CloudBeaver UI: https://cloudbeaver-{{ cloudbeaver_project_name }}.{{ apps_endpoint_domain }}
+
+      ## Credentials
+
+      - UI: {{ principal_admin_user }} / {{ cloudbeaver_universal_password }}
+
+      "

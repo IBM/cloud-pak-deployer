@@ -1,0 +1,27 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Automation-Application-Engine-AAE
+    usage_entry_value:
+      "# Automation Application Engine (AAE) (application pattern)
+
+      ## Endpoints
+
+      - AAE Server apps list: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-workspace/v2/applications
+
+      - AAE API Docs https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-workspace/public/apidoc
+
+      ## Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      "

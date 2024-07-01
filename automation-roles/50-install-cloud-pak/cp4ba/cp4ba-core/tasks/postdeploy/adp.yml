@@ -28,13 +28,6 @@
       - 201
       - 422
 
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Get IAM token
   ansible.builtin.include_role:
     name: common
@@ -89,3 +82,29 @@
     status_code:
       - 201
       - 200
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Automation-Document-Processing-ADP
+    usage_entry_value:
+      "# CP4BA Automation Document Processing (ADP) (document_processing pattern)
+
+      ## Endpoints
+
+      - CDRA API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cdra/cdapi/
+
+      - Content Project Deployment Service: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cpds/ibm-dba-content-deployment/ \
+        (Note: This URL is meant to use with ADP scripts and not to be accessed as is without context root)
+
+      - Ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/aca/ping
+
+      - Project admin API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/designer/?projectId=<Project ID>&features=adminapi
+
+      ## Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      "

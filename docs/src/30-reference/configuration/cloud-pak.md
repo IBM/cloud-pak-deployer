@@ -634,6 +634,9 @@ cp4ba:
 
   # Set to false if you don't want to install (or remove) phpLDAPAdmin
   phpldapadmin_enabled: true
+
+  # Set to false if you don't want to install (or remove) OpenSearch Dashboards
+  opensearch_dashboards_enabled: true  
 ```
 
 ### CP4BA main properties
@@ -791,3 +794,4 @@ The following properties are defined on the project level.
 | akhq_enabled                         | Set to `true` to enable AKHQ. Client for Kafka in CP4BA. | Yes  | true, false |
 | mongo_express_enabled                         | Set to `true` to enable Mongo Express. Client for MongoDB. | Yes  | true, false |
 | phpldapadmin_enabled                         | Set to `true` to enable phpLDApAdmin. Client for OpenLDAP. | Yes  | true, false |
+| opensearch_dashboards_enabled                         | Set to `true` to enable OpenSearch Dashboards. Client for OpenSearch. | Yes  | true, false |

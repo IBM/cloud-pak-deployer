@@ -1,0 +1,91 @@
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ opensearch_dashboards_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ opensearch_dashboards_project_name }}"
+    common_output_directory: "{{ opensearch_dashboards_output_directory }}"
+
+- name: Get OpenSearch password secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ opensearch_dashboards_cp4ba_project_name }}"
+    name: "opensearch-ibm-elasticsearch-cred-secret"
+  register: os_secret
+  retries: 40
+  delay: 15
+
+- name: Set OpenSearch password
+  ansible.builtin.set_fact:
+    os_password: "{{ os_secret.resources[0].data.elastic | b64decode }}"
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ opensearch_dashboards_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - serviceaccounts
+    - rolebindings
+    - deployments
+    - services
+
+- name: Add {{ item.name }}
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ opensearch_dashboards_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: serviceaccounts, wait_sleep: 15, wait_timeout: 15}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+  when: apps_endpoint_domain is not defined
+
+- name: Crete Edge Route
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-edge-route
+  vars:
+    common_namespace_name: "{{ opensearch_dashboards_project_name }}"
+    common_route_name: "opensearch-dashboards-{{ opensearch_dashboards_project_name }}"
+    common_service_name: opensearch-dashboards
+    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
+    common_output_directory: "{{ opensearch_dashboards_output_directory }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Extras-OpenSearch-Dashboards
+    usage_entry_value:
+      "# OpenSearch Dashboards
+
+      As OpenSearch content browser.
+
+      ## Endpoints
+
+      - UI: https://opensearch-dashboards-{{ opensearch_dashboards_project_name }}.{{ apps_endpoint_domain }}
+
+      ## Credentials
+
+      - elastic / {{ os_password }}
+
+      "
