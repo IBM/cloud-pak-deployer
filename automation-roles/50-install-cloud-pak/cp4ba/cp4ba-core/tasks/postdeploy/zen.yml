@@ -71,30 +71,6 @@
     common_retries: 80
     common_delay: 15
 
-- name: Delete Kibana pods
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Pod
-    namespace: "{{ cp4ba_kibana_project }}"
-    label_selectors:
-      - app=kibana
-  when: kibana_enabled
-
-- name: Wait for Kibana Deployment Available State
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: kibana
-    common_resource_namespace: "{{ cp4ba_kibana_project }}"
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
-  when: kibana_enabled
-
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
     name: common
@@ -314,62 +290,6 @@
       - 409
   register: cpfsadmin_response
 
-- name: Get IAM token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: iam-token-user
-  vars:
-    common_cpfs_project: "{{ cp4ba_project_name }}"
-    common_user: "cpfsadmin"
-    common_password: "{{ cp4ba_universal_password }}"
-    common_output_to_var: "iam_token"
-
-# Based on https://www.ibm.com/docs/en/cpfs?topic=apis-oidc-registration#register
-- name: Add service client to IAM
-  ansible.builtin.uri:
-    url: "https://cp-console-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/registration"
-    method: POST
-    headers:
-      Authorization: Bearer {{ iam_token }}
-    body_format: json
-    body:
-      {
-        "client_id": "cpadminservice",
-        "client_name": "cpadminservice",
-        "client_secret": "{{ cp4ba_universal_password }}",
-        "scope": "openid profile email",
-        "preauthorized_scope": "openid profile email",
-        "introspect_tokens": true,
-        "proofKeyForCodeExchange": true,
-        "response_types": [
-          "code",
-          "token",
-          "id_token token"
-        ],
-        "grant_types": [
-          "authorization_code",
-          "client_credentials",
-          "implicit",
-          "refresh_token",
-          "urn:ietf:params:oauth:grant-type:jwt-bearer",
-          "password"
-        ],
-        "allow_regexp_redirects":true,
-        "redirect_uris": [
-          "regexp:https://.*/oidcclient/redirect/.*"
-        ],
-        "appTokenAllowed": true,
-        "application_type": "web",
-        "subject_type": "public"
-      }
-    validate_certs: false
-    status_code:
-      - 201
-      - 400
-  register: client_response
-  failed_when: client_response.status == 400 and client_response.json | json_query('error_description') is not search('.*already exists.*')
-
-
 - name: Add cpadminservice to zen
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user"
@@ -406,7 +326,8 @@
 
 - name: Find zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
+    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key']
+      if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
 
 - name: Generate new Zen Api key
   when: zen_api_key | length == 0
@@ -414,11 +335,11 @@
     - name: Get IAM token
       ansible.builtin.include_role:
         name: common
-        tasks_from: iam-token-client
+        tasks_from: iam-token-user
       vars:
         common_cpfs_project: "{{ cp4ba_project_name }}"
-        common_client_id: "cpadminservice"
-        common_client_secret: "{{ cp4ba_universal_password }}"
+        common_user: "cpadminservice"
+        common_password: "{{ cp4ba_universal_password }}"
         common_output_to_var: "iam_token"
 
     - name: Get Zen token
@@ -447,10 +368,48 @@
         zen_api_key_new: "{{ zen_api_key_response.json.apiKey }}"
 
     # Regenerate usage with zen_api_key
-    - name: Generate usage
+    - name: Set usage entry for cpadminservice user
       ansible.builtin.include_role:
         name: usage
+        tasks_from: set-entry
+      vars:
+        usage_entry_name: cpadminservice-zen-api-key
+        usage_entry_value:
+          "Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=access-using-zen-api-key-authentication
+          If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service account with username \
+          *cpadminservice* has been prepared for you with the generated api key.
 
-    - name: Assign zen api key for further post deploy task
-      ansible.builtin.set_fact:
-        zen_api_key: "{{ zen_api_key_new }}"
+          Zen API key for cpadminservice user as generated in the UI: {{ zen_api_key_new }}
+
+          Zen API key for cpadminservice user in the form of header: ZenApiKey {{ 'cpadminservice:' + zen_api_key_new | b64encode }}
+
+          "
+
+- name: Get Zen PostgreSQL secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: zen-metastore-edb-app
+  register: zen_pg_secret
+  retries: 40
+  delay: 15
+
+- name: Set Zen PosgreSQL password
+  ansible.builtin.set_fact:
+    zen_pg_password: "{{ zen_pg_secret.resources[0].data.password | b64decode }}"
+
+- name: Add PG to cloudbeaver
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: cloudbeaver-add-pg
+  vars:
+    common_cloudbeaver_project: "{{ cp4ba_cloudbeaver_project }}"
+    common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
+    common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
+    common_cloudbeaver_connection_name: Zen PostgreSQL
+    common_pg_host: "zen-metastore-edb-rw.{{ cp4ba_project_name }}.svc.cluster.local"
+    common_pg_port: "5432"
+    common_pg_username: zen_user
+    common_pg_password: "{{ zen_pg_password }}"
+  when: _current_cp4ba_cluster.cloudbeaver_enabled

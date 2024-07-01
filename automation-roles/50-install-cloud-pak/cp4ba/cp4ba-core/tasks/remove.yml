@@ -73,6 +73,28 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
   when: clients.resources | length != 0
 
+# wait for the FlinkDeployment instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for FlinkDeployment intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: flink.ibm.com/v1beta1
+    kind: FlinkDeployment
+    namespace: "{{ cp4ba_project_name }}"
+  register: flink_deployments
+  retries: 10
+  delay: 30
+  until: flink_deployments.resources | length == 0
+  ignore_errors: true
+
+- name: Clear FlinkDeployment instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: flink.ibm.com/v1beta1
+    common_kind: FlinkDeployment
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: flink_deployments.resources | length != 0
+
 - name: Remove Catalog Sources
   kubernetes.core.k8s:
     state: absent
@@ -83,12 +105,16 @@
     wait: true
   with_items:
     - ibm-cp4a-operator-catalog
-    - ibm-cs-flink-operator-catalog
-    - ibm-cs-elastic-operator-catalog
-    - opencloud-operators
+    - ibm-opencontent-flink
+    - ibm-cs-opensearch-catalog
+    - ibm-cs-install-catalog-{{ cpfs_cs_version }}
     - bts-operator
+    - ibm-iam-operator-catalog
+    - ibm-zen-operator-catalog
+    - ibm-events-operator-catalog
     - cloud-native-postgresql-catalog
     - ibm-fncm-operator-catalog
+    - ibm-bai-operator-catalog
 
 # Based on https://www.ibm.com/docs/en/cpfs?topic=online-uninstalling-foundational-services
 

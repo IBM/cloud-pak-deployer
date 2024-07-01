@@ -51,11 +51,6 @@
     name: mongodb
   when: mongodb_enabled
 
-- name: Install Kibana
-  ansible.builtin.include_role:
-    name: kibana
-  when: kibana_enabled
-
 - name: Install cloudbeaver
   ansible.builtin.include_role:
     name: cloudbeaver
@@ -65,12 +60,6 @@
   ansible.builtin.include_role:
     name: roundcube
   when: mail_enabled and _current_cp4ba_cluster.roundcube_enabled
-
-- name: Install Cerebro
-  ansible.builtin.include_role:
-    name: cerebro
-  when: _current_cp4ba_cluster.cp4ba.enabled and (_current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
-    _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and _current_cp4ba_cluster.cerebro_enabled
 
 - name: Install Mongo Express
   ansible.builtin.include_role:
@@ -91,16 +80,28 @@
     name: cp4ba-core
   when: _current_cp4ba_cluster.cp4ba.enabled
 
+- name: Install Cerebro
+  ansible.builtin.include_role:
+    name: cerebro
+  when: _current_cp4ba_cluster.cp4ba.enabled and (_current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and _current_cp4ba_cluster.cerebro_enabled
+
+- name: Install OpenSearch Dashboards
+  ansible.builtin.include_role:
+    name: opensearch_dashboards
+  when: _current_cp4ba_cluster.cp4ba.enabled and (_current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled) and (_current_cp4ba_cluster.opensearch_dashboards_enabled | default(true))
+
 - name: Install AKHQ
   ansible.builtin.include_role:
     name: akhq
   when: _current_cp4ba_cluster.cp4ba.enabled and _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai and
     _current_cp4ba_cluster.akhq_enabled
 
-- name: Install MSSQL
-  ansible.builtin.include_role:
-    name: mssql
-  when: mssql_enabled
+# - name: Install MSSQL
+#   ansible.builtin.include_role:
+#     name: mssql
+#   when: mssql_enabled
 
 # - name: Install RPA
 #   ansible.builtin.include_role:

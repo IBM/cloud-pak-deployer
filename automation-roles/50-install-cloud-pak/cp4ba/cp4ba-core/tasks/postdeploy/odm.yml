@@ -67,7 +67,7 @@
       Authorization: "Bearer {{ zen_token }}"
     body_format: json
     body:
-      username: "{{ lc_principal_admin_user }}"
+      username: "{{ item }}"
       user_roles:
         - odm_admin_role
         - odm_runtime_admin_role
@@ -76,6 +76,10 @@
     validate_certs: false
     status_code:
       - 200
+  with_items:
+    - cpadminservice
+    - "{{ lc_principal_admin_user }}"
+
 
 - name: Add ODM regular roles to group {{ item }}
   ansible.builtin.uri:
@@ -97,24 +101,6 @@
   register: group_response
   failed_when: group_response.status == 500 and group_response.json | json_query('exception') is not search('.*duplicate key value*')
   with_items: "{{ lc_general_groups }}"
-
-- name: Add ODM Admin role to service user
-  ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/cpadminservice?add_roles=true"
-    method: PUT
-    headers:
-      Authorization: "Bearer {{ zen_token }}"
-    body_format: json
-    body:
-      username: cpadminservice
-      user_roles:
-        - odm_admin_role
-        - odm_runtime_admin_role
-        - odm_runtime_user_role
-        - odm_business_user_role
-    validate_certs: false
-    status_code:
-      - 200
 
 - name: Regenerate Zen token for new permissions
   ansible.builtin.include_role:
@@ -154,7 +140,10 @@
 
 - name: Find zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['zen-api-key'] if usage.resources | length != 0 and usage.resources[0].data['zen-api-key'] is defined }}"
+    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key'] | regex_search(regexp,'\\1')
+      if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
+  vars:
+    regexp: 'key: (.*)'
 
 - name: Update credentials for server
   ansible.builtin.uri:
@@ -197,3 +186,53 @@
     status_code:
       - 200
   register: server_update_response
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Automation-Decision-Services-ADS
+    usage_entry_value:
+      "# Operational Decision Manager (ODM) (decisions pattern)
+
+      You may get 400 not authorized error when accessing endpoints. In this case clear cookies and refresh browser.
+
+      ## Endpoints
+
+      - Decision Center UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter
+
+      - Decision Center OAS: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter-api
+
+      - Decision Center remote API jars: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/\
+      odm/decisioncenter/assets/decision-center-client-api.zip \
+      (details on https://www.ibm.com/docs/en/odm/latest?topic=8110-accessing-decision-center-remotely-from-java-client)
+
+      - Decision Center build command API jars: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/buildcommand.zip \
+      (details on https://www.ibm.com/docs/en/odm/latest?topic=8110-automating-project-builds-build-command)
+
+      - Decision Center custom data providers API jars: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/\
+      odm/decisioncenter/assets/decision-center-client-api.zip \
+      (details on https://www.ibm.com/docs/en/odm/latest?topic=8110-setting-up-custom-data-providers)
+
+      - Decision Center truststore: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/truststore.jks
+
+      - Decision Center OIDC providers: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter/assets/OdmOidcProvidersRD.json
+
+      - Decision Runner UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/DecisionRunner
+
+      - Decision Server Console: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res
+
+      - Decision Server Runtime: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/DecisionService
+
+      ## Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }} for access through web UIs
+
+      - odmAdmin / {{ universal_password }} who can be used for ODM REST Basic Auth
+
+      - For ODM REST auth with {{ lc_principal_admin_user }} user or other LDAP users, follow guide on \
+      https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?\
+      topic=access-using-zen-api-key-authentication with REST Authorization header with ZenApiKey type
+
+      "

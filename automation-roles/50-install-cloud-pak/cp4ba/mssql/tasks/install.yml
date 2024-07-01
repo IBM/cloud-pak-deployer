@@ -39,3 +39,32 @@
     - {name: secrets, wait_sleep: 15, wait_timeout: 15}
     - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Pre-requisites-MSSQL
+    usage_entry_value:
+      "# MSSQL
+
+      As DB server for RPA.
+
+      ## Endpoints
+
+      - Exposed as NodePort as found in Project *{{ mssql_project_name }}* in Service *mssql*.
+
+      ## Credentials
+
+      - sa / {{ mssql_universal_password }}
+
+      ## CLI in container
+
+      ```bash
+
+      /opt/mssql-tools/bin/sqlcmd -S 127.0.0.1 -U sa -P {{ mssql_universal_password }}
+
+      ```
+
+      "

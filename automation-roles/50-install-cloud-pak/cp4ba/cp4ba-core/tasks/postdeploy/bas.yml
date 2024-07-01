@@ -1,0 +1,29 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Business-Automation-Studio-BAS
+    usage_entry_value:
+      "# Business Automation Studio (BAS) (foundation pattern)
+
+      ## Endpoints
+
+      - Business Automations Studio: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/BAStudio/build/index.jsp#/automationservices
+
+      - Business Applications Studio: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/BAStudio/build/index.jsp#/apps/platformRepo
+
+      - Playback AAE Server apps list: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ae-pbk/v2/applications
+
+      ## Credentials
+
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      "

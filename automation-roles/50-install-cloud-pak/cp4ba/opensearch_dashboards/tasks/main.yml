@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    opensearch_dashboards_output_directory: "{{ opensearch_dashboards_base_dir }}/{{ opensearch_dashboards_dir_name }}"
+
+- name: Remove opensearch_dashboards directory for generated files
+  ansible.builtin.file:
+    path: "{{ opensearch_dashboards_output_directory }}"
+    state: absent
+
+- name: Install opensearch_dashboards
+  ansible.builtin.include_tasks: install.yml
+  when: "opensearch_dashboards_action == 'install'"
+
+- name: Remove opensearch_dashboards
+  ansible.builtin.include_tasks: remove.yml
+  when: "opensearch_dashboards_action == 'remove'"

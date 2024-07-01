@@ -249,3 +249,28 @@
     status_code: 204
     return_content: true
   register: nexus_response
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Extras-Nexus
+    usage_entry_value:
+      "# Nexus
+
+      As package manager.
+
+      ## Endpoints
+
+      - UI: https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/
+
+      - OAS: https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/swagger.json
+
+      ## Credentials
+
+      - Credentials you should use: {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      - Initial administrative user credentials: admin / {{ nexus_universal_password }}
+
+      "

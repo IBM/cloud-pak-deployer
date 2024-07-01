@@ -1,0 +1,21 @@
+# Example of the functionality call
+#
+# - name: Set usage entry
+#   ansible.builtin.include_role:
+#     name: usage
+#     tasks_from: set-entry
+#   vars:
+#     usage_entry_name: _usage_entry_name
+#     usage_entry_value: _usage_entry_value
+
+- name: Set usage entry
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: ConfigMap
+    name: "{{ _current_cp4ba_cluster.project }}-usage"
+    namespace: cloud-pak-deployer
+    definition: |
+      data:
+        {{ usage_entry_name }}: |
+          {{ usage_entry_value | indent(4) }}
