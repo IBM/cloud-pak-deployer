@@ -548,6 +548,11 @@ cp4ba:
         optional_components:
           ads_designer: true # Designer (ADS)
           ads_runtime: true # Runtime (ADS)
+        gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-configuring-generative-ai-secret
+          apiKey: <watsonx_ai_api_key>
+          authUrl: https://iam.bluemix.net/identity/token
+          mlUrl: https://us-south.ml.cloud.ibm.com
+          projectId: <project_id>          
       content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
         enabled: true
         optional_components:
@@ -704,6 +709,11 @@ Placed in `cp4ba.patterns.decisions_ads` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.ads_designer          | Set to `true` to enable Designer | Yes | true, false |
 | optional_components.ads_runtime          | Set to `true` to enable Runtime | Yes | true, false |
+| gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=services-configuring-generative-ai-secret | false  | Object |
+| gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.authUrl          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
 
 #### Content pattern properties
 
