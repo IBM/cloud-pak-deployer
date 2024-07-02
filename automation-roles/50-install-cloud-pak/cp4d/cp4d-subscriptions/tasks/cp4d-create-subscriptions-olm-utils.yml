@@ -1,6 +1,11 @@
 ---
+# watsonx Orchestrate subscription fails to install if WA is not fully installed before CP4D 5.0.0
+- set_fact:
+    _apply_olm_cartridges: "{{ _cartridges_to_install }}"
+
 - set_fact:
     _apply_olm_cartridges: "{{ _cartridges_to_install | rejectattr('olm_utils_name','==','watsonx_orchestrate') }}"
+  when: _p_current_cp4d_cluster.cp4d_version < '5.0.0'
 
 - set_fact:
     _apply_olm_cartridges_list: >-
