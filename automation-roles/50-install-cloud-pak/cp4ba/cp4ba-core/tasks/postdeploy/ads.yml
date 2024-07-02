@@ -63,58 +63,6 @@
   ansible.builtin.include_tasks: ads-maven-plugins.yml
   with_dict: "{{ ads_maven_plugins_response.json | json_query('resources') }}"
 
-- name: Get roles
-  ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/roles"
-    method: GET
-    headers:
-      Authorization: "Bearer {{ zen_token }}"
-    validate_certs: false
-    status_code: 200
-  register: roles_response
-
-- name: Retrieve existing ADS admin role ID
-  ansible.builtin.set_fact:
-    ads_admin_role_id: "{{ roles_response.json | json_query(condition_query) | first | default('', true) }}"
-  vars:
-    condition_query:
-      "rows[?doc.role_name == 'ADS Admin'].id"
-
-- name: Create ADS admin role
-  when: ads_admin_role_id | length == 0
-  block:
-    - name: ADS permissions
-      ansible.builtin.set_fact:
-        ads_perms_list:
-          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary('administer_ads_platform', '') }}"
-          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('execute_ads_decision', '') }}"
-          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('manage_ads_decision', '') }}"
-          - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-            _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary('monitor_ads_runtime', '') }}"
-
-    # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-managing-user-permissions
-    - name: Create ADS admin role
-      ansible.builtin.uri:
-        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/role"
-        method: POST
-        headers:
-          Authorization: "Bearer {{ zen_token }}"
-        body_format: json
-        body:
-          role_name: ADS Admin
-          description: ""
-          permissions: "{{ ads_perms_list | select | list }}"
-        validate_certs: false
-        status_code: 201
-      register: admin_role_response
-
-    - name: Set ADS admin role ID
-      ansible.builtin.set_fact:
-        ads_admin_role_id: "{{ admin_role_response.json | json_query('id') }}"
-
 - name: Get groups
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups"
@@ -125,7 +73,7 @@
     status_code: 200
   register: groups_response
 
-- name: Add ADS Admin role to group {{ item }}
+- name: Add ADS roles to group {{ item }}
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v2/groups/{{ groups_response.json | json_query(condition_query) | first }}"
     method: PATCH
@@ -134,7 +82,11 @@
     body_format: json
     body:
       add_role_identifiers:
-        - "{{ ads_admin_role_id }}"
+        - ads_deployment_spaces_manager
+        - ads_runtime_monitor
+        - ads_decision_manager
+        - ads_decision_user
+        - ads_platform_administrator
     validate_certs: false
     status_code:
       - 200
@@ -146,9 +98,9 @@
   with_items: "{{ lc_admin_groups }}"
 
 # Needed as group related permissions are updated only after first real login via browser
-- name: Add ADS Admin role to default admin user
+- name: Add ADS roles to default admin user and cpadminservice
   ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ lc_principal_admin_user }}?add_roles=true"
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ item }}?add_roles=true"
     method: PUT
     headers:
       Authorization: "Bearer {{ zen_token }}"
@@ -156,7 +108,11 @@
     body:
       username: "{{ item }}"
       user_roles:
-        - "{{ ads_admin_role_id }}"
+        - ads_deployment_spaces_manager
+        - ads_runtime_monitor
+        - ads_decision_manager
+        - ads_decision_user
+        - ads_platform_administrator
     validate_certs: false
     status_code:
       - 200
