@@ -59,9 +59,9 @@
   with_items: "{{ lc_admin_groups }}"
 
 # Needed as group related permissions are updated only after first real login via browser
-- name: Add all ODM roles to default admin user
+- name: Add all ODM roles to default admin user and cpadminservice
   ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ lc_principal_admin_user }}?add_roles=true"
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ item }}?add_roles=true"
     method: PUT
     headers:
       Authorization: "Bearer {{ zen_token }}"
@@ -79,7 +79,6 @@
   with_items:
     - cpadminservice
     - "{{ lc_principal_admin_user }}"
-
 
 - name: Add ODM regular roles to group {{ item }}
   ansible.builtin.uri:
