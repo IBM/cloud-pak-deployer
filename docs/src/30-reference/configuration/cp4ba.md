@@ -141,8 +141,11 @@ For your convenience the following post-deployment setup tasks have been automat
 - Workforce Insights - Connection setup. You just need to create WFI dashboard. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=secrets-creating-custom-bpc-workforce-secret
 - ADS - Nexus connection setup and all ADS plugins loaded.
 - ADS - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=gst-task-2-connecting-git-repository-sharing-decision-service
-- ADS - Automatic Git project connection https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=services-connecting-remote-repository-automatically
+- ADS - Automatic Git project connection. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=services-connecting-remote-repository-automatically
+- ADS - Roles assigned to users and groups. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=services-managing-user-permissions
+- ADS - Precreation of GenAI Secret. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=services-configuring-generative-ai-secret
 - ODM - Service user credentials automatically assigned to servers.
+- ODM - Roles assigned to users and groups. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=access-managing-user-permissions
 - ADP - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-setting-up-remote-git-organization
 - ADP - Default project data loaded. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-loading-default-sample-data
 - ADP - Git connection and CDD repo creation done. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-setting-up-remote-git-organization

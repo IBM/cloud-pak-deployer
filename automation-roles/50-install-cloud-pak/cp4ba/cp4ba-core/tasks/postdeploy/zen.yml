@@ -326,8 +326,10 @@
 
 - name: Find zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key']
+    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
       if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
+  vars:
+    regexp: 'the UI: (.*)'
 
 - name: Generate new Zen Api key
   when: zen_api_key | length == 0
