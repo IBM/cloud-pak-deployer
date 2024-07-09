@@ -7,6 +7,16 @@
 NODE_UPDATED=0
 NODE_FIX_DIR=/tmp/cloud-pak-node-fix
 
+mkdir -p ${NODE_FIX_DIR}/backup
+
+# If kubelet is active, backup the current config file, in case we need to restore them if the services don't start
+if systemctl is-active kubelet -q;then
+  cp -r /etc/kubernetes/kubelet.conf ${NODE_FIX_DIR}/backup/kubelet.conf-backup
+fi
+if systemctl is-active crio -q;then
+  cp -r /etc/crio/crio.conf ${NODE_FIX_DIR}/backup/crio.conf-backup
+fi
+
 # Set global pull secret for RHEL nodes
 if [ -e /.docker/config.json ];then
   if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
@@ -62,7 +72,7 @@ if ! cmp -s /tmp/registries.conf /etc/containers/registries.conf;then
 fi
 
 # Change kubelet.conf to allow Db2 pods to run with unsafe Sysctls
-if [ -e ${NODE_FIX_DIR}/cp4d-apply-kubelet-config.sh ];then 
+if [ -e ${NODE_FIX_DIR}/cp4d-apply-kubelet-config.sh ];then
   ${NODE_FIX_DIR}/cp4d-apply-kubelet-config.sh
   if ! cmp -s ${NODE_FIX_DIR}/config/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf;then
     cp -r ${NODE_FIX_DIR}/config/cp4d-kubelet.conf /etc/kubernetes/kubelet.conf
@@ -88,9 +98,24 @@ if [ -e ${NODE_FIX_DIR}/apply-custom-node-settings.sh ];then
 fi
 
 if [ $NODE_UPDATED -eq 1 ];then
-  echo "Restarting kubelet and crio daemons" >> /tmp/cloud-pak-node-fix.log
-  systemctl restart kubelet
-  systemctl restart crio
+  echo "Restarting kubelet daemon" >> /tmp/cloud-pak-node-fix.log
+  systemctl restart kubelet | tee -a /tmp/cloud-pak-node-fix.log
+  echo "Restarting crio daemon" >> /tmp/cloud-pak-node-fix.log
+  systemctl restart crio | tee -a /tmp/cloud-pak-node-fix.log
+  echo "Waiting for 30 seconds" >> /tmp/cloud-pak-node-fix.log
+  sleep 30
+fi
+
+if ! systemctl is-active kubelet -q;then
+  echo "ERROR with kubelet daemon, recovering backup configuration file and restarting" >> /tmp/cloud-pak-node-fix-errors.log
+  cp -r ${NODE_FIX_DIR}/backup/kubelet.conf-backup /etc/kubernetes/kubelet.conf 
+  systemctl restart kubelet | tee -a /tmp/cloud-pak-node-fix.log
+fi
+
+if ! systemctl is-active crio -q;then
+  echo "ERROR with crio daemon, recovering backup configuration file and restarting" >> /tmp/cloud-pak-node-fix-errors.log
+  cp -r ${NODE_FIX_DIR}/backup/crio.conf-backup /etc/crio/crio.conf
+  systemctl restart crio | tee -a /tmp/cloud-pak-node-fix.log
 fi
 
 echo "Finished checking node cloud-pak node settings" >> /tmp/cloud-pak-node-fix.log
