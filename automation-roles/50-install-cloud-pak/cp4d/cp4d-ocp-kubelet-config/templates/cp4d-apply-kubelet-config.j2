@@ -9,11 +9,10 @@ NODE_FIX_DIR=/tmp/cloud-pak-node-fix
 # Copy the current Kubelet config file
 cp -r /etc/kubernetes/kubelet.conf ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
 
-if ! grep -q -e "^allowedUnsafeSysctls:" /etc/kubernetes/kubelet.conf;then
-  echo "allowedUnsafeSystctls property not found in kubelet.conf, adding it"
-  echo -e "\n### Cloud Pak for Data configuration ###" >> ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
-  echo "allowedUnsafeSysctls:" >> ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
-  echo '  - "kernel.msg*"' >>  ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
-  echo '  - "kernel.shm*"' >>  ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
-  echo '  - "kernel.sem"' >>  ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
-fi
+export KUBECONFIG=/etc/kubernetes/kubeconfig
+oc patch --local=true --filename=/etc/kubernetes/kubelet.conf \
+  --dry-run=client \
+  --type=merge -o yaml --patch='{"allowedUnsafeSysctls": ["kernel.msg*","kernel.shm*","kernel.sem"]}' \
+  -o yaml > ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
+
+echo "aaa" >> ${NODE_FIX_DIR}/config/cp4d-kubelet.conf
