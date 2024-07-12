@@ -25,6 +25,31 @@
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
+- name: Generate OpenShift AI DSCInitialization {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml
+  template:
+    src: dscinitialization.j2
+    dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml"
+
+- name: Apply yaml for OpenShift AI DSCInitialization
+  shell: |
+    oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml
+
+- name: Wait until OpenShift AI DSCInitialization default-dsci is ready
+  shell: |
+     oc get DSCInitialization default-dsci \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i ready | wc -l
+  register: _openshift_ai_dsc_init_status
+  retries: 30
+  delay: 30
+  until: _openshift_ai_dsc_init_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
 - name: Generate OpenShift AI DataScienceCluster {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml
   template:
     src: datasciencecluster.j2
