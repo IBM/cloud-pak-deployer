@@ -159,6 +159,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
+- IPM - Prescriptive mining permissions assigned to admin user.
 
 ## Usage & operations 📇
 
