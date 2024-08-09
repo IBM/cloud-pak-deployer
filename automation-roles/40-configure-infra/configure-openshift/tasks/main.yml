@@ -21,6 +21,10 @@
   vars:
     _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
 
+# Patch OperatorHub to enable default sources in marketplace for ROKS clusters
+- include_tasks: ibm-cloud-enable-outbound-traffic.yml
+  when: cloud_platform == 'ibm-cloud'
+
 - name: Prepare storage for OpenShift cluster {{ current_openshift_cluster.name }}
   include_role:
     name: prepare-openshift-storage
