@@ -1,0 +1,15 @@
+---
+- name: Disable outbound traffic protection for ROKS cluster
+  shell: |
+    ibmcloud oc vpc outbound-traffic-protection disable --cluster {{ current_openshift_cluster.name }} -f
+
+- name: Get current state of OperatorHub disableAllDefaultSources
+  shell:
+    oc get operatorhub cluster -o jsonpath='{.spec.disableAllDefaultSources}'
+  register: _disableAllDefaultSources
+
+- name: Patch OperatorHub to enable default sources in marketplace for ROKS clusters
+  shell: |
+    oc patch OperatorHub cluster --type json -p '[{"op": "remove", "path": "/spec/disableAllDefaultSources"}]'
+  when: _disableAllDefaultSources.stdout != ''
+
