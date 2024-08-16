@@ -55,7 +55,7 @@ subjects:
 * Update the secret below with your container software Entitlement key from https://myibm.ibm.com/products-services/containerlibrary. Make sure the key is indented exactly as below.
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the follliwng block with **replaced YOUR_ENTITLEMENT_KEY**
+* Paste the following block with **replaced YOUR_ENTITLEMENT_KEY**
 ```
 ---
 apiVersion: v1
@@ -73,7 +73,7 @@ stringData:
 * Update the configuration below to match what you want to deploy, do not change indent
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the follliwng block (exactly into the window)
+* Paste the following block (exactly into the window)
 ```
 ---
 apiVersion: v1
