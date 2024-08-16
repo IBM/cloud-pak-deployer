@@ -6,7 +6,7 @@ Log is as a cluster administrator to be able to run the deployer with the correc
 ## Prepare the deployer project and the storage
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the follliwng block (exactly into the window)
+* Paste the following block (exactly into the window)
 ```
 ---
 apiVersion: v1
