@@ -52,7 +52,7 @@
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Pod
-    namespace: mssql
+    namespace: "{{ rpa_mssql_project }}"
     label_selectors:
       - app=mssql
   register: pods
@@ -61,7 +61,7 @@
 
 - name: Delete MSSQL DBs
   kubernetes.core.k8s_exec:
-    namespace: mssql
+    namespace: "{{ rpa_mssql_project }}"
     pod: "{{ pods.resources[0].metadata.name }}"
     command: >
       /opt/mssql-tools/bin/sqlcmd -S localhost -U SA -P "{{ rpa_universal_password }}" -Q
@@ -129,7 +129,7 @@
     api_version: v1alpha1
     kind: CatalogSource
     name: "{{ item }}"
-    namespace: openshift-marketplace
+    namespace: "{{ rpa_project_name }}"
     wait: true
   with_items:
     - ibm-robotic-process-automation-catalog

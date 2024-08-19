@@ -149,6 +149,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - ADP - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-setting-up-remote-git-organization
 - ADP - Default project data loaded. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-loading-default-sample-data
 - ADP - Git connection and CDD repo creation done. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-setting-up-remote-git-organization
+- ADP - More project DBs created (6 in total - accommodates 3 ADP projects). https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=processing-creating-additional-project-databases
 - IER - Task Manager pod has TM_JOB_URL parameter set.
 - IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
@@ -158,6 +159,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
+- IPM - Prescriptive mining permissions assigned to admin user.
 
 ## Usage & operations 📇
 

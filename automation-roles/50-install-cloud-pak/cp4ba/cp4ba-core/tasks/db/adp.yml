@@ -24,22 +24,29 @@
       EOF"
   register: command_status
 
-- name: ADP proj1 DB
+- name: ADP proj DBs
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create user proj1
-        CREATE ROLE proj1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user {{ item }}
+        CREATE ROLE {{ item }} WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database proj1
-        create database proj1 owner proj1 template template0 encoding UTF8;
-        revoke connect on database proj1 from public;
-        grant all privileges on database proj1 to proj1;
+        -- create database {{ item }}
+        create database {{ item }} owner {{ item }} template template0 encoding UTF8;
+        revoke connect on database {{ item }} from public;
+        grant all privileges on database {{ item }} to {{ item }};
       EOF"
   register: command_status
+  with_items:
+    - proj1
+    - proj2
+    - proj3
+    - proj4
+    - proj5
+    - proj6
 
 - name: ADP proj2 DB
   kubernetes.core.k8s_exec:
@@ -147,7 +154,7 @@
   retries: 5
   failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
 
-- name: ADP init proj1 DB
+- name: ADP init proj DBs
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: postgresql-0
@@ -158,7 +165,7 @@
       export db_port=5432;
       export db_server_for_ca={{ cp4ba_postgresql_hostname }};
       export db_port_for_ca=5432;
-      export db_adm_username=proj1;
+      export db_adm_username={{ item }};
       export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
       export db_adm_pwd_b64_encoded=0;
       export base_db_name=adpbase;
@@ -169,10 +176,10 @@
       export base_valid_user=1;
       export base_pwdconfirmed=1;
       export tenant_type=0;
-      export tenant_id=proj1;
-      export tenant_db_name=proj1;
-      export tenant_dsn_name=proj1;
-      export tenant_db_user=proj1;
+      export tenant_id={{ item }};
+      export tenant_db_name={{ item }};
+      export tenant_dsn_name={{ item }};
+      export tenant_db_user={{ item }};
       export user_already_defined=1;
       export tenant_pwdconfirmed=1;
       export tenant_db_pwd={{ cp4ba_postgresql_universal_password }};
@@ -188,45 +195,10 @@
   until: command_status.rc == 0
   retries: 5
   failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
-
-- name: ADP init proj2 DB
-  kubernetes.core.k8s_exec:
-    namespace: "{{ cp4ba_postgresql_project }}"
-    pod: postgresql-0
-    command: >
-      bash -c '
-      cd /tmp/_adp_tmp/PG;
-      export db_server={{ cp4ba_postgresql_hostname }};
-      export db_port=5432;
-      export db_server_for_ca={{ cp4ba_postgresql_hostname }};
-      export db_port_for_ca=5432;
-      export db_adm_username=proj2;
-      export db_adm_pwd={{ cp4ba_postgresql_universal_password }};
-      export db_adm_pwd_b64_encoded=0;
-      export base_db_name=adpbase;
-      export base_db_user=adpbase;
-      export base_db_pwd={{ cp4ba_postgresql_universal_password }};
-      export base_db_pwd_b64_encoded=0;
-      export base_user_already_defined=1;
-      export base_valid_user=1;
-      export base_pwdconfirmed=1;
-      export tenant_type=0;
-      export tenant_id=proj2;
-      export tenant_db_name=proj2;
-      export tenant_dsn_name=proj2;
-      export tenant_db_user=proj2;
-      export user_already_defined=1;
-      export tenant_pwdconfirmed=1;
-      export tenant_db_pwd={{ cp4ba_postgresql_universal_password }};
-      export tenant_db_pwd_b64_encoded=0;
-      export tenant_ontology=default;
-      export confirmation=y;
-      export ssl=No;
-      export table_space_already_defined=1;
-      export tablespace_name=pg_default;
-      ./InitTenantDB.sh;
-      '
-  register: command_status
-  until: command_status.rc == 0
-  retries: 5
-  failed_when: command_status.rc != 0 and (command_status.stderr + command_status.stdout) is not search('.*already exists.*')
+  with_items:
+    - proj1
+    - proj2
+    - proj3
+    - proj4
+    - proj5
+    - proj6
