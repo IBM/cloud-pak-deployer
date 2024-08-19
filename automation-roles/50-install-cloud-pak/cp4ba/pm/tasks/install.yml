@@ -244,6 +244,32 @@
     "users":[{"username":"{{ lc_principal_admin_user }}"}],"groups":[],"authorizations":[]}'
   changed_when: false
 
+- name: Get Prescriptive permission auths
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=70"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: perms_response
+
+# ansible.builtin.uri not working
+- name: Add Analysts Users group Prescriptive permission
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'authorization={"id":"","resource":{"type":"70"},
+    "ancestorResource":{"type":"11"},"type":"1","tenantId":"-1",
+    "subject":{"id":"{{ analysts_users_group_id }}","type":"group"},
+    "TargetResource":"allTenantResource","permissions":[{"id":"PPM_REPORT_CONFIG"},{"id":"PPM_REPORT_DELETE"}]}'
+  changed_when: false
+  when: perms_response.json | json_query("data.authorizations[?subject.id == '" + analysts_users_group_id + "']") | length == 0
+
 - name: Get TaskMiningAdmins group
   ansible.builtin.set_fact:
     tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
