@@ -115,57 +115,62 @@
     common_pg_password: "{{ im_pg_password }}"
   when: _current_cp4ba_cluster.cloudbeaver_enabled
 
-- name: Get BTS PostgreSQL secret
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    namespace: "{{ cp4ba_project_name }}"
-    name: "ibm-bts-cnpg-{{ cp4ba_project_name }}-cp4ba-bts-app"
-  register: bts_pg_secret
-  retries: 40
-  delay: 15
+- name: When BTS enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
+    _current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer or
+    _current_cp4ba_cluster.cp4ba.patterns.application.enabled
+  block:
+    - name: Get BTS PostgreSQL secret
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ cp4ba_project_name }}"
+        name: "ibm-bts-cnpg-{{ cp4ba_project_name }}-cp4ba-bts-app"
+      register: bts_pg_secret
+      retries: 40
+      delay: 15
 
-- name: Set BTS PosgreSQL password
-  ansible.builtin.set_fact:
-    bts_pg_password: "{{ bts_pg_secret.resources[0].data.password | b64decode }}"
+    - name: Set BTS PosgreSQL password
+      ansible.builtin.set_fact:
+        bts_pg_password: "{{ bts_pg_secret.resources[0].data.password | b64decode }}"
 
-- name: Add PG to cloudbeaver
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: cloudbeaver-add-pg
-  vars:
-    common_cloudbeaver_project: "{{ cp4ba_cloudbeaver_project }}"
-    common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
-    common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
-    common_cloudbeaver_connection_name: BTS PostgreSQL
-    common_pg_host: "ibm-bts-cnpg-{{ cp4ba_project_name }}-{{ cp4ba_project_name }}-bts-rw.{{ cp4ba_project_name }}.svc.cluster.local"
-    common_pg_port: "5432"
-    common_pg_username: postgresadmin
-    common_pg_password: "{{ bts_pg_password }}"
-  when: _current_cp4ba_cluster.cloudbeaver_enabled
+    - name: Add PG to cloudbeaver
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: cloudbeaver-add-pg
+      vars:
+        common_cloudbeaver_project: "{{ cp4ba_cloudbeaver_project }}"
+        common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
+        common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
+        common_cloudbeaver_connection_name: BTS PostgreSQL
+        common_pg_host: "ibm-bts-cnpg-{{ cp4ba_project_name }}-{{ cp4ba_project_name }}-bts-rw.{{ cp4ba_project_name }}.svc.cluster.local"
+        common_pg_port: "5432"
+        common_pg_username: postgresadmin
+        common_pg_password: "{{ bts_pg_password }}"
+      when: _current_cp4ba_cluster.cloudbeaver_enabled
 
-- name: Set usage entry for BTS
-  ansible.builtin.include_role:
-    name: usage
-    tasks_from: set-entry
-  vars:
-    usage_entry_name: CP4BA-CPFS-Business-Teams-Service-BTS
-    usage_entry_value:
-      "# Business Teams Service (BTS)
+    - name: Set usage entry for BTS
+      ansible.builtin.include_role:
+        name: usage
+        tasks_from: set-entry
+      vars:
+        usage_entry_name: CP4BA-CPFS-Business-Teams-Service-BTS
+        usage_entry_value:
+          "# Business Teams Service (BTS)
 
-      ## Endpoints
+          ## Endpoints
 
-      - Admin UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/ui
+          - Admin UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/ui
 
-      - API Explorer: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/api/explorer
+          - API Explorer: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/api/explorer
 
-      - Teams API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/rest
+          - Teams API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/rest
 
-      ## Credentials
+          ## Credentials
 
-      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+          - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-      "
+          "
 
 - name: Set usage entry for Zen
   ansible.builtin.include_role:
@@ -186,84 +191,88 @@
 
       "
 
-- name: Get OpenSearch password secret
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    namespace: "{{ cp4ba_project_name }}"
-    name: "opensearch-ibm-elasticsearch-cred-secret"
-  register: os_secret
-  retries: 40
-  delay: 15
-
-- name: Set OpenSearch password
-  ansible.builtin.set_fact:
-    os_password: "{{ os_secret.resources[0].data.elastic | b64decode }}"
-
-- name: Set usage entry for OpenSearch
-  ansible.builtin.include_role:
-    name: usage
-    tasks_from: set-entry
-  vars:
-    usage_entry_name: CP4BA-CPFS-OpenSearch
-    usage_entry_value:
-      "# OpenSearch
-
-      ## Endpoints
-
-      - OpenSearch: https://opensearch-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
-
-      ## Credentials
-
-      - elastic / {{ os_password }}
-
-      "
+- name: When OpenSearch is enabled
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  block:
+    - name: Get OpenSearch password secret
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ cp4ba_project_name }}"
+        name: "opensearch-ibm-elasticsearch-cred-secret"
+      register: os_secret
+      retries: 40
+      delay: 15
 
-- name: Get OpenSearch password secret
-  kubernetes.core.k8s_info:
-    api_version: v1
-    kind: Secret
-    namespace: "{{ cp4ba_project_name }}"
-    name: "icp4ba-kafka-auth-0"
-  register: kafka_secret
-  retries: 40
-  delay: 15
+    - name: Set OpenSearch password
+      ansible.builtin.set_fact:
+        os_password: "{{ os_secret.resources[0].data.elastic | b64decode }}"
 
-- name: Set OpenSearch password
-  ansible.builtin.set_fact:
-    kafka_password: "{{ kafka_secret.resources[0].data.password | b64decode }}"
+    - name: Set usage entry for OpenSearch
+      ansible.builtin.include_role:
+        name: usage
+        tasks_from: set-entry
+      vars:
+        usage_entry_name: CP4BA-CPFS-OpenSearch
+        usage_entry_value:
+          "# OpenSearch
 
-- name: Set usage entry for Kafka
-  ansible.builtin.include_role:
-    name: usage
-    tasks_from: set-entry
-  vars:
-    usage_entry_name: CP4BA-CPFS-Kafka
-    usage_entry_value:
-      "# Kafka
+          ## Endpoints
 
-      ## Endpoints
+          - OpenSearch: https://opensearch-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
 
-      - Kafka: iaf-system-kafka-bootstrap-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}:443
+          ## Credentials
 
-      ## Credentials
+          - elastic / {{ os_password }}
 
-      - icp4ba-kafka-auth-0 / {{ kafka_password }} (username: ```oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} \
-      -o jsonpath='{.status.username}'```, password: ```oc get secret -n {{ cp4ba_project_name }} \
-      $(oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} -o jsonpath='{.status.secret}') \
-      -o jsonpath='{.data.password}' | base64 -d```)
+          "
 
-      - Alternative custom user: cpadmin / {{ universal_password }}
-
-      ## Configuration for Kafka connection
-
-      - Security protocol: Sasl Ssl
-
-      - Sasl Mechanism: SCRAM-SHA-512
-
-      - Root CA cert (used in *Path to root CA certificates file*): \
-      ```oc get kafka iaf-system -n {{ cp4ba_project_name }} -o jsonpath='{.status.listeners[1].certificates[0]}'```
-
-      "
+- name: When Kafka is enabled
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  block:
+    - name: Get Kafka password secret
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Secret
+        namespace: "{{ cp4ba_project_name }}"
+        name: "icp4ba-kafka-auth-0"
+      register: kafka_secret
+      retries: 40
+      delay: 15
+
+    - name: Set Kafka password
+      ansible.builtin.set_fact:
+        kafka_password: "{{ kafka_secret.resources[0].data.password | b64decode }}"
+
+    - name: Set usage entry for Kafka
+      ansible.builtin.include_role:
+        name: usage
+        tasks_from: set-entry
+      vars:
+        usage_entry_name: CP4BA-CPFS-Kafka
+        usage_entry_value:
+          "# Kafka
+
+          ## Endpoints
+
+          - Kafka: iaf-system-kafka-bootstrap-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}:443
+
+          ## Credentials
+
+          - icp4ba-kafka-auth-0 / {{ kafka_password }} (username: ```oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} \
+          -o jsonpath='{.status.username}'```, password: ```oc get secret -n {{ cp4ba_project_name }} \
+          $(oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} -o jsonpath='{.status.secret}') \
+          -o jsonpath='{.data.password}' | base64 -d```)
+
+          - Alternative custom user: cpadmin / {{ universal_password }}
+
+          ## Configuration for Kafka connection
+
+          - Security protocol: Sasl Ssl
+
+          - Sasl Mechanism: SCRAM-SHA-512
+
+          - Root CA cert (used in *Path to root CA certificates file*): \
+          ```oc get kafka iaf-system -n {{ cp4ba_project_name }} -o jsonpath='{.status.listeners[1].certificates[0]}'```
+
+          "
