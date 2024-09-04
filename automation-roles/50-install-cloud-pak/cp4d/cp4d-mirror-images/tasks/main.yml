@@ -6,6 +6,12 @@
       - _p_target_registry_hostname is defined
       - _p_case_dir is defined
 
+- name: Run the entrypoint
+  shell:
+    /usr/local/bin/entrypoint > {{ status_dir }}/log/olm-utils-entrypoint.log 2>&1
+  async: 1500000
+  poll: 0
+
 - name: Get OpenShift cluster definition for Cloud Pak for Data cluster
   set_fact:
     _openshift_config: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
