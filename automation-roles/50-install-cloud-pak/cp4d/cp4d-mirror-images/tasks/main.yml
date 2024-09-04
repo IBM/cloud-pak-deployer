@@ -4,13 +4,6 @@
     that:
       - _p_current_cp4d_cluster is defined
       - _p_target_registry_hostname is defined
-      - _p_case_dir is defined
-
-- name: Run the entrypoint
-  shell:
-    /usr/local/bin/entrypoint > {{ status_dir }}/log/olm-utils-entrypoint.log 2>&1
-  async: 1500000
-  poll: 0
 
 - name: Get OpenShift cluster definition for Cloud Pak for Data cluster
   set_fact:
@@ -63,30 +56,28 @@
 
   when: _p_target_registry_hostname != _v_portable_registry
 
-- name: Start portable registry if specified for either source or target
-  block:
-  - name: Set target directory for portable registry to {{ status_dir }}/registry-storage
-    ansible.builtin.replace:
-      path: /opt/ansible/etc/registryv2-config.yml
-      regexp: 'rootdirectory: .*'
-      replace: 'rootdirectory: {{ status_dir }}/registry-storage'
+- name: Create {{ status_dir }}/work directory
+  file:
+    path: "{{ status_dir }}/work"
+    state: directory
 
-  - name: Start portable registry in the background
-    shell:
-      /opt/ansible/bin/start-registry > {{ status_dir }}/log/portable-registry.log 2>&1
-    async: 1500000
-    poll: 0
-    register: _portable_registry_job
+- name: Set target directory for portable registry to {{ status_dir }}/work/registry-storage
+  ansible.builtin.replace:
+    path: /opt/ansible/etc/registryv2-config.yml
+    regexp: 'rootdirectory: .*'
+    replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
 
-  - debug:
-      var: _portable_registry_job
+- name: Run the entrypoint, which will start the portable registry
+  shell:
+    /usr/local/bin/entrypoint > {{ status_dir }}/log/olm-utils-entrypoint.log 2>&1
+  async: 1500000
+  poll: 0
 
-  - name: Wait until portable registry is available at port 12443
-    wait_for:
-      host: "127.0.0.1"
-      port: 12443
-      timeout: 30
-  when: _p_target_registry_hostname == _v_portable_registry or (_p_source_registry_hostname | default('') == _v_portable_registry)
+- name: Wait until portable registry is available at port 12443
+  wait_for:
+    host: "127.0.0.1"
+    port: 12443
+    timeout: 30
 
 # TODO Remove temporary patching of yml file
 - block:
@@ -133,15 +124,15 @@
   failed_when: False
   register: _mirror_images
 
-- name: Remove {{ status_dir }}/cp4d/offline
+- name: Remove {{ status_dir }}/work/offline
   ansible.builtin.file:
-    path: "{{ status_dir }}/cp4d/offline"
+    path: "{{ status_dir }}/work/offline"
     state: absent
 
-- name: Copy mirror-images assets from /tmp/work/offline to {{ status_dir }}/cp4d/
+- name: Copy mirror-images assets from /tmp/work/offline to {{ status_dir }}/work/
   copy:
     src: /tmp/work/offline
-    dest: "{{ status_dir }}/cp4d/"
+    dest: "{{ status_dir }}/work/"
     remote_src: True
 
 - name: Stop script that mirrors log files
