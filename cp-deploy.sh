@@ -943,15 +943,15 @@ if [[ "${ACTION}" == "download" ]] && ! ${CHECK_ONLY};then
   echo "Saving Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG} into ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
   ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
 
-  echo "Removing old archives for olm-utils container image"
-  rm -f ${STATUS_DIR}/downloads/olm-utils-image.tar
-  echo "Saving container image ${CPD_OLM_UTILS_V1_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-image.tar"
-  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-image.tar ${CPD_OLM_UTILS_V1_IMAGE}
-
   echo "Removing old archives for olm-utils-v2 container image"
   rm -f ${STATUS_DIR}/downloads/olm-utils-v2-image.tar
   echo "Saving container image ${CPD_OLM_UTILS_V2_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-v2-image.tar"
   ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-v2-image.tar ${CPD_OLM_UTILS_V2_IMAGE}
+
+  echo "Removing old archives for olm-utils-v3 container image"
+  rm -f ${STATUS_DIR}/downloads/olm-utils-v3-image.tar
+  echo "Saving container image ${CPD_OLM_UTILS_V3_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-v3-image.tar"
+  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-v3-image.tar ${CPD_OLM_UTILS_V3_IMAGE}
 fi
 
 # Build command when not running inside container
