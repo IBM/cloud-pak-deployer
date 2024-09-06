@@ -107,7 +107,6 @@ data:
     - project: cpd
       openshift_cluster_name: cpd-demo
       cp4d_version: 4.8.1
-      sequential_install: False
       accept_licenses: True
       cartridges:
       - name: cp-foundation
