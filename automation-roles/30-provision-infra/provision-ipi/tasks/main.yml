@@ -49,16 +49,6 @@
   - set_fact:
       _vsphere_password: "{{ secret_value }}"
 
-  - name: Make sure the specified VM folder exists
-    community.vmware.vcenter_folder:
-      hostname: "{{ _vsphere_config.vcenter }}"
-      datacenter: "{{ _vsphere_config.datacenter }}"
-      folder_name:  "{{ _vsphere_config.folder | basename }}"
-      folder_type: vm
-      username: "{{ _vsphere_user }}"
-      password: "{{ _vsphere_password }}"
-      state: present
-
   - name: Add API address and oauth-openshift to /etc/hosts
     shell:
       grep -q "^{{ _current_openshift_cluster.api_vip }}" /etc/hosts || \
