@@ -55,8 +55,8 @@ subjects:
 * Update the secret below with your container software Entitlement key from https://myibm.ibm.com/products-services/containerlibrary. Make sure the key is indented exactly as below.
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block with **replaced YOUR_ENTITLEMENT_KEY**
-```
+* Paste the following block with **replaced YOUR_ENTITLEMENT_KEY** on line 10
+```yaml linenums="1" hl_lines="10"
 ---
 apiVersion: v1
 kind: Secret
@@ -387,8 +387,8 @@ data:
 ## Start the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block (exactly) into the window
-```
+* Paste the following block into the window. You can update the tag and/or image registry to a concrete tag on line 11. The same value will be used for image for the Deployer Job.
+```yaml linenums="1" hl_lines="11"
 apiVersion: v1
 kind: Pod
 metadata:
