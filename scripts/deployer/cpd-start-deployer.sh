@@ -42,10 +42,13 @@ fi
 oc delete job cloud-pak-deployer --ignore-not-found
 oc delete job cloud-pak-deployer-debug --ignore-not-found
 
+# Determine image
+IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
+
 # Start Cloud Pak Deployer jobs
 echo "Starting the deployer job..."
-oc apply -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-job.yaml
+oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
 
 # Start a debug job (sleep infinity) so that we can easily get access to the deployer logs
 echo "Starting the deployer debug job..."
-oc apply -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-debug-job.yaml
+oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-debug-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
