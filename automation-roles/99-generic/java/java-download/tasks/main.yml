@@ -9,19 +9,17 @@
     path: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
   register: _java_download
 
-- block:
-  - name: Download OpenJDK-9 from {{ _v_get_java }}
-    get_url:
-      url: "{{ _v_get_java }}"
-      dest: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
-      owner: root
-      mode: 0644
-    register: _download_java_result
-    until: _download_java_result is succeeded
-    retries: 5
-    delay: 10
-
-  when: not _java_download.stat.exists
+- name: Download OpenJDK-9 from {{ _v_get_java }}
+  get_url:
+    url: "{{ _v_get_java }}"
+    dest: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
+    owner: root
+    mode: 0644
+    force: True
+  register: _download_java_result
+  until: _download_java_result is succeeded
+  retries: 5
+  delay: 10
 
 - name: Unpack OpenJDK 9 package
   unarchive:
