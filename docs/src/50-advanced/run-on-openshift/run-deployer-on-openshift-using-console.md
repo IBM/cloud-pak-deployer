@@ -387,7 +387,7 @@ data:
 ## Start the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block into the window. You can update the tag and/or image registry to a concrete tag on line 11. The same value will be used for image for the Deployer Job.
+* Paste the following block into the window. You can update the image on line 11. The same value will be used for image for the Deployer Job.
 ```yaml linenums="1" hl_lines="11"
 apiVersion: v1
 kind: Pod
