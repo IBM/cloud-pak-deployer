@@ -61,6 +61,10 @@ cp4d:
 
   - name: datastage-ent-plus
     state: removed
+
+    # The default instance is created automatically with the DataStage installation. If you want to create additional instances
+    # uncomment the section below and specify the various scaling options.
+
     # instances:
     #   - name: ds-instance
     #     # Optional settings
