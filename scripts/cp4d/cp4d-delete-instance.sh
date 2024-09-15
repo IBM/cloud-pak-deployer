@@ -72,7 +72,7 @@ fi
 
 # Ask for final confirmation to delete the CP4D instance
 if [ -z "${CPD_CONFIRM_DELETE}" ];then
-    read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT} and Cloud Pak Foundational Services (y/N)? " -r
+    read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT}, operators project ${CP4D_PROJECT}-operators and Foundational Services (y/N)? " -r
     case "${REPLY}" in 
     y|Y)
     ;;
@@ -87,6 +87,9 @@ temp_dir=$(mktemp -d)
 
 oc get project ${CP4D_PROJECT} > /dev/null 2>&1
 if [ $? -eq 0 ];then
+
+    # Delete instance namespace at the beginning to avoid additional CRs being created
+    oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
 
     log "Getting Custom Resources in OpenShift project ${CP4D_PROJECT}..."
     oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verbs=list -o name | grep -E 'ibm|caikitruntimestacks' | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
@@ -140,10 +143,6 @@ if [ $? -eq 0 ];then
     #
     # Now the CP4D project should be empty and can be deleted, this may take a while (5-15 minutes)
     #
-    log "Deleting ${CP4D_PROJECT} namespace"
-    oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
-    wait_ns_deleted ${CP4D_PROJECT}
-    oc delete ns ${CP4D_PROJECT} --ignore-not-found --wait=false
     wait_ns_deleted ${CP4D_PROJECT}
 else
     echo "Project ${CP4D_PROJECT} does not exist, skipping"
