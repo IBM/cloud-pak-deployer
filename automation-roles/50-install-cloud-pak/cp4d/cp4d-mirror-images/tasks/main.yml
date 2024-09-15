@@ -19,6 +19,29 @@
 - include_role:
     name: cp4d-variables
 
+- name: Create {{ status_dir }}/work directory
+  file:
+    path: "{{ status_dir }}/work"
+    state: directory
+
+- name: Set target directory for portable registry to {{ status_dir }}/work/registry-storage
+  ansible.builtin.replace:
+    path: /opt/ansible/etc/registryv2-config.yml
+    regexp: 'rootdirectory: .*'
+    replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
+
+- name: Run the entrypoint, which will start the portable registry
+  shell:
+    /usr/local/bin/entrypoint > {{ status_dir }}/log/olm-utils-entrypoint.log 2>&1
+  async: 1500000
+  poll: 0
+
+- name: Wait until portable registry is available at port 12443
+  wait_for:
+    host: "127.0.0.1"
+    port: 12443
+    timeout: 30
+
 - name: Authenticate to the entitled registry if mirroring from entitled registry
   shell:
     login-entitled-registry {{ ibm_cp_entitlement_key }}
@@ -55,29 +78,6 @@
         "{{ _target_registry_password }}"
 
   when: _p_target_registry_hostname != _v_portable_registry
-
-- name: Create {{ status_dir }}/work directory
-  file:
-    path: "{{ status_dir }}/work"
-    state: directory
-
-- name: Set target directory for portable registry to {{ status_dir }}/work/registry-storage
-  ansible.builtin.replace:
-    path: /opt/ansible/etc/registryv2-config.yml
-    regexp: 'rootdirectory: .*'
-    replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
-
-- name: Run the entrypoint, which will start the portable registry
-  shell:
-    /usr/local/bin/entrypoint > {{ status_dir }}/log/olm-utils-entrypoint.log 2>&1
-  async: 1500000
-  poll: 0
-
-- name: Wait until portable registry is available at port 12443
-  wait_for:
-    host: "127.0.0.1"
-    port: 12443
-    timeout: 30
 
 # TODO Remove temporary patching of yml file
 - block:
