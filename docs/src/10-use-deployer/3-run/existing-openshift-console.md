@@ -110,7 +110,6 @@ data:
     - project: cpd
       openshift_cluster_name: cpd-demo
       cp4d_version: 5.0.1
-      sequential_install: True
       db2u_limited_privileges: False
       use_fs_iam: True
       accept_licenses: True
