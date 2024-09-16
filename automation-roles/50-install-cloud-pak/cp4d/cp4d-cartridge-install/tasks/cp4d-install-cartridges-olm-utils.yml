@@ -1,21 +1,4 @@
 ---
-- name: Install cartridges for CP4D cluster {{ _p_current_cp4d_cluster.project }} using OLM utils
-  debug:
-    msg: ""
-
-- set_fact:
-    _apply_cr_cartridges: >-
-      {{  _cartridges_to_install | 
-            rejectattr('olm_utils_name','==','scheduler') |
-            selectattr('separate_install','undefined') |
-            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
-
-- set_fact:
-    _apply_cr_cartridges_list: >-
-      {{  _apply_cr_cartridges | 
-            map(attribute='olm_utils_name') | 
-            join(',')}}
-
 - name: Run pre-processing scripts
   include_tasks: cp4d-install-cr-pre-processing.yml
   loop: "{{ _apply_cr_cartridges | default([]) }}"
