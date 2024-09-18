@@ -1,0 +1,24 @@
+---
+- name: Cloud Pak for Data cluster from previous configuration
+  debug:
+    var: _previous_cp4d_cluster
+
+- set_fact:
+    _configured_cp4d_cluster: {}
+
+- set_fact:
+    _configured_cp4d_cluster: "{{ all_config.cp4d | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?project=='{{ _previous_cp4d_cluster.project }}']
+  when: all_config.cp4d is defined
+
+- name: Matching Cloud Pak for Data cluster in the current configuration
+  debug:
+    var: _configured_cp4d_cluster
+
+- include_role:
+    name: cp4d-cluster-delete
+  vars:
+    _p_current_cp4d_cluster: "{{ _previous_cp4d_cluster }}"
+  when: _configured_cp4d_cluster == {}
