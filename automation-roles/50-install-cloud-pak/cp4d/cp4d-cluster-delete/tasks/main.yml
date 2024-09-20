@@ -1,19 +1,19 @@
 ---
+- name: Fail if destroy was not confirmed
+  fail:
+    msg: "Destroy of Cloud Pak for Data cluster {{ _p_current_cp4d_cluster.project }} was not confirmed with --confirm-destroy parameter or via global_config confirm_destroy property"
+  when:
+    - _confirm_destroy | bool != True
+
 - name: Login to the OpenShift cluster "{{ _p_current_cp4d_cluster.openshift_cluster_name }}"
   include_role:
     name: openshift-login
   vars:
     _p_openshift_cluster_name: "{{ _p_current_cp4d_cluster.openshift_cluster_name }}"
 
-- debug:
-    var: _p_current_cp4d_cluster
-
-- debug:
-    var: playbook_dir
-
 - name: Delete Cloud Pak for Data instance {{ _p_current_cp4d_cluster.project }} and its operators, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-destroy.log
   shell: |
     {{ playbook_dir }}/../scripts/cp4d/cp4d-delete-instance.sh {{ _p_current_cp4d_cluster.project }} | tee -a {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-destroy.log
   environment:
-    CPD_CONFIRM_DELETE: true
-    CPD_DESTROY_CLUSTER_WIDE: false
+    CPD_CONFIRM_DELETE: "true"
+    CPD_DESTROY_CLUSTER_WIDE: "false"
