@@ -11,10 +11,14 @@
   when: ARCH != 'x86_64'
   
 - include_tasks: cpd-cli-download.yml
-  when: (_github_ibm_pat | default('')) == ''
+  when:
+    - (_github_ibm_pat | default('')) == ''
+    - not (cpd_airgap | bool)
 
 - include_tasks: cpd-cli-download-github-pat.yml
-  when: (_github_ibm_pat | default('')) != ''
+  when:
+    - (_github_ibm_pat | default('')) != ''
+    - not (cpd_airgap | bool)
 
 - name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz
   unarchive:

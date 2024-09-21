@@ -94,11 +94,95 @@
       state: absent
   when: _p_current_cp4d_cluster.cp4d_version == '4.8.5'
 
+- name: Copy CASE packages from {{ status_dir }}/work/ to /tmp/work/offline (air-gapped scenario) 
+  copy:
+    src: "{{ status_dir }}/work/offline"
+    dest: /tmp/work/
+    remote_src: True
+  when: _p_source_registry_hostname | default('') == _v_portable_registry
+
 - name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
   template:
     src: mirror-images-copy-log-files.j2
     dest: "{{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh"
-    mode: u+rwx
+    mode: u+rwx   
+
+- name: Run script that copies mirror log files in background
+  shell: |
+    {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
+  async: 86400
+  poll: 0
+
+- name: Collect the cartridges to be mirrored
+  set_fact:
+    _cartridges_to_mirror_list: "{{ _cartridges_to_install_list }}"
+
+- block:
+  - name: Collect foundation models to be installed
+    set_fact:
+      _models_to_install: "{{ _cartridges_to_install | json_query(jsonquery) | selectattr('state','match','installed') | map(attribute='model_id') }}"
+    vars:
+      jsonquery: "[?olm_utils_name=='watsonx_ai'].models[]"
+
+  - block:
+    - name: Filter the list of cartriges to exclude watsonx_ai_ifm from regular mirroring
+      set_fact:
+        _cartridges_to_mirror_list: "{{ _cartridges_to_install | map(attribute='olm_utils_name') | reject('equalto', 'watsonx_ai_ifm') | join(',') }}"
+   
+    - name: Get the watsonx_ai_ifm case version
+      shell: yq ".release_components_meta.watsonx_ai_ifm.case_version" /opt/ansible/ansible-play/config-vars/release-{{ _p_current_cp4d_cluster.cp4d_version }}.yml
+      register: _watsonx_ai_ifm_case_version
+
+    - name: Find watsonx_ai_ifm images csv file
+      find:
+        paths: "{{ status_dir }}/work/offline/{{ _p_current_cp4d_cluster.cp4d_version }}/.ibm-pak/data/cases/ibm-watsonx-ai-ifm/{{ _watsonx_ai_ifm_case_version.stdout }}"
+        patterns: '*-images.csv'
+      register: _watsonx_ai_ifm_images_files
+
+    - name: Read watsonx_ai_ifm images csv file
+      read_csv:
+        path: "{{ (_watsonx_ai_ifm_images_files.files | first).path }}"
+        skipinitialspace: True
+      register: _watsonx_ai_ifm_images_json
+
+    - name: Initialize group list
+      set_fact:
+        _case_groups: []
+
+    - name: Collect case groups for models
+      set_fact:
+        _case_groups: "{{ _case_groups + _watsonx_ai_ifm_images_json.list | selectattr('image_name','search',item) | map(attribute='groups') | unique }}"
+      loop: "{{ _models_to_install }}"
+
+    - debug: var=_case_groups
+
+    - name: Create case group list
+      set_fact:
+        _case_group_list: "{{ _case_groups | join(',') }}"
+      
+    - name: Generate script to mirror foundation model images {{ _p_current_cp4d_cluster.project }}-mirror-model-images.sh
+      template:
+        src: mirror-model-images.j2
+        dest: "{{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.sh"
+        mode: u+rwx
+      vars:
+        _p_preview_script: False
+
+    - name: Show script that will mirror model images {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.sh
+      debug:
+        msg: "{{ lookup('file', status_dir + '/cp4d/' + _p_current_cp4d_cluster.project + '-mirror-model-images.sh' ) }}"
+
+    - name: Mirror model images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
+      shell: |
+        {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.sh
+      failed_when: False
+      register: _mirror_model_images
+    
+    when: _models_to_install | length > 0
+
+  when:
+    - _p_current_cp4d_cluster.cp4d_version >= '5.0.1'
+    - '"watsonx_ai" in _cartridges_to_install_list'  
 
 - name: Generate script to mirror images {{ _p_current_cp4d_cluster.project }}-mirror-images.sh
   template:
@@ -112,28 +196,26 @@
   debug:
     msg: "{{ lookup('file', status_dir + '/cp4d/' + _p_current_cp4d_cluster.project + '-mirror-images.sh' ) }}"
 
-- name: Run script that copies mirror log files in background
-  shell: |
-    {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
-  async: 86400
-  poll: 0
-
 - name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
   shell: |
     {{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images.sh
   failed_when: False
   register: _mirror_images
 
-- name: Remove {{ status_dir }}/work/offline
-  ansible.builtin.file:
-    path: "{{ status_dir }}/work/offline"
-    state: absent
+- block:
 
-- name: Copy mirror-images assets from /tmp/work/offline to {{ status_dir }}/work/
-  copy:
-    src: /tmp/work/offline
-    dest: "{{ status_dir }}/work/"
-    remote_src: True
+  - name: Remove {{ status_dir }}/work/offline
+    ansible.builtin.file:
+      path: "{{ status_dir }}/work/offline"
+      state: absent
+
+  - name: Copy mirror-images assets from /tmp/work/offline to {{ status_dir }}/work/
+    copy:
+      src: /tmp/work/offline
+      dest: "{{ status_dir }}/work/"
+      remote_src: True
+  
+  when: _p_source_registry_hostname | default('') != _v_portable_registry
 
 - name: Stop script that mirrors log files
   file:
@@ -150,4 +232,4 @@
 
 - fail:
     msg: Mirroring of images failed, check mirror*.log files in {{ status_dir }}/log for details
-  when: _mirror_images.rc != 0
+  when: _mirror_images.rc != 0 or (_mirror_model_images is defined and _mirror_model_images.rc != 0)
