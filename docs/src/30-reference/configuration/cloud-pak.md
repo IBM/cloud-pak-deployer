@@ -25,6 +25,7 @@ cp4d:
   openshift_storage_name: nfs-storage
   cp4d_entitlement: cpd-enterprise
   cp4d_production_license: True
+  state: installed
   
   cartridges:
   - name: cpfs
@@ -46,6 +47,7 @@ cp4d:
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
 | cp4d_entitlement | Set to `cpd-enterprise`, `cpd-standard`, `watsonx-data`, `watsonx-ai`, `watsonx-gov-model-management`, `watsonx-gov-risk-compliance`, dependent on the deployed license | No | cpd-enterprise (default), cpd-standard, watsonx-data, watsonx-ai, watsonx-gov-model-management, watsonx-gov-risk-compliance |
 | cp4d_production_license | Whether the Cloud Pak for Data is a production license | No | True (default), False |
+| state | Indicated whether Cloud Pak for Data must be installed or removed | No | installed (default), removed |
 | image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
 | openshift_storage_name | References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | No, inferred from openshift->openshift_storage | |
 | cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](../../../30-reference/configuration/cp4d-cartridges) for more details | Yes | |

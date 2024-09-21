@@ -1,0 +1,16 @@
+---
+- name: Retrieve previous configuration from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ environment_name }}-all-config"
+    secret_group: "{{ environment_name }}" 
+
+- set_fact:
+    _previous_all_config: "{{ secret_value }}"
+
+- name: Check if Cloud Pak for Data cluster must be removed
+  include_tasks: cp4d-cluster-check-delete.yml
+  loop: "{{ _previous_all_config.cp4d | default([]) }}"
+  loop_control:
+    loop_var: _previous_cp4d_cluster
