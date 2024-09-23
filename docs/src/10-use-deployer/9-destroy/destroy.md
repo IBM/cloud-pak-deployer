@@ -1,11 +1,24 @@
 # Destroy the created resources
 
-If you have previously used the Cloud Pak Deployer to create assets on IBM Cloud, AWS or Azure, you can destroy the assets with the same command.
+If you have previously used the Cloud Pak Deployer to create assets, you can destroy the assets with the same command.
 
 !!! info
-    Currently, destroy is only implemented for IBM Cloud ROKS, AWS and Azure ARO, not for other cloud platforms.
+    Currently, destroy is only implemented for OpenShift clusters on IBM Cloud ROKS, AWS and Azure, and for Cloud Pak for Data on an existing OpenShift cluster.
 
 ## Prepare for destroy
+
+### Prepare for destroy on existing OpenShift
+
+#### Set environment variables for existing OpenShift
+
+Optional: set environment variables for deployer config and status directories. If not specified, respectively `$HOME/cpd-config` and `$HOME/cpd-status` will be used.
+```
+export STATUS_DIR=$HOME/cpd-status
+export CONFIG_DIR=$HOME/cpd-config
+```
+
+- `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and log files. **Please note** that if you have chosen to use a File Vault, the directory specified must be the one you used when you created the environment
+- `CONFIG_DIR`: Directory that holds the configuration. This must be the same directory you used when you created the environment
 
 ### Prepare for destroy on IBM Cloud
 

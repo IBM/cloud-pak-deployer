@@ -1,0 +1,75 @@
+---
+- name: Switch to the correct olm-utils version
+  include_role:
+    name: cp4d-switch-olm-utils
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
+- include_role:
+    name: cp4d-variables
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
+- set_fact:
+    _cpd_accept_licenses: "False"
+
+- set_fact:
+    _cpd_accept_licenses: "True"
+  when: (cpd_accept_licenses | default(False) | bool) or (current_cp4d_cluster.accept_licenses | default(False) | bool)
+
+- debug:
+    var: _cpd_accept_licenses
+
+- name: Fail if licenses were not accepted
+  fail:
+    msg: "You must accept the licenses, either in the cp4d object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
+  when: 
+  - not (cpd_accept_licenses | default(False) | bool)
+  - not (current_cp4d_cluster.accept_licenses | default(False) | bool)
+
+- set_fact:
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
+
+- name: Login to the OpenShift cluster "{{ current_cp4d_cluster.openshift_cluster_name }}"
+  include_role:
+    name: openshift-login
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+
+- name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.openshift_storage_name }}
+  include_role: 
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ current_cp4d_cluster.openshift_storage_name }}"  
+
+- name: Ensure the status log folder exists
+  file:
+    path: "{{status_dir}}/log"
+    state: directory
+
+- name: Logging state of cartridges in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-cartridge-state.log
+  shell: |
+    {{ role_path }}/files/cp4d-log-services-installed.sh \
+      {{ status_dir }} \
+      {{ current_cp4d_cluster.project }}
+  async: 86400
+  poll: 0
+  register: _log_services
+
+- name: Show details of background task to log cartridge state
+  debug:
+    var: _log_services
+
+- name: Prepare OpenShift cluster for Cloud Pak for Data
+  include_role:
+    name: cp4d-prepare-openshift
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+  when: ( current_cp4d_cluster.change_node_settings | default(True) | bool )
+
+- include_tasks: install-cp4d.yml
+  when: not (cpd_skip_cp_install | bool)

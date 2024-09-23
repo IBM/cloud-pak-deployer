@@ -1,16 +1,19 @@
 ---
-- name: Retrieve previous configuration from the vault
-  include_role: 
-    name: vault-get-secret
+- name: Fail if destroy was not confirmed
+  fail:
+    msg: "Destroy of Cloud Pak for Data cluster {{ _p_current_cp4d_cluster.project }} was not confirmed with --confirm-destroy parameter or via global_config confirm_destroy property"
+  when:
+    - _confirm_destroy | bool != True
+
+- name: Login to the OpenShift cluster "{{ _p_current_cp4d_cluster.openshift_cluster_name }}"
+  include_role:
+    name: openshift-login
   vars:
-    secret_name: "{{ environment_name }}-all-config"
-    secret_group: "{{ environment_name }}" 
+    _p_openshift_cluster_name: "{{ _p_current_cp4d_cluster.openshift_cluster_name }}"
 
-- set_fact:
-    _previous_all_config: "{{ secret_value }}"
-
-- name: Check if Cloud Pak for Data cluster must be removed
-  include_tasks: cp4d-cluster-check-delete.yml
-  loop: "{{ _previous_all_config.cp4d | default([]) }}"
-  loop_control:
-    loop_var: _previous_cp4d_cluster
+- name: Delete Cloud Pak for Data instance {{ _p_current_cp4d_cluster.project }} and its operators, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-destroy.log
+  shell: |
+    {{ playbook_dir }}/../scripts/cp4d/cp4d-delete-instance.sh {{ _p_current_cp4d_cluster.project }} | tee -a {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-destroy.log
+  environment:
+    CPD_CONFIRM_DELETE: "true"
+    CPD_DESTROY_CLUSTER_WIDE: "false"
