@@ -1,0 +1,500 @@
+<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Automated deployer of OpenShift cluster and IBM Cloud Paks"><meta name=author content=Author><link href=https://ibm.github.io/cloud-pak-deployer/10-use-deployer/3-run/existing-openshift-console/ rel=canonical><link rel=icon href=../../../assets/images/favicon.png><meta name=generator content="mkdocs-1.3.1, mkdocs-material-8.5.3"><title>Existing OpenShift using Console - Cloud Pak Deployer</title><link rel=stylesheet href=../../../assets/stylesheets/main.7a952b86.min.css><link rel=stylesheet href=../../../assets/stylesheets/palette.cbb835fc.min.css><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style><link rel=stylesheet href=../../../css/extra.css><script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr data-md-color-scheme data-md-color-primary=none data-md-color-accent=none> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> <a href=#running-deployer-on-openshift-using-console class=md-skip> Skip to content </a> </div> <div data-md-component=announce> </div> <header class=md-header data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../../.. title="Cloud Pak Deployer" class="md-header__button md-logo" aria-label="Cloud Pak Deployer" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> Cloud Pak Deployer </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> Existing OpenShift using Console </span> </div> </div> </div> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/IBM/cloud-pak-deployer title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg> </div> <div class=md-source__repository> Cloud Pak Deployer </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../../.. title="Cloud Pak Deployer" class="md-nav__button md-logo" aria-label="Cloud Pak Deployer" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54Z"/></svg> </a> Cloud Pak Deployer </label> <div class=md-nav__source> <a href=https://github.com/IBM/cloud-pak-deployer title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 6.2.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2022 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg> </div> <div class=md-source__repository> Cloud Pak Deployer </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../.. class=md-nav__link> Home </a> </li> <li class=md-nav__item> <a href=../../../01-introduction/current-state/ class=md-nav__link> Current state </a> </li> <li class=md-nav__item> <a href=../../../05-install/install/ class=md-nav__link> Installing Cloud Pak Deployer </a> </li> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_4 type=checkbox id=__nav_4 checked> <label class=md-nav__link for=__nav_4> Using Cloud Pak Deployer <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Using Cloud Pak Deployer" data-md-level=1> <label class=md-nav__title for=__nav_4> <span class="md-nav__icon md-icon"></span> Using Cloud Pak Deployer </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../1-overview/overview/ class=md-nav__link> Overview </a> </li> <li class="md-nav__item md-nav__item--active md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_4_2 type=checkbox id=__nav_4_2 checked> <label class=md-nav__link for=__nav_4_2> Run <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Run data-md-level=2> <label class=md-nav__title for=__nav_4_2> <span class="md-nav__icon md-icon"></span> Run </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../run/ class=md-nav__link> Running Cloud Pak Deployer </a> </li> <li class=md-nav__item> <a href=../existing-openshift/ class=md-nav__link> Existing OpenShift </a> </li> <li class="md-nav__item md-nav__item--active"> <input class="md-nav__toggle md-toggle" data-md-toggle=toc type=checkbox id=__toc> <label class="md-nav__link md-nav__link--active" for=__toc> Existing OpenShift using Console <span class="md-nav__icon md-icon"></span> </label> <a href=./ class="md-nav__link md-nav__link--active"> Existing OpenShift using Console </a> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#log-in-to-the-openshift-cluster class=md-nav__link> Log in to the OpenShift cluster </a> </li> <li class=md-nav__item> <a href=#prepare-the-deployer-project class=md-nav__link> Prepare the deployer Project </a> </li> <li class=md-nav__item> <a href=#set-the-entitlement-key class=md-nav__link> Set the entitlement key </a> </li> <li class=md-nav__item> <a href=#configure-the-cloud-paks-and-services-to-be-deployed class=md-nav__link> Configure the Cloud Paks and services to be deployed </a> </li> <li class=md-nav__item> <a href=#start-the-deployer class=md-nav__link> Start the deployer </a> </li> <li class=md-nav__item> <a href=#follow-the-logs-of-the-deployment class=md-nav__link> Follow the logs of the deployment </a> </li> <li class=md-nav__item> <a href=#re-run-deployer-when-failed-or-if-you-want-to-update-the-configuration class=md-nav__link> Re-run deployer when failed or if you want to update the configuration </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../ibm-cloud/ class=md-nav__link> IBM Cloud </a> </li> <li class=md-nav__item> <a href=../aws-rosa/ class=md-nav__link> AWS ROSA </a> </li> <li class=md-nav__item> <a href=../aws-self-managed/ class=md-nav__link> AWS Self-managed </a> </li> <li class=md-nav__item> <a href=../azure-aro/ class=md-nav__link> Azure ARO </a> </li> <li class=md-nav__item> <a href=../azure-self-managed/ class=md-nav__link> Azure Self-managed </a> </li> <li class=md-nav__item> <a href=../vsphere/ class=md-nav__link> vSphere </a> </li> <li class=md-nav__item> <a href=../fusion-hci/ class=md-nav__link> Spectrum HCI </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_4_3 type=checkbox id=__nav_4_3> <label class=md-nav__link for=__nav_4_3> Post-run <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Post-run data-md-level=2> <label class=md-nav__title for=__nav_4_3> <span class="md-nav__icon md-icon"></span> Post-run </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../5-post-run/post-run/ class=md-nav__link> Post-run changes </a> </li> <li class=md-nav__item> <a href=../../7-command/command/ class=md-nav__link> Running commands </a> </li> <li class=md-nav__item> <a href=../../9-destroy/destroy/ class=md-nav__link> Destroy cluster </a> </li> </ul> </nav> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5 type=checkbox id=__nav_5> <label class=md-nav__link for=__nav_5> Reference <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Reference data-md-level=1> <label class=md-nav__title for=__nav_5> <span class="md-nav__icon md-icon"></span> Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1 type=checkbox id=__nav_5_1> <label class=md-nav__link for=__nav_5_1> Configuration <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Configuration data-md-level=2> <label class=md-nav__title for=__nav_5_1> <span class="md-nav__icon md-icon"></span> Configuration </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/topologies/ class=md-nav__link> Topologies </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cpd-objects/ class=md-nav__link> Objects overview </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cpd-global-config/ class=md-nav__link> Global config </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/vault/ class=md-nav__link> Vault </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/infrastructure/ class=md-nav__link> Infrastructure </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1_6 type=checkbox id=__nav_5_1_6> <label class=md-nav__link for=__nav_5_1_6> OpenShift <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=OpenShift data-md-level=3> <label class=md-nav__title for=__nav_5_1_6> <span class="md-nav__icon md-icon"></span> OpenShift </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/openshift/ class=md-nav__link> OpenShift </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1_6_2 type=checkbox id=__nav_5_1_6_2> <label class=md-nav__link for=__nav_5_1_6_2> Identity and Access Management <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Identity and Access Management" data-md-level=4> <label class=md-nav__title for=__nav_5_1_6_2> <span class="md-nav__icon md-icon"></span> Identity and Access Management </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/redhat-sso/ class=md-nav__link> Red Hat SSO </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/demo-openldap/ class=md-nav__link> Demo OpenLDAP </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> Monitoring </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> Logging and auditing </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/dns/ class=md-nav__link> DNS </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cloud-pak/ class=md-nav__link> Cloud Paks </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_1_8 type=checkbox id=__nav_5_1_8> <label class=md-nav__link for=__nav_5_1_8> Cloud Pak for Data <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Cloud Pak for Data" data-md-level=3> <label class=md-nav__title for=__nav_5_1_8> <span class="md-nav__icon md-icon"></span> Cloud Pak for Data </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-cartridges/ class=md-nav__link> Cartridges </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-instances/ class=md-nav__link> Instances </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-connections/ class=md-nav__link> Platform connections </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-access-control/ class=md-nav__link> Access Control </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-assets/ class=md-nav__link> Assets </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> Monitoring </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/logging-auditing/ class=md-nav__link> Logging and auditing </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4ba/ class=md-nav__link> Cloud Pak for Business Automation </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/private-registry/ class=md-nav__link> Private registries </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_5_2 type=checkbox id=__nav_5_2> <label class=md-nav__link for=__nav_5_2> Process <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Process data-md-level=2> <label class=md-nav__title for=__nav_5_2> <span class="md-nav__icon md-icon"></span> Process </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/process/overview/ class=md-nav__link> Overview </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/validate/ class=md-nav__link> Validate </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/prepare/ class=md-nav__link> Prepare </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/provision-infra/ class=md-nav__link> Provision infra </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/configure-infra/ class=md-nav__link> Configure infra </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/install-cloud-pak/ class=md-nav__link> Install Cloud Paks </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/configure-cloud-pak/ class=md-nav__link> Configure Cloud Paks </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/deploy-assets/ class=md-nav__link> Deploy assets </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/smoke-tests/ class=md-nav__link> Smoke tests </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/timings/ class=md-nav__link> Timings </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_6 type=checkbox id=__nav_6> <label class=md-nav__link for=__nav_6> Troubleshooting <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Troubleshooting data-md-level=1> <label class=md-nav__title for=__nav_6> <span class="md-nav__icon md-icon"></span> Troubleshooting </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../40-troubleshooting/cp4d-uninstall/ class=md-nav__link> Cloud Pak for Data uninstall </a> </li> <li class=md-nav__item> <a href=../../../40-troubleshooting/ibm-cloud-access-nfs-server/ class=md-nav__link> Access NFS server on IBM Cloud </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_7 type=checkbox id=__nav_7> <label class=md-nav__link for=__nav_7> Advanced <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Advanced data-md-level=1> <label class=md-nav__title for=__nav_7> <span class="md-nav__icon md-icon"></span> Advanced </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_7_1 type=checkbox id=__nav_7_1> <label class=md-nav__link for=__nav_7_1> Run on OpenShift <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label="Run on OpenShift" data-md-level=2> <label class=md-nav__title for=__nav_7_1> <span class="md-nav__icon md-icon"></span> Run on OpenShift </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../50-advanced/run-on-openshift/run-deployer-on-openshift-using-console/ class=md-nav__link> Running deployer on OpenShift using console </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/run-on-openshift/build-image-and-run-deployer-on-openshift/ class=md-nav__link> Build image and run deployer on OpenShift </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/run-on-openshift/run-deployer-wizard-on-openshift/ class=md-nav__link> Run deployer wizard on OpenShift </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../50-advanced/private-registry-and-air-gapped/ class=md-nav__link> Private registry and air-gapped </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/alternative-repo-reg/ class=md-nav__link> Using alternative CASE repositories and registries </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/advanced-configuration/ class=md-nav__link> Advanced configuration </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/locations-to-whitelist/ class=md-nav__link> Locations to whitelist </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/apply-node-settings-non-mco/ class=md-nav__link> Apply node settings to non-MCO clusters </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/cp4d-pre-release/ class=md-nav__link> Installing pre-releases of Cloud Pak for DAta </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/gitops/ class=md-nav__link> GitOps </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle" data-md-toggle=__nav_8 type=checkbox id=__nav_8> <label class=md-nav__link for=__nav_8> Development <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav aria-label=Development data-md-level=1> <label class=md-nav__title for=__nav_8> <span class="md-nav__icon md-icon"></span> Development </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../80-development/deployer-development-setup/ class=md-nav__link> Deployer development setup </a> </li> <li class=md-nav__item> <a href=../../../80-development/doc-development-setup/ class=md-nav__link> Deployer documentation development setup </a> </li> <li class=md-nav__item> <a href=../../../80-development/doc-guidelines/ class=md-nav__link> Deployer documentation guidelines </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class="md-sidebar md-sidebar--secondary" data-md-component=sidebar data-md-type=toc> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> <label class=md-nav__title for=__toc> <span class="md-nav__icon md-icon"></span> Table of contents </label> <ul class=md-nav__list data-md-component=toc data-md-scrollfix> <li class=md-nav__item> <a href=#log-in-to-the-openshift-cluster class=md-nav__link> Log in to the OpenShift cluster </a> </li> <li class=md-nav__item> <a href=#prepare-the-deployer-project class=md-nav__link> Prepare the deployer Project </a> </li> <li class=md-nav__item> <a href=#set-the-entitlement-key class=md-nav__link> Set the entitlement key </a> </li> <li class=md-nav__item> <a href=#configure-the-cloud-paks-and-services-to-be-deployed class=md-nav__link> Configure the Cloud Paks and services to be deployed </a> </li> <li class=md-nav__item> <a href=#start-the-deployer class=md-nav__link> Start the deployer </a> </li> <li class=md-nav__item> <a href=#follow-the-logs-of-the-deployment class=md-nav__link> Follow the logs of the deployment </a> </li> <li class=md-nav__item> <a href=#re-run-deployer-when-failed-or-if-you-want-to-update-the-configuration class=md-nav__link> Re-run deployer when failed or if you want to update the configuration </a> </li> </ul> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <article class="md-content__inner md-typeset"> <a href=https://github.com/IBM/cloud-pak-deployer/edit/main/docs/10-use-deployer/3-run/existing-openshift-console.md title="Edit this page" class="md-content__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20.71 7.04c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.37-.39-1.02-.39-1.41 0l-1.84 1.83 3.75 3.75M3 17.25V21h3.75L17.81 9.93l-3.75-3.75L3 17.25Z"/></svg> </a> <h1 id=running-deployer-on-openshift-using-console>Running deployer on OpenShift using console<a class=headerlink href=#running-deployer-on-openshift-using-console title="Permanent link">🔗</a></h1> <p>See the deployer in action deploying IBM watsonx.ai on an existing OpenShift cluster in this video: <a href=https://ibm.box.com/v/cpd-wxai-existing-ocp>https://ibm.box.com/v/cpd-wxai-existing-ocp</a></p> <h2 id=log-in-to-the-openshift-cluster>Log in to the OpenShift cluster<a class=headerlink href=#log-in-to-the-openshift-cluster title="Permanent link">🔗</a></h2> <p>Log in as a cluster administrator to be able to run the deployer with the correct permissions.</p> <h2 id=prepare-the-deployer-project>Prepare the deployer Project<a class=headerlink href=#prepare-the-deployer-project title="Permanent link">🔗</a></h2> <ul> <li>Go to the OpenShift console</li> <li>Click the "+" sign at the top of the page</li> <li>Paste the following block (exactly) into the window <div class=highlight><pre><span></span><code><span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">Namespace</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>creationTimestamp</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">null</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ServiceAccount</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-sa</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io/v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">RoleBinding</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">system:openshift:scc:privileged</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nt>roleRef</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>apiGroup</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io</span>
+<span class=w>  </span><span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ClusterRole</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">system:openshift:scc:privileged</span>
+<span class=nt>subjects</span><span class=p>:</span>
+<span class="p p-Indicator">-</span><span class=w> </span><span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ServiceAccount</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-sa</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io/v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ClusterRoleBinding</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-cluster-admin</span>
+<span class=nt>roleRef</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>apiGroup</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">rbac.authorization.k8s.io</span>
+<span class=w>  </span><span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ClusterRole</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cluster-admin</span>
+<span class=nt>subjects</span><span class=p>:</span>
+<span class="p p-Indicator">-</span><span class=w> </span><span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ServiceAccount</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-sa</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+</code></pre></div></li> </ul> <h2 id=set-the-entitlement-key>Set the entitlement key<a class=headerlink href=#set-the-entitlement-key title="Permanent link">🔗</a></h2> <ul> <li>Update the secret below with your container software Entitlement key from <a href=https://myibm.ibm.com/products-services/containerlibrary>https://myibm.ibm.com/products-services/containerlibrary</a>. Make sure the key is indented exactly as below.</li> <li>Go to the OpenShift console</li> <li>Click the "+" sign at the top of the page</li> <li>Paste the following block with <strong>replaced YOUR_ENTITLEMENT_KEY</strong> on line 10 <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 1</span>
+<span class=normal> 2</span>
+<span class=normal> 3</span>
+<span class=normal> 4</span>
+<span class=normal> 5</span>
+<span class=normal> 6</span>
+<span class=normal> 7</span>
+<span class=normal> 8</span>
+<span class=normal> 9</span>
+<span class=normal>10</span></pre></div></td><td class=code><div><pre><span></span><code><span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">Secret</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-entitlement-key</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nt>type</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">Opaque</span>
+<span class=nt>stringData</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>cp-entitlement-key</span><span class=p>:</span><span class=w> </span><span class="p p-Indicator">|</span>
+<span class=hll><span class=w>    </span><span class=no>YOUR_ENTITLEMENT_KEY</span>
+</span></code></pre></div></td></tr></table></div></li> </ul> <h2 id=configure-the-cloud-paks-and-services-to-be-deployed>Configure the Cloud Paks and services to be deployed<a class=headerlink href=#configure-the-cloud-paks-and-services-to-be-deployed title="Permanent link">🔗</a></h2> <ul> <li>Update the configuration below to match what you want to deploy, do not change indent</li> <li>Go to the OpenShift console</li> <li>Click the "+" sign at the top of the page</li> <li>Paste the following block (exactly into the window) <div class=highlight><pre><span></span><code><span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ConfigMap</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-config</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nt>data</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>cpd-config.yaml</span><span class=p>:</span><span class=w> </span><span class="p p-Indicator">|</span>
+<span class=w>    </span><span class=no>global_config:</span>
+<span class=w>      </span><span class=no>environment_name: demo</span>
+<span class=w>      </span><span class=no>cloud_platform: existing-ocp</span>
+<span class=w>      </span><span class=no>confirm_destroy: False</span>
+
+<span class=w>    </span><span class=no>openshift:</span>
+<span class=w>    </span><span class=no>- name: cpd-demo</span>
+<span class=w>      </span><span class=no>ocp_version: &quot;4.15&quot;</span>
+<span class=w>      </span><span class=no>cluster_name: cpd-demo</span>
+<span class=w>      </span><span class=no>domain_name: example.com</span>
+<span class=w>      </span><span class=no>mcg:</span>
+<span class=w>        </span><span class=no>install: False</span>
+<span class=w>        </span><span class=no>storage_type: storage-class</span>
+<span class=w>        </span><span class=no>storage_class: managed-nfs-storage</span>
+<span class=w>      </span><span class=no>gpu:</span>
+<span class=w>        </span><span class=no>install: False</span>
+<span class=w>      </span><span class=no>openshift_ai:</span>
+<span class=w>        </span><span class=no>install: False</span>
+<span class=w>        </span><span class=no>channel: eus-2.8</span>
+<span class=w>      </span><span class=no>openshift_storage:</span>
+<span class=w>      </span><span class=no>- storage_name: auto-storage</span>
+<span class=w>        </span><span class=no>storage_type: auto</span>
+
+<span class=w>    </span><span class=no>cp4d:</span>
+<span class=w>    </span><span class=no>- project: cpd</span>
+<span class=w>      </span><span class=no>openshift_cluster_name: cpd-demo</span>
+<span class=w>      </span><span class=no>cp4d_version: 5.0.1</span>
+<span class=w>      </span><span class=no>db2u_limited_privileges: False</span>
+<span class=w>      </span><span class=no>use_fs_iam: True</span>
+<span class=w>      </span><span class=no>accept_licenses: True</span>
+<span class=w>      </span><span class=no>cartridges:</span>
+<span class=w>      </span><span class=no>- name: cp-foundation</span>
+<span class=w>        </span><span class=no>license_service:</span>
+<span class=w>          </span><span class=no>state: disabled</span>
+<span class=w>          </span><span class=no>threads_per_core: 2</span>
+<span class=w>    </span><span class=no>  </span>
+<span class=w>      </span><span class=no>- name: lite</span>
+
+<span class=w>      </span><span class=no>- name: scheduler </span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span><span class=no>    </span>
+<span class=w>      </span><span class=no>- name: analyticsengine </span>
+<span class=w>        </span><span class=no>description: Analytics Engine Powered by Apache Spark </span>
+<span class=w>        </span><span class=no>size: small </span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: bigsql</span>
+<span class=w>        </span><span class=no>description: Db2 Big SQL</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: ca</span>
+<span class=w>        </span><span class=no>description: Cognos Analytics</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: ca-instance</span>
+<span class=w>          </span><span class=no>metastore_ref: ca-metastore</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: dashboard</span>
+<span class=w>        </span><span class=no>description: Cognos Dashboards</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: datagate</span>
+<span class=w>        </span><span class=no>description: Db2 Data Gate</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: dataproduct</span>
+<span class=w>        </span><span class=no>description: Data Product Hub</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span><span class=no>    </span>
+<span class=w>      </span><span class=no>- name: datastage-ent</span>
+<span class=w>        </span><span class=no>description: DataStage Enterprise</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: datastage-ent-plus</span>
+<span class=w>        </span><span class=no>description: DataStage Enterprise Plus</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>        </span><span class=no># The default instance is created automatically with the DataStage installation. If you want to create additional instances</span>
+<span class=w>        </span><span class=no># uncomment the section below and specify the various scaling options.</span>
+
+<span class=w>        </span><span class=no># instances:</span>
+<span class=w>        </span><span class=no>#   - name: ds-instance</span>
+<span class=w>        </span><span class=no>#     # Optional settings</span>
+<span class=w>        </span><span class=no>#     description: &quot;datastage ds-instance&quot;</span>
+<span class=w>        </span><span class=no>#     size: medium</span>
+<span class=w>        </span><span class=no>#     storage_class: efs-nfs-client</span>
+<span class=w>        </span><span class=no>#     storage_size_gb: 60</span>
+<span class=w>        </span><span class=no>#     # Custom Scale options</span>
+<span class=w>        </span><span class=no>#     scale_px_runtime:</span>
+<span class=w>        </span><span class=no>#       replicas: 2</span>
+<span class=w>        </span><span class=no>#       cpu_request: 500m</span>
+<span class=w>        </span><span class=no>#       cpu_limit: 2</span>
+<span class=w>        </span><span class=no>#       memory_request: 2Gi</span>
+<span class=w>        </span><span class=no>#       memory_limit: 4Gi</span>
+<span class=w>        </span><span class=no>#     scale_px_compute:</span>
+<span class=w>        </span><span class=no>#       replicas: 2</span>
+<span class=w>        </span><span class=no>#       cpu_request: 1</span>
+<span class=w>        </span><span class=no>#       cpu_limit: 3</span>
+<span class=w>        </span><span class=no>#       memory_request: 4Gi</span>
+<span class=w>        </span><span class=no>#       memory_limit: 12Gi    </span>
+
+<span class=w>      </span><span class=no>- name: db2</span>
+<span class=w>        </span><span class=no>description: Db2 OLTP</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: ca-metastore</span>
+<span class=w>          </span><span class=no>metadata_size_gb: 20</span>
+<span class=w>          </span><span class=no>data_size_gb: 20</span>
+<span class=w>          </span><span class=no>backup_size_gb: 20  </span>
+<span class=w>          </span><span class=no>transactionlog_size_gb: 20</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: db2wh</span>
+<span class=w>        </span><span class=no>description: Db2 Warehouse</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: dmc</span>
+<span class=w>        </span><span class=no>description: Db2 Data Management Console</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: data-management-console</span>
+<span class=w>          </span><span class=no>description: Data Management Console</span>
+<span class=w>          </span><span class=no>size: medium</span>
+<span class=w>          </span><span class=no>storage_size_gb: 50</span>
+
+<span class=w>      </span><span class=no>- name: dods</span>
+<span class=w>        </span><span class=no>description: Decision Optimization</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: dp</span>
+<span class=w>        </span><span class=no>description: Data Privacy</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: dpra</span>
+<span class=w>        </span><span class=no>description: Data Privacy Risk Assessment</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: dv</span>
+<span class=w>        </span><span class=no>description: Data Virtualization</span>
+<span class=w>        </span><span class=no>size: small </span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: data-virtualization</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no># Please note that for EDB Postgress, a secret edb-postgres-license-key must be created in the vault</span>
+<span class=w>      </span><span class=no># before deploying</span>
+<span class=w>      </span><span class=no>- name: edb_cp4d</span>
+<span class=w>        </span><span class=no>description: EDB Postgres</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: instance1</span>
+<span class=w>          </span><span class=no>version: &quot;15.4&quot;</span>
+<span class=w>          </span><span class=no>#type: Standard</span>
+<span class=w>          </span><span class=no>#members: 1</span>
+<span class=w>          </span><span class=no>#size_gb: 50</span>
+<span class=w>          </span><span class=no>#resource_request_cpu: 1</span>
+<span class=w>          </span><span class=no>#resource_request_memory: 4Gi</span>
+<span class=w>          </span><span class=no>#resource_limit_cpu: 1</span>
+<span class=w>          </span><span class=no>#resource_limit_memory: 4Gi</span>
+
+<span class=w>      </span><span class=no>- name: factsheet</span>
+<span class=w>        </span><span class=no>description: AI Factsheets</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: hee</span>
+<span class=w>        </span><span class=no>description: Execution Engine for Apache Hadoop</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: mantaflow</span>
+<span class=w>        </span><span class=no>description: MANTA Automated Lineage</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: match360</span>
+<span class=w>        </span><span class=no>description: IBM Match 360</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>wkc_enabled: true</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: openpages</span>
+<span class=w>        </span><span class=no>description: OpenPages</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no># For Planning Analytics, the case version is needed due to defect in olm utils</span>
+<span class=w>      </span><span class=no>- name: planning-analytics</span>
+<span class=w>        </span><span class=no>description: Planning Analytics</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: replication</span>
+<span class=w>        </span><span class=no>description: Data Replication</span>
+<span class=w>        </span><span class=no>license: IDRC</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: rstudio</span>
+<span class=w>        </span><span class=no>description: RStudio Server with R 3.6</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: spss</span>
+<span class=w>        </span><span class=no>description: SPSS Modeler</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: syntheticdata</span>
+<span class=w>        </span><span class=no>description: Synthetic Data Generator</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: voice-gateway</span>
+<span class=w>        </span><span class=no>description: Voice Gateway</span>
+<span class=w>        </span><span class=no>replicas: 1</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: watson-assistant</span>
+<span class=w>        </span><span class=no>description: Watson Assistant</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no># noobaa_account_secret: noobaa-admin</span>
+<span class=w>        </span><span class=no># noobaa_cert_secret: noobaa-s3-serving-cert</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: wa-instance</span>
+<span class=w>          </span><span class=no>description: &quot;Watson Assistant instance&quot;</span>
+
+<span class=w>      </span><span class=no>- name: watson-discovery</span>
+<span class=w>        </span><span class=no>description: Watson Discovery</span>
+<span class=w>        </span><span class=no># noobaa_account_secret: noobaa-admin</span>
+<span class=w>        </span><span class=no># noobaa_cert_secret: noobaa-s3-serving-cert</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: wd-instance</span>
+<span class=w>          </span><span class=no>description: &quot;Watson Discovery instance&quot;</span>
+
+<span class=w>      </span><span class=no>- name: watson-openscale</span>
+<span class=w>        </span><span class=no>description: Watson OpenScale</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: watson-speech</span>
+<span class=w>        </span><span class=no>description: Watson Speech (STT and TTS)</span>
+<span class=w>        </span><span class=no>stt_size: xsmall</span>
+<span class=w>        </span><span class=no>tts_size: xsmall</span>
+<span class=w>        </span><span class=no># noobaa_account_secret: noobaa-admin</span>
+<span class=w>        </span><span class=no># noobaa_cert_secret: noobaa-s3-serving-cert</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no># Please note that for watsonx.ai, the following pre-requisites exist:</span>
+<span class=w>      </span><span class=no># If you want to use foundation models, you neeed to install the Node Feature Discovery and NVIDIA GPU operators. </span>
+<span class=w>      </span><span class=no>#    You can do so by setting the openshift.gpu.install property to True</span>
+<span class=w>      </span><span class=no># OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to True</span>
+<span class=w>      </span><span class=no>- name: watsonx_ai</span>
+<span class=w>        </span><span class=no>description: watsonx.ai</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>tuning_disabled: true</span>
+<span class=w>        </span><span class=no>models:</span>
+<span class=w>        </span><span class=no>- model_id: allam-1-13b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: codellama-codellama-34b-instruct-hf</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: elyza-japanese-llama-2-7b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: google-flan-ul2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: google-flan-t5-xl</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: google-flan-t5-xxl</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: eleutherai-gpt-neox-20b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-8b-japanese</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-13b-chat-v1</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-13b-chat-v2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-13b-instruct-v1</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-13b-instruct-v2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-20b-multilingual</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: core42-jais-13b-chat</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: meta-llama-llama-2-13b-chat</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: meta-llama-llama3-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: meta-llama-llama-2-70b-chat</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mncai-llama-2-13b-dpo-v7</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-mistralai-merlinite-7b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-mpt-7b-instruct2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mistralai-mixtral-8x7b-instruct-v01</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-mistralai-mixtral-8x7b-instruct-v01-q</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: bigscience-mt0-xxl</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: bigcode-starcoder</span>
+<span class=w>          </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: watsonx_data</span>
+<span class=w>        </span><span class=no>description: watsonx.data</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: watsonx_governance</span>
+<span class=w>        </span><span class=no>description: watsonx.governance</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>installType: all</span>
+<span class=w>          </span><span class=no>enableFactsheet: true</span>
+<span class=w>          </span><span class=no>enableOpenpages: true</span>
+<span class=w>          </span><span class=no>enableOpenscale: true</span>
+
+<span class=w>      </span><span class=no>- name: watsonx_orchestrate</span>
+<span class=w>        </span><span class=no>description: watsonx.orchestrate</span>
+<span class=w>        </span><span class=no>app_connect:</span>
+<span class=w>          </span><span class=no>app_connect_project: ibm-app-connect</span>
+<span class=w>          </span><span class=no>app_connect_case_version: 11.5.0</span>
+<span class=w>          </span><span class=no>app_connect_channel_version: v11.5</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: wca-ansible</span>
+<span class=w>        </span><span class=no>description: watsxonx Code Assistant for Red Hat Ansible Lightspeed</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: wca-z</span>
+<span class=w>        </span><span class=no>description: watsxonx Code Assistant for Z</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no># For the IBM Knowledge Catalog, you can specify 3 editions: wkx, ikc_premium, or ikc_standard</span>
+<span class=w>      </span><span class=no># Choose the correct IBM Knowledge Catalog edition below</span>
+<span class=w>      </span><span class=no>- name: wkc</span>
+<span class=w>        </span><span class=no>description: IBM Knowledge Catalog</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: False</span>
+<span class=w>          </span><span class=no>enableDataQuality: False</span>
+
+<span class=w>      </span><span class=no>- name: ikc_premium</span>
+<span class=w>        </span><span class=no>description: IBM Knowledge Catalog - Premium edition</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: False</span>
+<span class=w>          </span><span class=no>enableDataQuality: False</span>
+
+<span class=w>      </span><span class=no>- name: ikc_standard</span>
+<span class=w>        </span><span class=no>description: IBM Knowledge Catalog - Standard edition</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: False</span>
+<span class=w>          </span><span class=no>enableDataQuality: False</span>
+
+<span class=w>      </span><span class=no>- name: wml</span>
+<span class=w>        </span><span class=no>description: Watson Machine Learning</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: installed</span>
+
+<span class=w>      </span><span class=no>- name: wml-accelerator</span>
+<span class=w>        </span><span class=no>description: Watson Machine Learning Accelerator</span>
+<span class=w>        </span><span class=no>replicas: 1</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: ws</span>
+<span class=w>        </span><span class=no>description: Watson Studio</span>
+<span class=w>        </span><span class=no>state: installed</span>
+
+<span class=w>      </span><span class=no>- name: ws-pipelines</span>
+<span class=w>        </span><span class=no>description: Watson Studio Pipelines</span>
+<span class=w>        </span><span class=no>state: removed</span>
+
+<span class=w>      </span><span class=no>- name: ws-runtimes</span>
+<span class=w>        </span><span class=no>description: Watson Studio Runtimes</span>
+<span class=w>        </span><span class=no>runtimes:</span>
+<span class=w>        </span><span class=no>- ibm-cpd-ws-runtime-241-py</span>
+<span class=w>        </span><span class=no>- ibm-cpd-ws-runtime-231-py</span>
+<span class=w>        </span><span class=no>- ibm-cpd-ws-runtime-241-pygpu</span>
+<span class=w>        </span><span class=no>- ibm-cpd-ws-runtime-231-pygpu</span>
+<span class=w>        </span><span class=no>- ibm-cpd-ws-runtime-241-r</span>
+<span class=w>        </span><span class=no>- ibm-cpd-ws-runtime-231-r</span>
+<span class=w>        </span><span class=no>state: removed </span>
+</code></pre></div></li> </ul> <h2 id=start-the-deployer>Start the deployer<a class=headerlink href=#start-the-deployer title="Permanent link">🔗</a></h2> <ul> <li>Go to the OpenShift console</li> <li>Click the "+" sign at the top of the page</li> <li>Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job (From release v3.0.2 onwards). <div class=highlight><table class=highlighttable><tr><td class=linenos><div class=linenodiv><pre><span></span><span class=normal> 1</span>
+<span class=normal> 2</span>
+<span class=normal> 3</span>
+<span class=normal> 4</span>
+<span class=normal> 5</span>
+<span class=normal> 6</span>
+<span class=normal> 7</span>
+<span class=normal> 8</span>
+<span class=normal> 9</span>
+<span class=normal>10</span>
+<span class=normal>11</span>
+<span class=normal>12</span>
+<span class=normal>13</span>
+<span class=normal>14</span>
+<span class=normal>15</span>
+<span class=normal>16</span>
+<span class=normal>17</span>
+<span class=normal>18</span>
+<span class=normal>19</span>
+<span class=normal>20</span>
+<span class=normal>21</span></pre></div></td><td class=code><div><pre><span></span><code><span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">Pod</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>labels</span><span class=p>:</span>
+<span class=w>    </span><span class=nt>app</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-start</span>
+<span class=w>  </span><span class=nt>generateName</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-start-</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nt>spec</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>containers</span><span class=p>:</span>
+<span class=w>  </span><span class="p p-Indicator">-</span><span class=w> </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=hll><span class=w>    </span><span class=nt>image</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">quay.io/cloud-pak-deployer/cloud-pak-deployer:latest</span>
+</span><span class=w>    </span><span class=nt>imagePullPolicy</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">Always</span>
+<span class=w>    </span><span class=nt>terminationMessagePath</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">/dev/termination-log</span>
+<span class=w>    </span><span class=nt>terminationMessagePolicy</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">File</span>
+<span class=w>    </span><span class=nt>command</span><span class=p>:</span><span class=w> </span><span class="p p-Indicator">[</span><span class=s>&quot;/bin/sh&quot;</span><span class="p p-Indicator">,</span><span class=s>&quot;-xc&quot;</span><span class="p p-Indicator">]</span>
+<span class=w>    </span><span class=nt>args</span><span class=p>:</span><span class=w> </span>
+<span class=w>      </span><span class="p p-Indicator">-</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">/cloud-pak-deployer/scripts/deployer/cpd-start-deployer.sh</span>
+<span class=w>  </span><span class=nt>restartPolicy</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">Never</span>
+<span class=w>  </span><span class=nt>securityContext</span><span class=p>:</span>
+<span class=w>    </span><span class=nt>runAsUser</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">0</span>
+<span class=w>  </span><span class=nt>serviceAccountName</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-sa</span>
+</code></pre></div></td></tr></table></div></li> </ul> <h2 id=follow-the-logs-of-the-deployment>Follow the logs of the deployment<a class=headerlink href=#follow-the-logs-of-the-deployment title="Permanent link">🔗</a></h2> <ul> <li>Open the OpenShift console</li> <li>Go to Workloads &rarr; Pods</li> <li>Select <code>cloud-pak-deployer</code> as the project at the top of the page</li> <li>Click the deployer Pod</li> <li>Click Logs tab</li> </ul> <div class="admonition info"> <p class=admonition-title>Info</p> <p>When running the deployer installing Cloud Pak for Data, the first run will fail. This is because the deployer applies the node configuration to OpenShift, which will cause all nodes to restart one by one, including the node that runs the deployer. Because of the Job setting, a new deployer pod will automatically start and resume from where it was stopped. </p> </div> <h2 id=re-run-deployer-when-failed-or-if-you-want-to-update-the-configuration>Re-run deployer when failed or if you want to update the configuration<a class=headerlink href=#re-run-deployer-when-failed-or-if-you-want-to-update-the-configuration title="Permanent link">🔗</a></h2> <p>If the deployer has failed or if you want to make changes to the configuration after the successful run, you can do the following:</p> <ul> <li>Open the OpenShift console</li> <li>Go to Workloads &rarr; Jobs</li> <li>Check the logs of the <code>cloud-pak-deployer</code> job</li> <li>If needed, make changes to the <code>cloud-pak-deployer-config</code> Config Map by going to Workloads &rarr; ConfigMaps</li> <li><a href=#start-the-deployer>Re-run the deployer</a></li> </ul> </article> </div> </div> </main> <footer class=md-footer> <nav class="md-footer__inner md-grid" aria-label=Footer> <a href=../existing-openshift/ class="md-footer__link md-footer__link--prev" aria-label="Previous: Existing OpenShift" rel=prev> <div class="md-footer__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg> </div> <div class=md-footer__title> <div class=md-ellipsis> <span class=md-footer__direction> Previous </span> Existing OpenShift </div> </div> </a> <a href=../ibm-cloud/ class="md-footer__link md-footer__link--next" aria-label="Next: IBM Cloud" rel=next> <div class=md-footer__title> <div class=md-ellipsis> <span class=md-footer__direction> Next </span> IBM Cloud </div> </div> <div class="md-footer__button md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11H4Z"/></svg> </div> </a> </nav> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.5bf1dace.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.config.lang": "en", "search.config.pipeline": "trimmer, stopWordFilter", "search.config.separator": "[\\s\\-]+", "search.placeholder": "Search", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version.title": "Select version"}}</script> <script src=../../../assets/javascripts/bundle.37e9125f.min.js></script> <script src=../../../js/open_in_new_tab.js></script> </body> </html>
