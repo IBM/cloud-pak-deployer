@@ -18,7 +18,6 @@ cp4d:
 - project: cpd
   openshift_cluster_name: sample
   cp4d_version: 4.7.3
-  sequential_install: False
   use_fs_iam: False
   change_node_settings: True
   db2u_limited_privileges: False
@@ -39,7 +38,7 @@ cp4d:
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
 | openshift_cluster_name | Name of the OpenShift cluster                  | Yes, inferred from openshift       | Existing `openshift` cluster |
 | cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges that do not specify a version | Yes | 4.x.x |
-| sequential_install | If set to `True` the deployer will run the **OLM utils** playbooks to install catalog sources, subscriptions and CRs. If set to `False`, deployer will use OLM utils to generate the scripts and then run them, which will cause the catalog sources, subscriptions and CRs to be created immediately and install in parallel | No | True (default), False |
+| sequential_install | Deprecated property | No | True (default), False |
 | use_fs_iam | If set to `True` the deployer will enable Foundational Services IAM for authentication | No | False (default), True |
 | use_cp_alt_repo | When set to `False`, deployer will use use the alternative repo specified in `cp_alt_repo` resource | No | True (default), False |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
