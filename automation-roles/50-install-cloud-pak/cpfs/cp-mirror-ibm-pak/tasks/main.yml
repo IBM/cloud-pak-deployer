@@ -5,32 +5,23 @@
 
 # ------------ Portable registry -------------
 
-- name: Start portable registry if needed
-  block:
+- name: Set target directory for portable registry to {{ status_dir }}/work/registry-storage
+  ansible.builtin.replace:
+    path: /opt/ansible/etc/registryv2-config.yml
+    regexp: 'rootdirectory: .*'
+    replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
 
-  - name: Set target directory for portable registry to {{ status_dir }}/registry-storage
-    ansible.builtin.replace:
-      path: /opt/ansible/etc/registryv2-config.yml
-      regexp: 'rootdirectory: .*'
-      replace: 'rootdirectory: {{ status_dir }}/registry-storage'
+- name: Run the entrypoint, which will start the portable registry
+  shell:
+    /usr/local/bin/entrypoint > {{ status_dir }}/log/olm-utils-entrypoint.log 2>&1
+  async: 1500000
+  poll: 0
 
-  - name: Start portable registry in the background
-    shell:
-      /opt/ansible/bin/start-registry > {{ status_dir }}/log/portable-registry.log 2>&1
-    async: 1500000
-    poll: 0
-    register: _portable_registry_job
-
-  - debug:
-      var: _portable_registry_job
-
-  - name: Wait until registry is available at port 12443
-    wait_for:
-      host: "127.0.0.1"
-      port: 12443
-      timeout: 30
-
-  when: not (cpd_skip_portable_registry | bool) 
+- name: Wait until portable registry is available at port 12443
+  wait_for:
+    host: "127.0.0.1"
+    port: 12443
+    timeout: 30
 
 # ---------- Entitled registry ---------------
 

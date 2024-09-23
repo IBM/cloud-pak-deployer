@@ -51,6 +51,7 @@ cp4d:
   cartridges:
   - name: datastage-ent-plus
     state: installed
+
     instances:
     - name: ds-instance
       # Optional settings
