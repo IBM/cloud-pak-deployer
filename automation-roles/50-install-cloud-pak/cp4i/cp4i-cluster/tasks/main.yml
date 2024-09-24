@@ -176,9 +176,9 @@
     # --- Verify if portable registry content exists ---
     # It is possible that images are already in the private registry
 
-    - name: "Verify that directory {{ status_dir }}/registry-storage exists"
+    - name: "Verify that directory {{ status_dir }}/work/registry-storage exists"
       stat:
-        path: "{{ status_dir }}/registry-storage"
+        path: "{{ status_dir }}/work/registry-storage"
       register: _portable_reg_storage_dir
 
     - fail:
@@ -193,11 +193,11 @@
       # NOTE(SJ) The same code exists elsewere (cp-mirror-ibm-pak role,..., cp4d roles)
       # It would be worth considering a separate generic role
 
-      - name: "Set target directory for portable registry to {{ status_dir }}/registry-storage"
+      - name: "Set target directory for portable registry to {{ status_dir }}/work/registry-storage"
         ansible.builtin.replace:
           path: /opt/ansible/etc/registryv2-config.yml
           regexp: 'rootdirectory: .*'
-          replace: 'rootdirectory: {{ status_dir }}/registry-storage'
+          replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
 
       - name: Start portable registry in the background
         shell:

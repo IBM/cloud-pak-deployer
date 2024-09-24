@@ -10,15 +10,6 @@
     state: present
     create: True
 
-- name: Insert cpd_platform options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} CPD Platform options #"
-    block: |2
-        cpd_platform:
-          cloudpakfordata: true
-          iamIntegration: {{ _p_current_cp4d_cluster.use_fs_iam | default(False) | bool }}
-
 - name: Starting background task to patch Db2U clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-db2u-temp-patch.log
   shell: |
     {{ role_path }}/files/temp-patch-db2u.sh \
@@ -36,7 +27,23 @@
 - set_fact:
     _cp4d_cartridges_installed_successfully: True
 
+- set_fact:
+    _apply_cr_cartridges: >-
+      {{  _cartridges_to_install | 
+            rejectattr('olm_utils_name','==','scheduler') |
+            rejectattr('olm_utils_name','==','cpd_platform') |
+            rejectattr('olm_utils_name','==','cpfs') |
+            selectattr('separate_install','undefined') |
+            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+
+- set_fact:
+    _apply_cr_cartridges_list: >-
+      {{  _apply_cr_cartridges | 
+            map(attribute='olm_utils_name') | 
+            join(',')}}
+
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
+  when: _apply_cr_cartridges != []
 
 - name: Install separate cartridges
   include_tasks: cp4d-install-separate-cr.yml
