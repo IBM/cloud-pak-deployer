@@ -54,8 +54,8 @@
 
 # Fail if the detected storage type is not supported
 - fail:
-    msg: "Valid storage types are 'nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-storage-fdf', and 'custom'"
-  when: _storage_type not in ['nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-storage-fdf', 'custom']
+    msg: "Valid storage types are 'nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-vpc-storage', 'ibm-storage-fdf', and 'custom'"
+  when: _storage_type not in ['nfs', 'ocs', 'pwx', 'aws-elastic', 'ibm-classic-storage', 'ibm-vpc-storage', 'ibm-storage-fdf', 'custom']
 
 # Set storage class variables based on the detected storage type
 - set_fact:
@@ -69,6 +69,7 @@
         'ocs': 'ocs-storagecluster-cephfs',
         'pwx': 'px-replicated',
         'ibm-classic-storage': 'ibmc-file-gold-gid',
+        'ibm-vpc-storage': 'ibmc-vpc-file-1000-iops',
         'ibm-storage-fdf': 'ibm-storage-fusion-cp-sc'
       }[_storage_type]) }}"
     ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default({
@@ -76,6 +77,7 @@
         'ocs': 'ocs-storagecluster-ceph-rbd',
         'pwx': 'px-db',
         'ibm-classic-storage': 'ibmc-block-gold',
+        'ibm-vpc-storage': 'ibmc-vpc-block-10iops-tier',
         'ibm-storage-fdf': 'ibm-storage-fusion-cp-sc'
       }[_storage_type]) }}"
   when:
