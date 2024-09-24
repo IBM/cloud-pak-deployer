@@ -74,7 +74,17 @@
       loop: "{{ all_config.openshift | default([]) }}"
       loop_control:
         loop_var: current_openshift_cluster
+      when: cloud_platform != 'existing-ocp'
 
-    - name: Destroy infrastructure
+    - name: Destroy infrastructure if not existing OpenShift
       include_role:
         name: destroy-infra
+      when: cloud_platform != 'existing-ocp'
+
+    - name: Destroy Cloud Pak for Data for existing OpenShfit
+      include_role:
+        name: cp4d-cluster-delete
+      loop: "{{ all_config.cp4d | default([]) }}"
+      loop_control:
+        loop_var: _p_current_cp4d_cluster
+      when: cloud_platform == 'existing-ocp'

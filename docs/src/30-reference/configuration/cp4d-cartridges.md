@@ -7,7 +7,6 @@ An example Cloud Pak for Data object with cartridges is below:
 cp4d:
 - project: cpd-instance
   cp4d_version: 4.8.3
-  sequential_install: False
 
   cartridges:
   - name: cpfs

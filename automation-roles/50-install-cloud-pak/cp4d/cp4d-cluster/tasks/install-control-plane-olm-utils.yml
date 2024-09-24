@@ -37,22 +37,15 @@
     remote_src: True
     mode: u+rwx
 
-- name: Run apply-cr command to install Cloud Pak for Data platform
-  block:
-  - name: Generate apply-cr command to install Cloud Pak for Data platform
-    set_fact:
-      _apply_cr_command: "{{ lookup('template', 'apply-cr-cpd-platform.j2') }}"
-    vars:
-      _p_preview_script: False
-  - name: Run apply-cr command to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
-    shell: |
-      {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
-  when: _sequential_install
+- name: Generate apply-cr command to install Cloud Pak for Data platform
+  set_fact:
+    _apply_cr_command: "{{ lookup('template', 'apply-cr-cpd-platform.j2') }}"
+  vars:
+    _p_preview_script: False
 
-- name: Run shell script to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
+- name: Run apply-cr command to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
   shell: |
-    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh >> {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
-  when: not _sequential_install
+    {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
 
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for ZenService to be completed

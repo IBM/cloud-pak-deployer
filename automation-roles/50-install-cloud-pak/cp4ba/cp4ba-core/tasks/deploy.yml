@@ -327,6 +327,10 @@
               ic_css_index_area: "{{ cr_bck.spec.initialize_configuration.ic_css_index_area +
                   cr.spec.initialize_configuration.ic_css_index_area }}"
               ic_enable_cbr: "{{ cr_bck.spec.initialize_configuration.ic_enable_cbr + cr.spec.initialize_configuration.ic_enable_cbr }}"
+            verify_configuration:
+              vc_cpe_verification:
+                vc_cpe_cbr: "{{ cr_bck.spec.verify_configuration.vc_cpe_verification.vc_cpe_cbr +
+                  cr.spec.verify_configuration.vc_cpe_verification.vc_cpe_cbr }}"
       when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-workflow-authoring
@@ -376,6 +380,22 @@
             verify_configuration:
               vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
 
+    - name: Combine lists back to CR with CSS
+      ansible.builtin.set_fact:
+        cr: "{{ cr | combine(list_overwrites, recursive=true) }}"
+      vars:
+        list_overwrites:
+          spec:
+            initialize_configuration:
+              ic_css_index_area: "{{ cr_bck.spec.initialize_configuration.ic_css_index_area +
+                  cr.spec.initialize_configuration.ic_css_index_area }}"
+              ic_enable_cbr: "{{ cr_bck.spec.initialize_configuration.ic_enable_cbr + cr.spec.initialize_configuration.ic_enable_cbr }}"
+            verify_configuration:
+              vc_cpe_verification:
+                vc_cpe_cbr: "{{ cr_bck.spec.verify_configuration.vc_cpe_verification.vc_cpe_cbr +
+                  cr.spec.verify_configuration.vc_cpe_verification.vc_cpe_cbr }}"
+      when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
+
 - name: Add patterns to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(patterns_insert, recursive=true) }}"
@@ -409,7 +429,7 @@
     src: "{{ cp4ba_output_directory }}/cr.yaml"
 
 - name: Wait for Kafka
-  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
   block:
     - name: Wait for Kafka instance Ready state
       ansible.builtin.include_role:
