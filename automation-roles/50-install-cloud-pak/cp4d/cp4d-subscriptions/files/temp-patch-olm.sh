@@ -3,10 +3,13 @@
 # Parameters
 # $1: Status directory
 # $2: Foundational Services project
+# $3: Cloud Pak for Data project
+# $4: Subscription scope (platform, cartridges, ...)
 
 status_dir=$1
 fs_project=$2
 cpd_project=$3
+sub_scope=$4
 
 exit_code=0
 
@@ -103,8 +106,8 @@ while true;do
         oc delete csv -n ${fs_project} ${csv} --ignore-not-found
       fi 
     done < ${diag_dir}/csv-diag.csv
-    log "REMEDIATE: Re-running script to create subscriptions ${status_dir}/cp4d/${cpd_project}-apply-olm-cartridge-sub.sh, output in ${diag_dir}/${cpd_project}-apply-olm-cartridge-sub.log"
-    ${status_dir}/cp4d/${cpd_project}-apply-olm-cartridge-sub.sh >> ${diag_dir}/${cpd_project}-apply-olm-cartridge-sub.log
+    log "REMEDIATE: Re-running script to create subscriptions ${status_dir}/cp4d/${cpd_project}-apply-subscriptions-${sub_scope}.sh, output in ${diag_dir}/${cpd_project}-apply-subscriptions-${sub_scope}.log"
+    ${status_dir}/cp4d/${cpd_project}-apply-subscriptions-${sub_scope}.sh >> ${diag_dir}/${cpd_project}-apply-subscriptions-${sub_scope}.log
     # # Recreating all deleted subscriptions
     # while IFS=, read -r sub sub_ts csv sub_state;do
     #   if [[ "${csv}" == "" ]];then
