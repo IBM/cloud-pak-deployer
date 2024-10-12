@@ -1,4 +1,9 @@
 ---
+- include_tasks: aws-s3-sts-role.yml
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_credentials_mode | default('')) == 'Manual'
+
 - name: Create openshift-storage OpenShift project
   shell: |
     oc create ns openshift-storage || true
@@ -19,6 +24,23 @@
 - name: Create ODF operator
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
+
+- name: Approve InstallPlan for ODF operator
+  block:
+  - shell: |
+      oc get installplans.operators.coreos.com -n openshift-storage \
+        --no-headers | grep 'Manual' | grep false | head -1 | awk '{print $1}'
+    register: _odf_ip
+
+  - shell: |
+      oc patch installplans.operators.coreos.com -n openshift-storage {{ _odf_ip.stdout }} \
+        --type merge \
+        --patch '{"spec":{"approved":true}}'
+    when: _odf_ip.stdout != ''
+
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_credentials_mode | default('')) == 'Manual'
 
 - name: Wait until ODF Operator CSV has status Succeeded
   shell: |
@@ -43,3 +65,12 @@
       -n openshift-storage \
       --type json \
       -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
+
+- name: Set operator to Manual approval if the cluster is installed with STS
+  shell: |
+    oc patch subscriptions.operators.coreos.com -n openshift-storage odf-operator \
+        --type merge \
+        --patch '{"spec":{"installPlanApproval":"Manual"}}'
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_credentials_mode | default('')) == 'Manual'
