@@ -1,0 +1,66 @@
+---
+- name: Retrieve AWS Account ID
+  shell: |
+    aws sts get-caller-identity --query "Account" --output text
+  register: _aws_account_id
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
+
+- debug:
+    var: _aws_account_id.stdout
+
+- name: Retrieve OpenShift cluster OIDC provider
+  shell: |
+    oc get authentication cluster -o jsonpath='{.spec.serviceAccountIssuer}'
+  register: _authentication_sa_issuer_raw
+
+- name: Trim OIDC provider {{ _authentication_sa_issuer_raw.stdout }}
+  set_fact:
+    _authentication_sa_issuer: "{{ _authentication_sa_issuer_raw.stdout | regex_replace('[A-z]*://', '') }}"
+
+- name: Generate AWS role trust relationship file {{ status_dir }}/openshift/{{ _aws_mcg_role }}-trust-relationship.json
+  template:
+    src: aws-role-trust-relationship.j2
+    dest: "{{ status_dir }}/openshift/{{ _aws_mcg_role }}-trust-relationship.json"
+
+- name: Create role {{ _aws_mcg_role }}
+  shell: |
+    aws iam create-role --role-name {{ _aws_mcg_role }} --assume-role-policy-document \
+      file://{{ status_dir }}/openshift/{{ _aws_mcg_role }}-trust-relationship.json \
+      --description "{{ _aws_mcg_role }} MCG role"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
+
+- name: Attach policy AmazonS3FullAccess to role {{ _aws_mcg_role }}
+  shell: |
+    aws iam attach-role-policy \
+      --role-name {{ _aws_mcg_role }} \
+      --policy-arn "arn:aws:iam::aws:policy/AmazonS3FullAccess"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
+
+- name: Attach policy AWSLambda_FullAccess to role {{ _aws_mcg_role }}
+  shell: |
+    aws iam attach-role-policy \
+      --role-name {{ _aws_mcg_role }} \
+      --policy-arn "arn:aws:iam::aws:policy/AWSLambda_FullAccess"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
+
+- name: Retrieve ARN for AWS role {{ _aws_mcg_role }}
+  shell: |
+    aws iam get-role --role-name {{ _aws_mcg_role }} --output text --query 'Role.Arn'
+  failed_when: False
+  register: _aws_mcg_role_arn
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
