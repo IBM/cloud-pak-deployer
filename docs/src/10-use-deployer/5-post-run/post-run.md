@@ -28,7 +28,13 @@ Then, update the password:
 ./cp-deploy.sh vault set -vs cp4d_admin_zen_sample_sample -vsv "my Really Sec3re Passw0rd"
 ```
 
-Finally, run the deployer again. It will make the necessary changes to the OpenShift secret and check that the `admin` user can log in. In this case you can speed up the process via the `--skip-infra` flag.
+Finally, run the deployer again. It will make the necessary changes to the OpenShift secret and check that the `admin` (or `cpadmin`) user can log in. In this case you can speed up the process via the `--skip-infra` flag.
 ```
 ./cp-deploy.sh env apply --skip-infra [--accept-all-liceneses]
 ```
+
+## Add GPU nodes to the cluster
+watsonx.ai requires GPUs to run and tune the foundation models. Deployer currently does not provision these GPU nodes, but you can add them manually from the OpenShift console.
+
+### GPU nodes on AWS
+For adding GPU nodes on AWS infrastructure, refer to [Add GPUs to self-managed OpenShift on AWS](./aws-self-managed-add-gpu.md).
