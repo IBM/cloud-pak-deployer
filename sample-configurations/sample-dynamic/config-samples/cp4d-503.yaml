@@ -2,12 +2,15 @@
 cp4d:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 4.8.5
-  cp4d_entitlement:
+  cp4d_version: 5.0.3
+  cp4d_entitlement: 
   - cpd-enterprise
   # - cpd-standard
   # - cognos-analytics
+  # - data-product-hub
   # - datastage
+  # - ikc-premium
+  # - ikc-standard
   # - openpages
   # - planning-analytics
   # - product-master
@@ -16,13 +19,14 @@ cp4d:
   # - watson-assistant
   # - watson-discovery
   # - watsonx-ai
+  # - watsonx-code-assistant-ansible
+  # - watsonx-code-assistant-z
   # - watsonx-data
   # - watsonx-gov-mm
   # - watsonx-gov-rc
   # - watsonx-orchestrate
   cp4d_production_license: True
   accept_licenses: False
-  sequential_install: False
   db2u_limited_privileges: False
   use_fs_iam: True
   operators_project: cpd-operators
@@ -71,6 +75,10 @@ cp4d:
     description: Db2 Data Gate
     state: removed
 
+  - name: dataproduct
+    description: Data Product Hub
+    state: removed
+    
   - name: datastage-ent
     description: DataStage Enterprise
     state: removed
@@ -78,10 +86,6 @@ cp4d:
   - name: datastage-ent-plus
     description: DataStage Enterprise Plus
     state: removed
-
-    # The default instance is created automatically with the DataStage installation. If you want to create additional instances
-    # uncomment the section below and specify the various scaling options.
-
     # instances:
     #   - name: ds-instance
     #     # Optional settings
@@ -169,7 +173,7 @@ cp4d:
     size: small
     state: removed
 
-  - name: hadoop
+  - name: hee
     description: Execution Engine for Apache Hadoop
     size: small
     state: removed
@@ -250,17 +254,31 @@ cp4d:
     # noobaa_cert_secret: noobaa-s3-serving-cert
     state: removed
 
-  # Please note that for watsonx.ai foundation models, you neeed to install the
-  # Node Feature Discovery and NVIDIA GPU operators. You can do so by setting the openshift.gpu.install property to True
+  # Please note that for watsonx.ai, the following pre-requisites exist:
+  # If you want to use foundation models, you neeed to install the Node Feature Discovery and NVIDIA GPU operators. 
+  #    You can do so by setting the openshift.gpu.install property to True
+  # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to True
   - name: watsonx_ai
     description: watsonx.ai
     state: removed
+    installation_options:
+      tuning_disabled: true
     models:
-    - model_id: google-flan-t5-xxl
+    - model_id: allam-1-13b-instruct
+      state: removed
+    - model_id: codellama-codellama-34b-instruct-hf
+      state: removed
+    - model_id: elyza-japanese-llama-2-7b-instruct
       state: removed
     - model_id: google-flan-ul2
       state: removed
+    - model_id: google-flan-t5-xl
+      state: removed
+    - model_id: google-flan-t5-xxl
+      state: removed
     - model_id: eleutherai-gpt-neox-20b
+      state: removed
+    - model_id: ibm-granite-8b-japanese
       state: removed
     - model_id: ibm-granite-13b-chat-v1
       state: removed
@@ -270,9 +288,25 @@ cp4d:
       state: removed
     - model_id: ibm-granite-13b-instruct-v2
       state: removed
+    - model_id: ibm-granite-20b-multilingual
+      state: removed
+    - model_id: core42-jais-13b-chat
+      state: removed
+    - model_id: meta-llama-llama-2-13b-chat
+      state: removed
+    - model_id: meta-llama-llama3-8b-instruct
+      state: removed
     - model_id: meta-llama-llama-2-70b-chat
       state: removed
+    - model_id: mncai-llama-2-13b-dpo-v7
+      state: removed
+    - model_id: ibm-mistralai-merlinite-7b
+      state: removed
     - model_id: ibm-mpt-7b-instruct2
+      state: removed
+    - model_id: mistralai-mixtral-8x7b-instruct-v01
+      state: removed
+    - model_id: ibm-mistralai-mixtral-8x7b-instruct-v01-q
       state: removed
     - model_id: bigscience-mt0-xxl
       state: removed
@@ -292,15 +326,47 @@ cp4d:
       enableOpenpages: true
       enableOpenscale: true
 
+  - name: watsonx_orchestrate
+    description: watsonx.orchestrate
+    app_connect:
+      app_connect_project: ibm-app-connect
+      app_connect_case_version: 11.5.0
+      app_connect_channel_version: v11.5
+    state: removed
+
+  - name: wca-ansible
+    description: watsxonx Code Assistant for Red Hat Ansible Lightspeed
+    state: removed
+
+  - name: wca-z
+    description: watsxonx Code Assistant for Z
+    state: removed
+
+  # For the IBM Knowledge Catalog, you can specify 3 editions: wkx, ikc_premium, or ikc_standard
+  # Choose the correct IBM Knowledge Catalog edition below
   - name: wkc
     description: IBM Knowledge Catalog
     size: small
     state: removed
     installation_options:
-      install_wkc_core_only: False
       enableKnowledgeGraph: False
       enableDataQuality: False
-      enableFactSheet: False
+
+  - name: ikc_premium
+    description: IBM Knowledge Catalog - Premium edition
+    size: small
+    state: removed
+    installation_options:
+      enableKnowledgeGraph: False
+      enableDataQuality: False
+
+  - name: ikc_standard
+    description: IBM Knowledge Catalog - Standard edition
+    size: small
+    state: removed
+    installation_options:
+      enableKnowledgeGraph: False
+      enableDataQuality: False
 
   - name: wml
     description: Watson Machine Learning
@@ -324,13 +390,11 @@ cp4d:
   - name: ws-runtimes
     description: Watson Studio Runtimes
     runtimes:
-    - ibm-cpd-ws-runtime-py39
-    - ibm-cpd-ws-runtime-222-py
-    - ibm-cpd-ws-runtime-py39gpu
-    - ibm-cpd-ws-runtime-222-pygpu
+    - ibm-cpd-ws-runtime-241-py
+    - ibm-cpd-ws-runtime-231-py
+    - ibm-cpd-ws-runtime-241-pygpu
     - ibm-cpd-ws-runtime-231-pygpu
-    - ibm-cpd-ws-runtime-r36
-    - ibm-cpd-ws-runtime-222-r
+    - ibm-cpd-ws-runtime-241-r
     - ibm-cpd-ws-runtime-231-r
     state: removed 
 
