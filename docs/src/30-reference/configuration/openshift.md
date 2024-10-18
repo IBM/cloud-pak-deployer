@@ -68,7 +68,7 @@ openshift:
 | domain_name          | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                       |
 | cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                  | No        | True, False (default) |
 | oadp                 | Must the OpenShift Advanced Data Protection operator be installed                                               | No        | True, False (default) |
-| infrastructure.type                   | Infrastructure OpenShfit is deployed on. See below for additional explanation                                   | detect (default) |
+| infrastructure.type                   | Infrastructure OpenShift is deployed on. See below for additional explanation                                   | detect (default) |
 | infrastructure.processor_architecture | Architecture of the processor that the OpenShift cluster is deployed on                                         | No               | amd64 (default), ppc64le, s390x |
 | openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                          | No               |                                 |
 | upstream_dns[]                        | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                   | No               |                                 |

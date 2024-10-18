@@ -1,4 +1,9 @@
 ---
+- include_tasks: aws-s3-sts-role.yml
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_credentials_mode | default('')) == 'Manual'
+
 - name: Create openshift-storage OpenShift project
   shell: |
     oc create ns openshift-storage || true
@@ -43,3 +48,12 @@
       -n openshift-storage \
       --type json \
       -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
+
+- name: Set operator to Manual approval if the cluster is installed with STS
+  shell: |
+    oc patch subscriptions.operators.coreos.com -n openshift-storage odf-operator \
+        --type merge \
+        --patch '{"spec":{"installPlanApproval":"Manual"}}'
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_credentials_mode | default('')) == 'Manual'

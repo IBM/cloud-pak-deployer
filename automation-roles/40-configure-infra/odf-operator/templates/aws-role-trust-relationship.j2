@@ -1,0 +1,20 @@
+{
+ "Version": "2012-10-17",
+ "Statement": [
+   {
+ 	"Effect": "Allow",
+ 	"Principal": {
+   	"Federated": "arn:aws:iam::{{ _aws_account_id.stdout }}:oidc-provider/{{ _authentication_sa_issuer }}"
+ 	},
+ 	"Action": "sts:AssumeRoleWithWebIdentity",
+ 	"Condition": {
+   	"StringEquals": {
+    	"{{ _authentication_sa_issuer }}:sub": [
+      	"system:serviceaccount:openshift-storage:noobaa",
+      	"system:serviceaccount:openshift-storage:noobaa-endpoint"
+      	]
+   	}
+ 	}
+   }
+ ]
+}

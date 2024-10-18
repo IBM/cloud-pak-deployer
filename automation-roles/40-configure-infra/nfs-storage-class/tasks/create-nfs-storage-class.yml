@@ -7,6 +7,16 @@
   debug:
     msg: "{{ nfs_temp_dir }}"
 
+- name: Determine name of the NFS provisioner OpenShift project
+  shell: |
+    oc get project cp-nfs
+  failed_when: False
+  register: _check_cp_nfs_project
+
+- set_fact:
+    nfs_storage_class_project: "cp-nfs"
+  when: _check_cp_nfs_project == 0
+
 - name: Create OpenShift Project {{ nfs_storage_class_project }}
   shell: |
     oc get project {{ nfs_storage_class_project }} > /dev/null 2>&1 || \
