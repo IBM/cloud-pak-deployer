@@ -14,13 +14,18 @@
     _cp4d_user: 'cpadmin'
   when: _iam_integration
 
-- name: Get authentication details to check if zen frontdoor is used (unified route)
-  shell: |
-    oc get --namespace {{ _p_cp4d_project }} authentications.operator.ibm.com example-authentication -o json
-  register: _zen_authentication
-
 - set_fact:
-    _zen_frontdoor: "{{ (_zen_authentication.stdout | from_json).spec.config.zenFrontDoor | default(False) | bool  }}"
+    _zen_frontdoor: False
+
+- block:
+  - name: Get authentication details to check if zen frontdoor is used (unified route)
+    shell: |
+      oc get --namespace {{ _p_cp4d_project }} authentications.operator.ibm.com example-authentication -o json
+    register: _zen_authentication
+
+  - set_fact:
+      _zen_frontdoor: "{{ (_zen_authentication.stdout | from_json).spec.config.zenFrontDoor | default(False) | bool  }}"
+  when: _iam_integration
     
 - name: Get route to Cloud Pak for Data from OpenShift project
   shell: |
