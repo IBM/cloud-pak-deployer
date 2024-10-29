@@ -10,6 +10,13 @@
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
 
+- name: "Fail if dry-run specified for other cloud platform than existing-ocp"
+  fail:
+    msg: "--dry-run can only be specified for existing-ocp"
+  when:
+  - cpd_dry_run | bool
+  - cloud_platform != 'existing-ocp'
+
 - include_tasks: ibmcloud-validate-variables.yml
   when:
     - cloud_platform == 'ibm-cloud'
