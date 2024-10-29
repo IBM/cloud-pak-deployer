@@ -48,7 +48,8 @@ command_usage() {
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --skip-cp-install             Skip installation of the Cloud Pak and finish after configuring the OpenShift cluster (\$SKIP_CP_INSTALL)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
-  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
+  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation"
+  echo "  --dry-run                     Only log the steps that will be performed, do not make any changes to the OpenShift cluster"
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
   echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
@@ -541,6 +542,14 @@ while (( "$#" )); do
     export CHECK_ONLY=true
     shift 1
     ;;  
+  --dry-run)
+    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" ]];then
+      echo "Error: --dry-run is only valid for environment subcommand with apply/destroy."
+      command_usage 2
+    fi
+    export CPD_DRY_RUN=true
+    shift 1
+    ;;  
   --air-gapped)
     if ${INSIDE_CONTAINER};then
       echo "$1 flag not allowed when running inside container"
@@ -1031,6 +1040,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CPD_SKIP_CP_INSTALL=${CPD_SKIP_CP_INSTALL}"
   run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
   run_cmd+=" -e CHECK_ONLY=${CHECK_ONLY}"
+  run_cmd+=" -e CPD_DRY_RUN=${CPD_DRY_RUN}"
   run_cmd+=" -e CPD_AIRGAP=${CPD_AIRGAP}"
   run_cmd+=" -e CPD_SKIP_MIRROR=${CPD_SKIP_MIRROR}"
   run_cmd+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
