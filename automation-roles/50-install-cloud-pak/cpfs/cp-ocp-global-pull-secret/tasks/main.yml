@@ -1,17 +1,9 @@
 ---
-- name: Extract the global pull secret
-  shell: |
-    oc extract secret/pull-secret -n openshift-config --confirm --to={{ status_dir }}/openshift
-- name: Set the global pull secret
-  shell: |
-    cat {{ status_dir }}/openshift/.dockerconfigjson | \
-      jq --arg registry "{{ _p_registry_url }}" \
-        --arg pull_secret $(echo -n "{{ _p_registry_pull_secret }}" | base64 -w0) \
-        '.auths += {($registry): {"auth": $pull_secret, "email": "not-used"}}' \
-        > {{ status_dir }}/openshift/newdockerconfigjson
-    oc set data secret/pull-secret -n openshift-config \
-      --from-file=.dockerconfigjson={{ status_dir }}/openshift/newdockerconfigjson
+- include_tasks: apply-global-pull-secret-entitled.yml
+  when: (_p_registry_url | default('')) == ''
 
-- name: Apply pull secret if the Machine Config Operator does not exist
-  include_tasks: non-mco-apply-pull-secret.yml
+- include_tasks: apply-global-pull-secret-private.yml
+  when: (_p_registry_url | default('')) != ''
+
+- include_tasks: non-mco-apply-pull-secret.yml
   when: not _mco_exists
