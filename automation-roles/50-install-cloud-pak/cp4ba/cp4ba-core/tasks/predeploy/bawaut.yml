@@ -40,3 +40,16 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ cp4ba_output_directory }}/bawaut-lombardi-custom-xml-secret.yaml"
+
+
+# Based on https://www.ibm.com/docs/en/baw/24.x?topic=customizing-business-automation-workflow-containers-properties
+- name: Prepare yaml file for BAWAUT Liberty server Secret
+  ansible.builtin.template:
+    src: bawaut/bawaut-liberty-custom-xml-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/bawaut-liberty-custom-xml-secret.yaml"
+    mode: u+rwx
+
+- name: Add BAWAUT Liberty server Secret
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/bawaut-liberty-custom-xml-secret.yaml"
