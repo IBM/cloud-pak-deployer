@@ -108,7 +108,7 @@
       secret_payload: "{{ _cluster_admin_password }}"
       secret_group: "{{ environment_name }}"
 
-  when: _describe_cluster_admin is search("There is no admin")
+  when: _describe_cluster_admin.stderr is search("rosa create admin")
 
 - include_tasks: aws-enable-openshift-fileserver.yml
   loop: "{{ _current_openshift_cluster.openshift_storage | default([]) }}"
