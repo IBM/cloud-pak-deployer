@@ -10,18 +10,20 @@
     state: present
     create: True
 
-- name: Starting background task to patch Db2U clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-db2u-temp-patch.log
-  shell: |
-    {{ role_path }}/files/temp-patch-db2u.sh \
-      {{ status_dir }} \
-      {{ _p_current_cp4d_cluster.project }}
-  async: 86400
-  poll: 0
-  register: _patch_db2u
+- block:
+  - name: Starting background task to patch Db2U clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-db2u-temp-patch.log
+    shell: |
+      {{ role_path }}/files/temp-patch-db2u.sh \
+        {{ status_dir }} \
+        {{ _p_current_cp4d_cluster.project }}
+    async: 86400
+    poll: 0
+    register: _patch_db2u
 
-- name: Show details of background task to patch Db2U
-  debug:
-    var: _patch_db2u
+  - name: Show details of background task to patch Db2U
+    debug:
+      var: _patch_db2u
+  when: not cpd_dry_run
 
 # Set fact which is handled when testing install of all cartridges
 - set_fact:
@@ -62,3 +64,4 @@
   loop: "{{ _cartridges_to_install | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge
+  when: not_dry_run
