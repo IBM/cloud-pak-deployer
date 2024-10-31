@@ -5,6 +5,12 @@
       src: cpd-network-policy.j2
       dest: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
 
+  - include_role:
+      name: log-deployer-activity
+    vars:
+      _p_activity_description: "Create network policy for Cloud Pak for Data on IBM Cloud"
+      _p_activity_yaml: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
+
   - name: Create Network Policy
     shell: |
       oc apply -f {{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml
@@ -17,6 +23,7 @@
         {%- set result = ansible_callback_diy.result.output -%}
         {%- set retries_left = result.retries - result.attempts -%}
         Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    when: not cpd_dry_run
   when: cloud_platform == "ibm-cloud" and _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
 
 - include_tasks: cp4d-setup-mcg-secrets.yml

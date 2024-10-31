@@ -18,6 +18,13 @@
     src: "cpd-edb-license-secret.j2"
     dest: "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
 
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create EDB PostgreSQL license secret object"
+    _p_activity_yaml: "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
+
 - name: Apply EDB PostgreSQL secret
   command: |
     oc apply -f "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
+  when: not cpd_dry_run
