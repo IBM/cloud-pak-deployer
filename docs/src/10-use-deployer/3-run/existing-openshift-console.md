@@ -94,14 +94,14 @@ data:
       cluster_name: cpd-demo
       domain_name: example.com
       mcg:
-        install: False
+        install: auto
         storage_type: storage-class
         storage_class: managed-nfs-storage
       gpu:
         install: False
       openshift_ai:
-        install: False
-        channel: eus-2.8
+        install: auto
+        channel: auto
       openshift_storage:
       - storage_name: auto-storage
         storage_type: auto
@@ -334,8 +334,8 @@ data:
 
       # Please note that for watsonx.ai, the following pre-requisites exist:
       # If you want to use foundation models, you neeed to install the Node Feature Discovery and NVIDIA GPU operators. 
-      #    You can do so by setting the openshift.gpu.install property to True
-      # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to True
+      #    You can do so by setting the openshift.gpu.install property to auto
+      # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to auto
       - name: watsonx_ai
         description: watsonx.ai
         state: removed
