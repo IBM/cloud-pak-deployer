@@ -1,8 +1,23 @@
 ---
-- include_tasks: aws-s3-sts-role.yml
+- set_fact:
+    _aws_sts_mode: False
+
+- set_fact:
+    _aws_sts_mode: True
   when: 
   - cloud_platform == 'aws'
-  - (_p_credentials_mode | default('')) == 'Manual'
+  - (_p_openshift_cluster.infrastructure.type | default('self-managed')) == 'self-managed'
+  - (_p_openshift_cluster.infrastructure.credentials_mode | default('')) == 'Manual'
+
+- set_fact:
+    _aws_sts_mode: True
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_openshift_cluster.infrastructure.type | default('self-managed')) == 'rosa'
+  - (_p_openshift_cluster.infrastructure.use_sts | default(False))
+
+- include_tasks: aws-s3-sts-role.yml
+  when: _aws_sts_mode
 
 - name: Create openshift-storage OpenShift project
   shell: |
@@ -54,6 +69,4 @@
     oc patch subscriptions.operators.coreos.com -n openshift-storage odf-operator \
         --type merge \
         --patch '{"spec":{"installPlanApproval":"Manual"}}'
-  when: 
-  - cloud_platform == 'aws'
-  - (_p_credentials_mode | default('')) == 'Manual'
+  when: _aws_sts_mode

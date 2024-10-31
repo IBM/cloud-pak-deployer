@@ -45,6 +45,10 @@
     AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
   when: _rosa_describe_cluster.rc != 0
 
+- name: Renew AWS credentials from the vault
+  include_role:
+    name: aws-get-credentials
+
 - name: Get details for cluster {{ _current_openshift_cluster.name }}
   shell: |
     rosa describe cluster \
@@ -108,7 +112,7 @@
       secret_payload: "{{ _cluster_admin_password }}"
       secret_group: "{{ environment_name }}"
 
-  when: _describe_cluster_admin is search("There is no admin")
+  when: _describe_cluster_admin.stderr is search("rosa create admin")
 
 - include_tasks: aws-enable-openshift-fileserver.yml
   loop: "{{ _current_openshift_cluster.openshift_storage | default([]) }}"
