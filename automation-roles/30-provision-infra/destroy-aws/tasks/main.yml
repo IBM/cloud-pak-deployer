@@ -8,29 +8,9 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: Get aws-access-key secret from in the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "aws-access-key"
-    secret_group: "{{ environment_name }}"
-    _p_secret_variable: _aws_access_key
-
-- name: Get aws-secret-access-key secret from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "aws-secret-access-key"
-    secret_group: "{{ environment_name }}" 
-    _p_secret_variable: _aws_secret_access_key
-
-- name: Get aws-session-token secret from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "aws-session-token"
-    secret_group: "{{ environment_name }}"
-    _p_secret_variable: _aws_session_token
+- name: Get AWS credentials from the vault
+  include_role:
+    name: aws-get-credentials
 
 - name: Destroy Openshift with AWS ROSA
   include_tasks: destroy-aws-rosa.yml
