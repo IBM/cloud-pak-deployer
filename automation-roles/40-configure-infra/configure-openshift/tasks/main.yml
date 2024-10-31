@@ -101,9 +101,11 @@
     name: openshift-gpu
   vars:
     _p_openshift_cluster: "{{ current_openshift_cluster }}"
+  when: current_openshift_cluster.gpu.install | default(False) | bool
 
 - name: Configure OpenShift AI
   include_role:
     name: openshift-ai
   vars:
     _p_openshift_cluster: "{{ current_openshift_cluster }}"
+  when: current_openshift_cluster.openshift_ai.install | default(False) | bool

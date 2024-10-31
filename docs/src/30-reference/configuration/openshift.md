@@ -43,10 +43,10 @@ openshift:
      dns_servers:
      - 172.31.2.73:53
   gpu:
-    install: False
+    install: auto
   openshift_ai:
-    install: False
-    channel: fast
+    install: auto
+    channel: auto
   mcg:
     install: True
     storage_type: storage-class
@@ -73,10 +73,10 @@ openshift:
 | openshift_logging[]                   | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                          | No               |                                 |
 | upstream_dns[]                        | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                   | No               |                                 |
 | gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx components                                                                                                                      | Yes       | auto, True, False              |
 | openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
-| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
-| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes       | auto, True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | auto (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -162,8 +162,8 @@ openshift:
     storage_type: storage-class
     storage_class: managed-nfs-storage
   openshift_ai:
-    install: False
-    channel: fast
+    install: auto
+    channel: auto
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
@@ -205,10 +205,10 @@ openshift:
 | openshift_logging[]              | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                           | No                      |                                                                                  |
 | upstream_dns[]                   | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                                    | No                      |                                                                                  |
 | gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx components                                                                                                                      | Yes       | auto, True, False              |
 | openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
-| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
-| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes       | auto, True, False              |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | auto (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -266,10 +266,10 @@ openshift:
      dns_servers:
      - 172.31.2.73:53
   gpu:
-    install: False
+    install: auto
   openshift_ai:
-    install: False
-    channel: fast
+    install: auto
+    channel: auto
   mcg:
     install: True
     storage_type: storage-class
@@ -305,11 +305,11 @@ openshift:
 | infrastructure.openshift_cluster_network_cidr | Network CIDR used by the OpenShift pods. Normally you would not have to change this, unless other systems in the network are in the 10.128.0.0/14 subnet. | No        | CIDR                     |
 | openshift_logging[]                           | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                    | No        |                          |
 | upstream_dns[]                                | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                             | No        |                          |
-| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                   | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx  | Yes  | auto, True, False |
 | openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
-| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
-| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes | auto, True, False       |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                                                                                                  | No        | auto (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -400,11 +400,11 @@ openshift:
 | infrastructure.compute_iam_role               | If not standard, specify the IAM role that the OpenShift installer must use for the compute nodes during cluster creation                                                                                                                                   | No        |                          |
 | infrastructure.ami_id                         | ID of the AWS AMI to boot all images                                                                                                                                                                                                                        | No        |                          |
 | openshift_logging[]                           | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                                                                                      | No        |                          |
-| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                   | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx  | Yes  | auto, True, False |
 | openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
-| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
-| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes | auto, True, False       |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                                                                                                  | No        | auto (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -465,10 +465,10 @@ openshift:
      dns_servers:
      - 172.31.2.73:53
   gpu:
-    install: False
+    install: auto
   openshift_ai:
-    install: False
-    channel: fast
+    install: auto
+    channel: auto
   mcg:
     install: True
     storage_type: storage-class
@@ -503,11 +503,11 @@ openshift:
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                | No        |                          |
 | openshift_logging[]             | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                       | No        |                          |
 | upstream_dns[]                  | Upstream DNS servers(s), see [Upstream DNS Servers](#upstream-dns-servers)                                                                   | No        |                          |
-| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                   | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx  | Yes  | auto, True, False |
 | openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
-| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
-| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes | auto, True, False       |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                                                                                                  | No        | auto (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
@@ -553,10 +553,10 @@ openshift:
     pod_cidr: "10.128.0.0/14"
     service_cidr: "172.30.0.0/16"
   gpu:
-    install: False
+    install: auto
   openshift_ai:
-    install: False
-    channel: fast
+    install: auto
+    channel: auto
   openshift_storage:
   - storage_name: ocs-storage
     storage_type: ocs
@@ -583,11 +583,11 @@ openshift:
 | network.service_cidr | CIDR of service network                                                                   | Yes       | Must be a minimum of /18 or larger. |
 | openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)    | No        |                                     |
 | upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                             | No        |                                     |
-| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
-| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall)                                                                                                                      | Yes       | True, False              |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                   | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx  | Yes  | auto, True, False |
 | openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
-| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall      | Yes       | True, False              |
-| openshift_ai.channel                          | Which oeprator channel must be installed                                      | No        | fast (default), stable, ... |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes | auto, True, False       |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                                                                                                  | No        | auto (default), stable, ... |
 | mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
 | mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
 | mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |

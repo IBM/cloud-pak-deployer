@@ -1,0 +1,23 @@
+---
+# Determine if any cartridges with a Knative dependency are installed
+- set_fact:
+    _nfd_gpu_required: False
+    _opernshift_ai_required: False
+
+- name: Determine if any of the cartridges has a dependency on the Node Feature Discovery or NVIDIA GPU operators
+  set_fact:
+    _nfd_gpu_required: "{{ _nfd_gpu_required or (item.nfd_gpu_required | default(False)) }}"
+  loop: "{{ _cartridges_to_install }}"
+
+- name: Show if there is a dependency on the Node Feature Discovery or NVIDIA GPU operators
+  debug:
+    var: _nfd_gpu_required
+
+- name: Determine if any of the cartridges has a dependency on the OpenShift AI operator
+  set_fact:
+    _opernshift_ai_required: "{{ _nfd_gpu_required or (item.nfd_gpu_required | default(False)) }}"
+  loop: "{{ _cartridges_to_install }}"
+
+- name: Show if there is a dependency on theOpenShift AI operator
+  debug:
+    var: _opernshift_ai_required

@@ -11,14 +11,14 @@
 - set_fact:
     _nfd_channel: "{{ _nfd_packagemanifest.stdout }}"
 
-- name: Generate NFD operator file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-operator.yaml
+- name: Generate NFD operator file {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml
   template:
     src: nfd-operator.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-operator.yaml"
+    dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml"
 
 - name: Create NFD operator
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-operator.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml
 
 - name: Wait until NFD Operator CSV has status Succeeded
   shell: |
@@ -41,11 +41,11 @@
   include_role:
     name: openshift-get-version
 
-- name: Generate NodeFeatureDiscovery CR file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-cr.yaml
+- name: Generate NodeFeatureDiscovery CR file {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml
   template:
     src: nfd-cr.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-cr.yaml"
+    dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml"
 
 - name: Create NFD CR
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-nfd-cr.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml
