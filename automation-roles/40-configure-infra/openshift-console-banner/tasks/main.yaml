@@ -5,12 +5,31 @@
       src: console-banner.j2
       dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-console-banner.yaml"
 
+  - include_role:
+      name: log-deployer-activity
+    vars:
+      _p_activity_description: "Create OpenShift console banner"
+      _p_activity_yaml: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-console-banner.yaml"
+
   - name: Create OpenShift console banner
     shell: |
       oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-console-banner.yaml
+    when: not cpd_dry_run
   when: (_p_openshift_cluster.console_banner | default ("")) != ""
 
-- name: Delete console banner if not specified
-  shell:
-    oc delete ConsoleNotification cpd-console-banner --ignore-not-found
-  when: (_p_openshift_cluster.console_banner | default ("")) == ""
+- block:
+  - set_fact:
+      _delete_openshift_console_banner: "oc delete ConsoleNotification cpd-console-banner --ignore-not-found"
+
+  - include_role:
+      name: log-deployer-activity
+    vars:
+      _p_activity_description: "Setup Multicloud Object Gateway"
+      _p_activity_command: "{{ _setup_mcg_command }}"
+
+  - name: Delete console banner if not specified
+    shell: |
+      {{ _delete_openshift_console_banner }}
+    when: not cpd_dry_run
+  when: 
+  - (_p_openshift_cluster.console_banner | default ("")) == ""
