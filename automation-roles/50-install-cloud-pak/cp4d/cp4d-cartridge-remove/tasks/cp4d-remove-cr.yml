@@ -7,6 +7,20 @@
 - name: Delete instances of {{ _current_cartridge_cr.name }}
   include_tasks: cp4d-delete-cr-instances.yml
 
-- name: Removing cartridge {{ _current_cartridge_cr.name }}
+- set_fact:
+    _delete_cartridge_cr_command: "{{ oc delete {{ _current_cartridge_cr.cr_cr }} --namespace {{ _p_current_cp4d_cluster.project }} --all }}"
+
+- name: Show ommand for delete cartridge CR
+  debug:
+    var: _delete_cartridge_cr_command
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Remove cartridge {{ _current_cartridge_cr.name }}"
+    _p_activity_command: "{{ _delete_cartridge_cr_command }}"
+
+- name: Remove cartridge {{ _current_cartridge_cr.name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-delete-cartridge.log
   shell: |
-    oc delete {{ _current_cartridge_cr.cr_cr }} --namespace {{ _p_current_cp4d_cluster.project }} --all
+    {{ _delete_cartridge_cr_command }} >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-delete-cartridge.log 2>&1
+  when: not cpd_dry_run
