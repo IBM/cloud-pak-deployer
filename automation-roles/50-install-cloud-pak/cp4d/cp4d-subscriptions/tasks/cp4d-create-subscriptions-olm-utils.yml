@@ -46,24 +46,32 @@
   debug:
     var: _apply_olm_command
 
-- name: Run apply-olm command to install {{ _p_subscription_scope }} subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log
-  shell: |
-    {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log 2>&1
-  failed_when: False
-  retries: 2
-  delay: 10
-  until: _apply_olm_result.rc==0
-  register: _apply_olm_result
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create {{ _p_subscription_scope }} subscriptions"
+    _p_activity_command: "{{ _apply_olm_command }}"
 
-- name: Show subscriptions state if apply-olm failed
-  block:
-  - name: Retrieving state of all operators in project {{ _p_current_cp4d_cluster.operators_project }}
+- block:
+  - name: Run apply-olm command to install {{ _p_subscription_scope }} subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log
     shell: |
-      oc get subscriptions.operators.coreos.com -n {{ _p_current_cp4d_cluster.operators_project }} \
-        --no-headers \
-        --sort-by=.metadata.creationTimestamp \
-        -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
-    register: _subscription_state
-  - fail:
-      msg: "Creation of the subscriptions failed (possible due to OLM issue): {{ _subscription_state.stdout_lines }}"
-  when: _apply_olm_result.rc != 0
+      {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log 2>&1
+    failed_when: False
+    retries: 2
+    delay: 10
+    until: _apply_olm_result.rc==0
+    register: _apply_olm_result
+
+  - name: Show subscriptions state if apply-olm failed
+    block:
+    - name: Retrieving state of all operators in project {{ _p_current_cp4d_cluster.operators_project }}
+      shell: |
+        oc get subscriptions.operators.coreos.com -n {{ _p_current_cp4d_cluster.operators_project }} \
+          --no-headers \
+          --sort-by=.metadata.creationTimestamp \
+          -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' 
+      register: _subscription_state
+    - fail:
+        msg: "Creation of the subscriptions failed (possible due to OLM issue): {{ _subscription_state.stdout_lines }}"
+    when: _apply_olm_result.rc != 0
+  when: not cpd_dry_run
