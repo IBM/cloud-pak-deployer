@@ -1,0 +1,15 @@
+---
+- name: Generate scheduler command
+  set_fact:
+    _apply_scheduler_command: "{{ lookup('template','apply-scheduler.j2') }}"
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Apply scheduler"
+    _p_activity_command: "{{ _apply_scheduler_command }}"
+
+- name: Install scheduler, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-scheduler.log
+  shell: |
+    {{ _apply_scheduler_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-scheduler.log
+  when: not cpd_dry_run
