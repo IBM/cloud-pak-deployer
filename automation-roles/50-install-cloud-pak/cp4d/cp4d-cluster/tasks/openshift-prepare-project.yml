@@ -8,65 +8,67 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-# Create project that will run operators of Cloud Pak for Data
-- name: Validate if OpenShift project {{ current_cp4d_cluster.operators_project }} exists
-  shell: oc project {{ current_cp4d_cluster.operators_project }}
-  failed_when: False
-  register: _cp4d_operators_project_exists
-  when: current_cp4d_cluster.cp4d_version >= '4.7.0'
+- set_fact:
+    _create_operators_project: "oc new-project {{ current_cp4d_cluster.operators_project }} | true"
 
-- name: Create OpenShift Project {{ current_cp4d_cluster.operators_project }} if it does not exist
-  command: oc new-project {{current_cp4d_cluster.operators_project }}
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create oeprators project {{ current_cp4d_cluster.operators_project }}"
+    _p_activity_command: "{{ _create_operators_project }}"
+
+- name: Create operators project {{ current_cp4d_cluster.operators_project }}
+  shell: |
+    {{ _create_operators_project }}
+  when: not cpd_dry_run
+
+- set_fact:
+    _create_instance_project: "oc new-project {{ current_cp4d_cluster.project }} | true"
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create instance project {{ current_cp4d_cluster.project }}"
+    _p_activity_command: "{{ _create_instance_project }}"
+
+- name: Create instance project {{ current_cp4d_cluster.project }}
+  shell: |
+    {{ _create_instance_project }}
+  when: not cpd_dry_run
+
+# Set configmap to control if Db2U must run with elevated or limited privileges
+- include_tasks: cp4d-db2u-configmap.yml
   when:
-  - current_cp4d_cluster.cp4d_version >= '4.7.0'
-  - _cp4d_operators_project_exists.rc != 0
+  - _db2u_dependency | default(False)
 
-# Create project that will run instance of Cloud Pak for Data
-- name: Validate if OpenShift project {{ current_cp4d_cluster.project }} exists
-  shell: oc project {{ current_cp4d_cluster.project }}
-  failed_when: False
-  register: _cp4d_cluster_project_exists
+- name: Generate authorize instance command for project {{ current_cp4d_cluster.project }}
+  set_fact:
+    _authorize_instance_command: "{{ lookup('template','authorize-instance.j2') }}"
 
-- name: Create OpenShift Project {{ current_cp4d_cluster.project }} if it does not exist
-  command: oc new-project {{ current_cp4d_cluster.project }}
-  when: _cp4d_cluster_project_exists.rc != 0
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Authorize instance {{ current_cp4d_cluster.project }}"
+    _p_activity_command: "{{ _authorize_instance_command }}"
 
-# Prepare CP4D for versions >= 4.7.0
-- block:
-  # Set configmap to control if Db2U must run with elevated or limited privileges
-  - include_tasks: cp4d-db2u-configmap.yml
-    when:
-    - _db2u_dependency | default(False)
+- name: Authorize instance, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log
+  shell: |
+    set -o pipefail
+    {{ _authorize_instance_command }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log
+  when: not cpd_dry_run
 
-  - name: Generate authorize instance command for project {{ current_cp4d_cluster.project }}
-    set_fact:
-      _authorize_instance_command: "{{ lookup('template','authorize-instance.j2') }}"
+- name: Generate setop instance topology command for project {{ current_cp4d_cluster.project }}
+  set_fact:
+    _setup_instance_topology: "{{ lookup('template','setup-instance-topology.j2') }}"
 
-  - include_role:
-      name: log-deployer-activity
-    vars:
-      _p_activity_description: "Authorize instance {{ current_cp4d_cluster.project }}"
-      _p_activity_command: "{{ _authorize_instance_command }}"
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Authorize instance {{ current_cp4d_cluster.project }}"
+    _p_activity_command: "{{ _setup_instance_topology }}"
 
-  - name: Authorize instance, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log
-    shell: |
-      set -o pipefail
-      {{ _authorize_instance_command }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log
-
-  - name: Generate setop instance topology command for project {{ current_cp4d_cluster.project }}
-    set_fact:
-      _setup_instance_topology: "{{ lookup('template','setup-instance_topology.j2') }}"
-
-  - include_role:
-      name: log-deployer-activity
-    vars:
-      _p_activity_description: "Authorize instance {{ current_cp4d_cluster.project }}"
-      _p_activity_command: "{{ _setup_instance_topology }}"
-
-  - name: Setup instance topology, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance-topology.log
-    shell: |
-      set -o pipefail
-      {{ _setup_instance_topology }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance-topology.log
-
-  when: 
-  - current_cp4d_cluster.cp4d_version >= '4.7.0'
+- name: Setup instance topology, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance-topology.log
+  shell: |
+    set -o pipefail
+    {{ _setup_instance_topology }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance-topology.log
+  when: not cpd_dry_run
