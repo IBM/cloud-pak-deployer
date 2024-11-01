@@ -78,20 +78,28 @@
     regexp: '(ibm-datagate-prod-\d.\d.\d)(.tgz)'
     replace: '\1*\2'
 
-- name: Run apply-olm command to create catalog sources for Cloud Pak for Data {{ _p_catsrc_scope }}
-  block:
-  - name: Generate OLM command to create catalog sources for Cloud Pak for Data {{ _p_catsrc_scope }}
-    set_fact:
-      _apply_olm_command: "{{ lookup('template', 'apply-olm-create-catsrc.j2') }}" 
-    vars:
-      _p_preview_script: False
-  - name: Run apply-olm command to create catalog sources, logs are in {{ status_dir }}/log/apply-olm-create-catsrc-{{ _p_catsrc_scope }}.log
-    shell: |
-      {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc{{ _p_catsrc_scope }}.log 2>&1
+- name: Generate OLM command to create catalog sources for Cloud Pak for Data {{ _p_catsrc_scope }}
+  set_fact:
+    _apply_olm_command: "{{ lookup('template', 'apply-olm-create-catsrc.j2') }}" 
+  vars:
+    _p_preview_script: False
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create catalog sources for {{ _p_catsrc_scope }}"
+    _p_activity_command: "{{ _apply_olm_command }}"
+
+- name: Run apply-olm command to create catalog sources for {{ _p_catsrc_scope }}, logs are in {{ status_dir }}/log/apply-olm-create-catsrc-{{ _p_catsrc_scope }}.log
+  shell: |
+    {{ _apply_olm_command }} > {{ status_dir }}/log/apply-olm-create-catsrc{{ _p_catsrc_scope }}.log 2>&1
+  when: not cpd_dry_run
 
 - name: If not air-gapped, copy case files from /tmp/work/offline to {{ status_dir }}/cp4d/offline
   copy:
     src: /tmp/work/offline
     dest: "{{ status_dir }}/cp4d/"
     remote_src: True
-  when: not (cpd_airgap | default(False) | bool)
+  when: 
+  - not (cpd_airgap | default(False) | bool)
+  - not cpd_dry_run
