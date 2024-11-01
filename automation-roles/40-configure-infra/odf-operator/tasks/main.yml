@@ -19,9 +19,19 @@
 - include_tasks: aws-s3-sts-role.yml
   when: _aws_sts_mode
 
+- set_fact: 
+    _create_openshift_storage_project: "oc create ns openshift-storage || true"
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create openshift-storage project"
+    _p_activity_command: "{{ _create_openshift_storage_project }}"
+
 - name: Create openshift-storage OpenShift project
   shell: |
-    oc create ns openshift-storage || true
+    {{ _create_openshift_storage_project }}
+  when: not dry_run
 
 - name: Retrieve default channel for ocs-operator manifest
   shell:
@@ -36,37 +46,45 @@
     src: odf-operator.j2
     dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml"
 
-- name: Create ODF operator
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
-
-- name: Wait until ODF Operator CSV has status Succeeded
-  shell: |
-     oc get csv -n openshift-storage \
-      -l operators.coreos.com/ocs-operator.openshift-storage \
-      --no-headers \
-      -o custom-columns='name:metadata.name,phase:status.phase' | \
-      grep -i succeeded | wc -l
-  register: _odf_csv_status
-  retries: 30
-  delay: 30
-  until: _odf_csv_status.stdout == "1"
+- include_role:
+    name: log-deployer-activity
   vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    _p_activity_description: "Create ODF operator"
+    _p_activity_yaml: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml"
 
-- name: Ensure that Data Foundation is shown in the console
-  shell: |
-    oc patch console.operator cluster \
-      -n openshift-storage \
-      --type json \
-      -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
+- block:
+  - name: Create ODF operator
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
 
-- name: Set operator to Manual approval if the cluster is installed with STS
-  shell: |
-    oc patch subscriptions.operators.coreos.com -n openshift-storage odf-operator \
-        --type merge \
-        --patch '{"spec":{"installPlanApproval":"Manual"}}'
-  when: _aws_sts_mode
+  - name: Wait until ODF Operator CSV has status Succeeded
+    shell: |
+      oc get csv -n openshift-storage \
+        -l operators.coreos.com/ocs-operator.openshift-storage \
+        --no-headers \
+        -o custom-columns='name:metadata.name,phase:status.phase' | \
+        grep -i succeeded | wc -l
+    register: _odf_csv_status
+    retries: 30
+    delay: 30
+    until: _odf_csv_status.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+
+  - name: Ensure that Data Foundation is shown in the console
+    shell: |
+      oc patch console.operator cluster \
+        -n openshift-storage \
+        --type json \
+        -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
+
+  - name: Set operator to Manual approval if the cluster is installed with STS
+    shell: |
+      oc patch subscriptions.operators.coreos.com -n openshift-storage odf-operator \
+          --type merge \
+          --patch '{"spec":{"installPlanApproval":"Manual"}}'
+    when: _aws_sts_mode
+  when: not dry_run

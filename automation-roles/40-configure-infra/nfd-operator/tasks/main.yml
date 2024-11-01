@@ -1,7 +1,17 @@
 ---
+- set_fact:
+    _create_nfd_ns: "oc create ns openshift-nfd || true"
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create Node Feature Discovery operator namespace"
+    _p_activity_commandl: "{{ _create_nfd_ns }}"
+
 - name: Create openshift-nfd OpenShift project
   shell: |
-    oc create ns openshift-nfd || true
+   {{ _create_nfd_ns }}
+  when: not cpd_dry_run
 
 - name: Retrieve default channel for Node Feature Discovery manifest
   shell:
@@ -16,26 +26,34 @@
     src: nfd-operator.j2
     dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml"
 
-- name: Create NFD operator
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml
-
-- name: Wait until NFD Operator CSV has status Succeeded
-  shell: |
-     oc get csv -n openshift-nfd \
-      -l operators.coreos.com/nfd.openshift-nfd \
-      --no-headers \
-      -o custom-columns='name:metadata.name,phase:status.phase' | \
-      grep -i succeeded | wc -l
-  register: _nfd_csv_status
-  retries: 30
-  delay: 30
-  until: _nfd_csv_status.stdout == "1"
+- include_role:
+    name: log-deployer-activity
   vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    _p_activity_description: "Create NFD operator"
+    _p_activity_yaml: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml"
+
+- block:
+  - name: Create NFD operator
+    shell: |
+      oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml
+
+  - name: Wait until NFD Operator CSV has status Succeeded
+    shell: |
+      oc get csv -n openshift-nfd \
+        -l operators.coreos.com/nfd.openshift-nfd \
+        --no-headers \
+        -o custom-columns='name:metadata.name,phase:status.phase' | \
+        grep -i succeeded | wc -l
+    register: _nfd_csv_status
+    retries: 30
+    delay: 30
+    until: _nfd_csv_status.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
 
 - name: Get OpenShift version
   include_role:
@@ -46,6 +64,13 @@
     src: nfd-cr.j2
     dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml"
 
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create NFD CR"
+    _p_activity_yaml: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml"
+
 - name: Create NFD CR
   shell: |
     oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml
+  when: not cpd_dry_run
