@@ -1,5 +1,4 @@
 ---
-
 # Prepare CP4D for versions >= 4.8.0
 - block:
 
@@ -27,17 +26,24 @@
           --patch='{"metadata": {"namespace": "ibm-knative-events"}}' \
           --dry-run=client | oc apply -n ibm-knative-events -f -
     
-    when: cpd_airgap | bool
+    when: 
+    - cpd_airgap | bool
+    - not cpd_dry_run
 
-  - name: Generate deploy KNative eventing script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.sh
-    template:
-      src: deploy-knative-eventing.j2
-      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.sh"
-      mode: u+rwx
+  - name: Generate deploy KNative eventing command
+    set_fact:
+      _deploy_knative_eventing_command: "{{ lookup('template','deploy-knative-eventing.j2') }}"
+
+  - include_role:
+      name: log-deployer-activity
+    vars:
+      _p_activity_description: "Deploy KNative eventing"
+      _p_activity_command: "{{ _deploy_knative_eventing_command }}"
 
   - name: Run script to deploy KNative eventing, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.log
     shell: |
-      {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.sh
+      {{ _deploy_knative_eventing_command }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.log
+    when: not cpd_dry_run
 
   when: 
   - current_cp4d_cluster.cp4d_version >= '4.8.0'

@@ -4,6 +4,13 @@
     src: db2u-product-cm.j2
     dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2u-product-cm.yml"
 
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create configmap db2u-product-cm in project {{ current_cp4d_cluster.project }}"
+    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2u-product-cm.yml"
+
 - name: Create configmap db2u-product-cm in project {{ current_cp4d_cluster.project }}
   shell: |
     oc apply -f {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2u-product-cm.yml
+  when: not cpd_dry_run

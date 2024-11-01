@@ -43,22 +43,30 @@
   vars:
     _p_preview_script: False
 
-- name: Run apply-cr command to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
-  shell: |
-    {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
-
-# Wait for ZenService to be created (can take 10-15 minutes)
-- name: Wait for ZenService to be completed
-  shell: |
-    oc get ZenService -n {{ current_cp4d_cluster.project }} lite-cr --output json | \
-      jq -r '.status.zenStatus' | grep -i 'completed' | \
-      wc -l
-  register: deployed_zenservice
-  retries: 90
-  delay: 60
-  until: deployed_zenservice.stdout == "1"
+- include_role:
+    name: log-deployer-activity
   vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    _p_activity_description: "Run apply-cr to install Cloud Pak for Data platform"
+    _p_activity_command: "{{ _apply_cr_command }}"
+
+- block:
+  - name: Run apply-cr command to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
+    shell: |
+      {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
+
+  # Wait for ZenService to be created (can take 10-15 minutes)
+  - name: Wait for ZenService to be completed
+    shell: |
+      oc get ZenService -n {{ current_cp4d_cluster.project }} lite-cr --output json | \
+        jq -r '.status.zenStatus' | grep -i 'completed' | \
+        wc -l
+    register: deployed_zenservice
+    retries: 90
+    delay: 60
+    until: deployed_zenservice.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
