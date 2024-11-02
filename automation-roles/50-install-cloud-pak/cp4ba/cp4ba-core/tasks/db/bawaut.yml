@@ -162,5 +162,39 @@
         -- create database bawsql
         CREATE DATABASE bawsql OWNER bawsql TEMPLATE template0 ENCODING UTF8 TABLESPACE bawsql_tbs;
         REVOKE CONNECT ON DATABASE bawsql FROM public;
+
+      EOF"
+  register: command_status
+
+- name: BAWSQL DB - Populate sample values
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://bawsql:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+
+        -- add test table
+        CREATE TABLE IF NOT EXISTS public.user_db
+        (
+            id serial NOT NULL,
+            username character varying NOT NULL,
+            first_name character varying,
+            last_name character varying,
+            PRIMARY KEY (id),
+            CONSTRAINT unique_username UNIQUE (username)
+        );
+
+        -- add test data
+        INSERT INTO public.user_db(username, first_name, last_name)
+        VALUES 
+          ('jdoe0','John','Doe'),
+          ('hrobbey1','Hurleigh','Robbey'),
+          ('nhankins2','Nicola','Hankins'),
+          ('rcassin3','Rois','Cassin'),
+          ('shalbert4','Silvia','Halbert'),
+          ('lrowena5','Linn','Rowena')
+        ON CONFLICT (username) DO NOTHING;
+
       EOF"
   register: command_status
