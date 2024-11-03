@@ -1,3 +1,9 @@
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Delete project {{ _openldap_project_name }}"
+    _p_activity_command: "oc delete ns {{ _openldap_project_name }} --ignore-not-found"
+    
 - name: Remove OpenShift project {{ _openldap_project_name }}
   kubernetes.core.k8s:
     state: absent
@@ -7,3 +13,4 @@
     wait: true
     wait_sleep: 15
     wait_timeout: 120
+  when: not cpd_dry_run
