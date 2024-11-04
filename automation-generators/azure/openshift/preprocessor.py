@@ -66,7 +66,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             gpu = ge['gpu']
             if 'install' not in gpu:
                 g.appendError(msg='install property must be specified in openshift.gpu')
-            elif gpu['install'] not in ['True','False','auto']:
+            elif str(gpu['install']).lower() not in ['true','false','auto']:
                 g.appendError(msg='Value gpu.install must be True, False or auto')
 
         # Validate openshift_ai attributes
@@ -74,7 +74,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             openshift_ai = ge['openshift_ai']
             if 'install' not in openshift_ai:
                 g.appendError(msg='install property must be specified in openshift.openshift_ai')
-            elif openshift_ai['install'] not in ['True','False','auto']:
+            elif str(openshift_ai['install']).lower() not in ['true','false','auto']:
                 g.appendError(msg='Value openshift_ai.install must be True, False or auto')
 
         if 'mcg' in ge:
