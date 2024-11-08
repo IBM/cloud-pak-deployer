@@ -6,33 +6,35 @@
     loop_var: _current_cp4d_cartridge
 
 # Always generate the preview script to log what will be done
-- name: Generate command preview script to install cartridges
-  set_fact:
-    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-cartridges.j2') }}"
-  vars:
-    _p_preview_script: True 
+- block:
+  - name: Generate command preview script to install cartridges
+    set_fact:
+      _apply_cr_command_script: "{{ lookup('template', 'apply-cr-cartridges.j2') }}"
+    vars:
+      _p_preview_script: True 
 
-- name: Show apply-cr command for install cartridges preview script
-  debug:
-    var: _apply_cr_command_script
+  - name: Show apply-cr command for install cartridges preview script
+    debug:
+      var: _apply_cr_command_script
 
-- name: Generate preview script to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
-  shell: |
-    {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
+  - name: Generate preview script to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
+    shell: |
+      {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh
-  copy:
-    src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
-    remote_src: True
-    mode: u+rwx
+  - name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh
+    copy:
+      src: "/tmp/work/preview.sh"
+      dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
+      remote_src: True
+      mode: u+rwx
 
-# TODO: Remove patch once fixed in product
-- name: Patch DashboardService in apply-cr script to workaround defect
-  ansible.builtin.replace:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
-    regexp: 'kind:\s+dashboardservice'
-    replace: 'kind: DashboardService'
+  # TODO: Remove patch once fixed in product
+  - name: Patch DashboardService in apply-cr script to workaround defect
+    ansible.builtin.replace:
+      path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
+      regexp: 'kind:\s+dashboardservice'
+      replace: 'kind: DashboardService'
+  when: not cpd_dry_run
 
 - name: Generate apply-cr command to install cartridges
   set_fact:
