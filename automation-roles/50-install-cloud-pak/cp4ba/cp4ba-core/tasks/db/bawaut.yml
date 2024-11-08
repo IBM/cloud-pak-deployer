@@ -137,15 +137,15 @@
   register: command_status
 
 # Prepare BAW custom DB for usage with the SQL Integration Toolkit
-- name: BAWSQL DB prepare tablespace
+- name: BAWEXTERNAL DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/bawsql
+    command: mkdir -p /bitnami/postgresql/tablespaces/bawexternal
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
-- name: BAWSQL DB
+- name: BAWEXTERNAL DB
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
@@ -153,26 +153,26 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
 
-        -- create user bawsql
-        CREATE USER bawsql WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user bawexternal
+        CREATE USER bawexternal WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create tablespace for bawsql
-        CREATE TABLESPACE bawsql_tbs OWNER bawsql LOCATION '/bitnami/postgresql/tablespaces/bawsql';
+        -- create tablespace for bawexternal
+        CREATE TABLESPACE bawexternal_tbs OWNER bawexternal LOCATION '/bitnami/postgresql/tablespaces/bawexternal';
 
-        -- create database bawsql
-        CREATE DATABASE bawsql OWNER bawsql TEMPLATE template0 ENCODING UTF8 TABLESPACE bawsql_tbs;
-        REVOKE CONNECT ON DATABASE bawsql FROM public;
+        -- create database bawexternal
+        CREATE DATABASE bawexternal OWNER bawexternal TEMPLATE template0 ENCODING UTF8 TABLESPACE bawexternal_tbs;
+        REVOKE CONNECT ON DATABASE bawexternal FROM public;
 
       EOF"
   register: command_status
 
-- name: BAWSQL DB - Populate sample values
+- name: BAWEXTERNAL DB - Populate sample values
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        psql postgresql://bawsql:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        psql postgresql://bawexternal:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
 
         -- add test table
         CREATE TABLE IF NOT EXISTS public.user_db
