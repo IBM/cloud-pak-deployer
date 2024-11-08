@@ -48,23 +48,6 @@
     - proj5
     - proj6
 
-- name: ADP proj2 DB
-  kubernetes.core.k8s_exec:
-    namespace: "{{ cp4ba_postgresql_project }}"
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: >
-      bash -c "
-        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create user proj2
-        CREATE ROLE proj2 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
-
-        -- create database proj2
-        create database proj2 owner proj2 template template0 encoding UTF8;
-        revoke connect on database proj2 from public;
-        grant all privileges on database proj2 to proj2;
-      EOF"
-  register: command_status
-
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=scripts-creating-databases-document-processing
 # DEVOS Based on
 # https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
