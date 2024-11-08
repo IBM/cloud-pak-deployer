@@ -10,7 +10,7 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
     {% endif %}
     kube_version = "{{generator.attributes.ocp_version}}_openshift"
     flavor       = "{{generator.attributes.compute_flavour}}"
-    secondary_storage = "{{ generator.attributes.compute_secondary_storage | default(omit) }}"
+    secondary_storage = "{{ generator.attributes.secondary_storage | default(omit) }}"
     entitlement  = "cloud_pak"
     vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
     worker_count = "{{ ((generator.attributes.compute_nodes) / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
@@ -41,7 +41,7 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
     cluster           = "{{generator.attributes.name }}"
     worker_pool_name  = "{{generator.attributes.name }}-{{item.ocs_storage_label}}"
     flavor       = "{{ item.storage_flavour | default('bx2.16x64') }}"
-    secondary_storage = "{{ item.storage_secondary_storage | default(omit) }}"
+    secondary_storage = "{{ item.secondary_storage | default(omit) }}"
     vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
     worker_count      = "{{ (3 / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
