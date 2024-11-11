@@ -138,6 +138,7 @@ openshift:
   managed: True
   ocp_version: 4.8
   compute_flavour: bx2.16x64
+  secondary_storage: 900gb.10iops-tier
   compute_nodes: 3
   cloud_native_toolkit: False
   oadp: False
@@ -170,6 +171,8 @@ openshift:
     nfs_server_name: sample-nfs
   - storage_name: ocs-storage
     storage_type: ocs
+    storage_flavour: bx2.16x64
+    secondary_storage: 900gb.10iops-tier
     ocs_storage_label: ocs
     ocs_storage_size_gb: 500
     ocs_version: 4.8.0
@@ -191,6 +194,7 @@ openshift:
 | managed                          | Is the ROKS cluster managed by this deployer? See note below.                                                                                                                                    | No                      | True (default), False                                                            |
 | ocp_version                      | ROKS Kubernetes version. If you want to install `4.10`, specify `"4.10"`                                                                                                                         | Yes                     | >= 4.6                                                                           |
 | compute_flavour                  | Type of compute node to be used                                                                                                                                                                  | Yes                     | [Node flavours](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles&interface=api) |
+| secondary_storage                | Additional storage to be added to the compute servers                                                                                                                                            | No                      | 900gb.10iops-tier, ...|
 | compute_nodes                    | Total number of compute nodes. This must be a factor of the number of subnets                                                                                                                    | Yes                     | Integer                                                                          |
 | resource_group                   | IBM Cloud resource group for the ROKS cluster                                                                                                                                                    | Yes                     |                                                                                  |
 | cloud_native_toolkit             | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                                                                                                   | No                      | True, False (default)                                                            |
@@ -201,7 +205,6 @@ openshift:
 | infrastructure.cos_name          | Reference to the `cos` object created for this cluster                                                                                                                                           | Yes                     | Existing cos object                                                              |
 | infrastructure.private_only      | If true, it indicates that the ROKS cluster must be provisioned without public endpoints                                                                                                         | No                      | True, False (default)                                                            |
 | infrastructure.deny_node_ports   | If true, the Allow ICMP, TCP and UDP rules for the security group associated with the ROKS cluster are removed if present. If false, the Allow ICMP, TCP and UDP rules are added if not present. | No                      | True, False (default)                                                            |
-| infrastructure.secondary_storage | Reference to the storage flavour to be used as secondary storage, for example `"900gb.5iops-tier"`                                                                                               | No                      | Valid secondary storage flavour                                                  |
 | openshift_logging[]              | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)                                                                                                           | No                      |                                                                                  |
 | upstream_dns[]                   | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                                                                                                                                    | No                      |                                                                                  |
 | gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                                       | No        |                          |
@@ -227,6 +230,8 @@ The `managed` attribute indicates whether the ROKS cluster is managed by the Clo
 | openshift_storage[] | List of storage definitions to be defined on OpenShift                                          | Yes                            |                       |
 | storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                               | Yes                            |                       |
 | storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | nfs, ocs or pwx       |
+| storage_flavour     | Type of compute node to be used for the storage nodes                                           | Yes                            | [Node flavours](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles&interface=api), default is `bx2.16x64` |
+| secondary_storage   | Additional storage to be added to the storage server                                            | No                             | 900gb.10iops-tier, ...|
 | nfs_server_name     | Name of the NFS server within the VPC                                                           | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
 | ocs_storage_label   | Label to be used for the dedicated OCS nodes in the cluster                                     | Yes if `storage_type` is `ocs` |                       |
 | ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                                                       | Yes if `storage_type` is `ocs` |                       |
