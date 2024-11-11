@@ -27,6 +27,10 @@
   shell:
     oc get packagemanifest ocs-operator -o jsonpath='{.status.defaultChannel}'
   register: _odf_packagemanifest
+  failed_when: False
+  retries: 30
+  delay: 10
+  until: _odf_packagemanifest.rc==0
 
 - set_fact:
     _odf_channel: "{{ _odf_packagemanifest.stdout }}"
