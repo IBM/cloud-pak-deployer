@@ -39,6 +39,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('managed').isOptional().mustBeOneOf([True,False])
     g('ocp_version').isRequired()
     g('compute_flavour').isRequired()
+    g('secondary_storage').isOptional()
     g('compute_nodes').isRequired()    
     g('infrastructure').isRequired()
     g('openshift_storage').isRequired()
