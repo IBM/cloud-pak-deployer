@@ -14,6 +14,10 @@
     shell:
       oc get packagemanifest redhat-oadp-operator -o jsonpath='{.status.defaultChannel}'
     register: _oadp_packagemanifest
+    failed_when: False
+    retries: 30
+    delay: 10
+    until: _oadp_packagemanifest.rc==0
 
   - set_fact:
       _oadp_channel: "{{ _oadp_packagemanifest.stdout }}"
