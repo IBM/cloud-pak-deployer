@@ -7,6 +7,10 @@
   shell:
     oc get packagemanifest gpu-operator-certified -o jsonpath='{.status.defaultChannel}'
   register: _nvidia_packagemanifest
+  failed_when: False
+  retries: 30
+  delay: 10
+  until: _nvidia_packagemanifest.rc==0
 
 - set_fact:
     _nvidia_channel: "{{ _nvidia_packagemanifest.stdout }}"
