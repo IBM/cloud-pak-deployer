@@ -67,12 +67,11 @@
         -- create user devos1
         CREATE USER devos1 WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database devos1
-        create database devos1 owner devos1 template template0 encoding UTF8;
-        revoke connect on database devos1 from public;
+        -- create tablespace for devos1
+        CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/bitnami/postgresql/tablespaces/devos1';
 
-        -- please modify location follow your requirement
-        create tablespace devos1_tbs owner devos1 location '/bitnami/postgresql/tablespaces/devos1';
+        -- create database devos1
+        CREATE DATABASE devos1 OWNER devos1 TEMPLATE template0 ENCODING UTF8 TABLESPACE devos1_tbs;
       EOF"
   register: command_status
 

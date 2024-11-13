@@ -28,11 +28,11 @@
         -- create user icndb
         CREATE USER icndb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database icndb
-        create database icndb owner icndb template template0 encoding UTF8 ;
-        revoke connect on database icndb from public;
 
-        -- please modify location follow your requirement
-        create tablespace icndb_tbs owner icndb location '/bitnami/postgresql/tablespaces/icndb';
+        -- create tablespace for icndb
+        CREATE TABLESPACE icndb_tbs OWNER icndb LOCATION '/bitnami/postgresql/tablespaces/icndb';
+
+        -- create database icndb
+        CREATE DATABASE icndb OWNER icndb TEMPLATE template0 ENCODING UTF8 TABLESPACE icndb_tbs;
       EOF"
   register: command_status

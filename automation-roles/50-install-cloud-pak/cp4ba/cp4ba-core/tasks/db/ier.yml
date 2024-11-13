@@ -26,12 +26,12 @@
         -- create user fpos
         CREATE USER fpos WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database fpos
-        create database fpos owner fpos template template0 encoding UTF8 ;
-        revoke connect on database fpos from public;
 
-        -- please modify location follow your requirement
-        create tablespace fpos_tbs owner fpos location '/bitnami/postgresql/tablespaces/fpos';
+        -- create tablespace for fpos
+        CREATE TABLESPACE fpos_tbs OWNER fpos LOCATION '/bitnami/postgresql/tablespaces/fpos';
+
+        -- create database fpos
+        CREATE DATABASE fpos OWNER fpos TEMPLATE template0 ENCODING UTF8 TABLESPACE fpos_tbs;
       EOF"
   register: command_status
 
@@ -54,11 +54,10 @@
         -- create user ros
         CREATE USER ros WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database ros
-        create database ros owner ros template template0 encoding UTF8 ;
-        revoke connect on database ros from public;
+        -- create tablespace for ros
+        CREATE TABLESPACE ros_tbs OWNER ros LOCATION '/bitnami/postgresql/tablespaces/ros';
 
-        -- please modify location follow your requirement
-        create tablespace ros_tbs owner ros location '/bitnami/postgresql/tablespaces/ros';
+        -- create database ros
+        CREATE DATABASE ros OWNER ros TEMPLATE template0 ENCODING UTF8 TABLESPACE ros_tbs;
       EOF"
   register: command_status

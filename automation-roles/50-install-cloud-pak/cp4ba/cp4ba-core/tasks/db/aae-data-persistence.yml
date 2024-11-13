@@ -28,11 +28,10 @@
         -- create user aeos
         CREATE USER aeos WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database aeos
-        create database aeos owner aeos template template0 encoding UTF8;
-        revoke connect on database aeos from public;
+        -- create tablespace for aeos
+        CREATE TABLESPACE aeos_tbs OWNER aeos LOCATION '/bitnami/postgresql/tablespaces/aeos';
 
-        -- please modify location follow your requirement
-        create tablespace aeos_tbs owner aeos location '/bitnami/postgresql/tablespaces/aeos';
+        -- create database aeos
+        CREATE DATABASE aeos OWNER aeos TEMPLATE template0 ENCODING UTF8 TABLESPACE aeos_tbs;
       EOF"
   register: command_status
