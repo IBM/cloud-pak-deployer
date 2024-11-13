@@ -17,8 +17,8 @@
         -- create user adpbase
         CREATE USER adpbase WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database adpbase
-        create database adpbase owner adpbase template template0 encoding UTF8;
+        -- create database adpbase -- default template tablespace
+        CREATE DATABASE adpbase OWNER adpbase TEMPLATE template0 ENCODING UTF8;
         revoke connect on database adpbase from public;
       EOF"
   register: command_status
@@ -33,8 +33,8 @@
         -- create user {{ item }}
         CREATE USER {{ item }} WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database {{ item }}
-        create database {{ item }} owner {{ item }} template template0 encoding UTF8;
+        -- create database {{ item }} -- default template tablespace
+        CREATE DATABASE {{ item }} OWNER {{ item }} TEMPLATE template0 ENCODING UTF8;
         revoke connect on database {{ item }} from public;
       EOF"
   register: command_status
