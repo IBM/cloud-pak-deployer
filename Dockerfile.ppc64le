@@ -47,6 +47,15 @@ RUN cd /opt/ansible && \
 #RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
+# cli utilities
+RUN mkdir -p /Data/downloads && \ 
+    wget -O /Data/downloads/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("ppc64le-EE")).browser_download_url') && \
+    tar -xvzf /Data/downloads/cpd-cli.tar.gz -C /usr/local/bin --strip-components=1 && \
+    wget -O /Data/downloads/cloudctl.tar.gz https://github.com/IBM/cloud-pak-cli/releases/download/$(curl -s https://api.github.com/repos/IBM/cloud-pak-cli/releases/latest | jq -r .tag_name)/cloudctl-ppc64le.tar.gz && \
+    tar -xvzf /Data/downloads/cloudctl.tar.gz -C /usr/local/bin && \
+    mv /usr/local/bin/cloudctl-linux-ppc64le /usr/local/bin/cloudctl && \
+    rm -rf /Data/downloads
+
 ENV USER_UID=1001
 
 RUN chown -R ${USER_ID}:0 /Data && \

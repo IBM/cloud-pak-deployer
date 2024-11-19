@@ -1,31 +1,34 @@
 ---
-- name: Create downloads directory
-  file:
-    path: "{{ status_dir }}/downloads"
-    state: directory
+- block:
+    - name: Create downloads directory
+      file:
+        path: "{{ status_dir }}/downloads"
+        state: directory
 
-- set_fact:
-    _cpd_cli_arch: 'amd64'
-- set_fact:
-    _cpd_cli_arch: '{{ ARCH }}'
-  when: ARCH != 'x86_64'
-  
-- include_tasks: cpd-cli-download.yml
-  when:
-    - (_github_ibm_pat | default('')) == ''
-    - not (cpd_airgap | bool)
+    - set_fact:
+        _cpd_cli_arch: "amd64"
+    - set_fact:
+        _cpd_cli_arch: "{{ ARCH }}"
+      when: ARCH != 'x86_64'
 
-- include_tasks: cpd-cli-download-github-pat.yml
-  when:
-    - (_github_ibm_pat | default('')) != ''
-    - not (cpd_airgap | bool)
+    - include_tasks: cpd-cli-download.yml
+      when:
+        - (_github_ibm_pat | default('')) == ''
+        - not (cpd_airgap | bool)
 
-- name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz
-  unarchive:
-    src: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz"
-    dest: /usr/local/bin/
-    extra_opts: 
-    - --strip-components=1
+    - include_tasks: cpd-cli-download-github-pat.yml
+      when:
+        - (_github_ibm_pat | default('')) != ''
+        - not (cpd_airgap | bool)
+
+    - name: Unpack cpd-cli from {{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz
+      unarchive:
+        src: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz"
+        dest: /usr/local/bin/
+        extra_opts:
+          - --strip-components=1
+
+  when: not (cpd_skip_cli_downloads | default(False) | bool)
 
 - name: Get cpd-cli version
   shell: |

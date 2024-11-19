@@ -50,6 +50,7 @@ command_usage() {
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation."
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
+  echo "  --skip-cli-downloads          Pertains to env apply and env download. When specified, the downloads for cli applications are skipped (\$CPD_SKIP_CLI_DOWNLOADS)"
   echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
   echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
   echo "  --clean-up                    Remove the container after the run is completed (\$CPD_CLEANUP)"
@@ -553,6 +554,14 @@ while (( "$#" )); do
     export CPD_AIRGAP=true
     shift 1
     ;;   
+  --skip-cli-downloads)
+    if [[ "${ACTION}" != "apply" ]];then
+      echo "Error: --skip-cli-downloads is only valid for environment subcommand with apply/download."
+      command_usage 2
+    fi
+    export CPD_SKIP_CLI_DOWNLOADS=true
+    shift 1
+    ;;  
   --skip-mirror-images)
     if [[ "${ACTION}" != "apply" && "${ACTION}" != "download"  ]];then
       echo "Error: --skip-mirror-images is only valid for environment subcommand with apply/download."
@@ -1032,6 +1041,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
   run_cmd+=" -e CHECK_ONLY=${CHECK_ONLY}"
   run_cmd+=" -e CPD_AIRGAP=${CPD_AIRGAP}"
+  run_cmd+=" -e CPD_SKIP_CLI_DOWNLOADS=${CPD_SKIP_CLI_DOWNLOADS}"
   run_cmd+=" -e CPD_SKIP_MIRROR=${CPD_SKIP_MIRROR}"
   run_cmd+=" -e CPD_SKIP_PORTABLE_REGISTRY=${CPD_SKIP_PORTABLE_REGISTRY}"
   run_cmd+=" -e CPD_TEST_CARTRIDGES=${CPD_TEST_CARTRIDGES}"
