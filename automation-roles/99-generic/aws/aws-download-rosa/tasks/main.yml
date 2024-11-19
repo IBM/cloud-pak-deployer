@@ -8,39 +8,41 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- name: Create downloads directory
-  file:
-    path: "{{ status_dir }}/downloads"
-    state: directory
+- block:
+    - name: Create downloads directory
+      file:
+        path: "{{ status_dir }}/downloads"
+        state: directory
 
-- name: Check if ROSA client was already downloaded
-  stat:
-    path: "{{ status_dir }}/downloads/{{ _rosa_client_package }}"
-  register: _rosa_download
+    - name: Check if ROSA client was already downloaded
+      stat:
+        path: "{{ status_dir }}/downloads/{{ _rosa_client_package }}"
+      register: _rosa_download
 
-- name: Download ROSA client "{{ _rosa_base_url }}/{{ _rosa_client_package }}"
-  get_url:
-    url: "{{ _rosa_base_url }}/{{ _rosa_client_package }}"
-    dest: "{{ status_dir }}/downloads/{{ _rosa_client_package }}"
-    owner: root
-    mode: 0644
-  register: _download_result
-  until: _download_result is succeeded
-  retries: 5
-  delay: 30
-  when: not _rosa_download.stat.exists
+    - name: Download ROSA client "{{ _rosa_base_url }}/{{ _rosa_client_package }}"
+      get_url:
+        url: "{{ _rosa_base_url }}/{{ _rosa_client_package }}"
+        dest: "{{ status_dir }}/downloads/{{ _rosa_client_package }}"
+        owner: root
+        mode: 0644
+      register: _download_result
+      until: _download_result is succeeded
+      retries: 5
+      delay: 30
+      when: not _rosa_download.stat.exists
 
-- name: Unpack ROSA client
-  shell:
-    tar -zvxf {{ status_dir }}/downloads/{{ _rosa_client_package }} -C /usr/local/bin --no-same-owner
-  args:
-    warn: false
+    - name: Unpack ROSA client
+      shell: tar -zvxf {{ status_dir }}/downloads/{{ _rosa_client_package }} -C /usr/local/bin --no-same-owner
+      args:
+        warn: false
 
-- name: Make ROSA client executable
-  file:
-    path: /usr/local/bin/rosa
-    owner: root
-    mode: u=rwx,g=rx,o=rx
+    - name: Make ROSA client executable
+      file:
+        path: /usr/local/bin/rosa
+        owner: root
+        mode: u=rwx,g=rx,o=rx
+
+  when: not (cpd_skip_cli_downloads | default(False) | bool)
 
 - name: Get ROSA client version
   shell: |
