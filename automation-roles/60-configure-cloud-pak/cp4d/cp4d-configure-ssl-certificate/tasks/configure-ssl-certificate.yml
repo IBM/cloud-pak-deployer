@@ -41,7 +41,9 @@
     _update_cp4d_ssl_config: 1
   when: _cp4d_existing_external_tls_secret_result.stdout == "0"
 
-- when: _cp4d_existing_external_tls_secret_result.stdout == "1"
+- when: 
+  - _cp4d_existing_external_tls_secret_result.stdout == "1"
+  - not cpd_dry_run
   block:
     - name: Get current cert.crt from Cloud Pak for Data
       shell: |
@@ -66,7 +68,9 @@
     msg: "No changes to current TLS certificate of Cloud Pak for Data, skipping configuration of TLS certificate"
   when: _update_cp4d_ssl_config == 0
 
-- when: _update_cp4d_ssl_config == 1
+- when: 
+  - _update_cp4d_ssl_config == 1
+  - not cpd_dry_run
   block:
     - name: Delete existing external-tls-secret if present
       shell: |

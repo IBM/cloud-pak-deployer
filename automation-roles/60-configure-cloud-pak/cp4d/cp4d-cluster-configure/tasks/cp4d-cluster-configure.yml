@@ -53,7 +53,9 @@
 - name: Error if no secret value is returned
   fail:
     msg: Unable to acquire secret value for {{ _cp4d_admin_password_vault_key_name }}
-  when: "_cp4d_admin_password==''"
+  when: 
+  - _cp4d_admin_password==''
+  - not cpd_dry_run
 
 - name: Login to Cloud Pak for Data as the admin user
   include_role:
@@ -61,6 +63,7 @@
   vars:
     _p_cp4d_project: "{{ current_cp4d_cluster.project }}"
     _p_cp4d_password: "{{ _cp4d_admin_password }}"
+  when: not cpd_dry_run
 
 # Configure SSL certificate from the OpenShift Cluster to Cloud Pak for Data
 - name: Configure Cloud Pak for Data SSL certificate
