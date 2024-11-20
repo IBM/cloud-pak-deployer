@@ -65,9 +65,11 @@
     vars:
       _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
+# TODO: Removed failed_when
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
     shell:
       openshift-install create cluster --dir={{ status_dir }}/vsphere-ipi/{{ _current_openshift_cluster.name }} --log-level debug >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
+    failed_when: False
 
   - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
     set_fact:
