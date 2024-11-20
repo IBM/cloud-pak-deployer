@@ -31,6 +31,11 @@
 - set_fact:
     _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"
 
+- name: Retrieve template details for machineset
+  shell: |
+    oc get machineset -n openshift-machine-api -o jsonpath='{range .items[0]}{.spec.template.spec.providerSpec.value.template}{end}'
+  register: _get_machineset_template_name
+
 - name: Generate MachineSet file {{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
   template:
     src: vsphere-ocs-machineset.j2
