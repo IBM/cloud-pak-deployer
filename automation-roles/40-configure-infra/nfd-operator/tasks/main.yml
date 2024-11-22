@@ -7,6 +7,10 @@
   shell:
     oc get packagemanifest nfd -o jsonpath='{.status.defaultChannel}'
   register: _nfd_packagemanifest
+  failed_when: False
+  retries: 30
+  delay: 10
+  until: _nfd_packagemanifest.rc==0
 
 - set_fact:
     _nfd_channel: "{{ _nfd_packagemanifest.stdout }}"
