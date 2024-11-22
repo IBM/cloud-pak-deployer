@@ -16,9 +16,9 @@
       _storage_inferred_ocp_infra_type: 'standard'
 
   - set_fact:
-      _storage_inferred_ocp_infra_type: "{{ item.key }}"
-    loop: "{{ existing_ocp_cloud_infra | dict2items }}"
-    when: _existing_ocp_storage_class.stdout is search('storageclass.storage.k8s.io/{{ item.value.storage_class }}')
+      _storage_inferred_ocp_infra: "{{ item.value.infra }}"
+    loop: "{{ _v_existing_ocp_cloud_infra | dict2items }}"
+    when: _existing_ocp_storage_class is search('storageclass.storage.k8s.io/{{ item.key }}')
 
   # Extra handling for ibm cloud 
   - set_fact:
