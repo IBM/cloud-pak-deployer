@@ -65,15 +65,15 @@
     vars:
       _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
-# TODO: Removed failed_when
   - name: Run IPI installer for OpenShift cluster {{ _current_openshift_cluster.name }}, logs are in {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log
-    shell:
+    shell: |
       openshift-install create cluster --dir={{ status_dir }}/vsphere-ipi/{{ _current_openshift_cluster.name }} --log-level debug >> {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log 2>&1
+    register: _vsphere_openshift_install
     failed_when: False
 
   - name: Retrieve kubeadmin password for OpenShift cluster {{ _current_openshift_cluster.name }}
     set_fact:
-      _new_kubeadmin_password: "{{ lookup('file', status_dir + '/vsphere-ipi/' + _current_openshift_cluster.name + '/auth/kubeadmin-password') }}"
+      _new_kubeadmin_password: "{{ lookup('file', status_dir + '/vsphere-ipi/' + _current_openshift_cluster.name + '/auth/kubeadmin-password', errors='ignore') }}"
 
   - name: Store kubeadmin password into the vault
     include_role: 
@@ -82,4 +82,20 @@
       secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
       secret_group: "{{ environment_name }}" 
       secret_payload: "{{ _new_kubeadmin_password }}"
+    when: _new_kubeadmin_password!=''
+
+  - name: Fail if there was a timeout during the vSphere OpenShift install
+    fail:
+      msg: Errors or timeout occurred while installing OpenShift on vSphere, please check {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log. The kubeadmin password has been stored in vault secret {{ _current_openshift_cluster.name }}-kubeadmin-password
+    when: 
+    - _vsphere_openshift_install.rc !=0
+    - _new_kubeadmin_password!=''
+
+  - name: Fail if there was a fatal error during the vSphere OpenShift install
+    fail:
+      msg: Errors occurred while installing OpenShift on vSphere, please check {{ status_dir }}/log/{{ _current_openshift_cluster.name }}-create-cluster.log file
+    when: 
+    - _vsphere_openshift_install.rc !=0
+    - _new_kubeadmin_password==''
+
   when: _kubeadmin_password==""
