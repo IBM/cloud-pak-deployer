@@ -135,3 +135,66 @@
         grant create on tablespace chdb_tbs to chdb;
       EOF"
   register: command_status
+
+# Prepare BAW custom DB for usage with the SQL Integration Toolkit
+- name: BAWEXTERNAL DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir -p /bitnami/postgresql/tablespaces/bawexternal
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
+
+- name: BAWEXTERNAL DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+
+        -- create user bawexternal
+        CREATE USER bawexternal WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for bawexternal
+        CREATE TABLESPACE bawexternal_tbs OWNER bawexternal LOCATION '/bitnami/postgresql/tablespaces/bawexternal';
+
+        -- create database bawexternal
+        CREATE DATABASE bawexternal OWNER bawexternal TEMPLATE template0 ENCODING UTF8 TABLESPACE bawexternal_tbs;
+        REVOKE CONNECT ON DATABASE bawexternal FROM public;
+
+      EOF"
+  register: command_status
+
+- name: BAWEXTERNAL DB - Populate sample values
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://bawexternal:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+
+        -- add test table
+        CREATE TABLE IF NOT EXISTS public.user_db
+        (
+            id serial NOT NULL,
+            username character varying NOT NULL,
+            first_name character varying,
+            last_name character varying,
+            PRIMARY KEY (id),
+            CONSTRAINT unique_username UNIQUE (username)
+        );
+
+        -- add test data
+        INSERT INTO public.user_db(username, first_name, last_name)
+        VALUES 
+          ('jdoe0','John','Doe'),
+          ('hrobbey1','Hurleigh','Robbey'),
+          ('nhankins2','Nicola','Hankins'),
+          ('rcassin3','Rois','Cassin'),
+          ('shalbert4','Silvia','Halbert'),
+          ('lrowena5','Linn','Rowena')
+        ON CONFLICT (username) DO NOTHING;
+
+      EOF"
+  register: command_status
