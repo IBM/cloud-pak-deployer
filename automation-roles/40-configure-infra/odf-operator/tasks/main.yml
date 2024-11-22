@@ -1,4 +1,24 @@
 ---
+- set_fact:
+    _aws_sts_mode: False
+
+- set_fact:
+    _aws_sts_mode: True
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_openshift_cluster.infrastructure.type | default('self-managed')) == 'self-managed'
+  - (_p_openshift_cluster.infrastructure.credentials_mode | default('')) == 'Manual'
+
+- set_fact:
+    _aws_sts_mode: True
+  when: 
+  - cloud_platform == 'aws'
+  - (_p_openshift_cluster.infrastructure.type | default('self-managed')) == 'rosa'
+  - (_p_openshift_cluster.infrastructure.use_sts | default(False))
+
+- include_tasks: aws-s3-sts-role.yml
+  when: _aws_sts_mode
+
 - name: Create openshift-storage OpenShift project
   shell: |
     oc create ns openshift-storage || true
@@ -7,6 +27,10 @@
   shell:
     oc get packagemanifest ocs-operator -o jsonpath='{.status.defaultChannel}'
   register: _odf_packagemanifest
+  failed_when: False
+  retries: 30
+  delay: 10
+  until: _odf_packagemanifest.rc==0
 
 - set_fact:
     _odf_channel: "{{ _odf_packagemanifest.stdout }}"
@@ -43,3 +67,10 @@
       -n openshift-storage \
       --type json \
       -p '[{"op": "add", "path": "/spec/plugins", "value": ["odf-console"]}]'
+
+- name: Set operator to Manual approval if the cluster is installed with STS
+  shell: |
+    oc patch subscriptions.operators.coreos.com -n openshift-storage odf-operator \
+        --type merge \
+        --patch '{"spec":{"installPlanApproval":"Manual"}}'
+  when: _aws_sts_mode

@@ -62,12 +62,21 @@ spec:
             - filters:
                 - name: tag:Name
                   values:
+{% if current_openshift_cluster.ocp_version < '4.16' %}
                     - {{ _infrastructure_id }}-worker-sg 
+{% else %}
+                    - {{ _infrastructure_id }}-lb 
+                    - {{ _infrastructure_id }}-node
+{% endif %}
           subnet:
             filters:
               - name: tag:Name
                 values:
+{% if current_openshift_cluster.ocp_version < '4.16' %}
                   - {{ _infrastructure_id }}-private-{{ _zone }} 
+{% else %}
+                  - {{ _infrastructure_id }}-subnet-private-{{ _zone }} 
+{% endif %}
           tags:
             - name: kubernetes.io/cluster/{{ _infrastructure_id }} 
               value: owned

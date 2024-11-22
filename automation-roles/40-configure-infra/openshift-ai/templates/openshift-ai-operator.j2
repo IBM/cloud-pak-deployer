@@ -35,7 +35,17 @@ metadata:
   name: rhods-operator
   namespace: redhat-ods-operator
 spec:
-  channel: {{ _p_openshift_cluster.openshift_ai.channel | default('stable') }}
+{% if (_p_openshift_cluster.openshift_ai.channel | default('auto') | lower) == 'auto' %}
+
+{% if (_p_cp4d_version | default('5.0.3')) >= '5.0.3' %}
+  channel: stable
+{% else %}
+  channel: eus-2.8
+{% endif %}
+
+{% else %}
+  channel: {{ _p_openshift_cluster.openshift_ai.channel }}
+{% endif %}
   installPlanApproval: Automatic
   name: rhods-operator
   source: redhat-operators

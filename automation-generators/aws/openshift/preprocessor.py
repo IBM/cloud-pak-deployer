@@ -87,6 +87,22 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 elif len(dns['dns_servers']) < 1:
                     g.appendError(msg='At least 1 dns_servers element must be specified for all upstream_dns configurations')
 
+        # Validate gpu attributes
+        if 'gpu' in ge:
+            gpu = ge['gpu']
+            if 'install' not in gpu:
+                g.appendError(msg='install property must be specified in openshift.gpu')
+            elif str(gpu['install']).lower() not in ['true','false','auto']:
+                g.appendError(msg='Value gpu.install must be True, False or auto')
+
+        # Validate openshift_ai attributes
+        if 'openshift_ai' in ge:
+            openshift_ai = ge['openshift_ai']
+            if 'install' not in openshift_ai:
+                g.appendError(msg='install property must be specified in openshift.openshift_ai')
+            elif str(openshift_ai['install']).lower() not in ['true','false','auto']:
+                g.appendError(msg='Value openshift_ai.install must be True, False or auto')
+
         if 'mcg' in ge:
             mcg=ge['mcg']
             if 'install' not in mcg:

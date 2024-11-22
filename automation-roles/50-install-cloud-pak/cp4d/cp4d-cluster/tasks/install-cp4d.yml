@@ -71,8 +71,6 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
 - include_tasks: install-control-plane-olm-utils.yml
-  when: 
-  - not _upgrade_cp4d
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml
@@ -97,9 +95,12 @@
   include_role:
     name: cp4d-configure-ssl-certificate
 
-- name: Apply the specified license to the Cloud Pak for Data installation
-  include_tasks: cp4d-apply-license.yml
-  when: current_cp4d_cluster.cp4d_entitlement | default('') != ''
+- name: Apply the specified entitlement(s) to the Cloud Pak for Data installation
+  include_role: 
+    name: cp4d-apply-entitlement
+  vars:
+    _p_cp4d_entitlement: "{{ current_cp4d_cluster.cp4d_entitlement | default([]) }}"
+    _p_cp4d_production_license: "{{ current_cp4d_cluster.cp4d_production_license | default(True) }}"
 
 - name: Create catalog sources for Cloud Pak for Data cartridges in project {{ current_cp4d_cluster.project }}
   include_role:

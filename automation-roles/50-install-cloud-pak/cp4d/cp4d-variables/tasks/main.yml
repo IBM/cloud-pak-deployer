@@ -146,24 +146,6 @@
     - _installed_ibmcpd_version < "4.6.5"
     - not allow_cp4d_upgrade | default(False) | bool
 
-# Determine if cartridges must be installed sequentially
-- set_fact:
-    _sequential_install: "{{ _p_current_cp4d_cluster.sequential_install | default(True) | bool }}"
-
-- name: Force sequential install if CP4D must be upgraded
-  set_fact:
-    _sequential_install: "{{ _sequential_install or _upgrade_cp4d }}"
-
-- name: Determine if CP4D services must be installed sequentially
-  set_fact:
-    _sequential_install: "{{ _sequential_install or item.force_sequential_install }}"
-  loop: "{{ _cartridges_to_install }}"
-  no_log: True
-
-- name: Show if sequential install is done
-  debug:
-    var: _sequential_install
-
 # check if any of the cartridges have a db2u dependency
 - include_tasks: check-db2u-dependency.yml
 
@@ -175,6 +157,9 @@
 
 # check if any of the cartridges have a knative-eventing dependency
 - include_tasks: check-knative-eventing.yml
+
+# check if any of the cartridges have a dependency on the NFD and GPU operators and OpenShift AI
+- include_tasks: check-gpu-openshift-ai.yml
 
 - name: Determine cartridge dependencies
   set_fact:

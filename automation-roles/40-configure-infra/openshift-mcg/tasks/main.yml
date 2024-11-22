@@ -16,9 +16,16 @@
       oc get sc {{ _p_openshift_cluster.mcg.storage_class }}
     when:  _p_openshift_cluster.mcg.storage_type == 'storage-class'
 
+  - name: Label all compute nodes as storage nodes to allow StorageCluster to be created, ignore failure
+    shell: |
+      oc label no -l node-role.kubernetes.io/worker cluster.ocs.openshift.io/openshift-storage=
+    failed_when: False
+
   - name: Install ODF operator
     include_role: 
       name: odf-operator
+    vars:
+      _p_openshift_cluster: "{{ current_openshift_cluster }}"
 
   - name: Generate MCG StorageCluster ocs-storagecluster into {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
     template:

@@ -1,0 +1,22 @@
+---
+- name: Get cluster infra ID
+  shell: |
+    oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
+  register: _cluster_infra_id
+
+- set_fact:
+    _aws_mcg_role: "{{ _cluster_infra_id.stdout }}-mcg"
+
+- name: Retrieve ARN for AWS role {{ _aws_mcg_role }}
+  shell: |
+    aws iam get-role --role-name {{ _aws_mcg_role }} --output text --query 'Role.Arn'
+  failed_when: False
+  register: _aws_mcg_role_arn
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ _aws_secret_access_key }}"
+    AWS_SESSION_TOKEN: "{{ _aws_session_token }}"
+
+
+- include_tasks: create-aws-s3-sts-role.yml
+  when: _aws_mcg_role_arn.rc != 0

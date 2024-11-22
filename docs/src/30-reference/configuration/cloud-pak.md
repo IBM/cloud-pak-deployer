@@ -18,14 +18,35 @@ cp4d:
 - project: cpd
   openshift_cluster_name: sample
   cp4d_version: 4.7.3
-  sequential_install: False
   use_fs_iam: False
   change_node_settings: True
   db2u_limited_privileges: False
   accept_licenses: False
   openshift_storage_name: nfs-storage
-  cp4d_entitlement: cpd-enterprise
+  cp4d_entitlement: 
+  - cpd-enterprise
+  # - cpd-standard
+  # - cognos-analytics
+  - data-product-hub
+  # - datastage
+  # - ikc-premium
+  # - ikc-standard
+  # - openpages
+  # - planning-analytics
+  # - product-master
+  # - speech-to-text
+  # - text-to-speech
+  - watson-assistant
+  # - watson-discovery
+  # - watsonx-ai
+  # - watsonx-code-assistant-ansible
+  # - watsonx-code-assistant-z
+  # - watsonx-data
+  # - watsonx-gov-mm
+  # - watsonx-gov-rc
+  # - watsonx-orchestrate  
   cp4d_production_license: True
+  state: installed
   
   cartridges:
   - name: cpfs
@@ -39,14 +60,15 @@ cp4d:
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
 | openshift_cluster_name | Name of the OpenShift cluster                  | Yes, inferred from openshift       | Existing `openshift` cluster |
 | cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges that do not specify a version | Yes | 4.x.x |
-| sequential_install | If set to `True` the deployer will run the **OLM utils** playbooks to install catalog sources, subscriptions and CRs. If set to `False`, deployer will use OLM utils to generate the scripts and then run them, which will cause the catalog sources, subscriptions and CRs to be created immediately and install in parallel | No | True (default), False |
+| sequential_install | Deprecated property | No | True (default), False |
 | use_fs_iam | If set to `True` the deployer will enable Foundational Services IAM for authentication | No | False (default), True |
 | use_cp_alt_repo | When set to `False`, deployer will use use the alternative repo specified in `cp_alt_repo` resource | No | True (default), False |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
 | db2u_limited_privileges | Depicts whether Db2U containers run with limited privileges. If they do (`True`), Deployer will create KubeletConfig and Tuned OpenShift resources as per the documentation. | No | False (default), True |
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
-| cp4d_entitlement | Set to `cpd-enterprise`, `cpd-standard`, `watsonx-data`, `watsonx-ai`, `watsonx-gov-model-management`, `watsonx-gov-risk-compliance`, dependent on the deployed license | No | cpd-enterprise (default), cpd-standard, watsonx-data, watsonx-ai, watsonx-gov-model-management, watsonx-gov-risk-compliance |
+| cp4d_entitlement | Set to `cpd-enterprise`, `cpd-standard`, `watsonx-data`, `watsonx-ai`, `watsonx-gov-mm`, `watsonx-gov-rc`, dependent on the deployed license, multiple entitlements can be specified | No | For valid values, refer to product documentation |
 | cp4d_production_license | Whether the Cloud Pak for Data is a production license | No | True (default), False |
+| state | Indicated whether Cloud Pak for Data must be installed or removed | No | installed (default), removed |
 | image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
 | openshift_storage_name | References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | No, inferred from openshift->openshift_storage | |
 | cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](../../../30-reference/configuration/cp4d-cartridges) for more details | Yes | |

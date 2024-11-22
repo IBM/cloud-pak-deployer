@@ -25,13 +25,13 @@
 - debug:
     var: _aws_zones
 
-- name: Generate MachineSet file {{status_dir}}/openshift/aws-ipi-ocs-machineset.yaml
+- name: Generate MachineSet file {{ status_dir }}/openshift/aws-ipi-ocs-machineset.yaml
   template:
     src: "aws-ipi-ocs-machineset.j2"
-    dest: "{{status_dir}}/openshift/aws-ipi-ocs-machineset.yaml"
+    dest: "{{ status_dir }}/openshift/aws-ipi-ocs-machineset.yaml"
 
 - name: Create or update machine set
-  shell: oc apply -f {{status_dir}}/openshift/aws-ipi-ocs-machineset.yaml
+  shell: oc apply -f {{ status_dir }}/openshift/aws-ipi-ocs-machineset.yaml
 
 - name: Wait for machine sets
   include_tasks: wait-for-machine-set.yml
@@ -42,6 +42,8 @@
 - name: Install ODF operator
   include_role: 
     name: odf-operator
+  vars:
+    _p_openshift_cluster: "{{ current_openshift_cluster }}"
 
 - name: Check if StorageCluster ocs-storagecluster already exists
   command: |
@@ -49,15 +51,15 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Generate ODF StorageCluster file {{status_dir}}/openshift/aws-ocs-storagecluster.yaml
+- name: Generate ODF StorageCluster file {{ status_dir }}/openshift/aws-ocs-storagecluster.yaml
   template:
     src: "aws-ocs-storagecluster.j2"
-    dest: "{{status_dir}}/openshift/aws-ocs-storagecluster.yaml"
+    dest: "{{ status_dir }}/openshift/aws-ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
 - name: Create ODF StorageCluster
   shell: |
-    oc apply -f {{status_dir}}/openshift/aws-ocs-storagecluster.yaml
+    oc apply -f {{ status_dir }}/openshift/aws-ocs-storagecluster.yaml
   when: _ocs_cluster_exists.rc != 0
 
 - name: Wait until ODF StorageCluster has status Ready

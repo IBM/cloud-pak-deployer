@@ -9,7 +9,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly) into the window
-```
+```yaml
 ---
 apiVersion: v1
 kind: Namespace
@@ -55,8 +55,8 @@ subjects:
 * Update the secret below with your container software Entitlement key from https://myibm.ibm.com/products-services/containerlibrary. Make sure the key is indented exactly as below.
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block with **replaced YOUR_ENTITLEMENT_KEY**
-```
+* Paste the following block with **replaced YOUR_ENTITLEMENT_KEY** on line 10
+```yaml linenums="1" hl_lines="10"
 ---
 apiVersion: v1
 kind: Secret
@@ -74,7 +74,7 @@ stringData:
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly into the window)
-```
+```yaml
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -94,14 +94,14 @@ data:
       cluster_name: cpd-demo
       domain_name: example.com
       mcg:
-        install: False
+        install: auto
         storage_type: storage-class
         storage_class: managed-nfs-storage
       gpu:
         install: False
       openshift_ai:
-        install: False
-        channel: eus-2.8
+        install: auto
+        channel: auto
       openshift_storage:
       - storage_name: auto-storage
         storage_type: auto
@@ -110,7 +110,6 @@ data:
     - project: cpd
       openshift_cluster_name: cpd-demo
       cp4d_version: 5.0.1
-      sequential_install: True
       db2u_limited_privileges: False
       use_fs_iam: True
       accept_licenses: True
@@ -161,6 +160,10 @@ data:
       - name: datastage-ent-plus
         description: DataStage Enterprise Plus
         state: removed
+
+        # The default instance is created automatically with the DataStage installation. If you want to create additional instances
+        # uncomment the section below and specify the various scaling options.
+
         # instances:
         #   - name: ds-instance
         #     # Optional settings
@@ -331,8 +334,8 @@ data:
 
       # Please note that for watsonx.ai, the following pre-requisites exist:
       # If you want to use foundation models, you neeed to install the Node Feature Discovery and NVIDIA GPU operators. 
-      #    You can do so by setting the openshift.gpu.install property to True
-      # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to True
+      #    You can do so by setting the openshift.gpu.install property to auto
+      # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to auto
       - name: watsonx_ai
         description: watsonx.ai
         state: removed
@@ -369,7 +372,7 @@ data:
           state: removed
         - model_id: meta-llama-llama-2-13b-chat
           state: removed
-        - model_id: meta-llama-llama3-8b-instruct
+        - model_id: meta-llama-llama-3-8b-instruct
           state: removed
         - model_id: meta-llama-llama-2-70b-chat
           state: removed
@@ -477,8 +480,8 @@ data:
 ## Start the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block (exactly) into the window
-```
+* Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job (From release v3.0.2 onwards).
+```yaml linenums="1" hl_lines="11"
 apiVersion: v1
 kind: Pod
 metadata:

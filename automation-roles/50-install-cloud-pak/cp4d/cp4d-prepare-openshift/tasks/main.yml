@@ -19,5 +19,15 @@
   - cloud_platform == 'existing-ocp'
   - _storage_type == 'pwx'
 
+- include_tasks: cp4d-install-gpu.yml
+  when: 
+  - (_current_openshift_cluster.gpu.install | default('')) == 'auto'
+  - _nfd_gpu_required
+
+- include_tasks: cp4d-install-openshift-ai.yml
+  when: 
+  - (_current_openshift_cluster.openshift_ai.install | default('') | lower) == 'auto'
+  - _opernshift_ai_required
+
 - name: Prepare Cloud Pak for Data cluster-wide configuration on cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_tasks: cp4d-prepare-openshift.yml
