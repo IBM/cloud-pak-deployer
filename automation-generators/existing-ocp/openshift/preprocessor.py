@@ -60,6 +60,22 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 elif len(dns['dns_servers']) < 1:
                     g.appendError(msg='At least 1 dns_servers element must be specified for all upstream_dns configurations')
 
+        # Validate gpu attributes
+        if 'gpu' in ge:
+            gpu = ge['gpu']
+            if 'install' not in gpu:
+                g.appendError(msg='install property must be specified in openshift.gpu')
+            elif str(gpu['install']).lower() not in ['true','false','auto']:
+                g.appendError(msg='Value gpu.install must be True, False or auto')
+
+        # Validate openshift_ai attributes
+        if 'openshift_ai' in ge:
+            openshift_ai = ge['openshift_ai']
+            if 'install' not in openshift_ai:
+                g.appendError(msg='install property must be specified in openshift.openshift_ai')
+            elif str(openshift_ai['install']).lower() not in ['true','false','auto']:
+                g.appendError(msg='Value openshift_ai.install must be True, False or auto')
+
         # Validate mcg attributes
         if 'mcg' in ge:
             mcg = ge['mcg']
@@ -73,7 +89,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg='Value mcg.storage_type must be storage-class')
             if 'storage_class' not in mcg:
                 g.appendError(msg='storage_class property must be specified in openshift.mcg')
-                
+
       # Validate openshift_storage attributes
         if len(ge['openshift_storage']) < 1:
             g.appendError(msg='At least one openshift_storage element must be specified.')

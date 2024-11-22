@@ -233,8 +233,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('sequential_install').isOptional().mustBeOneOf([True, False])
     g('accept_licenses').isOptional().mustBeOneOf([True, False])
     g('change_node_settings').isOptional()
-    g('cp4d_entitlement').isOptional().mustBeOneOf(['cpd-enterprise', 'cpd-standard', 'watsonx-data', 'watsonx-ai', 'watsonx-gov-model-management', 'watsonx-gov-risk-compliance'])
+    g('cp4d_entitlement').isOptional()
     g('cp4d_production_license').isOptional().mustBeOneOf([True, False])
+    g('state').isOptional().mustBeOneOf(['installed', 'removed'])
 
     # Expand storage if no errors yet
     if len(g.getErrors()) == 0:
@@ -277,6 +278,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         # Set operators project to <project>-operators if not explicitly configure
         if not 'operators_project' in ge:
             g('operators_project').set('{}-operators'.format(ge['project']))
+
+        if not 'state' in ge:
+            g('state').set('installed')
 
 # Check reference
 # - Retrieve the openshift element with name=openshift_cluster_name

@@ -1,6 +1,6 @@
 # Container image including olm-utils
-ARG CPD_OLM_UTILS_V2_IMAGE
-ARG CPD_OLM_UTILS_V3_IMAGE
+ARG CPD_OLM_UTILS_V2_IMAGE="icr.io/cpopen/cpd/olm-utils-v2:latest"
+ARG CPD_OLM_UTILS_V3_IMAGE="icr.io/cpopen/cpd/olm-utils-v3:latest"
 
 FROM ${CPD_OLM_UTILS_V2_IMAGE} as olm-utils-v2
 RUN cd /opt/ansible && \

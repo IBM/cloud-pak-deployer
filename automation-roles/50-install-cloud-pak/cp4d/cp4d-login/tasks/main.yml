@@ -1,11 +1,31 @@
 ---
-- name: Get ZenService CR to check authentication method
+- name: Get ZenService CR to check if IAM authentication is used
   shell: |
     oc get --namespace {{ _p_cp4d_project }} ZenService lite-cr -o json
   register: _zenservice_cr
 
 - set_fact:
     _iam_integration: "{{ (_zenservice_cr.stdout | from_json).spec.iamIntegration | bool  }}"
+
+- set_fact:
+    _cp4d_user: 'admin'
+
+- set_fact:
+    _cp4d_user: 'cpadmin'
+  when: _iam_integration
+
+- set_fact:
+    _zen_frontdoor: False
+
+- block:
+  - name: Get authentication details to check if zen frontdoor is used (unified route)
+    shell: |
+      oc get --namespace {{ _p_cp4d_project }} authentications.operator.ibm.com example-authentication -o json
+    register: _zen_authentication
+
+  - set_fact:
+      _zen_frontdoor: "{{ (_zen_authentication.stdout | from_json).spec.config.zenFrontDoor | default(False) | bool  }}"
+  when: _iam_integration
     
 - name: Get route to Cloud Pak for Data from OpenShift project
   shell: |
@@ -17,7 +37,9 @@
     cp4d_url: "{{ _current_cp4d_url }}"
 
 - include_tasks: cp4d-login-non-iam.yml
-  when: not _iam_integration
+  when: not _iam_integration or _zen_frontdoor
 
 - include_tasks: cp4d-login-iam.yml
-  when: _iam_integration
+  when: 
+  - _iam_integration
+  - not _zen_frontdoor

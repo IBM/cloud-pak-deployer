@@ -24,7 +24,6 @@ cp4d:
 - project: cpd-instance
   openshift_cluster_name: cpd-demo
   cp4d_version: 4.8.3
-  sequential_install: True
   accept_licenses: True
   cartridges:
   - name: cp-foundation
@@ -61,6 +60,10 @@ cp4d:
 
   - name: datastage-ent-plus
     state: removed
+
+    # The default instance is created automatically with the DataStage installation. If you want to create additional instances
+    # uncomment the section below and specify the various scaling options.
+
     # instances:
     #   - name: ds-instance
     #     # Optional settings

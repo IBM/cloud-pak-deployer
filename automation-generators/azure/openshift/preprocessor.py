@@ -61,6 +61,22 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             if type(ge['cloud_native_toolkit']) != bool:
                 g.appendError(msg='Attribute cloud_native_toolkit must be either true or false if specified. Default is false.')
 
+        # Validate gpu attributes
+        if 'gpu' in ge:
+            gpu = ge['gpu']
+            if 'install' not in gpu:
+                g.appendError(msg='install property must be specified in openshift.gpu')
+            elif str(gpu['install']).lower() not in ['true','false','auto']:
+                g.appendError(msg='Value gpu.install must be True, False or auto')
+
+        # Validate openshift_ai attributes
+        if 'openshift_ai' in ge:
+            openshift_ai = ge['openshift_ai']
+            if 'install' not in openshift_ai:
+                g.appendError(msg='install property must be specified in openshift.openshift_ai')
+            elif str(openshift_ai['install']).lower() not in ['true','false','auto']:
+                g.appendError(msg='Value openshift_ai.install must be True, False or auto')
+
         if 'mcg' in ge:
             mcg=ge['mcg']
             if 'install' not in mcg:

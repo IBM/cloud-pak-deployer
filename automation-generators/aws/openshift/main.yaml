@@ -40,6 +40,9 @@
       secret_group: "{{ environment_name }}"
       secret_file: "{{ PATH_TO_OUTPUT_DIR }}/{{ generator.attributes.name }}/install-config.yaml"
 
-  when: _openshift_config.infrastructure.type == 'self-managed' and not (cpd_check_only | default(False) | bool)
+  when: 
+  - _openshift_config.infrastructure.type == 'self-managed' 
+  - not (cpd_check_only | default(False) | bool)
+  - not (cpd_skip_infra | default(False) | bool)
 
 # - fail:

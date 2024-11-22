@@ -9,6 +9,7 @@ There are 5 main steps to run the deploye for AWS:
 3. [Obtain entitlement keys and secrets](#3-acquire-entitlement-keys-and-secrets)
 4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
 5. [Run the deployer](#5-run-the-deployer)
+6. [Post-install configuration (Add GPU nodes)](#6-post-install-configuration)
 
 See the deployer in action in this video: https://ibm.box.com/v/cpd-aws-self-managed
 
@@ -272,5 +273,8 @@ included: /cloud-pak-deployer/automation-roles/99-generic/vault/vault-get-secret
 cp4d_admin_zen_40_pluto_01: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
-### Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
+## 6. Post-install configuration
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run):
+
+* Update the Cloud Pak for Data administrator password
+* Add GPU node(s) to your OpenShift cluster

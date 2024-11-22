@@ -46,17 +46,6 @@
   debug:
     var: _apply_olm_command
 
-- name: Starting background task to patch OLM artifacts in operators project {{ _p_current_cp4d_cluster.operators_project }}. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.operators_project }}-patch-olm.log
-  shell: |
-    {{ role_path }}/files/temp-patch-olm.sh \
-      {{ status_dir }} \
-      {{ _p_current_cp4d_cluster.operators_project }} \
-      {{ _p_current_cp4d_cluster.project }}
-  async: 86400
-  poll: 0
-  register: _patch_olm
-  when: _p_subscription_scope == 'platform'
-
 - name: Run apply-olm command to install {{ _p_subscription_scope }} subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log
   shell: |
     {{ _apply_olm_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-subscriptions-{{ _p_subscription_scope }}.log 2>&1

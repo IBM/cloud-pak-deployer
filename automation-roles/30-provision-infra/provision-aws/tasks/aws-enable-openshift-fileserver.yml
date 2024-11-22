@@ -15,11 +15,21 @@
     _aws_fs_id: "{{ _aws_describe_fs.stdout | from_json | first }}"
   when: (_aws_describe_fs.stdout | from_json) != []
 
-- name: Get security group for OpenShift cluster compute nodes
+- name: Set name of compute node security group for OpenShift < 4.16
+  set_fact:
+    _aws_compute_sg: "{{ _current_openshift_cluster.name }}*-worker-sg"
+  when: (_current_openshift_cluster.ocp_version | string) < '4.16'
+
+- name: Set name of compute node security group for OpenShift >= 4.16
+  set_fact:
+    _aws_compute_sg: "{{ _current_openshift_cluster.name }}*-node"
+  when: (_current_openshift_cluster.ocp_version | string) >= '4.16'
+
+- name: Get security group for OpenShift cluster compute nodes using filter {{ _aws_compute_sg }}
   shell: |
     aws ec2 describe-security-groups \
       --region {{ _current_openshift_cluster.infrastructure.aws_region }} \
-      --filters "Name=tag:Name,Values={{ _current_openshift_cluster.name }}*-worker-sg" \
+      --filters "Name=tag:Name,Values={{ _aws_compute_sg }}" \
       --query 'SecurityGroups[*].GroupId'
   environment:
     AWS_ACCESS_KEY_ID: "{{ _aws_access_key }}"
@@ -30,9 +40,9 @@
 - debug:
     var: _aws_sg
 
-- name: Fail if security group was not found
+- name: Fail if security group {{ _aws_compute_sg }} was not found
   fail:
-    msg: "Security group with name {{ _current_openshift_cluster.name }}*-worker-sg not found"
+    msg: "Security group with name {{ _aws_compute_sg }} not found"
   when: (_aws_sg.stdout | from_json) == []
 
 - set_fact:
