@@ -21,12 +21,17 @@
         
         - name: Configure CP4D LDAP connectivity
           include_tasks: configure-cpd-ldap-integration.yml
+      when: not cpd_dry_run
 
     - name: Disable CP4D LDAP connectivity
       include_tasks: disable-cpd-ldap-integration.yml
-      when: "_cp4d_ldap_config_list|length == 0"
+      when: 
+      - _cp4d_ldap_config_list|length == 0
+      - not cpd_dry_run
 
 - name: Configure CP4D LDAP connectivity
   include_tasks: disable-cpd-ldap-integration.yml
-  when: all_config.cp4d_ldap_config is not defined
+  when: 
+  - all_config.cp4d_ldap_config is not defined
+  - not cpd_dry_run
   
