@@ -1,7 +1,7 @@
 # Build image and run deployer on OpenShift
 
 ## Create configuration
-```
+``` { .bash .copy }
 export CONFIG_DIR=$HOME/cpd-config && mkdir -p $CONFIG_DIR/config
 
 cat << EOF > $CONFIG_DIR/config/cpd-config.yaml
@@ -184,7 +184,7 @@ EOF
 Log is as a cluster administrator to be able to run the deployer with the correct permissions.
 
 ## Prepare the deployer project
-```
+``` { .bash .copy }
 oc new-project cloud-pak-deployer 
 
 oc project cloud-pak-deployer
@@ -196,7 +196,7 @@ oc adm policy add-cluster-role-to-user cluster-admin -z cloud-pak-deployer-sa
 ## Build deployer image and push to the internal registry
 Building the deployer image typically takes ~5 minutes. Only do this if the image has not been built yet.
 
-```
+``` { .bash .copy }
 cat << EOF | oc apply -f -
 apiVersion: image.openshift.io/v1
 kind: ImageStream
@@ -238,19 +238,19 @@ EOF
 ```
 
 Now, wait until the deployer image has been built.
-```
+``` { .bash .copy }
 oc get build -n cloud-pak-deployer -w
 ```
 
 ## Set configuration
-```
+``` { .bash .copy }
 oc create cm -n cloud-pak-deployer cloud-pak-deployer-config
 oc set data -n cloud-pak-deployer cm/cloud-pak-deployer-config \
   --from-file=$CONFIG_DIR/config
 ```
   
 ## Start the deployer job
-```
+``` { .bash .copy }
 export CP_ENTITLEMENT_KEY=your_entitlement_key
 
 cat << EOF | oc apply -f -
@@ -322,7 +322,7 @@ EOF
 
 ## Optional: start debug job
 The debug job can be useful if you want to access the status directory of the deployer if the deployer job has failed.
-```
+``` { .bash .copy }
 cat << EOF | oc apply -f -
 apiVersion: batch/v1
 kind: Job
@@ -375,7 +375,7 @@ EOF
 ```
 
 ## Follow the logs of the deployment
-```
+``` { .bash .copy }
 oc logs -f -n cloud-pak-deployer job/cloud-pak-deployer
 ```
 

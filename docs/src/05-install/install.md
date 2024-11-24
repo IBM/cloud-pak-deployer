@@ -16,20 +16,20 @@ Once the guest operating system is set up, log in as root. VirtualBox supports p
 ### Install on Linux
 
 On Red Hat Enterprise Linux of CentOS, run the following commands:
-```
+``` { .bash .copy }
 yum install -y podman git
 yum clean all
 ```
 
 On MacOS, run the following commands:
-```
+``` { .bash .copy }
 brew install podman git
 podman machine create
 podman machine init
 ```
 
 On Ubuntu, debian Based : 
-```
+``` { .bash .copy }
 apt-get -y install podman
 podman machine create
 podman machine init
@@ -44,19 +44,19 @@ Generally, adhere to the instructions provided to install either podman or docke
 If you clone the repository from the command line, you will need to enter a token when you run the `git clone` command. You can retrieve your token as follows:
 
 Go to a directory where you want to download the Git repo.
-```
+``` { .bash .copy }
 git clone --depth=1 https://github.com/IBM/cloud-pak-deployer.git
 ```
 
 ## Build the image
 
 First go to the directory where you cloned the GitHub repository, for example `~/cloud-pak-deployer`.
-```
+``` { .bash .copy }
 cd cloud-pak-deployer
 ```
 
 Then run the following command to build the container image.
-```
+``` { .bash .copy }
 ./cp-deploy.sh build
 ```
 
@@ -66,7 +66,7 @@ This process will take 5-10 minutes to complete and it will install all the pre-
 
 To download the Cloud Pak Deployer image from the Quay.io registry, you can use the Docker command-line interface (CLI) or Podman.
 
-```bash
+``` { .bash .copy }
 podman pull quay.io/cloud-pak-deployer/cloud-pak-deployer
 ```
 
@@ -76,7 +76,7 @@ This command pulls the latest version of the Cloud Pak Deployer image from the Q
 
 By default, the above command pulls the latest version of the Cloud Pak Deployer image. If you want to specify a particular version or tag, you can append it to the image name. For example:
 
-```bash
+``` { .bash .copy }
 podman pull quay.io/cloud-pak-deployer/cloud-pak-deployer:<tag_or_version>
 ```
 

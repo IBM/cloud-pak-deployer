@@ -23,7 +23,7 @@ For the `CPD_PRIVATE_REGISTRY_CREDS` value, specify both the user and password i
 
 ## Example
 
-```
+``` { .bash .copy }
 export CPD_PRIVATE_REGISTRY=de.icr.io/cp4d-470
 export CPD_PRIVATE_REGISTRY_CREDS="iamapikey:U97KLPYF663AE4XAQL0"
 ./scripts/cp4d/cp4d-apply-non-mco-cluster-settings.sh

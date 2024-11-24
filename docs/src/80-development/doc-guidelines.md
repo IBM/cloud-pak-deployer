@@ -6,13 +6,13 @@ This document contains a few formatting rules/requirements to maintain uniformit
 
 ### Code block input
 Code block **inputs** should be created by surrounding the code text with three tick marks `` ``` `` key. For example, to create the following code block:
-```
+``` { .bash .copy }
 oc get nodes
 ```
 
 Your markdown input would look like:
 ````
-```
+``` { .bash .copy }
 oc get nodes
 ```
 ````
