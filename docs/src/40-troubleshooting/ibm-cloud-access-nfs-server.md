@@ -11,13 +11,13 @@ For security reasons, the NFS server can only be reached via a bastion server th
 Getting SSH access to the NFS server is easiest from within the deployer container as it has all tools installed to extract the IP addresses from the Terraform state file.
 
 Optional: Ensure that the environment variables for the configuration and status directories are set. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
-```
+``` { .bash .copy }
 export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
 
 Start the deployer command line.
-```
+``` { .bash .copy }
 ./cp-deploy.sh env command
 ```
 
@@ -33,7 +33,7 @@ Current OpenShift context: pluto-01
 ## Obtain private SSH key
 Access to both the bastion and NFS servers are typically protected by the same SSH key, which is stored in the vault. To list all vault secrets, run the command below.
 
-```
+``` { .bash .copy }
 cd /cloud-pak-deployer
 ./cp-deploy.sh vault list
 ```
@@ -57,7 +57,7 @@ localhost                  : ok=11   changed=0    unreachable=0    failed=0    s
 ```
 
 Then, retrieve the private key (in the above example `pluto-01-provision-ssh-key`) to an output file in your `~/.ssh` directory, make sure it has the correct private key format (new line at the end) and permissions (600).
-```
+``` { .bash .copy }
 SSH_FILE=~/.ssh/pluto-01-rsa
 mkdir -p ~/.ssh
 chmod 600 ~/.ssh
@@ -71,7 +71,7 @@ chmod 600 $SSH_FILE
 ## Find the IP addresses
 To connect to the NFS server, you need the public IP address of the bastion server and the private IP address of the NFS server. Obviously these can be retrieved from the IBM Cloud resource list (https://cloud.ibm.com/resources), but they are also kept in the Terraform "tfstate" file
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault get -vs sample-terraform-tfstate \
     -vsf /tmp/sample-terraform-tfstate
 ```
@@ -79,7 +79,7 @@ To connect to the NFS server, you need the public IP address of the bastion serv
 The below commands do not provide the prettiest output but you should be able to extract the IP addresses from them.
 
 For the bastion node public (floating) IP address:
-```
+``` { .bash .copy }
 cat /tmp/sample-terraform-tfstate | jq -r '.resources[]' | grep -A 10 -E "ibm_is_float"
 ```
 
@@ -97,7 +97,7 @@ cat /tmp/sample-terraform-tfstate | jq -r '.resources[]' | grep -A 10 -E "ibm_is
 ```
 
 For the NFS server:
-```
+``` { .bash .copy }
 cat /tmp/sample-terraform-tfstate | jq -r '.resources[]' | grep -A 10 -E "ibm_is_instance|primary_network_interface"
 ```
 
@@ -124,7 +124,7 @@ In the above examples, the IP addresses are:
 
 ## SSH to the NFS server
 Finally, to get command line access to the NFS server:
-```
+``` { .bash .copy }
 BASTION_IP=149.81.215.172
 NFS_IP=10.227.0.138
 ssh -i $SSH_FILE \
@@ -135,11 +135,11 @@ ssh -i $SSH_FILE \
 
 ## Stopping the session
 Once you've finished exploring the NFS server, you can exit from it:
-```
+``` { .bash .copy }
 exit
 ```
 
 Finally, exit from the deployer container which is then terminated.
-```
+``` { .bash .copy }
 exit
 ```

@@ -7,7 +7,7 @@ Log is as a cluster administrator to be able to run the deployer with the correc
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly into the window)
-```
+``` { .yaml .copy }
 ---
 apiVersion: v1
 kind: Namespace
@@ -77,7 +77,7 @@ spec:
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly into the window)
-```
+``` { .yaml .copy }
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -10,13 +10,13 @@ The Cloud Pak Deployer includes several samples which you can use to build your 
 
 ## Configuration steps - static sample configuration
 1. Copy the static sample configuration directory to your own directory:
-```bash
+``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
 cp -r ./sample-configurations/roks-ocs-cp4d/config/* $HOME/cpd-config/config/
 cd $HOME/cpd-config/config
 ```
 2. Edit the "cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
-```
+``` { .bash .copy }
 nano ./config/cp4d-450.yaml
 ```
 
@@ -24,20 +24,20 @@ The configuration typically works without any configuration changes and will cre
 
 ## Configuration steps - dynamically choose OpenShift and Cloud Pak
 1. Copy the sample configuration directory to your own directory:
-```
+``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
 ```
 2. Copy the relevant OpenShift configuration file from the `samples-configuration` directory to the `config` directory, for example:
-```
+``` { .bash .copy }
 cp ./sample-configurations/sample-dynamic/config-samples/ocp-ibm-cloud-roks-ocs.yaml $HOME/cpd-config/config/
 ```
 3. Copy the relevant "cp4d-..." file from the `samples-configuration` directory to the `config` directory, for example:
-```
+``` { .bash .copy }
 cp ./sample-configurations/sample-dynamic/config-samples/cp4d-462.yaml $HOME/cpd-config/config/
 ```
 
 4. Edit the "$HOME/cpd-config/config/cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
-```
+``` { .bash .copy }
 nano $HOME/cpd-config/config/cp4d-463.yaml
 ```
 
@@ -62,7 +62,7 @@ Additionally, there are 3 optional subdirectories:
 You can choose to keep only a single file per subdirectory or, for more complex configurations, you can create multiple yaml files. You can find a full list of all supported object types here: [Configuration objects](../../../30-reference/configuration/cpd-objects). The generator automatically merges all `.yaml` files in the config and defaults directory. Files with different extensions are ignored. In the sample configurations we split configuration of the OpenShift `ocp-...` and Cloud Pak `cp4.-...` objects.
 
 For example, your `config` directory could hold the following files:
-```
+``` { .bash .copy }
 cp4d-463.yaml
 ocp-ibm-cloud-roks-ocs.yaml
 ```
@@ -86,20 +86,20 @@ User passwords, certificates and other "secret" information is kept in the vault
 All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](../../../30-reference/configuration/vault).
 
 Optional: Ensure that the environment variables for the configuration and status directories are set. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
-```
+``` { .bash .copy }
 export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
 
 Set vSphere user secret:
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
     --vault-secret vsphere-user \
     --vault-secret-value super_user@vsphere.local
 ```
 
 Or, if you want to create the secret from an input file:
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
     --vault-secret kubeconfig \
     --vault-secret-file ~/.kube/config
@@ -110,7 +110,7 @@ Or, if you want to create the secret from an input file:
 If the configuration is kept in a GitHub repository, you can set environment variables to have the deployer pull the GitHub repository to the current server before starting the process.
 
 Set environment variables.
-```
+``` { .bash .copy }
 export CPD_CONFIG_GIT_REPO="https://github.com/IBM/cloud-pak-deployer-config.git"
 export CPD_CONFIG_GIT_REF="main"
 export CPD_CONFIG_GIT_CONTEXT=""
@@ -127,7 +127,7 @@ export CPD_CONFIG_GIT_CONTEXT=""
 In some situations you may want to use a single configuration for deployment in different environments, such as development, acceptance test and production. The Cloud Pak Deployer uses the Jinja2 templating engine which is included in Ansible to pre-process the configuration. This allows you to dynamically adjust the configuration based on extra variables you specify at the command line.
 
 Example:
-```
+``` { .bash .copy }
 ./cp-deploy.sh env apply \
   -e ibm_cloud_region=eu_gb \
   -e env_id=jupiter-03 [--accept-all-liceneses]
@@ -135,7 +135,7 @@ Example:
 
 This passes the `env_id` and `ibm_cloud_region` variables to the Cloud Pak Deployer, which can then populate variables in the configuration. In the sample configurations, the `env_id` is used to specify the name of the VPC, ROKS cluster and others and overrides the value specified in the `global_config` definition. The `ibm_cloud_region` overrides region specified in the inventory file.
 
-```
+``` { .yaml .copy }
 ...
 vpc:
 - name: "{{ env_id }}"
@@ -151,7 +151,7 @@ address_prefix:
 ```
 
 When running with the above `cp-deploy.sh` command, the snippet would be generated as:
-```
+``` { .yaml .copy }
 ...
 vpc:
 - name: "jupiter-03"
@@ -171,7 +171,7 @@ The `ibm_cloud_region` variable is specified in the inventory file. This is anot
 You can even include more complex constructs for dynamic configuration, with `if` statements, `for` loops and others.
 
 An example where the OpenShift OCS storage classes would only be generated for a specific environment (pluto-prod) would be:
-```
+``` { .yaml .copy }
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs

@@ -23,7 +23,7 @@ The manifests (CASE files) representing the Cloud Pak components are present in 
 
 In the Cloud Pak Deployer, we have chosen to reference the CASE versions in the configuration, for example:
 
-```
+``` { .yaml .copy }
 cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
