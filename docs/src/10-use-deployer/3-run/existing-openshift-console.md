@@ -9,7 +9,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly) into the window
-```yaml
+``` { .yaml .copy }
 ---
 apiVersion: v1
 kind: Namespace
@@ -56,7 +56,7 @@ subjects:
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block with **replaced YOUR_ENTITLEMENT_KEY** on line 10
-```yaml linenums="1" hl_lines="10"
+``` { .yaml .copy linenums="1" hl_lines="10" }
 ---
 apiVersion: v1
 kind: Secret
@@ -74,7 +74,7 @@ stringData:
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block (exactly into the window)
-```yaml
+``` { .yaml .copy }
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -94,11 +94,11 @@ data:
       cluster_name: cpd-demo
       domain_name: example.com
       mcg:
-        install: auto
+        install: False
         storage_type: storage-class
         storage_class: managed-nfs-storage
       gpu:
-        install: False
+        install: auto
       openshift_ai:
         install: auto
         channel: auto
@@ -109,7 +109,7 @@ data:
     cp4d:
     - project: cpd
       openshift_cluster_name: cpd-demo
-      cp4d_version: 5.0.1
+      cp4d_version: 5.0.3
       db2u_limited_privileges: False
       use_fs_iam: True
       accept_licenses: True
@@ -481,7 +481,7 @@ data:
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job (From release v3.0.2 onwards).
-```yaml linenums="1" hl_lines="11"
+``` { .yaml .copy linenums="1" hl_lines="11" }
 apiVersion: v1
 kind: Pod
 metadata:

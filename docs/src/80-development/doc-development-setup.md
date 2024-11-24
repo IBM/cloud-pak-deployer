@@ -9,7 +9,7 @@ Do the following:
 
 * Make sure you have cloned this repository to your development server
 * Start from the main directory of the cloud-pak-deployer repository
-```
+``` { .bash .copy }
 cd docs
 ./dev-doc-build.sh
 ```
@@ -17,7 +17,7 @@ cd docs
 This will build a Red Hat UBI image with all requirements pre-installed. It will take ~2-10 minutes to complete this step, dependent on your network bandwidth.
 
 ## Running the documentation image
-```
+``` { .bash .copy }
 ./dev-doc-run.sh
 ```
 
@@ -36,7 +36,7 @@ http://localhost:8000
 
 ## Stopping the documentation container
 If you don't want to test your changes locally anymore, stop the docker container.
-```
+``` { .bash .copy }
 podman kill cpd-doc
 ```
 
@@ -44,7 +44,7 @@ Next time you want to test your changes, re-run the `./dev-doc-run.sh`, which wi
 
 ## Removing the docker container and image
 If you want to remove all from your development server, do the following:
-```
+``` { .bash .copy }
 podman rm -f cpd-doc
 podman rmi -f cpd-doc:latest
 ```

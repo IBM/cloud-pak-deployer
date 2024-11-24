@@ -25,7 +25,7 @@ Deployer reads the configuration from a directory you set in the `CONFIG_DIR` en
 You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). For vSphere installations, copy one of `ocp-vsphere-*.yaml` files into the `$CONFIG_DIR/config` directory. If you also want to install a Cloud Pak, copy one of the `cp4*.yaml` files.
 
 Example:
-```
+``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
 cp sample-configurations/sample-dynamic/config-samples/ocp-vsphere-ocs-nfs.yaml $HOME/cpd-config/config/
 cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
@@ -34,7 +34,7 @@ cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-c
 ### Set configuration and status directories environment variables
 Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
 
-```
+``` { .bash .copy }
 export CONFIG_DIR=$HOME/cpd-config
 export STATUS_DIR=$HOME/cpd-status
 ```
@@ -91,7 +91,7 @@ In order for the Cloud Pak Deployer to create the infrastructure and deploy the 
 
 ### Set environment variables for vSphere
 
-```
+``` { .bash .copy }
 export VSPHERE_USER=your_vsphere_user
 export VSPHERE_PASSWORD=password_of_the_vsphere_user
 ```
@@ -126,7 +126,7 @@ To obtain access to the OpenShift nodes post-installation, you will need to spec
 ### Set the Cloud Pak entitlement key
 If you want the Cloud Pak images to be pulled from the entitled registry, set the Cloud Pak entitlement key.
 
-```
+``` { .bash .copy }
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
@@ -136,7 +136,7 @@ export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 
 You need to store the OpenShift pull secret in the vault so that the deployer has access to it.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
     --vault-secret ocp-pullsecret \
     --vault-secret-file /tmp/ocp_pullsecret.json
@@ -144,7 +144,7 @@ You need to store the OpenShift pull secret in the vault so that the deployer ha
 
 ### Optional: Create secret for public SSH key
 If you want to use your SSH key to access nodes in the cluster, set the Vault secret with the public SSH key.
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
     --vault-secret ocp-ssh-pub-key \
     --vault-secret-file ~/.ssh/id_rsa.pub
@@ -153,7 +153,7 @@ If you want to use your SSH key to access nodes in the cluster, set the Vault se
 ### Optional: Set the GitHub Personal Access Token (PAT)
 In some cases, download of the `cloudctl` and `cpd-cli` clients from https://github.com/IBM will fail because GitHub limits the number of API calls from non-authenticated clients. You can remediate this issue by creating a [Personal Access Token on github.com](https://github.com/settings/tokens) and creating a secret in the vault.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
 ```
 
@@ -165,7 +165,7 @@ Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` 
 
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env apply --check-only --accept-all-licenses
 ```
 
@@ -173,7 +173,7 @@ If you only want to validate the configuration, you can run the dpeloyer with th
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env apply --accept-all-licenses
 ```
 
@@ -185,7 +185,7 @@ When running the command, the container will start as a daemon and the command w
 
 You can return to view the logs as follows:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env logs
 ```
 
@@ -193,7 +193,7 @@ Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak w
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env kill
 ```
 
@@ -207,7 +207,7 @@ Once the process has finished, it will output the URLs by which you can access t
 
 To retrieve the Cloud Pak URL(s):
 
-```
+``` { .bash .copy }
 cat $STATUS_DIR/cloud-paks/*
 ```
 
@@ -222,7 +222,7 @@ The `admin` password can be retrieved from the vault as follows:
 
 List the secrets in the vault:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault list
 ```
 
@@ -241,7 +241,7 @@ Secret list for group sample:
 
 You can then retrieve the Cloud Pak for Data admin password like this:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_demo
 ```
 

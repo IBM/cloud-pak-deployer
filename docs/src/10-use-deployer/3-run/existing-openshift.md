@@ -27,7 +27,7 @@ Deployer reads the configuration from a directory you set in the `CONFIG_DIR` en
 You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). For existing OpenShift installations, copy one of `ocp-existing-ocp-*.yaml` files into the `$CONFIG_DIR/config` directory. If you also want to install a Cloud Pak, copy one of the `cp4*.yaml` files.
 
 Example:
-```
+``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
 cp sample-configurations/sample-dynamic/config-samples/ocp-existing-ocp-auto.yaml $HOME/cpd-config/config/
 cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
@@ -36,7 +36,7 @@ cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-c
 ### Set configuration and status directories environment variables
 Cloud Pak Deployer uses the status directory to log its activities and also to keep track of its running state. For a given environment you're provisioning or destroying, you should always specify the same status directory to avoid contention between different deploy runs. 
 
-```
+``` { .bash .copy }
 export CONFIG_DIR=$HOME/cpd-config
 export STATUS_DIR=$HOME/cpd-status
 ```
@@ -70,7 +70,7 @@ If you want to pull the Cloud Pak images from the entitled registry (i.e. an onl
 ### Set the Cloud Pak entitlement key
 If you want the Cloud Pak images to be pulled from the entitled registry, set the Cloud Pak entitlement key.
 
-```
+``` { .bash .copy }
 export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 ```
 
@@ -91,7 +91,7 @@ For most OpenShift installations, you can retrieve the `oc login` command with a
 Before passing the `oc login` command or the `kubeconfig` file, make sure you can login to your cluster using the command or the config file. If the cluster's API server has a self-signed certificate, make sure you specify the `--insecure-skip-tls-verify` flag for the `oc login` command.
 
 Example:
-```
+``` { .bash .copy }
 oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify
 ```
 
@@ -108,7 +108,7 @@ Using project "default".
 This is the most straightforward option if you only have 1 OpenShift cluster in your configuration.
 
 Set the environment variable for the `oc login` command
-```
+``` { .bash .copy }
 export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
 
@@ -121,7 +121,7 @@ When the deployer is run, it automatically sets the `oc-login` vault secret to t
 Use this option if you have multiple OpenShift clusters configured in th deployer configuration.
 
 Store the login command in secret `<cluster name>-oc-login`
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
   -vs pluto-01-oc-login \
   -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
@@ -136,19 +136,19 @@ If you already have a "kubeconfig" file that holds the credentials of your clust
 - Locate the Kubernetes config file. If you have logged in with the OpenShift client, this is typically `~/.kube/config`
 
 If you did not just login to the cluster, the current context of the kubeconfig file may not point to your cluster. The deployer will check that the server the current context points to matches the `cluster_name` and `domain_name` of the configured `openshift` object. To check the current context, run the following command:
-```
+``` { .bash .copy }
 oc config current-context
 ```
 
 Now, store the Kubernetes config file as a vault secret.
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
     --vault-secret kubeconfig \
     --vault-secret-file ~/.kube/config
 ```
 
 If the deployer manages multiple OpenShift clusters, you can specify a kubeconfig file for each of the clusters by prefixing the `kubeconfig` with the name of the `openshift` object, for example:
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set \
     --vault-secret pluto-01-kubeconfig \
     --vault-secret-file /data/pluto-01/kubeconfig
@@ -162,7 +162,7 @@ When connecting to the OpenShift cluster, a cluster-specific kubeconfig vault se
 ### Optional: Set the GitHub Personal Access Token (PAT)
 In some cases, download of the `cloudctl` and `cpd-cli` clients from https://github.com/IBM will fail because GitHub limits the number of API calls from non-authenticated clients. You can remediate this issue by creating a [Personal Access Token on github.com](https://github.com/settings/tokens) and creating a secret in the vault.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
 ```
 
@@ -174,7 +174,7 @@ Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` 
 
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env apply --check-only --accept-all-licenses
 ```
 
@@ -182,7 +182,7 @@ If you only want to validate the configuration, you can run the dpeloyer with th
 
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env apply --accept-all-licenses
 ```
 
@@ -194,7 +194,7 @@ When running the command, the container will start as a daemon and the command w
 
 You can return to view the logs as follows:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env logs
 ```
 
@@ -202,7 +202,7 @@ Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak w
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env kill
 ```
 
@@ -216,7 +216,7 @@ Once the process has finished, it will output the URLs by which you can access t
 
 To retrieve the Cloud Pak URL(s):
 
-```
+``` { .bash .copy }
 cat $STATUS_DIR/cloud-paks/*
 ```
 
@@ -231,7 +231,7 @@ The `admin` password can be retrieved from the vault as follows:
 
 List the secrets in the vault:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault list
 ```
 
@@ -246,7 +246,7 @@ Secret list for group sample:
 
 You can then retrieve the Cloud Pak for Data admin password like this:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_sample
 ```
 

@@ -11,19 +11,19 @@ Make sure you have set the **CONFIG_DIR** and **STATUS_DIR** environment variabl
 ### Optional: prepare OpenShift cluster
 If you have not run the deployer yet and do not intend to install any Cloud Paks, but you do want to access the OpenShift cluster from the command line to check or prepare items, run the deployer with the `--skip-cp-install` flag.
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env apply --skip-cp-install
 ```
 
 Deployer will check the configuration, download clients, attempt to login to OpenShift and prepare the OpenShift cluster with the global pull secret and (for Cloud Pak for Data) node settings. After that the deployer will finish without installing any Cloud Pak.
 
 ## Run the Cloud Pak Deployer command line
-```
+``` { .bash .copy }
 ./cp-deploy.sh env cmd 
 ```
 
 You should see something like this:
-```
+```output
 -------------------------------------------------------------------------------
 Entering Cloud Pak Deployer command line in a container.
 Use the "exit" command to leave the container and return to the hosting server.
@@ -33,15 +33,21 @@ Current OpenShift context: cpd
 ```
 
 Now, you can check the OpenShift cluster version:
+``` { .bash .copy }
+oc get clusterversion
 ```
-[root@Cloud Pak Deployer Container ~]$ oc get clusterversion
+
+```output
 NAME      VERSION   AVAILABLE   PROGRESSING   SINCE   STATUS
 version   4.8.14    True        False         2d3h    Cluster version is 4.8.14
 ```
 
 Or, display the list of OpenShift projects:
+``` { .bash .copy }
+oc get projects | grep -v openshift-
 ```
-[root@Cloud Pak Deployer Container ~]$ oc get projects | grep -v openshift-
+
+```output
 NAME                                               DISPLAY NAME   STATUS
 calico-system                                                     Active
 default                                                           Active
@@ -59,6 +65,6 @@ cpd                                                            Active
 
 ## Exit the command line
 Once finished, exit out of the container.
-```
+``` { .bash .copy }
 exit
 ```

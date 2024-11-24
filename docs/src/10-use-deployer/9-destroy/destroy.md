@@ -12,7 +12,7 @@ If you have previously used the Cloud Pak Deployer to create assets, you can des
 #### Set environment variables for existing OpenShift
 
 Optional: set environment variables for deployer config and status directories. If not specified, respectively `$HOME/cpd-config` and `$HOME/cpd-status` will be used.
-```
+``` { .bash .copy }
 export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
@@ -24,12 +24,12 @@ export CONFIG_DIR=$HOME/cpd-config
 
 #### Set environment variables for IBM Cloud
 
-```
+``` { .bash .copy }
 export IBM_CLOUD_API_KEY=your_api_key
 ```
 
 Optional: set environment variables for deployer config and status directories. If not specified, respectively `$HOME/cpd-config` and `$HOME/cpd-status` will be used.
-```
+``` { .bash .copy }
 export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
@@ -44,7 +44,7 @@ export CONFIG_DIR=$HOME/cpd-config
 
 We assume that the vault already holds the mandatory secrets for AWS Access Key, Secret Access Key and ROSA login token.
 
-```
+``` { .bash .copy }
 export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
@@ -58,7 +58,7 @@ export CONFIG_DIR=$HOME/cpd-config
 
 We assume that the vault already holds the mandatory secrets for Azure - Service principal id and its password, tenant id and ARO login token.
 
-```
+``` { .bash .copy }
 export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
@@ -68,7 +68,7 @@ export CONFIG_DIR=$HOME/cpd-config
 
 ## Run the Cloud Pak Deployer to destroy the assets
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env destroy --confirm-destroy
 ```
 
@@ -78,13 +78,13 @@ When running the command, the container will start as a daemon and the command w
 
 You can return to view the logs as follows:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env logs
 ```
 
 If you need to interrupt the process, use CTRL-C to stop the logging output and then use:
 
-```
+``` { .bash .copy }
 ./cp-deploy.sh env kill
 ```
 
