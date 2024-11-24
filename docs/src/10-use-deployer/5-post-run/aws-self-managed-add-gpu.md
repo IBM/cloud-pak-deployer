@@ -4,7 +4,7 @@ When deploying self-managed OpenShift on AWS, the compute nodes are represented 
 
 ## Find the compute node `MachineSet`
 Below is an example of a compute node (worker) `MachineSet` created by the OpenShift installer. The instance type defines the node that is spun up, with 32 vCPUs and 128 GB of memory.
-```yaml
+``` { .yaml .copy }
 apiVersion: machine.openshift.io/v1beta1
 kind: MachineSet
 metadata:
@@ -188,7 +188,7 @@ status:
 
 To create a GPU `MachineSet` in the same region, copy the yaml into your favourite text editor and remove all the unnecessary properties. Below is an example of the resulting yaml, highlighting the items that have changed to define the GPU node(s). In this example there is only 1 GPU node of type `g6e.8xlarge`. Only the highlighted properties should be changed.
 
-```yaml linenums="1" hl_lines="4 9 13 20 31"
+``` { .yaml .copy linenums="1" hl_lines="4 9 13 20 31" }
 apiVersion: machine.openshift.io/v1beta1
 kind: MachineSet
 metadata:

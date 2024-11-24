@@ -14,7 +14,7 @@ The method for smoke tests should be dynamic, for example by referencing a Git r
 This "smoke test" finds the route of the Cloud Pak for Data instance(s) and retrieves the `admin` password from the vault which is then displayed.
 
 Example:
-```
+```output
 ['CP4D URL: https://cpd-cpd.fke09-10-a939e0e6a37f1ce85dbfddbb7ab97418-0000.eu-gb.containers.appdomain.cloud', 'CP4D admin password: ITnotgXcMTcGliiPvVLwApmsV']
 ```
 

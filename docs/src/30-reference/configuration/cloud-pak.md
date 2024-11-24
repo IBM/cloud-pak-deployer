@@ -13,7 +13,7 @@ Defines the Cloud Pak(s) which is/are layed out on the OpenShift cluster, typica
 
 Defines the Cloud Pak for Data instances to be configured on the OpenShift cluster(s).
 
-```yaml
+``` { .yaml .copy }
 cp4d:
 - project: cpd
   openshift_cluster_name: sample
@@ -77,7 +77,7 @@ cp4d:
 
 Defines the Cloud Pak for Integration installation to be configured on the OpenShift cluster(s).
 
-```yaml
+``` { .yaml .copy }
 cp4i:
 - project: cp4i
   openshift_cluster_name: {{ env_id }}
@@ -101,7 +101,7 @@ cp4i:
 
 The immediate content of the cp4i object is actually a list of OpenShift projects (namespaces). There can be more than one project and instances can be created in separate projects.
 
-```yaml
+``` { .yaml .copy }
 cp4i:
 - project: cp4i
   ...
@@ -299,7 +299,7 @@ Defines the Cloud Pak for Watson AIOps installation to be configured on the Open
 
 Aside from the base install, the deployer can also install ready-to-use demos for each of the instances
 
-```yaml
+``` { .yaml .copy }
 cp4waiops:
 - project: cp4waiops
   openshift_cluster_name: "{{ env_id }}"
@@ -330,7 +330,7 @@ The project that is specified at the `cp4waiops` level defines the OpenShift pro
 
 ### AI Manager
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-aimanager
     kind: AIManager
@@ -361,7 +361,7 @@ The project that is specified at the `cp4waiops` level defines the OpenShift pro
 
 ### AI Manager - Demo Content
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-aimanager-demo-content
     kind: AIManagerDemoContent
@@ -379,7 +379,7 @@ See sample config for remainder of properties.
 
 ### Event Manager
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-eventmanager
     kind: EventManager
@@ -400,7 +400,7 @@ See sample config for remainder of properties.
 
 ### Event Manager Demo Content
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-eventmanager
     kind: EventManagerDemoContent
@@ -415,7 +415,7 @@ See sample config for remainder of properties.
 
 ### Infrastructure Management
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-infrastructure-management
     kind: InfrastructureManagement
@@ -434,7 +434,7 @@ See sample config for remainder of properties.
 
 ElasticSearch, Logstash and Kibana stack.
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-elk
     kind: ELK
@@ -449,7 +449,7 @@ ElasticSearch, Logstash and Kibana stack.
 
 ### Instana
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-instana
     kind: Instana
@@ -484,7 +484,7 @@ ElasticSearch, Logstash and Kibana stack.
 
 ### Turbonomic
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-turbonomic
     kind: Turbonomic
@@ -501,7 +501,7 @@ ElasticSearch, Logstash and Kibana stack.
 
 ### Turbonomic Demo Content
 
-```yaml
+``` { .yaml .copy }
   instances:
   - name: cp4waiops-turbonomic-demo-content
     kind: TurbonomicDemoContent
@@ -529,7 +529,7 @@ See sample config for remainder of properties.
 Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
 See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.  
 
-```yaml
+``` { .yaml .copy }
 ---
 cp4ba:
 - project: cp4ba
