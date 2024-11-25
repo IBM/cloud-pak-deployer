@@ -29,6 +29,16 @@ compute:
       iamRole: {{ generator.attributes.infrastructure.compute_iam_role }}
 {% endif %}
   replicas: {{ generator.attributes.compute_nodes }}
+- hyperthreading: Enabled
+  name: worker-gpu
+  platform:
+    aws:
+      type: {{ generator.attributes.gpu_compute_flavour }}
+      zones: {{ _aws_zones }}
+{% if generator.attributes.infrastructure.compute_iam_role is defined %}
+      iamRole: {{ generator.attributes.infrastructure.compute_iam_role }}
+{% endif %}
+  replicas: {{ generator.attributes.gpu_compute_nodes }}
 
 networking:
   clusterNetwork:
