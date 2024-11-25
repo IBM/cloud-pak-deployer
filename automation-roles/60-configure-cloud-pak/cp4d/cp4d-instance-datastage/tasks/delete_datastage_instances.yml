@@ -1,14 +1,16 @@
 ---
-- set_fact:
-    _all_ds_instances: []
-- name: Get all current DataStage instances
-  shell: |
-    oc get pxruntime -n {{ current_cp4d_cluster.project }} -o json
-  failed_when: False
-  register: _all_ds_instances_output
-- set_fact:
-    _all_ds_instances: "{{ (_all_ds_instances_output.stdout | from_json)['items'] }}"
-  when: _all_ds_instances_output.rc == 0
+- block:
+  - set_fact:
+      _all_ds_instances: []
+  - name: Get all current DataStage instances
+    shell: |
+      oc get pxruntime -n {{ current_cp4d_cluster.project }} -o json
+    failed_when: False
+    register: _all_ds_instances_output
+  - set_fact:
+      _all_ds_instances: "{{ (_all_ds_instances_output.stdout | from_json)['items'] }}"
+    when: _all_ds_instances_output.rc == 0
+  when: not cpd_dry_run
 
 # Loop through all deployed DataStage instance definitions to check if instance no longer exists in the config
 - name: Loop through each DataStage instance to check if it must be deleted
