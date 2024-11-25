@@ -3,122 +3,130 @@
   debug:
     msg: "{{ _ds_instance }}"
 
-- name: Check if the DataStage instance {{ _ds_instance.name }} is already running
-  shell: |
-    oc get pxruntime {{ _ds_instance.name }} -n {{ current_cp4d_cluster.project }} --no-headers | wc -l
-  failed_when: False
-  register: _ds_instance_lookup_result
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision DataStage instance {{ _ds_instance.name }}"
+    _p_activity_comment: "Create DataStage instance {{ _ds_instance.name }} using datastage CR"
 
-- name: Determine if DataStage instance already exists
-  debug:
-    msg: "DataStage instance {{ _ds_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
-  when: (_ds_instance_lookup_result.stdout | int) != 0
-
-- when: (_ds_instance_lookup_result.stdout | int) == 0
-  block:
-
-  - name: Generate DataStage runtime ID
-    shell: date +%s%N | cut -b1-13
-    register: _ds_instance_id_output
-
-  - set_fact:
-      _ds_instance_name: "{{ _ds_instance.name }}"
-      _ds_instance_description: "{{ _ds_instance.description | default('') }}"
-      _ds_instance_namespace: "{{ current_cp4d_cluster.project }}"
-      _ds_instance_size: "{{ _ds_instance.size | default('small') | lower }}"
-      _ds_instance_storage_class: "{{ _ds_instance.storage_class | default(ocp_storage_class_file) }}"
-      _ds_instance_storage_size_gb: "{{ _ds_instance.storage_size_gb | default('50') }}"
-      _ds_instance_id: "{{ _ds_instance_id_output.stdout }}"
-      _ds_instance_scale_px_compute: "{{ _ds_instance.scale_px_compute | default(omit) }}"
-      _ds_px_compute_replicas: "{{ _ds_instance.scale_px_compute.replicas | default(omit) }}"
-      _ds_px_compute_limit_cpu: "{{ _ds_instance.scale_px_compute.cpu_limit | default(omit) }}"
-      _ds_px_compute_limit_memory: "{{ _ds_instance.scale_px_compute.memory_limit | default(omit) }}"
-      _ds_px_compute_request_cpu: "{{ _ds_instance.scale_px_compute.cpu_request | default(omit) }}"
-      _ds_px_compute_request_memory: "{{ _ds_instance.scale_px_compute.memory_request | default(omit) }}"    
-      _ds_instance_scale_px_runtime: "{{ _ds_instance.scale_px_runtime | default(omit) }}"
-      _ds_px_runtime_replicas: "{{ _ds_instance.scale_px_runtime.replicas | default(omit) }}"
-      _ds_px_runtime_limit_cpu: "{{ _ds_instance.scale_px_runtime.cpu_limit | default(omit) }}"
-      _ds_px_runtime_limit_memory: "{{ _ds_instance.scale_px_runtime.memory_limit | default(omit) }}"
-      _ds_px_runtime_request_cpu: "{{ _ds_instance.scale_px_runtime.cpu_request | default(omit) }}"
-      _ds_px_runtime_request_memory: "{{ _ds_instance.scale_px_runtime.memory_request | default(omit) }}"    
-
-  - name: If custom PX Compute scale is defined, confirm PX Runtime is defined as well
-    assert:
-      that: _ds_instance_scale_px_runtime is defined
-      fail_msg: "Custom scale properties 'scale_px_compute' found, but missing 'scale_px_runtime'. When using custom scaling options \
-              both must be specified."
-    when: _ds_instance_scale_px_compute is defined
-
-  - name: If custom PX Runtime scale is defined, confirm PX Compute is defined as well
-    assert:
-      that: _ds_instance_scale_px_compute is defined
-      fail_msg: "Custom scale properties 'scale_px_runtime' found, but missing 'scale_px_compute'. When using custom scaling options \
-              both must be specified."
-    when: _ds_instance_scale_px_runtime is defined
-
-  - name: If custom PX Compute scale parameters are defined, confirm all parameters are populated
-    assert:
-      that: 
-        - _ds_px_compute_replicas is defined
-        - _ds_px_compute_limit_cpu is defined
-        - _ds_px_compute_limit_memory is defined
-        - _ds_px_compute_request_cpu is defined
-        - _ds_px_compute_request_memory is defined
-      fail_msg: "PxRuntime {{ _ds_instance_name }} has missing options for `scale_px_compute`. Ensure the properties replicas, \
-                cpu_limit, memory_limit, cpu_request and memory_request are defined"
-    when: _ds_instance_scale_px_compute is defined
-
-  - name: If custom PX Runtime scale parameters are defined, confirm all parameters are populated
-    assert:
-      that: 
-        - _ds_px_runtime_replicas is defined
-        - _ds_px_runtime_limit_cpu is defined
-        - _ds_px_runtime_limit_memory is defined
-        - _ds_px_runtime_request_cpu is defined
-        - _ds_px_runtime_request_memory is defined
-      fail_msg: "PxRuntime {{ _ds_instance_name }} has missing `scale_px_runtime` options. Ensure the properties replicas \
-                cpu_limit, memory_limit, cpu_request memory_request are defined"
-    when: _ds_instance_scale_px_runtime is defined
-
-  - fail:
-      msg: "DataStage instance {{ _ds_instance_name }} has invalid value \"{{ _ds_instance_size }}\" for size property. Only {{ cp4d_datastage_size_options }} are supported."
-    when: _ds_instance_size not in cp4d_datastage_size_options
-
-  - name: "Validate Storage Class {{ _ds_instance_storage_class }}"
+- block:
+  - name: Check if the DataStage instance {{ _ds_instance.name }} is already running
     shell: |
-      oc get sc | grep "^{{ _ds_instance_storage_class }}[[:space:]]" | wc -l
-    register: _current_ds_instance_storage_class
+      oc get pxruntime {{ _ds_instance.name }} -n {{ current_cp4d_cluster.project }} --no-headers | wc -l
+    failed_when: False
+    register: _ds_instance_lookup_result
 
-  - fail:
-      msg: "Storage Class {{ _ds_instance_storage_class }} configured in DataStage instance {{ _ds_instance_name }} is not available in OCP cluster."
-    when: _current_ds_instance_storage_class.stdout == "0"
+  - name: Determine if DataStage instance already exists
+    debug:
+      msg: "DataStage instance {{ _ds_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
+    when: (_ds_instance_lookup_result.stdout | int) != 0
 
-  - name: Get the current CP4D user owner_id
-    uri:
-      url: 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/me'
-      method: GET
-      headers:
-        Content-Type: application/json
-        Authorization: "Bearer {{ _cp4d_bearer_token }}"
-      return_content: yes
-      validate_certs: no
-      status_code: 200
-    register: _cp4d_user_details
+  - when: (_ds_instance_lookup_result.stdout | int) == 0
+    block:
 
-  - set_fact:
-      _cp4d_user_owner_id: "{{ _cp4d_user_details.json.UserInfo.uid }}"
+    - name: Generate DataStage runtime ID
+      shell: date +%s%N | cut -b1-13
+      register: _ds_instance_id_output
 
-  - name: Obtain DataStage version
-    shell:
-      oc get datastage -n {{ current_cp4d_cluster.project }} datastage -o jsonpath='{.spec.version}'
-    register: _cp4d_ds_version
+    - set_fact:
+        _ds_instance_name: "{{ _ds_instance.name }}"
+        _ds_instance_description: "{{ _ds_instance.description | default('') }}"
+        _ds_instance_namespace: "{{ current_cp4d_cluster.project }}"
+        _ds_instance_size: "{{ _ds_instance.size | default('small') | lower }}"
+        _ds_instance_storage_class: "{{ _ds_instance.storage_class | default(ocp_storage_class_file) }}"
+        _ds_instance_storage_size_gb: "{{ _ds_instance.storage_size_gb | default('50') }}"
+        _ds_instance_id: "{{ _ds_instance_id_output.stdout }}"
+        _ds_instance_scale_px_compute: "{{ _ds_instance.scale_px_compute | default(omit) }}"
+        _ds_px_compute_replicas: "{{ _ds_instance.scale_px_compute.replicas | default(omit) }}"
+        _ds_px_compute_limit_cpu: "{{ _ds_instance.scale_px_compute.cpu_limit | default(omit) }}"
+        _ds_px_compute_limit_memory: "{{ _ds_instance.scale_px_compute.memory_limit | default(omit) }}"
+        _ds_px_compute_request_cpu: "{{ _ds_instance.scale_px_compute.cpu_request | default(omit) }}"
+        _ds_px_compute_request_memory: "{{ _ds_instance.scale_px_compute.memory_request | default(omit) }}"    
+        _ds_instance_scale_px_runtime: "{{ _ds_instance.scale_px_runtime | default(omit) }}"
+        _ds_px_runtime_replicas: "{{ _ds_instance.scale_px_runtime.replicas | default(omit) }}"
+        _ds_px_runtime_limit_cpu: "{{ _ds_instance.scale_px_runtime.cpu_limit | default(omit) }}"
+        _ds_px_runtime_limit_memory: "{{ _ds_instance.scale_px_runtime.memory_limit | default(omit) }}"
+        _ds_px_runtime_request_cpu: "{{ _ds_instance.scale_px_runtime.cpu_request | default(omit) }}"
+        _ds_px_runtime_request_memory: "{{ _ds_instance.scale_px_runtime.memory_request | default(omit) }}"    
 
-  - name: Create DataStage PXRuntime CRD yaml file
-    template:
-      src: ds_instance.yaml.j2
-      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-datastage-instance-{{ _ds_instance_name }}-cr.yaml"
+    - name: If custom PX Compute scale is defined, confirm PX Runtime is defined as well
+      assert:
+        that: _ds_instance_scale_px_runtime is defined
+        fail_msg: "Custom scale properties 'scale_px_compute' found, but missing 'scale_px_runtime'. When using custom scaling options \
+                both must be specified."
+      when: _ds_instance_scale_px_compute is defined
 
-  - name: Provision PxRunTime {{ _ds_instance_name }} 
-    shell: |
-      oc create -f {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-datastage-instance-{{ _ds_instance_name }}-cr.yaml
-    register: _oc_create_ds
+    - name: If custom PX Runtime scale is defined, confirm PX Compute is defined as well
+      assert:
+        that: _ds_instance_scale_px_compute is defined
+        fail_msg: "Custom scale properties 'scale_px_runtime' found, but missing 'scale_px_compute'. When using custom scaling options \
+                both must be specified."
+      when: _ds_instance_scale_px_runtime is defined
+
+    - name: If custom PX Compute scale parameters are defined, confirm all parameters are populated
+      assert:
+        that: 
+          - _ds_px_compute_replicas is defined
+          - _ds_px_compute_limit_cpu is defined
+          - _ds_px_compute_limit_memory is defined
+          - _ds_px_compute_request_cpu is defined
+          - _ds_px_compute_request_memory is defined
+        fail_msg: "PxRuntime {{ _ds_instance_name }} has missing options for `scale_px_compute`. Ensure the properties replicas, \
+                  cpu_limit, memory_limit, cpu_request and memory_request are defined"
+      when: _ds_instance_scale_px_compute is defined
+
+    - name: If custom PX Runtime scale parameters are defined, confirm all parameters are populated
+      assert:
+        that: 
+          - _ds_px_runtime_replicas is defined
+          - _ds_px_runtime_limit_cpu is defined
+          - _ds_px_runtime_limit_memory is defined
+          - _ds_px_runtime_request_cpu is defined
+          - _ds_px_runtime_request_memory is defined
+        fail_msg: "PxRuntime {{ _ds_instance_name }} has missing `scale_px_runtime` options. Ensure the properties replicas \
+                  cpu_limit, memory_limit, cpu_request memory_request are defined"
+      when: _ds_instance_scale_px_runtime is defined
+
+    - fail:
+        msg: "DataStage instance {{ _ds_instance_name }} has invalid value \"{{ _ds_instance_size }}\" for size property. Only {{ cp4d_datastage_size_options }} are supported."
+      when: _ds_instance_size not in cp4d_datastage_size_options
+
+    - name: "Validate Storage Class {{ _ds_instance_storage_class }}"
+      shell: |
+        oc get sc | grep "^{{ _ds_instance_storage_class }}[[:space:]]" | wc -l
+      register: _current_ds_instance_storage_class
+
+    - fail:
+        msg: "Storage Class {{ _ds_instance_storage_class }} configured in DataStage instance {{ _ds_instance_name }} is not available in OCP cluster."
+      when: _current_ds_instance_storage_class.stdout == "0"
+
+    - name: Get the current CP4D user owner_id
+      uri:
+        url: 'https://{{ cp4d_url.stdout }}/icp4d-api/v1/me'
+        method: GET
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
+        return_content: yes
+        validate_certs: no
+        status_code: 200
+      register: _cp4d_user_details
+
+    - set_fact:
+        _cp4d_user_owner_id: "{{ _cp4d_user_details.json.UserInfo.uid }}"
+
+    - name: Obtain DataStage version
+      shell:
+        oc get datastage -n {{ current_cp4d_cluster.project }} datastage -o jsonpath='{.spec.version}'
+      register: _cp4d_ds_version
+
+    - name: Create DataStage PXRuntime CRD yaml file
+      template:
+        src: ds_instance.yaml.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-datastage-instance-{{ _ds_instance_name }}-cr.yaml"
+
+    - name: Provision PxRunTime {{ _ds_instance_name }} 
+      shell: |
+        oc create -f {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-datastage-instance-{{ _ds_instance_name }}-cr.yaml
+      register: _oc_create_ds
+  when: not cpd_dry_run

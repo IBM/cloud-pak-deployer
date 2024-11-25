@@ -3,35 +3,16 @@
   debug:
     var: _db2_instance
 
-- name: Check if the Db2 OLTP instance is already running
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2oltp_instance_addon_type }}&display_name={{ _db2_instance.name }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ _cp4d_bearer_token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _db2_instance_lookup_result
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision Db2 instance {{ _db2_instance.name }}"
+    _p_activity_comment: "Use REST API to provision Db2 instance {{ _db2_instance.name }}"
 
-- name: Determine if Db2 OLTP instance already exists
-  debug:
-    msg: "Db2 OLTP instance {{ _db2_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
-  when: _db2_instance_lookup_result.json.total_count != 0
-
-# If instance doesn't exist yet, create it
-- when: _db2_instance_lookup_result.json.total_count == 0
-  block:
-  - name: Set the required privileges for Db2 OLTP instance creation for OpenShift Project {{ current_cp4d_cluster.project }}
-    shell: |
-      oc adm policy \
-        add-cluster-role-to-user system:controller:persistent-volume-binder \
-        system:serviceaccount:{{ current_cp4d_cluster.project }}:zen-databases-sa
-
-  - name: Get CP4D Database specifications
+- block:
+  - name: Check if the Db2 OLTP instance is already running
     uri:
-      url: 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases'
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_db2oltp_instance_addon_type }}&display_name={{ _db2_instance.name }}'
       method: GET
       headers:
         Content-Type: application/json
@@ -39,68 +20,95 @@
       return_content: yes
       validate_certs: no
       status_code: 200
-    register: _databases_details_result_v1
-    until: _databases_details_result_v1.status == 200
-    retries: 12
-    delay: 5
-    when: current_cp4d_cluster.cp4d_version < '4.7.0'
+    register: _db2_instance_lookup_result
 
-  - name: Get CP4D Database specifications
-    uri:
-      url: 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases/'
-      method: GET
-      headers:
-        Content-Type: application/json
-        Authorization: "Bearer {{ _cp4d_bearer_token }}"
-      return_content: yes
-      validate_certs: no
-      status_code: 200
-    register: _databases_details_result_v2
-    until: _databases_details_result_v2.status == 200
-    retries: 12
-    delay: 5
-    when: current_cp4d_cluster.cp4d_version >= '4.7.0'
-
-  - set_fact:
-      _databases_details_result: "{{ _databases_details_result_v2 }}"
-    when: current_cp4d_cluster.cp4d_version >= '4.7.0'
-
-  - debug:
-      var: _databases_details_result
-
-  - set_fact:
-      _db2_cartridge_details: "{{ _databases_details_result.json.result | json_query(query_db2_details) }}"
-    vars:
-      cartridge_type: "db2oltp"
-      query_db2_details: "[?type=='{{ cartridge_type }}']"
-
-  - name: Show Db2 OLTP cartridge details
+  - name: Determine if Db2 OLTP instance already exists
     debug:
-      msg: "{{ _db2_cartridge_details }}"
+      msg: "Db2 OLTP instance {{ _db2_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
+    when: _db2_instance_lookup_result.json.total_count != 0
 
-  - set_fact:
-      _db2_version: "{{ (_db2_cartridge_details | first).version }}"
-      _db2_repositories: " {{ (_db2_cartridge_details | first).create.repositories | regex_replace(\"'\", '\"')  }}"
-      _db2_chart: "{{ (_db2_cartridge_details | first).chart }}"
+  # If instance doesn't exist yet, create it
+  - when: _db2_instance_lookup_result.json.total_count == 0
+    block:
+    - name: Set the required privileges for Db2 OLTP instance creation for OpenShift Project {{ current_cp4d_cluster.project }}
+      shell: |
+        oc adm policy \
+          add-cluster-role-to-user system:controller:persistent-volume-binder \
+          system:serviceaccount:{{ current_cp4d_cluster.project }}:zen-databases-sa
 
-  - name: Prepare Db2 OLTP instance {{ _db2_instance.name }} json file
-    template:
-      src: db2_instance_40.json.j2
-      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2_instance_40.json"
+    - name: Get CP4D Database specifications
+      uri:
+        url: 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases'
+        method: GET
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
+        return_content: yes
+        validate_certs: no
+        status_code: 200
+      register: _databases_details_result_v1
+      until: _databases_details_result_v1.status == 200
+      retries: 12
+      delay: 5
+      when: current_cp4d_cluster.cp4d_version < '4.7.0'
 
-  - name: Create Db2 OLTP instance {{ _db2_instance.name }}
-    shell: |
-      curl -v -k \
-        -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
-        -H 'Content-Type: application/json' \
-        -X POST \
-        'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
-        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2_instance_40.json
-    register: _create_db2_instance_result
+    - name: Get CP4D Database specifications
+      uri:
+        url: 'https://{{ cp4d_url.stdout }}/icp4data/api/v1/databases/'
+        method: GET
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
+        return_content: yes
+        validate_certs: no
+        status_code: 200
+      register: _databases_details_result_v2
+      until: _databases_details_result_v2.status == 200
+      retries: 12
+      delay: 5
+      when: current_cp4d_cluster.cp4d_version >= '4.7.0'
 
-  - set_fact:
-      _db2_instance_id: "{{ (_create_db2_instance_result.stdout | from_json).id }}"
+    - set_fact:
+        _databases_details_result: "{{ _databases_details_result_v2 }}"
+      when: current_cp4d_cluster.cp4d_version >= '4.7.0'
 
-  - name: Show results of Db2 OLTP instance creation
-    debug:
-      msg: "{{ _create_db2_instance_result }}"
+    - debug:
+        var: _databases_details_result
+
+    - set_fact:
+        _db2_cartridge_details: "{{ _databases_details_result.json.result | json_query(query_db2_details) }}"
+      vars:
+        cartridge_type: "db2oltp"
+        query_db2_details: "[?type=='{{ cartridge_type }}']"
+
+    - name: Show Db2 OLTP cartridge details
+      debug:
+        msg: "{{ _db2_cartridge_details }}"
+
+    - set_fact:
+        _db2_version: "{{ (_db2_cartridge_details | first).version }}"
+        _db2_repositories: " {{ (_db2_cartridge_details | first).create.repositories | regex_replace(\"'\", '\"')  }}"
+        _db2_chart: "{{ (_db2_cartridge_details | first).chart }}"
+
+    - name: Prepare Db2 OLTP instance {{ _db2_instance.name }} json file
+      template:
+        src: db2_instance_40.json.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2_instance_40.json"
+
+    - name: Create Db2 OLTP instance {{ _db2_instance.name }}
+      shell: |
+        curl -v -k \
+          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+          -H 'Content-Type: application/json' \
+          -X POST \
+          'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+          -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-db2_instance_40.json
+      register: _create_db2_instance_result
+
+    - set_fact:
+        _db2_instance_id: "{{ (_create_db2_instance_result.stdout | from_json).id }}"
+
+    - name: Show results of Db2 OLTP instance creation
+      debug:
+        msg: "{{ _create_db2_instance_result }}"
+  when: not cpd_dry_run

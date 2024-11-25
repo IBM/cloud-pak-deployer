@@ -5,7 +5,14 @@
     dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-patch-watsonxaiifm.sh"
     mode: u+rwx
 
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Patch watsonxaiifm for foundation model instances"
+    _p_activity_script: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-patch-watsonxaiifm.sh"
+
 - name: Run script to configure running watsonx.ai models, output is in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-patch-watsonxaiifm.log
   shell: |
     {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-patch-watsonxaiifm.sh > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-patch-watsonxaiifm.log
   register: _patch_watsonxaiifm_result
+  when: not cpd_dry_run

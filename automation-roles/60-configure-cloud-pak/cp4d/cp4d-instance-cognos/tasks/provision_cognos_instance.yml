@@ -10,312 +10,320 @@
     msg: "Cognos Analytics size can be small, medium or large. {{ _cp4d_cognos_instance_tshirt_size }} is not supported."
   when: _cp4d_cognos_instance_tshirt_size not in ['small','medium','large']
 
-- name: Check if the Cognos Analytics instance is already running
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&display_name={{ _cognos_instance.name }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ _cp4d_bearer_token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _cognos_lookup_result
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision Cognos Analytics instance {{ _cognos_instance.name }}"
+    _p_activity_comment: "Create Cognos Analytics instance {{ _cognos_instance.name }} using REST API"
 
-- set_fact:
-    _cp4d_cognos_instance_storage_class: "{{ ocp_storage_class_file }}"
-    _cp4d_cognos_instance_storage_class_block: "{{ ocp_storage_class_block }}"
+- block:
+  - name: Check if the Cognos Analytics instance is already running
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_cognos_instance_addon_type }}&display_name={{ _cognos_instance.name }}'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _cognos_lookup_result
 
-- name: Determine if Cognos Analytics instance already exists
-  debug:
-    msg: "Cognos Analytics instance {{ _cognos_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
-  when: _cognos_lookup_result.json.total_count != 0
+  - set_fact:
+      _cp4d_cognos_instance_storage_class: "{{ ocp_storage_class_file }}"
+      _cp4d_cognos_instance_storage_class_block: "{{ ocp_storage_class_block }}"
 
-- set_fact:
-    _internal_db2_instance_id: ""
+  - name: Determine if Cognos Analytics instance already exists
+    debug:
+      msg: "Cognos Analytics instance {{ _cognos_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
+    when: _cognos_lookup_result.json.total_count != 0
 
-- when: _cognos_lookup_result.json.total_count == 0
-  block:
+  - set_fact:
+      _internal_db2_instance_id: ""
 
-    - name: Get provisioned db2oltp instances with name {{ _cognos_instance.metastore_ref }}
-      uri:
-        url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type=db2oltp&display_name={{ _cognos_instance.metastore_ref }}'
-        method: GET
-        headers:
-          Content-Type: application/json
-          Authorization: "Bearer {{ _cp4d_bearer_token }}"
-        return_content: yes
-        validate_certs: no
-        status_code: 200
-      register: _db2_lookup_result
+  - when: _cognos_lookup_result.json.total_count == 0
+    block:
 
-    - fail:
-        msg: Db2 OLTP instance {{ _cognos_instance.metastore_ref }} was not found; the Cognos Analytics instance cannot be provisioned without a valid Db2 OLTP instance
-      when: _db2_lookup_result.json.total_count == 0
+      - name: Get provisioned db2oltp instances with name {{ _cognos_instance.metastore_ref }}
+        uri:
+          url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type=db2oltp&display_name={{ _cognos_instance.metastore_ref }}'
+          method: GET
+          headers:
+            Content-Type: application/json
+            Authorization: "Bearer {{ _cp4d_bearer_token }}"
+          return_content: yes
+          validate_certs: no
+          status_code: 200
+        register: _db2_lookup_result
 
-    - when: _db2_lookup_result.json.total_count == 1
-      block:
-        - name: "Prepare Cognos instance creation using provisioned Db2 OLTP instance {{ _cognos_instance.metastore_ref }}"
-          include_tasks: prepare_provision_cognos_instance_internal.yml
+      - fail:
+          msg: Db2 OLTP instance {{ _cognos_instance.metastore_ref }} was not found; the Cognos Analytics instance cannot be provisioned without a valid Db2 OLTP instance
+        when: _db2_lookup_result.json.total_count == 0
 
-        - set_fact:
-            _internal_db2_instance_id: "{{ _db2_lookup_result.json.service_instances[0].id }}"
+      - when: _db2_lookup_result.json.total_count == 1
+        block:
+          - name: "Prepare Cognos instance creation using provisioned Db2 OLTP instance {{ _cognos_instance.metastore_ref }}"
+            include_tasks: prepare_provision_cognos_instance_internal.yml
 
-    - name: Get the list of catalogs to extract the Platform assets catalog ID
-      uri:
-        url: 'https://{{ cp4d_url.stdout }}/v2/catalogs'
-        method: GET
-        headers:
-          Content-Type: application/json
-          Authorization: "Bearer {{ _cp4d_bearer_token }}"
-        return_content: yes
-        validate_certs: no
-        status_code: 200
-      register: _cp4d_get_catalog_result
+          - set_fact:
+              _internal_db2_instance_id: "{{ _db2_lookup_result.json.service_instances[0].id }}"
 
-    - debug:
-        var: _cp4d_get_catalog_result
+      - name: Get the list of catalogs to extract the Platform assets catalog ID
+        uri:
+          url: 'https://{{ cp4d_url.stdout }}/v2/catalogs'
+          method: GET
+          headers:
+            Content-Type: application/json
+            Authorization: "Bearer {{ _cp4d_bearer_token }}"
+          return_content: yes
+          validate_certs: no
+          status_code: 200
+        register: _cp4d_get_catalog_result
 
-    - set_fact:
-        _cp4d_platform_access_catalog: "{{ _cp4d_get_catalog_result.json.catalogs | json_query(query) | first | default({}) }}"
-      vars:
-        query: >-
-          [?entity.name=='Platform assets catalog']
+      - debug:
+          var: _cp4d_get_catalog_result
 
-    - name: Fail if Platform assets catalog could not be found
-      fail:
-        msg: Platform assets catalog could not be found in the CP4D instance.
-      when: _cp4d_platform_access_catalog=={}
+      - set_fact:
+          _cp4d_platform_access_catalog: "{{ _cp4d_get_catalog_result.json.catalogs | json_query(query) | first | default({}) }}"
+        vars:
+          query: >-
+            [?entity.name=='Platform assets catalog']
 
-    - name: Validate if the connection to the Cognos Db2 Content Repository '{{ _cp4d_platform_connection_name }}' is available
-      uri:
-        url: 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}&entity.flags=personal_credentials&entity.name={{ _cp4d_platform_connection_name }}'
-        method: GET
-        headers:
-          Content-Type: application/json
-          Authorization: "Bearer {{ _cp4d_bearer_token }}"
-        return_content: yes
-        validate_certs: no
-        status_code: 200
-      register: _cp4d_cognos_db2_content_repo_result
+      - name: Fail if Platform assets catalog could not be found
+        fail:
+          msg: Platform assets catalog could not be found in the CP4D instance.
+        when: _cp4d_platform_access_catalog=={}
 
-    - set_fact:
-        _cp4d_cognos_db2_content_repo: "{{ _cp4d_cognos_db2_content_repo_result.json.resources | json_query(query_db) }}"
-      vars:
-        db2_name: "{{ _cp4d_platform_connection_name }}"
-        query_db: "[?entity.name=='{{ db2_name }}']"
+      - name: Validate if the connection to the Cognos Db2 Content Repository '{{ _cp4d_platform_connection_name }}' is available
+        uri:
+          url: 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}&entity.flags=personal_credentials&entity.name={{ _cp4d_platform_connection_name }}'
+          method: GET
+          headers:
+            Content-Type: application/json
+            Authorization: "Bearer {{ _cp4d_bearer_token }}"
+          return_content: yes
+          validate_certs: no
+          status_code: 200
+        register: _cp4d_cognos_db2_content_repo_result
 
-    - name: Show number of data sources matching platform connection name
-      debug:
-        msg: "Number of datasources found with name {{ _cp4d_platform_connection_name }}: {{ _cp4d_cognos_db2_content_repo |length }}"
+      - set_fact:
+          _cp4d_cognos_db2_content_repo: "{{ _cp4d_cognos_db2_content_repo_result.json.resources | json_query(query_db) }}"
+        vars:
+          db2_name: "{{ _cp4d_platform_connection_name }}"
+          query_db: "[?entity.name=='{{ db2_name }}']"
 
-    - name: Create Cognos Repository DB connection {{ _cp4d_platform_connection_name }} if it does not exist
-      block:
-        - name: Get the available connection types
-          uri:
-            url: 'https://{{ cp4d_url.stdout }}/v2/datasource_types'
-            method: GET
-            headers:
-              Content-Type: application/json
-              Authorization: "Bearer {{ _cp4d_bearer_token }}"
-            return_content: yes
-            validate_certs: no
-            status_code: 200
-          register: _cp4d_datasource_types_result
+      - name: Show number of data sources matching platform connection name
+        debug:
+          msg: "Number of datasources found with name {{ _cp4d_platform_connection_name }}: {{ _cp4d_cognos_db2_content_repo |length }}"
 
-        - set_fact:
-            _cp4d_datasource_db2_type: "{{ _cp4d_datasource_types_result.json.resources | json_query(query) | first }}"
-          vars:
-            db2_name: 'db2'
-            query: "[?entity.name=='{{ db2_name }}'].metadata.asset_id"
+      - name: Create Cognos Repository DB connection {{ _cp4d_platform_connection_name }} if it does not exist
+        block:
+          - name: Get the available connection types
+            uri:
+              url: 'https://{{ cp4d_url.stdout }}/v2/datasource_types'
+              method: GET
+              headers:
+                Content-Type: application/json
+                Authorization: "Bearer {{ _cp4d_bearer_token }}"
+              return_content: yes
+              validate_certs: no
+              status_code: 200
+            register: _cp4d_datasource_types_result
 
-        - debug:
-            var: _cp4d_datasource_db2_type
+          - set_fact:
+              _cp4d_datasource_db2_type: "{{ _cp4d_datasource_types_result.json.resources | json_query(query) | first }}"
+            vars:
+              db2_name: 'db2'
+              query: "[?entity.name=='{{ db2_name }}'].metadata.asset_id"
 
-        - name: Create Datasource connection json file
-          template:
-            src: cognos_connection.json.j2
-            dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cp4d_platform_connection_name }}-connection.json"
+          - debug:
+              var: _cp4d_datasource_db2_type
 
-        - name: Create Datasource connection {{ _cp4d_platform_connection_name }}
-          shell: |
-            curl -v -k \
-              -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' \
-              -X POST \
-              https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }} \
-              -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cp4d_platform_connection_name }}-connection.json
-          register: _create_cognos_connection_result
-      when: (_cp4d_cognos_db2_content_repo | length) == 0
+          - name: Create Datasource connection json file
+            template:
+              src: cognos_connection.json.j2
+              dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cp4d_platform_connection_name }}-connection.json"
 
-    - name: Get the Global platform connection for '{{ _cp4d_platform_connection_name }}'
-      uri:
-        url: 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}&entity.flags=personal_credentials&entity.name={{ _cp4d_platform_connection_name }}'
-        method: GET
-        headers:
-          Content-Type: application/json
-          Authorization: "Bearer {{ _cp4d_bearer_token }}"
-        return_content: yes
-        validate_certs: no
-        status_code: 200
-      register: _cp4d_cognos_db2_platform_connection_result
+          - name: Create Datasource connection {{ _cp4d_platform_connection_name }}
+            shell: |
+              curl -v -k \
+                -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' -H 'Content-Type: application/json' \
+                -X POST \
+                https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }} \
+                -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cp4d_platform_connection_name }}-connection.json
+            register: _create_cognos_connection_result
+        when: (_cp4d_cognos_db2_content_repo | length) == 0
 
-    - name: Get the Connection Id of Global Platform connection '{{ _cp4d_platform_connection_name }}'
-      set_fact:
-        _cp4d_cognos_db2_platform_connection_id_list: "{{ _cp4d_cognos_db2_platform_connection_result.json.resources | json_query(query) | default([]) }}"
-      vars:
-        query: "[?entity.name=='{{ _cp4d_platform_connection_name }}'].metadata.asset_id"    
+      - name: Get the Global platform connection for '{{ _cp4d_platform_connection_name }}'
+        uri:
+          url: 'https://{{ cp4d_url.stdout }}/v2/connections?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}&entity.flags=personal_credentials&entity.name={{ _cp4d_platform_connection_name }}'
+          method: GET
+          headers:
+            Content-Type: application/json
+            Authorization: "Bearer {{ _cp4d_bearer_token }}"
+          return_content: yes
+          validate_certs: no
+          status_code: 200
+        register: _cp4d_cognos_db2_platform_connection_result
 
-    - fail:
-        msg: "No Global platform connection with name {{ _cp4d_platform_connection_name }} available"
-      when: _cp4d_cognos_db2_platform_connection_id_list | length != 1
+      - name: Get the Connection Id of Global Platform connection '{{ _cp4d_platform_connection_name }}'
+        set_fact:
+          _cp4d_cognos_db2_platform_connection_id_list: "{{ _cp4d_cognos_db2_platform_connection_result.json.resources | json_query(query) | default([]) }}"
+        vars:
+          query: "[?entity.name=='{{ _cp4d_platform_connection_name }}'].metadata.asset_id"    
 
-    - set_fact:
-        _cp4d_cognos_db2_platform_connection_id: "{{ _cp4d_cognos_db2_platform_connection_id_list | first }}"
-   
-    - name: Confirm the Datasource connection {{ _cp4d_platform_connection_name }} is valid
-      uri:
-        body_format: json
-        body: '{}'
-        return_content: yes
-        method: PUT
-        url: "https://{{ cp4d_url.stdout }}/v2/connections/{{ _cp4d_cognos_db2_platform_connection_id }}/actions/test?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}"
-        headers:
-          Authorization: "Bearer {{ _cp4d_bearer_token }}"
-          Content-Type: "application/json"
-          Accept: "application/json"
-        validate_certs: no
-      register: _test_global_platform_connection_result
-      failed_when: false
+      - fail:
+          msg: "No Global platform connection with name {{ _cp4d_platform_connection_name }} available"
+        when: _cp4d_cognos_db2_platform_connection_id_list | length != 1
 
-    - when: _test_global_platform_connection_result.status != 200
-      block:
-        - debug:
-            msg: "{{ _test_global_platform_connection_result }}"
-
-        - fail:
-            msg: "Test connection to Global Platform connection {{ _cp4d_platform_connection_name }} failed. Unable to provision Cognos instance. \
-                  Validate the Global Platform connection properties, or delete the global platform connection so the Deployer will re-create it. \
-                  \n Returned Error Message: \n\n {{ _test_global_platform_connection_result.content }}"
-
-    - name: Obtain Cognos Analytics version
-      shell:
-        oc get caservice -n {{ current_cp4d_cluster.project }} ca-addon-cr -o jsonpath='{.spec.version}'
-      register: _ca_version
-
-    - set_fact:
-        _cognos_instance_pods_count: "7"
+      - set_fact:
+          _cp4d_cognos_db2_platform_connection_id: "{{ _cp4d_cognos_db2_platform_connection_id_list | first }}"
     
-    - name: Create cognos instance 4.0 json file
-      template:
-        src: cognos_instance_40.json.j2
-        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_instance.json"
-      when: _ca_cp4d_version == "4.0"
+      - name: Confirm the Datasource connection {{ _cp4d_platform_connection_name }} is valid
+        uri:
+          body_format: json
+          body: '{}'
+          return_content: yes
+          method: PUT
+          url: "https://{{ cp4d_url.stdout }}/v2/connections/{{ _cp4d_cognos_db2_platform_connection_id }}/actions/test?catalog_id={{ _cp4d_platform_access_catalog.metadata.guid }}"
+          headers:
+            Authorization: "Bearer {{ _cp4d_bearer_token }}"
+            Content-Type: "application/json"
+            Accept: "application/json"
+          validate_certs: no
+        register: _test_global_platform_connection_result
+        failed_when: false
 
-    - when: _ca_cp4d_version != "4.0"
-      block:
+      - when: _test_global_platform_connection_result.status != 200
+        block:
+          - debug:
+              msg: "{{ _test_global_platform_connection_result }}"
 
-        - name: Get current secrets
-          uri:
-            url: 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets'
-            method: GET
-            headers:
-              Content-Type: application/json
-              Authorization: "Bearer {{ _cp4d_bearer_token }}"
-            return_content: yes
-            validate_certs: no
-            status_code: 200
-          register: _cp4d_secret_get_result
+          - fail:
+              msg: "Test connection to Global Platform connection {{ _cp4d_platform_connection_name }} failed. Unable to provision Cognos instance. \
+                    Validate the Global Platform connection properties, or delete the global platform connection so the Deployer will re-create it. \
+                    \n Returned Error Message: \n\n {{ _test_global_platform_connection_result.content }}"
 
-        - set_fact:
-            _cp4d_secret_query: "{{ _cp4d_secret_get_result.json.secrets | json_query(secret_smtp) }}"
-          vars:
-            secret_smtp_name: "smtpSecret"
-            secret_smtp: "[?secret_name=='{{ secret_smtp_name }}']"        
+      - name: Obtain Cognos Analytics version
+        shell:
+          oc get caservice -n {{ current_cp4d_cluster.project }} ca-addon-cr -o jsonpath='{.spec.version}'
+        register: _ca_version
 
-        - when: _cp4d_secret_query | length == 1
-          set_fact:
-            _cp4d_cognos_smtp_secret: "{{ _cp4d_secret_query[0].secret_urn }}"
+      - set_fact:
+          _cognos_instance_pods_count: "7"
+      
+      - name: Create cognos instance 4.0 json file
+        template:
+          src: cognos_instance_40.json.j2
+          dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_instance.json"
+        when: _ca_cp4d_version == "4.0"
 
-        - when: _cp4d_secret_query | length == 0
-          block:
-            - name: Create Cognos smtp secret json
-              template:
-                src: cognos_smtp_secret.json.j2
-                dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_smtp_secret.json"
+      - when: _ca_cp4d_version != "4.0"
+        block:
 
-            - name: Create Cognos smtp secret
-              shell: |
-                curl -v -k \
-                  -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
-                  -H 'Content-Type: application/json' \
-                  -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets' \
-                  -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_smtp_secret.json
-              register: _cp4d_cognos_smtp_secret_create_result       
+          - name: Get current secrets
+            uri:
+              url: 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets'
+              method: GET
+              headers:
+                Content-Type: application/json
+                Authorization: "Bearer {{ _cp4d_bearer_token }}"
+              return_content: yes
+              validate_certs: no
+              status_code: 200
+            register: _cp4d_secret_get_result
 
-            - set_fact:
-                _cp4d_cognos_smtp_secret_result: "{{ _cp4d_cognos_smtp_secret_create_result.stdout | from_json }}"
+          - set_fact:
+              _cp4d_secret_query: "{{ _cp4d_secret_get_result.json.secrets | json_query(secret_smtp) }}"
+            vars:
+              secret_smtp_name: "smtpSecret"
+              secret_smtp: "[?secret_name=='{{ secret_smtp_name }}']"        
 
-            - set_fact:
-                _cp4d_cognos_smtp_secret: "{{ _cp4d_cognos_smtp_secret_result.secret_urn }}"
+          - when: _cp4d_secret_query | length == 1
+            set_fact:
+              _cp4d_cognos_smtp_secret: "{{ _cp4d_secret_query[0].secret_urn }}"
 
-        - debug:
-            msg: "Cognos SMTP Secret: {{ _cp4d_cognos_smtp_secret }}"
-        
-        - name: Create cognos instance 4.5 json file
-          template:
-            src: "cognos_instance_45_{{ _cp4d_cognos_instance_tshirt_size | lower }}.json.j2"
-            dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_instance.json"
+          - when: _cp4d_secret_query | length == 0
+            block:
+              - name: Create Cognos smtp secret json
+                template:
+                  src: cognos_smtp_secret.json.j2
+                  dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_smtp_secret.json"
 
-        - set_fact:
-            _cognos_instance_pods_count: "5"
+              - name: Create Cognos smtp secret
+                shell: |
+                  curl -v -k \
+                    -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+                    -H 'Content-Type: application/json' \
+                    -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v2/secrets' \
+                    -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_smtp_secret.json
+                register: _cp4d_cognos_smtp_secret_create_result       
 
-    - name: Create Cognos instance
-      shell: |
-        curl -v -k \
-          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
-          -H 'Content-Type: application/json' \
-          -X POST \
-          'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
-          -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_instance.json
-      register: _cognos_instance_create_result
+              - set_fact:
+                  _cp4d_cognos_smtp_secret_result: "{{ _cp4d_cognos_smtp_secret_create_result.stdout | from_json }}"
 
-    - set_fact:
-        _cognos_instance_create_result_json: "{{ _cognos_instance_create_result.stdout | from_json }}"
+              - set_fact:
+                  _cp4d_cognos_smtp_secret: "{{ _cp4d_cognos_smtp_secret_result.secret_urn }}"
 
-    - when: _ca_cp4d_version == "4.0"
-      block:
-      - name: Wait until Cognos Analytics artifacts pod has started and is ready
+          - debug:
+              msg: "Cognos SMTP Secret: {{ _cp4d_cognos_smtp_secret }}"
+          
+          - name: Create cognos instance 4.5 json file
+            template:
+              src: "cognos_instance_45_{{ _cp4d_cognos_instance_tshirt_size | lower }}.json.j2"
+              dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_instance.json"
+
+          - set_fact:
+              _cognos_instance_pods_count: "5"
+
+      - name: Create Cognos instance
         shell: |
-          oc get po \
-            -n {{ current_cp4d_cluster.project }} \
-            -l app.kubernetes.io/component=ca-artifacts \
-            --no-headers \
-            -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
-        register: _ca_artifacts_pod
-        retries: 60
-        delay: 10
-        until:
-          - _ca_artifacts_pod.rc==0
-          - _ca_artifacts_pod.stdout!=''
+          curl -v -k \
+            -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+            -H 'Content-Type: application/json' \
+            -X POST \
+            'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+            -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _cognos_instance.name }}-cognos_instance.json
+        register: _cognos_instance_create_result
 
-      - name: Wait for a bit so that all Cognos Analytics containers are starting
-        pause:
-          seconds: 90
+      - set_fact:
+          _cognos_instance_create_result_json: "{{ _cognos_instance_create_result.stdout | from_json }}"
 
-      - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
+      - when: _ca_cp4d_version == "4.0"
+        block:
+        - name: Wait until Cognos Analytics artifacts pod has started and is ready
+          shell: |
+            oc get po \
+              -n {{ current_cp4d_cluster.project }} \
+              -l app.kubernetes.io/component=ca-artifacts \
+              --no-headers \
+              -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
+          register: _ca_artifacts_pod
+          retries: 60
+          delay: 10
+          until:
+            - _ca_artifacts_pod.rc==0
+            - _ca_artifacts_pod.stdout!=''
+
+        - name: Wait for a bit so that all Cognos Analytics containers are starting
+          pause:
+            seconds: 90
+
+        - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
+          shell: |
+            oc delete pod \
+              -n {{ current_cp4d_cluster.project }} \
+              {{ _ca_artifacts_pod.stdout }}
+
+      - name: Cognos Analytics instance being provisioned
+        debug:
+          msg: "Cognos Analytics instance being provisioned. ID: {{ _cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
+
+      - name: Label DB2 STS when using internal metastore
         shell: |
-          oc delete pod \
+          oc label sts \
             -n {{ current_cp4d_cluster.project }} \
-            {{ _ca_artifacts_pod.stdout }}
-
-    - name: Cognos Analytics instance being provisioned
-      debug:
-        msg: "Cognos Analytics instance being provisioned. ID: {{ _cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
-
-    - name: Label DB2 STS when using internal metastore
-      shell: |
-        oc label sts \
-          -n {{ current_cp4d_cluster.project }} \
-            c-db2oltp-{{ _internal_db2_instance_id }}-db2u cognos_instance_id={{ _cognos_instance_create_result_json.id }} \
-            --overwrite
-      when: not _internal_db2_instance_id == ""
+              c-db2oltp-{{ _internal_db2_instance_id }}-db2u cognos_instance_id={{ _cognos_instance_create_result_json.id }} \
+              --overwrite
+        when: not _internal_db2_instance_id == ""
+  when: not cpd_dry_run
