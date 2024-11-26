@@ -13,18 +13,9 @@
 - set_fact:
     _cpd_edb_license_key: "{{ secret_value | b64encode }}"
 
-- name: Create EDB PostgreSQL license secret object
-  template:
-    src: "cpd-edb-license-secret.j2"
-    dest: "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
-
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create EDB PostgreSQL license secret object"
-    _p_activity_yaml: "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
-
-- name: Apply EDB PostgreSQL secret
-  command: |
-    oc apply -f "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"
-  when: not cpd_dry_run
+    _p_apply_yaml_description: Create EDB PostgreSQL license secret
+    _p_apply_yaml_template: cpd-edb-license-secret.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/cpd-edb-postgresql-secret.yml"

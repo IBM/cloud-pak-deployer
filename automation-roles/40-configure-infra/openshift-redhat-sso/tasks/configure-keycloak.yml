@@ -1,21 +1,12 @@
 ---
-- name: Generate yaml for Keycloak {{ _keycloak_name }} in namespace {{ _keycloak_name }}
-  template:
-    src: redhat-sso-keycloak.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml"
-
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create Keycloak {{ _keycloak_name }}"
-    _p_activity_yaml: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
+    _p_apply_yaml_description: Create Keycloak
+    _p_apply_yaml_template: redhat-sso-keycloak.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml"
 
 - block:
-  - name: Create Keycloak from YAML file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml
-
-
   - name: Wait until Keycloak {{ _keycloak_name }} is ready
     shell: |
       oc get keycloaks.keycloak.org -n {{ _keycloak_name }} {{ _keycloak_name }} \

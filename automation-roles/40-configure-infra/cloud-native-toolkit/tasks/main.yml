@@ -20,60 +20,49 @@
     register: _gitops_yaml_files
 
   - include_role:
-      name: log-deployer-activity
+      name: generate-apply-yaml
     vars:
-      _p_activity_description: "Install GitOps operator file {{ item.path }}"
-      _p_activity_yaml: "{{ item.path }}"
+      _p_apply_yaml_description: "Install GitOps operator"
+      _p_apply_yaml_output_file: "{{ item.path }}"
     loop: '{{ _gitops_yaml_files.files }}'
-    
-  - block:
-    - name: Install GitOps operator
-      shell: |
-        oc apply -f {{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x
 
-    - name: Wait until OpenShift GitOps CSV has status Succeeded
-      shell: |
-        oc get csv -n openshift-operators \
-          -l operators.coreos.com/openshift-gitops-operator.openshift-operators \
-          --no-headers \
-          -o custom-columns='name:metadata.name,phase:status.phase' | \
-          grep -i succeeded | wc -l
-      register: _openshift_gitops_csv_status
-      retries: 30
-      delay: 30
-      until: _openshift_gitops_csv_status.stdout == "1"
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  - name: Wait until OpenShift GitOps CSV has status Succeeded
+    shell: |
+      oc get csv -n openshift-operators \
+        -l operators.coreos.com/openshift-gitops-operator.openshift-operators \
+        --no-headers \
+        -o custom-columns='name:metadata.name,phase:status.phase' | \
+        grep -i succeeded | wc -l
+    register: _openshift_gitops_csv_status
+    retries: 30
+    delay: 30
+    until: _openshift_gitops_csv_status.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
     when: not cpd_dry_run
 
   - include_role:
-      name: log-deployer-activity
+      name: generate-apply-yaml
     vars:
-      _p_activity_description: "Create ArgoCD instance"
-      _p_activity_yaml: "{{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x/argocd-instance/argocd-instance.yaml"
+      _p_apply_yaml_description: "Create ArgoCD instance"
+      _p_apply_yaml_output_file: "{{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x/argocd-instance/argocd-instance.yaml"
 
-  - block:
-    - name: Create ArgoCD instance
-      shell: |
-        oc apply -f {{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x/argocd-instance/argocd-instance.yaml \
-          -n openshift-gitops
-
-    - name: Wait until ArgoCD instance has been created in OpenShift project openshift-gitops
-      shell: |
-        oc get argocd -n openshift-gitops openshift-gitops-cntk \
-          --no-headers | wc -l
-      register: _argocd_instance
-      retries: 30
-      delay: 30
-      until: _argocd_instance.stdout == "1"
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
+  - name: Wait until ArgoCD instance has been created in OpenShift project openshift-gitops
+    shell: |
+      oc get argocd -n openshift-gitops openshift-gitops-cntk \
+        --no-headers | wc -l
+    register: _argocd_instance
+    retries: 30
+    delay: 30
+    until: _argocd_instance.stdout == "1"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
     when: not cpd_dry_run
 
   when: (_p_openshift_cluster.cloud_native_toolkit | default(False) | bool)

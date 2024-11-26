@@ -3,22 +3,13 @@
   shell: |
     oc delete KubeletConfig cpd-crio-kubeletconfig --ignore-not-found
   when: not cpd_dry_run
-    
-- name: Create KubeletConfig yaml
-  template:
-    src: cp4d-kubeletconfig.j2
-    dest: "{{ status_dir }}/openshift/cp4d-kubeletconfig.yaml"
 
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create KubeletConfig"
-    _p_activity_yaml: "{{ status_dir }}/openshift/cp4d-kubeletconfig.yaml"
-
-- name: Create KubeletConfig {{ kubelet_config_name }}
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/cp4d-kubeletconfig.yaml
-  when: not cpd_dry_run
+    _p_apply_yaml_description: Create KubeletConfig
+    _p_apply_yaml_template: cp4d-kubeletconfig.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/cp4d-kubeletconfig.yaml"
 
 - name: Label worker machine config pool to allow KubeletConfig
   shell: |

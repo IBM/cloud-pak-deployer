@@ -84,21 +84,13 @@
     {{ _create_app_connect_catsrc }}
   when: not cpd_dry_run
 
-- name: Generate yaml for IBM App Connect operator
-  template:
-    src: ibm-app-connect.j2
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml"
-
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create IBM App Connect operator"
-    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml"
+    _p_apply_yaml_description: Create IBM App Connect operator
+    _p_apply_yaml_template: ibm-app-connect.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml"
 
-- name: Create IBM App Connect operator
-  shell: |
-    oc apply -f {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml
-  when: not cpd_dry_run
 
 - name: Wait for IBM App Connect operator to be installed
   shell: |

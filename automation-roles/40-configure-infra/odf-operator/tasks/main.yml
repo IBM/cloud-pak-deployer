@@ -41,22 +41,14 @@
 - set_fact:
     _odf_channel: "{{ _odf_packagemanifest.stdout }}"
 
-- name: Generate ODF operator file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
-  template:
-    src: odf-operator.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml"
-
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create ODF operator"
-    _p_activity_yaml: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml"
+    _p_apply_yaml_description: Create ODF operator
+    _p_apply_yaml_template: odf-operator.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml"
 
 - block:
-  - name: Create ODF operator
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-odf-operator.yaml
-
   - name: Wait until ODF Operator CSV has status Succeeded
     shell: |
       oc get csv -n openshift-storage \

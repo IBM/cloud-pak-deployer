@@ -27,36 +27,27 @@
     vars:
       _p_openshift_cluster: "{{ current_openshift_cluster }}"
 
-  - name: Generate MCG StorageCluster ocs-storagecluster into {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
-    template:
-      src: openshift-mcg-storagecluster.j2
-      dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
-
   - include_role:
-      name: log-deployer-activity
+      name: generate-apply-yaml
     vars:
-      _p_activity_description: "Create MCG StorageCluster"
-      _p_activity_yaml: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
+      _p_apply_yaml_description: Create MCG StorageCluster ocs-storagecluster
+      _p_apply_yaml_template: openshift-mcg-storagecluster.j2
+      _p_apply_yaml_output_file: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
 
-  - block:
-    - name: Apply yaml for MCG StorageCluster ocs-storagecluster
-      shell: |
-        oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
-
-    - name: Wait until MCG StorageCluster has status Ready
-      shell: |
-        oc get StorageCluster ocs-storagecluster -n openshift-storage \
-        --no-headers \
-        -o custom-columns='phase:status.phase'
-      register: _storage_cluster_status
-      retries: 60
-      delay: 30
-      until: _storage_cluster_status.stdout == "Ready"
-      vars:
-        ansible_callback_diy_runner_retry_msg: >-
-          {%- set result = ansible_callback_diy.result.output -%}
-          {%- set retries_left = result.retries - result.attempts -%}
-          Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  - name: Wait until MCG StorageCluster has status Ready
+    shell: |
+      oc get StorageCluster ocs-storagecluster -n openshift-storage \
+      --no-headers \
+      -o custom-columns='phase:status.phase'
+    register: _storage_cluster_status
+    retries: 60
+    delay: 30
+    until: _storage_cluster_status.stdout == "Ready"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
     when: not cpd_dry_run
 
   when: 
