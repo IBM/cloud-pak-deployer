@@ -1,67 +1,40 @@
 ---
-- name: Generate yaml for {{ _keycloak_name }} namespace
-  template:
-    src: redhat-sso-namespace.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Red Hat SSO namespace {{ _keycloak_name }} 
+    _p_apply_yaml_template: redhat-sso-namespace.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
 
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create Red Hat SSO namespace {{ _keycloak_name }}"
-    _p_activity_yaml: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
+    _p_apply_yaml_description: Create Red Hat SSO operator group in project {{ _keycloak_name }}
+    _p_apply_yaml_template: redhat-sso-operatorgroup.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
 
-- name: Create Red Hat SSO namespace {{ _keycloak_name }}
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Red Hat SSO subscription in project {{ _keycloak_name }}
+    _p_apply_yaml_template: redhat-sso-subscription.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml"
+
+# Wait until subscription has been successfully created
+- name: Wait until Red Hat SSO operator in project {{ _keycloak_name }} has status Succeeded
   shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml
-  when: not cpd_dry_run
-
-- name: Generate yaml for Red Hat SSO operator group in project {{ _keycloak_name }}
-  template:
-    src: redhat-sso-operatorgroup.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
-
-- include_role:
-    name: log-deployer-activity
+    oc get csv -n {{ _keycloak_name }} \
+      -l operators.coreos.com/rhsso-operator.{{ _keycloak_name }} \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _redhat_sso_csv_status
+  retries: 30
+  delay: 30
+  until: _redhat_sso_csv_status.stdout == "1"
   vars:
-    _p_activity_description: "Create Red Hat SSO operatorgroup in project {{ _keycloak_name }}"
-    _p_activity_yaml: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
-
-- name: Create Red Hat SSO operatorgroup in project {{ _keycloak_name }}
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml
-  when: not cpd_dry_run
-
-- name: Generate yaml for Red Hat SSO subscription in project {{ _keycloak_name }}
-  template:
-    src: redhat-sso-subscription.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml"
-
-- include_role:
-    name: log-deployer-activity
-  vars:
-    _p_activity_description: "Create Red Hat SSO operator in project {{ _keycloak_name }}"
-    _p_activity_yaml: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
-
-- block:
-  - name: Create Red Hat SSO operator in project {{ _keycloak_name }}
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml
-    
-  # Wait until subscription has been successfully created
-  - name: Wait until Red Hat SSO operator in project {{ _keycloak_name }} has status Succeeded
-    shell: |
-      oc get csv -n {{ _keycloak_name }} \
-        -l operators.coreos.com/rhsso-operator.{{ _keycloak_name }} \
-        --no-headers \
-        -o custom-columns='name:metadata.name,phase:status.phase' | \
-        grep -i succeeded | wc -l
-    register: _redhat_sso_csv_status
-    retries: 30
-    delay: 30
-    until: _redhat_sso_csv_status.stdout == "1"
-    vars:
-      ansible_callback_diy_runner_retry_msg: >-
-        {%- set result = ansible_callback_diy.result.output -%}
-        {%- set retries_left = result.retries - result.attempts -%}
-        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
   when: not cpd_dry_run

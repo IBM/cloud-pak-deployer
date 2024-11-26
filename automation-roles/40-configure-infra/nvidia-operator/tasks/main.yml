@@ -21,69 +21,51 @@
 - set_fact:
     _nvidia_channel: "{{ _nvidia_packagemanifest.stdout }}"
 
-- name: Generate NVIDIA operator file {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-operator.yaml
-  template:
-    src: nvidia-operator.j2
-    dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-operator.yaml"
-
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create NVIDIA operator"
-    _p_activity_yaml: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-operator.yaml"
+    _p_apply_yaml_description: Create NVIDIA operator
+    _p_apply_yaml_template: nvidia-operator.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-operator.yaml"
 
-- block:
-  - name: Create NVIDIA operator
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-operator.yaml
-
-  - name: Wait until NVIDIA Operator CSV has status Succeeded
-    shell: |
-      oc get csv -n nvidia-gpu-operator \
-        -l operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator \
-        --no-headers \
-        -o custom-columns='name:metadata.name,phase:status.phase' | \
-        grep -i succeeded | wc -l
-    register: _nvidia_csv_status
-    retries: 30
-    delay: 30
-    until: _nvidia_csv_status.stdout == "1"
-    vars:
-      ansible_callback_diy_runner_retry_msg: >-
-        {%- set result = ansible_callback_diy.result.output -%}
-        {%- set retries_left = result.retries - result.attempts -%}
-        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+- name: Wait until NVIDIA Operator CSV has status Succeeded
+  shell: |
+    oc get csv -n nvidia-gpu-operator \
+      -l operators.coreos.com/gpu-operator-certified.nvidia-gpu-operator \
+      --no-headers \
+      -o custom-columns='name:metadata.name,phase:status.phase' | \
+      grep -i succeeded | wc -l
+  register: _nvidia_csv_status
+  retries: 30
+  delay: 30
+  until: _nvidia_csv_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
   when: not cpd_dry_run
 
-- name: Generate NVIDIA ClusterPolicy CR file {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-cluster-policy-cr.yaml
-  template:
-    src: nvidia-cluster-policy-cr.j2
-    dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-cluster-policy-cr.yaml"
-
 - include_role:
-    name: log-deployer-activity
+    name: generate-apply-yaml
   vars:
-    _p_activity_description: "Create NVIDIA ClusterPolicy CR"
-    _p_activity_yaml:  "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-cluster-policy-cr.yaml"
+    _p_apply_yaml_description: Generate NVIDIA ClusterPolicy CR
+    _p_apply_yaml_template: nvidia-cluster-policy-cr.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-cluster-policy-cr.yaml"
 
-- block:
-  - name: Create NVIDIA ClusterPolicy CR
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-cluster-policy-cr.yaml
-
-  - name: Wait until NVIDIA ClusterPolicy has status Ready
-    shell: |
-      oc get clusterpolicies.nvidia.com gpu-cluster-policy \
-      --no-headers \
-      -o custom-columns='name:metadata.name,phase:status.state' | \
-      grep -i ready | wc -l
-    register: _nvidia_cluster_policy_status
-    retries: 30
-    delay: 30
-    until: _nvidia_cluster_policy_status.stdout == "1"
-    vars:
-      ansible_callback_diy_runner_retry_msg: >-
-        {%- set result = ansible_callback_diy.result.output -%}
-        {%- set retries_left = result.retries - result.attempts -%}
-        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+- name: Wait until NVIDIA ClusterPolicy has status Ready
+  shell: |
+    oc get clusterpolicies.nvidia.com gpu-cluster-policy \
+    --no-headers \
+    -o custom-columns='name:metadata.name,phase:status.state' | \
+    grep -i ready | wc -l
+  register: _nvidia_cluster_policy_status
+  retries: 30
+  delay: 30
+  until: _nvidia_cluster_policy_status.stdout == "1"
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
   when: not cpd_dry_run  
