@@ -55,34 +55,21 @@
     dest: /tmp
     remote_src: True
 
-- set_fact:
-    _create_app_connect_project: "oc new-project {{ _app_connect.app_connect_project }} || true"
-
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create App Connect project"
-    _p_activity_command: "{{ _create_app_connect_project }}"
-
-- name: Create OpenShift Project {{ _app_connect.app_connect_project }}
-  shell: |
-    {{ _create_app_connect_project }}
-  when: not cpd_dry_run
+    _p_activity_description: Create App Connect project {{ _app_connect.app_connect_project }}
+    _p_activity_command: "oc adn new-project {{ _app_connect.app_connect_project }} || true"
 
 - name: Generate command to create IBM App Connect catalog source
   set_fact:
     _create_app_connect_catsrc: "{{ lookup('template', 'create-app-connect-catsrc.j2') }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create App Connect catalog source"
+    _p_activity_description: Create IBM App Connect catalog source
     _p_activity_command: "{{ _create_app_connect_catsrc }}"
-
-- name: Create IBM App Connect catalog source
-  shell: |
-    {{ _create_app_connect_catsrc }}
-  when: not cpd_dry_run
 
 - include_role:
     name: generate-apply-yaml
@@ -90,7 +77,6 @@
     _p_apply_yaml_description: Create IBM App Connect operator
     _p_apply_yaml_template: ibm-app-connect.j2
     _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml"
-
 
 - name: Wait for IBM App Connect operator to be installed
   shell: |

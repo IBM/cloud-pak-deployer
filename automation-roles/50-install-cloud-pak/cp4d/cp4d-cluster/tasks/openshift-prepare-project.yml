@@ -8,33 +8,17 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- set_fact:
-    _create_operators_project: "oc new-project {{ current_cp4d_cluster.operators_project }} | true"
+- include_role:
+    name: run-command
+  vars:
+    _p_activity_description: Create operators project {{ current_cp4d_cluster.operators_project }}
+    _p_activity_command: "oc new-project {{ current_cp4d_cluster.operators_project }} || true"
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create oeprators project {{ current_cp4d_cluster.operators_project }}"
-    _p_activity_command: "{{ _create_operators_project }}"
-
-- name: Create operators project {{ current_cp4d_cluster.operators_project }}
-  shell: |
-    {{ _create_operators_project }}
-  when: not cpd_dry_run
-
-- set_fact:
-    _create_instance_project: "oc new-project {{ current_cp4d_cluster.project }} | true"
-
-- include_role:
-    name: log-deployer-activity
-  vars:
-    _p_activity_description: "Create instance project {{ current_cp4d_cluster.project }}"
-    _p_activity_command: "{{ _create_instance_project }}"
-
-- name: Create instance project {{ current_cp4d_cluster.project }}
-  shell: |
-    {{ _create_instance_project }}
-  when: not cpd_dry_run
+    _p_activity_description: Create instance project {{ current_cp4d_cluster.project }}
+    _p_activity_command: "oc new-project {{ current_cp4d_cluster.project }} || true"
 
 # Set configmap to control if Db2U must run with elevated or limited privileges
 - include_tasks: cp4d-db2u-configmap.yml

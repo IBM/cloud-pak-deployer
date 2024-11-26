@@ -5,14 +5,9 @@
       _set_cartridge_scaling: "{{ lookup('template', 'set-cartridge-scaling.j2') }}"
 
   - include_role:
-      name: log-deployer-activity
+      name: run-command
     vars:
-      _p_activity_description: "Set cartridge scaling for {{ _current_cp4d_cartridge.CR_Kind }}"
+      _p_activity_description: Set cartridge scaling for {{ _current_cp4d_cartridge.CR_Kind }}
       _p_activity_command: "{{ _set_cartridge_scaling }}"
-
-  - name: Scale service 
-    shell: |
-      {{ _set_cartridge_scaling }}
-    when: not cpd_dry_run
     
   when: (_current_cp4d_cartridge.size | default('')) != ''

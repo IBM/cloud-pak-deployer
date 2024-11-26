@@ -43,19 +43,10 @@
     mode: u+rwx
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create project {{ _openldap_project_name }}"
+    _p_activity_description: Create project {{ _openldap_project_name }}
     _p_activity_command: "oc adm new-project {{ _openldap_project_name }} || true"
-
-- name: Create Project {{ _openldap_project_name }}
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ _openldap_project_name }}"
-    common_output_directory: "{{ _v_openldap_base_dir }}"
-  when: not cpd_dry_run
 
 - name: Prepare OpenLDAP yaml file for cluster {{ current_openshift_cluster.name }}
   ansible.builtin.template:

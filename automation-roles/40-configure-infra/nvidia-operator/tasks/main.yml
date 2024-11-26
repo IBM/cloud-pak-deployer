@@ -1,17 +1,9 @@
 ---
-- set_fact:
-    _create_nvidia_operator_ns: "oc create ns nvidia-gpu-operator || true"
-
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create NVIDIA operator namespace"
-    _p_activity_commandl: "{{ _create_nvidia_operator_ns }}"
-
-- name: Create nvidia-gpu-operator OpenShift project
-  shell: |
-    {{ _create_nvidia_operator_ns }}
-  when: not cpd_dry_run
+    _p_activity_description: Create NVIDIA operator namespace nvidia-gpu-operator
+    _p_activity_command: "oc create ns nvidia-gpu-operator || true"
 
 - name: Retrieve default channel for the NVIDIA GPU manifest
   shell:

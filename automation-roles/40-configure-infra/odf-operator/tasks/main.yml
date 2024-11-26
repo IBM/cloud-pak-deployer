@@ -19,19 +19,11 @@
 - include_tasks: aws-s3-sts-role.yml
   when: _aws_sts_mode
 
-- set_fact: 
-    _create_openshift_storage_project: "oc create ns openshift-storage || true"
-
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create openshift-storage project"
-    _p_activity_command: "{{ _create_openshift_storage_project }}"
-
-- name: Create openshift-storage OpenShift project
-  shell: |
-    {{ _create_openshift_storage_project }}
-  when: not cpd_dry_run
+    _p_activity_description: Create OpenShift project openshift-storage
+    _p_activity_command: "oc create ns openshift-storage || true"
 
 - name: Retrieve default channel for ocs-operator manifest
   shell:
