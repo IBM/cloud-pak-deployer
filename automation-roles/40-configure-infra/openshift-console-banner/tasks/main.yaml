@@ -7,19 +7,9 @@
     _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-console-banner.yaml"
   when: (_p_openshift_cluster.console_banner | default ("")) != ""
 
-- block:
-  - set_fact:
-      _delete_openshift_console_banner: "oc delete ConsoleNotification cpd-console-banner --ignore-not-found"
-
-  - include_role:
-      name: log-deployer-activity
-    vars:
-      _p_activity_description: "Setup Multicloud Object Gateway"
-      _p_activity_command: "{{ _delete_openshift_console_banner }}"
-
-  - name: Delete console banner if not specified
-    shell: |
-      {{ _delete_openshift_console_banner }}
-    when: not cpd_dry_run
-  when: 
-  - (_p_openshift_cluster.console_banner | default ("")) == ""
+- include_role:
+    name: run-command
+  vars:
+    _p_activity_description: Delete OpenShift console banner
+    _p_activity_command: oc delete ConsoleNotification cpd-console-banner --ignore-not-found
+  when: (_p_openshift_cluster.console_banner | default ("")) == ""

@@ -5,31 +5,17 @@
       - _p_openshift_cluster is defined
 
 - block:
-  - set_fact:
-      _create_openshift_adp_ns: "oc create ns openshift-adp || true"
-      _annotate_openshift_adp_ns: 'oc annotate namespace openshift-adp openshift.io/node-selector="" --overwrite'
+  - include_role:
+      name: run-command
+    vars:
+      _p_activity_description: Create project openshift-adp
+      _p_activity_command: "oc create ns openshift-adp || true"
 
   - include_role:
-      name: log-deployer-activity
+      name: run-command
     vars:
-      _p_activity_description: "Create project openshift-adp"
-      _p_activity_commandl: "{{ _create_openshift_adp_ns }}"
-
-  - name: Create project openshift-adp
-    shell: |
-      {{ _create_openshift_adp_ns }}
-    when: not cpd_dry_run
-
-  - include_role:
-      name: log-deployer-activity
-    vars:
-      _p_activity_description: "Annotate project openshift-adp namespace"
-      _p_activity_commandl: "{{ _annotate_openshift_adp_ns }}"
-
-  - name: Annotate project openshift-adp namespace
-    shell: |
-      {{ _annotate_openshift_adp_ns }}
-    when: not cpd_dry_run
+      _p_activity_description: Annotate project openshift-adp
+      _p_activity_command: "oc annotate namespace openshift-adp openshift.io/node-selector= --overwrite"
 
   - name: Retrieve default channel for redhad-oadp-operator manifest
     shell:

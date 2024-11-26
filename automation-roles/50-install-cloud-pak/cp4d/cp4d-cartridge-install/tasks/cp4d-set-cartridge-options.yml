@@ -9,13 +9,8 @@
       _set_cartridge_options: "{{ lookup('template', 'set-cartridge-options.j2') }}"
 
   - include_role:
-      name: log-deployer-activity
+      name: run-command
     vars:
-      _p_activity_description: "Set cartridge options for {{ _current_cp4d_cartridge.CR_Kind }}"
+      _p_activity_description: Set cartridge options for {{ _current_cp4d_cartridge.CR_Kind }}
       _p_activity_command: "{{ _set_cartridge_options }}"
-
-  - name: Set cartridge installation options for cartridge {{ _current_cp4d_cartridge.name }}
-    shell: |
-      {{ _set_cartridge_options }}
-    when: not cpd_dry_run
   when: (_current_cp4d_cartridge.installation_options | default({})) != {}

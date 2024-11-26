@@ -1,14 +1,6 @@
 ---
-- name: Generate delete scheduler command
-  set_fact:
-    _delete_scheduler_command: "oc delete Scheduling ibm-cpd-scheduler -n {{ _scheduler_project }} --ignore-not-found --wait=true || true"
-
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Delete scheduler"
-    _p_activity_command: "{{ _delete_scheduler_command }}"
-
-- name: Uninstall scheduling service from project {{ _scheduler_project }} 
-  shell: |
-    {{ _delete_scheduler_command }}
+    _p_activity_description: Uninstall scheduling service from project {{ _scheduler_project }} 
+    _p_activity_command: "oc delete Scheduling ibm-cpd-scheduler -n {{ _scheduler_project }} --ignore-not-found --wait=true || true"

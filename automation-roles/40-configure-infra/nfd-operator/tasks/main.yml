@@ -1,17 +1,9 @@
 ---
-- set_fact:
-    _create_nfd_ns: "oc create ns openshift-nfd || true"
-
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create Node Feature Discovery operator namespace"
-    _p_activity_commandl: "{{ _create_nfd_ns }}"
-
-- name: Create openshift-nfd OpenShift project
-  shell: |
-   {{ _create_nfd_ns }}
-  when: not cpd_dry_run
+    _p_activity_description: Create Node Feature Discovery operator namespace
+    _p_activity_command: "oc create ns openshift-nfd || true"
 
 - name: Retrieve default channel for Node Feature Discovery manifest
   shell:
