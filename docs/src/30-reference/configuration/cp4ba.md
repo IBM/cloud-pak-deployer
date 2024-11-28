@@ -153,6 +153,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - IER - Task Manager pod has TM_JOB_URL parameter set.
 - IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
+- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), BAW (BAWTOS) and ADP (DEVOS1) objectstores.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAI - extra flink task manager added for custom event processing.
