@@ -5,6 +5,73 @@
   vars:
     common_output_to_var: "apps_endpoint_domain"
 
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    common_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Build OS list
+  ansible.builtin.set_fact:
+    os_list: ["OS1"]
+
+- name: Add BAWTOS to OS list
+  ansible.builtin.set_fact:
+    os_list: "{{ os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Add DEVOS1 to OS list
+  ansible.builtin.set_fact:
+    os_list: "{{ os_list + ['DEVOS1'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+
+- name: Enable DYNAMIC CBR Summary for Simple Search
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          changeObject(
+            classIdentifier:\"ObjectStore\"
+            identifier:\"{{ item }}\"
+            properties:[{CBRSummaryType:2}]
+            actions:[
+              {
+                type:UPDATE
+              }
+            ]
+          ){
+            className
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content"
+  with_items: {{ os_list }}
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
