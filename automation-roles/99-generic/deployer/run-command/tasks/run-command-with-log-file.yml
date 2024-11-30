@@ -1,0 +1,14 @@
+---
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "{{ _p_command_description }}"
+    _p_activity_command: "{{ _p_command }}"
+
+- name: "Run command: {{ _p_command }}, output is in file {{ _p_command_log_file }}"
+  shell: |
+    set -o pipefail
+    {{ _p_command }} 2>&1 | tee -a {{ _p_command_log_file }}
+  register: "{{ _p_command_register_variable | default(omit) }}"
+  failed_when: "{{ _p_command_failed_when | default(omit) }}"
+  when: not cpd_dry_run

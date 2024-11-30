@@ -58,8 +58,8 @@
 - include_role:
     name: run-command
   vars:
-    _p_activity_description: Create App Connect project {{ _app_connect.app_connect_project }}
-    _p_activity_command: "oc adn new-project {{ _app_connect.app_connect_project }} || true"
+    _p_command_description: Create App Connect project {{ _app_connect.app_connect_project }}
+    _p_command: "oc adm new-project {{ _app_connect.app_connect_project }} || true"
 
 - name: Generate command to create IBM App Connect catalog source
   set_fact:
@@ -68,8 +68,9 @@
 - include_role:
     name: run-command
   vars:
-    _p_activity_description: Create IBM App Connect catalog source
-    _p_activity_command: "{{ _create_app_connect_catsrc }}"
+    _p_command_description: Create IBM App Connect catalog source
+    _p_command: "{{ _create_app_connect_catsrc }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-setup-mcg.log"
 
 - include_role:
     name: generate-apply-yaml

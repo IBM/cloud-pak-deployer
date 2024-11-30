@@ -1,11 +1,6 @@
 ---
-- include_role:
-    name: log-deployer-activity
-  vars:
-    _p_activity_description: "{{ _p_activity_description }}"
-    _p_activity_command: "{{ _p_activity_command }}"
+- include_tasks: run-command.yml
+  when: (_p_command_log_file | default('')) == ''
 
-- name: "Run command: {{ _p_activity_command }}"
-  shell: |
-    {{ _p_activity_command }}
-  when: not cpd_dry_run
+- include_tasks: run-command-with-log-file.yml
+  when: (_p_command_log_file | default('')) != ''
