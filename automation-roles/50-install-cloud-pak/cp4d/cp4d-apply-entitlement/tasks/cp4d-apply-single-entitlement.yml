@@ -1,22 +1,11 @@
 ---
-- name: Generate apply-entitlement script {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-entitlement-{{ _p_entitlement }}.sh for entitlement {{ _p_entitlement }}
-  template:
-    src: apply-entitlement.j2
-    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-entitlement-{{ _p_entitlement }}.sh"
-    mode: u=rwx
-
 - name: Generate apply-entitlement command for entitlement {{ _p_entitlement }}
   set_fact: 
     _apply_entitlement_command: "{{ lookup('template','apply-entitlement.j2') }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Apply entitlement {{ _p_entitlement }}"
-    _p_activity_command: "{{ _apply_entitlement_command }}"
-
-- name: Apply entitlement {{ _p_entitlement }}, output is in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-entitlement.log
-  shell: |
-    set -o pipefail
-    {{ _apply_entitlement_command }} | tee -a {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-entitlement.log
-  when: not cpd_dry_run
+    _p_command_description: Apply entitlement {{ _p_entitlement }}
+    _p_command: "{{ _apply_entitlement_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-entitlement.log"
