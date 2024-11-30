@@ -5,6 +5,11 @@
 - set_fact:
     _deployer_activity_sequence: "{{ (_deployer_activity_sequence | default(0)) | int + 1 }}"
 
+- file:
+    path: "{{ status_dir }}/log/deployer-actitivies.log"
+    state: absent
+  when: _deployer_activity_sequence==1
+
 - include_tasks: log-deployer-command.yml
   when: _p_activity_command | default('') != ''
 
