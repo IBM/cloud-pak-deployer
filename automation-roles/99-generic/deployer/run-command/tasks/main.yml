@@ -1,6 +1,20 @@
 ---
 - include_tasks: run-command.yml
-  when: (_p_command_log_file | default('')) == ''
+  when: 
+  - (_p_command_log_file | default('')) == ''
+  - not _p_command_failed_when is defined
+
+- include_tasks: run-command-failed-when.yml
+  when: 
+  - (_p_command_log_file | default('')) == ''
+  - _p_command_failed_when is defined
 
 - include_tasks: run-command-with-log-file.yml
-  when: (_p_command_log_file | default('')) != ''
+  when: 
+  - (_p_command_log_file | default('')) != ''
+  - not _p_command_failed_when is defined
+
+- include_tasks: run-command-with-log-file-failed-when.yml
+  when: 
+  - (_p_command_log_file | default('')) != ''
+  - _p_command_failed_when is defined
