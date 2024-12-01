@@ -53,26 +53,25 @@
     _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log"
     _p_command_failed_when: False
 
-- set_fact:
-    _install_cartridges_result: "{{ _run_command_result }}"
+- block:
+  - set_fact:
+      _install_cartridges_result: "{{ _run_command_result }}"
 
-- name: Fail if there was an error installing the cartridge(s) using apply-cr
-  fail:
-    msg: "{{ _install_cartridges_result }}"
-  when: 
-  - _install_cartridges_result.rc!=0
-  - not (cpd_test_cartridges | default(False) | bool)
-  - not cpd_dry_run
+  - name: Fail if there was an error installing the cartridge(s) using apply-cr
+    fail:
+      msg: "{{ _install_cartridges_result }}"
+    when: 
+    - _install_cartridges_result.rc!=0
+    - not (cpd_test_cartridges | default(False) | bool)
 
-- set_fact:
-    _cp4d_cartridges_installed_successfully: False
-  when: 
-  - _install_cartridges_result.rc!=0
-  - not cpd_dry_run
+  - set_fact:
+      _cp4d_cartridges_installed_successfully: False
+    when: 
+    - _install_cartridges_result.rc!=0
 
-- name: Wait for cartridges to finish installation
-  include_tasks: cp4d-wait-cartridges-ready.yml
-  loop: "{{ _apply_cr_cartridges | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
+  - name: Wait for cartridges to finish installation
+    include_tasks: cp4d-wait-cartridges-ready.yml
+    loop: "{{ _apply_cr_cartridges | default([]) }}"
+    loop_control:
+      loop_var: _current_cp4d_cartridge
   when: not cpd_dry_run

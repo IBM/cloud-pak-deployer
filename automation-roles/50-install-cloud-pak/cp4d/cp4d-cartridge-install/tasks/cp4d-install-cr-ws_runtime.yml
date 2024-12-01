@@ -42,18 +42,16 @@
       _p_preview_script: False
 
   - include_role:
-      name: log-deployer-activity
+      name: run-command
     vars:
-      _p_activity_description: "Install Watson Studio runtime {{ _ws_runtime }}"
-      _p_activity_command: "{{ _apply_ws_runtime_command }}"
+      _p_command_description: Run apply-cr command to install Watson Studio runtime {{ _ws_runtime }}
+      _p_command: "{{ _apply_ws_runtime_command }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-{{ _ws_runtime }}.log"
+      _p_command_failed_when: False
 
   - block:
-    - name: Run apply-cr command to install Watson Studio runtime {{ _ws_runtime }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-{{ _ws_runtime }}.log
-      shell: |
-        set -o pipefail
-        {{ _apply_ws_runtime_command }} | tee -a {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-{{ _ws_runtime }}.log 2>&1
-      register: _install_cartridges_result
-      failed_when: False
+    - set_fact:
+        _install_cartridges_result: "{{ _run_command_result }}"
 
     - name: Fail if there was an error installing the runtime {{ _ws_runtime }} using apply-cr
       fail:
