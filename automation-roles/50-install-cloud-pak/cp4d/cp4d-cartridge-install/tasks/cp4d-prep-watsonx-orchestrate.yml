@@ -21,19 +21,12 @@
     var: _apply_olm_wxo_command
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create watsonx Orchestrate subscription"
-    _p_activity_command: "{{ _apply_olm_wxo_command }}"
-
-- name: Run apply-olm command to install watsonx Orchestrate subscriptions, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-wxo.log
-  shell: |
-    {{ _apply_olm_wxo_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-wxo.log 2>&1
-  retries: 2
-  delay: 10
-  until: _apply_olm_wxo_result.rc==0
-  register: _apply_olm_wxo_result
-  when: not cpd_dry_run
+    _p_command_description: Run apply-olm command to install watsonx Orchestrate subscriptions
+    _p_command: "{{ _apply_olm_wxo_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-wxo.log"
+    _p_command_failed_when: False
 
 - set_fact:
     _app_connect: "{{ _current_cp4d_cartridge.app_connect }}"

@@ -4,7 +4,10 @@ When running the Cloud Pak Deployer on an existing OpenShift cluster, the follow
 
 - The OpenShift cluster is up and running with sufficient compute nodes
 - The appropriate storage class(es) have been pre-created
-- You have cluster administrator permissions to OpenShift
+- You have cluster administrator permissions to OpenShift (except when using `--dry-run`)
+
+!!! info
+    If you don't want to make changes to the OpenShift cluster and only want to review the steps deployer will run, you can use the `--dry-run` option with `cp-deploy.sh`. This will generate a log file `$STATUS_DIR/log/deployer-actitivies.log`, which lists the steps deployer will execute when running without `--dry-run`. Please note that the dry-run option has only been implemented for Cloud Pak for Data i.e. watsonx.
 
 !!! info
     You can also choose to run Cloud Pak Deployer as a job on the OpenShift cluster. This removes the dependency on a separate server or workstation to run the deployer. **Please note that you may need unrestricted OpenShift entitlements for this.** To run the deployer on OpenShift via the OpenShift console, see [Run on OpenShift using console](./existing-openshift-console.md)

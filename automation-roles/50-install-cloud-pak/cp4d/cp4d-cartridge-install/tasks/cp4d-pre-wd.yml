@@ -1,29 +1,10 @@
 ---
-- block:
-  - name: Prepare yaml file for network policy 
-    template:
-      src: cpd-network-policy.j2
-      dest: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
-
-  - include_role:
-      name: log-deployer-activity
-    vars:
-      _p_activity_description: "Create network policy for Cloud Pak for Data on IBM Cloud"
-      _p_activity_yaml: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
-
-  - name: Create Network Policy
-    shell: |
-      oc apply -f {{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml
-    register: _network_policy_create_result
-    retries: 10
-    delay: 30
-    until: _network_policy_create_result.rc == 0
-    vars:
-      ansible_callback_diy_runner_retry_msg: >-
-        {%- set result = ansible_callback_diy.result.output -%}
-        {%- set retries_left = result.retries - result.attempts -%}
-        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
-    when: not cpd_dry_run
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create network policy for Cloud Pak for Data on IBM Cloud
+    _p_apply_yaml_template: cpd-network-policy.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/ccpd-network-policy-{{ current_cp4d_cluster.project }}.yml"
   when: cloud_platform == "ibm-cloud" and _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
 
 - include_tasks: cp4d-setup-mcg-secrets.yml
