@@ -5,9 +5,9 @@
     _p_activity_description: "{{ _p_command_description }}"
     _p_activity_command: "{{ _p_command }}"
 
-- name: "Run command: {{ _p_command }}, output is in file {{ _p_command_log_file }}"
+- name: "Run command: {{ _p_command }}"
   shell: |
-    set -o pipefail
-    {{ _p_command }} 2>&1 | tee -a {{ _p_command_log_file }}
+    {{ _p_command }}
   register: _run_command_result
+  failed_when: "{{ _p_command_failed_when }}"
   when: not cpd_dry_run
