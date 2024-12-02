@@ -85,23 +85,19 @@
 
 - name: Generate command to create IBM App Connect instance for watsonx Ochestrate
   set_fact:
-    _create_app_connect_instance: "{{ lookup('template', 'create-app-connect-instance.j2') }}"
+    _create_app_connect_instance: "{{ lookup('template', 'setup-app-connect.j2') }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Create App Connect instance for watsonx Orchestrate"
-    _p_activity_command: "{{ _create_app_connect_instance }}"
-
-- name: Create IBM App Connect instance for watsonx Orchestrate
-  shell: |
-    {{ _create_app_connect_instance }}
-  when: not cpd_dry_run    
-
-- set_fact:
-    _cp4d_admin_password_vault_key_name: "cp4d_admin_{{ _p_current_cp4d_cluster.project| replace('-','_') }}_{{ _p_current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+    _p_command_description: Create App Connect instance for watsonx Orchestrate
+    _p_command: "{{ _create_app_connect_instance }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-app-connect-instance.log"
 
 - block:
+  - set_fact:
+      _cp4d_admin_password_vault_key_name: "cp4d_admin_{{ _p_current_cp4d_cluster.project| replace('-','_') }}_{{ _p_current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
   - name: Retrieve CP4D admin password from vault secret {{ _cp4d_admin_password_vault_key_name }}
     include_role: 
       name: vault-get-secret
