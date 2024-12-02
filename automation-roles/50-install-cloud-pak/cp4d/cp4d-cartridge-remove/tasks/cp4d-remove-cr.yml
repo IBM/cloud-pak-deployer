@@ -2,7 +2,9 @@
 - name: Fail if destroy was not confirmed
   fail:
     msg: "Will not delete cartridge {{ _current_cartridge_cr.name }}. Destroy was not confirmed with --confirm-destroy parameter or global_config confirm_destroy property"
-  when: (_confirm_destroy | default(False) | bool) != True
+  when: 
+  - (_confirm_destroy | default(False) | bool) != True
+  - not cpd_dry_run
 
 - name: Delete instances of {{ _current_cartridge_cr.name }}
   include_tasks: cp4d-delete-cr-instances.yml
