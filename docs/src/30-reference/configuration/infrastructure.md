@@ -508,7 +508,7 @@ vsphere:
 | cluster       | vSphere cluster to be used for the virtual machines                         | Yes       |                |
 | resource_pool | vSphere resource pool                                                       | No        |                |
 | network       | vSphere network to be used for the virtual machines                         | Yes       |                |
-| folder        | Fully qualified folder name into which the OpenShift cluster will be placed | Yes       |                |
+| folder        | Fully qualified folder name into which the OpenShift cluster will be placed; the folder must exist | Yes       |                |
 
 ### vSphere `vm_definition`
 
