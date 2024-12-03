@@ -140,7 +140,6 @@
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-
         -- create user bawexternal
         CREATE USER bawexternal WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
@@ -160,7 +159,6 @@
     command: >
       bash -c "
         psql postgresql://bawexternal:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-
         -- add test table
         CREATE TABLE IF NOT EXISTS public.user_db
         (
@@ -174,7 +172,7 @@
 
         -- add test data
         INSERT INTO public.user_db(username, first_name, last_name)
-        VALUES 
+        VALUES
           ('jdoe0','John','Doe'),
           ('hrobbey1','Hurleigh','Robbey'),
           ('nhankins2','Nicola','Hankins'),
@@ -182,6 +180,5 @@
           ('shalbert4','Silvia','Halbert'),
           ('lrowena5','Linn','Rowena')
         ON CONFLICT (username) DO NOTHING;
-
       EOF"
   register: command_status
