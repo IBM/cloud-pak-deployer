@@ -1,7 +1,9 @@
 ---
-- name: Allow MachineConfig operator to reboot compute nodes again
-  shell: |
-    oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Allow MachineConfig operator to reboot compute nodes again
+    _p_command: oc patch --type=merge --patch='{"spec":{"paused":false}}' machineconfigpool/worker
 
 - name: Get number of compute nodes
   shell: |
