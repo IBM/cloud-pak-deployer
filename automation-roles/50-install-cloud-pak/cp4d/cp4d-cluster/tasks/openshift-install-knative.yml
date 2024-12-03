@@ -35,11 +35,19 @@
       _deploy_knative_eventing_command: "{{ lookup('template','deploy-knative-eventing.j2') }}"
 
   - include_role:
-      name: run-command
+      name: log-deployer-activity
     vars:
-      _p_command_description: Deploy KNative eventing
-      _p_command: "{{ _deploy_knative_eventing_command }}"
-      _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.log"
+      _p_activity_description: Deploy KNative eventing
+      _p_activity_command: "{{ _deploy_knative_eventing_command }}"
+
+  - name: Run script to deploy KNative eventing, output can be found in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.log
+    shell: |
+      {{ _deploy_knative_eventing_command }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-deploy-knative-eventing.log
+    register: _deploy_knative_eventing
+    retries: 10
+    delay: 15
+    until: _deploy_knative_eventing.rc==0
+    when: not cpd_dry_run
 
   when: 
   - current_cp4d_cluster.cp4d_version >= '4.8.0'
