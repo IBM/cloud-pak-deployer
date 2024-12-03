@@ -1,6 +1,6 @@
 # Example of the functionality call
 #
-# - name: Remove PostgreSQL tablespace
+# - name: Remove PostgreSQL tablespace and folder
 #   ansible.builtin.include_role:
 #     name: common
 #     tasks_from: remove-postgresql-tablespace
@@ -24,7 +24,7 @@
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        DROP TABLESPACE IF EXISTS {{ common_postgresql_tablespace_name }}_tbs;
+        DROP TABLESPACE IF EXISTS {{ common_postgresql_tablespace_name }};
       EOF"
   register: command_status
   when: postgresql_pod.resources | length != 0
