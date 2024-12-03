@@ -24,20 +24,23 @@
     _cert_manager_project: 'cert-manager'
   when: (_p_cert_manager | default('ibm')) != 'ibm'
 
-- name: Generate apply-cluster-components script {{ _v_template_dest_directory }}/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
-  template:
-    src: apply-cluster-components.j2
-    dest: "{{ _v_template_dest_directory }}/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh"
-    mode: u+rwx
+- name: Generate apply-cluster-components command
+  set_fact:
+    _apply_cluster_components_command: "{{ lookup('template', 'apply-cluster-components.j2') }}" 
 
-- name: Run shell script to apply cluster components on OpenShift cluster {{ _p_openshift_cluster_name }}, logs are in {{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log
-  shell: |
-    {{ _v_template_dest_directory }}/{{ _p_openshift_cluster_name }}-apply-cluster-components.sh
-  when: 
-  - not _p_preview
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Apply cluster components for OpenShift cluster {{ _p_openshift_cluster_name }}
+    _p_command: "{{ _apply_cluster_components_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log"
 
-- name: Set number of threads per core to {{ _threads_per_core }}
-  shell: |
-    oc patch ibmlicensing instance \
-      --type=merge \
-      -p '{"spec": {"features": {"hyperThreading": {"threadsPerCore" : {{ _threads_per_core }}  }}}}'
+- name: Generate command to set threads per core
+  set_fact:
+    _set_threads_per_core_command: "{{ lookup('template', 'set-threads.j2') }}" 
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Set threads per core to {{ _threads_per_core }}
+    _p_command: "{{ _set_threads_per_core_command }}"
