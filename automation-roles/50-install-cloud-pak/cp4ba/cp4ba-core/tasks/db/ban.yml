@@ -14,7 +14,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/icndb
+    command: mkdir -p /bitnami/postgresql/tablespaces/icndb_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -26,16 +26,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user icndb
-        CREATE ROLE icndb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER icndb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+
+        -- create tablespace for icndb
+        CREATE TABLESPACE icndb_tbs OWNER icndb LOCATION '/bitnami/postgresql/tablespaces/icndb_tbs';
 
         -- create database icndb
-        create database icndb owner icndb template template0 encoding UTF8 ;
-        revoke connect on database icndb from public;
-        grant all privileges on database icndb to icndb;
-        grant connect, temp, create on database icndb to icndb;
-
-        -- please modify location follow your requirement
-        create tablespace icndb_tbs owner icndb location '/bitnami/postgresql/tablespaces/icndb';
-        grant create on tablespace icndb_tbs to icndb;
+        CREATE DATABASE icndb OWNER icndb TEMPLATE template0 ENCODING UTF8 TABLESPACE icndb_tbs;
+        REVOKE CONNECT ON DATABASE icndb FROM PUBLIC;
       EOF"
   register: command_status

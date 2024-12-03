@@ -13,7 +13,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/gcddb
+    command: mkdir -p /bitnami/postgresql/tablespaces/gcddb_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -25,17 +25,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user gcddb
-        CREATE ROLE gcddb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER gcddb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for gcddb
+        CREATE TABLESPACE gcddb_tbs OWNER gcddb LOCATION '/bitnami/postgresql/tablespaces/gcddb_tbs';
 
         -- create database gcddb
-        create database gcddb owner gcddb template template0 encoding UTF8 ;
-        revoke connect on database gcddb from public;
-        grant all privileges on database gcddb to gcddb;
-        grant connect, temp, create on database gcddb to gcddb;
-
-        -- please modify location follow your requirement
-        create tablespace gcddb_tbs owner gcddb location '/bitnami/postgresql/tablespaces/gcddb';
-        grant create on tablespace gcddb_tbs to gcddb;
+        CREATE DATABASE gcddb OWNER gcddb TEMPLATE template0 ENCODING UTF8 TABLESPACE gcddb_tbs;
+        REVOKE CONNECT ON DATABASE gcddb FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -45,7 +42,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/os1db
+    command: mkdir -p /bitnami/postgresql/tablespaces/os1db_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -57,16 +54,13 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user os1db
-        CREATE ROLE os1db WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER os1db WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for os1db
+        CREATE TABLESPACE os1db_tbs OWNER os1db LOCATION '/bitnami/postgresql/tablespaces/os1db_tbs';
 
         -- create database os1db
-        create database os1db owner os1db template template0 encoding UTF8 ;
-        revoke connect on database os1db from public;
-        grant all privileges on database os1db to os1db;
-        grant connect, temp, create on database os1db to os1db;
-
-        -- please modify location follow your requirement
-        create tablespace os1db_tbs owner os1db location '/bitnami/postgresql/tablespaces/os1db';
-        grant create on tablespace os1db_tbs to os1db;
+        CREATE DATABASE os1db OWNER os1db TEMPLATE template0 ENCODING UTF8 TABLESPACE os1db_tbs;
+        REVOKE CONNECT ON DATABASE os1db FROM PUBLIC;
       EOF"
   register: command_status
