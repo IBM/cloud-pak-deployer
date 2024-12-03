@@ -1,0 +1,64 @@
+---
+global_config:
+  environment_name: sample
+  cloud_platform: vsphere
+  env_id: pluto-01
+  confirm_destroy: False
+
+nfs_server:
+- name: sample-nfs
+  infrastructure:
+    host_ip: 10.99.92.31
+    storage_folder: /data/nfs    
+
+vsphere:
+- name: "{{ env_id }}"
+  vcenter: 10.99.92.13
+  datacenter: Datacenter1
+  datastore: Datastore1
+  cluster: Cluster1
+  network: "VM Network"
+  # resource_pool: Default    # optional
+  folder: "/Datacenter1/vm/{{ env_id }}"
+
+vm_definition:
+- name: control-plane
+  vcpu: 8
+  memory_mb: 32768
+  boot_disk_size_gb: 100
+- name: compute
+  vcpu: 16
+  memory_mb: 65536
+  boot_disk_size_gb: 200
+- name: storage
+  vcpu: 10
+  memory_mb: 32768
+  boot_disk_size_gb: 100
+  # Optional overrides for vsphere properties
+  # datastore: Datastore1
+  # network: "VM Network"
+
+openshift:
+- name: "{{ env_id }}"
+  domain_name: example.com
+  vsphere_name: "{{ env_id }}"
+  ocp_version: 4.15
+  control_plane_nodes: 3
+  control_plane_vm_definition: control-plane
+  compute_nodes: 3
+  compute_vm_definition: compute
+  api_vip: 10.99.92.51
+  ingress_vip: 10.99.92.52
+  gpu:
+    install: auto
+  openshift_ai:
+    install: auto
+    channel: auto
+  mcg:
+    install: True
+    storage_type: storage-class
+    storage_class: thin-csi
+  openshift_storage:
+  - storage_name: nfs-storage
+    storage_type: nfs
+    nfs_server_name: sample-nfs

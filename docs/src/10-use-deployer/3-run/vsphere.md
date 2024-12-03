@@ -87,7 +87,7 @@ If you do not configure the DNS entries upfront, the deployer will still run and
 
 ### Obtain the vSphere user and password
 
-In order for the Cloud Pak Deployer to create the infrastructure and deploy the IBM Cloud Pak, it must have provisioning access to vSphere and it needs the vSphere user and password. The user must have permissions to create VM folders and virtual machines.
+In order for the Cloud Pak Deployer to create the infrastructure and deploy the IBM Cloud Pak, it must have provisioning access to vSphere and it needs the vSphere user and password. The user must have permissions to create virtual machines.
 
 ### Set environment variables for vSphere
 
