@@ -1,16 +1,14 @@
 ---
-- name: Generate OpenShift AI operator {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-operator.yaml
-  template:
-    src: openshift-ai-operator.j2
-    dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-operator.yaml"
-
-- name: Apply yaml for OpenShift AI operator
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-operator.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create OpenShift AI operator
+    _p_apply_yaml_template: openshift-ai-operator.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-operator.yaml"
 
 - name: Wait until OpenShift AI operator CSV has status Succeeded
   shell: |
-     oc get csv -n redhat-ods-operator \
+    oc get csv -n redhat-ods-operator \
       -l operators.coreos.com/rhods-operator.redhat-ods-operator \
       --no-headers \
       -o custom-columns='name:metadata.name,phase:status.phase' | \
@@ -24,19 +22,18 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
 
-- name: Generate OpenShift AI DSCInitialization {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml
-  template:
-    src: dscinitialization.j2
-    dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml"
-
-- name: Apply yaml for OpenShift AI DSCInitialization
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create OpenShift AI DSCInitialization
+    _p_apply_yaml_template: dscinitialization.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc-init.yaml"
 
 - name: Wait until OpenShift AI DSCInitialization default-dsci is ready
   shell: |
-     oc get DSCInitialization default-dsci \
+    oc get DSCInitialization default-dsci \
       --no-headers \
       -o custom-columns='name:metadata.name,phase:status.phase' | \
       grep -i ready | wc -l
@@ -49,19 +46,18 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
 
-- name: Generate OpenShift AI DataScienceCluster {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml
-  template:
-    src: datasciencecluster.j2
-    dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml"
-
-- name: Apply yaml for OpenShift AI DataScienceCluster
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create OpenShift AI DataScienceCluster
+    _p_apply_yaml_template: datasciencecluster.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-openshift-ai-dsc.yaml"
 
 - name: Wait until OpenShift AI DataScienceCluster default-dsc is ready
   shell: |
-     oc get DataScienceCluster default-dsc \
+    oc get DataScienceCluster default-dsc \
       --no-headers \
       -o custom-columns='name:metadata.name,phase:status.phase' | \
       grep -i ready | wc -l
@@ -74,3 +70,4 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run

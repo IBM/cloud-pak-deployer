@@ -1,7 +1,9 @@
 ---
-- name: Create openshift-nfd OpenShift project
-  shell: |
-    oc create ns openshift-nfd || true
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Create Node Feature Discovery operator namespace
+    _p_command: "oc create ns openshift-nfd || true"
 
 - name: Retrieve default channel for Node Feature Discovery manifest
   shell:
@@ -15,18 +17,16 @@
 - set_fact:
     _nfd_channel: "{{ _nfd_packagemanifest.stdout }}"
 
-- name: Generate NFD operator file {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml
-  template:
-    src: nfd-operator.j2
-    dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml"
-
-- name: Create NFD operator
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create NFD operator
+    _p_apply_yaml_template: nfd-operator.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator.yaml"
 
 - name: Wait until NFD Operator CSV has status Succeeded
   shell: |
-     oc get csv -n openshift-nfd \
+    oc get csv -n openshift-nfd \
       -l operators.coreos.com/nfd.openshift-nfd \
       --no-headers \
       -o custom-columns='name:metadata.name,phase:status.phase' | \
@@ -40,16 +40,15 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
 
 - name: Get OpenShift version
   include_role:
     name: openshift-get-version
 
-- name: Generate NodeFeatureDiscovery CR file {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml
-  template:
-    src: nfd-cr.j2
-    dest: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml"
-
-- name: Create NFD CR
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Generate NodeFeatureDiscovery CR
+    _p_apply_yaml_template: nfd-cr.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-cr.yaml"

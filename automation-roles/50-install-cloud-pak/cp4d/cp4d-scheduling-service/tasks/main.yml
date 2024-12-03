@@ -1,7 +1,6 @@
 ---
 - set_fact:
     _scheduler_project: "{{ scheduling_service_project }}"
-  when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
 
 - set_fact:
     _scheduler: "{{ _p_current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
@@ -12,10 +11,8 @@
 - debug:
     var: _scheduler
 
-- name: Install scheduling service for Cloud Pak for Data 4.7.0 and higher
-  include_tasks: install-scheduler-47.yml
+- include_tasks: install-scheduler.yml
   when: 
-  - _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
   - _scheduler != {} and (_scheduler.state | default('installed')) == 'installed'
 
 - include_tasks: uninstall-scheduler.yml

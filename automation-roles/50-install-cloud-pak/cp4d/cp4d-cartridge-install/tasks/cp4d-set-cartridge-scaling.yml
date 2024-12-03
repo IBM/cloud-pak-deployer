@@ -1,9 +1,13 @@
 ---
 - block:
-  - name: Scale service 
-    shell: |
-      oc patch {{ _current_cp4d_cartridge.CR_Kind }} {{ _current_cp4d_cartridge.CR_Name }}  \
-      -n {{ _p_current_cp4d_cluster.project }} \ 
-      --type merge \
-      -p '{"spec":{"scaleConfig": "{{ _current_cp4d_cartridge.size }}" } }'
+  - name: Generate command to set cartridge scaling for {{ _current_cp4d_cartridge.CR_Kind }}
+    set_fact:
+      _set_cartridge_scaling: "{{ lookup('template', 'set-cartridge-scaling.j2') }}"
+
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Set cartridge scaling for {{ _current_cp4d_cartridge.CR_Kind }}
+      _p_command: "{{ _set_cartridge_scaling }}"
+    
   when: (_current_cp4d_cartridge.size | default('')) != ''

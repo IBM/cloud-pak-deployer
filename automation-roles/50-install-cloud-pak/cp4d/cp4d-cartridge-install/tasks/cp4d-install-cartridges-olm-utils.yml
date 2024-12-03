@@ -6,33 +6,33 @@
     loop_var: _current_cp4d_cartridge
 
 # Always generate the preview script to log what will be done
-- name: Generate command preview script to install cartridges
-  set_fact:
-    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-cartridges.j2') }}"
-  vars:
-    _p_preview_script: True 
+- block:
+  - name: Generate command preview script to install cartridges
+    set_fact:
+      _apply_cr_command_script: "{{ lookup('template', 'apply-cr-cartridges.j2') }}"
+    vars:
+      _p_preview_script: True 
 
-- name: Show apply-cr command for install cartridges preview script
-  debug:
-    var: _apply_cr_command_script
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Generate preview script to install cartridges
+      _p_command: "{{ _apply_cr_command_script }}"
 
-- name: Generate preview script to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
-  shell: |
-    {{ _apply_cr_command_script }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
+  - name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh
+    copy:
+      src: "/tmp/work/preview.sh"
+      dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
+      remote_src: True
+      mode: u+rwx
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh
-  copy:
-    src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
-    remote_src: True
-    mode: u+rwx
-
-# TODO: Remove patch once fixed in product
-- name: Patch DashboardService in apply-cr script to workaround defect
-  ansible.builtin.replace:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
-    regexp: 'kind:\s+dashboardservice'
-    replace: 'kind: DashboardService'
+  # TODO: Remove patch once fixed in product
+  - name: Patch DashboardService in apply-cr script to workaround defect
+    ansible.builtin.replace:
+      path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.sh"
+      regexp: 'kind:\s+dashboardservice'
+      replace: 'kind: DashboardService'
+  when: not cpd_dry_run
 
 - name: Generate apply-cr command to install cartridges
   set_fact:
@@ -44,25 +44,34 @@
   debug:
     var: _apply_cr_command
 
-- name: Run apply-cr command to install cartridges, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log
-  shell: |
-    {{ _apply_cr_command }} > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log 2>&1
-  register: _install_cartridges_result
-  failed_when: False
 
-- name: Fail if there was an error installing the cartridge(s) using apply-cr
-  fail:
-    msg: "{{ _install_cartridges_result }}"
-  when: 
-  - _install_cartridges_result.rc!=0
-  - not (cpd_test_cartridges | default(False) | bool)
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Run apply-cr command to install cartridges into project {{ _p_current_cp4d_cluster.project }}
+    _p_command: "{{ _apply_cr_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log"
+    _p_command_failed_when: False
 
-- set_fact:
-    _cp4d_cartridges_installed_successfully: False
-  when: _install_cartridges_result.rc!=0
+- block:
+  - set_fact:
+      _install_cartridges_result: "{{ _run_command_result }}"
 
-- name: Wait for cartridges to finish installation
-  include_tasks: cp4d-wait-cartridges-ready.yml
-  loop: "{{ _apply_cr_cartridges | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
+  - name: Fail if there was an error installing the cartridge(s) using apply-cr
+    fail:
+      msg: "{{ _install_cartridges_result }}"
+    when: 
+    - _install_cartridges_result.rc!=0
+    - not (cpd_test_cartridges | default(False) | bool)
+
+  - set_fact:
+      _cp4d_cartridges_installed_successfully: False
+    when: 
+    - _install_cartridges_result.rc!=0
+
+  - name: Wait for cartridges to finish installation
+    include_tasks: cp4d-wait-cartridges-ready.yml
+    loop: "{{ _apply_cr_cartridges | default([]) }}"
+    loop_control:
+      loop_var: _current_cp4d_cartridge
+  when: not cpd_dry_run

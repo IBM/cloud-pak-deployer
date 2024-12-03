@@ -1,27 +1,24 @@
 ---
-- name: Generate yaml for {{ _keycloak_name }} namespace
-  template:
-    src: redhat-sso-namespace.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
-- name: Create Red Hat SSO namespace {{ _keycloak_name }}
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Red Hat SSO namespace {{ _keycloak_name }} 
+    _p_apply_yaml_template: redhat-sso-namespace.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-namespace.yaml"
 
-- name: Generate yaml for Red Hat SSO operator group in project {{ _keycloak_name }}
-  template:
-    src: redhat-sso-operatorgroup.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
-- name: Create Red Hat SSO operatorgroup in project {{ _keycloak_name }}
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Red Hat SSO operator group in project {{ _keycloak_name }}
+    _p_apply_yaml_template: redhat-sso-operatorgroup.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-operatorgroup.yaml"
 
-- name: Generate yaml for Red Hat SSO subscription in project {{ _keycloak_name }}
-  template:
-    src: redhat-sso-subscription.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml"
-- name: Create Red Hat SSO operator in project {{ _keycloak_name }}
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Red Hat SSO subscription in project {{ _keycloak_name }}
+    _p_apply_yaml_template: redhat-sso-subscription.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-redhat-sso-subscription.yaml"
 
 # Wait until subscription has been successfully created
 - name: Wait until Red Hat SSO operator in project {{ _keycloak_name }} has status Succeeded
@@ -40,3 +37,4 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run

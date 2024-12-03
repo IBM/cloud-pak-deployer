@@ -42,13 +42,11 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project {{ _openldap_project_name }}
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
+- include_role:
+    name: run-command
   vars:
-    common_namespace_name: "{{ _openldap_project_name }}"
-    common_output_directory: "{{ _v_openldap_base_dir }}"
+    _p_command_description: Create project {{ _openldap_project_name }}
+    _p_command: "oc adm new-project {{ _openldap_project_name }} || true"
 
 - name: Prepare OpenLDAP yaml file for cluster {{ current_openshift_cluster.name }}
   ansible.builtin.template:
@@ -61,6 +59,12 @@
     - persistentvolumeclaims
     - deployments
     - services
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Install OpenLDAP"
+    _p_activity_yaml: "{{ _v_openldap_base_dir }}/{{ current_openshift_cluster.name }}-{{ _current_demo_openldap.name }}-openldap-{{ item }}.yaml"
 
 - name: Add OpenLDAP item {{ item.name }}
   kubernetes.core.k8s:
@@ -75,3 +79,4 @@
     - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
+  when: not cpd_dry_run

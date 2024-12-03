@@ -1,8 +1,7 @@
 ---
-- name: Create Container Runtime Configuration definition {{ status_dir }}/openshift/cp4d-container-runtime-config.yaml
-  template:
-    src: cp4d-container-runtime-config.j2
-    dest: "{{ status_dir }}/openshift/cp4d-container-runtime-config.yaml"
-
-- name: Apply Container Runtime configuration
-  shell: oc apply -f {{ status_dir }}/openshift/cp4d-container-runtime-config.yaml
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Container Runtime Configuration
+    _p_apply_yaml_template: cp4d-container-runtime-config.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/cp4d-container-runtime-config.yaml"

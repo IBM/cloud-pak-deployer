@@ -1,29 +1,36 @@
 ---
-
 - name: Generate audit configuration
   template:
     src: cpd-audit-fluent-config.j2
     dest: "{{ status_dir }}/cp4d/fluent.conf"
 
-- name: Apply audit configuration
-  shell:
-    oc set data -n {{ current_cp4d_cluster.project }} cm/zen-audit-config \
-      --from-file={{ status_dir }}/cp4d/fluent.conf
-  register: _audit_set_data
-  changed_when: "'zen-audit-config data updated' in _audit_set_data.stdout"
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Apply audit configuration to Cloud Pak for Data instance"
+    _p_activity_yaml: "{{ status_dir }}/cp4d/fluent.conf"
 
-- name: Restart audit pods if configuration was changed
-  shell:
-    oc delete po -n {{ current_cp4d_cluster.project }} -l component=zen-audit
-  when:  _audit_set_data.changed
+- block:
+  - name: Apply audit configuration from {{ status_dir }}/cp4d/fluent.conf
+    shell:
+      oc set data -n {{ current_cp4d_cluster.project }} cm/zen-audit-config \
+        --from-file={{ status_dir }}/cp4d/fluent.conf
+    register: _audit_set_data
+    changed_when: "'zen-audit-config data updated' in _audit_set_data.stdout"
 
-- name: Apply replication factor
-  shell:
-    oc scale -n {{ current_cp4d_cluster.project }} deploy/zen-audit --replicas={{ _cp4d_audit_config.audit_replicas | default(1) }}
+  - name: Restart audit pods if configuration was changed
+    shell:
+      oc delete po -n {{ current_cp4d_cluster.project }} -l component=zen-audit
+    when:  _audit_set_data.changed
 
-- name: Apply audit output for OpenShift logging
-  include_tasks: configure-cpd-audit-openshift.yml
-  loop: "{{ _cp4d_audit_config.audit_output | default([]) }}"
-  when: _current_audit_output.type=='openshift-logging'
-  loop_control:
-    loop_var: _current_audit_output
+  - name: Apply replication factor
+    shell:
+      oc scale -n {{ current_cp4d_cluster.project }} deploy/zen-audit --replicas={{ _cp4d_audit_config.audit_replicas | default(1) }}
+
+  - name: Apply audit output for OpenShift logging
+    include_tasks: configure-cpd-audit-openshift.yml
+    loop: "{{ _cp4d_audit_config.audit_output | default([]) }}"
+    when: _current_audit_output.type=='openshift-logging'
+    loop_control:
+      loop_var: _current_audit_output
+  when: not cpd_dry_run

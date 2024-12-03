@@ -10,20 +10,25 @@
   fail: msg="cloud_platform {{ cloud_platform }} only support values {{ supported_cloud_platform_types }} "
   when: "cloud_platform not in supported_cloud_platform_types"
 
-- include_tasks: ibmcloud-validate-variables.yml
+- name: "Fail if dry-run specified for other cloud platform than existing-ocp"
+  fail:
+    msg: "--dry-run can only be specified for existing-ocp"
   when:
-    - cloud_platform == 'ibm-cloud'
+  - cpd_dry_run | bool
+  - cloud_platform != 'existing-ocp'
+
+- include_tasks: ibmcloud-validate-variables.yml
+  when: cloud_platform == 'ibm-cloud'
 
 - include_tasks: aws-validate-variables.yml
-  when:
-    - cloud_platform == 'aws'
+  when: cloud_platform == 'aws'
 
 - include_tasks: azure-validate-variables.yml
-  when:
-    - cloud_platform == 'azure'
+  when: cloud_platform == 'azure'
 
 - name: Fail if destroy was not confirmed
   fail:
     msg: "Destroy was not confirmed with --confirm-destroy parameter or via global_config confirm_destroy property"
   when:
-    - _confirm_destroy | bool != True
+  - _confirm_destroy | bool != True
+  - not cpd_dry_run

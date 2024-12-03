@@ -4,26 +4,30 @@
     msg: ""
 
 # Always generate the preview script to log what will be done
-- name: "Generate command preview script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}"
-  set_fact:
-    _apply_cr_command_script: "{{ lookup('template', 'apply-cr-dp.j2') }}"
-  vars:
-    _p_preview_script: True 
+- block:
+  - name: "Generate command preview script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}"
+    set_fact:
+      _apply_cr_command_script: "{{ lookup('template', 'apply-cr-dp.j2') }}"
+    vars:
+      _p_preview_script: True 
 
-- name: Show apply-cr command to install cartridges
-  debug:
-    var: _apply_cr_command_script
+  - name: Show apply-cr command to install cartridges
+    debug:
+      var: _apply_cr_command_script
 
-- name: Generate preview script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
-  shell: |
-    {{ _apply_cr_command_script }} >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Generate preview script to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}
+      _p_command: "{{ _apply_cr_command_script }}"
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dp.sh
-  copy:
-    src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dp.sh"
-    remote_src: True
-    mode: u+rwx
+  - name: Copy script to {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dp.sh
+    copy:
+      src: "/tmp/work/preview.sh"
+      dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-apply-cr-dp.sh"
+      remote_src: True
+      mode: u+rwx
+  when: not cpd_dry_run
 
 - name: Generate apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}
   set_fact:
@@ -31,19 +35,27 @@
   vars:
     _p_preview_script: False
 
-- name: Run apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log
-  shell: |
-    {{ _apply_cr_command }} >> {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log 2>&1
-  register: _install_cartridges_result
-  failed_when: False
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Run apply-cr command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}
+    _p_command: "{{ _apply_cr_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-apply-cr.log"
+    _p_command_failed_when: False
 
-- name: Fail if there was an error installing the cartridge {{ _current_cp4d_cartridge.olm_utils_name }} using apply-cr
-  fail:
-    msg: "{{ _install_cartridges_result }}"
-  when: 
-  - _install_cartridges_result.rc!=0
-  - not (cpd_test_cartridges | default(False) | bool)
+- block:
+  - set_fact:
+      _install_cartridges_result: "{{ _run_command_result }}"
 
-- set_fact:
-    _cp4d_cartridges_installed_successfully: False
-  when: _install_cartridges_result.rc!=0
+  - name: Fail if there was an error installing the cartridge {{ _current_cp4d_cartridge.olm_utils_name }} using apply-cr
+    fail:
+      msg: "{{ _install_cartridges_result }}"
+    when: 
+    - _install_cartridges_result.rc!=0
+    - not (cpd_test_cartridges | default(False) | bool)
+
+  - set_fact:
+      _cp4d_cartridges_installed_successfully: False
+    when: 
+    - _install_cartridges_result.rc!=0
+  when: not cpd_dry_run

@@ -1,0 +1,23 @@
+---
+- debug:
+    var: _deployer_activity_sequence
+
+- set_fact:
+    _deployer_activity_sequence: "{{ (_deployer_activity_sequence | default(0)) | int + 1 }}"
+
+- file:
+    path: "{{ status_dir }}/log/deployer-activities.log"
+    state: absent
+  when: _deployer_activity_sequence==1
+
+- include_tasks: log-deployer-command.yml
+  when: _p_activity_command | default('') != ''
+
+- include_tasks: log-deployer-yaml-file.yml
+  when: _p_activity_yaml | default('') != ''
+
+- include_tasks: log-deployer-script-file.yml
+  when: _p_activity_script | default('') != ''
+
+- include_tasks: log-deployer-comment.yml
+  when: _p_activity_comment | default('') != ''

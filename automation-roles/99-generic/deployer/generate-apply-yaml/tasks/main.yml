@@ -1,0 +1,14 @@
+---
+- include_tasks: generate-yaml-file.yml
+  when: (_p_apply_yaml_template | default('')) != ''
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "{{ _p_apply_yaml_description }}"
+    _p_activity_yaml: "{{ _p_apply_yaml_output_file }}"
+
+- name: "{{ _p_apply_yaml_description }} using file {{ _p_apply_yaml_output_file }}"
+  shell: |
+    oc apply -f {{ _p_apply_yaml_output_file }}
+  when: not cpd_dry_run

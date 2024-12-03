@@ -3,47 +3,55 @@
   debug:
     msg: "{{ _dmc_instance }}"
 
-- name: Check if the Data Management Console instance is already running
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dmc_addon_type }}&display_name={{ _dmc_instance.name }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ _cp4d_bearer_token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _dmc_instance_lookup_result
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision DMC instance {{ _dmc_instance.name }}"
+    _p_activity_comment: "Create DMC instance {{ _dmc_instance.name }} using REST API"
 
-- name: Determine if Data Management Console instance already exists
-  debug:
-    msg: "Data Management Console instance {{ _dmc_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
-  when: _dmc_instance_lookup_result.json.total_count != 0
+- block:
+  - name: Check if the Data Management Console instance is already running
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dmc_addon_type }}&display_name={{ _dmc_instance.name }}'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _dmc_instance_lookup_result
 
-- when: _dmc_instance_lookup_result.json.total_count == 0
-  block:
-  - name: Obtain Data Management Console version
-    shell: |
-      oc get dmcaddon -n {{ current_cp4d_cluster.project }} dmc-addon -o jsonpath='{.spec.version}'
-    register: _dmc_version
-
-  - name: Create Data Management Console configuration file
-    template:
-      src: dmc-instance.j2
-      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dmc_instance.name }}-dmc-instance.json"
-
-  - name: Create Data Management Console instance
-    shell: |
-      curl -v -k \
-        -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
-        -H 'Content-Type: application/json' \
-        -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
-        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dmc_instance.name }}-dmc-instance.json
-    register: _provision_dmc_result
-
-  - name: Show Data Management Console instance provisioning result
+  - name: Determine if Data Management Console instance already exists
     debug:
-      msg: "{{ _provision_dmc_result }}"
+      msg: "Data Management Console instance {{ _dmc_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
+    when: _dmc_instance_lookup_result.json.total_count != 0
 
-  - set_fact:
-      _provision_dmc_result_json: "{{ _provision_dmc_result.stdout | from_json }}"
+  - when: _dmc_instance_lookup_result.json.total_count == 0
+    block:
+    - name: Obtain Data Management Console version
+      shell: |
+        oc get dmcaddon -n {{ current_cp4d_cluster.project }} dmc-addon -o jsonpath='{.spec.version}'
+      register: _dmc_version
+
+    - name: Create Data Management Console configuration file
+      template:
+        src: dmc-instance.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dmc_instance.name }}-dmc-instance.json"
+
+    - name: Create Data Management Console instance
+      shell: |
+        curl -v -k \
+          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+          -H 'Content-Type: application/json' \
+          -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+          -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dmc_instance.name }}-dmc-instance.json
+      register: _provision_dmc_result
+
+    - name: Show Data Management Console instance provisioning result
+      debug:
+        msg: "{{ _provision_dmc_result }}"
+
+    - set_fact:
+        _provision_dmc_result_json: "{{ _provision_dmc_result.stdout | from_json }}"
+  when: not cpd_dry_run

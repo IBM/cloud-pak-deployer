@@ -41,7 +41,15 @@
     _update_cp4d_ssl_config: 1
   when: _cp4d_existing_external_tls_secret_result.stdout == "0"
 
-- when: _cp4d_existing_external_tls_secret_result.stdout == "1"
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Apply SSL configuration to Cloud Pak for Data"
+    _p_activity_comment: "Apply SSL configuration to secret external-tls-secret in OpenShift project {{ current_cp4d_cluster.project }}"
+
+- when: 
+  - _cp4d_existing_external_tls_secret_result.stdout == "1"
+  - not cpd_dry_run
   block:
     - name: Get current cert.crt from Cloud Pak for Data
       shell: |
@@ -66,7 +74,9 @@
     msg: "No changes to current TLS certificate of Cloud Pak for Data, skipping configuration of TLS certificate"
   when: _update_cp4d_ssl_config == 0
 
-- when: _update_cp4d_ssl_config == 1
+- when: 
+  - _update_cp4d_ssl_config == 1
+  - not cpd_dry_run
   block:
     - name: Delete existing external-tls-secret if present
       shell: |

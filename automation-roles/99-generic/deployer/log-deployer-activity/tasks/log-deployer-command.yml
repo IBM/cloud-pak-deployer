@@ -1,0 +1,17 @@
+---
+- name: Write deployer activity to {{ status_dir }}/log/deployer-activities.log
+  blockinfile:
+    path: "{{ status_dir }}/log/deployer-activities.log"
+    create: True
+    insertafter: EOF
+    marker: ""
+    block: |
+
+      # ---
+      #
+      # Activity timestamp: {{  now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}
+      # Deployer activity: {{ _deployer_activity_sequence }}
+      # Description: {{ _p_activity_description | default("") }}
+      # Command:
+      {{ _p_activity_command }}
+      # ---
