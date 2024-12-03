@@ -12,7 +12,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/fpos
+    command: mkdir -p /bitnami/postgresql/tablespaces/fpos_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -24,17 +24,15 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user fpos
-        CREATE ROLE fpos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER fpos WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+
+        -- create tablespace for fpos
+        CREATE TABLESPACE fpos_tbs OWNER fpos LOCATION '/bitnami/postgresql/tablespaces/fpos_tbs';
 
         -- create database fpos
-        create database fpos owner fpos template template0 encoding UTF8 ;
-        revoke connect on database fpos from public;
-        grant all privileges on database fpos to fpos;
-        grant connect, temp, create on database fpos to fpos;
-
-        -- please modify location follow your requirement
-        create tablespace fpos_tbs owner fpos location '/bitnami/postgresql/tablespaces/fpos';
-        grant create on tablespace fpos_tbs to fpos;
+        CREATE DATABASE fpos OWNER fpos TEMPLATE template0 ENCODING UTF8 TABLESPACE fpos_tbs;
+        REVOKE CONNECT ON DATABASE fpos FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -43,7 +41,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/ros
+    command: mkdir -p /bitnami/postgresql/tablespaces/ros_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -55,16 +53,13 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user ros
-        CREATE ROLE ros WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER ros WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for ros
+        CREATE TABLESPACE ros_tbs OWNER ros LOCATION '/bitnami/postgresql/tablespaces/ros_tbs';
 
         -- create database ros
-        create database ros owner ros template template0 encoding UTF8 ;
-        revoke connect on database ros from public;
-        grant all privileges on database ros to ros;
-        grant connect, temp, create on database ros to ros;
-
-        -- please modify location follow your requirement
-        create tablespace ros_tbs owner ros location '/bitnami/postgresql/tablespaces/ros';
-        grant create on tablespace ros_tbs to ros;
+        CREATE DATABASE ros OWNER ros TEMPLATE template0 ENCODING UTF8 TABLESPACE ros_tbs;
+        REVOKE CONNECT ON DATABASE ros FROM PUBLIC;
       EOF"
   register: command_status

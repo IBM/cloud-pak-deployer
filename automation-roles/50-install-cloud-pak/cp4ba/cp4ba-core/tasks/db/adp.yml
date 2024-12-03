@@ -15,12 +15,11 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user adpbase
-        CREATE ROLE adpbase WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER adpbase WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database adpbase
-        create database adpbase owner adpbase template template0 encoding UTF8;
-        revoke connect on database adpbase from public;
-        grant all privileges on database adpbase to adpbase;
+        -- create database adpbase -- default template tablespace
+        CREATE DATABASE adpbase OWNER adpbase TEMPLATE template0 ENCODING UTF8;
+        REVOKE CONNECT ON DATABASE adpbase FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -32,12 +31,11 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user {{ item }}
-        CREATE ROLE {{ item }} WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER {{ item }} WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database {{ item }}
-        create database {{ item }} owner {{ item }} template template0 encoding UTF8;
-        revoke connect on database {{ item }} from public;
-        grant all privileges on database {{ item }} to {{ item }};
+        -- create database {{ item }} -- default template tablespace
+        CREATE DATABASE {{ item }} OWNER {{ item }} TEMPLATE template0 ENCODING UTF8;
+        REVOKE CONNECT ON DATABASE {{ item }} FROM PUBLIC;
       EOF"
   register: command_status
   with_items:
@@ -48,23 +46,6 @@
     - proj5
     - proj6
 
-- name: ADP proj2 DB
-  kubernetes.core.k8s_exec:
-    namespace: "{{ cp4ba_postgresql_project }}"
-    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: >
-      bash -c "
-        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create user proj2
-        CREATE ROLE proj2 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
-
-        -- create database proj2
-        create database proj2 owner proj2 template template0 encoding UTF8;
-        revoke connect on database proj2 from public;
-        grant all privileges on database proj2 to proj2;
-      EOF"
-  register: command_status
-
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=scripts-creating-databases-document-processing
 # DEVOS Based on
 # https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
@@ -72,7 +53,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/devos1
+    command: mkdir -p /bitnami/postgresql/tablespaces/devos1_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -84,17 +65,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user devos1
-        CREATE ROLE devos1 WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER devos1 WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for devos1
+        CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/bitnami/postgresql/tablespaces/devos1_tbs';
 
         -- create database devos1
-        create database devos1 owner devos1 template template0 encoding UTF8;
-        revoke connect on database devos1 from public;
-        grant all privileges on database devos1 to devos1;
-        grant connect, temp, create on database devos1 to devos1;
-
-        -- please modify location follow your requirement
-        create tablespace devos1_tbs owner devos1 location '/bitnami/postgresql/tablespaces/devos1';
-        grant create on tablespace devos1_tbs to devos1;
+        CREATE DATABASE devos1 OWNER devos1 TEMPLATE template0 ENCODING UTF8 TABLESPACE devos1_tbs;
+        REVOKE CONNECT ON DATABASE devos1 FROM PUBLIC;
       EOF"
   register: command_status
 

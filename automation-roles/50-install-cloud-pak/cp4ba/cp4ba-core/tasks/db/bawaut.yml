@@ -13,7 +13,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/bawdocs
+    command: mkdir -p /bitnami/postgresql/tablespaces/bawdocs_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -25,17 +25,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user bawdocs
-        CREATE ROLE bawdocs WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER bawdocs WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for bawdocs
+        CREATE TABLESPACE bawdocs_tbs OWNER bawdocs LOCATION '/bitnami/postgresql/tablespaces/bawdocs_tbs';
 
         -- create database bawdocs
-        create database bawdocs owner bawdocs template template0 encoding UTF8 ;
-        revoke connect on database bawdocs from public;
-        grant all privileges on database bawdocs to bawdocs;
-        grant connect, temp, create on database bawdocs to bawdocs;
-
-        -- please modify location follow your requirement
-        create tablespace bawdocs_tbs owner bawdocs location '/bitnami/postgresql/tablespaces/bawdocs';
-        grant create on tablespace bawdocs_tbs to bawdocs;
+        CREATE DATABASE bawdocs OWNER bawdocs TEMPLATE template0 ENCODING UTF8 TABLESPACE bawdocs_tbs;
+        REVOKE CONNECT ON DATABASE bawdocs FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -45,7 +42,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/bawtos
+    command: mkdir -p /bitnami/postgresql/tablespaces/bawtos_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -57,17 +54,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user bawtos
-        CREATE ROLE bawtos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER bawtos WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for bawtos
+        CREATE TABLESPACE bawtos_tbs OWNER bawtos LOCATION '/bitnami/postgresql/tablespaces/bawtos_tbs';
 
         -- create database bawtos
-        create database bawtos owner bawtos template template0 encoding UTF8 ;
-        revoke connect on database bawtos from public;
-        grant all privileges on database bawtos to bawtos;
-        grant connect, temp, create on database bawtos to bawtos;
-
-        -- please modify location follow your requirement
-        create tablespace bawtos_tbs owner bawtos location '/bitnami/postgresql/tablespaces/bawtos';
-        grant create on tablespace bawtos_tbs to bawtos;
+        CREATE DATABASE bawtos OWNER bawtos TEMPLATE template0 ENCODING UTF8 TABLESPACE bawtos_tbs;
+        REVOKE CONNECT ON DATABASE bawtos FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -77,7 +71,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/bawdos
+    command: mkdir -p /bitnami/postgresql/tablespaces/bawdos_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -89,17 +83,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user bawdos
-        CREATE ROLE bawdos WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER bawdos WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for bawdos
+        CREATE TABLESPACE bawdos_tbs OWNER bawdos LOCATION '/bitnami/postgresql/tablespaces/bawdos_tbs';
 
         -- create database bawdos
-        create database bawdos owner bawdos template template0 encoding UTF8 ;
-        revoke connect on database bawdos from public;
-        grant all privileges on database bawdos to bawdos;
-        grant connect, temp, create on database bawdos to bawdos;
-
-        -- please modify location follow your requirement
-        create tablespace bawdos_tbs owner bawdos location '/bitnami/postgresql/tablespaces/bawdos';
-        grant create on tablespace bawdos_tbs to bawdos;
+        CREATE DATABASE bawdos OWNER bawdos TEMPLATE template0 ENCODING UTF8 TABLESPACE bawdos_tbs;
+        REVOKE CONNECT ON DATABASE bawdos FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -110,7 +101,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/chdb
+    command: mkdir -p /bitnami/postgresql/tablespaces/chdb_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -122,17 +113,14 @@
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
         -- create user chdb
-        CREATE ROLE chdb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        CREATE USER chdb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for chdb
+        CREATE TABLESPACE chdb_tbs OWNER chdb LOCATION '/bitnami/postgresql/tablespaces/chdb_tbs';
 
         -- create database chdb
-        create database chdb owner chdb template template0 encoding UTF8 ;
-        revoke connect on database chdb from public;
-        grant all privileges on database chdb to chdb;
-        grant connect, temp, create on database chdb to chdb;
-
-        -- please modify location follow your requirement
-        create tablespace chdb_tbs owner chdb location '/bitnami/postgresql/tablespaces/chdb';
-        grant create on tablespace chdb_tbs to chdb;
+        CREATE DATABASE chdb OWNER chdb TEMPLATE template0 ENCODING UTF8 TABLESPACE chdb_tbs;
+        REVOKE CONNECT ON DATABASE chdb FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -141,7 +129,7 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/bawexternal
+    command: mkdir -p /bitnami/postgresql/tablespaces/bawexternal_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -157,12 +145,11 @@
         CREATE USER bawexternal WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for bawexternal
-        CREATE TABLESPACE bawexternal_tbs OWNER bawexternal LOCATION '/bitnami/postgresql/tablespaces/bawexternal';
+        CREATE TABLESPACE bawexternal_tbs OWNER bawexternal LOCATION '/bitnami/postgresql/tablespaces/bawexternal_tbs';
 
         -- create database bawexternal
         CREATE DATABASE bawexternal OWNER bawexternal TEMPLATE template0 ENCODING UTF8 TABLESPACE bawexternal_tbs;
-        REVOKE CONNECT ON DATABASE bawexternal FROM public;
-
+        REVOKE CONNECT ON DATABASE bawexternal FROM PUBLIC;
       EOF"
   register: command_status
 
