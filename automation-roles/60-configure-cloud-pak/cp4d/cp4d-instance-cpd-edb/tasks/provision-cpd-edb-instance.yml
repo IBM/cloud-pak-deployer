@@ -3,34 +3,42 @@
   debug:
     var: _cpd_edb_instance
 
-- set_fact:
-    _cpd_edb_instance_name: "{{ _cpd_edb_instance.name }}"
-    _cpd_edb_instance_namespace: "{{ current_cp4d_cluster.project }}"
-    _cpd_edb_instance_type: "{{ _cpd_edb_instance.type | default ('Standard') }}"
-    _cpd_edb_instance_version: "{{ _cpd_edb_instance.version }}"
-    _cpd_edb_instance_members: "{{ _cpd_edb_instance.members | default('1') }}"
-    _cpd_edb_instance_storage_class: "{{ _cpd_edb_instance.storage_class | default(ocp_storage_class_file) }}"
-    _cpd_edb_instance_storage_size_gb: "{{ _cpd_edb_instance.size_gb | default ('50') }}"
-    _cpd_edb_instance_resource_request_cpu: "{{ _cpd_edb_instance.resource_request_cpu | default ('1000m') }}"
-    _cpd_edb_instance_resource_request_memory: "{{ _cpd_edb_instance.resource_request_memory | default ('4Gi') }}"
-    _cpd_edb_instance_resource_limit_cpu: "{{ _cpd_edb_instance.resource_limit_cpu | default ('1000m') }}"
-    _cpd_edb_instance_resource_limit_memory: "{{ _cpd_edb_instance.resource_limit_memory | default ('4Gi') }}"
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision EDB instance {{ _cpd_edb_instance.name }}"
+    _p_activity_comment: "Create EDB instance {{ _cpd_edb_instance.name }} using CPDEdbInstance CR"
 
-- name: "Validate if CPD EDB instance is already present"
-  shell: oc get CPDEdbInstance -n {{ _cpd_edb_instance_namespace }} --no-headers | grep "^{{ _cpd_edb_instance_name }}[[:space:]]" | wc -l
-  register: _cpd_edb_instance_lookup_result
+- block:
+  - set_fact:
+      _cpd_edb_instance_name: "{{ _cpd_edb_instance.name }}"
+      _cpd_edb_instance_namespace: "{{ current_cp4d_cluster.project }}"
+      _cpd_edb_instance_type: "{{ _cpd_edb_instance.type | default ('Standard') }}"
+      _cpd_edb_instance_version: "{{ _cpd_edb_instance.version }}"
+      _cpd_edb_instance_members: "{{ _cpd_edb_instance.members | default('1') }}"
+      _cpd_edb_instance_storage_class: "{{ _cpd_edb_instance.storage_class | default(ocp_storage_class_file) }}"
+      _cpd_edb_instance_storage_size_gb: "{{ _cpd_edb_instance.size_gb | default ('50') }}"
+      _cpd_edb_instance_resource_request_cpu: "{{ _cpd_edb_instance.resource_request_cpu | default ('1000m') }}"
+      _cpd_edb_instance_resource_request_memory: "{{ _cpd_edb_instance.resource_request_memory | default ('4Gi') }}"
+      _cpd_edb_instance_resource_limit_cpu: "{{ _cpd_edb_instance.resource_limit_cpu | default ('1000m') }}"
+      _cpd_edb_instance_resource_limit_memory: "{{ _cpd_edb_instance.resource_limit_memory | default ('4Gi') }}"
 
-- when: not _cpd_edb_instance_lookup_result.stdout == "0"
-  debug:
-    msg: "CPD EDB instance {{ _cpd_edb_instance_name }} already available. Skipping provision..."
+  - name: "Validate if CPD EDB instance is already present"
+    shell: oc get CPDEdbInstance -n {{ _cpd_edb_instance_namespace }} --no-headers | grep "^{{ _cpd_edb_instance_name }}[[:space:]]" | wc -l
+    register: _cpd_edb_instance_lookup_result
 
-- when: _cpd_edb_instance_lookup_result.stdout == "0"
-  block:
-  - name: Create CPD EDB Instance CRD yaml file
-    template:
-      src: cpd-edb-instance.j2
-      dest: "{{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml"
+  - when: not _cpd_edb_instance_lookup_result.stdout == "0"
+    debug:
+      msg: "CPD EDB instance {{ _cpd_edb_instance_name }} already available. Skipping provision..."
 
-  - name: Provision CPDEdbInstance {{ _cpd_edb_instance_name }} 
-    shell: |
-      oc create -f {{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml
+  - when: _cpd_edb_instance_lookup_result.stdout == "0"
+    block:
+    - name: Create CPD EDB Instance CRD yaml file
+      template:
+        src: cpd-edb-instance.j2
+        dest: "{{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml"
+
+    - name: Provision CPDEdbInstance {{ _cpd_edb_instance_name }} 
+      shell: |
+        oc create -f {{ status_dir }}/cp4d/cpd-edb-instance-cr.yaml
+  when: not cpd_dry_run

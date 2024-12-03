@@ -12,37 +12,45 @@
     msg: "OpenPages instance {{ _openpages_instance_name }} has invalid value \"{{ _openpages_instance_size }}\" for size property. Only {{ cp4d_openpages_instance_size_options }} are supported."
   when: _openpages_instance_size not in cp4d_openpages_instance_size_options
 
-- name: "Validate if instance {{ _openpages_instance_name }} already exists"
-  shell: |
-    oc get OpenPagesInstance --no-headers \
-      -n {{ current_cp4d_cluster.project }} | grep "^{{ _openpages_instance_name }}[[:space:]]" | wc -l
-  register: _current_openpages_instance
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision OpenPages instance {{ _openpages_instance.name }}"
+    _p_activity_comment: "Create OpenPages instance {{ _openpages_instance.name }} using OpenPagesInstance CR"
 
-- when: not _current_openpages_instance.stdout == "0"
-  debug:
-    msg: "OpenPages instance {{ _openpages_instance_name }} already created. Skipping provision..."
+- block:
+  - name: "Validate if instance {{ _openpages_instance_name }} already exists"
+    shell: |
+      oc get OpenPagesInstance --no-headers \
+        -n {{ current_cp4d_cluster.project }} | grep "^{{ _openpages_instance_name }}[[:space:]]" | wc -l
+    register: _current_openpages_instance
 
-- when: _current_openpages_instance.stdout == "0"
-  block:
+  - when: not _current_openpages_instance.stdout == "0"
+    debug:
+      msg: "OpenPages instance {{ _openpages_instance_name }} already created. Skipping provision..."
 
-    - name: Get current OpenPages version
-      shell: |
-        oc get OpenPagesService -n {{ current_cp4d_cluster.project }} openpagesservice-cr \
-          -o jsonpath='{.spec.version}'
-      register: _openpages_version_output
+  - when: _current_openpages_instance.stdout == "0"
+    block:
 
-    - set_fact:
-        _openpages_version: "{{ _openpages_version_output.stdout }}"
+      - name: Get current OpenPages version
+        shell: |
+          oc get OpenPagesService -n {{ current_cp4d_cluster.project }} openpagesservice-cr \
+            -o jsonpath='{.spec.version}'
+        register: _openpages_version_output
 
-    - name: Create OpenPages instance yaml file
-      template:
-        src: openpages-instance.yaml.j2
-        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _openpages_instance_name }}-openpages.yaml"
+      - set_fact:
+          _openpages_version: "{{ _openpages_version_output.stdout }}"
 
-    - name: Create OpenPages instance {{ _openpages_instance_name }}
-      shell: |
-        oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _openpages_instance_name }}-openpages.yaml"
-      register: _openpages_instance_create_result
+      - name: Create OpenPages instance yaml file
+        template:
+          src: openpages-instance.yaml.j2
+          dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _openpages_instance_name }}-openpages.yaml"
 
-    - debug:
-        var: _openpages_instance_create_result
+      - name: Create OpenPages instance {{ _openpages_instance_name }}
+        shell: |
+          oc apply -f "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _openpages_instance_name }}-openpages.yaml"
+        register: _openpages_instance_create_result
+
+      - debug:
+          var: _openpages_instance_create_result
+  when: not cpd_dry_run

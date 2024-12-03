@@ -1,7 +1,4 @@
-#!/bin/bash
-
-set -o pipefail
-mirror-images \
+ mirror-images \
     --release={{ _p_current_cp4d_cluster.cp4d_version }} \
     --components=watsonx_ai_ifm \
 {% if (_p_source_registry_hostname | default('')) == _v_portable_registry -%}
@@ -9,7 +6,6 @@ mirror-images \
 {% endif -%}    
     --target_registry={{ _target_registry_url }} \
     --arch={{ _openshift_processor_arch }} \
-    --preview={%- if _p_preview_script -%}true{%- else -%}false{%- endif %} \
     -v \
     --groups={{ _case_group_list }} \
-    --case_download={%- if cpd_airgap | default(False) -%}false{%- else -%}true{%- endif %} 2>&1 | tee {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log 
+    --case_download={%- if cpd_airgap | default(False) -%}false{%- else -%}true{%- endif %}

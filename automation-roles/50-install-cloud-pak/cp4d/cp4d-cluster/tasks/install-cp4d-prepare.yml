@@ -51,18 +51,20 @@
     path: "{{status_dir}}/log"
     state: directory
 
-- name: Logging state of cartridges in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-cartridge-state.log
-  shell: |
-    {{ role_path }}/files/cp4d-log-services-installed.sh \
-      {{ status_dir }} \
-      {{ current_cp4d_cluster.project }}
-  async: 86400
-  poll: 0
-  register: _log_services
+- block:
+  - name: Logging state of cartridges in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-cartridge-state.log
+    shell: |
+      {{ role_path }}/files/cp4d-log-services-installed.sh \
+        {{ status_dir }} \
+        {{ current_cp4d_cluster.project }}
+    async: 86400
+    poll: 0
+    register: _log_services
 
-- name: Show details of background task to log cartridge state
-  debug:
-    var: _log_services
+  - name: Show details of background task to log cartridge state
+    debug:
+      var: _log_services
+  when: not cpd_dry_run
 
 - name: Prepare OpenShift cluster for Cloud Pak for Data
   include_role:

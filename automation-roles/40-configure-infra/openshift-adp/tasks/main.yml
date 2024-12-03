@@ -5,10 +5,17 @@
       - _p_openshift_cluster is defined
 
 - block:
-  - name: Create project openshift-adp if it doesn't exist
-    shell: |
-      oc create ns openshift-adp || true
-      oc annotate namespace openshift-adp openshift.io/node-selector="" --overwrite
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Create project openshift-adp
+      _p_command: "oc create ns openshift-adp || true"
+
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Annotate project openshift-adp
+      _p_command: "oc annotate namespace openshift-adp openshift.io/node-selector= --overwrite"
 
   - name: Retrieve default channel for redhad-oadp-operator manifest
     shell:
@@ -22,13 +29,11 @@
   - set_fact:
       _oadp_channel: "{{ _oadp_packagemanifest.stdout }}"
 
-  - name: Generate operator subscription for Advanced Data Protection into "{{ status_dir }}/openshift/openshift-adp-sub.yaml"
-    template:
-      src: openshift-adp-sub.j2
-      dest: "{{ status_dir }}/openshift/openshift-adp-sub.yaml"
-
-  - name: Apply yaml for Advanced Data Protection subscription
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/openshift-adp-sub.yaml
+  - include_role:
+      name: generate-apply-yaml
+    vars:
+      _p_apply_yaml_description: Create OpenShift Advanced Data Protection operator
+      _p_apply_yaml_template: openshift-adp-sub.j2
+      _p_apply_yaml_output_file: "{{ status_dir }}/openshift/openshift-adp-sub.yaml"
 
   when: (_p_openshift_cluster.oadp | default(False) | bool)

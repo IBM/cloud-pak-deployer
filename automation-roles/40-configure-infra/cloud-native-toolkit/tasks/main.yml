@@ -10,9 +10,21 @@
       repo: "{{ _cntk_github_repo }}"
       dest: "{{ status_dir }}/openshift/multi-tenancy-gitops"
 
-  - name: Install GitOps operator
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x
+  - name: 'Lookup *.yaml files in {{ status_dir }}/openshift/multi-tenancy-gitops'
+    find:
+      paths: '{{ status_dir }}/openshift/multi-tenancy-gitops'
+      file_type: any
+      patterns: '*.yaml'
+      follow: False
+      recurse: False
+    register: _gitops_yaml_files
+
+  - include_role:
+      name: generate-apply-yaml
+    vars:
+      _p_apply_yaml_description: "Install GitOps operator"
+      _p_apply_yaml_output_file: "{{ item.path }}"
+    loop: '{{ _gitops_yaml_files.files }}'
 
   - name: Wait until OpenShift GitOps CSV has status Succeeded
     shell: |
@@ -30,11 +42,13 @@
         {%- set result = ansible_callback_diy.result.output -%}
         {%- set retries_left = result.retries - result.attempts -%}
         Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    when: not cpd_dry_run
 
-  - name: Create ArgoCD instance
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x/argocd-instance/argocd-instance.yaml \
-        -n openshift-gitops
+  - include_role:
+      name: generate-apply-yaml
+    vars:
+      _p_apply_yaml_description: "Create ArgoCD instance"
+      _p_apply_yaml_output_file: "{{ status_dir }}/openshift/multi-tenancy-gitops/setup/ocp4x/argocd-instance/argocd-instance.yaml"
 
   - name: Wait until ArgoCD instance has been created in OpenShift project openshift-gitops
     shell: |
@@ -49,5 +63,6 @@
         {%- set result = ansible_callback_diy.result.output -%}
         {%- set retries_left = result.retries - result.attempts -%}
         Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...        
+    when: not cpd_dry_run
 
   when: (_p_openshift_cluster.cloud_native_toolkit | default(False) | bool)

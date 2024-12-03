@@ -1,6 +1,3 @@
-#!/bin/bash
-
-set -o pipefail
 mirror-images \
     --release={{ _p_current_cp4d_cluster.cp4d_version }} \
     --components={%- if _p_current_cp4d_cluster.cp4d_version >= '4.7.0' %}ibm-cert-manager,ibm-licensing,{%- endif %}{{ _cartridges_to_mirror_list }} \
@@ -9,6 +6,5 @@ mirror-images \
 {% endif -%}    
     --target_registry={{ _target_registry_url }} \
     --arch={{ _openshift_processor_arch }} \
-    --preview={%- if _p_preview_script -%}true{%- else -%}false{%- endif %} \
     -v \
-    --case_download={%- if cpd_airgap | default(False) -%}false{%- else -%}true{%- endif %} 2>&1 | tee {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log 
+    --case_download={%- if cpd_airgap | default(False) -%}false{%- else -%}true{%- endif %}

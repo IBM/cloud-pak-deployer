@@ -3,47 +3,55 @@
   debug:
     msg: "{{ _dv_instance }}"
 
-- name: Check if the Data Virtualization instance is already running
-  uri:
-    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_addon_type }}&display_name={{ _dv_instance.name }}'
-    method: GET
-    headers:
-      Content-Type: application/json
-      Authorization: "Bearer {{ _cp4d_bearer_token }}"
-    return_content: yes
-    validate_certs: no
-    status_code: 200
-  register: _dv_instance_lookup_result
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision Data Virtualization instance {{ _dv_instance.name }}"
+    _p_activity_comment: "Use REST API to provision DV instance {{ _dv_instance.name }}"
 
-- name: Determine if Data Virtualization instance already exists
-  debug:
-    msg: "Data Virtualization instance {{ _dv_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
-  when: _dv_instance_lookup_result.json.total_count != 0
+- block:
+  - name: Check if the Data Virtualization instance is already running
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_dv_addon_type }}&display_name={{ _dv_instance.name }}'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _dv_instance_lookup_result
 
-- when: _dv_instance_lookup_result.json.total_count == 0
-  block:
-  - name: Obtain Data Virtualization version
-    shell: |
-      oc get dvservice -n {{ current_cp4d_cluster.project }} dv-service -o jsonpath='{.spec.version}'
-    register: _dv_version
-
-  - name: Create Data Virtualization configuration file
-    template:
-      src: dv_instance_40.json.j2
-      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dv_instance.name }}-dv_instance.json"
-
-  - name: Create Data Virtualization instance
-    shell: |
-      curl -v -k \
-        -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
-        -H 'Content-Type: application/json' \
-        -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
-        -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dv_instance.name }}-dv_instance.json
-    register: _provision_dv_result
-
-  - name: Show Data Virtualization instance provisioning result
+  - name: Determine if Data Virtualization instance already exists
     debug:
-      msg: "{{ _provision_dv_result }}"
+      msg: "Data Virtualization instance {{ _dv_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
+    when: _dv_instance_lookup_result.json.total_count != 0
 
-  - set_fact:
-      _provision_dv_result_json: "{{ _provision_dv_result.stdout | from_json }}"
+  - when: _dv_instance_lookup_result.json.total_count == 0
+    block:
+    - name: Obtain Data Virtualization version
+      shell: |
+        oc get dvservice -n {{ current_cp4d_cluster.project }} dv-service -o jsonpath='{.spec.version}'
+      register: _dv_version
+
+    - name: Create Data Virtualization configuration file
+      template:
+        src: dv_instance_40.json.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dv_instance.name }}-dv_instance.json"
+
+    - name: Create Data Virtualization instance
+      shell: |
+        curl -v -k \
+          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+          -H 'Content-Type: application/json' \
+          -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+          -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _dv_instance.name }}-dv_instance.json
+      register: _provision_dv_result
+
+    - name: Show Data Virtualization instance provisioning result
+      debug:
+        msg: "{{ _provision_dv_result }}"
+
+    - set_fact:
+        _provision_dv_result_json: "{{ _provision_dv_result.stdout | from_json }}"
+  when: not cpd_dry_run

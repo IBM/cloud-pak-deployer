@@ -1,19 +1,11 @@
 ---
 - name: Generate apply-entitlement command for entitlement {{ _p_entitlement }}
-  template:
-    src: apply-entitlement.j2
-    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-entitlement-{{ _p_entitlement }}.sh"
-    mode: u=rwx
+  set_fact: 
+    _apply_entitlement_command: "{{ lookup('template','apply-entitlement.j2') }}"
 
-- name: Run apply-entitlement command, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-entitlement.log
-  shell: |
-    {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-entitlement-{{ _p_entitlement }}.sh
-  register: _apply_entitlement_result
-  retries: 5
-  delay: 30
-  until: _apply_entitlement_result.rc == 0
+- include_role:
+    name: run-command
   vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    _p_command_description: Apply entitlement {{ _p_entitlement }}
+    _p_command: "{{ _apply_entitlement_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-entitlement.log"

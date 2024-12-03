@@ -3,10 +3,14 @@
   - name: Show cartridge installation options
     debug:
       msg: "{{ _current_cp4d_cartridge.installation_options | to_json }}"
-  - name: Set cartridge installation options for cartridge {{ _current_cp4d_cartridge.name }}
-    shell: |
-      oc patch {{ _current_cp4d_cartridge.CR_Kind }} {{ _current_cp4d_cartridge.CR_Name }}  \
-      -n {{ _p_current_cp4d_cluster.project }} \ 
-      --type merge \
-      -p '{"spec": {{ _current_cp4d_cartridge.installation_options | to_json }} }'
+
+  - name: Generate command to set cartridge options for {{ _current_cp4d_cartridge.CR_Kind }}
+    set_fact:
+      _set_cartridge_options: "{{ lookup('template', 'set-cartridge-options.j2') }}"
+
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Set cartridge options for {{ _current_cp4d_cartridge.CR_Kind }}
+      _p_command: "{{ _set_cartridge_options }}"
   when: (_current_cp4d_cartridge.installation_options | default({})) != {}

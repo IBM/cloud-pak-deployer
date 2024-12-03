@@ -16,26 +16,28 @@
           cloudpakfordata: true
           iamIntegration: {{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}
 
-- name: Generate apply-cr command to install Cloud Pak for Data platform
-  set_fact:
-    _apply_cr_command: "{{ lookup('template', 'apply-cr-cpd-platform.j2') }}" 
-  vars:
-    _p_preview_script: True
+- block:
+  - name: Generate apply-cr preview script to install Cloud Pak for Data platform
+    set_fact:
+      _apply_cr_command: "{{ lookup('template', 'apply-cr-cpd-platform.j2') }}" 
+    vars:
+      _p_preview_script: True
 
-- name: Show apply-cr command to install Cloud Pak for Data platform
-  debug:
-    var: _apply_cr_command
+  - name: Show apply-cr command to install Cloud Pak for Data platform
+    debug:
+      var: _apply_cr_command
 
-- name: Generate preview script to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
-  shell: |
-    {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
+  - name: Generate preview script to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
+    shell: |
+      {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
 
-- name: Copy script to {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh
-  copy:
-    src: "/tmp/work/preview.sh"
-    dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh"
-    remote_src: True
-    mode: u+rwx
+  - name: Copy script to {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh
+    copy:
+      src: "/tmp/work/preview.sh"
+      dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-apply-cr-platform.sh"
+      remote_src: True
+      mode: u+rwx
+  when: not cpd_dry_run
 
 - name: Generate apply-cr command to install Cloud Pak for Data platform
   set_fact:
@@ -43,9 +45,12 @@
   vars:
     _p_preview_script: False
 
-- name: Run apply-cr command to install Cloud Pak for Data platform, logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log
-  shell: |
-    {{ _apply_cr_command }} > {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log 2>&1
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Run apply-cr to install Cloud Pak for Data platform
+    _p_command: "{{ _apply_cr_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log"
 
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for ZenService to be completed
@@ -62,3 +67,4 @@
       {%- set result = ansible_callback_diy.result.output -%}
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run

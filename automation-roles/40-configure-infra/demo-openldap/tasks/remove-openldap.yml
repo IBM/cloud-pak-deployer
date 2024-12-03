@@ -1,9 +1,5 @@
-- name: Remove OpenShift project {{ _openldap_project_name }}
-  kubernetes.core.k8s:
-    state: absent
-    api_version: project.openshift.io/v1
-    kind: Project
-    name: "{{ _openldap_project_name }}"
-    wait: true
-    wait_sleep: 15
-    wait_timeout: 120
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Delete project {{ _openldap_project_name }}
+    _p_command: "oc delete ns {{ _openldap_project_name }} --ignore-not-found"

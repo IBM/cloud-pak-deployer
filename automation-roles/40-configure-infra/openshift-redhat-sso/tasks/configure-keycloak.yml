@@ -1,35 +1,35 @@
 ---
-- name: Generate yaml for Keycloak {{ _keycloak_name }} in namespace {{ _keycloak_name }}
-  template:
-    src: redhat-sso-keycloak.j2
-    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml"
-
-- name: Create Keycloak from YAML file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml
-
-- name: Wait until Keycloak {{ _keycloak_name }} is ready
-  shell: |
-    oc get keycloaks.keycloak.org -n {{ _keycloak_name }} {{ _keycloak_name }} \
-      -o jsonpath='{.status.ready}'
-  register: _keycloak_status
-  retries: 30
-  delay: 30
-  until: (_keycloak_status.stdout | lower) == "true"
+- include_role:
+    name: generate-apply-yaml
   vars:
-    ansible_callback_diy_runner_retry_msg: >-
-      {%- set result = ansible_callback_diy.result.output -%}
-      {%- set retries_left = result.retries - result.attempts -%}
-      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    _p_apply_yaml_description: Create Keycloak
+    _p_apply_yaml_template: redhat-sso-keycloak.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ _keycloak_name }}-keycloak.yaml"
 
-- name: Get Keycloak information
-  include_role:
-    name: get-keycloak-info
-  vars:
-    _p_keycloak_name: "{{ _keycloak_name }}"
+- block:
+  - name: Wait until Keycloak {{ _keycloak_name }} is ready
+    shell: |
+      oc get keycloaks.keycloak.org -n {{ _keycloak_name }} {{ _keycloak_name }} \
+        -o jsonpath='{.status.ready}'
+    register: _keycloak_status
+    retries: 30
+    delay: 30
+    until: (_keycloak_status.stdout | lower) == "true"
+    vars:
+      ansible_callback_diy_runner_retry_msg: >-
+        {%- set result = ansible_callback_diy.result.output -%}
+        {%- set retries_left = result.retries - result.attempts -%}
+        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-- name: Create Keycloak groups
-  include_tasks: create-keycloak-group.yml
-  loop: "{{ _current_openshift_redhat_sso.groups | default([]) }}"
-  loop_control:
+  - name: Get Keycloak information
+    include_role:
+      name: get-keycloak-info
+    vars:
+      _p_keycloak_name: "{{ _keycloak_name }}"
+
+  - name: Create Keycloak groups
+    include_tasks: create-keycloak-group.yml
+    loop: "{{ _current_openshift_redhat_sso.groups | default([]) }}"
+    loop_control:
     loop_var: _current_keycloak_group
+  when: not cpd_dry_run

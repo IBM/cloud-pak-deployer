@@ -27,14 +27,12 @@
     vars:
       _p_openshift_cluster: "{{ current_openshift_cluster }}"
 
-  - name: Generate MCG StorageCluster ocs-storagecluster into {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
-    template:
-      src: openshift-mcg-storagecluster.j2
-      dest: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
-
-  - name: Apply yaml for MCG StorageCluster ocs-storagecluster
-    shell: |
-      oc apply -f {{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml
+  - include_role:
+      name: generate-apply-yaml
+    vars:
+      _p_apply_yaml_description: Create MCG StorageCluster ocs-storagecluster
+      _p_apply_yaml_template: openshift-mcg-storagecluster.j2
+      _p_apply_yaml_output_file: "{{ status_dir }}/openshift/openshift-{{ _p_openshift_cluster.name }}-mcg-storagecluster.yaml"
 
   - name: Wait until MCG StorageCluster has status Ready
     shell: |
@@ -50,6 +48,7 @@
         {%- set result = ansible_callback_diy.result.output -%}
         {%- set retries_left = result.retries - result.attempts -%}
         Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+    when: not cpd_dry_run
 
   when: 
   - _p_openshift_cluster.mcg.install | default(False) | bool

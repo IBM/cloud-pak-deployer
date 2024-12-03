@@ -2,13 +2,9 @@
 - include_tasks: cp4d-setup-mcg-secrets.yml
   when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
   
-- block:
-  - name: Prepare yaml file for Watson Knowledge Studio CR
-    template:
-      src: watson-ks-cr-45.j2
-      dest: "{{ status_dir }}/cp4d/watson-ks-cr-45-{{ _p_current_cp4d_cluster.project }}.yml"
-
-  - name: Create Watson Knowledge Studio CR
-    shell: |
-      oc apply -f {{ status_dir }}/cp4d/watson-ks-cr-45-{{ _p_current_cp4d_cluster.project }}.yml
-  when: _p_current_cp4d_cluster.cp4d_version >= "4.5.0"
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create Watson Knowledge Studio CR
+    _p_apply_yaml_template: watson-ks-cr-45.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/watson-ks-cr-45-{{ _p_current_cp4d_cluster.project }}.yml"

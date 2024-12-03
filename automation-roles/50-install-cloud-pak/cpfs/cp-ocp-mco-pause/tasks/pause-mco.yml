@@ -31,12 +31,16 @@
   - not _mco_exists
   - _existing_ocp_infra_type != 'ibm-roks'
 
-- name: Pause the MachineConfig operator to disable rebooting of compute nodes
-  shell: |
-    oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Pause the MachineConfig operator to disable rebooting of compute nodes
+    _p_command: oc patch --type=merge --patch='{"spec":{"paused":true}}' machineconfigpool/worker
   when: 
   - _mco_exists
   - _existing_ocp_infra_type != 'aws-rosa'
 
 - include_tasks: non-mco-prepare-node-settings.yml
-  when: not _mco_exists
+  when: 
+  - not _mco_exists
+  - not cpd_dry_run
