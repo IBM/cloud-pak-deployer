@@ -8,43 +8,44 @@
   fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
   when: "cloud_platform not in implemented_cloud_platform_types"
 
-- block:
-    - name: Create downloads directory
-      file:
-        path: "{{ status_dir }}/downloads"
-        state: directory
+- name: Create downloads directory
+  file:
+    path: "{{ status_dir }}/downloads"
+    state: directory
 
-    - name: Check if ibmcloud download was already done
-      stat:
-        path: "{{ status_dir }}/downloads/ibmcloud-linux.sh"
-      register: _ibmcloud_download
+- name: Check if ibmcloud download was already done
+  stat:
+    path: "{{ status_dir }}/downloads/ibmcloud-linux.sh"
+  register: _ibmcloud_download
 
-    - name: Download ibmcloud tool
-      get_url:
-        url: "{{ _v_ibm_cloud_cli }}"
-        dest: "{{ status_dir }}/downloads/ibmcloud-linux.sh"
-        owner: root
-        mode: 0700
-      register: _download_result
-      until: _download_result is succeeded
-      retries: 5
-      delay: 30
-      when: not _ibmcloud_download.stat.exists
+- name: Download ibmcloud tool
+  get_url:
+    url: "{{ _v_ibm_cloud_cli }}"
+    dest: "{{ status_dir }}/downloads/ibmcloud-linux.sh"
+    owner: root
+    mode: 0700
+  register: _download_result
+  until: _download_result is succeeded
+  retries: 5
+  delay: 30
+  when:
+    - not _ibmcloud_download.stat.exists
+    - not (cpd_skip_cli_downloads | default(False) | bool)
 
-    - name: Check if ibmcloud command already exists
-      stat:
-        path: /usr/local/bin/ibmcloud
-      register: _ibmcloud_command
+- name: Check if ibmcloud command already exists
+  stat:
+    path: /usr/local/bin/ibmcloud
+  register: _ibmcloud_command
 
-    - name: Run ibmcloud installer
-      shell: |
-        {{ status_dir }}/downloads/ibmcloud-linux.sh && \
-        ibmcloud plugin install kubernetes-service -f && \
-        ibmcloud plugin install container-registry -f && \
-        ibmcloud plugin install vpc-infrastructure -f
-      when: not _ibmcloud_command.stat.exists
-
-  when: not (cpd_skip_cli_downloads | default(False) | bool)
+- name: Run ibmcloud installer
+  shell: |
+    {{ status_dir }}/downloads/ibmcloud-linux.sh && \
+    ibmcloud plugin install kubernetes-service -f && \
+    ibmcloud plugin install container-registry -f && \
+    ibmcloud plugin install vpc-infrastructure -f
+  when:
+    - not _ibmcloud_command.stat.exists
+    - _download_result is succeeded
 
 - name: Get ibmcloud CLI version
   shell: |

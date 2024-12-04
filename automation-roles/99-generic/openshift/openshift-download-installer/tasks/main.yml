@@ -31,12 +31,16 @@
       until: _download_result is succeeded
       retries: 5
       delay: 30
-      when: _openshift_installer_download.stat.exists == False
+      when:
+        - _openshift_installer_download.stat.exists == False
+        - not (cpd_skip_cli_downloads | default(False) | bool)
 
     - name: Unpack OpenShift installer
       unarchive:
         src: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
         dest: "/usr/local/bin"
+      when:
+        - _openshift_installer_download.stat.exists or _download_result is succeeded
+
   when:
     - cloud_platform in implemented_cloud_platform_types
-    - not (cpd_skip_cli_downloads | default(False) | bool)

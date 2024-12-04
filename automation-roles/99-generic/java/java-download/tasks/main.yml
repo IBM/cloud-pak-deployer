@@ -1,27 +1,30 @@
 ---
-  - block:
-    - name: Create downloads directory
-      file:
-        path: "{{ status_dir }}/downloads"
-        state: directory
+- name: Create downloads directory
+  file:
+    path: "{{ status_dir }}/downloads"
+    state: directory
 
-    - name: Check if java was already downloaded
-      stat:
-        path: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
-      register: _java_download
+- name: Check if java was already downloaded
+  stat:
+    path: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
+  register: _java_download
 
-    - name: Download OpenJDK-9 from {{ _v_get_java }}
-      get_url:
-        url: "{{ _v_get_java }}"
-        dest: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
-        owner: root
-        mode: 0644
-        force: True
-      register: _download_java_result
-      until: _download_java_result is succeeded
-      retries: 5
-      delay: 10
+- name: Download OpenJDK-9 from {{ _v_get_java }}
+  get_url:
+    url: "{{ _v_get_java }}"
+    dest: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
+    owner: root
+    mode: 0644
+    force: True
+  register: _download_java_result
+  until: _download_java_result is succeeded
+  retries: 5
+  delay: 10
+  when:
+    - not _java_download.stat.exists
+    - not (cpd_skip_cli_downloads | default(False) | bool)
 
+- block:
     - name: Unpack OpenJDK 9 package
       unarchive:
         src: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
@@ -38,8 +41,7 @@
         src: /usr/local/bin/jdk-9/bin/keytool
         dest: /usr/local/bin/keytool
         state: link
-
-  when: not (cpd_skip_cli_downloads | default(False) | bool)
+  when: _java_download.stat.exists or _download_java_result is succeeded
 
 - name: Get java version
   shell: |

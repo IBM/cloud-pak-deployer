@@ -1,0 +1,50 @@
+---
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - cloud_platform is defined
+      - _p_ocp_version is defined
+
+- name: Validate cloud_platform is implemented
+  fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+  when: "cloud_platform not in implemented_cloud_platform_types"
+
+- name: Create downloads directory
+  file:
+    path: "{{ status_dir }}/downloads"
+    state: directory
+
+- name: Retrieve x.y version for download
+  set_fact:
+    _ocp_download_version: "{{ _p_ocp_version | regex_search('([0-9].[0-9]+)','\\1') | first }}"
+
+- name: Check if OpenShift client was already downloaded
+  stat:
+    path: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _ocp_download_version }}"
+  register: _ocp_client_download
+
+- name: Download OpenShift client "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_client_package }}"
+  get_url:
+    url: "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_client_package }}"
+    dest: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _ocp_download_version }}"
+    owner: root
+    mode: 0644
+  register: _download_result
+  until: _download_result is succeeded
+  retries: 5
+  delay: 30
+  when: _ocp_client_download.stat.exists == False
+
+- name: Unpack OpenShift client from {{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _ocp_download_version }}
+  unarchive:
+    src: "{{ status_dir }}/downloads/{{ _openshift_client_package }}-{{ _ocp_download_version }}"
+    dest: "/usr/local/bin"
+
+- name: Get OpenShift client version
+  shell: |
+    oc version --client
+  register: _ocp_client_version
+
+- name: Show OpenShift client version
+  debug:
+    var: _ocp_client_version.stdout
