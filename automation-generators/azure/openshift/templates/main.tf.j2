@@ -14,8 +14,10 @@ controlPlane:
       type: {{ generator.attributes.control_plane_flavour }}
       zones:
       - "1"
+{% if generator.attributes.infrastructure.multi_zone | default(False) %}
       - "2"
       - "3"
+{% endif %}
   replicas: 3
 
 compute: 
@@ -26,8 +28,10 @@ compute:
       type: {{ generator.attributes.compute_flavour }}
       zones:
       - "1"
+{% if generator.attributes.infrastructure.multi_zone | default(False) %}
       - "2"
       - "3"
+{% endif %}
       osDisk:
         diskSizeGB: {{ generator.attributes.compute_disk_size_gb }}
         diskType: Premium_LRS
@@ -50,12 +54,25 @@ networking:
 
 platform:
   azure:
+{% if not generator.attributes.infrastructure.private_only | default(False) %}
     baseDomainResourceGroupName: {{ generator.attributes.domain_resource_group }}
+{% endif %}    
     region: {{ all_config.global_config.azure_location }}
     resourceGroupName: {{ _azure_config.resource_group.name }}
     outboundType: Loadbalancer
     cloudName: AzurePublicCloud
 
+{% if generator.attributes.infrastructure.private_only | default(False) %}
+    networkResourceGroupName: {{ _azure_config.vnet.network_resource_group_name }}
+    virtualNetwork: {{ _azure_config.vnet.name }}
+    controlPlaneSubnet: {{ _azure_config.control_plane.subnet.name }}
+    computeSubnet: {{ _azure_config.control_plane.subnet.name }}
+{% endif %}
+
 fips: false
 pullSecret: '{{ lookup("file","/tmp/ocp_pullsecret.json") }}'
 sshKey: '{{ _ocp_ssh_pub_key }}'
+
+{% if generator.attributes.infrastructure.private_only | default(False) %}
+publish: Internal
+{% endif %}
