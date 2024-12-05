@@ -50,6 +50,41 @@
 - name: Setup FNCM Subscription for ECM Content event
   ansible.builtin.include_tasks: bawaut-fncm-subscription.yml
 
+# Without enabling this on domain level, Case History and BAW Timeline doesn't work.
+- name: Prepare java file for Case History Enablement
+  ansible.builtin.template:
+    src: bawaut/EnableCaseHistory.java.j2
+    dest: "{{ cp4ba_output_directory }}/EnableCaseHistory.java"
+    mode: u+rwx
+
+- name: Get CPE pods
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app={{ cp4ba_cr_meta_name }}-cpe-deploy"
+  register: pods
+
+- name: Get CPE pod name
+  ansible.builtin.set_fact:
+    cpe_pod_name: "{{ pods.resources[0].metadata.name }}"
+
+- name: Copy java file to CPE pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ cpe_pod_name }}"
+    remote_path: "/tmp/EnableCaseHistory.java"
+    local_path: "{{ cp4ba_output_directory }}/EnableCaseHistory.java"
+    no_preserve: true
+    state: to_pod
+
+- name: Execute EnableCaseHistory.java
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ cpe_pod_name }}"
+    command: java -classpath /opt/ibm/wlp/usr/servers/defaultServer/jaceLib/Jace.jar /tmp/EnableCaseHistory.java
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage

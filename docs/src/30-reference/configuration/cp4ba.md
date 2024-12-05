@@ -156,6 +156,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/latest?topic=events-using-event-handler-filenet-content-manager.
+- BAW - Enable Case History on FNCM Domain level as a prerequisite for Timeline Visualizer. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=widgets-timeline-visualizer
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.
