@@ -58,28 +58,6 @@
     common_namespace_name: "{{ rpa_project_name }}"
     common_label_selector_stub: ibm-mq
 
-
-# TODO hotfix to enable RPA to progress last seen CP4BA 24.0.1 + RPA 2.0.0 START
-- name: Scale deployment down to zero replicas
-  kubernetes.core.k8s_scale:
-    api_version: apps/v1
-    kind: Deployment
-    name: ibm-cp4a-operator
-    namespace: "{{ rpa_project_name }}"
-    replicas: 0
-
-- name: Patch ZenService
-  kubernetes.core.k8s_json_patch:
-    api_version: zen.cpd.ibm.com/v1
-    kind: ZenService
-    name: iaf-zen-cpdservice
-    namespace: "{{ rpa_project_name }}"
-    patch:
-      - op: replace
-        path: /spec/zenCustomRoute/route_reencrypt
-        value: 'true'
-# TODO hotfix to enable RPA to progress last seen CP4BA 24.0.1 + RPA 2.0.0 END
-
 - name: Prepare yaml file for the Operator Subscription
   ansible.builtin.template:
     src: subscription.yaml.j2
@@ -398,14 +376,3 @@
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
       "
-
-
-# TODO hotfix to enable RPA to progress last seen CP4BA 24.0.1 + RPA 2.0.0 START
-- name: Scale deployment up to one replicas
-  kubernetes.core.k8s_scale:
-    api_version: apps/v1
-    kind: Deployment
-    name: ibm-cp4a-operator
-    namespace: "{{ rpa_project_name }}"
-    replicas: 1
-# TODO hotfix to enable RPA to progress last seen CP4BA 24.0.1 + RPA 2.0.0 END

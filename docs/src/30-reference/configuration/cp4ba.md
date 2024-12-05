@@ -155,7 +155,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), BAW (BAWTOS) and ADP (DEVOS1) objectstores.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
-- BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/latest?topic=events-using-event-handler-filenet-content-manager.
+- BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/latest?topic=events-using-event-handler-filenet-content-manager
 - BAW - Enable Case History on FNCM Domain level as a prerequisite for Timeline Visualizer. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=widgets-timeline-visualizer
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
