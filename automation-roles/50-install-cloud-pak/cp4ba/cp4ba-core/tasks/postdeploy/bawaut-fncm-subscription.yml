@@ -1,0 +1,319 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    common_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Search for existing baw-server.properties document
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "{
+          documents(
+            repositoryIdentifier:\"BAWTOS\"
+            from:\"Document d WITH INCLUDESUBCLASSES\"
+            where:\"d.[DocumentTitle] = 'baw-server.properties'\"
+            orderBy:\"DocumentTitle\"
+            pageSize:20
+          )
+          {
+            documents {
+              id
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: baw_properties_graphql_response
+  failed_when: "'errors' in baw_properties_graphql_response.content"
+
+- name: Setup BAW FNCM integration
+  when: baw_properties_graphql_response.json.data.documents.documents | length == 0
+  block:
+    - name: Copy needed jar files
+      kubernetes.core.k8s_cp:
+        namespace: "{{ cp4ba_project_name }}"
+        pod: "{{ cp4ba_cr_meta_name }}-bastudio-deployment-0"
+        remote_path: "/opt/ibm/wlp/ibmProcessServer/lib/BPM/{{ item }}"
+        local_path: "{{ cp4ba_output_directory }}/{{ item.split('/')[-1] }}"
+        no_preserve: true
+        state: from_pod
+      with_items:
+        - EventHandlers/ECM/FileNet/filenet-bpm-event-handler-51.jar
+        - Lombardi/lib/commons-codec.jar
+        - Lombardi/lib/commons-httpclient.jar
+
+    - name: Prepare yaml file for baw-server.properties
+      ansible.builtin.template:
+        src: bawaut/baw-server.properties.j2
+        dest: "{{ cp4ba_output_directory }}/baw-server.properties"
+        mode: u+rwx
+
+    - name: Add baw-server.properties
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: form-multipart
+        body:
+          graphql: |
+            {"query":"mutation ($contvar:String){
+              createDocument(
+                repositoryIdentifier:\"BAWTOS\"
+                documentProperties: {
+                  name: \"baw-server.properties\"
+                  contentElements:{
+                    replace: [{type: CONTENT_TRANSFER contentType: \"text/plain\" subContentTransfer: {content:$contvar} }]
+                  }
+                } checkinAction: {}
+              ) { id name } }", "variables":{"contvar":null} }"
+          contvar:
+            content: "{{ lookup('file', cp4ba_output_directory + '/baw-server.properties') }}"
+            filename: baw-server.properties
+            mime_type: text/plain
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+
+    - name: Set baw-server.properties ID
+      ansible.builtin.set_fact:
+        properties_id: "{{ graphql_response.json.data.createDocument.id }}"
+
+    - name: Create CodeModules folder
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          query: |
+            mutation CreateCodeModulesFolder {createFolder(repositoryIdentifier:
+            "BAWTOS", folderProperties: {name: "CodeModules", parent: {identifier: "/"} }) {id} }
+        validate_certs: false
+        status_code:
+          - 200
+      register: folder_response
+      failed_when: (folder_response.json | json_query('errors') | default([], true) | length > 1) and
+        (folder_response.json | json_query('errors[0].extensions.serverErrorMessage')
+          is not match('A uniqueness requirement has been violated. The value for property FolderName of class Folder is not unique.'))
+
+    - name: Add Code Module
+      ansible.builtin.command: |
+        curl -ks --location 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql' \
+        --header 'Authorization: Bearer {{ zen_token }}' \
+        --form graphql='{
+        "query":"
+          mutation ($contvar1:String $contvar2:String $contvar3:String) {
+            createDocument(
+              repositoryIdentifier:\"BAWTOS\"
+              fileInFolderIdentifier: \"/CodeModules\"
+              classIdentifier:\"CodeModule\"
+              documentProperties: {
+                name: \"BPM Event Action Code Module\"
+                contentElements:{
+                  replace: [
+                    {type: CONTENT_TRANSFER contentType: \"application/java-archive\" subContentTransfer: {content:$contvar1} },
+                    {type: CONTENT_TRANSFER contentType: \"application/java-archive\" subContentTransfer: {content:$contvar2} },
+                    {type: CONTENT_TRANSFER contentType: \"application/java-archive\" subContentTransfer: {content:$contvar3} },
+                  ]
+                }
+              } checkinAction: {}
+            ) { id name }
+          }
+        ",
+        "variables":{"contvar":null} }' \
+        --form contvar1=@{{ cp4ba_output_directory }}/filenet-bpm-event-handler-51.jar \
+        --form contvar2=@{{ cp4ba_output_directory }}/commons-codec.jar \
+        --form contvar3=@{{ cp4ba_output_directory }}/commons-httpclient.jar
+      register: curl_output
+      failed_when: curl_output.rc != 0 or (curl_output.stdout | from_json | default({}) == {})
+      changed_when: false
+      # noqa: command-instead-of-module
+
+    - name: Parse JSON response
+      ansible.builtin.set_fact:
+        response_json: "{{ curl_output.stdout | from_json }}"
+
+    - name: Set Code Module ID
+      ansible.builtin.set_fact:
+        code_module_id: "{{ response_json.data.createDocument.id }}"
+
+    - name: Create Event Action
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "mutation {
+              changeObject(
+                repositoryIdentifier:\"BAWTOS\"
+                properties:[
+                  {DisplayName:\"BPM Event Action\"}
+                  {DescriptiveText:\"BPM Event Action\"}
+                  {ProgID:\"com.ibm.bpm.integration.filenet.BPMEventHandler\"}
+                  {IsEnabled: true}
+                ]
+                objectProperties:[
+                  {
+                    identifier:\"CodeModule\"
+                    objectReferenceValue:{
+                      identifier:\"{{ code_module_id }}\"
+                    }
+                  }
+                ]
+                actions:[
+                  {
+                    type:CREATE
+                    subCreateAction:{
+                      classId:\"EventAction\"
+                    }
+                  }
+                ]
+              ) {
+                className
+                properties(includes:[\"Id\"]) {
+                  id
+                  value
+                }
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+
+    - name: Set Event Action ID
+      ansible.builtin.set_fact:
+        event_action_id: "{{ graphql_response.json.data.changeObject.properties[0].value }}"
+
+    - name: Get Document Class Description
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "{
+              classDescription (repositoryIdentifier: \"BAWTOS\" identifier: \"Document\") {
+                id
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+
+    - name: Set Document Class Description ID
+      ansible.builtin.set_fact:
+        document_class_id: "{{ graphql_response.json.data.classDescription.id }}"
+
+    - name: Debug
+      ansible.builtin.debug:
+        msg: "{{ graphql_response }}"
+
+    - name: Create Subscription
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "mutation {
+              changeObject(
+                repositoryIdentifier: \"BAWTOS\"
+                properties: [
+                  {DisplayName: \"BPM Subscription\"},
+                  {IncludeSubclassesRequested: true},
+                  {IsEnabled: true},
+                  {IsSynchronous: false},
+                  {UserString: \"{{ properties_id }}\"}
+                ]
+                objectProperties: [
+                  {
+                    identifier: \"EventAction\", objectReferenceValue: {
+                      identifier: \"{{ event_action_id }}\"
+                    }
+                  },
+                  {
+                    identifier: \"SubscriptionTarget\", objectReferenceValue: {
+                      classIdentifier: \"ClassDefinition\", identifier: \"{{ document_class_id }}\"
+                    }
+                  },
+                  {
+                    identifier: \"SubscribedEvents\", dependentObjectListValue: {
+                      replace: [
+                        {objectProperties: [
+                          {identifier: \"EventClass\", objectReferenceValue: {identifier: \"CreationEvent\"}}
+                        ]}
+                      ]
+                    }
+                  }
+                ]
+                actions: [{type: CREATE, subCreateAction: {classId: \"ClassSubscription\"}}]
+              ) {
+                className
+                properties(includes: [\"Id\"]) {
+                  id
+                  value
+                }
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
