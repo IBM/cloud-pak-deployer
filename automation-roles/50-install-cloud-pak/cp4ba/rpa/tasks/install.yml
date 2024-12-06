@@ -33,7 +33,7 @@
   until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
   with_items:
     - ibm-robotic-process-automation-catalog
-    - ibm-cloud-databases-redis-operator-catalog
+    - ibm-redis-cp-operator-catalog
     - ibmmq-operator-catalogsource
 
 - name: Prepare yaml file for the MQ Operator Subscription
@@ -229,6 +229,7 @@
     --data-urlencode 'grant_type=password'
   register: rpa_token_response
   changed_when: false
+  # noqa: command-instead-of-module
 
 - name: Set rpa_token
   ansible.builtin.set_fact:
