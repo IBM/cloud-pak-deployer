@@ -9,6 +9,7 @@ There are 5 main steps to run the deployer for Azure:
 3. [Obtain entitlement keys and secrets](#3-acquire-entitlement-keys-and-secrets)
 4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
 5. [Run the deployer](#5-run-the-deployer)
+6. [Post-install configuration (Add GPU nodes)](#6-post-install-configuration)
 
 ## Topology
 
@@ -93,9 +94,9 @@ Login as the service principal:
 az login --service-principal -u a4c39ae9-f9d1-4038-b4a4-ab011e769111 -p xyz-xyz --tenant 869930ac-17ee-4dda-bbad-7354c3e7629c8
 ```
 
-### Create the resource group
+### Create the resource group (if not already done)
 
-First the resource group must be created; this resource group must match the one configured in your OpenShift yaml config file.
+First the resource group must be created; this resource group must match the one configured in your OpenShift yaml config file. Create the resource group if this was not already done by the Azure administrator.
 ``` { .bash .copy }
 az group create \
   --name ${AZURE_RESOURCE_GROUP} \
@@ -257,5 +258,8 @@ included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
-### Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
+## 6. Post-install configuration
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run):
+
+* Update the Cloud Pak for Data administrator password
+* Add GPU node(s) to your OpenShift cluster
