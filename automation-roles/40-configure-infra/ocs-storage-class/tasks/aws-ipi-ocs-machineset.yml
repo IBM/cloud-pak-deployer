@@ -1,0 +1,36 @@
+---
+- name: Retrieve infrastructure ID
+  shell: |
+    oc get -o jsonpath='{.status.infrastructureName}{"\n"}' infrastructure cluster
+  register: _get_infrastructure_id
+
+- set_fact:
+    _infrastructure_id: "{{ _get_infrastructure_id.stdout }}"
+
+- name: Retrieve image details
+  shell: |
+    oc get machineset -n openshift-machine-api -o jsonpath='{range .items[0]}{.spec.template.spec.providerSpec.value.ami.id}{end}'
+  register: _get_image_details
+
+- set_fact:
+    _ami_id: "{{ _get_image_details.stdout }}"
+
+- debug:
+    var: _ami_id
+
+- debug:
+    var: _aws_zones
+
+- name: Generate MachineSet file {{ status_dir }}/openshift/aws-ipi-ocs-machineset.yaml
+  template:
+    src: "aws-ipi-ocs-machineset.j2"
+    dest: "{{ status_dir }}/openshift/aws-ipi-ocs-machineset.yaml"
+
+- name: Create or update machine set
+  shell: oc apply -f {{ status_dir }}/openshift/aws-ipi-ocs-machineset.yaml
+
+- name: Wait for machine sets
+  include_tasks: wait-for-machine-set.yml
+  with_items: "{{ _aws_zones }}"
+  loop_control:
+    loop_var: _aws_zone
