@@ -106,6 +106,13 @@ az role assignment create \
 ### Create a service principal with resource group permissions
 If the service principal must not have permissions at the subscription-level, you can grant permissions for the resource group(s) the service principal needs to create resources in.
 
+First you have to make sure that the resource group exists:
+``` { .bash .copy }
+az group create \
+  --name ${AZURE_RESOURCE_GROUP} \
+  --location ${AZURE_LOCATION}
+```
+
 ``` { .bash .copy }
 az ad sp create-for-rbac \
   --role Contributor \
@@ -135,7 +142,7 @@ az role assignment create \
 There are scenarios where the permissions must be set for additional resource groups, for example when the Azure virtual network is in a different resource group than the OpenShift cluster. This is common in private network installations.
 
 ```
-export AZURE_NETWORK_RESOURCE_GROUP=pluto-01-rg
+export AZURE_NETWORK_RESOURCE_GROUP=pluto-01-network-rg
 ```
 
 Set the permissions of the service principal to allow updates to the network resource group and allow creation of the OpenShift cluster.
