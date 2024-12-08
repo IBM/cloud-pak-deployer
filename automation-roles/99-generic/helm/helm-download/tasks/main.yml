@@ -10,29 +10,30 @@
   register: _helm_download
 
 - block:
+    - name: Download get_helm.sh script that installs latest version of helm
+      get_url:
+        url: "{{ _v_get_helm }}"
+        dest: "{{ status_dir }}/downloads/get_helm.sh"
+        owner: root
+        mode: 0744
+      register: _download_get_helm
+      until: _download_get_helm is succeeded
+      retries: 5
+      delay: 5
 
-  - name: Download get_helm.sh script that installs latest version of helm
-    get_url:
-      url: "{{ _v_get_helm }}"
-      dest: "{{ status_dir }}/downloads/get_helm.sh"
-      owner: root
-      mode: 0744
-    register: _download_get_helm
-    until: _download_get_helm is succeeded
-    retries: 5
-    delay: 5
+    - name: Run {{ status_dir }}/downloads/get_helm.sh
+      shell: |
+        {{ status_dir }}/downloads/get_helm.sh
 
-  - name: Run {{ status_dir }}/downloads/get_helm.sh
-    shell: |
-      {{ status_dir }}/downloads/get_helm.sh
+    - name: Copy helm executable to {{ status_dir/dowloads }}
+      copy:
+        src: "/usr/local/bin/helm"
+        dest: "{{ status_dir }}/downloads/helm"
+        remote_src: True
 
-  - name: Copy helm executable to {{ status_dir/dowloads }}
-    copy:
-      src: "/usr/local/bin/helm"
-      dest: "{{ status_dir }}/downloads/helm"
-      remote_src: True
-
-  when: not _helm_download.stat.exists
+  when:
+    - not _helm_download.stat.exists
+    - not (cpd_skip_cli_downloads | default(False) | bool)
 
 - name: Copy helm executable to /usr/local/bin
   copy:
@@ -40,6 +41,7 @@
     dest: "/usr/local/bin/helm"
     mode: 0744
     remote_src: True
+  when: _helm_download.stat.exists or _download_get_helm is succeeded
 
 - name: Get helm version
   shell: |

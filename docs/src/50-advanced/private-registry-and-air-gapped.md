@@ -287,4 +287,4 @@ If you do not set these values, the deployer assumes that the default images are
 | Property             | Description                                            | Example                        |
 | -------------------- | ------------------------------------------------------ | ------------------------------ |
 | cpd_oc_debug_image   | Container image to be used for the `oc debug` command. | `registry.redhat.io/rhel8/support-tools:latest` |
-| cpd_ds_image         | Container image to be used for the DaemonSets that configure Kubelet, etc. | `registry.access.redhat.com/ubi8/ubi:latest` |
+| cpd_ds_image         | Container image to be used for the DaemonSets that configure Kubelet, etc. | `icr.io/cpopen/cpd/olm-utils-v3:latest` |

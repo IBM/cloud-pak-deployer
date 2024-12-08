@@ -28,7 +28,9 @@
   until: _download_result is succeeded
   retries: 5
   delay: 30
-  when: not _ibmcloud_download.stat.exists
+  when:
+    - not _ibmcloud_download.stat.exists
+    - not (cpd_skip_cli_downloads | default(False) | bool)
 
 - name: Check if ibmcloud command already exists
   stat:
@@ -41,8 +43,10 @@
     ibmcloud plugin install kubernetes-service -f && \
     ibmcloud plugin install container-registry -f && \
     ibmcloud plugin install vpc-infrastructure -f
-  when: not _ibmcloud_command.stat.exists
-  
+  when:
+    - not _ibmcloud_command.stat.exists
+    - _download_result is succeeded
+
 - name: Get ibmcloud CLI version
   shell: |
     ibmcloud version
