@@ -14,21 +14,18 @@ azure:
     location: "{{ azure_location }}"
   vnet:
     name: "{{ env_id }}-vnet"
-    network_resource_group_name: "{{ env_id }}-network-rg"
-    address_space: 10.0.0.0/22
   control_plane:
     subnet:
       name: "{{ env_id }}-control-plane-subnet"
-      address_prefixes: 10.0.0.0/23
   compute:
     subnet:
       name: "{{ env_id }}-compute-subnet"
-      address_prefixes: 10.0.2.0/23
 
 openshift:
 - name: "{{ env_id }}"
   azure_name: "{{ env_id }}-infra"
   domain_name: "{{ env_id }}.eu"
+  domain_resource_group: "{{ env_id }}-domain-rg" 
   ocp_version: 4.16.26
   control_plane_flavour: Standard_D8s_v3
   compute_flavour: Standard_D16s_v3
@@ -39,6 +36,7 @@ openshift:
     multi_zone: False
     private_only: True
   network:
+    machine_cidr: "10.0.0.0/16"
     pod_cidr: "10.128.0.0/14"
     service_cidr: "172.30.0.0/16"
   gpu:
