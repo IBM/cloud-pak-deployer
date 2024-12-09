@@ -54,19 +54,19 @@ networking:
 
 platform:
   azure:
-{% if not generator.attributes.infrastructure.private_only | default(False) %}
-    baseDomainResourceGroupName: {{ generator.attributes.domain_resource_group }}
-{% endif %}    
     region: {{ all_config.global_config.azure_location }}
     resourceGroupName: {{ _azure_config.resource_group.name }}
-    outboundType: Loadbalancer
     cloudName: AzurePublicCloud
 
-{% if generator.attributes.infrastructure.private_only | default(False) %}
+{% if not generator.attributes.infrastructure.private_only | default(False) %}
+    baseDomainResourceGroupName: {{ generator.attributes.domain_resource_group }}
+    outboundType: Loadbalancer
+{% else %}    
     networkResourceGroupName: {{ _azure_config.vnet.network_resource_group_name }}
     virtualNetwork: {{ _azure_config.vnet.name }}
     controlPlaneSubnet: {{ _azure_config.control_plane.subnet.name }}
     computeSubnet: {{ _azure_config.compute.subnet.name }}
+    outboundType: UserDefinedRouting
 {% endif %}
 
 fips: false
