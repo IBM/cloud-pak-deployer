@@ -51,8 +51,8 @@ RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-iso
 
 # cli utilities
 RUN mkdir -p /Data/downloads && \ 
-    wget -O /Data/downloads/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \
-    tar -xvzf /Data/downloads/cpd-cli.tar.gz -C /usr/local/bin --strip-components=1 && \
+    wget -q -O /Data/downloads/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \
+    tar -xzf /Data/downloads/cpd-cli.tar.gz -C /usr/local/bin --strip-components=1 && \
     rm -rf /Data/downloads
 
 ENV USER_UID=1001
