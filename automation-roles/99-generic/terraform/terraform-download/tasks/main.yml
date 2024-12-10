@@ -17,16 +17,12 @@
       -O {{ status_dir }}/downloads/terraform_linux_amd64.zip
   args:
     warn: False
-  register: _terraform_download_result
-  when:
-    - not _terraform_download.stat.exists
-    - not (cpd_skip_cli_downloads | default(False) | bool)
+  when: not _terraform_download.stat.exists
 
 - name: Unpack Terraform from {{ status_dir }}/downloads/terraform_linux_amd64.zip
   unarchive:
     src: "{{ status_dir }}/downloads/terraform_linux_amd64.zip"
     dest: "/usr/local/bin"
-  when: _terraform_download.stat.exists or _terraform_download_result is succeeded
 
 - name: Get Terraform version
   shell: |

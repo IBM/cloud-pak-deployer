@@ -20,28 +20,23 @@
   until: _download_java_result is succeeded
   retries: 5
   delay: 10
-  when:
-    - not _java_download.stat.exists
-    - not (cpd_skip_cli_downloads | default(False) | bool)
 
-- block:
-    - name: Unpack OpenJDK 9 package
-      unarchive:
-        src: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
-        dest: "/usr/local/bin"
+- name: Unpack OpenJDK 9 package
+  unarchive:
+    src: "{{ status_dir }}/downloads/openjdk-9_linux-x64_bin.tar.gz"
+    dest: "/usr/local/bin"
 
-    - name: Link java executable
-      file:
-        src: /usr/local/bin/jdk-9/bin/java
-        dest: /usr/local/bin/java
-        state: link
+- name: Link java executable
+  file:
+    src: /usr/local/bin/jdk-9/bin/java
+    dest: /usr/local/bin/java
+    state: link
 
-    - name: Link keytool executable
-      file:
-        src: /usr/local/bin/jdk-9/bin/keytool
-        dest: /usr/local/bin/keytool
-        state: link
-  when: _java_download.stat.exists or _download_java_result is succeeded
+- name: Link keytool executable
+  file:
+    src: /usr/local/bin/jdk-9/bin/keytool
+    dest: /usr/local/bin/keytool
+    state: link
 
 - name: Get java version
   shell: |
