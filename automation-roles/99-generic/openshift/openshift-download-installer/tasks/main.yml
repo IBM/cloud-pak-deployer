@@ -7,40 +7,34 @@
 
 - name: Download OpenShift installer for certain cloud platforms only
   block:
-    - name: Create downloads directory
-      file:
-        path: "{{ status_dir }}/downloads"
-        state: directory
+  - name: Create downloads directory
+    file:
+      path: "{{ status_dir }}/downloads"
+      state: directory
 
-    - name: Retrieve x.y version for download
-      set_fact:
-        _ocp_download_version: "{{ _p_ocp_version | regex_search('([0-9].[0-9]+)','\\1') | first }}"
+  - name: Retrieve x.y version for download
+    set_fact:
+      _ocp_download_version: "{{ _p_ocp_version | regex_search('([0-9].[0-9]+)','\\1') | first }}"
 
-    - name: Check if OpenShift installer version {{ _ocp_download_version }} was already downloaded
-      stat:
-        path: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
-      register: _openshift_installer_download
+  - name: Check if OpenShift installer version {{ _ocp_download_version }} was already downloaded
+    stat:
+      path: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
+    register: _openshift_installer_download
 
-    - name: Download OpenShift installer "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_installer_package }}"
-      get_url:
-        url: "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_installer_package }}"
-        dest: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
-        owner: root
-        mode: 0644
-      register: _download_result
-      until: _download_result is succeeded
-      retries: 5
-      delay: 30
-      when:
-        - _openshift_installer_download.stat.exists == False
-        - not (cpd_skip_cli_downloads | default(False) | bool)
+  - name: Download OpenShift installer "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_installer_package }}"
+    get_url:
+      url: "{{ _openshift_clients_base_url }}{{ _ocp_download_version }}/{{ _openshift_installer_package }}"
+      dest: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
+      owner: root
+      mode: 0644
+    register: _download_result
+    until: _download_result is succeeded
+    retries: 5
+    delay: 30
+    when: _openshift_installer_download.stat.exists == False
 
-    - name: Unpack OpenShift installer
-      unarchive:
-        src: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
-        dest: "/usr/local/bin"
-      when:
-        - _openshift_installer_download.stat.exists or _download_result is succeeded
-
-  when:
-    - cloud_platform in implemented_cloud_platform_types
+  - name: Unpack OpenShift installer
+    unarchive:
+      src: "{{ status_dir }}/downloads/{{ _openshift_installer_package }}-{{ _ocp_download_version }}"
+      dest: "/usr/local/bin"
+  when: cloud_platform in implemented_cloud_platform_types

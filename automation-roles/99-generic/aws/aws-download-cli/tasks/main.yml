@@ -1,44 +1,41 @@
 ---
-- block:
-    - name: Validate mandatory variables are defined
-      assert:
-        that:
-          - cloud_platform is defined
+  - name: Validate mandatory variables are defined
+    assert:
+      that:
+        - cloud_platform is defined
 
-    - name: Validate cloud_platform is implemented
-      fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
-      when: "cloud_platform not in implemented_cloud_platform_types"
+  - name: Validate cloud_platform is implemented
+    fail: msg="cloud_platform {{ cloud_platform }} is not implemented, current implemented cloud platforms are {{ implemented_cloud_platform_types }} "
+    when: "cloud_platform not in implemented_cloud_platform_types"
 
-    - name: Create downloads directory
-      file:
-        path: "{{ status_dir }}/downloads"
-        state: directory
+  - name: Create downloads directory
+    file:
+      path: "{{ status_dir }}/downloads"
+      state: directory
 
-    - name: Check if AWS client was already downloaded
-      stat:
-        path: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
-      register: _aws_cli_download
+  - name: Check if AWS client was already downloaded
+    stat:
+      path: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
+    register: _aws_cli_download
 
-    - name: Download AWS CLI "{{ _aws_cli_url }}"
-      get_url:
-        url: "{{ _aws_cli_url }}"
-        dest: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
-        owner: root
-        mode: 0644
-      register: _download_result
-      until: _download_result is succeeded
-      retries: 5
-      delay: 30
-      when: not _aws_cli_download.stat.exists
+  - name: Download AWS CLI "{{ _aws_cli_url }}"
+    get_url:
+      url: "{{ _aws_cli_url }}"
+      dest: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
+      owner: root
+      mode: 0644
+    register: _download_result
+    until: _download_result is succeeded
+    retries: 5
+    delay: 30
+    when: not _aws_cli_download.stat.exists
 
-    - name: Unpack aws-cli client installer
-      unarchive:
-        src: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
-        dest: "{{ status_dir }}/downloads"
-        remote_src: True
+  - name: Unpack aws-cli client installer
+    unarchive:
+      src: "{{ status_dir }}/downloads/{{ _aws_cli_package }}"
+      dest: "{{ status_dir }}/downloads"
+      remote_src: True
 
-    - name: Install aws client
-      shell: |
-        {{ status_dir }}/downloads/aws/install
-
-  when: not (cpd_skip_cli_downloads | default(False) | bool)
+  - name: Install aws client
+    shell: |
+      {{ status_dir }}/downloads/aws/install

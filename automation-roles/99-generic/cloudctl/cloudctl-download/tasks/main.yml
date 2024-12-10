@@ -1,40 +1,37 @@
 ---
+- name: Create downloads directory
+  file:
+    path: "{{ status_dir }}/downloads"
+    state: directory
+
+- set_fact:
+    _cloudctl_arch: "amd64"
+- set_fact:
+    _cloudctl_arch: "{{ ARCH }}"
+  when: ARCH != 'x86_64'
+
+- name: Check if cloudctl was already downloaded
+  stat:
+    path: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
+  register: _cloudctl_download
+
 - block:
-    - name: Create downloads directory
-      file:
-        path: "{{ status_dir }}/downloads"
-        state: directory
+    - include_tasks: cloudctl-download.yml
+      when: (_github_ibm_pat | default('')) == ''
 
-    - set_fact:
-        _cloudctl_arch: "amd64"
-    - set_fact:
-        _cloudctl_arch: "{{ ARCH }}"
-      when: ARCH != 'x86_64'
+    - include_tasks: cloudctl-download-github-pat.yml
+      when: (_github_ibm_pat | default('')) != ''
 
-    - name: Check if cloudctl was already downloaded
-      stat:
-        path: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
-      register: _cloudctl_download
+  when: not _cloudctl_download.stat.exists
 
-    - block:
-        - include_tasks: cloudctl-download.yml
-          when: (_github_ibm_pat | default('')) == ''
+- name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz
+  unarchive:
+    src: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
+    dest: "/usr/local/bin"
 
-        - include_tasks: cloudctl-download-github-pat.yml
-          when: (_github_ibm_pat | default('')) != ''
-
-      when: not _cloudctl_download.stat.exists
-
-    - name: Unpack cloudctl from {{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz
-      unarchive:
-        src: "{{ status_dir }}/downloads/cloudctl-linux-{{ _cloudctl_arch }}.tar.gz"
-        dest: "/usr/local/bin"
-
-    - name: Rename to cloudctl
-      shell: |
-        mv -f /usr/local/bin/cloudctl-linux-{{ _cloudctl_arch }} /usr/local/bin/cloudctl
-
-  when: not (cpd_skip_cli_downloads | default(False) | bool)
+- name: Rename to cloudctl
+  shell: |
+    mv -f /usr/local/bin/cloudctl-linux-{{ _cloudctl_arch }} /usr/local/bin/cloudctl
 
 - name: Get cloudctl version
   shell: |
