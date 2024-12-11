@@ -17,6 +17,13 @@
   - cpd_dry_run | bool
   - cloud_platform != 'existing-ocp'
 
+- name: "Fail if --skip-cli-downloads specified for other cloud platform than existing-ocp"
+  fail:
+    msg: "--skip-cli-downloads can only be specified for existing-ocp"
+  when:
+  - cpd_skip_cli_downloads | bool
+  - cloud_platform != 'existing-ocp'
+
 - include_tasks: ibmcloud-validate-variables.yml
   when:
     - cloud_platform == 'ibm-cloud'
