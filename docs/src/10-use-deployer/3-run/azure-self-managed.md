@@ -9,13 +9,21 @@ There are 5 main steps to run the deployer for Azure:
 3. [Obtain entitlement keys and secrets](#3-acquire-entitlement-keys-and-secrets)
 4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
 5. [Run the deployer](#5-run-the-deployer)
+6. [Post-install configuration (Add GPU nodes)](#6-post-install-configuration)
 
 ## Topology
 
 A typical setup of the OpenShift cluster on Azure is pictured below:
 ![Self-managed configuration](images/azure-aro.png)
 
-When deploying self-managed OpenShift on Azure, you must configure the domain name by setting the `openshift.domain_name`, which must be public domain with a registrar. OpenShift will create a public DNS zone with additional entries to reach the OpenShift API and the applications (Cloud Paks). If you don't have a domain yet, you buy one from Azure: https://learn.microsoft.com/en-us/azure/app-service/manage-custom-dns-buy-domain.
+### Public self-managed OpenShift
+When deploying a public self-managed OpenShift on Azure, the `openshift.domain_name` domain name must be registered with a registrar. OpenShift will create a public DNS zone with additional entries to reach the OpenShift API and the applications (Cloud Paks). If you don't have a domain yet, you buy one from Azure: https://learn.microsoft.com/en-us/azure/app-service/manage-custom-dns-buy-domain.
+
+### Private self-managed OpenShift
+When deploying a self-managed OpenShift in a private network on Azure, the `openshift.domain_name` references the private DNS zone that is created within the resource group that also holds the OpenShift control plane VMs, compute VMs and many other resources. For a private deployment, the virtual network (vnet) must exist already in a different resource group and it must have subnets for the control plane and compute plane. 
+
+!!! info
+To ensure that the deployer can do a lookup of the OpenShift API server, it is easiest to run it on a server in the same existing vnet. If the OpenShift installer cannot contact the API server during the installation, it will fail and so will the deployer.
 
 ## 1. Configure deployer
 
@@ -70,6 +78,23 @@ export AZURE_SP=pluto-01-sp
 - `AZURE_LOCATION`: The Azure location of the resource group, for example `useast` or `westeurope`.
 - `AZURE_SP`: Azure service principal that is used to create the resources on Azure. You will get the service principal from the Azure administrator.
 
+### Create or check existence of the virtual network for private OpenShift installations
+
+If you install OpenShift with private endpoints, the vnet must already exist in a different resource gruop from the `$AZURE_RESOURCE_GROUP`. For convenience, this resource group is referred to as the `AZURE_NETWORK_RESOURCE_GROUP`. Plese check the following:
+
+- The vnet exists and is in the same `AZURE_LOCATION` as the OpenShift cluster
+- The vnet has 2 subnets, one for the control plane VMs and one for the compute VMs
+- The service principal has `Contributor` and `User Access Administrator` permissions on the `AZURE_NETWORK_RESOURCE_GROUP` that holds the vnet. Check the instructions to [create the role assignments](./azure-service-principal.md#set-permissions-for-additional-resource-groups)
+
+### Create the resource group (if not already done)
+
+First the resource group must be created; this resource group must match the one configured in your OpenShift yaml config file. Create the resource group if this was not already done by the Azure administrator.
+``` { .bash .copy }
+az group create \
+  --name ${AZURE_RESOURCE_GROUP} \
+  --location ${AZURE_LOCATION}
+```
+
 ### Store Service Principal credentials
 
 You must run the OpenShift installation using an Azure Service Principal with sufficient permissions. The Azure account administrator will share the SP credentials as a JSON file. If you have subscription-level access you can also create the Service Principal yourself. See steps in [Create Azure service principal](./azure-service-principal.md).
@@ -85,22 +110,6 @@ Example output in credentials file:
 ```
 
 Store this file as `/tmp/${AZURE_SP}-credentials.json`.
-
-### Login as Service Principal
-
-Login as the service principal:
-``` { .bash .copy }
-az login --service-principal -u a4c39ae9-f9d1-4038-b4a4-ab011e769111 -p xyz-xyz --tenant 869930ac-17ee-4dda-bbad-7354c3e7629c8
-```
-
-### Create the resource group
-
-First the resource group must be created; this resource group must match the one configured in your OpenShift yaml config file.
-``` { .bash .copy }
-az group create \
-  --name ${AZURE_RESOURCE_GROUP} \
-  --location ${AZURE_LOCATION}
-```
 
 ## 3. Acquire entitlement keys and secrets
 
@@ -257,5 +266,8 @@ included: /automation_script/automation-roles/99-generic/vault/vault-get-secret/
 cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
-### Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
+## 6. Post-install configuration
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run):
+
+* Update the Cloud Pak for Data administrator password
+* Add GPU node(s) to your OpenShift cluster
