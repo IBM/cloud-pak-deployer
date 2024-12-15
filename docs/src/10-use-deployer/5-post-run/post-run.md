@@ -38,3 +38,6 @@ watsonx.ai requires GPUs to run and tune the foundation models. Deployer current
 
 ### GPU nodes on AWS
 For adding GPU nodes on AWS infrastructure, refer to [Add GPUs to self-managed OpenShift on AWS](./aws-self-managed-add-gpu.md).
+
+### GPU nodes on Azure
+For adding GPU nodes on Azure infrastructure, refer to [Add GPUs to self-managed OpenShift on Azure](./azure-self-managed-add-gpu.md).

@@ -130,6 +130,7 @@ O8t91ek+e5PEsVkR/RLIM1M1YkiSV4irxW/uFPucXHZDVH8azfnJjf6j6cXWt/ra
 Now that you have the signature, you can configure Git to sign commits:
 ``` { .bash .copy }
 git config --global user.signingkey A83C67A6D7F71756
+git config --global commit.gpgsign true
 ```
 
 Next, add your GPG key to your Git user.
@@ -143,7 +144,6 @@ Next, add your GPG key to your Git user.
 * Enter a meaningful title for your GPG key, for example: **FK Development Server**
 * Paste the public GPG key
 * Confirm by pushing the **Add GPG key** button
-
 
 Commits done on your development server will now be signed with your user name and e-mail address and will show as **Verified** when listing the commits.
 

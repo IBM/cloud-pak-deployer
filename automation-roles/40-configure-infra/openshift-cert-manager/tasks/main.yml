@@ -1,0 +1,9 @@
+---
+- name: Check if OpenShift certificate manager has already been installed
+  shell: |
+    oc get certmanagers.operator.openshift.io cluster -o yaml
+  failed_when: False
+  register: _get_cert_manager
+
+- include_tasks: install-cert-manager.yml
+  when: _get_cert_manager.rc != 0

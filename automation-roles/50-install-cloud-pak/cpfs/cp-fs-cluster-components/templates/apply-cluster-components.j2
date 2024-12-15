@@ -5,5 +5,7 @@ apply-cluster-components \
 {% if _p_migrate_topology | default(False) -%}
     --migrate_from_cs_ns={{ foundational_services_project }} \
 {% endif -%}   
-    --cert_manager_ns={{ _cert_manager_project }} \
+{% if _install_ibm_cert_manager | default(True) -%}
+    --cert_manager_ns=ibm-cert-manager \
+{% endif -%}
     --licensing_ns={{ license_service_project | default('ibm-licensing') }} 2>&1 | tee {{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log 2>&1
