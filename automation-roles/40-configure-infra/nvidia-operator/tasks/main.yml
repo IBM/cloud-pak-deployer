@@ -5,6 +5,20 @@
     _p_command_description: Create NVIDIA operator namespace nvidia-gpu-operator
     _p_command: "oc create ns nvidia-gpu-operator || true"
 
+- name: Check if NVIDIA GPU OperatorGroup already exists, to avoid creating another one
+  shell: |
+    oc get operatorgroups.operators.coreos.com -n nvidia-gpu-operator \
+      --no-headers | wc -l
+  register: _nvidia_og
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create NVIDIA operator group
+    _p_apply_yaml_template: nvidia-operator-group.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nvidia-operator-group.yaml"
+  when: _nvidia_og.stdout == "0"
+
 - name: Retrieve default channel for the NVIDIA GPU manifest
   shell:
     oc get packagemanifest gpu-operator-certified -o jsonpath='{.status.defaultChannel}'
