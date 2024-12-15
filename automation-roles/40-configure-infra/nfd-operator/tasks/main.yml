@@ -5,6 +5,20 @@
     _p_command_description: Create Node Feature Discovery operator namespace
     _p_command: "oc create ns openshift-nfd || true"
 
+- name: Check if OpenShift NFD OperatorGroup already exists, to avoid creating another one
+  shell: |
+    oc get operatorgroups.operators.coreos.com -n openshift-nfd \
+      --no-headers | wc -l
+  register: _nfd_og
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create NFD operator Group
+    _p_apply_yaml_template: nfd-operator-group.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster.name }}-nfd-operator-group.yaml"
+  when: _nfd_og.stdout == "0"
+
 - name: Retrieve default channel for Node Feature Discovery manifest
   shell:
     oc get packagemanifest nfd -o jsonpath='{.status.defaultChannel}'
