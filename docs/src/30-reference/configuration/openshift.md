@@ -12,7 +12,8 @@ For OpenShift, there are 5 flavours:
 - [OpenShift on IBM Cloud](#openshift-on-ibm-cloud-roks)
 - [OpenShift on AWS - ROSA](#openshift-on-aws---rosa)
 - [OpenShift on AWS - self-managed](#openshift-on-aws---self-managed)
-- [OpenShift on Microsoft Azure (ARO)](#openshift-on-microsoft-azure-aro)
+- [OpenShift on Microsoft Azure - ARO](#openshift-on-microsoft-azure---aro)
+- [OpenShift on Microsoft Azure - self-managed](#openshift-on-microsoft-azure---self-managed)
 - [OpenShift on vSphere](#openshift-on-vsphere)
 
 Every OpenShift cluster definition of a few mandatory properties that control which version of OpenShift is installed, the number and flavour of control plane and compute nodes and the underlying infrastructure, dependent on the cloud platform on which it is provisioned. Storage is a mandatory element for every `openshift` definition. For a list of supported storage types per cloud platform, refer to [Supported storage types](#supported-storage-types).
@@ -329,6 +330,7 @@ openshift:
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                              | Yes                            |                       |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                                   | Yes                            |                       |
 | storage_type              | Type of storage class to create in the OpenShift cluster                                                                            | Yes                            | nfs or ocs            |
+| dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
 | nfs_server_name           | Name of the NFS server within the VPC                                                                                               | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                               | No                             | >= 4.6                |
 | ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                         | Yes if `storage_type` is `ocs` |                       |
@@ -436,6 +438,7 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                            | Yes                            |                  |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                 | Yes                            |                  |
 | storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | ocs, aws-elastic |
+| dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
 | ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                       | Yes if `storage_type` is `ocs` |                  |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `ocs` |                  |
@@ -544,7 +547,7 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 | ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
-### OpenShift on Microsoft Azure (ARO)
+### OpenShift on Microsoft Azure - ARO
 
 ```
 openshift:
@@ -554,7 +557,12 @@ openshift:
   ocp_version: 4.10.54
   cloud_native_toolkit: False
   oadp: False
+  infrastructure:
+    type: aro
+    multi_zone: True
+    private_only: False
   network:
+    machine_cidr: "10.0.0.0/16"
     pod_cidr: "10.128.0.0/14"
     service_cidr: "172.30.0.0/16"
   gpu:
@@ -583,7 +591,11 @@ openshift:
 | ocp_version          | The OpenShift version. If you want to install `4.10`, specify `"4.10"`                    | Yes       | >= 4.6                              |
 | cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                            | No        | True, False (default)               |
 | oadp                 | Must the OpenShift Advanced Data Protection operator be installed                         | No        | True, False (default)               |
+| infrastructure.type  | Type of OpenShift cluster                                                                 | Yes       | aro, self-managed |
+| infrastructure.multi_zone | Specify if the cluster is provisioned in a single zone or 3 zones                    | Yes       | True, False |
+| infrastructure.private_only | Specify if the cluster is provisioned in a private virtual network, not allowed for ARO | Yes       | True, False |
 | network              | Cluster network attributes                                                                | Yes       |                                     |
+| network.machine_cidr | CIDR of provisioned machines                                                              | Yes       | Must be a minimum of /18 or larger. |
 | network.pod_cidr     | CIDR of pod network                                                                       | Yes       | Must be a minimum of /18 or larger. |
 | network.service_cidr | CIDR of service network                                                                   | Yes       | Must be a minimum of /18 or larger. |
 | openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)    | No        |                                     |
@@ -606,7 +618,85 @@ openshift:
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                                       | Yes                            |                   |
 | storage_name              | Name of the storage                                                                                                                          | Yes                            |                   |
 | storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `ocs` or `nfs`    |
+| dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
 | ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
 | ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `ocs` |                   |
 | ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `ocs` |                   |
 | ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select `managed-premium`                                            | Yes if `storage_type` is `ocs` | `managed-premium` |
+
+### OpenShift on Microsoft Azure - Self-managed
+
+```
+openshift:
+- name: sample
+  azure_name: sample
+  domain_name: example.com
+  ocp_version: 4.10.54
+  cloud_native_toolkit: False
+  oadp: False
+  infrastructure:
+    type: self-managed
+    multi_zone: False
+    private_only: False
+  network:
+    machine_cidr: "10.0.0.0/16"
+    pod_cidr: "10.128.0.0/14"
+    service_cidr: "172.30.0.0/16"
+  gpu:
+    install: auto
+  openshift_ai:
+    install: auto
+    channel: auto
+  openshift_storage:
+  - storage_name: ocs-storage
+    storage_type: ocs
+    ocs_storage_label: ocs
+    ocs_storage_size_gb: 512
+    ocs_dynamic_storage_class: managed-premium
+```
+
+#### Property explanation for OpenShift cluster on Microsoft Azure - Self-managed
+
+!!! warning
+    You are not allowed to specify the OCP version of the ARO cluster. The latest current version is provisioned automatically instead no matter what value is specified in the "ocp_version" parameter. The "ocp_version" parameter is mandatory for compatibility with other layers of the provisioning, such as the OpenShift client. For instance, the value is used by the process which downloads and installs the `oc` client. Please, specify the value according to what OCP version will be provisioned.
+
+| Property             | Description                                                                               | Mandatory | Allowed values                      |
+|----------------------|-------------------------------------------------------------------------------------------|-----------|-------------------------------------|
+| name                 | Name of the OpenShift cluster                                                             | Yes       |                                     |
+| azure_name           | Name of the `azure` element in the configuration                                          | Yes       |                                     |
+| domain_name          | Domain mame of the cluster, if you want to override the name generated by Azure           | No        |                                     |
+| ocp_version          | The OpenShift version. If you want to install `4.10`, specify `"4.10"`                    | Yes       | >= 4.6                              |
+| cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                            | No        | True, False (default)               |
+| oadp                 | Must the OpenShift Advanced Data Protection operator be installed                         | No        | True, False (default)               |
+| infrastructure.type  | Type of OpenShift cluster                                                                 | Yes       | aro, self-managed |
+| infrastructure.multi_zone | Specify if the cluster is provisioned in a single zone or 3 zones                    | Yes       | True, False |
+| infrastructure.private_only | Specify if the cluster is provisioned in a private virtual network                 | Yes       | True, False |
+| network              | Cluster network attributes                                                                | Yes       |                                     |
+| network.machine_cidr | CIDR of provisioned machines                                                              | Yes       | Must be a minimum of /18 or larger. |
+| network.pod_cidr     | CIDR of pod network                                                                       | Yes       | Must be a minimum of /18 or larger. |
+| network.service_cidr | CIDR of service network                                                                   | Yes       | Must be a minimum of /18 or larger. |
+| openshift_logging[]  | Logging attributes for OpenShift cluster, see [OpenShift logging](logging-auditing.md)    | No        |                                     |
+| upstream_dns[]       | Upstream DNS servers(s), see [Upstream DNS Servers](./dns.md)                             | No        |                                     |
+| gpu                                           | Control Node Feature Discovery and NVIDIA GPU operators                                                                                                   | No        |                          |
+| gpu.install                                   | Must Node Feature Discovery and NVIDIA GPU operators be installed (Once installed, False does not uninstall). `auto` will install the operators if needed by any of the Cloud Pak/watsonx  | Yes  | auto, True, False |
+| openshift_ai                                  | Control installation of OpenShift AI                                          | No        |                          |
+| openshift_ai.install                          | Must OpenShift AI be installed (Once installed, False does not uninstall). `auto` will install OpenShift AI if needed by any of the Cloud Pak/watsonx components | Yes | auto, True, False       |
+| openshift_ai.channel                          | Which oeprator channel must be installed                                                                                                                  | No        | auto (default), stable, ... |
+| mcg                                           | Multicloud Object Gateway properties                                                                                                                      | No        |                          |
+| mcg.install                                   | Must Multicloud Object Gateway be installed (Once installed, False does not uninstall)                                                                    | Yes       | True, False              |
+| mcg.storage_type                              | Type of storage supporting the object Noobaa object storage                                                                                               | Yes       | storage-class            |
+| mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
+| openshift_storage[]  | List of storage definitions to be defined on OpenShift, see below for further explanation | Yes       |                                     |
+
+##### openshift_storage[] - OpenShift storage definitions
+
+| Property                  | Description                                                                                                                                  | Mandatory                      | Allowed values    |
+|---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-------------------|
+| openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                                       | Yes                            |                   |
+| storage_name              | Name of the storage                                                                                                                          | Yes                            |                   |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `ocs` or `nfs`    |
+| dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
+| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
+| ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `ocs` |                   |
+| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `ocs` |                   |
+| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select 

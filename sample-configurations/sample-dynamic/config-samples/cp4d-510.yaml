@@ -2,14 +2,35 @@
 cp4d:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 5.0.1
-  cp4d_entitlement: cpd-enterprise           # or: cpd-standard, watsonx-ai, watsonx-data, watsonx-gov-model-management, watsonx-gov-risk-compliance
+  cp4d_version: 5.1.0
+  cp4d_entitlement: 
+  - cpd-enterprise
+  # - cpd-standard
+  # - cognos-analytics
+  # - data-product-hub
+  # - datastage
+  # - ikc-premium
+  # - ikc-standard
+  # - openpages
+  # - planning-analytics
+  # - product-master
+  # - speech-to-text
+  # - text-to-speech
+  # - watson-assistant
+  # - watson-discovery
+  # - watsonx-ai
+  # - watsonx-code-assistant-ansible
+  # - watsonx-code-assistant-z
+  # - watsonx-data
+  # - watsonx-gov-mm
+  # - watsonx-gov-rc
+  # - watsonx-orchestrate
   cp4d_production_license: True
   accept_licenses: False
-  sequential_install: True
   db2u_limited_privileges: False
   use_fs_iam: True
   operators_project: cpd-operators
+  state: installed
   cartridges:
   - name: cp-foundation
     license_service:
@@ -52,6 +73,11 @@ cp4d:
 
   - name: datagate
     description: Db2 Data Gate
+    state: removed
+
+  - name: datalineage
+    description: IBM MANTA Data Lineage
+    size: small
     state: removed
 
   - name: dataproduct
@@ -277,7 +303,7 @@ cp4d:
       state: removed
     - model_id: meta-llama-llama-2-13b-chat
       state: removed
-    - model_id: meta-llama-llama-3-8b-instruct
+    - model_id: meta-llama-llama3-8b-instruct
       state: removed
     - model_id: meta-llama-llama-2-70b-chat
       state: removed
@@ -313,8 +339,8 @@ cp4d:
     description: watsonx.orchestrate
     app_connect:
       app_connect_project: ibm-app-connect
-      app_connect_case_version: 11.5.0
-      app_connect_channel_version: v11.5
+      app_connect_case_version: 12.2.1
+      app_connect_channel_version: v12.2
     state: removed
 
   - name: wca-ansible
@@ -332,24 +358,24 @@ cp4d:
     size: small
     state: removed
     installation_options:
-      enableKnowledgeGraph: False
-      enableDataQuality: False
+      enableKnowledgeGraph: True
+      enableDataQuality: True
 
   - name: ikc_premium
     description: IBM Knowledge Catalog - Premium edition
     size: small
     state: removed
     installation_options:
-      enableKnowledgeGraph: False
-      enableDataQuality: False
+      enableKnowledgeGraph: True
+      enableDataQuality: True
 
   - name: ikc_standard
     description: IBM Knowledge Catalog - Standard edition
     size: small
     state: removed
     installation_options:
-      enableKnowledgeGraph: False
-      enableDataQuality: False
+      enableKnowledgeGraph: True
+      enableDataQuality: True
 
   - name: wml
     description: Watson Machine Learning

@@ -29,21 +29,32 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     #Check Must Fields
     #Level 1
     g('name').isRequired()
-    g('azure_name').isRequired()    
+    g('domain_name').isRequired()
+    g('azure_name').expandWith('azure[*]',remoteIdentifier='name')
     g('control_plane_flavour').isRequired()
     g('compute_flavour').isRequired()
     g('compute_disk_size_gb').isRequired()
     g('compute_nodes').isRequired()
     g('ocp_version').isRequired()
-    g('network').isRequired()
-    g('infrastructure').isRequired()
     g('openshift_storage').isRequired()
 
-    #Level 2
+    g('network.machine_cidr').isRequired()
+    g('network.pod_cidr').isRequired()
+    g('network.service_cidr').isRequired()
+    g('infrastructure.type').isRequired().mustBeOneOf(['self-managed','aro'])
+    g('infrastructure.multi_zone').isRequired()
+    g('infrastructure.private_only').isRequired()
+
+
+    # Get azure configuration
     if len(g.getErrors()) == 0:
-        g('network.pod_cidr').isRequired()
-        g('network.service_cidr').isRequired()
-        g('infrastructure.type').isRequired()
+        ge=g.getExpandedAttributes()
+        azure={}
+        for a in fullConfig['azure']:
+            if a['name']==ge['azure_name']:
+                azure=a
+        if azure=={}:
+            g.appendError(msg='azure resource {} not found'.format(ge['azure_name']))
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:
@@ -52,6 +63,15 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         # If type is self-managed, the domain name is required
         if ge['infrastructure']['type'] == 'self-managed':
             g('domain_name').isRequired()
+
+        if type(ge['infrastructure']['multi_zone']) != bool:
+                g.appendError(msg='Attribute multi_zone must be either true or false.')
+        if type(ge['infrastructure']['private_only']) != bool:
+                g.appendError(msg='Attribute private_only must be either true or false.')
+
+        # Domain resource group is mandatory for public OpenShift
+        if ge['infrastructure']['private_only'] == False:
+                g('domain_resource_group').isRequired()
 
         # OpenShift version must be 4.6 or higher
         if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
@@ -109,6 +129,29 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     g.appendError(msg='ocs_dynamic_storage_class must be specified when storage_type is ocs')
                 if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
                     g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+
+    # Check azure configuration
+    if len(g.getErrors()) == 0:
+        ga = GeneratorPreProcessor(azure,fullConfig,moduleVariables)
+
+        ga('name').isRequired()
+        ga('sp_name').isRequired()
+        ga('resource_group.name').isRequired()
+        ga('resource_group.location').isRequired()    
+
+        if ge['infrastructure']['type'] == 'aro':
+            ga('vnet.name').isRequired()
+            ga('vnet.address_space').isRequired()
+            ga('control_plane.subnet.name').isRequired()
+            ga('control_plane.subnet.address_prefixes').isRequired()
+            ga('compute.subnet.name').isRequired()
+            ga('compute.subnet.address_prefixes').isRequired()
+
+        if ge['infrastructure']['private_only'] == True:
+            ga('vnet.name').isRequired()
+            ga('vnet.network_resource_group_name').isRequired()
+            ga('control_plane.subnet.name').isRequired()
+            ga('compute.subnet.name').isRequired()
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),

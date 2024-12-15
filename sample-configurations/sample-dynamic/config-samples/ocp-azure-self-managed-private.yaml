@@ -12,13 +12,21 @@ azure:
   resource_group:
     name: "{{ env_id }}-rg"
     location: "{{ azure_location }}"
+  vnet:
+    name: "{{ env_id }}-vnet"
+    network_resource_group_name: "{{ env_id }}-network-rg"
+  control_plane:
+    subnet:
+      name: "{{ env_id }}-control-plane-subnet"
+  compute:
+    subnet:
+      name: "{{ env_id }}-compute-subnet"
 
 openshift:
 - name: "{{ env_id }}"
   azure_name: "{{ env_id }}-infra"
   domain_name: "{{ env_id }}.eu"
-  domain_resource_group: "{{ env_id }}-domain-rg"
-  ocp_version: 4.15.22
+  ocp_version: 4.16.26
   control_plane_flavour: Standard_D8s_v3
   compute_flavour: Standard_D16s_v3
   compute_disk_size_gb: 300
@@ -26,7 +34,7 @@ openshift:
   infrastructure:
     type: self-managed
     multi_zone: False
-    private_only: False
+    private_only: True
   network:
     machine_cidr: "10.0.0.0/16"
     pod_cidr: "10.128.0.0/14"
@@ -47,3 +55,4 @@ openshift:
     ocs_storage_label: ocs
     ocs_storage_size_gb: 512
     ocs_dynamic_storage_class: managed-csi
+
