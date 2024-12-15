@@ -50,10 +50,9 @@ RUN cd /opt/ansible && \
 RUN pip3 install "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
 # cli utilities
-RUN mkdir -p /Data/downloads && \ 
-    wget -q -O /Data/downloads/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \
-    tar -xzf /Data/downloads/cpd-cli.tar.gz -C /usr/local/bin --strip-components=1 && \
-    rm -rf /Data/downloads
+RUN wget -q -O /tmp/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \
+    tar -xzf /tmp/cpd-cli.tar.gz -C /usr/local/bin --strip-components=1 && \
+    rm -f /tmp/cpd-cli.tar.gz
 
 ENV USER_UID=1001
 

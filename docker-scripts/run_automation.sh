@@ -81,7 +81,6 @@ env|environment)
   run_cmd+=" --extra-vars cpd_check_only=${CHECK_ONLY}"
   run_cmd+=" --extra-vars cpd_dry_run=${CPD_DRY_RUN}"
   run_cmd+=" --extra-vars cpd_airgap=${CPD_AIRGAP}"
-  run_cmd+=" --extra-vars cpd_skip_cli_downloads=${CPD_SKIP_CLI_DOWNLOADS}"
   run_cmd+=" --extra-vars cpd_skip_mirror=${CPD_SKIP_MIRROR}"
   run_cmd+=" --extra-vars cpd_skip_cp_install=${CPD_SKIP_CP_INSTALL}"
   run_cmd+=" --extra-vars cpd_skip_portable_registry=${CPD_SKIP_PORTABLE_REGISTRY}"
