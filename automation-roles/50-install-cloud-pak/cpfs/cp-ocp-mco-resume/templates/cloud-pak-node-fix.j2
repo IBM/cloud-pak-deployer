@@ -16,6 +16,20 @@ log() {
   printf "[${LOG_TIME}] ${1}\n" | tee -a /tmp/cloud-pak-node-fix/cloud-pak-node-fix.log
 }
 
+merge_pull_secret() {
+  INPUT_FILE=$1
+  if [ -e ${INPUT_FILE} ];then
+    if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
+      jq -s '.[0] * .[1]' ${INPUT_FILE} ${NODE_FIX_DIR}/secrets/newdockerconfigjson > ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson
+      if ! cmp -s ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson ${INPUT_FILE};then
+        cp ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson ${INPUT_FILE}
+        NODE_UPDATED=1
+        log "INFO: Pull secret changed in ${INPUT_FILE}"
+      fi
+    fi
+  fi
+}
+
 mkdir -p ${NODE_FIX_DIR}/backup
 
 # If kubelet is active, backup the current config file, in case we need to restore them if the services don't start
@@ -27,27 +41,13 @@ if systemctl is-active crio -q;then
 fi
 
 # Set global pull secret for RHEL nodes
-if [ -e /.docker/config.json ];then
-  if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
-    if ! cmp -s ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json;then
-      cp ${NODE_FIX_DIR}/secrets/newdockerconfigjson /.docker/config.json
-      NODE_UPDATED=1
-      log "INFO: Pull secret changed in /.docker/config.json"
-    fi
-  fi
-fi
+merge_pull_secret /.docker/config.json
 
 # Set global pull secret for CoreOS nodes
-if [ -e /root/.docker/config.json ];then
-  if [ -e ${NODE_FIX_DIR}/secrets/newdockerconfigjson ];then
-    jq -s '.[0] * .[1]' /root/.docker/config.json ${NODE_FIX_DIR}/secrets/newdockerconfigjson > ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson
-    if ! cmp -s ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson /root/.docker/config.json;then
-      cp ${NODE_FIX_DIR}/secrets/mergeddockerconfigjson /root/.docker/config.json
-      NODE_UPDATED=1
-      log "INFO: Pull secret changed in /root/.docker/config.json"
-    fi
-  fi
-fi
+merge_pull_secret /root/.docker/config.json
+
+# Set global pull secret for CoreOS nodes version 4.15+
+merge_pull_secret /var/data/kubelet/config.json
 
 # Prepare for ImageContentSourcePolicy changes
 rm -f /tmp/registries.conf
