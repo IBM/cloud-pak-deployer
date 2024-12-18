@@ -1,4 +1,5 @@
 # CP4BA catalog https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cp-automation
+# CP4BA Git Repo https://github.com/icp4a/cert-kubernetes
 # IBM CS Flink Operator Catalog https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cs-flink
 # IBM CS Elastic Operator Catalog https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cs-elastic
 # IBM Cloud Foundational Services https://github.com/IBM/cloud-pak/tree/master/repo/case/ibm-cp-common-services
@@ -16,7 +17,7 @@
 # disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
 #
 ###############################################################################
-# CP4BA 24.0.0-IF003 catalog
+# CP4BA 24.0.1 catalog
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
@@ -26,7 +27,7 @@ spec:
   displayName: ibm-cp4a-operator
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-cp-automation-catalog@sha256:2d00d01669ba5aba7471dcb85128b014577956b13630fc8da4e2ad3cf0c84db4
+  image: icr.io/cpopen/ibm-cp-automation-catalog@sha256:80e5f2c149a622f74af25bfb9e9d3411ccaf136b914982d6e348b1c8b89bec5a
   updateStrategy:
     registryPoll:
       interval: 45m
@@ -64,11 +65,11 @@ spec:
       interval: 45m
   priority: 100
 ---
-# IBM Cloud Foundational Services 4.6.6
+# IBM Cloud Foundational Services 4.9.0
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: ibm-cs-install-catalog-v4-6-6
+  name: "ibm-cs-install-catalog-{{ cpfs_cs_version }}"
   namespace: "{{ cp4ba_project_name }}"
   annotations:
     bedrock_catalogsource_priority: '1'
@@ -76,34 +77,34 @@ spec:
   displayName: IBM CS Install Operators
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-cs-install-catalog@sha256:f97e7cb0d476edfc16a3e983596512fd6166506cc9cfc5c833581ff23affd1b0
+  image: icr.io/cpopen/ibm-cs-install-catalog@sha256:6dec61b65e1414fadce180ce9e9aeba82dd2e393085cb3cadc1a6e271cefe50a
   updateStrategy:
     registryPoll:
       interval: 45m
   priority: 100    
 ---
-# IBM Business Teams Service version 3.34.0
+# IBM Business Teams Service version 3.35.1
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: bts-operator-v3-34-0
+  name: "bts-operator-{{ cpfs_bts_version }}"
   namespace: "{{ cp4ba_project_name }}"
   annotations:
     bedrock_catalogsource_priority: '1'
 spec:
-  displayName: BTS Operator
+  displayName: BTS Operator-3.35.1
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-bts-operator-catalog@sha256:437a91f9e0cc224c32fb3d574dbe56efe5d1211f2338746e8a7e192034beae8f
+  image: icr.io/cpopen/ibm-bts-operator-catalog@sha256:c803538b0ff68d76f5c85a21fed3c3a680acbf12c6150d39f2c3072e89de04b1
   updateStrategy:
     registryPoll:
       interval: 45m
 ---
-# IBM CS IM Operator Catalog 4.5.5
+# IBM CS IM Operator Catalog 4.8.0
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: ibm-iam-operator-catalog
+  name: "ibm-iam-operator-catalog-{{ cpfs_iam_version }}"
   namespace: "{{ cp4ba_project_name }}"
   annotations:
     bedrock_catalogsource_priority: '1'
@@ -111,17 +112,17 @@ spec:
   displayName: IBM IAM Operator Catalog
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-iam-operator-catalog@sha256:205906d04301c85fe006143e2fc7134cd019a7fa83d3dd94fd816b929712605e
+  image: icr.io/cpopen/ibm-iam-operator-catalog@sha256:28685c8ebc72df046e883ca37c379ea11b4e6e14c9dd7c8da2c91b3cf1b57816
   updateStrategy:
     registryPoll:
       interval: 45m
   priority: 100
 ---
-# IBM Zen Operator Catalog 5.1.8
+# IBM Zen Operator Catalog 6.0.4+20240916.202115.96
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
-  name: ibm-zen-operator-catalog
+  name: "ibm-zen-operator-catalog-{{ cpfs_zen_version }}"
   namespace: "{{ cp4ba_project_name }}"
   annotations:
     bedrock_catalogsource_priority: '1'
@@ -129,7 +130,7 @@ spec:
   displayName: IBM Zen Operator Catalog
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-zen-operator-catalog@sha256:d0157f7ff656b745424a4ed276ee3ee19de2507989d4c506f638adc85b440127
+  image: icr.io/cpopen/ibm-zen-operator-catalog@sha256:9ce549fe51c21f584ad1e37fb09f0931018b48e4081af43bdff85d8dedfa8d65
   updateStrategy:
     registryPoll:
       interval: 45m
@@ -153,7 +154,7 @@ spec:
       interval: 45m
   priority: 100
 ---
-# Cloud Native PostgresSQL 1.18.12 (4.25.0)
+# Cloud Native PostgresSQL Version 1.22.5 (CASE 4.29.0+20240829.203322.1920)(Postgresql Version 14.13)
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
@@ -165,13 +166,13 @@ spec:
   displayName: Cloud Native Postgresql Catalog
   publisher: IBM
   sourceType: grpc
-  image: icr.io/cpopen/ibm-cpd-cloud-native-postgresql-operator-catalog@sha256:0b46a3ec66622dd4a96d96243602a21d7a29cd854f67a876ad745ec524337a1f
+  image: icr.io/cpopen/ibm-cpd-cloud-native-postgresql-operator-catalog@sha256:d6b5e43f3b5c4e4198ed6ddfd4577eebea644df9d2fe2bac33600764b5cda631
   updateStrategy:
     registryPoll:
       interval: 45m
   priority: 100
 ---
-# IBM FileNet Content Manager Standalone catalog.
+# IBM FileNet Content Manager Standalone catalog for 5.6.0-IF001.
 apiVersion: operators.coreos.com/v1alpha1
 kind: CatalogSource
 metadata:
