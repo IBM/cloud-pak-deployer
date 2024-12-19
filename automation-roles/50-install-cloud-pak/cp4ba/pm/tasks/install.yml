@@ -165,7 +165,8 @@
     wait_timeout: 15
 
 # Based on validate successful deployment by following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=platform-how-validate-successful-installation
-- name: Wait for ProcessMining to be Ready
+# TODO waiting only for UIReady as Ready status is currently broken
+- name: Wait for ProcessMining to be UIReady
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
@@ -174,9 +175,35 @@
     common_resource_kind: ProcessMining
     common_resource_name: processmining
     common_resource_namespace: "{{ pm_project_name }}"
-    common_condition_name: Ready
+    common_condition_name: UIReady
     common_retries: 30
     common_delay: 120
+
+# TODO waiting only for pods ready as Ready status is currently broken START
+- name: Initialize loop variables
+  set_fact:
+    ready_pods: []
+    retries: 30
+
+- name: Query and check pods in a loop
+  until: ready_pods | length >= 10
+  retries: "{{ retries }}"
+  delay: 30
+  tasks:
+    - name: Query for IPM pods with label app.kubernetes.io/instance=processmining
+      k8s_info:
+        api_version: v1
+        kind: Pod
+        label_selectors:
+          - app.kubernetes.io/instance=processmining
+      register: pod_query
+
+    - name: Parse pod statuses
+      set_fact:
+        ready_pods: >
+          {{ pod_query.resources | \
+              json_query('[?status.containerStatuses[0].ready == `true`].metadata.name') }}
+# TODO waiting only for pods ready as Ready status is currently broken END
 
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
