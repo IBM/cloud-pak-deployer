@@ -54,19 +54,3 @@
     _fs_catalog_source_yaml: "{{ _instance_type_details.catalog_source_yaml_name }}"
     _fs_case_version: "{{ _foundational_services_details.case_version }}"
     _fs_channel: "{{ _foundational_services_details.channel }}"
-
-- name: Save Foundational Services CASE file
-  shell: |
-    oc ibm-pak get {{ _fs_case_file_name }} --version {{ _fs_case_version }}
-
-- name: Create Foundational Services mirror manifest when Entitled registry is used
-  shell: |
-    oc ibm-pak generate mirror-manifests {{ _fs_case_file_name }} --version {{ _fs_case_version }} icr.io
-  when: not _private_reg_defined
-
-- name: Create Foundational Services mirror manifest when private registry is used
-  shell: |
-    oc ibm-pak generate mirror-manifests {{ _fs_case_file_name }} --version {{ _fs_case_version }} {{ _private_reg_url }}
-  when: _private_reg_defined
-
-  

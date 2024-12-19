@@ -3,41 +3,33 @@
 - name: "Download CASE file and create mirror manifest for {{ current_cp4i_instance.type }}"
   block:
 
-  # 
-  # Download
-  #
-
   - name: Find version specific instance type properties
     include_tasks: get-instance-properties.yml
 
-  - name: "Get the details for instance type {{ instance_properties.type }}"
+  - name: Get the details for instance type {{ instance_properties.type }}
     set_fact:
       _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
     vars:
       query: >-
         [?type=='{{ instance_properties.type }}']
 
-  - fail:
+  - name: Fail if instance type definition is not found
+    fail:
       msg: The definition of instance type {{ instance_properties.type }} not found
     when: _instance_type_details=={}
 
   - name: "Save case file {{ _instance_type_details.case_file_name }}-{{ instance_properties.case_version }}"
     shell: |
       oc ibm-pak get {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }}
-  #
-  # Mirror manifest when Entitled registry is used
-  #
+
   - name: Create mirror manifest when Entitled registry is used
     shell: |
       oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }} icr.io
-    when: _use_entitled_registry
+    when: not _private_reg_defined
 
-  #
-  # Mirror manifest when private registry is used
-  #    
   - name: Create mirror manifest when private registry is used
     shell: |
-      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }} {{ current_cp4i_cluster.image_registry_url }}
-    when: not (_use_entitled_registry | bool)  
+      oc ibm-pak generate mirror-manifests {{ _instance_type_details.case_file_name }} --version {{ instance_properties.case_version }} {{ _private_reg_url }}
+    when: _private_reg_defined
 
   when: (current_cp4i_instance.state | default('installed')) == 'installed'

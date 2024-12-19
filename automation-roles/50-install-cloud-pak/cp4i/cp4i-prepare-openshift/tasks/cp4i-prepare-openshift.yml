@@ -5,23 +5,13 @@
 #   _p_private_reg_url
 #   _p_private_reg_auth
 #   _p_entitled_reg_auth
-#   _p_use_entitled_registry
-#
-
-
-#
-# Pause Machine Config Operator
+#   _p_private_reg_defined
+#   _p_entitled_reg_defined
 #
 
 - name: Pause the Machine Config Operator
   include_role:
     name: cp-ocp-mco-pause
-
-#
-# Create image content source policy if private registry is used
-#
-# - NOTE(SJ) We assume here that {{ status_dir }}/ibm-pak exists
-#   This is checked in the main task of the cp4i-cluster role 
 
 - name: Create ImageContentSourcePolicy for the Cloud Pak with private registry
   block:
@@ -32,39 +22,26 @@
       loop_control:
         loop_var: current_cp4i_instance
 
-  when: not (_p_use_entitled_registry | bool)
+    - name: Create ImageContentSourcePolicy for Foundational Services
+      include_tasks: foundational-svc-content-source-policy.yml
+      when: _new_style
 
-#
-# Set global pull secret for specified private registry
-#
+  when: _p_private_reg_defined
 
-- name: Set global pull secret for specified private registry
-  block:
-    - name: Set the global pull secret for the private registry
-      include_role:
-        name: cp-ocp-global-pull-secret
-      vars:
-        _p_registry_url: "{{ _private_reg_url }}" 
-        _p_registry_pull_secret: "{{ _private_reg_auth }}"
-  when: not (_p_use_entitled_registry | bool)
-
-#
-# Set the global pull secret for the entitled registry
-#
+- name: Set the global pull secret for the private registry
+  include_tasks: pull-secret.yml
+  vars:
+    _p_registry_url: "{{ _private_reg_url }}" 
+    _p_registry_pull_secret: "{{ _private_reg_auth }}"
+  when: _p_private_reg_defined
 
 - name: Set the global pull secret for the entitled registry
-  ansible.builtin.include_role:
-    name: cp-ocp-global-pull-secret
+  include_tasks: pull-secret.yml
   vars:
-    _p_ibm_cp_entitlement_key: "{{ ibm_cp_entitlement_key }}"
-  when: (_p_use_entitled_registry | bool)
-
-#
-# Resume the Machine Config operator
-#
+    _p_registry_url: "{{ _v_entitled_registry }}"
+    _p_registry_pull_secret: "{{ _p_entitled_reg_auth }}"
+  when: _p_entitled_reg_defined
 
 - name: Resume the Machine Config operator
   include_role:
     name: cp-ocp-mco-resume
-
-
