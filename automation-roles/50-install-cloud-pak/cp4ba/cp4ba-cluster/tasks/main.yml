@@ -1,5 +1,4 @@
 ---
-
 - name: Create private variable for cp4ba configuration
   ansible.builtin.set_fact:
     _current_cp4ba_cluster: "{{ current_cp4ba_cluster }}"
@@ -25,12 +24,6 @@
   vars:
     query: >-
       [?name=='{{ _current_cp4ba_cluster.openshift_cluster_name }}']
-
-- name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
-  ansible.builtin.include_role:
-    name: openshift-download-client
-  vars:
-    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
 
 - name: Login to the OpenShift cluster
   ansible.builtin.include_role:
@@ -121,8 +114,7 @@
 
 - name: Set passwrod from vault
   ansible.builtin.set_fact:
-    _cp4ba_admin_password_vault_key_name:
-      "cp4ba_admin_{{ _current_cp4ba_cluster.project | replace('-', '_') }}_{{ _current_cp4ba_cluster.openshift_cluster_name | replace('-', '_') }}"
+    _cp4ba_admin_password_vault_key_name: "cp4ba_admin_{{ _current_cp4ba_cluster.project | replace('-', '_') }}_{{ _current_cp4ba_cluster.openshift_cluster_name | replace('-', '_') }}"
 
 - name: Validate if an existing admin password for {{ _cp4ba_admin_password_vault_key_name }} exists in the vault
   ansible.builtin.include_role:
@@ -155,8 +147,7 @@
         name: vault-set-secret
       vars:
         secret_name: "{{ _cp4ba_admin_password_vault_key_name }}"
-        secret_description:
-          "cp4ba admin password for namespace {{ _current_cp4ba_cluster.project }}, cluster {{ _current_cp4ba_cluster.openshift_cluster_name }}"
+        secret_description: "cp4ba admin password for namespace {{ _current_cp4ba_cluster.project }}, cluster {{ _current_cp4ba_cluster.openshift_cluster_name }}"
         secret_payload: "{{ _cp4ba_admin_password_new }}"
         secret_group: "{{ environment_name }}"
 

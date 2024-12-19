@@ -1,5 +1,4 @@
 ---
-
 # INPUT PARAMETERS
 #
 # all_config            : loaded all configuration yamls
@@ -10,7 +9,7 @@
 #
 # cpd_skip_cp_install : from environment variable CPD_SKIP_CP_INSTALL}
 #
-# cpd_airgap          : from environment variable CPD_AIRGAP 
+# cpd_airgap          : from environment variable CPD_AIRGAP
 
 # PREREQUISITES:
 # vault with the entitlement key or private registry credentials
@@ -94,21 +93,21 @@
       secret_name: "image-registry-{{ current_cp4i_cluster.image_registry_name }}"
       secret_group: "{{ environment_name }}"
 
-  - name: Validate if container registry credentials secret is available
-    fail: msg="Container registry credentials secret image-registry-{{ current_cp4i_cluster.image_registry_name }} from group {{ environment_name }} is empty"
-    when: secret_value== ""
+    - name: Validate if container registry credentials secret is available
+      fail: msg="Container registry credentials secret image-registry-{{ current_cp4i_cluster.image_registry_name }} from group {{ environment_name }} is empty"
+      when: secret_value== ""
 
-  - name: Find private registry dedicated to this cluster
-    set_fact:
-      _selected_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
-    vars:
-      query: >-
-        [?name=='{{ current_cp4i_cluster.image_registry_name }}']
+    - name: Find private registry dedicated to this cluster
+      set_fact:
+        _selected_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?name=='{{ current_cp4i_cluster.image_registry_name }}']
 
-  - name: Fail if the referenced registry does not exist
-    fail:
-      msg: "The registry {{ current_cp4i_cluster.image_registry_name }} is not defined"   
-    when: (_selected_registry | default({})) == {}      
+    - name: Fail if the referenced registry does not exist
+      fail:
+        msg: "The registry {{ current_cp4i_cluster.image_registry_name }} is not defined"
+      when: (_selected_registry | default({})) == {}
 
   - name: Set private registry credentials and properties
     set_fact:
@@ -117,9 +116,9 @@
       _private_reg_port: "{{ _selected_registry.registry_port | default('') }}"
       _private_reg_namespace: "{{ selected_registry.registry_namespace | default('') }}"
 
-  - name: Set private registry URL
-    set_fact:    
-      _private_reg_url: "{{ lookup('template','private_reg_url.j2') }}"
+    - name: Set private registry URL
+      set_fact:
+        _private_reg_url: "{{ lookup('template','private_reg_url.j2') }}"
 
   when: _private_reg_defined
 
@@ -215,15 +214,14 @@
 
 - name: Reset CP4I directory for generated files
   block:
+    - file:
+        path: "{{ status_dir }}/cp4i"
+        state: absent
 
-  - file:
-      path: "{{ status_dir }}/cp4i"
-      state: absent
-
-  - name: Create directory status/cp4i
-    file:
-      path: "{{ status_dir }}/cp4i"
-      state: directory
+    - name: Create directory status/cp4i
+      file:
+        path: "{{ status_dir }}/cp4i"
+        state: directory
 
 - name: Prepare OpenShift cluster for Cloud Pak for Integration
   include_role:
@@ -238,4 +236,3 @@
 - name: Run cp4i installation
   include_tasks: install-cp4i.yml
   when: not (cpd_skip_cp_install | bool)
-
