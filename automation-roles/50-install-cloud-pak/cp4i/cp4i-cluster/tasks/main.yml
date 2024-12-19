@@ -15,91 +15,79 @@
 # PREREQUISITES:
 # vault with the entitlement key or private registry credentials
 
-
-- debug:
-    msg: "Handling CP4I cluster {{ current_cp4i_cluster.project }}"
-
-#
-# Check if license is accepted and fail if it is not
-#
+- name: ///// Handling CP4I cluster {{ current_cp4i_cluster.project }} /////
+  debug:
+    msg: "Begin processing"
 
 - name: Check if license is accepted and fail if it is not
   block:    
   - set_fact:
-      _cpd_accept_licenses: "False"
+      _cpd_accept_licenses: False
 
-  - set_fact:
-      _cpd_accept_licenses: "True"
+  - name: Check if license is accepted
+    set_fact:
+      _cpd_accept_licenses: True
     when: (cpd_accept_licenses | default(False) | bool) or (current_cp4i_cluster.accept_licenses | default(False) | bool)
 
-  - name: Fail if licenses were not accepted
+  - name: Fail if license is not accepted
     fail:
       msg: "You must accept the licenses, either in the cp4i object with accept_licenses: True, or by specifying --accept-all-licenses at the command line"
     when: not _cpd_accept_licenses
 
-# 
-# Check which registry is used. Entitled or private?
-#
-# --> _use_entitled_registry
-
-- name: Check if Entitled or private registry is used
+- name: Specify if new installation style is needed
   block:
   - set_fact:
-      _use_entitled_registry: False
+      _new_style: False
 
-  - set_fact:
-      _use_entitled_registry: True
-    when:
-    - (current_cp4i_cluster.image_registry_name | default("")) == ""
-
-  - debug:
-      msg: "Using Entitled registry"
-    when: (_use_entitled_registry | bool)
-
-  - debug:
-      msg: "Using private registry"
-    when: not (_use_entitled_registry | bool)
-
-#
-# If Entitled registry is used obtain its key from vault
-# and prepare authentication credentials.
-# Fail if the key does not exist in the vault
-#
-# --> _entitled_reg_auth
+  - name: "Check if new installation style is needed based on specified Cloud Pak for Integration version {{ current_cp4i_cluster.cp4i_version }}"
+    set_fact:
+      _new_style: True
+    when: current_cp4i_cluster.cp4i_version >= '2023.4' or current_cp4i_cluster.cp4i_version >= '16.1.0'
 
 - name: Obtain Entitled registry key and prepare authentication credentials
   block:
 
-  - name: Get IBM Entitled Registry key
+  - name: Assume that entitlement key is defined 
+    set_fact:
+      _entitled_reg_defined: True
+
+  - name: Read from vault the secret value related to IBM entitlement key
     include_role: 
       name: vault-get-secret
     vars:
       secret_name: "ibm_cp_entitlement_key"
       secret_group: "{{ environment_name }}"
 
-  - set_fact:
+  - name: Assign the secret value to the entitlemet key variable
+    set_fact:
       ibm_cp_entitlement_key: "{{ secret_value }}"
 
-  - fail:
-      msg: "No image registry name specified for CP4I but cannot pull from entitled registry because of missing entitlement key in vault"
+  - name: If entitlement key was not found assume that entitled registry is not used
+    set_fact:
+      _entitled_reg_defined: False
     when: ibm_cp_entitlement_key == "" 
 
-  - set_fact:
+  - name: If entitled registry is defined prepare its credentials
+    set_fact:
       _entitled_reg_auth: "{{ _v_entitled_registry_username }}:{{ ibm_cp_entitlement_key }}"
+    when: _entitled_reg_defined
 
-  when: (_use_entitled_registry | bool)   
+- name: Check if private registry is defined
+  block:
+  - name: By default assume that private registry is not defined
+    set_fact:
+      _private_reg_defined: False
 
-#
-# If private registry is used obtain its authentication credentials
-# from the vault. Fail if they don't exist
-#
-# --> _private_reg_auth
-#     _private_reg_url
+  - name: Check if private registry is defined in the cluster configuration
+    set_fact:
+      _private_reg_defined: True
+    when:
+    - (current_cp4i_cluster.image_registry_name | default("")) != ""
 
-- name: Obtain private registry authentication credentials
+- name: Obtain private registry credentials if it is defined
   block:
 
-  - name: "Get pull secret for image registry {{ current_cp4i_cluster.image_registry_name }} from the vault"
+  - name: "Get pull secret from the vault for image registry {{ current_cp4i_cluster.image_registry_name }}"
     include_role: 
       name: vault-get-secret
     vars:
@@ -122,10 +110,6 @@
       msg: "The registry {{ current_cp4i_cluster.image_registry_name }} is not defined"   
     when: (_selected_registry | default({})) == {}      
 
-  - name: Selected registry
-    debug:
-      msg: "{{ _selected_registry }}" 
-
   - name: Set private registry credentials and properties
     set_fact:
       _private_reg_auth: "{{ secret_value }}"
@@ -137,12 +121,75 @@
     set_fact:    
       _private_reg_url: "{{ lookup('template','private_reg_url.j2') }}"
 
-  when: not (_use_entitled_registry | bool)
+  when: _private_reg_defined
 
-#
-# Detect current openshift cluster from config (!!env_id)
-#
-# --> _current_openshift_cluster
+- name: When private registry not is specified
+  block:
+  - debug:
+      msg: "Private registry in not defined - using Entitled registry"
+
+  - name: Check if the configuratin defines using CASE files
+    set_fact:
+      _use_case_files: (current_cp4i_cluster.use_case_files | default(True) | bool)
+
+  - name: When using CASE files
+    block:
+    - name: Using CASE files specified. Downloading...
+      include_tasks: download-case-files.yml
+    when: _use_case_files
+
+  - name: When not using CASE files
+    block:
+    - name: Using CASE files is not specified.
+      debug:
+        msg: "The online catalog sources will be used during the installation."  
+    when: not _use_case_files
+
+  when: not _private_reg_defined
+
+- name: When private registry is specified
+  block: 
+  - debug:
+      msg: "Using private registry"
+
+  - name: With private registry, the CASE files are always used regardless the configuration
+    set_fact:
+      _use_case_files: True
+
+  - name: When cpd_airgap
+    block:
+
+    - name: Define case files location for air-gapped installation (usecases 2 & 3)
+      set_fact:
+        _case_files_dir: "{{ status_dir }}/ibm-pak"
+
+    - name: Get foundational services properties
+      include_tasks: foundational-svc-props.yml
+
+    - debug:
+        msg: "Air-gapped usecase 2"
+      when: cpd_skip_mirror
+
+    - name: Air-gapped usecase 3 -  Mirroring from portable to private registry
+      include_tasks: mirror-from-portable-reg.yml
+      when: not cpd_skip_mirror
+
+    when: cpd_airgap 
+
+  - name: When not cpd_airgap (use-case 1)
+    block:
+    - name: Download CASE files
+      include_tasks: download-case-files.yml
+
+    - name: Mirror from entitled to private registry
+      include_tasks: mirror-from-entitled-reg.yml
+      when: not cpd_skip_mirror
+
+    when: not cpd_airgap
+
+  when: _private_reg_defined
+
+# ---------------------------------------------------------
 
 - name: Detect current openshift cluster from config
   set_fact:
@@ -151,115 +198,20 @@
     query: >-
       [?name=='{{ current_cp4i_cluster.openshift_cluster_name }}']
 
-#
-# Download OpenShift client for current version  
-#
 
 - name: Download and activate OpenShift client for version {{ _current_openshift_cluster.ocp_version }}
   include_role:
     name: openshift-download-client
   vars:
-    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
-
-# If airgapped installation defined mirror from portable to private registry
-
-- name: If airgapped installation mirror from portable to private registry
-  block:
-
-    # --- Assure that private registry is used ---
-
-    - name: Assure that private registry is used
-      fail:
-        msg: "A private registry must be defined for the airgapped installation"
-      when: (_use_entitled_registry | bool)
-
-    # --- Verify if portable registry content exists ---
-    # It is possible that images are already in the private registry
-
-    - name: "Verify that directory {{ status_dir }}/work/registry-storage exists"
-      stat:
-        path: "{{ status_dir }}/work/registry-storage"
-      register: _portable_reg_storage_dir
-
-    - fail:
-        msg: "Directory {{ status_dir }}/ibm-pak needed for private registry does not exist"
-      when: _portable_reg_storage_dir.stat.exists==false
-    
-    - name: Mirror from portable to private only if portable registry storage exists in the status dir
-      block:
-
-      # --- Start portable registry ---
-      # 
-      # NOTE(SJ) The same code exists elsewere (cp-mirror-ibm-pak role,..., cp4d roles)
-      # It would be worth considering a separate generic role
-
-      - name: "Set target directory for portable registry to {{ status_dir }}/work/registry-storage"
-        ansible.builtin.replace:
-          path: /opt/ansible/etc/registryv2-config.yml
-          regexp: 'rootdirectory: .*'
-          replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
-
-      - name: Start portable registry in the background
-        shell:
-          /opt/ansible/bin/start-registry > {{ status_dir }}/log/portable-registry.log 2>&1
-        async: 1500000
-        poll: 0
-        register: _portable_registry_job
-
-      - debug:
-          var: _portable_registry_job
-
-      - name: Wait until registry is available at port 12443
-        wait_for:
-          host: "127.0.0.1"
-          port: 12443
-          timeout: 30
-
-      # --- Mirror from portable to private registry ---
-
-      # NOTE(SJ) We assume here that the same private registry specified
-      # during download phase is also used for the installation. 
-      # The current version does not allow switching to other private registry. 
-      # The reason for that are mirror manifests that are created with the private 
-      # registry defined as the target registry in ibm-pak CLI 
-
-      - name: Set authentication file location
-        set_fact:
-          _registry_auth_file: "{{ status_dir }}/cloud-paks/auth.json"
-
-      - name: "Check that authentication file {{ _registry_auth_file }} exists"
-        stat:
-          path: "{{ _registry_auth_file }}"
-        register: _registry_auth_file_path
-      
-      - fail:
-          msg: "Registry authetication file does not exist in the status directory"
-        when: _registry_auth_file_path.stat.exists==false
-          
-      - name: Loop through instances and mirror images from portable registry for defined types
-        include_tasks: mirror-from-portable-reg.yml
-        loop: "{{ current_cp4i_cluster.instances | default([]) }}"
-        loop_control:
-          loop_var: current_cp4i_instance
-
-
-      when: _portable_reg_storage_dir.stat.exists  
-
-  when: (cpd_airgap | bool)
-
-#
-# Login to OpenShift cluster (!!env_id)
-#
+    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"    
+  when: not (cp4i_sandbox | default(False) | bool)
 
 - name: Login to the OpenShift cluster
   include_role:
     name: openshift-login
   vars:
     _p_openshift_cluster_name: "{{ current_cp4i_cluster.openshift_cluster_name }}"
-
-#
-# Reset directory for generated files
-#
+  when: not (cp4i_sandbox | default(False) | bool)
 
 - name: Reset CP4I directory for generated files
   block:
@@ -273,10 +225,6 @@
       path: "{{ status_dir }}/cp4i"
       state: directory
 
-#
-# Prepare OpenShift cluster
-#
-
 - name: Prepare OpenShift cluster for Cloud Pak for Integration
   include_role:
     name: cp4i-prepare-openshift
@@ -284,11 +232,8 @@
     _p_private_reg_url: "{{ _private_reg_url }}"
     _p_private_reg_auth: "{{ _private_reg_auth }}"
     _p_entitled_reg_auth: "{{ _entitled_reg_auth }}"
-    _p_use_entitled_registry: "{{ _use_entitled_registry }}"
-
-#
-# Run installation
-#
+    _p_private_reg_defined: "{{ _private_reg_defined }}"
+    _p_entitled_reg_defined: "{{ _entitled_reg_defined }}"
 
 - name: Run cp4i installation
   include_tasks: install-cp4i.yml
