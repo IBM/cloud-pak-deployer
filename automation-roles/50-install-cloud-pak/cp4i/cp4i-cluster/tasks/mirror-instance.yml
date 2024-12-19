@@ -1,0 +1,39 @@
+---
+
+- name: Mirroring images for instance 
+  block:
+
+  - name: Get instance properties and instance type details
+    include_role: 
+      name: cp4i-instance-props
+    vars:
+      - _p_current_cp4i_cluster: "{{ current_cp4i_cluster }}"
+      - _p_current_cp4i_instance: "{{ _current_cp4i_instance }}"
+    # returns:
+      # _instance_properties 
+      # _instance_type_details 
+
+  - name: Set default name of the images mapping file
+    set_fact:
+      _images_mapping_file: images-mapping.txt
+
+  - name: Set images mapping file name when mirroring from portable registry
+    set_fact:
+      _images_mapping_file: images-mapping-from-registry.txt
+    when: (_mirroring_from_portable_reg | default(False) | bool)
+
+  - name: Mirror to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
+    shell: |
+      set -o pipefail
+      oc image mirror \
+       -f {{ _case_files_dir }}/data/mirror/{{ _instance_type_details.case_file_name }}/{{ _instance_properties.case_version }}/{{ _images_mapping_file }} \
+       --filter-by-os '.*'  \
+       -a {{ _reg_auth_file }} \
+       --insecure  \
+       --skip-multiple-scopes \
+       --max-per-registry=1 \
+       --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+
+  when: (_current_cp4i_instance.state | default('installed')) == 'installed'
+

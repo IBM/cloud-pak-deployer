@@ -7,7 +7,6 @@
 # In/Out
 #   -ibm_pak_used : switch it to true 
 
-
 - debug:
     msg: Saving cp4i CASE files
 
@@ -20,4 +19,72 @@
   loop: "{{ _p_current_cp4i_cluster.instances | default([]) }}"
   loop_control:
     loop_var: _p_current_cp4i_instance
+
+- name: Download Foundational Services CASE files if new installation style is needed
+  block:
+  - set_fact:
+      _new_style: False
+
+  - name: "Check if new installation style is needed based on specified Cloud Pak for Integration version {{ _p_current_cp4i_cluster.cp4i_version }}"
+    set_fact:
+      _new_style: True
+    when: _p_current_cp4i_cluster.cp4i_version >= '2023.4' or _p_current_cp4i_cluster.cp4i_version >= '16.1.0'
+
+  - name: Download Foundational Services CASE when new style is defined
+    block:
+    - name: Include instance_types variables
+      include_vars: ../../cp4i-cluster/vars/main.yml
+    - name: Include versions variables
+      include_vars: ../../cp4i-cluster/vars/versions.yml 
+
+    - name: Find Foundational Services instance type
+      set_fact:
+        _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?type=='foundational-services']
+
+    - name: Fail if instance type is not found
+      fail:
+        msg: "An instance type foundational-services was not found"
+      when: _instance_type_details == {}
+
+    - name: Select cloud pak version
+      set_fact:
+        _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?cp4i_version=='{{ _p_current_cp4i_cluster.cp4i_version }}']
+
+    - name: Fail if cloud pak version is not defined
+      fail:
+        msg: "Cloud Pak version {{ _p_current_cp4i_cluster.cp4i_version }} not defined"
+      when: _cloud_pak_ver == {}
+    
+    - name: Get Foundational Services version specific details
+      set_fact:
+        _foundational_services_details: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+      vars:
+        query: >-
+          [?type=='foundational-services']
+
+    - name: Fail if Foundational Services details are not found
+      fail:
+        msg: "Foundational Services not defined in CP4I version {{ _p_current_cp4i_cluster.cp4i_version }}"
+      when: _foundational_services_details == {}
+
+    - name: Get Foundational Services CASE name, CASE version and channel
+      set_fact:
+        _fs_case_file_name: "{{ _instance_type_details.case_file_name }}"
+        _fs_catalog_source_yaml: "{{ _instance_type_details.catalog_source_yaml_name }}"
+        _fs_case_version: "{{ _foundational_services_details.case_version }}"
+        _fs_channel: "{{ _foundational_services_details.channel }}"
+
+    - name: Save Foundational Services CASE file
+      shell: |
+        oc ibm-pak get {{ _fs_case_file_name }} --version {{ _fs_case_version }}
+
+    when: _new_style
+
+ 
 

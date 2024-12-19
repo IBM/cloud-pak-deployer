@@ -1,0 +1,111 @@
+---
+
+- name: Validate mandatory variables are defined
+  assert:
+    that:
+      - _p_current_cp4i_cluster is defined
+      - _p_private_reg_url is defined
+      - _p_portable_reg_url is defined
+      - _p_reg_auth_file is defined
+
+- name: Determine if new installation style is needed
+  set_fact:
+    _new_style: True
+  when: _p_current_cp4i_cluster.cp4i_version >= '2023.4' or _p_current_cp4i_cluster.cp4i_version >= '16.1.0'
+
+- name: Mirror foundational services only in the case of new installation style
+  block:
+
+  - name: Include instance_types variables
+    include_vars: ../../cp4i-cluster/vars/main.yml
+
+  - name: Include versions variables
+    include_vars: ../../cp4i-cluster/vars/versions.yml 
+ 
+  - name: Find Foundational Services instance type
+    set_fact:
+      _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?type=='foundational-services']
+
+  - name: Fail if instance type is not found
+    fail:
+      msg: "An instance type foundational-services was not found"
+    when: _instance_type_details == {}
+
+  - name: Select cloud pak version
+    set_fact:
+      _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?cp4i_version=='{{ _p_current_cp4i_cluster.cp4i_version }}']
+
+  - name: Fail if cloud pak version is not defined
+    fail:
+      msg: "Cloud Pak version {{ _p_current_cp4i_cluster.cp4i_version }} not defined"
+    when: _cloud_pak_ver == {}
+
+  - name: Get Foundational Services version specific details
+    set_fact:
+      _foundational_services_details: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?type=='foundational-services']
+
+  - name: Fail if Foundational Services details are not found
+    fail:
+      msg: "Foundational Services not defined in CP4I version {{ _p_current_cp4i_cluster.cp4i_version }}"
+    when: _foundational_services_details == {}
+
+  - name: Get Foundational Services CASE name, CASE version and channel
+    set_fact:
+      _fs_case_file_name: "{{ _instance_type_details.case_file_name }}"
+      _fs_catalog_source_yaml: "{{ _instance_type_details.catalog_source_yaml_name }}"
+      _fs_case_version: "{{ _foundational_services_details.case_version }}"
+      _fs_channel: "{{ _foundational_services_details.channel }}"
+
+  - name: Create mirror manifests for private registry     
+    shell: |
+      oc ibm-pak generate mirror-manifests {{ _fs_case_file_name }} \
+        --version {{ _fs_case_version }} \
+        {{ _p_private_reg_url }}
+    when: (cpd_skip_portable_registry | bool)
+
+  - name: Create mirror manifests for portable registry with private registry as a final one
+    shell: |
+      oc ibm-pak generate mirror-manifests {{ _fs_case_file_name }} \
+        --version {{ _fs_case_version }} \
+        {{ _p_portable_reg_url }} \
+        --final-registry {{ _p_private_reg_url }}        
+    when: not (cpd_skip_portable_registry | bool)
+
+  - name: Mirror to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
+    shell: |
+      set -o pipefail
+      oc image mirror \
+       -f ~/.ibm-pak/data/mirror/{{ _fs_case_file_name }}/{{ _fs_case_version }}/images-mapping.txt \
+       --filter-by-os '.*'  \
+       -a {{ _p_reg_auth_file }} \
+       --insecure  \
+       --skip-multiple-scopes \
+       --max-per-registry=1 \
+       --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+    when: (cpd_skip_portable_registry | bool)
+
+  - name: Mirror to portable registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
+    shell: |
+      set -o pipefail
+      oc image mirror \
+        -f ~/.ibm-pak/data/mirror/{{ _fs_case_file_name }}/{{ _fs_case_version }}/images-mapping-to-registry.txt \
+        --filter-by-os '.*'  \
+        -a {{ _p_reg_auth_file }} \
+        --insecure  \
+        --skip-multiple-scopes \
+        --max-per-registry=1 \
+        --continue-on-error=true 2>&1 | \
+       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+    when: not (cpd_skip_portable_registry | bool)
+
+  when: (_new_style | default(False) | bool)
