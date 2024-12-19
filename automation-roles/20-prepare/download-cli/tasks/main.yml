@@ -15,10 +15,6 @@
 - include_tasks: azure-download-cli.yml
   when: cloud_platform == 'azure'
 
-- name: Download and install cpd-cli
-  include_role:
-    name: cpd-cli-download
-
 - name: Download OpenShift installer
   include_role:
     name: openshift-download-installer
@@ -27,13 +23,3 @@
   loop: "{{ all_config.openshift | default([]) }}"
   loop_control:
     loop_var: _current_openshift_cluster
-
-- name: Download OpenShift client
-  include_role:
-    name: openshift-download-client
-  vars:
-    _p_ocp_version: "{{ _current_openshift_cluster.ocp_version }}"
-  loop: "{{ all_config.openshift | default([]) }}"
-  loop_control:
-    loop_var: _current_openshift_cluster
-    
