@@ -1,0 +1,18 @@
+---
+
+- name: Download CASE file for each instance type
+  include_tasks: download-case-file.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: current_cp4i_instance
+- name: Download Foundational Services CASE when new style is defined
+  include_tasks: download-foundational-svc-case.yml
+    # returns
+    # - _fs_case_file_name
+    # - _fs_catalog_source_yaml
+    # - _fs_case_version
+    # - _fs_channel
+  when: (_new_style | default(True))
+- name: Location of the CASE files (~/.ibm-pak)
+  set_fact:
+    _case_files_dir: "~/.ibm-pak"

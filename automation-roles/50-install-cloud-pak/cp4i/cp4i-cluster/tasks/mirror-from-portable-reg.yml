@@ -1,29 +1,62 @@
 ---
 
-- name: Mirror images for instance
-  block:
+- name: Verify that portable registry content exists
+  stat:
+    path: "{{ status_dir }}/work/registry-storage"
+  register: _portable_reg_storage_dir
 
-  - name: Get instance properties and instance type details
-    include_role: 
-      name: cp4i-instance-props
-    vars:
-      _p_current_cp4i_cluster: "{{ current_cp4i_cluster }}"
-      _p_current_cp4i_instance: "{{ current_cp4i_instance }}"
-    # returns:
-      # _instance_properties 
-      # _instance_type_details   
+- name: Fail if portable registry content does not exists
+  fail:
+    msg: "Directory {{ status_dir }}/ibm-pak needed for private registry does not exist"
+  when: _portable_reg_storage_dir.stat.exists==false
 
-  - name: "Mirror instance images from portable to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log"
-    shell: |
-      set -o pipefail
-      oc image mirror \
-       -f {{ status_dir }}/ibm-pak/data/mirror/{{ _instance_type_details.case_file_name }}/{{ _instance_properties.case_version }}/images-mapping-from-registry.txt \
-       --filter-by-os '.*'  \
-       -a {{ _registry_auth_file }} \
-       --insecure  \
-       --skip-multiple-scopes \
-       --max-per-registry=1 \
-       --continue-on-error=true 2>&1 | \
-       tee -a {{ status_dir }}/log/cp4i-mirror-images.log
+- name: Set target directory for portable registry
+  ansible.builtin.replace:
+    path: /opt/ansible/etc/registryv2-config.yml
+    regexp: 'rootdirectory: .*'
+    replace: 'rootdirectory: {{ status_dir }}/work/registry-storage'
 
-  when: (current_cp4i_instance.state | default('installed')) == 'installed'
+- name: Start portable registry in the background
+  shell:
+    /opt/ansible/bin/start-registry > {{ status_dir }}/log/portable-registry.log 2>&1
+  async: 1500000
+  poll: 0
+  register: _portable_registry_job
+
+- name: Verify portable registry state
+  debug:
+    var: _portable_registry_job
+
+- name: Wait until registry is available at port 12443
+  wait_for:
+    host: "127.0.0.1"
+    port: 12443
+    timeout: 30
+
+- name: Ensure {{ status_dir }}/cloud-paks directory exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Define registry authentication file {{ status_dir }}/cloud-paks/auth.json
+  set_fact:
+    _reg_auth_file: "{{ status_dir }}/cloud-paks/auth.json" 
+
+- name: Generate {{ status_dir }}/cloud-paks/auth.json
+  template:
+    src: auth.json.port2priv.j2
+    dest: "{{ _reg_auth_file }}"
+
+- name: Set flag for mirroring from portable registry
+  set_fact:
+    _mirroring_from_portable_reg: True
+
+- name: Loop through instances and mirror images
+  include_tasks: mirror-instance.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4i_instance
+
+- name: Mirror Foundational Services images
+  include_tasks: mirror-foundational-svc.yml
+  when: _new_style

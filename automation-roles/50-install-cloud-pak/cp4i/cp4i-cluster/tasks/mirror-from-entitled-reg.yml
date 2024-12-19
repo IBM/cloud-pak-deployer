@@ -1,0 +1,25 @@
+---
+
+- name: Ensure {{ status_dir }}/cloud-paks directory exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Define registry authentication file {{ status_dir }}/cloud-paks/auth.json
+  set_fact:
+    _reg_auth_file: "{{ status_dir }}/cloud-paks/auth.json" 
+
+- name: "Generate {{ status_dir }}/cloud-paks/auth.json"
+  template:
+    src: auth.json.ent2priv.j2
+    dest: "{{ _reg_auth_file }}"
+
+- name: Loop through instances and mirror images
+  include_tasks: mirror-instance.yml
+  loop: "{{ current_cp4i_cluster.instances | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4i_instance
+
+- name: Mirror Foundational Services images
+  include_tasks: mirror-foundational-svc.yml
+  when: _new_style

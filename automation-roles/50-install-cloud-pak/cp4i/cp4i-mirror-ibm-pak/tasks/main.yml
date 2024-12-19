@@ -95,5 +95,21 @@
       loop_control:
         loop_var: _p_current_cp4i_instance
 
+    - name: Mirror foundational services
+      include_tasks: mirror-foundational-svc.yml
+
   when: (_private_registry_defined | default(False) | bool) 
+
+- name: Make sure that {{ status_dir }}/work exists
+  file:
+    path: "{{ status_dir }}/work"
+    state: directory
+
+- name: Make sure that {{ status_dir }}/work/offline exists
+  file:
+    path: "{{ status_dir }}/work/offline"
+    state: directory
+
+- name: Save case files
+  command: cp -r ~/.ibm-pak {{ status_dir }}/work/offline/ibm-pak
 

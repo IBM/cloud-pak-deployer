@@ -1,0 +1,62 @@
+---
+
+- name: Find Foundational Services instance type
+  set_fact:
+    _instance_type_details: "{{ instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='foundational-services']
+
+- name: Fail if Foundational Services instance type was not found
+  fail:
+    msg: "An instance type foundational-services was not found"
+  when: _instance_type_details == {}
+
+- name: Include version details variables
+  include_vars: versions.yml
+
+- name: Select cloud pak version
+  set_fact:
+    _cloud_pak_ver: "{{ version_specific_properties | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?cp4i_version=='{{ current_cp4i_cluster.cp4i_version }}']
+
+- name: Fail if the cloud pak version was not found
+  fail:
+    msg: "Cloud Pak version {{ current_cp4i_cluster.cp4i_version }} not defined"
+  when: _cloud_pak_ver == {}
+
+- name: Get Foundational Services version specific details
+  set_fact:
+    _foundational_services_details: "{{ _cloud_pak_ver.instance_types | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?type=='foundational-services']
+
+- name: Fail if the Foundational services are not defined
+  fail:
+    msg: "Foundational Services not defined in CP4I version {{ current_cp4i_cluster.cp4i_version }}"
+  when: _foundational_services_details == {}
+
+- name: Set default name of the images mapping file
+  set_fact:
+    _images_mapping_file: images-mapping.txt
+
+- name: Set images mapping file name when mirroring from portable registry
+  set_fact:
+    _images_mapping_file: images-mapping-from-registry.txt
+  when: (_mirroring_from_portable_reg | default(False) | bool)
+
+- name: Mirror Foundational Services images to private registry, logs are in {{ status_dir }}/log/cp4i-mirror-images.log
+  shell: |
+    set -o pipefail
+    oc image mirror \
+      -f {{ _case_files_dir }}/data/mirror/{{ _instance_type_details.case_file_name }}/{{ _foundational_services_details.case_version }}/{{ _images_mapping_file }} \
+      --filter-by-os '.*'  \
+      -a {{ _reg_auth_file }} \
+      --insecure  \
+      --skip-multiple-scopes \
+      --max-per-registry=1 \
+      --continue-on-error=true 2>&1 | \
+      tee -a {{ status_dir }}/log/cp4i-mirror-images.log
