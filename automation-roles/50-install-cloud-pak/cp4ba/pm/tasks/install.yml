@@ -180,29 +180,17 @@
     common_delay: 120
 
 # TODO waiting only for pods ready as Ready status is currently broken START
-- name: Initialize loop variables
-  set_fact:
-    ready_pods: []
-    retries: 30
-
-- name: Query and check pods in a loop
-  until: ready_pods | length >= 10
-  retries: "{{ retries }}"
+- name: Query for IPM pods and wait for them
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ pm_project_name }}"
+    label_selectors:
+      - app.kubernetes.io/instance=processmining
+  register: pods
+  until: pods.resources | json_query('[?status.containerStatuses[0].ready == `true`].metadata.name') | length >= 10
+  retries: 30
   delay: 30
-  tasks:
-    - name: Query for IPM pods with label app.kubernetes.io/instance=processmining
-      k8s_info:
-        api_version: v1
-        kind: Pod
-        label_selectors:
-          - app.kubernetes.io/instance=processmining
-      register: pod_query
-
-    - name: Parse pod statuses
-      set_fact:
-        ready_pods: >
-          {{ pod_query.resources | \
-              json_query('[?status.containerStatuses[0].ready == `true`].metadata.name') }}
 # TODO waiting only for pods ready as Ready status is currently broken END
 
 - name: Get OCP Apps domain
