@@ -57,7 +57,7 @@ while true; do
   current_ts=$(date +%s)
 
   log "Collecting OLM information into ${temp_dir}"
-  oc get sub -n ${fs_project} \
+  oc get subscriptions.operators.coreos.com -n ${fs_project} \
     --sort-by=.metadata.creationTimestamp \
     --no-headers \
     -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}' > ${sub_file}
@@ -91,11 +91,11 @@ while true; do
     cat ${sub_file}
     log "WARNING: Not all operators are correctly installed. All entries should have a CSV and have state AtLatestKnown"
     # Delete all subscriptions that don't have a CSV
-    oc get sub -n ${fs_project} -o json | jq 'del(.items[] .metadata.annotations, .items[] .metadata.resourceVersion, .items[] .metadata.creationTimestamp, .items[] .metadata.generation, .items[] .metadata.uid, .items[] .status)' > ${temp_dir}/${fs_project}-subcriptions.json
+    oc get subscriptions.operators.coreos.com -n ${fs_project} -o json | jq 'del(.items[] .metadata.annotations, .items[] .metadata.resourceVersion, .items[] .metadata.creationTimestamp, .items[] .metadata.generation, .items[] .metadata.uid, .items[] .status)' > ${temp_dir}/${fs_project}-subcriptions.json
     while IFS=, read -r sub sub_ts csv sub_state; do
       if [[ "${csv}" == "" ]]; then
         log "DIAG: Deleting subscription ${sub}"
-        oc delete sub -n ${fs_project} ${sub}
+        oc delete subscriptions.operators.coreos.com -n ${fs_project} ${sub}
       fi
     done < ${sub_file}
     # Delete orphaned CSVs and their install plans
