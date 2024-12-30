@@ -93,21 +93,21 @@
       secret_name: "image-registry-{{ current_cp4i_cluster.image_registry_name }}"
       secret_group: "{{ environment_name }}"
 
-    - name: Validate if container registry credentials secret is available
-      fail: msg="Container registry credentials secret image-registry-{{ current_cp4i_cluster.image_registry_name }} from group {{ environment_name }} is empty"
-      when: secret_value== ""
+  - name: Validate if container registry credentials secret is available
+    fail: msg="Container registry credentials secret image-registry-{{ current_cp4i_cluster.image_registry_name }} from group {{ environment_name }} is empty"
+    when: secret_value== ""
 
-    - name: Find private registry dedicated to this cluster
-      set_fact:
-        _selected_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
-      vars:
-        query: >-
-          [?name=='{{ current_cp4i_cluster.image_registry_name }}']
+  - name: Find private registry dedicated to this cluster
+    set_fact:
+      _selected_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
+    vars:
+      query: >-
+        [?name=='{{ current_cp4i_cluster.image_registry_name }}']
 
-    - name: Fail if the referenced registry does not exist
-      fail:
-        msg: "The registry {{ current_cp4i_cluster.image_registry_name }} is not defined"
-      when: (_selected_registry | default({})) == {}
+  - name: Fail if the referenced registry does not exist
+    fail:
+      msg: "The registry {{ current_cp4i_cluster.image_registry_name }} is not defined"
+    when: (_selected_registry | default({})) == {}
 
   - name: Set private registry credentials and properties
     set_fact:
@@ -116,9 +116,9 @@
       _private_reg_port: "{{ _selected_registry.registry_port | default('') }}"
       _private_reg_namespace: "{{ selected_registry.registry_namespace | default('') }}"
 
-    - name: Set private registry URL
-      set_fact:
-        _private_reg_url: "{{ lookup('template','private_reg_url.j2') }}"
+  - name: Set private registry URL
+    set_fact:
+      _private_reg_url: "{{ lookup('template','private_reg_url.j2') }}"
 
   when: _private_reg_defined
 
@@ -131,17 +131,12 @@
     set_fact:
       _use_case_files: (current_cp4i_cluster.use_case_files | default(True) | bool)
 
-  - name: When using CASE files
-    block:
-    - name: Using CASE files specified. Downloading...
-      include_tasks: download-case-files.yml
+  - include_tasks: download-case-files.yml
     when: _use_case_files
 
-  - name: When not using CASE files
-    block:
-    - name: Using CASE files is not specified.
-      debug:
-        msg: "The online catalog sources will be used during the installation."  
+  - name: Using CASE files is not specified.
+    debug:
+      msg: "The online catalog sources will be used during the installation."  
     when: not _use_case_files
 
   when: not _private_reg_defined
@@ -205,15 +200,14 @@
   when: not (cp4i_sandbox | default(False) | bool)
 
 - name: Reset CP4I directory for generated files
-  block:
-    - file:
-        path: "{{ status_dir }}/cp4i"
-        state: absent
+  file:
+    path: "{{ status_dir }}/cp4i"
+    state: absent
 
-    - name: Create directory status/cp4i
-      file:
-        path: "{{ status_dir }}/cp4i"
-        state: directory
+- name: Create directory status/cp4i
+  file:
+    path: "{{ status_dir }}/cp4i"
+    state: directory
 
 - name: Prepare OpenShift cluster for Cloud Pak for Integration
   include_role:
