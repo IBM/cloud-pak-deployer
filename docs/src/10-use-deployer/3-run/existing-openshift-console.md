@@ -305,15 +305,16 @@ data:
         replicas: 1
         state: removed
 
+      # In case watsonx Orchestrate is installed, no instances must be created for Watson Assistant
       - name: watson-assistant
         description: Watson Assistant
         size: small
         # noobaa_account_secret: noobaa-admin
         # noobaa_cert_secret: noobaa-s3-serving-cert
         state: removed
-        instances:
-        - name: wa-instance
-          description: "Watson Assistant instance"
+        # instances:
+        # - name: wa-instance
+        #   description: "Watson Assistant instance"
 
       - name: watson-discovery
         description: Watson Discovery
