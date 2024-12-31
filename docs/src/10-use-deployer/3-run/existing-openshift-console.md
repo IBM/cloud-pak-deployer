@@ -456,8 +456,8 @@ data:
         description: watsonx.orchestrate
         app_connect:
           app_connect_project: ibm-app-connect
-          app_connect_case_version: 11.5.0
-          app_connect_channel_version: v11.5
+          app_connect_case_version: 12.5.0
+          app_connect_channel_version: v12.5
         state: removed
 
       - name: wca-ansible
