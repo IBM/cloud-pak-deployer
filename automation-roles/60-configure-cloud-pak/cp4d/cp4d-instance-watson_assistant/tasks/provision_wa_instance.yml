@@ -40,19 +40,18 @@
         dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wa_instance.name }}-wa-instance.json"
 
     - name: Create Watson Assistant instance {{ _wa_instance.name }}
-      shell: |
-        curl -v -k \
-          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
-          -H 'Content-Type: application/json' \
-          -X POST \
-          'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
-          -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wa_instance.name }}-wa-instance.json
+      uri:
+        url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances'
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
+        src: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wa_instance.name }}-wa-instance.json"
+        validate_certs: no
+        status_code: 200
       register: _create_wa_instance_result
-
-    - set_fact:
-        _create_wa_instance_result_json: "{{ _create_wa_instance_result.stdout | from_json }}"
 
     - name: Show Watson Assistant instance result
       debug:
-        var: _create_wa_instance_result_json
+        var: _create_wa_instance_result
   when: not cpd_dry_run

@@ -90,7 +90,7 @@ data:
 
     openshift:
     - name: cpd-demo
-      ocp_version: "4.15"
+      ocp_version: "4.16"
       cluster_name: cpd-demo
       domain_name: example.com
       mcg:
@@ -109,7 +109,7 @@ data:
     cp4d:
     - project: cpd
       openshift_cluster_name: cpd-demo
-      cp4d_version: 5.0.3
+      cp4d_version: 5.1.0
       db2u_limited_privileges: False
       use_fs_iam: True
       accept_licenses: True
@@ -147,6 +147,11 @@ data:
 
       - name: datagate
         description: Db2 Data Gate
+        state: removed
+
+      - name: datalineage
+        description: IBM MANTA Data Lineage
+        size: small
         state: removed
 
       - name: dataproduct
@@ -300,15 +305,16 @@ data:
         replicas: 1
         state: removed
 
+      # In case watsonx Orchestrate is installed, no instances must be created for Watson Assistant
       - name: watson-assistant
         description: Watson Assistant
         size: small
         # noobaa_account_secret: noobaa-admin
         # noobaa_cert_secret: noobaa-s3-serving-cert
         state: removed
-        instances:
-        - name: wa-instance
-          description: "Watson Assistant instance"
+        # instances:
+        # - name: wa-instance
+        #   description: "Watson Assistant instance"
 
       - name: watson-discovery
         description: Watson Discovery
@@ -332,10 +338,6 @@ data:
         # noobaa_cert_secret: noobaa-s3-serving-cert
         state: removed
 
-      # Please note that for watsonx.ai, the following pre-requisites exist:
-      # If you want to use foundation models, you neeed to install the Node Feature Discovery and NVIDIA GPU operators. 
-      #    You can do so by setting the openshift.gpu.install property to auto
-      # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to auto
       - name: watsonx_ai
         description: watsonx.ai
         state: removed
@@ -346,6 +348,8 @@ data:
           state: removed
         - model_id: codellama-codellama-34b-instruct-hf
           state: removed
+        - model_id: codestral-22b
+          state: removed
         - model_id: elyza-japanese-llama-2-7b-instruct
           state: removed
         - model_id: google-flan-ul2
@@ -354,41 +358,86 @@ data:
           state: removed
         - model_id: google-flan-t5-xxl
           state: removed
-        - model_id: eleutherai-gpt-neox-20b
+        - model_id: ibm-granite-7b-lab
           state: removed
         - model_id: ibm-granite-8b-japanese
           state: removed
-        - model_id: ibm-granite-13b-chat-v1
-          state: removed
         - model_id: ibm-granite-13b-chat-v2
-          state: removed
-        - model_id: ibm-granite-13b-instruct-v1
           state: removed
         - model_id: ibm-granite-13b-instruct-v2
           state: removed
         - model_id: ibm-granite-20b-multilingual
           state: removed
+        - model_id: granite-3-2b-instruct
+          state: removed
+        - model_id: granite-3-8b-instruct
+          state: removed
+        - model_id: granite-guardian-3-2b-instruct
+          state: removed
+        - model_id: granite-guardian-3-8b-instruct
+          state: removed
+        - model_id: granite-3b-code-instruct
+          state: removed
+        - model_id: granite-8b-code-instruct
+          state: removed
+        - model_id: granite-20b-code-instruct
+          state: removed
+        - model_id: granite-20b-code-base-schema-linking
+          state: removed
+        - model_id: granite-20b-code-base-sql-gen
+          state: removed
+        - model_id: granite-34b-code-instruct
+          state: removed
         - model_id: core42-jais-13b-chat
           state: removed
-        - model_id: meta-llama-llama-2-13b-chat
+        - model_id: llama-3-2-1b-instruct
+          state: removed
+        - model_id: llama-3-2-3b-instruct
+          state: removed
+        - model_id: llama-3-2-11b-vision-instruct
+          state: removed
+        - model_id: llama-3-2-90b-vision-instruct
+          state: removed
+        - model_id: llama-guard-3-11b-vision
+          state: removed
+        - model_id: llama-3-1-8b-instruct
+          state: removed
+        - model_id: llama-3-1-70b-instruct
+          state: removed
+        - model_id: llama-3-405b-instruct
           state: removed
         - model_id: meta-llama-llama-3-8b-instruct
           state: removed
-        - model_id: meta-llama-llama-2-70b-chat
+        - model_id: meta-llama-llama-3-70b-instruct
+          state: removed
+        - model_id: meta-llama-llama-2-13b-chat
           state: removed
         - model_id: mncai-llama-2-13b-dpo-v7
           state: removed
-        - model_id: ibm-mistralai-merlinite-7b
+        - model_id: ministral-8b-instruct
           state: removed
-        - model_id: ibm-mpt-7b-instruct2
+        - model_id: mistral-small-instruct
+          state: removed
+        - model_id: mistral-large
           state: removed
         - model_id: mistralai-mixtral-8x7b-instruct-v01
           state: removed
-        - model_id: ibm-mistralai-mixtral-8x7b-instruct-v01-q
-          state: removed
         - model_id: bigscience-mt0-xxl
           state: removed
-        - model_id: bigcode-starcoder
+        - model_id: pixtral-12b
+          state: removed
+        # Embedding models
+        - model_id: all-minilm-l6-v2
+          state: removed
+        - model_id: all-minilm-l12-v2
+          state: removed
+        - model_id: ms-marco-minilm-l-12-v2
+          state: removed
+        - model_id: multilingual-e5-large
+          state: removed
+        - model_id: slate-30m-english-rtrvr-v2
+          state: removed
+        - model_id: slate-125m-english-rtrvr-v2
           state: removed
 
       - name: watsonx_data
@@ -408,8 +457,8 @@ data:
         description: watsonx.orchestrate
         app_connect:
           app_connect_project: ibm-app-connect
-          app_connect_case_version: 11.5.0
-          app_connect_channel_version: v11.5
+          app_connect_case_version: 12.5.0
+          app_connect_channel_version: v12.5
         state: removed
 
       - name: wca-ansible
