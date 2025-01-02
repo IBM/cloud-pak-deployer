@@ -15,7 +15,7 @@ fs_project=${PROJECT_CPD_INST_OPERATORS}
 # List subscriptions and their CSVs
 if oc get project ${fs_project} > /dev/null 2>&1; then
   echo "Listing subscriptions and their CSVs"
-  oc get sub -n ${fs_project} \
+  oc get subscriptions.operators.coreos.com -n ${fs_project} \
       --sort-by=.metadata.creationTimestamp \
       --no-headers \
       -o jsonpath='{range .items[*]}{.metadata.name}{","}{.metadata.creationTimestamp}{","}{.status.installedCSV}{","}{.status.state}{"\n"}{end}'

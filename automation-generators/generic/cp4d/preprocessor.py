@@ -359,6 +359,18 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             g.appendError(msg='You need to specify a cartridge for the Cloud Pak Foundational Services (cpfs or cp-foundation)')
         if cpdPlatformFound==False:
             g.appendError(msg='You need to specify a cartridge for the Cloud Pak for Data platform (cpd_platform or lite)')
+            
+    # Now that we have reached this point, we can check the cartridge details
+    if len(g.getErrors()) == 0:
+        wa_cartridge={}
+        wxo_cartridge={}
+        for c in ge['cartridges']:
+            if c['name'] in ["watson_assistant","watson-assistant"]:
+                wa_cartridge=c
+            if c['name'] in ["watsonx_orchestrate","watsonx-orchestrate"]:
+                wxo_cartridge=c
+        if 'state' in wa_cartridge and wa_cartridge['state']=='installed' and 'instances' in wa_cartridge and 'state' in wxo_cartridge and wxo_cartridge['state']=='installed':
+            g.appendError(msg='Watson Assistant instances are not allowed if watsonx Orchstrate is also installed.')
         
     result = {
         'attributes_updated': g.getExpandedAttributes(),
