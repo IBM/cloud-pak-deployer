@@ -11,7 +11,9 @@ There are 5 main steps to run the deploye for AWS:
 5. [Run the deployer](#5-run-the-deployer)
 6. [Post-install configuration (Add GPU nodes)](#6-post-install-configuration)
 
-See the deployer in action in this video: https://ibm.box.com/v/cpd-aws-self-managed
+See the deployer in action in this video:
+
+<video src="https://ibm.box.com/shared/static/01jbnh1racivtjjmwnc10fxj9xr2uhgp.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:300px; min-height: 200px"></video>
 
 ## Topology
 
