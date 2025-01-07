@@ -10,6 +10,10 @@ There are 5 main steps to run the deployer for AWS:
 4. [Set environment variables and secrets](#4-set-environment-variables-and-secrets)
 5. [Run the deployer](#5-run-the-deployer)
 
+See the deployer in action in this video:
+
+<video src="https://ibm.box.com/shared/static/wdmvrnumxieiie51aqhp1yg682bar0tv.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:300px; min-height: 200px"></video>
+
 ## Topology
 
 A typical setup of the ROSA cluster is pictured below:
