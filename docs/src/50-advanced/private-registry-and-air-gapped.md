@@ -208,7 +208,9 @@ This will download all clients, start the portable registry and then mirror imag
     -vs ibm_cp_entitlement_key
 ```
 
-See the download of watsonx.ai in action: https://ibm.box.com/v/cpd-air-gapped-download
+See the download of watsonx.ai in action:
+
+<video src="https://ibm.box.com/shared/static/swgaprvr9uvy3f4483jqgls4ntc962ws.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:300px; min-height: 200px"></video>
 
 #### Diagram step 2
 When the download finished successfully, the status directory holds the deployer scripts, the configuration directory, the deployer container image and the portable registry.
@@ -223,7 +225,11 @@ The bastion server is not connected to the internet but is connected to the priv
 
 #### Diagram step 4
 
-See the air-gapped installation of Cloud Pak for Data in action: https://ibm.box.com/v/cpd-air-gapped-install. For the demonstration video, the download of the previous step has first been re-run to only download the Cloud Pak for Data control plane to avoid having to ship and upload ~700 GB.
+See the air-gapped installation of Cloud Pak for Data in action:
+
+<video src="https://ibm.box.com/shared/static/ldu9r6peftc037z1ydwawj5b26thk8kz.mp4" controls="controls" muted="muted" class="d-block rounded-bottom-2 border-top width-fit" style="max-height:300px; min-height: 200px"></video>
+
+For the demonstration video, the download of the previous step has first been re-run to only download the Cloud Pak for Data control plane to avoid having to ship and upload ~700 GB.
 
 We're using the instructions in [Run on existing OpenShift](../../10-use-deployer/3-run/existing-openshift), adding the CPD_AIRGAP environment variable.
 
