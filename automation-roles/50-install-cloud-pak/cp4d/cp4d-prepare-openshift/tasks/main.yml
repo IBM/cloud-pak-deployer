@@ -27,7 +27,12 @@
 - include_tasks: cp4d-install-openshift-ai.yml
   when: 
   - (_current_openshift_cluster.openshift_ai.install | default('') | lower) == 'auto'
-  - _opernshift_ai_required
+  - _openshift_ai_required
+
+- include_tasks: cp4d-install-knative.yml
+  when: 
+  - current_cp4d_cluster.cp4d_version >= '4.8.0'
+  - (_knative_eventing_dependency | default(False))
 
 - name: Prepare Cloud Pak for Data cluster-wide configuration on cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_tasks: cp4d-prepare-openshift.yml
