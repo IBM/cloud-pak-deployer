@@ -37,13 +37,13 @@
     container: openjdk-container
     command: |
       /bin/bash -c '
-      keytool -printcert -rfc -sslserver iaf-system-kafka-bootstrap.{{ akhq_cp4ba_project_name }}.{{ apps_endpoint_domain }} > /tmp/cert.pem
+      keytool -printcert -rfc -sslserver iaf-system-kafka-bootstrap-{{ akhq_cp4ba_project_name }}.{{ apps_endpoint_domain }}:443 > /tmp/cert.pem
       keytool -importcert \
         -file /tmp/cert.pem \
         -alias iaf-ca \
         -keystore /tmp/truststore.jks \
         -storepass {{ akhq_universal_password }} \
-        -noprompt
+        -noprompt \
         -trustcacerts
       base64 -w 0 /tmp/truststore.jks
       '
