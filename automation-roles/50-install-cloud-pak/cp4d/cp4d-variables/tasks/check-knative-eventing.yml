@@ -8,6 +8,10 @@
     _knative_eventing_dependency: "{{ _knative_eventing_dependency or (item.knative_eventing_dependency | default(False)) }}"
   loop: "{{ _cartridges_to_install }}"
 
+- set_fact:
+    _knative_eventing_dependency: True
+  when: (cpd_test_cartridges | default(False) | bool)  
+
 - name: Show if there is a Knative eventing dependency
   debug:
     var: _knative_eventing_dependency

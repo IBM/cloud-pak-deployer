@@ -13,6 +13,10 @@
   include_vars: vars-cp4d-installation.yml
 
 - set_fact:
+    _confirm_destroy: True
+  when: (cpd_test_cartridges | default(False) | bool)
+
+- set_fact:
     foundational_services_project: "{{ _p_current_cp4d_cluster.operators_project }}"
   when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
 
@@ -24,6 +28,7 @@
     _all_cartridges: []
     _cartridges_to_install: []
     _cartridge_dependencies: []
+    _surviving_cartridges: []
 
 - name: Obtain versions of case files and cartridges
   include_tasks: list-components-olm-utils.yml
@@ -96,16 +101,16 @@
     _all_cartridges: >-
       {{ _tmp_cartridges + _dp_cartridge }}
 
-- set_fact:
-    _cartridges_to_install: "{{ _all_cartridges }}"
-  when: (cpd_test_cartridges | default(False) | bool)
+# - set_fact:
+#     _cartridges_to_install: "{{ _all_cartridges }}"
+#   when: (cpd_test_cartridges | default(False) | bool)
 
 - set_fact:
     _cartridges_to_install: >-
       {{  _all_cartridges | 
             selectattr('state','undefined') | 
             union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
-  when: not(cpd_test_cartridges | default(False) | bool)
+  # when: not(cpd_test_cartridges | default(False) | bool)
 
 - set_fact:
     _cartridges_to_install_list: >-
