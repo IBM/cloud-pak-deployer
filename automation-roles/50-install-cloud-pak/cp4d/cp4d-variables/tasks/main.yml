@@ -24,6 +24,7 @@
     _all_cartridges: []
     _cartridges_to_install: []
     _cartridge_dependencies: []
+    _surviving_cartridges: []
 
 - name: Obtain versions of case files and cartridges
   include_tasks: list-components-olm-utils.yml
@@ -166,45 +167,37 @@
     _cartridge_dependencies: >-
       {{ _cartridge_dependencies + ( item.Dependencies.split('+') | map("trim") | list | reject('match','^$') | list ) | unique }}
   loop: "{{ _cartridges_to_install }}"
-  no_log: True
 
 - name: Remove duplicate entries from cartridge dependencies
   set_fact:
     _cartridge_dependencies: >-
       {{ _cartridge_dependencies | unique }}
 
-- name: Show cartridge dependencies
-  debug:
+- debug:
     var: _cartridge_dependencies
-
-- name: Show full information of cartridges to be installed
-  debug:
-    var: _cartridges_to_install
 
 - name: Obtain surviving cartridges
   set_fact:
-    _surviving_cartridges_names: "{{ _cartridges_to_install | json_query(jmes_query) }} + {{ _cartridge_dependencies }}"
+    _surviving_cartridges_names: "{{ _cartridges_to_install | json_query(jmes_query) | union(_cartridge_dependencies) }}"
   vars:
     jmes_query: "[?state=='installed'].olm_utils_name"
 
 - name: Make sure that ikc_standard is added to dependencies if ikc_premium is installed
   set_fact:
-    _surviving_cartridges_names: "{{ _surviving_cartridges_names }} + ['ikc_standard']"
+    _surviving_cartridges_names: "{{ _surviving_cartridges_names | union(['ikc_standard']) }}"
   when: '"ikc_premium" in _surviving_cartridges_names'
+
+- debug:
+    var: _surviving_cartridges_names
 
 - name: Determine the surviving cartridges
   set_fact:
     _surviving_cartridges: >-
-      {{ _surviving_cartridges | default([]) 
-        + [ _cartridges_to_install_item ]
-      }}
+      {{ _surviving_cartridges | union(_cartridges_to_install_item) }}
   vars:
     _cartridges_to_install_item: >-
           {{ _all_cartridges
             | selectattr('olm_utils_name','equalto',item)
-            | list
-            | first
-            | default({})
           }}
   loop: "{{ _surviving_cartridges_names }}"
 
