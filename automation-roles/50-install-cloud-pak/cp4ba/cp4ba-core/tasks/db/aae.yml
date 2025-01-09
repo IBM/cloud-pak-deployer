@@ -16,13 +16,11 @@
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create a new user
-        create user aaedb with password '{{ cp4ba_postgresql_universal_password }}';
+        -- create user aaedb
+        CREATE USER aaedb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database aaedb
-        create database aaedb owner aaedb;
-
-        -- The following grant is used for databases
-        grant all privileges on database aaedb to aaedb;
+        -- create database aaedb -- default template tablespace
+        CREATE DATABASE aaedb OWNER aaedb TEMPLATE template0 ENCODING UTF8;
+        REVOKE CONNECT ON DATABASE aaedb FROM PUBLIC;
       EOF"
   register: command_status
