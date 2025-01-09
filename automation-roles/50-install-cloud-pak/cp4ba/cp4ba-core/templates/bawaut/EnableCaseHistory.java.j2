@@ -1,0 +1,32 @@
+import com.filenet.api.admin.CmProcessEngineConfiguration;
+import com.filenet.api.collection.SubsystemConfigurationList;
+import com.filenet.api.constants.RefreshMode;
+import com.filenet.api.core.Connection;
+import com.filenet.api.core.Domain;
+import com.filenet.api.core.Factory;
+import com.filenet.api.util.UserContext;
+
+import javax.security.auth.Subject;
+
+public class EnableCaseHistory {
+
+    public static void main(String[] args) throws Exception {
+        Connection connection = Factory.Connection.getConnection("http://localhost:9080/wsi/FNCEWS40MTOM");
+        Subject subject = UserContext.createSubject(connection, "{{ lc_principal_admin_user }}", "{{ lc_principal_admin_password }}", "FileNetP8WSI");
+        UserContext.get().pushSubject(subject);
+        try {
+            Domain domain = Factory.Domain.fetchInstance(connection, null, null);
+            SubsystemConfigurationList subsystemConfigurations = domain.get_SubsystemConfigurations();
+            for (Object subsystemConfig : subsystemConfigurations) {
+                if (subsystemConfig instanceof CmProcessEngineConfiguration) {
+                    ((CmProcessEngineConfiguration) subsystemConfig).set_HistoryExporterEnabled(true);
+                    domain.save(RefreshMode.REFRESH);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            UserContext.get().popSubject();
+        }
+    }
+}

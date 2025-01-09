@@ -14,23 +14,51 @@
     common_namespace_name: "{{ akhq_project_name }}"
     common_output_directory: "{{ akhq_output_directory }}"
 
-- name: Import trusted CA from SSL certificate
-  community.general.java_cert:
-    cert_url: "iaf-system-kafka-bootstrap-{{ akhq_cp4ba_project_name }}.{{ apps_endpoint_domain }}"
-    keystore_path: "{{ akhq_output_directory }}/truststore.jks"
-    keystore_pass: "{{ akhq_universal_password }}"
-    keystore_create: true
+- name: Create a pod with OpenJDK runtime image
+  kubernetes.core.k8s:
     state: present
-    cert_alias: iaf-ca
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: akhq-keytool
+        namespace: "{{ akhq_project_name }}"
+      spec:
+        containers:
+          - name: openjdk-container
+            image: ubi9/openjdk-17-runtime:1.21-1
+            command: ["/bin/sh", "-c", "sleep 3600"]
+    wait: true
 
-- name: Load jks data
-  ansible.builtin.slurp:
-    src: "{{ akhq_output_directory }}/truststore.jks"
-  register: slurped_jks_data
+- name: Fetch certificate, create JKS, and encode as Base64
+  kubernetes.core.k8s_exec:
+    namespace: "{{ akhq_project_name }}"
+    pod: akhq-keytool
+    container: openjdk-container
+    command: |
+      /bin/bash -c '
+      keytool -printcert -rfc -sslserver iaf-system-kafka-bootstrap-{{ akhq_cp4ba_project_name }}.{{ apps_endpoint_domain }}:443 > /tmp/cert.pem
+      keytool -importcert \
+        -file /tmp/cert.pem \
+        -alias iaf-ca \
+        -keystore /tmp/truststore.jks \
+        -storepass {{ akhq_universal_password }} \
+        -noprompt \
+        -trustcacerts
+      base64 -w 0 /tmp/truststore.jks
+      '
+  register: base64_result
 
 - name: Decode data and store as fact
   ansible.builtin.set_fact:
-    _jks: "{{ slurped_jks_data.content }}"
+    _jks: "{{ base64_result.stdout }}"
+
+- name: Cleanup pod after execution
+  kubernetes.core.k8s:
+    state: absent
+    kind: Pod
+    name: akhq-keytool
+    namespace: "{{ akhq_project_name }}"
 
 - name: Get OCP Apps Endpoint
   ansible.builtin.include_role:

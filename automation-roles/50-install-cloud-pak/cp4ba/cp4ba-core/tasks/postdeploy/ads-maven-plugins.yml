@@ -56,29 +56,6 @@
         dest: "{{ cp4ba_output_directory }}/{{ plugin_file_name }}"
         mode: u+rwx
 
-    # TODO from ansible 2.10+ but line endings of jar files are changed and CP4BA components cannot use these modified jars.
-    # - name: Upload plugin to Nexus
-    #   ansible.builtin.uri:
-    #     url: "https://nexus.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=maven-releases"
-    #     method: POST
-    #     body_format: form-multipart
-    #     body:
-    #       maven2.asset1:
-    #         content: "{{ lookup('file', cp4ba_output_directory+'/'+item.value.path) }}"
-    #         filename: "{{ item.value.path }}"
-    #       maven2.groupId: "{{ item.value.maven_coordinates.groupId }}"
-    #       maven2.artifactId: "{{ item.value.maven_coordinates.artifactId }}"
-    #       maven2.version: "{{ item.value.maven_coordinates.version }}"
-    #       maven2.asset1.extension: "{{ item.value.maven_coordinates.packaging }}"
-    #     validate_certs: false
-    #     status_code: 200
-    #     user: "{{ lc_principal_admin_user }}"
-    #     password: "{{ lc_principal_admin_password }}"
-    #     force_basic_auth: true
-    #   register: response
-    #   vars:
-    #     jar_name: "{{ ads_maven_plugins_response.json | json_query('resources.annotations_maven_plugin.path') }}"
-
     - name: Upload plugin to Nexus
       ansible.builtin.command: |
         curl -kX 'POST' \
@@ -95,3 +72,4 @@
       register: ads_curl_result
       changed_when: true
       failed_when: ads_curl_result.stdout != "204"
+      # noqa: command-instead-of-module
