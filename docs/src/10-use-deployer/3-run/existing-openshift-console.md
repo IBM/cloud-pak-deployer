@@ -437,9 +437,9 @@ data:
           state: removed
         - model_id: multilingual-e5-large
           state: removed
-        - model_id: slate-30m-english-rtrvr-v2
+        - model_id: ibm-slate-30m-english-rtrvr
           state: removed
-        - model_id: slate-125m-english-rtrvr-v2
+        - model_id: ibm-slate-125m-english-rtrvr
           state: removed
 
       - name: watsonx_data
@@ -520,11 +520,8 @@ data:
         description: Watson Studio Runtimes
         runtimes:
         - ibm-cpd-ws-runtime-241-py
-        - ibm-cpd-ws-runtime-231-py
         - ibm-cpd-ws-runtime-241-pygpu
-        - ibm-cpd-ws-runtime-231-pygpu
         - ibm-cpd-ws-runtime-241-r
-        - ibm-cpd-ws-runtime-231-r
         state: removed 
 ```
 
