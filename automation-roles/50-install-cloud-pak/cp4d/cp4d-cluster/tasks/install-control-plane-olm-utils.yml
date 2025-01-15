@@ -16,6 +16,12 @@
           cloudpakfordata: true
           iamIntegration: {{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}
 
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Installation options file for apply-cr command"
+    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+
 - block:
   - name: Generate apply-cr preview script to install Cloud Pak for Data platform
     set_fact:
