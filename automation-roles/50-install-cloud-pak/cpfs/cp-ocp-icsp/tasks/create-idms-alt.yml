@@ -1,13 +1,13 @@
 ---
-- name: Create ImageDigestMirrorSet for alternative registries into {{ status_dir }}/openshift/cloud-pak-idms.yaml
-  template:
-    src: cloud-pak-idms-alt.j2
-    dest: "{{ status_dir }}/openshift/cloud-pak-idms.yaml"
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create ImageDigestMirrorSet for alternative registries into {{ status_dir }}/openshift/cloud-pak-idms.yaml
+    _p_apply_yaml_template: cloud-pak-idms-alt.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/cloud-pak-idms.yaml"
 
-- name: Create ImageDigestMirrorSet {{ icsp_name }}
-  shell: |
-    oc apply -f {{ status_dir }}/openshift/cloud-pak-idms.yaml
-
-- name: Delete ImageContentSourcePolicy {{ icsp_name }} if still existing
-  shell: |
-    oc delete imagecontentsourcepolicies.operator.openshift.io {{ icsp_name }} --ignore-not-found
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Delete ImageContentSourcePolicy {{ icsp_name }} if still existing
+    _p_command: oc delete imagecontentsourcepolicies.operator.openshift.io {{ icsp_name }} --ignore-not-found
