@@ -28,11 +28,12 @@
     _all_cartridges: []
     _cartridges_to_install: []
     _cartridge_dependencies: []
-    _surviving_cartridges: []
 
 - name: Obtain versions of case files and cartridges
   include_tasks: list-components-olm-utils.yml
   when: _list_components_json is not defined
+
+- include_tasks: get-cr-status.yml
 
 - name: Get cartridges with CR details
   set_fact:
@@ -66,16 +67,23 @@
     msg: "Not all cartridges in the configuration are valid: {{ _undefined_cartridges }}"
   when: _undefined_cartridges!=[]
 
-- name: Add versions details from olm-utils
+- name: Add versions details from olm-utils and installed version from get-cr-status
   set_fact:
     _all_cartridges: >-
       {{ _all_cartridges | default([]) 
-        + [ item | combine(_list_components_json_item) ]
+        + [ item | combine(_list_components_json_item) | combine(_get_cr_status_json_item) ]
       }}
   vars:
     _list_components_json_item: >-
           {{ _list_components_json.list
             | selectattr('Component_name','equalto',item['olm_utils_name'])
+            | list
+            | first
+            | default([])
+          }}
+    _get_cr_status_json_item: >-
+          {{ _get_cr_status_json.list
+            | selectattr('Component','equalto',item['olm_utils_name'])
             | list
             | first
             | default([])
@@ -192,32 +200,43 @@
   vars:
     jmes_query: "[?state=='installed'].olm_utils_name"
 
-- name: Make sure that ikc_standard is added to dependencies if ikc_premium is installed
+- name: Add control plane cartridges to the surviving cartridges
+  set_fact:
+    _surviving_cartridges_names: "{{ _surviving_cartridges_names }} + ['cpd_platform','zen','cpfs']"
+
+- name: Make sure that ikc_standard is added to the surviving cartridges if ikc_premium is installed
   set_fact:
     _surviving_cartridges_names: "{{ _surviving_cartridges_names }} + ['ikc_standard']"
   when: '"ikc_premium" in _surviving_cartridges_names'
 
-- name: Determine the surviving cartridges
+- name: Obtain surviving cartridge CRs
   set_fact:
-    _surviving_cartridges: >-
-      {{ _surviving_cartridges | default([]) 
-        + [ _cartridges_to_install_item ]
-      }}
+    _surviving_cartridges_crs: "{{ _cartridges_to_install | json_query(jmes_query) }}"
   vars:
-    _cartridges_to_install_item: >-
-          {{ _all_cartridges
-            | selectattr('olm_utils_name','equalto',item)
-            | list
-            | first
-            | default({})
-          }}
-  loop: "{{ _surviving_cartridges_names }}"
-
-- set_fact:
-    _surviving_cartridges: "{{ _surviving_cartridges | default([]) | rejectattr('CR_Kind','undefined') }}"
+    jmes_query: "[?state=='installed'].CR_Kind"
 
 - debug:
-    var: _surviving_cartridges
+    var: _surviving_cartridges_names
+
+- debug:
+    var: _surviving_cartridges_crs
+
+- set_fact:
+    _obsolete_cartridges: >-
+      {{ _get_cr_status_json.list 
+        | rejectattr('Component','in',_surviving_cartridges_names) 
+        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) }}
+
+- set_fact:
+    _obsolete_cartridges_names: >-
+      {{ _obsolete_cartridges
+        | map(attribute='Component') }}
+
+- debug:
+    var: _obsolete_cartridges
+
+- debug:
+    var: _obsolete_cartridges_names
 
 - name: Write cartridge to install information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
   copy:

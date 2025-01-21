@@ -2,17 +2,21 @@
 - include_role:
     name: cp4d-variables
 
+- name: Fail if there are cartridges to remove and destroy was not confirmed
+  fail:
+    msg: |
+      Will not delete cartridges. Destroy was not confirmed with --confirm-destroy parameter or global_config confirm_destroy property.
+      Cartridges that would be destroyed are: {{ _obsolete_cartridges_names }}
+  when: 
+  - _obsolete_cartridges_names | length != 0
+  - (_confirm_destroy | default(False) | bool) != True
+  - not cpd_dry_run
+
 - name: Remove obsolete cartridges from CP4D cluster {{ _p_current_cp4d_cluster.project }}
   debug:
     msg: "Remove obsolete cartridges from CP4D cluster {{ _p_current_cp4d_cluster.project }}"
 
-- name: Check which obsolete cartridges are still installed
-  include_tasks: cp4d-check-remove-cr.yml
-  loop: "{{ _all_cartridges }}"
+- include_tasks: cp4d-remove-cr.yml
+  loop: "{{ _obsolete_cartridges }}"
   loop_control:
-    loop_var: _current_cartridge_cr
-  when:
-  - (_current_cartridge_cr.cr_cr | default('')) != ''
-  - not (_current_cartridge_cr.embedded | default(False) | bool)
-  - not (_current_cartridge_cr.cr_internal | default(False) | bool)
-  - not _current_cartridge_cr.name in ['cpfs','cp-foundation','cpd_platform','lite','scheduler']
+    loop_var: _obsolete_cartridge
