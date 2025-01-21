@@ -1,6 +1,17 @@
 ---
+- name: Check if old scheduler project is already on the cluster
+  shell: |
+    oc get ns cpd-scheduler
+  failed_when: False
+  register: _get_cpd_scheduler
+
 - set_fact:
     _scheduler_project: "{{ scheduling_service_project }}"
+  when: _get_cpd_scheduler.rc != 0
+
+- set_fact:
+    _scheduler_project: cpd-scheduler
+  when: _get_cpd_scheduler.rc == 0
 
 - set_fact:
     _scheduler: "{{ _p_current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"

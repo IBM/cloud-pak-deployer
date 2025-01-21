@@ -50,20 +50,6 @@
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
 
-- name: Create catalog sources for Cloud Pak for Data platform in project {{ current_cp4d_cluster.project }}
-  include_role:
-    name: cp4d-catalog-source
-  vars:
-    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-    _p_catsrc_scope: platform
-
-- name: Create subscriptions for Cloud Pak for Data platform in project {{ current_cp4d_cluster.project }}
-  include_role:
-    name: cp4d-subscriptions
-  vars:
-    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-    _p_subscription_scope: platform
-
 - name: Install or uninstall scheduling service
   include_role:
     name: cp4d-scheduling-service
@@ -71,6 +57,10 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
 - include_tasks: install-control-plane-olm-utils.yml
+  when: current_cp4d_cluster.cp4d_version < "5.1.0"
+
+- include_tasks: install-software-hub.yml
+  when: current_cp4d_cluster.cp4d_version >= "5.1.0"
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml
