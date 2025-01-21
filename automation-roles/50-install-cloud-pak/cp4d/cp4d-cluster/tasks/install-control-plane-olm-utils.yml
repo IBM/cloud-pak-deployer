@@ -1,4 +1,18 @@
 ---
+- name: Create catalog sources for Cloud Pak for Data platform in project {{ current_cp4d_cluster.project }}
+  include_role:
+    name: cp4d-catalog-source
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_catsrc_scope: platform
+
+- name: Create subscriptions for Cloud Pak for Data platform in project {{ current_cp4d_cluster.project }}
+  include_role:
+    name: cp4d-subscriptions
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_subscription_scope: platform
+
 - name: Populate {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
   lineinfile:
     path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
@@ -15,6 +29,12 @@
         cpd_platform:
           cloudpakfordata: true
           iamIntegration: {{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Installation options file for apply-cr command"
+    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
 
 - block:
   - name: Generate apply-cr preview script to install Cloud Pak for Data platform
