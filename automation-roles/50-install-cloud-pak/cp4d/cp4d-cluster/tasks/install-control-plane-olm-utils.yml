@@ -1,4 +1,18 @@
 ---
+- name: Create catalog sources for Cloud Pak for Data platform in project {{ current_cp4d_cluster.project }}
+  include_role:
+    name: cp4d-catalog-source
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_catsrc_scope: platform
+
+- name: Create subscriptions for Cloud Pak for Data platform in project {{ current_cp4d_cluster.project }}
+  include_role:
+    name: cp4d-subscriptions
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_subscription_scope: platform
+
 - name: Populate {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
   lineinfile:
     path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"

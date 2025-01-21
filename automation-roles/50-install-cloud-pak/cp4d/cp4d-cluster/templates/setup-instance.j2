@@ -1,0 +1,10 @@
+setup-instance \
+    --cpd_operator_ns={{ current_cp4d_cluster.operators_project }} \
+    --cpd_instance_ns={{ current_cp4d_cluster.project }} \
+    --release={{ current_cp4d_cluster.cp4d_version }} \
+{% if not _cp_alt_repo_used -%}
+    --from_oci=true \
+{% endif -%}   
+    --block_storage_class={{ ocp_storage_class_block }} \
+    --param-file={{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml \
+    --license_acceptance=true -vvv
