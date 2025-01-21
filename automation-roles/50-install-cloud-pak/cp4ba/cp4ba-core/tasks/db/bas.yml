@@ -15,14 +15,12 @@
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create a new user
-        create user appdb with password '{{ cp4ba_postgresql_universal_password }}';
+        -- create user appdb
+        CREATE USER appdb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create database appdb
-        create database appdb owner appdb;
-
-        -- The following grant is used for databases
-        grant all privileges on database appdb to appdb;
+        -- create database appdb -- default template tablespace
+        CREATE DATABASE appdb OWNER appdb TEMPLATE template0 ENCODING UTF8;
+        REVOKE CONNECT ON DATABASE appdb FROM PUBLIC;
       EOF"
   register: command_status
 
@@ -34,16 +32,16 @@
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create the user
-        CREATE ROLE basdb WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user basdb
+        CREATE USER basdb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create the database:
-        CREATE DATABASE basdb WITH OWNER basdb ENCODING 'UTF8';
-        GRANT ALL ON DATABASE basdb to basdb;
+        -- create database basdb -- default template tablespace
+        CREATE DATABASE basdb OWNER basdb TEMPLATE template0 ENCODING UTF8;
+        REVOKE CONNECT ON DATABASE basdb FROM PUBLIC;
 
         -- Connect to your database and create schema
         \c basdb;
         SET ROLE basdb;
-        CREATE SCHEMA IF NOT EXISTS basdb AUTHORIZATION basdb;
+        CREATE SCHEMA IF NOT EXISTS basdb;
       EOF"
   register: command_status

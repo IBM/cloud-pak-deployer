@@ -1,9 +1,8 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 23.0.2 iFix 3.  
-RPA and Process Mining are currently not deployed due to discrepancy in Cloud Pak Foundational Services version.  
-Contains IPM version 1.14.4.
-~~Contains RPA version 23.0.15.~~
+Contains CP4BA version 24.0.1.  
+Contains IPM version 2.0.0.
+Contains RPA version 23.0.19.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -92,7 +91,7 @@ CP4BA capabilities are in purple color.
 
 More info for CP4BA capabilities is available in official docs at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest.
 
-More specifically in overview of patterns at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments.
+More specifically in overview of patterns at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capability-patterns-production-deployments.
 
 Pink color is used for CPFS dedicated capabilities.
 
@@ -148,13 +147,18 @@ For your convenience the following post-deployment setup tasks have been automat
 - ODM - Roles assigned to users and groups. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=access-managing-user-permissions
 - ADP - Organization in Git created. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-setting-up-remote-git-organization
 - ADP - Default project data loaded. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=processing-loading-default-sample-data
-- ADP - Git connection and CDD repo creation done. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=processing-setting-up-remote-git-organization
+- ADP - Git connection and CDD repo creation done. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=processing-setting-up-remote-git-organization
 - ADP - More project DBs created (6 in total - accommodates 3 ADP projects). https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=processing-creating-additional-project-databases
 - IER - Task Manager pod has TM_JOB_URL parameter set.
 - IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
+- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), BAW (BAWTOS) and ADP (DEVOS1) objectstores.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
+- BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/24.x?topic=events-using-event-handler-filenet-content-manager
+- BAW - Enable Case History on FNCM Domain level as a prerequisite for Timeline Visualizer. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=widgets-timeline-visualizer
+- BAW - Added stub configurations for watsonx.ai integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-generative-ai
+- BAW - Enabled Process Admin audit log. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-audit-log
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.
