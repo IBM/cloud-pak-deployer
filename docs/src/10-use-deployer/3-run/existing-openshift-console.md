@@ -298,6 +298,10 @@ data:
         description: SPSS Modeler
         state: removed
 
+      - name: streamsets
+        description: IBM StreamSets
+        state: removed
+
       - name: syntheticdata
         description: Synthetic Data Generator
         state: removed
