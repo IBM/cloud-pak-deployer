@@ -345,6 +345,7 @@ data:
         state: removed
         installation_options:
           tuning_disabled: true
+          lite_install: false
         models:
         - model_id: allam-1-13b-instruct
           state: removed
