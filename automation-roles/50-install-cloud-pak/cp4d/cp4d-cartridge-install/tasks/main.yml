@@ -7,19 +7,26 @@
     _cp4d_cartridges_installed_successfully: True
 
 - set_fact:
+    _apply_olm_cartridges_list: >-
+      {{ _cartridges_to_install
+        | map(attribute='olm_utils_name')
+        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
+
+- set_fact:
     _apply_cr_cartridges: >-
       {{  _cartridges_to_install | 
-            rejectattr('olm_utils_name','==','scheduler') |
-            rejectattr('olm_utils_name','==','cpd_platform') |
-            rejectattr('olm_utils_name','==','cpfs') |
             selectattr('separate_install','undefined') |
             union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
 
 - set_fact:
     _apply_cr_cartridges_list: >-
-      {{  _apply_cr_cartridges | 
-            map(attribute='olm_utils_name') | 
-            join(',')}}
+      {{  _apply_cr_cartridges 
+        | map(attribute='olm_utils_name')
+        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
 
 - name: Create catalog sources for Cloud Pak for Data cartridges in project {{ _p_current_cp4d_cluster.project }}
   include_role:
@@ -57,10 +64,15 @@
   when: not cpd_dry_run
 
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
-  when: _apply_cr_cartridges != []
+  when: _apply_cr_cartridges_list != ''
+
+- set_fact:
+    _apply_cr_cartridges_separate: >-
+      {{  _cartridges_to_install 
+        | selectattr('separate_install','defined') | selectattr('separate_install','==',True) }}
 
 - name: Install separate cartridges
   include_tasks: cp4d-install-separate-cr.yml
-  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop: "{{ _apply_cr_cartridges_separate | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge

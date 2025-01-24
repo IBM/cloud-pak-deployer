@@ -17,6 +17,16 @@
   when: (cpd_test_cartridges | default(False) | bool)
 
 - set_fact:
+    _cpd_accept_licenses: "False"
+
+- set_fact:
+    _cpd_accept_licenses: "True"
+  when: (cpd_accept_licenses | default(False) | bool) or (_p_current_cp4d_cluster.accept_licenses | default(False) | bool)
+
+- debug:
+    var: _cpd_accept_licenses
+
+- set_fact:
     foundational_services_project: "{{ _p_current_cp4d_cluster.operators_project }}"
   when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
 
@@ -99,16 +109,16 @@
     _all_cartridges: "{{ _tmp_cartridges }}"
 
 # Make sure that the dp cartridge is placed at the end
-- set_fact:
-    _dp_cartridge: >-
-      {{ _all_cartridges | selectattr('Component_name','match','dp') | default({}) }}
+# - set_fact:
+#     _dp_cartridge: >-
+#       {{ _all_cartridges | selectattr('Component_name','match','dp') | default({}) }}
 
-- set_fact:
-    _tmp_cartridges: "{{ _all_cartridges | rejectattr('Component_name','match','dp') }}"
+# - set_fact:
+#     _tmp_cartridges: "{{ _all_cartridges | rejectattr('Component_name','match','dp') }}"
 
-- set_fact:
-    _all_cartridges: >-
-      {{ _tmp_cartridges + _dp_cartridge }}
+# - set_fact:
+#     _all_cartridges: >-
+#       {{ _tmp_cartridges + _dp_cartridge }}
 
 # - set_fact:
 #     _cartridges_to_install: "{{ _all_cartridges }}"
