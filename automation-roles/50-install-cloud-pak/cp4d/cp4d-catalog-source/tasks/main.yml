@@ -1,12 +1,10 @@
 ---
 - set_fact:
-    _catsrc_cartridges_to_install_list: "{{ _cartridges_to_install_list }}"
+    _catsrc_cartridges_to_install_list: "{{ _apply_olm_cartridges_list }}"
 
 - set_fact:
     _catsrc_cartridges_to_install_list: "cpfs,cpd_platform"
   when: _p_catsrc_scope == 'platform'
 
 - include_tasks: create-catalog-source-olm-utils.yml
-
-- include_tasks: wait-catalog-sources-ready.yml
-  when: not cpd_dry_run
+  when: _catsrc_cartridges_to_install_list != ''

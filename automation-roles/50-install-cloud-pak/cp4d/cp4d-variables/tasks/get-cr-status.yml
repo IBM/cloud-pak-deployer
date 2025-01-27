@@ -1,0 +1,83 @@
+---
+- name: Clean up any old /tmp/work/status.csv file
+  file:
+    path: /tmp/work/status.csv
+    state: absent
+
+- name: Generate get-cr-status command to get CR status for CP4D project {{ _p_current_cp4d_cluster.project }}
+  set_fact:
+    _get_cr_status_command: "{{ lookup('template', 'get-cr-status.j2') }}" 
+
+- name: Run get-cr-status command 
+  shell: |
+    {{ _get_cr_status_command }}
+
+- set_fact:
+    _cp4d_get_cr_status_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-cr-status.csv"
+    _cp4d_get_cr_status_no_header_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-cr-status-no-header.csv"
+
+- name: Check if CR status file exists
+  stat:
+    path: /tmp/work/status.csv
+  register: _cr_status_file
+
+- name: Create header line if CR status does not exist
+  lineinfile:
+    path: /tmp/work/status.csv
+    line: "Component,CR Kind,CR Name,Creation Timestamp,Namespace,Expected Version,Reconciled Version,Operator Information,Progress,Progress Message,Reconcile History,Status"
+    insertbefore: "BOF"
+    state: present
+    create: True
+  when: not _cr_status_file.stat.exists
+
+# Try to copy the get-cr-status file. In certain situations (Windows, SELinux), the command may fail and has to be re-run without remote_src
+- block:
+  - name: Copy file to {{ _cp4d_get_cr_status_file }}
+    copy:
+      src: /tmp/work/status.csv
+      dest: "{{ _cp4d_get_cr_status_file }}"
+      remote_src: True
+      force: True
+      mode: u+rwx,g+rwx,o+rwx
+  rescue:
+  - name: Rescue copy file to {{ _cp4d_get_cr_status_file }}
+    copy:
+      src: /tmp/work/status.csv
+      dest: "{{ _cp4d_get_cr_status_file }}"
+
+- name: Get column headers
+  shell: |
+    head -1 {{ _cp4d_get_cr_status_file }}
+  register: _csv_column_headers_output
+
+- set_fact:
+    _csv_column_headers: "{{ _csv_column_headers_output.stdout }}"
+
+# Try to copy the get-cr-status output file. In certain situations (Windows, SELinux), the command may fail and has to be re-run without remote_src
+- block:
+  - name: Copy file to {{ _cp4d_get_cr_status_no_header_file }}
+    copy:
+      src: "{{ _cp4d_get_cr_status_file }}"
+      dest: "{{ _cp4d_get_cr_status_no_header_file }}"
+      remote_src: True
+  rescue:
+  - name: Copy file to {{ _cp4d_get_cr_status_no_header_file }}
+    copy:
+      src: "{{ _cp4d_get_cr_status_file }}"
+      dest: "{{ _cp4d_get_cr_status_no_header_file }}"
+
+- name: Remove first line from file
+  lineinfile:
+    path: "{{ _cp4d_get_cr_status_no_header_file }}"
+    regexp: "^Component"
+    state: absent
+
+- name: Try to convert to json
+  read_csv:
+    path: "{{ _cp4d_get_cr_status_no_header_file }}"
+    fieldnames: "{{ _csv_column_headers | replace(' ','_') }}"
+    skipinitialspace: True
+  register: _get_cr_status_json
+
+- debug:
+    var: _get_cr_status_json
