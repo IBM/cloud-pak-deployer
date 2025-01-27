@@ -1,2 +1,10 @@
 ---
+- set_fact:
+    _subscription_cartridges_to_install_list: "{{ _apply_olm_cartridges_list }}"
+
+- set_fact:
+    _subscription_cartridges_to_install_list: "cpfs,cpd_platform"
+  when: _p_subscription_scope == 'platform'
+
 - include_tasks: cp4d-create-subscriptions-olm-utils.yml
+  when: _subscription_cartridges_to_install_list != ''
