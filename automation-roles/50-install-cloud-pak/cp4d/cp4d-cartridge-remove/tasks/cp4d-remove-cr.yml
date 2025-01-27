@@ -1,17 +1,32 @@
 ---
-- name: Fail if destroy was not confirmed
-  fail:
-    msg: "Will not delete cartridge {{ _current_cartridge_cr.name }}. Destroy was not confirmed with --confirm-destroy parameter or global_config confirm_destroy property"
-  when: 
-  - (_confirm_destroy | default(False) | bool) != True
-  - not cpd_dry_run
-
-- name: Delete instances of {{ _current_cartridge_cr.name }}
+- name: Delete instances of {{ _obsolete_cartridge.Component }}
   include_tasks: cp4d-delete-cr-instances.yml
+
+- name: Generate delete-cr command to delete cartridge {{ _obsolete_cartridge.Component }} from project {{ _p_current_cp4d_cluster.project }}
+  set_fact:
+    _delete_cr_command: "{{ lookup('template', 'delete-cr.j2') }}" 
 
 - include_role:
     name: run-command
   vars:
-    _p_command_description: Remove cartridge {{ _current_cartridge_cr.name }} in namespace {{ _p_current_cp4d_cluster.project }}
-    _p_command: "oc delete {{ _current_cartridge_cr.cr_cr }} --namespace {{ _p_current_cp4d_cluster.project }} --all"
+    _p_command_description: Remove cartridge {{ _obsolete_cartridge.Component }} in namespace {{ _p_current_cp4d_cluster.project }}
+    _p_command: "{{ _delete_cr_command }}"
     _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-delete-cartridge.log"
+    _p_command_failed_when: False
+
+- block:
+  - set_fact:
+      _delete_cartridge_result: "{{ _run_command_result }}"
+
+  - name: Fail if there was an error deleting the cartridge {{ _obsolete_cartridge.Component }} using delete-cr
+    fail:
+      msg: "{{ _delete_cartridge_result }}"
+    when: 
+    - _delete_cartridge_result.rc!=0
+    - not (cpd_test_cartridges | default(False) | bool)
+
+  - set_fact:
+      _cp4d_cartridges_installed_successfully: False
+    when: 
+    - _delete_cartridge_result.rc!=0
+  when: not cpd_dry_run

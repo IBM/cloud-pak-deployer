@@ -16,5 +16,10 @@
   - include_tasks: "cp4d-install-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.yml"
     when: _install_cr_script.stat.exists
 
+  - name: Run post-processing scripts
+    include_tasks: cp4d-install-cr-post-processing.yml
+    when:
+    - _install_cartridges_result.rc==0
+
   when: 
   - (_current_cp4d_cartridge.separate_install | default(False) | bool)
