@@ -44,9 +44,6 @@
     _p_preview: False
   when: current_cp4d_cluster.cp4d_version >= "4.7.0"
 
-- name: Prepare KNative for OpenShift
-  include_tasks: openshift-install-knative.yml
-
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
 
@@ -94,25 +91,3 @@
   vars:
     _p_cp4d_entitlement: "{{ current_cp4d_cluster.cp4d_entitlement | default([]) }}"
     _p_cp4d_production_license: "{{ current_cp4d_cluster.cp4d_production_license | default(True) }}"
-
-- name: Create catalog sources for Cloud Pak for Data cartridges in project {{ current_cp4d_cluster.project }}
-  include_role:
-    name: cp4d-catalog-source
-  vars:
-    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-    _p_catsrc_scope: cartridges
-
-- name: Create subscriptions for Cloud Pak for Data cartridges in project {{ current_cp4d_cluster.project }}
-  include_role:
-    name: cp4d-subscriptions
-  vars:
-    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-    _p_subscription_scope: cartridges
-
-# Install selected cartridges
-- include_tasks: cp4d-cartridges.yml
-  when: not (cpd_test_cartridges | default(False) | bool) 
-
-# Install all cartridges one by one
-- include_tasks: cp4d-cartridges-test-all.yml
-  when: (cpd_test_cartridges | default(False) | bool) 
