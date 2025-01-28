@@ -94,7 +94,7 @@
           }}
     _get_cr_status_json_item: >-
           {{ _get_cr_status_json.list
-            | selectattr('Component','equalto',item['olm_utils_name'])
+            | selectattr('Components','equalto',item['olm_utils_name'])
             | list
             | first
             | default([])
@@ -229,13 +229,13 @@
 - set_fact:
     _obsolete_cartridges: >-
       {{ _get_cr_status_json.list 
-        | rejectattr('Component','in',_surviving_cartridges_names) 
+        | rejectattr('Components','in',_surviving_cartridges_names) 
         | rejectattr('CR_Kind','in',_surviving_cartridges_crs) }}
 
 - set_fact:
     _obsolete_cartridges_names: >-
       {{ _obsolete_cartridges
-        | map(attribute='Component') }}
+        | map(attribute='Components') }}
 
 - debug:
     var: _obsolete_cartridges
