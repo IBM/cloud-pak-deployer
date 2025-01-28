@@ -6,28 +6,6 @@
 - set_fact:
     _cp4d_cartridges_installed_successfully: True
 
-- set_fact:
-    _apply_olm_cartridges_list: >-
-      {{ _cartridges_to_install
-        | map(attribute='olm_utils_name')
-        | difference(_v_cp4d_control_plane_cartridges)
-        | list
-        | join(',')}}
-
-- set_fact:
-    _apply_cr_cartridges: >-
-      {{  _cartridges_to_install | 
-            selectattr('separate_install','undefined') |
-            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
-
-- set_fact:
-    _apply_cr_cartridges_list: >-
-      {{  _apply_cr_cartridges 
-        | map(attribute='olm_utils_name')
-        | difference(_v_cp4d_control_plane_cartridges)
-        | list
-        | join(',')}}
-
 - name: Create catalog sources for Cloud Pak for Data cartridges in project {{ _p_current_cp4d_cluster.project }}
   include_role:
     name: cp4d-catalog-source
