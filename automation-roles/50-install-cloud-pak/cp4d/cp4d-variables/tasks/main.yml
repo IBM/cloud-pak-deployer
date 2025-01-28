@@ -138,6 +138,28 @@
             join(',')}}
 
 - set_fact:
+    _apply_olm_cartridges_list: >-
+      {{ _cartridges_to_install
+        | map(attribute='olm_utils_name')
+        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges: >-
+      {{  _cartridges_to_install | 
+            selectattr('separate_install','undefined') |
+            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+
+- set_fact:
+    _apply_cr_cartridges_list: >-
+      {{  _apply_cr_cartridges 
+        | map(attribute='olm_utils_name')
+        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
+
+- set_fact:
     _upgrade_cp4d: False
 
 - name: Determine if CP4D must be upgraded
