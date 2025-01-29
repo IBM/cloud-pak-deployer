@@ -1120,6 +1120,11 @@ if ! $INSIDE_CONTAINER;then
     else 
       PODMAN_EXIT_CODE=$(${CPD_CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
     fi
+
+    # Show login info
+    if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
+      cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+    fi
   else
     eval $run_cmd
     PODMAN_EXIT_CODE=$?

@@ -215,7 +215,15 @@ If the Cloud Pak Deployer fails, for example because certain infrastructure comp
 
 ### Finishing up
 
-Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. You can also find this information under the `cloud-paks` directory in the status directory you specified.
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. 
+```
+--- Cloud Pak for Data project cpd ---
+CP4D URL: https://cpd-cpd.apps.6759f8089266ae8f450d554f.ocp.techzone.ibm.com
+CP4D User: cpadmin
+CP4D cpadmin password: <your-cpadmin-password>
+```
+
+You can also find this information under the `cloud-paks` directory in the status directory you specified.
 
 To retrieve the Cloud Pak URL(s):
 
