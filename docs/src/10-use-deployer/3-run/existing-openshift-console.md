@@ -118,7 +118,6 @@ data:
       cartridges:
       - name: cp-foundation
         license_service:
-          state: disabled
           threads_per_core: 2
       
       - name: lite
@@ -567,6 +566,69 @@ spec:
 
 !!! info
     When running the deployer installing Cloud Pak for Data, the first run will fail. This is because the deployer applies the node configuration to OpenShift, which will cause all nodes to restart one by one, including the node that runs the deployer. Because of the Job setting, a new deployer pod will automatically start and resume from where it was stopped.  
+
+## Finishing up
+
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. 
+```
+--- Cloud Pak for Data project cpd ---
+CP4D URL: https://cpd-cpd.apps.6759f8089266ae8f450d554f.ocp.techzone.ibm.com
+CP4D User: cpadmin
+CP4D cpadmin password: <your-cpadmin-password>
+```
+
+You can also find this information under the `cloud-paks` directory in the status directory you specified. The following commands can be run from the **debug** pod terminal that is in the `cloud-pak-deployer` project.
+
+To retrieve the Cloud Pak URL(s):
+
+``` { .bash .copy }
+cat $STATUS_DIR/cloud-paks/*
+```
+
+This will show the Cloud Pak URLs:
+
+```output
+Cloud Pak for Data URL for cluster pluto-01 and project cpd (domain name specified was example.com):
+https://cpd-cpd.apps.pluto-01.example.com
+```
+
+The `admin` password can be retrieved from the vault as follows:
+
+List the secrets in the vault:
+
+``` { .bash .copy }
+cp-deploy.sh vault list
+```
+
+This will show something similar to the following:
+
+```output
+Secret list for group sample:
+- ibm_cp_entitlement_key
+- oc-login
+- cp4d_admin_cpd_demo
+```
+
+You can then retrieve the Cloud Pak for Data admin password like this:
+
+``` { .bash .copy }
+cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_sample
+```
+
+```output
+PLAY [Secrets] *****************************************************************
+included: /cloud-pak-deployer/automation-roles/99-generic/vault/vault-get-secret/tasks/get-secret-file.yml for localhost
+cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
+```
+
+
+Once the process has finished, it will output the URLs by which you can access the deployed Cloud Pak. 
+```
+--- Cloud Pak for Data project cpd ---
+CP4D URL: https://cpd-cpd.apps.6759f8089266ae8f450d554f.ocp.techzone.ibm.com
+CP4D User: cpadmin
+CP4D cpadmin password: <your-cpadmin-password>
+```
 
 ## Re-run deployer when failed or if you want to update the configuration
 If the deployer has failed or if you want to make changes to the configuration after the successful run, you can do the following:
