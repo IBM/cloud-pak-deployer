@@ -630,12 +630,19 @@ if [ "${ARCH}" == "amd64" ];then
   ARCH="x86_64"
 fi
 
+# Determine architecture of the image
+if [[ "${ARCH}" == "x86_64" || "${ARCH}" == "arm64" ]]; then
+  IMAGE_ARCH="amd64"
+else
+  IMAGE_ARCH=${ARCH}
+fi
+
 # If images have not been overridden, set the variables here
 if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-  if [ "${ARCH}" == "x86_64" ]; then
+  if [[ "${IMAGE_ARCH}" == "amd64" || "${IMAGE_ARCH}" == "arm64" ]]; then
     export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
   else
-    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.$ARCH
+    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.${IMAGE_ARCH}
   fi
 else
   echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
@@ -643,10 +650,10 @@ fi
 
 # If images have not been overridden, set the variables here
 if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
-  if [ "${ARCH}" == "x86_64" ]; then
+  if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
     export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest
   else
-    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.$ARCH
+    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.${IMAGE_ARCH}
   fi
 else
   echo "Custom olm-utils-v3 image ${CPD_OLM_UTILS_V3_IMAGE} will be used."
@@ -685,16 +692,17 @@ if ! $INSIDE_CONTAINER;then
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
     # Build the image
-    if [ "${ARCH}" == "x86_64" ]; then
+    if [ "${IMAGE_ARCH}" == "amd64" ]; then
       DOCKERFILE=Dockerfile
     else
-      DOCKERFILE=Dockerfile.${ARCH}
+      DOCKERFILE=Dockerfile.${IMAGE_ARCH}
     fi
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
       -f ${SCRIPT_DIR}/${DOCKERFILE} \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       --build-arg CPD_OLM_UTILS_V3_IMAGE=${CPD_OLM_UTILS_V3_IMAGE} \
+      --platform linux/${IMAGE_ARCH} \
       ${SCRIPT_DIR}
     exit $?
   fi
@@ -966,6 +974,8 @@ fi
 # Build command when not running inside container
 if ! $INSIDE_CONTAINER;then
   run_cmd="${CPD_CONTAINER_ENGINE} run"
+
+  run_cmd+=" --arch ${IMAGE_ARCH}"
 
   # If CPD_CONTAINER_NAME has been specified, give the container this name
   if [ ! -z $CPD_CONTAINER_NAME ];then
