@@ -1,0 +1,40 @@
+---
+- name: Get kubeadmin password {rom the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_openshift_cluster.name }}-kubeadmin-password"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _kubeadmin_password
+
+- name: Get oc-login secret
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: oc-login
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _oc_login_secret
+
+- name: Get OpenShift Console endpoint
+  shell: |
+    oc whoami --show-console
+  register: _openshift_console_endpoint
+
+- name: Get OpenShift API endpoint
+  shell: |
+    oc whoami --show-server
+  register: _openshift_api_endpoint
+
+- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Write Cloud Pak for Data info to {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
+  blockinfile:
+    path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+    create: True
+    insertafter: EOF
+    marker: ""
+    block: |
+      {{ lookup('template','openshift-details.j2') }}
