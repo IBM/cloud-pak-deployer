@@ -2,7 +2,18 @@
 oc patch Watsonxaiifm watsonxaiifm-cr \
   -n {{ current_cp4d_cluster.project }} \
   --type=merge \
-  --patch '{"spec": {"install_model_list": [ {{ '\"' + _configured_watsonx_ai_instances | default([]) | selectattr('state','match','installed' ) | map(attribute='model_id') | join('\",\"') + '\"' }} ] } }'
+  --patch '{
+    "spec": {
+      "install_model_list": [ {{ '\"' + _configured_watsonx_ai_instances | default([]) | selectattr('state','match','installed' ) | map(attribute='model_id') | join('\",\"') + '\"' }} ]
+  {% if (_p_cp4d_version | default('5.0.3')) >= '5.0.3' %}
+    {% set map = {} %}
+    {% for model in _configured_watsonx_ai_instances | default([]) | selectattr('state','match','installed' ) | rejectattr('model_install_parameters','undefined') %}
+      {% set x=map.__setitem__(model.model_id | replace("-", "_"), model.model_install_parameters ) %}
+    {% endfor %}
+    ,"model_install_parameters": {{ map | tojson }}
+  {% endif %}
+    }
+  }'
 {% else %}
 oc patch Watsonxaiifm watsonxaiifm-cr \
   -n {{ current_cp4d_cluster.project }} \
