@@ -97,6 +97,11 @@ run_env_logs() {
       fi
     fi
   fi
+
+  # Show login info
+  if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
+    cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+  fi
 }
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -630,12 +635,19 @@ if [ "${ARCH}" == "amd64" ];then
   ARCH="x86_64"
 fi
 
+# Determine architecture of the image
+if [[ "${ARCH}" == "x86_64" || "${ARCH}" == "arm64" ]]; then
+  IMAGE_ARCH="amd64"
+else
+  IMAGE_ARCH=${ARCH}
+fi
+
 # If images have not been overridden, set the variables here
 if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-  if [ "${ARCH}" == "x86_64" ]; then
+  if [[ "${IMAGE_ARCH}" == "amd64" || "${IMAGE_ARCH}" == "arm64" ]]; then
     export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
   else
-    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.$ARCH
+    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.${IMAGE_ARCH}
   fi
 else
   echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
@@ -643,10 +655,10 @@ fi
 
 # If images have not been overridden, set the variables here
 if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
-  if [ "${ARCH}" == "x86_64" ]; then
+  if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
     export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest
   else
-    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.$ARCH
+    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.${IMAGE_ARCH}
   fi
 else
   echo "Custom olm-utils-v3 image ${CPD_OLM_UTILS_V3_IMAGE} will be used."
@@ -685,16 +697,17 @@ if ! $INSIDE_CONTAINER;then
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
     # Build the image
-    if [ "${ARCH}" == "x86_64" ]; then
+    if [ "${IMAGE_ARCH}" == "amd64" ]; then
       DOCKERFILE=Dockerfile
     else
-      DOCKERFILE=Dockerfile.${ARCH}
+      DOCKERFILE=Dockerfile.${IMAGE_ARCH}
     fi
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
       -f ${SCRIPT_DIR}/${DOCKERFILE} \
       --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       --build-arg CPD_OLM_UTILS_V3_IMAGE=${CPD_OLM_UTILS_V3_IMAGE} \
+      --platform linux/${IMAGE_ARCH} \
       ${SCRIPT_DIR}
     exit $?
   fi
@@ -967,6 +980,8 @@ fi
 if ! $INSIDE_CONTAINER;then
   run_cmd="${CPD_CONTAINER_ENGINE} run"
 
+  run_cmd+=" --arch ${IMAGE_ARCH}"
+
   # If CPD_CONTAINER_NAME has been specified, give the container this name
   if [ ! -z $CPD_CONTAINER_NAME ];then
     run_cmd+=" --name ${CPD_CONTAINER_NAME}"
@@ -1092,9 +1107,9 @@ if ! $INSIDE_CONTAINER;then
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
-  run_cmd+=" cloud-pak-deployer:${CPD_IMAGE_TAG}"
+  run_cmd+=" localhost/cloud-pak-deployer:${CPD_IMAGE_TAG}"
 
-   # echo $run_cmd
+  # echo $run_cmd
 
   # If running "environment" subcommand with apply/destroy, follow log
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
@@ -1110,6 +1125,7 @@ if ! $INSIDE_CONTAINER;then
     else 
       PODMAN_EXIT_CODE=$(${CPD_CONTAINER_ENGINE} inspect ${CURRENT_CONTAINER_ID} --format='{{.State.ExitCode}}')
     fi
+
   else
     eval $run_cmd
     PODMAN_EXIT_CODE=$?
