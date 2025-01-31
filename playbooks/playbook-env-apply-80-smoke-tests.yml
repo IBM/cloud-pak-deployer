@@ -37,6 +37,13 @@
       path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
       state: touch
 
+  - name: OpenShift smoke tests
+    include_role:
+      name: openshift-smoke-tests
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: _current_openshift_cluster
+
   - name: OpenShift Red Hat SSO smoke tests
     include_role:
       name: openshift-redhat-sso-smoke-tests

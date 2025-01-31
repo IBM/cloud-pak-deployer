@@ -4,6 +4,9 @@
 
 To install and run the Cloud Pak Deployer, ensure that either podman or docker is available on your system. These are typically available on various Linux distributions such as Red Hat Enterprise Linux (preferred), Fedora, CentOS, Ubuntu, and MacOS. Note that Docker behaves differently on Windows compared to Linux platforms, potentially causing deployment issues.
 
+!!! info
+If you plan to run Cloud Pak Deployer from the OpenShift console, you can skip these steps. A Cloud Pak Deployer container image is already available on quay.io, to be used in an OpenShift job.
+
 ### Using a Windows workstation
 
 If you're working on a Windows workstation without access to a Linux server, you can use VirtualBox to create a Linux virtual machine for deployment.

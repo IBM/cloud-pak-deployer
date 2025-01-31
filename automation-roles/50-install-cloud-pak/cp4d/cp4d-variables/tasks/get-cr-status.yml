@@ -50,9 +50,24 @@
     head -1 {{ _cp4d_get_cr_status_file }}
   register: _csv_column_headers_output
 
+# The header in CP4D 4.8 is: Component,CR-kind,CR-name,Namespace,Status,Version,Creationtimestamp,Reconciled-version,Operator-info
+# The header in CP4D 5.1 is: Components,CR Kind,CR Name,Creation Timestamp,Namespace,Expected Version,Reconciled Version,Operator Information,Progress,Progress Message,Reconcile History,Status
 # Between CP4D 5.1.0 and 5.1.1, the Component column has been renamed to Components
+- debug:
+    var: _csv_column_headers_output.stdout
+
 - set_fact:
-    _csv_column_headers: "{{ _csv_column_headers_output.stdout | replace('Component,','Components,') | replace(' ','_') }}"
+    _csv_column_headers: >-
+      {{ _csv_column_headers_output.stdout 
+        | replace('Component,','Components,') 
+        | replace('CR-kind','CR_Kind') 
+        | replace('CR-name','CR_Name') 
+        | replace(',Version,',',Expected_Version,') 
+        | replace('Creationtimestamp','Creation_Timestamp') 
+        | replace('Reconciled-version','Reconciled_Version') 
+        | replace('Operator-info','Operator_Information') 
+        | replace(' ','_') 
+        | replace('-','_') }}
 
 # Try to copy the get-cr-status output file. In certain situations (Windows, SELinux), the command may fail and has to be re-run without remote_src
 - block:
@@ -79,6 +94,3 @@
     fieldnames: "{{ _csv_column_headers }}"
     skipinitialspace: True
   register: _get_cr_status_json
-
-- debug:
-    var: _get_cr_status_json
