@@ -1107,9 +1107,9 @@ if ! $INSIDE_CONTAINER;then
   else
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/run_automation.sh"
   fi
-  run_cmd+=" cloud-pak-deployer:${CPD_IMAGE_TAG}"
+  run_cmd+=" localhost/cloud-pak-deployer:${CPD_IMAGE_TAG}"
 
-   # echo $run_cmd
+  # echo $run_cmd
 
   # If running "environment" subcommand with apply/destroy, follow log
   if [ "$SUBCOMMAND" == "environment" ] && [[ "${ACTION}" == "apply" || "${ACTION}" == "destroy" || "${ACTION}" == "wizard" || "${ACTION}" == "download" ]];then
