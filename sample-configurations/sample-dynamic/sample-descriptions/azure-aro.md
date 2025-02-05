@@ -1,8 +1,8 @@
-# Managed OpenShift on Azure (ARO) with OCS storage classes and Cloud Pak for Data
+# Managed OpenShift on Azure (ARO) with ODF storage classes and Cloud Pak for Data
 
-This is a sample configuration for Managed OpenShift on Microsoft Azure (ARO) with OCS storage and using the entitled registry. Infrastructure (immutable once provisioned), OpenShift cluster together with Cloud Pak for Data are managed by the deployer and deployment requires tenant and subscription ids, a few service provider object ids, an OpenShift pull secret and a Cloud Pak entitlement key.
+This is a sample configuration for Managed OpenShift on Microsoft Azure (ARO) with ODF storage and using the entitled registry. Infrastructure (immutable once provisioned), OpenShift cluster together with Cloud Pak for Data are managed by the deployer and deployment requires tenant and subscription ids, a few service provider object ids, an OpenShift pull secret and a Cloud Pak entitlement key.
 
-![Picture of the environment](./azure-aro-ocs.png)
+![Picture of the environment](./azure-aro.png)
 
 ## Infrastructure
 
@@ -12,11 +12,11 @@ Infrastructure details must be specified as part of a separate configuration. On
 
 You cannot choose the version for a Red Hat OpenShift on Azure (ARO) cluster. By default, the latest current version is provisioned automatically instead no matter what value is specified in the `ocp_version` parameter. The `ocp_version` parameter is used to install the correct version of the oc command line tool.
 
-The cluster is provisioned across 3 availability zones. In the sample configuration, 3 additional compute nodes are configured for OpenShift Container Storage (OpenShift Data Foundation). For back-end storage for the OCS cluster, the `managed-premium` storage class is used.
+The cluster is provisioned across 3 availability zones. In the sample configuration, 3 additional compute nodes are configured for OpenShift Container Storage (OpenShift Data Foundation). For back-end storage for the ODF cluster, the `managed-premium` storage class is used.
 
 ## Cloud Pak for Data
 
-Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the entitled registry and referencing the OCS storage classes in OpenShift.
+Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the entitled registry and referencing the ODF storage classes in OpenShift.
 
 ### Cartridges
 

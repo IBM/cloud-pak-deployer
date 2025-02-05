@@ -17,7 +17,7 @@ See the deployer in action in this video:
 ## Topology
 
 A typical setup of the ROKS cluster on IBM Cloud VPC is pictured below:
-![ROKS configuration](images/ibm-roks-ocs.png)
+![ROKS configuration](images/ibm-roks-odf.png)
 
 ## 1. Configure deployer
 
@@ -29,7 +29,7 @@ You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sa
 Example:
 ``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
-cp sample-configurations/sample-dynamic/config-samples/ocp-ibm-cloud-roks-ocs.yaml $HOME/cpd-config/config/
+cp sample-configurations/sample-dynamic/config-samples/ocp-ibm-cloud-roks-odf.yaml $HOME/cpd-config/config/
 cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
 ```
 

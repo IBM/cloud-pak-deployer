@@ -56,9 +56,9 @@
 - name: Wait for machine sets
   include_tasks: wait-for-machine-set.yml
   with_items:
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}1"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}2"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}3"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }}-{{ azure_location }}1"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }}-{{ azure_location }}2"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }}-{{ azure_location }}3"
   loop_control:
     loop_var: _machine_set_name
 
@@ -68,9 +68,9 @@
       $(oc get machine -n openshift-machine-api -l machine.openshift.io/cluster-api-machineset={{ _machine_set_name }} -o jsonpath='{.items[0].metadata.name}') \
       node-role.kubernetes.io/infra="" --overwrite
   with_items:
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}1"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}2"
-    - "{{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }}-{{ azure_location }}3"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }}-{{ azure_location }}1"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }}-{{ azure_location }}2"
+    - "{{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }}-{{ azure_location }}3"
   loop_control:
     loop_var: _machine_set_name
 
@@ -86,18 +86,18 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Generate OCS StorageCluster file {{status_dir}}/openshift/ocs-storagecluster.yaml
+- name: Generate ODF StorageCluster file {{status_dir}}/openshift/ocs-storagecluster.yaml
   template:
     src: "ocs-storagecluster.j2"
     dest: "{{status_dir}}/openshift/ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
-- name: Create OCS StorageCluster
+- name: Create ODF StorageCluster
   shell: |
     oc apply -f {{status_dir}}/openshift/ocs-storagecluster.yaml
   when: _ocs_cluster_exists.rc != 0
 
-- name: Wait until OCS StorageCluster has status Ready
+- name: Wait until ODF StorageCluster has status Ready
   shell: |
     oc get StorageCluster ocs-storagecluster -n openshift-storage \
      --no-headers \

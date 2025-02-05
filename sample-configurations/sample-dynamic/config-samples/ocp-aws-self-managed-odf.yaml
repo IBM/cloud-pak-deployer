@@ -2,20 +2,22 @@
 global_config:
   environment_name: sample
   cloud_platform: aws
-  aws_region: eu-central-1
+  aws_region: eu-west-2
   env_id: pluto-01
   confirm_destroy: False
 
 openshift:
 - name: "{{ env_id }}"
   ocp_version: 4.15.22
+  domain_name: example.com
+  control_plane_flavour: m4.xlarge
+  control_plane_nodes: 3
   compute_flavour: m5.4xlarge
   compute_nodes: 3
   infrastructure:
-    type: rosa
+    type: self-managed
     aws_region: "{{ aws_region }}"
     multi_zone: True
-    use_sts: False
   gpu:
     install: auto
   openshift_ai:
@@ -26,7 +28,8 @@ openshift:
     storage_type: storage-class
     storage_class: not-specified
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 512
+  - storage_name: odf-storage
+    storage_type: odf
+    dedicated_nodes: True
+    odf_storage_label: ocs
+    odf_storage_size_gb: 512

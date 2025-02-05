@@ -13,7 +13,7 @@ There are 5 main steps to run the deployer for vSphere:
 ## Topology
 
 A typical setup of the vSphere cluster with OpenShift is pictured below:
-![vSphere configuration](images/vsphere-ocs-nfs.png)
+![vSphere configuration](images/vsphere-odf-nfs.png)
 
 When deploying OpenShift and the Cloud Pak(s) on VMWare vSphere, there is a dependency on a DHCP server for issuing IP addresses to the newly configured cluster nodes. Also, once the OpenShift cluster has been installed, valid fully qualified host names are required to connect to the OpenShift API server at port `6443` and applications running behind the ingress server at port `443`. The Cloud Pak deployer cannot set up a DHCP server or a DNS server and to be able to connect to OpenShift or to reach the Cloud Pak after installation, name entries must be set up.
 
@@ -27,7 +27,7 @@ You can find OpenShift and Cloud Pak sample configuration (yaml) files here: [sa
 Example:
 ``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
-cp sample-configurations/sample-dynamic/config-samples/ocp-vsphere-ocs-nfs.yaml $HOME/cpd-config/config/
+cp sample-configurations/sample-dynamic/config-samples/ocp-vsphere-odf-nfs.yaml $HOME/cpd-config/config/
 cp sample-configurations/sample-dynamic/config-samples/cp4d-471.yaml $HOME/cpd-config/config/
 ```
 

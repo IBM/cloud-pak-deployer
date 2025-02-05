@@ -12,7 +12,7 @@ The Cloud Pak Deployer includes several samples which you can use to build your 
 1. Copy the static sample configuration directory to your own directory:
 ``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
-cp -r ./sample-configurations/roks-ocs-cp4d/config/* $HOME/cpd-config/config/
+cp -r ./sample-configurations/roks-odf-cp4d/config/* $HOME/cpd-config/config/
 cd $HOME/cpd-config/config
 ```
 2. Edit the "cp4d-....yaml" file and select the cartridges to be installed by changing the state to `installed`. Additionally you can accept the Cloud Pak license in the config file by specifying `accept_licenses: True`.
@@ -20,7 +20,7 @@ cd $HOME/cpd-config/config
 nano ./config/cp4d-450.yaml
 ```
 
-The configuration typically works without any configuration changes and will create all referenced objects, including the Virtual Private Cloud, subnets, SSH keys, ROKS cluster and OCS storage ndoes. There is typically no need to change address prefixes and subnets. The IP addresses used by the provisioned components are private to the VPC and are not externally exposed.
+The configuration typically works without any configuration changes and will create all referenced objects, including the Virtual Private Cloud, subnets, SSH keys, ROKS cluster and ODF storage nodes. There is typically no need to change address prefixes and subnets. The IP addresses used by the provisioned components are private to the VPC and are not externally exposed.
 
 ## Configuration steps - dynamically choose OpenShift and Cloud Pak
 1. Copy the sample configuration directory to your own directory:
@@ -29,7 +29,7 @@ mkdir -p $HOME/cpd-config/config
 ```
 2. Copy the relevant OpenShift configuration file from the `samples-configuration` directory to the `config` directory, for example:
 ``` { .bash .copy }
-cp ./sample-configurations/sample-dynamic/config-samples/ocp-ibm-cloud-roks-ocs.yaml $HOME/cpd-config/config/
+cp ./sample-configurations/sample-dynamic/config-samples/ocp-ibm-cloud-roks-odf.yaml $HOME/cpd-config/config/
 ```
 3. Copy the relevant "cp4d-..." file from the `samples-configuration` directory to the `config` directory, for example:
 ``` { .bash .copy }
@@ -64,7 +64,7 @@ You can choose to keep only a single file per subdirectory or, for more complex 
 For example, your `config` directory could hold the following files:
 ``` { .bash .copy }
 cp4d-463.yaml
-ocp-ibm-cloud-roks-ocs.yaml
+ocp-ibm-cloud-roks-odf.yaml
 ```
 
 This will provision a ROKS cluster on IBM Cloud with OpenShift Data Foundation (fka OCS) and Cloud Pak for Data 4.0.8.
@@ -170,17 +170,17 @@ The `ibm_cloud_region` variable is specified in the inventory file. This is anot
 
 You can even include more complex constructs for dynamic configuration, with `if` statements, `for` loops and others.
 
-An example where the OpenShift OCS storage classes would only be generated for a specific environment (pluto-prod) would be:
+An example where the OpenShift ODF storage classes would only be generated for a specific environment (pluto-prod) would be:
 ``` { .yaml .copy }
   openshift_storage:
   - storage_name: nfs-storage
     storage_type: nfs
     nfs_server_name: "{{ env_id }}-nfs"
 {% if env_id == 'jupiter-prod' %}
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 500
+  - storage_name: odf-storage
+    storage_type: odf
+    odf_storage_label: ocs
+    odf_storage_size_gb: 500
 {% endif %}
 ```
 

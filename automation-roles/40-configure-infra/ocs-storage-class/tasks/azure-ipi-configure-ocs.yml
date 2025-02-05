@@ -18,18 +18,18 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Generate OCS StorageCluster file {{ status_dir }}/openshift/ocs-storagecluster.yaml
+- name: Generate ODF StorageCluster file {{ status_dir }}/openshift/ocs-storagecluster.yaml
   template:
     src: "azure-ipi-ocs-storagecluster.j2"
     dest: "{{ status_dir }}/openshift/ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
-- name: Create OCS StorageCluster
+- name: Create ODF StorageCluster
   shell: |
     oc apply -f {{ status_dir }}/openshift/ocs-storagecluster.yaml
   when: _ocs_cluster_exists.rc != 0
 
-- name: Wait until OCS StorageCluster has status Ready
+- name: Wait until ODF StorageCluster has status Ready
   shell: |
     oc get StorageCluster ocs-storagecluster -n openshift-storage \
      --no-headers \

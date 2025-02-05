@@ -46,10 +46,11 @@
 - include_tasks: auto-detect-storage-type.yml
   when: _storage_type == 'auto'
 
-- fail: msg="Valid values for storage type are 'nfs', 'ocs', 'pwx', 'aws-elastic' and 'custom'"
+- fail: msg="Valid values for storage type are 'nfs', 'odf', 'odf-ext' 'pwx', 'aws-elastic' and 'custom'"
   when: 
     - _storage_type != 'nfs'
-    - _storage_type != 'ocs'
+    - _storage_type != 'odf'
+    - _storage_type != 'odf-ext'
     - _storage_type != 'pwx'
     - _storage_type != 'aws-elastic'
     - _storage_type != 'ibm-classic-storage'
@@ -63,7 +64,12 @@
 - set_fact:
     ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ocs-storagecluster-cephfs') }}"
     ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ocs-storagecluster-ceph-rbd') }}"
-  when: _storage_type == 'ocs'
+  when: _storage_type == 'odf'
+
+- set_fact:
+    ocp_storage_class_file: "{{ _selected_openshift_storage.ocp_storage_class_file | default('ocs-external-storagecluster-cephfs') }}"
+    ocp_storage_class_block: "{{ _selected_openshift_storage.ocp_storage_class_block | default('ocs-external-storagecluster-ceph-rbd') }}"
+  when: _storage_type == 'odf-ext'
 
 - fail: msg="ocp_storage_class_file and ocp_storage_class_block are required when storage_type is set to 'custom'"
   when:
