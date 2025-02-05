@@ -44,37 +44,37 @@
       {%- set retries_left = result.retries - result.attempts -%}
       Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
-- name: Get the nodes for the OCS storage class
+- name: Get the nodes for the ODF storage class
   command: |
     ibmcloud oc workers --cluster {{ current_openshift_cluster.name }} \
-      --worker-pool {{ current_openshift_cluster.name }}-{{ current_openshift_storage.ocs_storage_label }} \
+      --worker-pool {{ current_openshift_cluster.name }}-{{ current_openshift_storage.odf_storage_label }} \
       --output json
   register: _ocs_nodes
 
 # TODO: Remove debug
-- name: Show OCS nodes
+- name: Show ODF nodes
   debug:
     var: _ocs_nodes
 
-- name: Get OCS node IPs
+- name: Get ODF node IPs
   set_fact:
     _ocs_node_ips: "{{ _ocs_nodes.stdout | from_json | json_query(get_ips) | list }}"
   vars:
     get_ips: "[*].networkInterfaces[0].ipAddress"
 
-- name: Label the OCS nodes as infra
+- name: Label the ODF nodes as infra
   command: |
     oc label nodes {{ item }} node-role.kubernetes.io/infra="" --overwrite
   loop: "{{ _ocs_node_ips }}"
 
-- name: Taint the OCS nodes so they will only run OCS workload
+- name: Taint the ODF nodes so they will only run ODF workload
   command: |
     oc adm taint nodes {{ item }} node.ocs.openshift.io/storage="true":NoSchedule --overwrite
   loop: "{{ _ocs_node_ips }}"
 
-- name: Check if OcsCluster {{ current_openshift_storage.ocs_storage_label }} already exists
+- name: Check if OcsCluster {{ current_openshift_storage.odf_storage_label }} already exists
   command: |
-    oc get OcsCluster {{ current_openshift_storage.ocs_storage_label }} 
+    oc get OcsCluster {{ current_openshift_storage.odf_storage_label }} 
   failed_when: False
   register: ocs_cluster_exists
 
@@ -84,14 +84,14 @@
     dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ocscluster.yaml"
   when: ocs_cluster_exists.rc != 0
 
-- name: Create OcsCluster {{ current_openshift_storage.ocs_storage_label }}
+- name: Create OcsCluster {{ current_openshift_storage.odf_storage_label }}
   command: |
     oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ocscluster.yaml
   when: ocs_cluster_exists.rc != 0
 
-- name: Wait for OcsCluster {{ current_openshift_storage.ocs_storage_label }} to be deployed
+- name: Wait for OcsCluster {{ current_openshift_storage.odf_storage_label }} to be deployed
   command: |
-    oc get OcsCluster {{ current_openshift_storage.ocs_storage_label }} -o yaml
+    oc get OcsCluster {{ current_openshift_storage.odf_storage_label }} -o yaml
   register: _ocscluster_status
   failed_when: False
   retries: 60

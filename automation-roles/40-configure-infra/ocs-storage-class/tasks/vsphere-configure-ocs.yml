@@ -48,14 +48,14 @@
 - name: Get number of storage nodes in machine set
   shell: |
     oc get machineset -n openshift-machine-api \
-      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      {{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }} \
       -o jsonpath='{.status.replicas}'
   register: _machineset_replicas
 
 - name: Wait for {{ _machineset_replicas.stdout }} machines to be added to the cluster and become available
   shell: |
     oc get machineset -n openshift-machine-api \
-      {{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      {{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }} \
       -o jsonpath='{.status.availableReplicas}'
   register: _available_replicas
   retries: 120
@@ -79,10 +79,10 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Label the OCS storage nodes
+- name: Label the ODF storage nodes
   shell: |
     for machine in $(oc get machines -n openshift-machine-api --no-headers \
-      -l machine.openshift.io/cluster-api-machineset={{ _infrastructure_id }}-{{ current_openshift_storage.ocs_storage_label }} \
+      -l machine.openshift.io/cluster-api-machineset={{ _infrastructure_id }}-{{ current_openshift_storage.odf_storage_label }} \
       -o custom-columns=':.metadata.name');do
       oc label node $machine cluster.ocs.openshift.io/openshift-storage="" --overwrite
     done
@@ -95,13 +95,13 @@
   register: _ocs_cluster_tempfile
   when: _ocs_cluster_exists.rc != 0
 
-- name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
+- name: Generate ODF StorageCluster file {{ _ocs_cluster_tempfile.path }}
   template:
     src: ocs-storagecluster.j2
     dest: "{{ _ocs_cluster_tempfile.path }}"
   when: _ocs_cluster_exists.rc != 0
 
-- name: Create OCS StorageCluster
+- name: Create ODF StorageCluster
   shell: |
     oc apply -f {{ _ocs_cluster_tempfile.path }}
   when: _ocs_cluster_exists.rc != 0
