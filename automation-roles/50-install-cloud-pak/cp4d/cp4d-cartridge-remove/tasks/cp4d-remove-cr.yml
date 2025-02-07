@@ -1,15 +1,15 @@
 ---
-- name: Delete instances of {{ _obsolete_cartridge.Component }}
+- name: Delete instances of {{ _obsolete_cartridge.Components }}
   include_tasks: cp4d-delete-cr-instances.yml
 
-- name: Generate delete-cr command to delete cartridge {{ _obsolete_cartridge.Component }} from project {{ _p_current_cp4d_cluster.project }}
+- name: Generate delete-cr command to delete cartridge {{ _obsolete_cartridge.Components }} from project {{ _p_current_cp4d_cluster.project }}
   set_fact:
     _delete_cr_command: "{{ lookup('template', 'delete-cr.j2') }}" 
 
 - include_role:
     name: run-command
   vars:
-    _p_command_description: Remove cartridge {{ _obsolete_cartridge.Component }} in namespace {{ _p_current_cp4d_cluster.project }}
+    _p_command_description: Remove cartridge {{ _obsolete_cartridge.Components }} in namespace {{ _p_current_cp4d_cluster.project }}
     _p_command: "{{ _delete_cr_command }}"
     _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-delete-cartridge.log"
     _p_command_failed_when: False
@@ -18,7 +18,7 @@
   - set_fact:
       _delete_cartridge_result: "{{ _run_command_result }}"
 
-  - name: Fail if there was an error deleting the cartridge {{ _obsolete_cartridge.Component }} using delete-cr
+  - name: Fail if there was an error deleting the cartridge {{ _obsolete_cartridge.Components }} using delete-cr
     fail:
       msg: "{{ _delete_cartridge_result }}"
     when: 
