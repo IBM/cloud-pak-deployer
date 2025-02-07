@@ -275,8 +275,10 @@
     headers:
       Cookie: ibm-private-cloud-session={{ zen_token }}
     validate_certs: false
-    status_code: 200
   register: token_response
+  until: token_response.status == 200
+  retries: 180
+  delay: 10
 
 - name: Set rpa_oidc_token
   ansible.builtin.set_fact:
