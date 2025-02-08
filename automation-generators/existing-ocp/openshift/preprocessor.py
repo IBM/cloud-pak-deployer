@@ -93,19 +93,26 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
       # Validate openshift_storage attributes
         if len(ge['openshift_storage']) < 1:
             g.appendError(msg='At least one openshift_storage element must be specified.')
-        for os in ge['openshift_storage']:
+        for i, os in enumerate(ge['openshift_storage']):
             if "storage_name" not in os:
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs','aws-elastic','pwx','ibm-storage-fdf','custom','auto']:
-                g.appendError(msg='storage_type must be nfs, ocs, aws-elastic, ibm-storage-fdf, custom, or auto')
-            if "storage_type" in os and os['storage_type'] == 'custom':
-                if "ocp_storage_class_file" not in os:
-                    g.appendError(msg='ocp_storage_class_file must be specified when storage_type is custom')
-                if "ocp_storage_class_block" not in os:
-                    g.appendError(msg='ocp_storage_class_block must be specified when storage_type is custom')
+            else:
+                if os['storage_type']=='ocs':
+                    os.update([("storage_type", "odf")])
+                if os['storage_type'] not in ['nfs','odf','odf-ext','aws-elastic','pwx','ibm-storage-fdf','custom','auto']:
+                    g.appendError(msg='storage_type must be nfs, odf, odf-ext, aws-elastic, ibm-storage-fdf, custom, or auto')
+                if os['storage_type'] == 'custom':
+                    if "ocp_storage_class_file" not in os:
+                        g.appendError(msg='ocp_storage_class_file must be specified when storage_type is custom')
+                    if "ocp_storage_class_block" not in os:
+                        g.appendError(msg='ocp_storage_class_block must be specified when storage_type is custom')
                     
+            # Ensure the openshift_storage attribute is updated
+            ge['openshift_storage'][i]=os
+            g.setExpandedAttributes(ge)
+            
     # Return result containing updated attributes and errors
     result = {
         'attributes_updated': g.getExpandedAttributes(),

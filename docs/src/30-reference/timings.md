@@ -12,7 +12,7 @@
 |  | Create VSI without storage | 5 | |
 |  | Create VSI with storage | 10 | |
 |  | Create VPC ROKS cluster | 45 | |
-|  | Install ROKS OCS add-on and create storage classes | 45 | |
+|  | Install ROKS ODF add-on and create storage classes | 45 | |
 | | | | |
 | 40 - Configure infrastructure | Install NFS on VSIs | 10 | |
 | | Create NFS storage classes | 5 | |

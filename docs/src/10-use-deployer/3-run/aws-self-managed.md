@@ -18,7 +18,7 @@ See the deployer in action in this video:
 ## Topology
 
 A typical setup of the self-managed OpenShift cluster is pictured below:
-![AWS self-managed OpenShift](images/aws-self-managed-ocs.png)
+![AWS self-managed OpenShift](images/aws-self-managed-odf.png)
 
 ### Single-node OpenShift (SNO) on AWS
 Red Hat OpenShift also supports single-node deployments in which control plane and compute are combined into a single node. Obviously, this type of configuration does not cater for any high availability requirements that are usually part of a production installation, but it does offer a more cost-efficient option for development and testing purposes.

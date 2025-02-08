@@ -139,6 +139,10 @@ class GeneratorPreProcessor:
     def set(self, newValue):
         self.attributesDict[ self.recentCheck.get('pathToCheck') ] = newValue
         return self
+
+    def setExpandedAttributes(self, newValue):
+        self.attributesDict = newValue
+        return self
     
     # matchPattern (string): should look like 'vpc[*].name'
     def expandWith(self, matchPattern, remoteIdentifier='name'):

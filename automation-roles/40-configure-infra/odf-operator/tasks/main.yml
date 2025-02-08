@@ -28,13 +28,13 @@
 - name: Check if there are compute nodes which have been labelled as storage nodes
   shell: |
     oc get no -l cluster.ocs.openshift.io/openshift-storage -o name | wc -l
-  register: _nodes_ocs_storage_label
+  register: _nodes_odf_storage_label
 
 - name: Label all compute nodes as storage nodes to allow StorageCluster to be created, ignore failure
   shell: |
     oc label no -l node-role.kubernetes.io/worker cluster.ocs.openshift.io/openshift-storage=
   failed_when: False
-  when: _nodes_ocs_storage_label.stdout=='0'
+  when: _nodes_odf_storage_label.stdout=='0'
 
 - name: Retrieve default channel for ocs-operator manifest
   shell:

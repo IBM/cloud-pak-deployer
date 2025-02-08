@@ -6,16 +6,34 @@
     _p_command: "oc create ns cert-manager-operator || true"
 
 - name: Retrieve default channel for Red Hat certificate manager
-  shell:
+  shell: |
     oc get packagemanifest openshift-cert-manager-operator -o jsonpath='{.status.defaultChannel}'
-  register: _cert_manager_packagemanifest
+  register: _cert_manager_packagemanifest_default_channel
   failed_when: False
   retries: 30
   delay: 10
-  until: _cert_manager_packagemanifest.rc==0
+  until: _cert_manager_packagemanifest_default_channel.rc==0
 
 - set_fact:
-    _cert_manager_channel: "{{ _cert_manager_packagemanifest.stdout }}"
+    _cert_manager_default_channel: "{{ _cert_manager_packagemanifest_default_channel.stdout }}"
+
+- set_fact:
+    _cert_manager_channel: "{{ _cert_manager_default_channel }}"
+
+- name: Get package manifest to retrieve channels
+  shell: |
+    oc get packagemanifest openshift-cert-manager-operator -o json
+  register: _get_cert_manager_packagemanifest
+
+- set_fact:
+    _cert_manager_packagemanifest: "{{ _get_cert_manager_packagemanifest.stdout | from_json }}"
+
+- set_fact:
+    _cert_manager_max_channel: "{{ _cert_manager_packagemanifest.status.channels | map(attribute='name') | max }}"
+
+- set_fact:
+    _cert_manager_channel: "stable-v1.14"
+  when: _cert_manager_max_channel=='stable-v1.15'
 
 - include_role:
     name: generate-apply-yaml

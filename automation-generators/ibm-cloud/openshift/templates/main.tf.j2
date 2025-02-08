@@ -35,10 +35,10 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
 }
 
 {% for item in generator.attributes.openshift_storage %}
-{% if item.storage_type == "ocs" %}
+{% if item.storage_type == "odf" %}
 resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace("-", "_") }}_ocs" {
     cluster           = "{{generator.attributes.name }}"
-    worker_pool_name  = "{{generator.attributes.name }}-{{item.ocs_storage_label}}"
+    worker_pool_name  = "{{generator.attributes.name }}-{{item.odf_storage_label}}"
     flavor       = "{{ item.storage_flavour | default('bx2.16x64') }}"
     {% if item.secondary_storage is defined  %}
     secondary_storage = "{{ item.secondary_storage }}"
@@ -48,7 +48,7 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
     labels = {
-        "roks-storage" = "{{ item.ocs_storage_label }}"
+        "roks-storage" = "{{ item.odf_storage_label }}"
     }
 
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}

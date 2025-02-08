@@ -1,7 +1,7 @@
-# IBM Cloud ROKS on VPC with OCS storage and Cloud Pak for Data
-This is a sample configuration for ROKS on IBM Cloud, provisioned in a VPC with OCS storage. All infrastructure, OpenShift and Cloud Pak for Data are managed by the deployer and deployment requires nothing but an IBM Cloud API key and a Cloud Pak entitlement key.
+# IBM Cloud ROKS on VPC with ODF storage and Cloud Pak for Data
+This is a sample configuration for ROKS on IBM Cloud, provisioned in a VPC with ODF storage. All infrastructure, OpenShift and Cloud Pak for Data are managed by the deployer and deployment requires nothing but an IBM Cloud API key and a Cloud Pak entitlement key.
 
-![Picture of the environment](./ibm-roks-ocs.png)
+![Picture of the environment](./ibm-roks-odf.png)
 
 ## Infrastructure
 
@@ -15,10 +15,10 @@ The sample configuration is made up of 3 availability zones, each with its own a
 All zones have a single subnet which spans the entire IP address block.
 
 ## OpenShift
-An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC and across subnets 1, 2 and 3 and with OpenShift Container Storage (OpenShift Data Foundation) on 3 dedicated storage/compute nodes. As part of the OCS provisioning, 2 storage classes are created: `ocs-storagecluster-cephfs` for file storage and `ocs-storagecluster-ceph-rbd` for block storage.
+An OpenShift cluster with the specified version (4.8) is provisioned inside the VPC and across subnets 1, 2 and 3 and with OpenShift Container Storage (OpenShift Data Foundation) on 3 dedicated storage/compute nodes. As part of the ODF provisioning, 2 storage classes are created: `ocs-storagecluster-cephfs` for file storage and `ocs-storagecluster-ceph-rbd` for block storage.
 
 ## Cloud Pak for Data
-Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the IBM entitled registry and referencing the OCS storage class in OpenShift.
+Cloud Pak for Data 4.0 is installed in OpenShift project `cpd`, pulling images from the IBM entitled registry and referencing the ODF storage class in OpenShift.
 
 ### Cartridges
 The sample configuration holds a list of cartridges which will be installed. You can control whether cartridges will be installed by commenting or uncommenting the appropriate blocks. Please ensure that the cartridge elements are aligned (hyphens must be aligned with hyphens and properties with properties).

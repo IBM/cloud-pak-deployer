@@ -20,7 +20,7 @@ Every OpenShift cluster definition of a few mandatory properties that control wh
 
 Additionally, one can configure [Upstream DNS Servers](./dns.md) and [OpenShift logging](logging-auditing.md).
 
-The Multicloud Object Gateway (MCG) supports access to s3-compatible object storage via an underpinning block/file storage class, through the Noobaa operator. Some Cloud Pak for Data services such as Watson Assistant need object storage to run. MCG does not need to be installed if OpenShift Data Foundation (fka OCS) is also installed as the operator includes Noobaa.
+The Multicloud Object Gateway (MCG) supports access to s3-compatible object storage via an underpinning block/file storage class, through the Noobaa operator. Some Cloud Pak for Data services such as Watson Assistant need object storage to run. MCG does not need to be installed if OpenShift Data Foundation is also installed as the operator includes Noobaa.
 
 ### Existing OpenShift
 
@@ -101,7 +101,7 @@ The following values are allowed for `infrastructure.type`:
 | Property                | Description                                                                                 | Mandatory                         | Allowed values                      |
 |-------------------------|---------------------------------------------------------------------------------------------|-----------------------------------|-------------------------------------|
 | storage_name            | Name of the storage definition, to be referenced by the Cloud Pak                           | Yes                               |                                     |
-| storage_type            | Type of storage class to use in the OpenShift cluster                                       | Yes                               | nfs, ocs, aws-elastic, auto, custom |
+| storage_type            | Type of storage class to use in the OpenShift cluster                                       | Yes                               | nfs, odf, aws-elastic, auto, custom |
 | ocp_storage_class_file  | OpenShift storage class to use for file storage if different from default for storage_type  | Yes if `storage_type` is `custom` |                                     |
 | ocp_storage_class_block | OpenShift storage class to use for block storage if different from default for storage_type | Yes if `storage_type` is `custom` |                                     |
 
@@ -119,7 +119,7 @@ The table below indicates which storage classes are supported by the Cloud Pak D
 !!! warning
     The ability to provision or use certain storage types does not imply support by the Cloud Paks or by OpenShift itself. There are several restrictions for production use OpenShift Data Foundation, for example when on ROSA.
 
-| Cloud Provider | NFS Storage | OCS/ODF Storage | Portworx | Elastic | Custom (2) |
+| Cloud Provider | NFS Storage | ODF Storage     | Portworx | Elastic | Custom (2) |
 |----------------|-------------|-----------------|----------|---------|------------|
 | ibm-cloud      | Yes         | Yes             | Yes      | No      | Yes        |
 | vsphere        | Yes (1)     | Yes             | No       | No      | Yes        |
@@ -170,13 +170,13 @@ openshift:
   - storage_name: nfs-storage
     storage_type: nfs
     nfs_server_name: sample-nfs
-  - storage_name: ocs-storage
-    storage_type: ocs
+  - storage_name: odf-storage
+    storage_type: odf
     storage_flavour: bx2.16x64
     secondary_storage: 900gb.10iops-tier
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 500
-    ocs_version: 4.8.0
+    odf_storage_label: ocs
+    odf_storage_size_gb: 500
+    odf_version: 4.8.0
   - storage_name: pwx-storage
     storage_type: pwx 
     pwx_etcd_location: {{ ibm_cloud_region }}
@@ -219,7 +219,7 @@ openshift:
 | mcg.storage_class                             | Storage class supporting the Noobaa object storage                                                                                                        | Yes       | Existing storage class   |
 | openshift_storage[]              | List of storage definitions to be defined on OpenShift, see below for further explanation                                                                                                        | Yes                     |                                                                                  |
 
-The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Container Storage, you must also activate the add-on and create the `OcsCluster` custom resource.
+The `managed` attribute indicates whether the ROKS cluster is managed by the Cloud Pak Deployer. If set to `False`, the deployer will not provision the ROKS cluster but expects it to already be available in the VPC. You can still use the deployer to create the VPC, the subnets, NFS servers and other infrastructure, but first run it without an `openshift` element. Once the VPC has been created, manually create an OpenShift cluster in the VPC and then add the `openshift` element with `managed` set to `False`. If you intend to use OpenShift Data Foundation, you must also activate the add-on and create the `OcsCluster` custom resource.
 
 !!! warning
     If you set `infrastructure.private_only` to `True`, the server from which you run the deployer must be able to access the ROKS cluster via its private endpoint, either by establishing a VPN to the cluster's VPC, or by making sure the deployer runs on a server that has a connection with the ROKS VPC via a transit gateway.
@@ -230,13 +230,13 @@ The `managed` attribute indicates whether the ROKS cluster is managed by the Clo
 |---------------------|-------------------------------------------------------------------------------------------------|--------------------------------|-----------------------|
 | openshift_storage[] | List of storage definitions to be defined on OpenShift                                          | Yes                            |                       |
 | storage_name        | Name of the storage definition, to be referenced by the Cloud Pak                               | Yes                            |                       |
-| storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | nfs, ocs or pwx       |
+| storage_type        | Type of storage class to create in the OpenShift cluster                                        | Yes                            | nfs, odf or pwx       |
 | storage_flavour     | Type of compute node to be used for the storage nodes                                           | Yes                            | [Node flavours](https://cloud.ibm.com/docs/vpc?topic=vpc-profiles&interface=api), default is `bx2.16x64` |
 | secondary_storage   | Additional storage to be added to the storage server                                            | No                             | 900gb.10iops-tier, ...|
 | nfs_server_name     | Name of the NFS server within the VPC                                                           | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
-| ocs_storage_label   | Label to be used for the dedicated OCS nodes in the cluster                                     | Yes if `storage_type` is `ocs` |                       |
-| ocs_storage_size_gb | Size of the OCS storage in Gibibytes (Gi)                                                       | Yes if `storage_type` is `ocs` |                       |
-| ocs_version         | Version of OCS (ODF) to be deployed. If left empty, the latest version will be deployed         | No                             | >= 4.6                |
+| odf_storage_label   | Label to be used for the dedicated ODF nodes in the cluster                                     | Yes if `storage_type` is `odf` |                       |
+| odf_storage_size_gb | Size of the ODF storage in Gibibytes (Gi)                                                       | Yes if `storage_type` is `odf` |                       |
+| odf_version         | Version of ODF to be deployed. If left empty, the latest version will be deployed               | No                             | >= 4.6                |
 | pwx_etcd_location   | Location where the etcd service will be deployed, typically the same region as the ROKS cluster | Yes if `storage_type` is `pwx` |                       |
 | pwx_storage_size_gb | Size of the Portworx storage that will be provisioned                                           | Yes if `storage_type` is `pwx` |                       |
 | pwx_storage_iops    | IOPS for the storage volumes that will be provisioned                                           | Yes if `storage_type` is `pwx` |                       |
@@ -284,11 +284,11 @@ openshift:
   - storage_name: nfs-storage
     storage_type: nfs
     nfs_server_name: sample-nfs
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 512
-    ocs_dynamic_storage_class: thin
+  - storage_name: odf-storage
+    storage_type: odf
+    odf_storage_label: ocs
+    odf_storage_size_gb: 512
+    odf_dynamic_storage_class: thin
 
 ```
 
@@ -329,14 +329,14 @@ openshift:
 |---------------------------|-------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-----------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                              | Yes                            |                       |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                                   | Yes                            |                       |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                                            | Yes                            | nfs or ocs            |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                            | Yes                            | nfs or odf            |
 | dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
 | nfs_server_name           | Name of the NFS server within the VPC                                                                                               | Yes if `storage_type` is `nfs` | Existing `nfs_server` |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                               | No                             | >= 4.6                |
-| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                                         | Yes if `storage_type` is `ocs` |                       |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                           | Yes if `storage_type` is `ocs` |                       |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. On vSphere clusters, `thin` is usually available after OpenShift installation | Yes if `storage_type` is `ocs` |                       |
-| storage_vm_definition     | VM Definition that defines the virtual machine attributes for the OCS nodes                                                         | Yes if `storage_type` is `ocs` |                       |
+| odf_version               | Version of the ODF operator. If not specified, this will default to the `ocp_version`                                               | No                             | >= 4.6                |
+| odf_storage_label         | Label to be used for the dedicated ODF nodes in the cluster                                                                         | Yes if `storage_type` is `odf` |                       |
+| odf_storage_size_gb       | Size of the ODF storage in Gibibytes (Gi)                                                                                           | Yes if `storage_type` is `odf` |                       |
+| odf_dynamic_storage_class | Storage class that will be used for provisioning ODF. On vSphere clusters, `thin` is usually available after OpenShift installation | Yes if `storage_type` is `odf` |                       |
+| storage_vm_definition     | VM Definition that defines the virtual machine attributes for the ODF nodes                                                         | Yes if `storage_type` is `odf` |                       |
 
 ### OpenShift on AWS - self-managed
 
@@ -372,10 +372,10 @@ openshift:
     storage_type: storage-class
     storage_class: gp3-csi
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 512
+  - storage_name: odf-storage
+    storage_type: odf
+    odf_storage_label: ocs
+    odf_storage_size_gb: 512
   - storage_name: sample-elastic
     storage_type: aws-elastic
 ```
@@ -437,12 +437,12 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 |---------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------|------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                            | Yes                            |                  |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                 | Yes                            |                  |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | ocs, aws-elastic |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | odf, aws-elastic |
 | dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
-| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                       | Yes if `storage_type` is `ocs` |                  |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `ocs` |                  |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
+| odf_version               | Version of the ODF operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
+| odf_storage_label         | Label to be used for the dedicated ODF nodes in the cluster                                                       | Yes if `storage_type` is `odf` |                  |
+| odf_storage_size_gb       | Size of the ODF storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `odf` |                  |
+| odf_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
 ### OpenShift on AWS - ROSA
@@ -482,10 +482,10 @@ openshift:
     storage_type: storage-class
     storage_class: gp3-csi
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 512
+  - storage_name: odf-storage
+    storage_type: odf
+    odf_storage_label: ocs
+    odf_storage_size_gb: 512
   - storage_name: sample-elastic
     storage_type: aws-elastic
 ```
@@ -540,11 +540,11 @@ When deploying the OpenShift cluster within an existing VPC, you must specify th
 |---------------------------|-------------------------------------------------------------------------------------------------------------------|--------------------------------|------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                            | Yes                            |                  |
 | storage_name              | Name of the storage definition, to be referenced by the Cloud Pak                                                 | Yes                            |                  |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | ocs, aws-elastic |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
-| ocs_storage_label         | Label to be used for the dedicated OCS nodes in the cluster                                                       | Yes if `storage_type` is `ocs` |                  |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `ocs` |                  |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                          | Yes                            | ocs, odf, aws-elastic |
+| odf_version               | Version of the ODF operator. If not specified, this will default to the `ocp_version`                             | No                             |                  |
+| odf_storage_label         | Label to be used for the dedicated ODF nodes in the cluster                                                       | Yes if `storage_type` is `odf` |                  |
+| odf_storage_size_gb       | Size of the ODF storage in Gibibytes (Gi)                                                                         | Yes if `storage_type` is `odf` |                  |
+| odf_dynamic_storage_class | Storage class that will be used for provisioning ODF. `gp3-csi` is usually available after OpenShift installation | No                             |                  |
 
 
 ### OpenShift on Microsoft Azure - ARO
@@ -571,11 +571,11 @@ openshift:
     install: auto
     channel: auto
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 512
-    ocs_dynamic_storage_class: managed-premium
+  - storage_name: odf-storage
+    storage_type: odf
+    odf_storage_label: ocs
+    odf_storage_size_gb: 512
+    odf_dynamic_storage_class: managed-premium
 ```
 
 #### Property explanation for OpenShift cluster on Microsoft Azure (ARO)
@@ -617,12 +617,12 @@ openshift:
 |---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                                       | Yes                            |                   |
 | storage_name              | Name of the storage                                                                                                                          | Yes                            |                   |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `ocs` or `nfs`    |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            |  `odf` or `nfs`    |
 | dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
-| ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `ocs` |                   |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `ocs` |                   |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select `managed-premium`                                            | Yes if `storage_type` is `ocs` | `managed-premium` |
+| odf_version               | Version of the ODF operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
+| odf_storage_label         | Label (or rather a name) to be used for the dedicated ODF nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `odf` |                   |
+| odf_storage_size_gb       | Size of the ODF storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `odf` |                   |
+| odf_dynamic_storage_class | Storage class that will be used for provisioning ODF. In Azure, you must select `managed-premium`                                            | Yes if `storage_type` is `odf` | `managed-premium` |
 
 ### OpenShift on Microsoft Azure - Self-managed
 
@@ -648,11 +648,11 @@ openshift:
     install: auto
     channel: auto
   openshift_storage:
-  - storage_name: ocs-storage
-    storage_type: ocs
-    ocs_storage_label: ocs
-    ocs_storage_size_gb: 512
-    ocs_dynamic_storage_class: managed-premium
+  - storage_name: odf-storage
+    storage_type: odf
+    odf_storage_label: ocs
+    odf_storage_size_gb: 512
+    odf_dynamic_storage_class: managed-premium
 ```
 
 #### Property explanation for OpenShift cluster on Microsoft Azure - Self-managed
@@ -694,9 +694,9 @@ openshift:
 |---------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|--------------------------------|-------------------|
 | openshift_storage[]       | List of storage definitions to be defined on OpenShift                                                                                       | Yes                            |                   |
 | storage_name              | Name of the storage                                                                                                                          | Yes                            |                   |
-| storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `ocs` or `nfs`    |
+| storage_type              | Type of storage class to create in the OpenShift cluster                                                                                     | Yes                            | `odf` or `nfs`    |
 | dedicated_nodes           | Specify if dedicated nodes must be used for ODF                                                                                         | No                            | `True`, `False`    |
-| ocs_version               | Version of the OCS operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
-| ocs_storage_label         | Label (or rather a name) to be used for the dedicated OCS nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `ocs` |                   |
-| ocs_storage_size_gb       | Size of the OCS storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `ocs` |                   |
-| ocs_dynamic_storage_class | Storage class that will be used for provisioning OCS. In Azure, you must select 
+| odf_version               | Version of the ODF operator. If not specified, this will default to the `ocp_version`                                                        | No                             |                   |
+| odf_storage_label         | Label (or rather a name) to be used for the dedicated ODF nodes in the cluster - together with the combination of Azure location and zone id | Yes if `storage_type` is `odf` |                   |
+| odf_storage_size_gb       | Size of the ODF storage in Gibibytes (Gi)                                                                                                    | Yes if `storage_type` is `odf` |                   |
+| odf_dynamic_storage_class | Storage class that will be used for provisioning ODF. In Azure, you must select the storage class | |

@@ -28,7 +28,7 @@ cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.8.3
-  openshift_storage_name: ocs-storage
+  openshift_storage_name: odf-storage
   cartridges:
   - name: cpfs
   - name: cpd_platform

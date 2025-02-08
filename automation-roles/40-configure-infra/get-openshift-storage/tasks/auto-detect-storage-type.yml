@@ -11,8 +11,12 @@
   when: _openshift_storage_classes.stdout is search("managed-nfs-storage")
 
 - set_fact:
-    _storage_type: 'ocs'
+    _storage_type: 'odf'
   when: _openshift_storage_classes.stdout is search("ocs-storagecluster-ceph-rbd")
+
+- set_fact:
+    _storage_type: 'odf-ext'
+  when: _openshift_storage_classes.stdout is search("ocs-external-storagecluster-ceph-rbd")
 
 - set_fact:
     _storage_type: 'aws-elastic'
@@ -20,7 +24,7 @@
 
 - name: Fail if storage type could not be detected
   fail:
-    msg: "Storage type could not be detected for storage_type auto. Make sure that the cluster has NFS, ODF (OCS), Elastic, or Portworx storage classes."
+    msg: "Storage type could not be detected for storage_type auto. Make sure that the cluster has NFS, ODF (OCS), ODF External, Elastic, IBM-FDF, or Portworx storage classes."
   when: _storage_type == 'auto'
 
 - name: Show detected storage type when set to auto
