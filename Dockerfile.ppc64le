@@ -12,6 +12,7 @@ LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
             Frank Ketelaars, \ 
             Jiri Petnik"
+LABEL product=cloud-pak-deployer
 
 USER 0
 
