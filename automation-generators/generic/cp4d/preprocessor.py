@@ -8,24 +8,11 @@ import re
 # openshift:
 # - name: sample
 #   ocp_version: 4.6
-#   compute_flavour: bx2.16x64
-#   compute_nodes: 3
-#   resource_group_name: ibm
-#   infrastructure:
-#     type: vpc
-#     vpc_name: "{{ env_id }}"
-#     subnets: 
-#     - "{{ env_id }}-subnet-zone-1"
-#     - "{{ env_id }}-subnet-zone-2"
-#     - "{{ env_id }}-subnet-zone-3"
+#...
 #   openshift_storage:
 #   - storage_name: nfs-storage
 #     storage_type: nfs
 #     nfs_server_name: "{{ env_id }}-nfs"
-#   - storage_name: ocs-storage
-#     storage_type: ocs
-#     ocs_storage_label: ocs
-#     ocs_storage_size_gb: 500
 
 # Validating:
 # ---

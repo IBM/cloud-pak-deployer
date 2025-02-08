@@ -19,10 +19,10 @@ import re
 #     - "{{ env_id }}-subnet-zone-2"
 #     - "{{ env_id }}-subnet-zone-3"
 #   openshift_storage:
-#   - storage_name: ocs-storage
-#     storage_type: ocs
-#     ocs_storage_label: ocs
-#     ocs_storage_size_gb: 500
+#   - storage_name: odf-storage
+#     storage_type: odf
+#     odf_storage_label: ocs
+#     odf_storage_size_gb: 500
 
 # Validating:
 # ---
@@ -32,7 +32,7 @@ import re
 
 # - project: cp4i
 #   openshift_cluster_name: "{{ env_id }}"
-#   openshift_storage_name: nfs-rook-ceph
+#   openshift_storage_name: odf-storage
 #   cp4i_version: 2021.4.1
 #   use_case_files: True
 #   accept_licenses: False

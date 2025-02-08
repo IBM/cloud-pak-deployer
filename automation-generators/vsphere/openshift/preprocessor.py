@@ -17,12 +17,12 @@ from packaging import version
 #   ingress_vip: 10.99.92.52
 #   cloud_native_toolkit: False
 #   openshift_storage:
-#   - storage_name: ocs-storage
-#     storage_type: ocs
-#     ocs_version: 4.9
-#     ocs_storage_label: ocs
-#     ocs_storage_size_gb: 512
-#     ocs_dynamic_storage_class: thin
+#   - storage_name: odf-storage
+#     storage_type: odf
+#     odf_version: 4.9
+#     odf_storage_label: ocs
+#     odf_storage_size_gb: 512
+#     odf_dynamic_storage_class: thin
 #     storage_vm_definition: storage
 
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
@@ -109,20 +109,35 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['nfs','ocs']:
-                g.appendError(msg='storage_type must be nfs or ocs')
-            if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
-                g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
-            #for ocs
-            if "storage_type" in os and os['storage_type'] == 'ocs':
-                if "storage_vm_definition" not in os:
-                    g.appendError(msg='storage_vm_definition must be specified for openshift_storage elements of storage_type ocs')
-                if "ocs_storage_label" not in os:
-                    g.appendError(msg='ocs_storage_label must be specified for openshift_storage elements of storage_type ocs')
-                if "ocs_storage_size_gb" not in os:
-                    g.appendError(msg='ocs_storage_size_gb must be specified for openshift_storage elements of storage_type ocs')
-                if "ocs_dynamic_storage_class" not in os:
-                    g.appendError(msg='ocs_dynamic_storage_class must be specified for openshift_storage elements of storage_type ocs')
+            else:
+                if os['storage_type']=='ocs':
+                    os.update([("storage_type", "odf")])                
+                if os['storage_type'] not in ['nfs','odf']:
+                    g.appendError(msg='storage_type must be nfs or odf')
+                if os['storage_type']=='odf':
+                    if "ocs_storage_label" in os:
+                        os.update([("odf_storage_label", os['ocs_storage_label'])])
+                    if "ocs_storage_size_gb" in os:
+                        os.update([("odf_storage_size_gb", os['ocs_storage_size_gb'])])
+                    if "ocs_dynamic_storage_class" in os:
+                        os.update([("odf_dynamic_storage_class", os['ocs_dynamic_storage_class'])])
+                    if "ocs_version" in os:
+                        os.update([("odf_version", os['ocs_version'])])
+                    if "odf_storage_label" not in os:
+                        g.appendError(msg='odf_storage_label must be specified when storage_type is odf')
+                    if "odf_storage_size_gb" not in os:
+                        g.appendError(msg='odf_storage_size_gb must be specified when storage_type is odf')
+                    if "odf_dynamic_storage_class" not in os:
+                        g.appendError(msg='odf_dynamic_storage_class must be specified when storage_type is odf')
+                    if "odf_version" in os and version.parse(str(os['odf_version'])) < version.parse("4.6"):
+                        g.appendError(msg='odf_version must be 4.6 or higher. If the ODF version is 4.10, specify odf_version: "4.10"')
+                    if "storage_vm_definition" not in os:
+                        g.appendError(msg='storage_vm_definition must be specified for openshift_storage elements of storage_type odf')
+
+            # Ensure the openshift_storage attribute is updated
+            ge['openshift_storage'][i]=os
+            g.setExpandedAttributes(ge)
+
     result = {
         'attributes_updated': g.getExpandedAttributes(),
         'errors': g.getErrors()

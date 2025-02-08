@@ -5,7 +5,7 @@
 To install and run the Cloud Pak Deployer, ensure that either podman or docker is available on your system. These are typically available on various Linux distributions such as Red Hat Enterprise Linux (preferred), Fedora, CentOS, Ubuntu, and MacOS. Note that Docker behaves differently on Windows compared to Linux platforms, potentially causing deployment issues.
 
 !!! info
-If you plan to run Cloud Pak Deployer from the OpenShift console, you can skip these steps. A Cloud Pak Deployer container image is already available on quay.io, to be used in an OpenShift job.
+If you plan to run Cloud Pak Deployer from the OpenShift console, you can skip these steps. A Cloud Pak Deployer container image is already available on quay.io, to be used in an OpenShift job. For running Cloud Pak Deployer from the OpenShift console, please refer to [Run on OpenShift using console](../10-use-deployer/3-run/existing-openshift-console)
 
 ### Using a Windows workstation
 
@@ -60,10 +60,13 @@ cd cloud-pak-deployer
 
 Then run the following command to build the container image.
 ``` { .bash .copy }
-./cp-deploy.sh build
+./cp-deploy.sh build [--clean-up]
 ```
 
 This process will take 5-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Python and required operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.
+
+!!! info
+    If you want to keep your system clean if you're regularly building the Cloud Pak Deployer image, you can add the `--clean-up` option or set environment variable `CPD_CLEANUP` to `true`.
 
 ## Downloading the Cloud Pak Deployer Image from Registry
 

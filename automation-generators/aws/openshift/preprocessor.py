@@ -26,10 +26,10 @@ from packaging import version
     # - subnet-027ca7cc695ce8515
 #   cloud_native_toolkit: False
 #   openshift_storage:
-#   - storage_name: ocs-storage
-#     storage_type: ocs
-#     ocs_storage_label: ocs
-#     ocs_storage_size_gb: 500
+#   - storage_name: odf-storage
+#     storage_type: odf
+#     odf_storage_label: ocs
+#     odf_storage_size_gb: 500
 
 def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
@@ -119,28 +119,41 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         # Check openshift_storage atttributes
         if len(ge['openshift_storage']) < 1:
             g.appendError(msg='At least one openshift_storage element must be specified.')
-        for os in ge['openshift_storage']:
+        for i, os in enumerate(ge['openshift_storage']):
             if "storage_name" not in os:
                 g.appendError(msg='storage_name must be specified for all openshift_storage elements')
             if "storage_type" not in os:
                 g.appendError(msg='storage_type must be specified for all openshift_storage elements')
-            if "storage_type" in os and os['storage_type'] not in ['ocs','aws-elastic']:
-                g.appendError(msg='storage_type must be ocs or aws-elastic')
-            if "storage_type" in os and os['storage_type']=='aws-elastic':
-                nfs_server_names = []
-                if 'nfs_server' in fc:
-                    nfs_server_names = fc.match('nfs_server[*].name')
-                if "storage_name" not in os:
-                    g.appendError(msg='storage_name must be specified when storage_type is aws-elastic')
-                elif os['storage_name'] not in nfs_server_names:
-                    g.appendError(msg="'"+ os['storage_name'] + "' is not an existing nfs_server name (Found nfs_server: ["+ ','.join(nfs_server_names) +"] )")
-            if "storage_type" in os and os['storage_type']=='ocs':
-                if "ocs_storage_label" not in os:
-                    g.appendError(msg='ocs_storage_label must be specified when storage_type is ocs')
-                if "ocs_storage_size_gb" not in os:
-                    g.appendError(msg='ocs_storage_size_gb must be specified when storage_type is ocs')
-                if "ocs_version" in os and version.parse(str(os['ocs_version'])) < version.parse("4.6"):
-                    g.appendError(msg='ocs_version must be 4.6 or higher. If the OCS version is 4.10, specify ocs_version: "4.10"')
+            else:
+                if os['storage_type']=='ocs':
+                    os.update([("storage_type", "odf")])                
+                if os['storage_type'] not in ['odf','aws-elastic']:
+                    g.appendError(msg='storage_type must be odf or aws-elastic')
+                if os['storage_type']=='aws-elastic':
+                    nfs_server_names = []
+                    if 'nfs_server' in fc:
+                        nfs_server_names = fc.match('nfs_server[*].name')
+                    if "storage_name" not in os:
+                        g.appendError(msg='storage_name must be specified when storage_type is aws-elastic')
+                    elif os['storage_name'] not in nfs_server_names:
+                        g.appendError(msg="'"+ os['storage_name'] + "' is not an existing nfs_server name (Found nfs_server: ["+ ','.join(nfs_server_names) +"] )")
+                if os['storage_type']=='odf':
+                    if "ocs_storage_label" in os:
+                        os.update([("odf_storage_label", os['ocs_storage_label'])])
+                    if "ocs_storage_size_gb" in os:
+                        os.update([("odf_storage_size_gb", os['ocs_storage_size_gb'])])
+                    if "ocs_version" in os:
+                        os.update([("odf_version", os['ocs_version'])])
+                    if "odf_storage_label" not in os:
+                        g.appendError(msg='odf_storage_label must be specified when storage_type is odf')
+                    if "odf_storage_size_gb" not in os:
+                        g.appendError(msg='odf_storage_size_gb must be specified when storage_type is odf')
+                    if "odf_version" in os and version.parse(str(os['odf_version'])) < version.parse("4.6"):
+                        g.appendError(msg='odf_version must be 4.6 or higher. If the ODF version is 4.10, specify odf_version: "4.10"')
+
+            # Ensure the openshift_storage attribute is updated
+            ge['openshift_storage'][i]=os
+            g.setExpandedAttributes(ge)                    
 
         #check variables for aws   
         if '_aws_access_key' in var and var['_aws_access_key'] == "":

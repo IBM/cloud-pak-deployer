@@ -78,13 +78,13 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Generate OCS StorageCluster file {{ _ocs_cluster_tempfile.path }}
+- name: Generate ODF StorageCluster file {{ _ocs_cluster_tempfile.path }}
   template:
     src: aws-ocs-storagecluster.j2
     dest: "{{ status_dir }}/openshift/aws-ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
-- name: Create OCS StorageCluster
+- name: Create ODF StorageCluster
   shell: |
     oc apply -f "{{ status_dir }}/openshift/aws-ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0

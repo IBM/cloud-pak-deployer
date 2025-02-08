@@ -30,7 +30,7 @@ cp4d:
 - project: zen-45
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.5.3
-  openshift_storage_name: ocs-storage
+  openshift_storage_name: odf-storage
   image_registry_name: cpd453
 ```
 

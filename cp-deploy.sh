@@ -53,7 +53,7 @@ command_usage() {
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
   echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
-  echo "  --clean-up                    Remove the container after the run is completed (\$CPD_CLEANUP)"
+  echo "  --clean-up                    Remove the container after the run is completed. Remove old images after build. (\$CPD_CLEANUP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
   echo
@@ -99,8 +99,10 @@ run_env_logs() {
   fi
 
   # Show login info
-  if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
-    cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+  if [[ "${ACTION}" != "destroy" ]];then
+    if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
+      cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+    fi
   fi
 }
 
@@ -584,8 +586,8 @@ while (( "$#" )); do
     shift 1
     ;;
   --clean-up)
-    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${ACTION}" != "download" && "${SUBCOMMAND}" != "vault" ]];then
-      echo "Error: --clean-up is only valid for environment subcommand with apply/destroy or download or the vault subcommand."
+    if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" && "${ACTION}" != "download" && "${SUBCOMMAND}" != "vault" && "${SUBCOMMAND}" != "build" ]];then
+      echo "Error: --clean-up is only valid for environment subcommand with apply/destroy, or the download, build or vault subcommand."
       command_usage 2
     fi
     export CPD_CLEANUP=true
@@ -709,6 +711,10 @@ if ! $INSIDE_CONTAINER;then
       --build-arg CPD_OLM_UTILS_V3_IMAGE=${CPD_OLM_UTILS_V3_IMAGE} \
       --platform linux/${IMAGE_ARCH} \
       ${SCRIPT_DIR}
+    if "$CPD_CLEANUP";then 
+      echo "Cleaning up old Cloud Pak Deployer images..."
+      ${CPD_CONTAINER_ENGINE} image prune -f --filter label=product=cloud-pak-deployer
+    fi 
     exit $?
   fi
 fi
