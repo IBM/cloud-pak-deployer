@@ -99,8 +99,10 @@ run_env_logs() {
   fi
 
   # Show login info
-  if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
-    cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+  if [[ "${ACTION}" != "destroy" ]];then
+    if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
+      cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+    fi
   fi
 }
 
