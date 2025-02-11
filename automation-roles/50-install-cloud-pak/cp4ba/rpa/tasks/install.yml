@@ -132,6 +132,20 @@
     wait_sleep: 15
     wait_timeout: 15
 
+- name: Prepare yaml file for Allow Network Policy
+  ansible.builtin.template:
+    src: rpa-licensing-egress-allow-all-network-policy.yaml.j2
+    dest: "{{ rpa_output_directory }}/rpa-licensing-egress-allow-all-network-policy.yaml"
+    mode: u+rwx
+
+- name: Add the Allow Network Policy
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ rpa_output_directory }}/rpa-licensing-egress-allow-all-network-policy.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
 - name: Load RPA CR to variable
   ansible.builtin.set_fact:
     cr: "{{ lookup('template', 'roboticprocessautomation.yaml.j2') | from_yaml }}"
