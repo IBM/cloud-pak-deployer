@@ -1,13 +1,23 @@
 ---
+# In case zen frontdoor is set (default as from CP4D 5.1), the CP4D URL points to the FS IAM service
 - name: Get route to identity provider when using Foundational Services IAM
   shell: |
     oc --namespace {{ _p_cp4d_project }} get route platform-id-provider \
       -o jsonpath="{.spec.host}{.spec.path}"
-  register: _current_idp_url
+  register: _get_platform_id_provider
+  when: not _zen_frontdoor
+
+- set_fact:
+    _current_idp_url: "{{ _get_platform_id_provider.stdout }}"
+  when: not _zen_frontdoor
+
+- set_fact:
+    _current_idp_url: "{{ _current_cp4d_url.stdout }}/idprovider/"
+  when: _zen_frontdoor
 
 - name: Get IAM Access token when authenticating through Foundational Services IAM
   uri:
-    url: 'https://{{ _current_idp_url.stdout }}v1/auth/identityToken'
+    url: 'https://{{ _current_idp_url }}v1/auth/identityToken'
     method: POST
     body_format: form-urlencoded
     body:
