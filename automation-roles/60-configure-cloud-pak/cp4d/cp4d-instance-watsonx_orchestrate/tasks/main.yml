@@ -1,0 +1,33 @@
+---
+- set_fact:
+    _wxo_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "watsonx_orchestrate"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show watsonx Orchestrate cartridge
+  debug:
+    var: _wxo_cartridge
+
+- set_fact:
+    _configured_wxo_instances: []
+- set_fact:
+    _configured_wxo_instances: "{{ _wxo_cartridge.instances | default([] )}}"
+  when:
+  - _wxo_cartridge != {}
+  - (_wxo_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_wxo_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_wxo_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_wxo_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
+  - not cpd_dry_run
