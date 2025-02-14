@@ -1,0 +1,63 @@
+---
+- set_fact:
+    _wxo_instance_name: "{{ _wxo_instance.display_name }}"
+    _wxo_instance_id: "{{ _wxo_instance.id }}"
+    _wxo_cartridge_listed: {}
+    _delete_wxo_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration
+- block:
+  - set_fact:
+      _wxo_cartridge_listed: "{{ _wxo_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _wxo_instance_name }}']" 
+    when: _wxo_cartridge.instances is defined
+  - set_fact:
+      _delete_wxo_instance: True
+    when: 
+    - _wxo_cartridge_listed == {}
+  when: (_p_delete_all_instances | default(False)) == False
+
+- set_fact:
+    _delete_wxo_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
+- name: Fail if watsonx Orchestrate instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Destroy was not confirmed via --confirm-destroy or global_config confirm_destroy property, will not delete watsonx Orchestrate instance {{ _wxo_instance_name }}"
+  when:
+  - _delete_wxo_instance | bool
+  - _confirm_destroy | default (False) | bool == False
+
+- name: Deleting watsonx Orchestrate instance {{ _wxo_instance_name }}
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _wxo_instance_id }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+  register: _wxo_instance_delete_result
+  when: _delete_wxo_instance | bool
+
+- name: Wait until watsonx Orchestrate instance {{ _wxo_instance_name }} has been deleted
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _wxo_instance_id }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 404
+  register: _wxo_instance_exists
+  until: _wxo_instance_exists.status == 404
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: _delete_wxo_instance | bool
