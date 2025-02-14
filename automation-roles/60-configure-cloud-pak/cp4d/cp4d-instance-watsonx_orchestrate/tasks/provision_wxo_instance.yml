@@ -1,0 +1,57 @@
+---
+- name: Show watsonx Orchestrate instance
+  debug:
+    var: _wxo_instance
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision watsonx Orchestrate instance {{ _wxo_instance.name }}"
+    _p_activity_comment: "Create watsonx Orchestrate instance {{ _wxo_instance.name }} using REST API"
+
+- block:
+  - name: Check if the watsonx Orchestrate instance is already running
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_wxo_instance_addon_type }}&display_name={{ _wxo_instance.name }}'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _wxo_instance_lookup_result
+
+  - name: Determine if watsonx Orchestrate instance already exists
+    debug:
+      msg: "watsonx Orchestrate instance {{ _wxo_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, skipping provisioning"
+    when: _wxo_instance_lookup_result.json.total_count != 0
+
+  - when: _wxo_instance_lookup_result.json.total_count == 0
+    block:
+    - name: Obtain watsonx Orchestrate version
+      shell: |
+        oc get watsonxorchestrate.wo.watsonx.ibm.com -n {{ current_cp4d_cluster.project }} wo -o jsonpath='{.spec.version}'
+      register: _wxo_version
+
+    - name: Prepare watsonx Orchestrate instance {{ _wxo_instance.name }} json file
+      template:
+        src: wxo-instance.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wxo_instance.name }}-wxo-instance.json"
+
+    - name: Create watsonx Orchestrate instance {{ _wxo_instance.name }}
+      uri:
+        url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances'
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ _cp4d_bearer_token }}"
+        src: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wxo_instance.name }}-wxo-instance.json"
+        validate_certs: no
+        status_code: 200
+      register: _create_wxo_instance_result
+
+    - name: Show watsonx Orchestrate instance result
+      debug:
+        var: _create_wxo_instance_result
+  when: not cpd_dry_run
