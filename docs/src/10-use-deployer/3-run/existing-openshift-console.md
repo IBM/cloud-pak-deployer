@@ -465,6 +465,11 @@ data:
           app_connect_project: ibm-app-connect
           app_connect_case_version: 12.5.0
           app_connect_channel_version: v12.5
+        installation_options:
+          watsonx_orchestrate_watsonx_ai_type: false
+        instances:
+        - name: wxo-instance
+          description: "watsonx Orchestrate instance"
         state: removed
 
       - name: wca-ansible
