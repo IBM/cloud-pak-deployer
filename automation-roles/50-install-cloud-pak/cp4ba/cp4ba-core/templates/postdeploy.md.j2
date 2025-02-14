@@ -9,6 +9,7 @@ The following list specifies when you need to perform particular post-deployment
     - [IBM Content Navigator for Microsoft Office](#ibm-content-navigator-for-microsoft-office) - When you want to use NMO feature.
   - [Business Automation Studio (BAS) (foundation pattern)](#business-automation-studio-bas-foundation-pattern)
     - [Enable GenAI](#enable-genai) - When you want to use Gen AI features.
+    - [Enable Git integration](#enable-git-integration) - When you want to use Git integration.
     - [Deploy toolkits and configurators](#deploy-toolkits-and-configurators) - When you want to call ODM from Business Application using Automation Services.
   - [Business Automation Insights (BAI) (foundation pattern)](#business-automation-insights-bai-foundation-pattern)
     - [Configure Workforce insights](#configure-workforce-insights) - When you want to use Workforce Insights.
@@ -81,13 +82,29 @@ Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=c
 
 Both secrets are already created for you with stubs.
 
-Perform the following tasks form the OpenSHift console.
+Perform the following tasks form the OpenShift console.
 
-In Project {{ cp4ba_project_name }}, in Secret wfs-liberty-custom-xml-secret, search for *authData* and modify user and password with your real credentials
+In Project {{ cp4ba_project_name }}, in Secret wfs-liberty-custom-xml-secret, search for *authData* and modify user and password with your real credentials.
 
 In Project {{ cp4ba_project_name }}, in Secret wfs-lombardi-custom-xml-secret, search for *project-id* and *provider-url* and modify values with your real once.
 
 In Project {{ cp4ba_project_name }}, in Pods, search for *icp4adeploy-bastudio-deployment-0* and delete the pod to restart BAS.
+
+### Enable Git Integration
+
+Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=integration-integrating-github
+
+Stubs are already created.
+
+Perform the following tasks form the OpenShift console.
+
+In Project {{ cp4ba_project_name }}, in Secret bas-custom, search for *authData* and modify user and password with your real credentials
+
+In Project {{ cp4ba_project_name }}, in Secret git-ssl-secret and replace with certificate of your Git.
+
+In Project {{ cp4ba_project_name }}, in CR ICP4ACluster named icp4adeploy search for *git-endpoint-url* and update with your real value.
+
+Wait for Operators to do another cycle to make your changes effective.
 
 ### Deploy toolkits and configurators
 

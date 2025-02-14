@@ -15,3 +15,17 @@ spec:
         name: appdb
         port: "5432"
         type: postgresql
+{% if _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring %}
+    bastudio_custom_xml: |+
+      <properties>
+        <server>
+          <git-configuration merge="replace">
+            <git-endpoint-url>https://api.github.com/repos/user1/bawgitrepo</git-endpoint-url>
+            <git-auth-alias-name>Git-J2C-Auth-Alias-Name</git-auth-alias-name>
+          </git-configuration>
+        </server>
+      </properties>
+    custom_secret_name: bas-custom
+    tls:
+      tlsTrustList: [git-ssl-secret]
+{% endif %}
