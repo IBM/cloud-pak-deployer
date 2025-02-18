@@ -97,18 +97,6 @@ run_env_logs() {
       fi
     fi
   fi
-
-  show_deployer_info
-
-}
-
-# Show login info
-show_deployer_info() {
-  if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "apply" ]];then
-    if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
-      cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
-    fi
-  fi
 }
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -1161,8 +1149,6 @@ else
   else
     export VAULT_SECRETS
     . /cloud-pak-deployer/docker-scripts/run_automation.sh
-    
-    show_deployer_info
   fi
 
 fi
