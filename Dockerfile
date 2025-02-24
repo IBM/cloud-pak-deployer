@@ -16,12 +16,16 @@ LABEL product=cloud-pak-deployer
 
 USER 0
 
+RUN if [ ! $(command -v yum) ];then microdnf install -y yum;fi
+
 # Install required packages, including HashiCorp Vault client
-RUN yum install -y yum-utils && \
+RUN alternatives --install /usr/bin/python3 python3 /usr/bin/python3.12 1 && \
+    alternatives --set python3 /usr/bin/python3.12 && \
+    yum install -y yum-utils && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
     yum install -y tar sudo unzip wget jq skopeo httpd-tools git hostname bind-utils iproute procps-ng && \
     # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
-    yum install -y gcc python3.11-devel && \
+    yum install -y gcc python3.12-devel && \
     pip3 install jmespath pyyaml argparse python-benedict pyvmomi psutil && \
     sed -i 's|#!/usr/bin/python.*|#!/usr/bin/python3.9|g' /usr/bin/yum-config-manager && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
