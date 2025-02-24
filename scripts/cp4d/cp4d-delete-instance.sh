@@ -25,15 +25,15 @@ delete_operator_ns() {
     if [ $? -eq 0 ];then
         log "Deleting everything in the ${CP4D_OPERATORS} project"
         oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
-        oc delete sub -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
-        oc delete csv -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
+        oc delete subscriptions.operators.coreos.com -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
+        oc delete clusterserviceversions.operators.coreos.com -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
 
         oc delete operandconfig -n ${CP4D_OPERATORS} --all --ignore-not-found
         oc delete operandregistry -n ${CP4D_OPERATORS} --all --ignore-not-found
         oc delete nss -n ${CP4D_OPERATORS} --all --ignore-not-found
 
-        oc delete sub -n ${CP4D_OPERATORS} --all --ignore-not-found
-        oc delete csv -n ${CP4D_OPERATORS} --all --ignore-not-found
+        oc delete subscriptions.operators.coreos.com -n ${CP4D_OPERATORS} --all --ignore-not-found
+        oc delete clusterserviceversions.operators.coreos.com -n ${CP4D_OPERATORS} --all --ignore-not-found
 
         log "Deleting ${CP4D_OPERATORS} project"
         oc delete ns ${CP4D_OPERATORS} --ignore-not-found --wait=false
@@ -191,8 +191,8 @@ delete_ibm_scheduler() {
     if [ $? -eq 0 ];then
         log "Deleting everything in the ${IBM_SCHEDULING} project"
         oc delete Scheduling  -n ${IBM_SCHEDULING} --all --ignore-not-found
-        oc delete sub -n ${IBM_SCHEDULING} --all --ignore-not-found
-        oc delete csv -n ${IBM_SCHEDULING} --all --ignore-not-found
+        oc delete subscriptions.operators.coreos.com -n ${IBM_SCHEDULING} --all --ignore-not-found
+        oc delete clusterserviceversions.operators.coreos.com -n ${IBM_SCHEDULING} --all --ignore-not-found
 
         log "Deleting ${IBM_SCHEDULING} project"
         oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
@@ -212,8 +212,8 @@ delete_ibm_license_server() {
         if [ $? -eq 0 ]; then
             log "Deleting everything in the ${IBM_LICENSING} project"
             oc delete ibmlicensing  --all --ignore-not-found
-            oc delete sub -n ${IBM_LICENSING} --all --ignore-not-found
-            oc delete csv -n ${IBM_LICENSING} --all --ignore-not-found
+            oc delete subscriptions.operators.coreos.com -n ${IBM_LICENSING} --all --ignore-not-found
+            oc delete clusterserviceversions.operators.coreos.com -n ${IBM_LICENSING} --all --ignore-not-found
 
             log "Deleting ${IBM_LICENSING} project"
             oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
@@ -239,8 +239,8 @@ delete_ibm_certificate_manager() {
             oc delete endpointslice -n ${IBM_CERT_MANAGER}  --all --ignore-not-found
             oc delete endpoints -n ${IBM_CERT_MANAGER}  --all --ignore-not-found
 
-            oc delete sub -n ${IBM_CERT_MANAGER} --all --ignore-not-found
-            oc delete csv -n ${IBM_CERT_MANAGER} --all --ignore-not-found
+            oc delete subscriptions.operators.coreos.com -n ${IBM_CERT_MANAGER} --all --ignore-not-found
+            oc delete clusterserviceversions.operators.coreos.com -n ${IBM_CERT_MANAGER} --all --ignore-not-found
 
             log "Deleting ${IBM_CERT_MANAGER} project"
             oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
