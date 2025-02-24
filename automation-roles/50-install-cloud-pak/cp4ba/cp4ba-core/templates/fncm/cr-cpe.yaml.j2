@@ -9,11 +9,11 @@ spec:
       database_port: "5432"
     dc_os_datasources:
       - dc_database_type: postgresql
-        dc_os_label: os1
-        dc_common_os_datasource_name: FNOS1DS
-        dc_common_os_xa_datasource_name: FNOS1DSXA
+        dc_os_label: content
+        dc_common_os_datasource_name: FNCONTENTDS
+        dc_common_os_xa_datasource_name: FNCONTENTDSXA
         database_servername: "{{ cp4ba_postgresql_hostname }}"
-        database_name: os1db
+        database_name: contentdb
         database_port: "5432"
   initialize_configuration:
     ic_domain_creation:
@@ -25,12 +25,12 @@ spec:
       ic_ldap_name: ldap
     ic_obj_store_creation:
       object_stores:
-        - oc_cpe_obj_store_display_name: OS1
-          oc_cpe_obj_store_symb_name: OS1
+        - oc_cpe_obj_store_display_name: CONTENT
+          oc_cpe_obj_store_symb_name: CONTENT
           oc_cpe_obj_store_conn:
-            name: OS1_dbconnection
-            dc_os_datasource_name: FNOS1DS
-            dc_os_xa_datasource_name: FNOS1DSXA
+            name: CONTENT_dbconnection
+            dc_os_datasource_name: FNCONTENTDS
+            dc_os_xa_datasource_name: FNCONTENTDSXA
           oc_cpe_obj_store_admin_user_groups: [{% for item in lc_admin_groups %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
 {% if _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai %}
           oc_cpe_obj_store_enable_content_event_emitter: true
@@ -54,22 +54,22 @@ spec:
             - "{CE551ADD-0000-0000-0000-000000000011}" # 5.5.1 Social Collaboration Base Extensions
             - "{CE554ADD-0000-0000-0000-000000000021}" # 5.5.4 Event-Driven External Service Invocation Extensions
           oc_cpe_obj_store_enable_workflow: true
-          oc_cpe_obj_store_workflow_region_name: os1_region_name
-          oc_cpe_obj_store_workflow_data_tbl_space: os1db_tbs
+          oc_cpe_obj_store_workflow_region_name: content_region_name
+          oc_cpe_obj_store_workflow_data_tbl_space: contentdb_tbs
           oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
           oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
-          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_os1
+          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_content
     ic_icn_init_info:
       icn_repos:
-        - add_repo_id: OS1
-          add_repo_os_sym_name: OS1
-          add_repo_os_dis_name: OS1
+        - add_repo_id: CONTENT
+          add_repo_os_sym_name: CONTENT
+          add_repo_os_dis_name: CONTENT
       icn_desktop:
-        - add_desktop_id: OS1
-          add_desktop_name: OS1
-          add_desktop_description: OS1
-          add_desktop_repo_id: OS1
+        - add_desktop_id: CONTENT
+          add_desktop_name: CONTENT
+          add_desktop_description: CONTENT
+          add_desktop_repo_id: CONTENT
   verify_configuration:
     vc_icn_verification:
-      - vc_icn_repository: OS1
-        vc_icn_desktop_id: OS1          
+      - vc_icn_repository: CONTENT
+        vc_icn_desktop_id: CONTENT          

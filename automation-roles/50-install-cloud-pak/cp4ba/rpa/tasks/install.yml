@@ -1,5 +1,12 @@
 # Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-robotic-process-automation
 
+- name: Add global pull-secret ICR
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-global-pull-secret-icr
+  vars:
+    common_icr_password: "{{ rpa_icr_password }}"
+
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
     name: common
@@ -125,6 +132,20 @@
     wait_sleep: 15
     wait_timeout: 15
 
+- name: Prepare yaml file for Allow Network Policy
+  ansible.builtin.template:
+    src: rpa-licensing-egress-allow-all-network-policy.yaml.j2
+    dest: "{{ rpa_output_directory }}/rpa-licensing-egress-allow-all-network-policy.yaml"
+    mode: u+rwx
+
+- name: Add the Allow Network Policy
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ rpa_output_directory }}/rpa-licensing-egress-allow-all-network-policy.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
 - name: Load RPA CR to variable
   ansible.builtin.set_fact:
     cr: "{{ lookup('template', 'roboticprocessautomation.yaml.j2') | from_yaml }}"
@@ -178,6 +199,19 @@
   with_items:
     - rpa-ui-rpa
     - rpa-apiserver-rpa
+
+- name: Wait for RPA Zen Extension
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: zen.cpd.ibm.com/v1
+    common_resource_kind: ZenExtension
+    common_resource_name: rpa-zen-rpa-zen-extension
+    common_resource_namespace: "{{ rpa_project_name }}"
+    common_condition_name: Successful
+    common_retries: 25
+    common_delay: 20
 
 - name: Get IAM token
   ansible.builtin.include_role:
@@ -275,8 +309,10 @@
     headers:
       Cookie: ibm-private-cloud-session={{ zen_token }}
     validate_certs: false
-    status_code: 200
   register: token_response
+  until: token_response.status == 200
+  retries: 180
+  delay: 10
 
 - name: Set rpa_oidc_token
   ansible.builtin.set_fact:
