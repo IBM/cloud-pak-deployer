@@ -1,8 +1,8 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
 Contains CP4BA version 24.0.1.  
-Contains IPM version 2.0.0.
-Contains RPA version 23.0.19.
+Contains IPM version 2.0.0 IF001.
+Contains RPA version 23.0.20.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -159,6 +159,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - BAW - Enable Case History on FNCM Domain level as a prerequisite for Timeline Visualizer. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=widgets-timeline-visualizer
 - BAW - Added stub configurations for watsonx.ai integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-generative-ai
 - BAW - Enabled Process Admin audit log. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-audit-log
+- BAW - Added stub configurations for Git integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=integration-integrating-github
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.

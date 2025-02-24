@@ -33,7 +33,20 @@
 
 - name: Retrieve tls.crt
   ansible.builtin.set_fact:
-    "{{ common_crt_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] }}"
+    encoded_cert: "{{ default_secret.resources[0].data['tls.crt'] }}"
+
+- name: Decode base64 content
+  ansible.builtin.set_fact:
+    decoded_content: "{{ encoded_cert | b64decode }}"
+
+- name: Extract only certificates
+  ansible.builtin.set_fact:
+    certs: "{{ decoded_content |
+      regex_findall('(?s)-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----', multiline=True) }}"
+
+- name: Re-encode certificates
+  ansible.builtin.set_fact:
+    "{{ common_crt_output_to_var }}": "{{ certs | join('\r\n') | b64encode }}"
 
 - name: Retrieve tls.key
   ansible.builtin.set_fact:

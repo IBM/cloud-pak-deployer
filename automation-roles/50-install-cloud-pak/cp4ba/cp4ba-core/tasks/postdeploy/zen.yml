@@ -20,6 +20,7 @@
     wait: true
     wait_sleep: 15
     wait_timeout: 15
+  register: zen_tls_secret
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=security-customizing-cloud-pak-entry-point
 - name: Apply custom certificate for Zen
@@ -34,9 +35,17 @@
         zenCustomRoute:
           route_secret: cpd-route-tls-secret
 
-- name: Decode crt
+- name: Get new custom Zen TLS Secret contents
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: cpd-route-tls-secret
+  register: cpd_secret
+
+- name: Retrieve tls.crt and decode
   ansible.builtin.set_fact:
-    decoded_crt: "{{ tls_crt | b64decode }}"
+    decoded_content: "{{ cpd_secret.resources[0].data['tls.crt'] | b64decode }}"
 
 - name: Wait for Cert to be updated in Route
   kubernetes.core.k8s_info:
@@ -47,7 +56,7 @@
   register: route
   retries: 90
   delay: 60
-  until: route.resources[0].spec.tls.certificate == decoded_crt
+  until: (route.resources[0].spec.tls.certificate | trim) == (decoded_content | trim)
 
 - name: Delete Zen ibm-nginx pods
   kubernetes.core.k8s:

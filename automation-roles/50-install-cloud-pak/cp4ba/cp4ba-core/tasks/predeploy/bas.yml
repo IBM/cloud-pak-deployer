@@ -9,3 +9,37 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ cp4ba_output_directory }}/bas-secret.yaml"
+
+- name: Add BAW Git sync prerequisites
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+  block:
+    - name: Prepare yaml file for BAS Custom Secret
+      ansible.builtin.template:
+        src: bas/bas-custom-secret.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/bas-custom-secret.yaml"
+        mode: u+rwx
+
+    - name: Add BAS Custom Secret
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ cp4ba_output_directory }}/bas-custom-secret.yaml"
+
+    - name: Retrieve default certification
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: retrieve-default-certification
+      vars:
+        common_crt_output_to_var: "tls_crt"
+        common_key_output_to_var: "tls_key"
+        common_ca_output_to_var: "ca_crt"
+
+    - name: Prepare yaml file for BAS Git SSL Secret
+      ansible.builtin.template:
+        src: bas/bas-git-ssl-secret.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/bas-git-ssl-secret.yaml"
+        mode: u+rwx
+
+    - name: Add BAS Git SSL Secret
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ cp4ba_output_directory }}/bas-git-ssl-secret.yaml"

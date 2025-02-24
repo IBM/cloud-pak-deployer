@@ -38,29 +38,29 @@
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-preparing-databases
 # Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
-- name: OS1DB DB prepare tablespace
+- name: CONTENTDB DB prepare tablespace
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/os1db_tbs
+    command: mkdir -p /bitnami/postgresql/tablespaces/contentdb_tbs
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
-- name: OS1DB DB
+- name: CONTENTDB DB
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
         psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
-        -- create user os1db
-        CREATE USER os1db WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+        -- create user contentdb
+        CREATE USER contentdb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
-        -- create tablespace for os1db
-        CREATE TABLESPACE os1db_tbs OWNER os1db LOCATION '/bitnami/postgresql/tablespaces/os1db_tbs';
+        -- create tablespace for contentdb
+        CREATE TABLESPACE contentdb_tbs OWNER contentdb LOCATION '/bitnami/postgresql/tablespaces/contentdb_tbs';
 
-        -- create database os1db
-        CREATE DATABASE os1db OWNER os1db TEMPLATE template0 ENCODING UTF8 TABLESPACE os1db_tbs;
-        REVOKE CONNECT ON DATABASE os1db FROM PUBLIC;
+        -- create database contentdb
+        CREATE DATABASE contentdb OWNER contentdb TEMPLATE template0 ENCODING UTF8 TABLESPACE contentdb_tbs;
+        REVOKE CONNECT ON DATABASE contentdb FROM PUBLIC;
       EOF"
   register: command_status

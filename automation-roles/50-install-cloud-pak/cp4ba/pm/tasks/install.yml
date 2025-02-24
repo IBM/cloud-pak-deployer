@@ -1,3 +1,10 @@
+- name: Add global pull-secret ICR
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: add-global-pull-secret-icr
+  vars:
+    common_icr_password: "{{ pm_icr_password }}"
+
 - name: Get postgresql pod
   kubernetes.core.k8s_info:
     api_version: v1
@@ -192,6 +199,19 @@
   retries: 30
   delay: 30
 # TODO waiting only for pods ready as Ready status is currently broken END
+
+- name: Wait for PM Zen Extension
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: zen.cpd.ibm.com/v1
+    common_resource_kind: ZenExtension
+    common_resource_name: "{{ pm_project_name }}-pm-zen-extension"
+    common_resource_namespace: "{{ pm_project_name }}"
+    common_condition_name: Successful
+    common_retries: 25
+    common_delay: 20
 
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
