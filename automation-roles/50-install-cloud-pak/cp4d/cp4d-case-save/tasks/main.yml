@@ -7,25 +7,16 @@
     path: /tmp/work
     state: directory
 
-- name: Generate case-download command preview script to download case files
+- name: Generate case-download command to download case files
   set_fact:
     _case_download_command: "{{ lookup('template', 'case-download.j2') }}" 
 
-- name: Show case-download command to download case files
-  debug:
-    var: _case_download_command
-
-- name: Write script to "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.sh"
-  copy:
-    content: "{{ _case_download_command }}"
-    dest: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.sh"
-    mode: u+rwx
-
-- name: Download case files, logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.log
-  shell: |
-    {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.sh > {{ status_dir }}/log/{{ _p_current_cp4d_cluster.cp4d_version }}-case-download.log
-  args:
-    chdir: /tmp/work
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Download case files
+    _p_command: "{{ _case_download_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-case-download.log"
 
 - name: Create {{ status_dir }}/work directory if not present yet
   file:
