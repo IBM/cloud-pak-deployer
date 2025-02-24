@@ -16,9 +16,16 @@ export STATUS_DIR=$HOME/cpd-status
 export CONFIG_DIR=$HOME/cpd-config
 ```
 
-Start the deployer command line.
+### Set path and alias for the deployer
+
 ``` { .bash .copy }
-./cp-deploy.sh env command
+source ./set-env.sh
+```
+
+### Start the deployer command line
+
+``` { .bash .copy }
+cp-deploy.sh env command
 ```
 
 ```output
@@ -35,11 +42,11 @@ Access to both the bastion and NFS servers are typically protected by the same S
 
 ``` { .bash .copy }
 cd /cloud-pak-deployer
-./cp-deploy.sh vault list
+cp-deploy.sh vault list
 ```
 
 ```output
-./cp-deploy.sh vault list
+cp-deploy.sh vault list
 
 Starting Automation script...
 
@@ -61,7 +68,7 @@ Then, retrieve the private key (in the above example `pluto-01-provision-ssh-key
 SSH_FILE=~/.ssh/pluto-01-rsa
 mkdir -p ~/.ssh
 chmod 600 ~/.ssh
-./cp-deploy.sh vault get -vs pluto-01-provision-ssh-key \
+cp-deploy.sh vault get -vs pluto-01-provision-ssh-key \
     -vsf $SSH_FILE
 echo -e "\n" >> $SSH_FILE
 chmod 600 $SSH_FILE
@@ -72,7 +79,7 @@ chmod 600 $SSH_FILE
 To connect to the NFS server, you need the public IP address of the bastion server and the private IP address of the NFS server. Obviously these can be retrieved from the IBM Cloud resource list (https://cloud.ibm.com/resources), but they are also kept in the Terraform "tfstate" file
 
 ``` { .bash .copy }
-./cp-deploy.sh vault get -vs sample-terraform-tfstate \
+cp-deploy.sh vault get -vs sample-terraform-tfstate \
     -vsf /tmp/sample-terraform-tfstate
 ```
 
