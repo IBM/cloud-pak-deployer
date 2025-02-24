@@ -64,13 +64,13 @@ The bastion server is connected to the internet and OpenShift cluster.
 
 * If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](../../50-advanced/locations-to-whitelist)
 * If a proxy server is configured for the bastion node, check the settings (`http_proxy`, `https_proxy`, `no_proxy` environment variables)
-* Build the Cloud Pak Deployer image using `./cp-deploy.sh build`
+* Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
 * Export the CP_ENTITLEMENT_KEY environment variable with your Cloud Pak entitlement key
 * Create a vault secret `image-registry-<name>` holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example for a registry definition with name `cpd453`, create secret `image-registry-cpd453`.
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     -vs image-registry-cpd453 \
     -vsv "admin:very_s3cret"
 ```
@@ -80,9 +80,9 @@ The bastion server is connected to the internet and OpenShift cluster.
 export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
 
-* Run the `./cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
+* Run the `cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
 ``` { .bash .copy }
-./cp-deploy.sh env apply
+cp-deploy.sh env apply
 ```
 The existence of the `image_registry` definition and its reference in the `cp4d` definition instruct the deployer to mirror images to the private registry and to configure the OpenShift cluster to pull images from the private registry. If you have already mirrored the Cloud Pak images, you can add the `--skip-mirror-images` parameter to speed up the deployment process.
 
@@ -104,29 +104,29 @@ This use case is also sometimes referred to as "semi-air-gapped", where the foll
 
 * If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](../../50-advanced/locations-to-whitelist)
 * If a proxy server is configured for the internet-connected server, check the settings (`http_proxy`, `https_proxy`, `no_proxy` environment variables)
-* Build the Cloud Pak Deployer image using `./cp-deploy.sh build`
+* Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
 * Export the CONFIG_DIR and STATUS_DIR environment variables to respectively point to the configuration directory and the status directory
 * Export the CP_ENTITLEMENT_KEY environment variable with your Cloud Pak entitlement key
 * Create a vault secret `image-registry-<name>` holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example for a registry definition with name `cpd453`, create secret `image-registry-cpd453`.
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     -vs image-registry-cpd453 \
     -vsv "admin:very_s3cret"
 ```
 If the status directory does not exist it is created at this point.
 
 #### Diagram step 1
-* Run the deployer using the `./cp-deploy.sh env download --skip-portable-registry` command. For example:
+* Run the deployer using the `cp-deploy.sh env download --skip-portable-registry` command. For example:
 ``` { .bash .copy }
-./cp-deploy.sh env download \
+cp-deploy.sh env download \
     --skip-portable-registry
 ```
 This will download all clients to the status directory and then mirror images from the entitled registry to the private registry. If mirroring fails, fix the issue and just run the `env download` again.
 
 * Before saving the status directory, you can optionally remove the entitlement key from the vault:
 ``` { .bash .copy }
-./cp-deploy.sh vault delete \
+cp-deploy.sh vault delete \
     -vs ibm_cp_entitlement_key
 ```
 
@@ -164,7 +164,7 @@ export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ
 * Run the `cp-deploy.sh env apply --skip-mirror-images` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
 ``` { .bash .copy }
 cd cloud-pak-deployer
-./cp-deploy.sh env apply \
+cp-deploy.sh env apply \
     --skip-mirror-images
 ```   
 
@@ -196,15 +196,15 @@ This use case is also usually referred to as "air-gapped", where the following c
 
 #### Diagram step 1
 
-* Run the deployer using the `./cp-deploy.sh env download` command. For example:
+* Run the deployer using the `cp-deploy.sh env download` command. For example:
 ``` { .bash .copy }
-./cp-deploy.sh env download
+cp-deploy.sh env download
 ```
 This will download all clients, start the portable registry and then mirror images from the entitled registry to the **portable registry**. The portable registry data is kept in the status directory. If mirroring fails, fix the issue and just run the `env download` again.
 
 * Before saving the status directory, you can optionally remove the entitlement key from the vault:
 ``` { .bash .copy }
-./cp-deploy.sh vault delete \
+cp-deploy.sh vault delete \
     -vs ibm_cp_entitlement_key
 ```
 
@@ -253,14 +253,14 @@ export CPD_OC_LOGIN="oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ
 
 * Create a vault secret `image-registry-<name>` holding the connection credentials for the private registry specified in the configuration (`image_registry`). For example for a registry definition with name `cpd453`, create secret `image-registry-cpd453`.
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     -vs image-registry-cpd453 \
     -vsv "admin:very_s3cret"
 ```
 
-* Run the `./cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
+* Run the `cp-deploy.sh env apply` command to start deployment of the Cloud Pak to the OpenShift cluster. For example:
 ``` { .bash .copy }
-./cp-deploy.sh env apply
+cp-deploy.sh env apply
 ```  
 The `CPD_AIRGGAP` environment variable tells the deployer it will not download anything from the internet. As a first action, the deployer mirrors images from the portable registry to the private registry included in the configuration (`image_registry`)
 

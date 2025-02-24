@@ -58,9 +58,15 @@ First go to the directory where you cloned the GitHub repository, for example `~
 cd cloud-pak-deployer
 ```
 
+### Set path and alias for the deployer
+
+``` { .bash .copy }
+source ./set-env.sh
+```
+
 Then run the following command to build the container image.
 ``` { .bash .copy }
-./cp-deploy.sh build [--clean-up]
+cp-deploy.sh build [--clean-up]
 ```
 
 This process will take 5-10 minutes to complete and it will install all the pre-requisites needed to run the automation, including Ansible, Python and required operating system packages. For the installation to work, the system on which the image is built must be connected to the internet.

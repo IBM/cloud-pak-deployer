@@ -93,14 +93,14 @@ export CONFIG_DIR=$HOME/cpd-config
 
 Set vSphere user secret:
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     --vault-secret vsphere-user \
     --vault-secret-value super_user@vsphere.local
 ```
 
 Or, if you want to create the secret from an input file:
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     --vault-secret kubeconfig \
     --vault-secret-file ~/.kube/config
 ```    
@@ -128,7 +128,7 @@ In some situations you may want to use a single configuration for deployment in 
 
 Example:
 ``` { .bash .copy }
-./cp-deploy.sh env apply \
+cp-deploy.sh env apply \
   -e ibm_cloud_region=eu_gb \
   -e env_id=jupiter-03 [--accept-all-liceneses]
 ```

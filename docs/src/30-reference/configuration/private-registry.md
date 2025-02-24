@@ -37,7 +37,7 @@ When mirroring images, the deployer connects to the registry using the host name
 
 The user and password to connect to the registry will be retrieved from the vault, using secret `image-registry-<your_image_registry_name>` and must be stored in the format `registry_user:registry_password`. For example, if you want to connect to the image registry `cpd404` with user `admin` and password `very_s3cret`, you would create a secret as follows:
 ```
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
   -vs image-registry-cpd463 \
   -vsv "admin:very_s3cret"
 ```
@@ -48,7 +48,7 @@ If you need to connect to a private registry which is not signed by a public cer
 
 For example, if you have a file `/tmp/ca.crt` with the PEM certificate for the certificate authority, you can do the following:
 ```
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
   -vs cpd463-ca-bundle \
   -vsf /tmp/ca.crt
 ```
@@ -80,7 +80,7 @@ The registry host name must end with `icr.io` and the registry namespace is mand
 
 If you have already created the ICR namespace, create a vault secret for the image registry credentials:
 ```
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
   -vs image-registry-cpd463
   -vsv "admin:very_s3cret"
 ```
@@ -116,14 +116,14 @@ image_registry:
 
 To create the vault secret for the image registry credentials:
 ```
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
   -vs image-registry-cpd463
   -vsv "admin:very_s3cret"
 ```
 
 To create the vault secret for the CA bundle:
 ```
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
   -vs cpd463-ca-bundle
   -vsf /tmp/ca.crt
 ```
