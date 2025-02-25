@@ -1,6 +1,31 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 
+command_usage() {
+  echo
+  echo "Usage: $0 [OPTIONS]"
+  echo
+  echo "OPTIONS:"
+  echo "  --debug-only         Run debug job only, not the deployer job"
+  exit 1
+}
+
+# Check that subcommand is valid
+PARAMS=""
+while (( "$#" )); do
+  case "$1" in
+  --debug-only)
+    export DEBUG_ONLY=true
+    shift 1
+    ;;
+  *) 
+    echo "Invalid option."
+    command_usage 1
+    shift 1
+    ;;
+  esac
+done
+
 # Check if we can connect to the OpenShift cluster
 oc cluster-info > /dev/null 2>&1
 if [ $? -ne 0 ];then
@@ -34,10 +59,12 @@ if ! $(oc get pvc cloud-pak-deployer-status > /dev/null 2>&1 );then
 fi
 
 # Check if Cloud Pak Deployer job is active
-deployer_status=$(oc get job cloud-pak-deployer -o jsonpath='{.status.active}' 2>/dev/null)
-if [ "${deployer_status}" == "1" ];then
-    echo "Cloud Pak Deployer job is still active, exiting."
-    exit 1
+if ! "${DEBUG_ONLY}"
+  deployer_status=$(oc get job cloud-pak-deployer -o jsonpath='{.status.active}' 2>/dev/null)
+  if [ "${deployer_status}" == "1" ];then
+      echo "Cloud Pak Deployer job is still active, exiting."
+      exit 1
+  fi
 fi
 
 # Delete finished Cloud Pak Deployer jobs
@@ -48,8 +75,10 @@ oc delete job cloud-pak-deployer-debug --ignore-not-found
 IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
 
 # Start Cloud Pak Deployer jobs
-echo "Starting the deployer job..."
-oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
+if ! "${DEBUG_ONLY}"
+  echo "Starting the deployer job..."
+  oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
+fi
 
 # Start a debug job (sleep infinity) so that we can easily get access to the deployer logs
 echo "Starting the deployer debug job..."
