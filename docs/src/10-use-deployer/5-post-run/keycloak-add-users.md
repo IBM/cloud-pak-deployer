@@ -118,9 +118,9 @@ Keycloak admin password: <admin password>
 
 * Log in with the user and password you created in Keycloak
 
-![Login Shelly](./imges/keycloak-login-product-shelly.png)
+![Login Shelly](./images/keycloak-login-product-shelly.png)
 
-![Welcome Shelly](./imges/keycloak-product-welcome-shelly.png)
+![Welcome Shelly](./images/keycloak-login-product-welcome-shelly.png)
 
 ## Add additional users
 
