@@ -11,7 +11,8 @@ FROM ${CPD_OLM_UTILS_V3_IMAGE} as olmn-utils-v3
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
             Frank Ketelaars, \ 
-            Jiri Petnik"
+            Jiri Petnik, \
+            Jan Dusek"
 LABEL product=cloud-pak-deployer
 
 ENV PIP_ROOT_USER_ACTION=ignore
