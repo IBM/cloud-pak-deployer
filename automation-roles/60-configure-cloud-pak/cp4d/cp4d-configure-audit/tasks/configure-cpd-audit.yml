@@ -11,20 +11,24 @@
     _p_activity_yaml: "{{ status_dir }}/cp4d/fluent.conf"
 
 - block:
+  - name: Create zen-audit-config config map if it doesn't exist
+    shell: |
+      oc create -n {{ current_cp4d_cluster.project }} cm zen-audit-config | true
+
   - name: Apply audit configuration from {{ status_dir }}/cp4d/fluent.conf
-    shell:
+    shell: |
       oc set data -n {{ current_cp4d_cluster.project }} cm/zen-audit-config \
         --from-file={{ status_dir }}/cp4d/fluent.conf
     register: _audit_set_data
     changed_when: "'zen-audit-config data updated' in _audit_set_data.stdout"
 
   - name: Restart audit pods if configuration was changed
-    shell:
+    shell: |
       oc delete po -n {{ current_cp4d_cluster.project }} -l component=zen-audit
     when:  _audit_set_data.changed
 
   - name: Apply replication factor
-    shell:
+    shell: |
       oc scale -n {{ current_cp4d_cluster.project }} deploy/zen-audit --replicas={{ _cp4d_audit_config.audit_replicas | default(1) }}
 
   - name: Apply audit output for OpenShift logging

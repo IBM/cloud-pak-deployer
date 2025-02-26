@@ -66,10 +66,16 @@ export CONFIG_DIR=$HOME/cpd-config
 - `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and log files. **Please note** that if you have chosen to use a File Vault, the directory specified must be the one you used when you created the environment
 - `CONFIG_DIR`: Directory that holds the configuration. This must be the same directory you used when you created the environment
 
+### Set path and alias for the deployer
+
+``` { .bash .copy }
+source ./set-env.sh
+```
+
 ## Run the Cloud Pak Deployer from the command line to uninstall the software
 
 ``` { .bash .copy }
-./cp-deploy.sh env destroy --confirm-destroy
+cp-deploy.sh env destroy --confirm-destroy
 ```
 
 Please ensure you specify the same extra (dynamic) variables that you used when you ran the `env apply` command.
@@ -79,13 +85,13 @@ When running the command, the container will start as a daemon and the command w
 You can return to view the logs as follows:
 
 ``` { .bash .copy }
-./cp-deploy.sh env logs
+cp-deploy.sh env logs
 ```
 
 If you need to interrupt the process, use CTRL-C to stop the logging output and then use:
 
 ``` { .bash .copy }
-./cp-deploy.sh env kill
+cp-deploy.sh env kill
 ```
 
 ## Run the Cloud Pak Deployer from the OpenShift console to uninstall the software

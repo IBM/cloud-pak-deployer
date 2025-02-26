@@ -1,0 +1,35 @@
+# Build the Deployer image
+
+name: build-deployer-image-test
+
+# Trigger the workflow on push or pull request events but only for the main branch
+on:
+  push:
+    branches:
+    - test
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Sequence of tasks that will be executed as part of the job
+    steps:
+
+      - name: Check-out repository
+        uses: actions/checkout@v3
+
+      - name: Build the image
+        run: |
+          ./cp-deploy.sh build
+
+      - name: Push to quay.io
+        env:
+          QUAY_IO_USER: ${{ secrets.QUAY_IO_USER }}
+          QUAY_IO_PASSWORD: ${{ secrets.QUAY_IO_PASSWORD }}
+        run: |
+          podman login quay.io -u "${QUAY_IO_USER}" -p "${QUAY_IO_PASSWORD}"
+          podman tag cloud-pak-deployer:latest quay.io/cloud-pak-deployer/cloud-pak-deployer:test
+          podman push quay.io/cloud-pak-deployer/cloud-pak-deployer:test

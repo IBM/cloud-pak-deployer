@@ -178,7 +178,11 @@ From that point forward you can use VSCode as if you were working on your laptop
 The Cloud Pak Deployer runs as a container on the server. When you're in the process of developing new features, having to always rebuild the image is a bit of a pain, hence we've introduced a special command line parameter.
 
 ``` { .bash .copy }
-./cp-deploy.sh env apply .... --cpd-develop [--accept-all-liceneses]
+source ./set-env.sh
+```
+
+``` { .bash .copy }
+cp-deploy.sh env apply .... --cpd-develop [--accept-all-liceneses]
 ```
 
 When adding the `--cpd-develop` parameter to the command line, the current directory is mapped as a volume to the `/cloud-pak-deployer` directory within the container. This means that any latest changes you've done to the Ansible playbooks or other commands will take effect immediately.
@@ -190,8 +194,12 @@ When adding the `--cpd-develop` parameter to the command line, the current direc
 When working on multiple changes concurrently, you may have to switch between branches or tags. By default, the Cloud Pak Deployer image is built with image `latest`, but you can override this by setting the `CPD_IMAGE_TAG` environment variable in your session.
 
 ``` { .bash .copy }
+source ./set-env.sh
+```
+
+``` { .bash .copy }
 export CPD_IMAGE_TAG=cp4d-460
-./cp-deploy.sh build
+cp-deploy.sh build
 ```
 
 When building the deployer, the image is now tagged:
@@ -206,7 +214,7 @@ localhost/cloud-pak-deployer         cp4d-460    8b08cb2f9a2e  8 minutes ago  1.
 
 When running the deployer with the same environment variable set, you will see an additional message in the output.
 ``` { .bash .copy }
-./cp-deploy.sh env apply
+cp-deploy.sh env apply
 ```
 
 ```output
@@ -218,8 +226,12 @@ Cloud Pak Deployer image tag cp4d-460 will be used.
 By default, the `cp-deploy.sh` command detects if `podman` (preferred) or `docker` is found on the system. In case both are present, `podman` is used. You can override this behaviour by setting the `CPD_CONTAINER_ENGINE` environment variable.
 
 ``` { .bash .copy }
+source ./set-env.sh
+```
+
+``` { .bash .copy }
 export CPD_CONTAINER_ENGINE=docker
-./cp-deploy.sh build
+cp-deploy.sh build
 ```
 
 ```output

@@ -129,7 +129,7 @@ Use this option if you have multiple OpenShift clusters configured in th deploye
 
 Store the login command in secret `<cluster name>-oc-login`
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
   -vs pluto-01-oc-login \
   -vsv "oc login api.pluto-01.coc.ibm.com:6443 -u kubeadmin -p BmxQ5-KjBFx-FgztG-gpTF3 --insecure-skip-tls-verify"
 ```
@@ -149,18 +149,18 @@ oc config current-context
 
 Now, store the Kubernetes config file as a vault secret.
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     --vault-secret kubeconfig \
     --vault-secret-file ~/.kube/config
 ```
 
 If the deployer manages multiple OpenShift clusters, you can specify a kubeconfig file for each of the clusters by prefixing the `kubeconfig` with the name of the `openshift` object, for example:
 ``` { .bash .copy }
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     --vault-secret pluto-01-kubeconfig \
     --vault-secret-file /data/pluto-01/kubeconfig
 
-./cp-deploy.sh vault set \
+cp-deploy.sh vault set \
     --vault-secret venus-02-kubeconfig \
     --vault-secret-file /data/venus-02/kubeconfig
 ```
@@ -168,12 +168,18 @@ When connecting to the OpenShift cluster, a cluster-specific kubeconfig vault se
 
 ## 5. Run the deployer
 
+### Set path and alias for the deployer
+
+``` { .bash .copy }
+source ./set-env.sh
+```
+
 ### Optional: validate the configuration
 
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
 ``` { .bash .copy }
-./cp-deploy.sh env apply --check-only --accept-all-licenses
+cp-deploy.sh env apply --check-only --accept-all-licenses
 ```
 
 ### Run the Cloud Pak Deployer
@@ -181,7 +187,7 @@ If you only want to validate the configuration, you can run the dpeloyer with th
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ``` { .bash .copy }
-./cp-deploy.sh env apply --accept-all-licenses
+cp-deploy.sh env apply --accept-all-licenses
 ```
 
 You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
@@ -193,7 +199,7 @@ When running the command, the container will start as a daemon and the command w
 You can return to view the logs as follows:
 
 ``` { .bash .copy }
-./cp-deploy.sh env logs
+cp-deploy.sh env logs
 ```
 
 Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
@@ -201,7 +207,7 @@ Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak w
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
 ``` { .bash .copy }
-./cp-deploy.sh env kill
+cp-deploy.sh env kill
 ```
 
 ### On failure
@@ -230,7 +236,7 @@ The `admin` password can be retrieved from the vault as follows:
 List the secrets in the vault:
 
 ``` { .bash .copy }
-./cp-deploy.sh vault list
+cp-deploy.sh vault list
 ```
 
 This will show something similar to the following:
@@ -245,7 +251,7 @@ Secret list for group sample:
 You can then retrieve the Cloud Pak for Data admin password like this:
 
 ``` { .bash .copy }
-./cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_sample
+cp-deploy.sh vault get --vault-secret cp4d_admin_cpd_sample
 ```
 
 ```output
