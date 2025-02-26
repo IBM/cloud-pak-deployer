@@ -3,7 +3,10 @@ If you want to change the deployed configuration, you can just update the config
 
 Below are a couple of examples of post-run changes you may want to do.
 
-## Change Cloud Pak for Data admin password
+## Configure IdP users
+When Keycloak (Red Hat SSO) has been configured, you cannot login without first creating a user. Refer to [Add users to Keycloak](./keycloak-add-users.md) for the steps to configure users.
+
+## Change Cloud Pak for Data administrator password
 When initially installed, the Cloud Pak Deployer will generate a strong password for the Cloud Pak for Data `admin` user (or `cpadmin` if you have selected to use Foundational Services IAM). If you want to change the password afterwards, you can do this from the Cloud Pak for Data user interface, but this means that the deployer will no longer be able to make changes to the Cloud Pak for Data configuration.
 
 If you have updated the admin password from the UI, please make sure you also update the secret in the vault.
