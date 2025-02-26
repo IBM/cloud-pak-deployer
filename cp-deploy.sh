@@ -97,13 +97,6 @@ run_env_logs() {
       fi
     fi
   fi
-
-  # Show login info
-  if [[ "${ACTION}" != "destroy" ]];then
-    if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
-      cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
-    fi
-  fi
 }
 
 # --------------------------------------------------------------------------------------------------------- #
@@ -644,29 +637,6 @@ else
   IMAGE_ARCH=${ARCH}
 fi
 
-# If images have not been overridden, set the variables here
-if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-  if [[ "${IMAGE_ARCH}" == "amd64" || "${IMAGE_ARCH}" == "arm64" ]]; then
-    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
-  else
-    export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.${IMAGE_ARCH}
-  fi
-else
-  echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
-fi
-
-# If images have not been overridden, set the variables here
-if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
-  if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
-    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest
-  else
-    export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.${IMAGE_ARCH}
-  fi
-else
-  echo "Custom olm-utils-v3 image ${CPD_OLM_UTILS_V3_IMAGE} will be used."
-fi
-
-
 if ! $INSIDE_CONTAINER;then
   # Check if podman or docker command was found
   if [ -z $CPD_CONTAINER_ENGINE ];then
@@ -688,6 +658,28 @@ if ! $INSIDE_CONTAINER;then
 
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
+    # If images have not been overridden, set the variables here
+    if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
+      if [[ "${IMAGE_ARCH}" == "amd64" || "${IMAGE_ARCH}" == "arm64" ]]; then
+        export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
+      else
+        export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.${IMAGE_ARCH}
+      fi
+    else
+      echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
+    fi
+
+    # If images have not been overridden, set the variables here
+    if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
+      if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
+        export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest
+      else
+        export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.${IMAGE_ARCH}
+      fi
+    else
+      echo "Custom olm-utils-v3 image ${CPD_OLM_UTILS_V3_IMAGE} will be used."
+    fi
+
     echo "Building Cloud Pak Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG}"
     # Store version info into image
     mkdir -p ${SCRIPT_DIR}/.version-info

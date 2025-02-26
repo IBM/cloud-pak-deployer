@@ -116,7 +116,7 @@ This scenario is supported. To enable this feature, please ensure that you take 
 2. Create "cluster-admin " password token using the following command:
 
     ``` { .bash .copy }
-    $ ./cp-deploy.sh vault set -vs={{env_id}}-cluster-admin-password=[YOUR PASSWORD]
+    $ cp-deploy.sh vault set -vs={{env_id}}-cluster-admin-password=[YOUR PASSWORD]
     ```
 
 Without these changes, sthe cloud player will fail and you will receive the following error message: "Failed to get the cluster-admin password from the vault".
@@ -159,19 +159,25 @@ export AWS_SESSION_TOKEN=your_session_token
 In some cases, download of the `cloudctl` and `cpd-cli` clients from https://github.com/IBM will fail because GitHub limits the number of API calls from non-authenticated clients. You can remediate this issue by creating a [Personal Access Token on github.com](https://github.com/settings/tokens) and creating a secret in the vault.
 
 ``` { .bash .copy }
-./cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
+cp-deploy.sh vault set -vs github-ibm-pat=<your PAT>
 ```
 
-Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` to the `./cp-deploy.sh env apply` command.
+Alternatively, you can set the secret by adding `-vs github-ibm-pat=<your PAT>` to the `cp-deploy.sh env apply` command.
 
 ## 5. Run the deployer  
+
+### Set path and alias for the deployer
+
+``` { .bash .copy }
+source ./set-env.sh
+```
 
 ### Optional: validate the configuration
 
 If you only want to validate the configuration, you can run the dpeloyer with the `--check-only` argument. This will run the first stage to validate variables and vault secrets and then execute the generators.
 
 ``` { .bash .copy }
-./cp-deploy.sh env apply --check-only --accept-all-licenses
+cp-deploy.sh env apply --check-only --accept-all-licenses
 ```
 
 ### Run the Cloud Pak Deployer
@@ -179,7 +185,7 @@ If you only want to validate the configuration, you can run the dpeloyer with th
 To run the container using a local configuration input directory and a data directory where temporary and state is kept, use the example below. If you don't specify the status directory, the deployer will automatically create a temporary directory. Please note that the status directory will also hold secrets if you have configured a flat file vault. If you lose the directory, you will not be able to make changes to the configuration and adjust the deployment. It is best to specify a permanent directory that you can reuse later. If you specify an existing directory the current user **must** be the owner of the directory. Failing to do so may cause the container to fail with insufficient permissions.
 
 ``` { .bash .copy }
-./cp-deploy.sh env apply --accept-all-licenses
+cp-deploy.sh env apply --accept-all-licenses
 ```
 
 You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../50-advanced/advanced-configuration.md#using-dynamic-variables-extra-variables).
@@ -191,7 +197,7 @@ When running the command, the container will start as a daemon and the command w
 You can return to view the logs as follows:
 
 ``` { .bash .copy }
-./cp-deploy.sh env logs
+cp-deploy.sh env logs
 ```
 
 Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../30-reference/timings).
@@ -199,7 +205,7 @@ Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak w
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
 ``` { .bash .copy }
-./cp-deploy.sh env kill
+cp-deploy.sh env kill
 ```
 
 ### On failure
@@ -228,7 +234,7 @@ The `admin` password can be retrieved from the vault as follows:
 List the secrets in the vault:
 
 ``` { .bash .copy }
-./cp-deploy.sh vault list
+cp-deploy.sh vault list
 ```
 
 This will show something similar to the following:
@@ -247,7 +253,7 @@ Secret list for group sample:
 You can then retrieve the Cloud Pak for Data admin password like this:
 
 ``` { .bash .copy }
-./cp-deploy.sh vault get --vault-secret cp4d_admin_zen_40_pluto_01
+cp-deploy.sh vault get --vault-secret cp4d_admin_zen_40_pluto_01
 ```
 
 ```output

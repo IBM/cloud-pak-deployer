@@ -27,6 +27,15 @@ cd ${SCRIPT_DIR}/..
 # Retrieve version info
 source ./.version-info/version-info.sh
 
+# Show login info
+show_deployer_info() {
+  if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "apply" ]];then
+    if [ -e ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt ];then
+      cat ${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt
+    fi
+  fi
+}
+
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
@@ -135,6 +144,9 @@ env|environment)
     echo "====================================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
     echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   fi
+
+  show_deployer_info
+
   exit ${exit_code}
   ;;
 

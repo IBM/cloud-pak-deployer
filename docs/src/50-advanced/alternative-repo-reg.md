@@ -5,6 +5,12 @@
 
 Alternative repositories and registries are mainly geared towards pre-GA use of the Cloud Paks where CASE files are downloaded from internal repositories and staging container image registries need to be used as images have not been released yet.
 
+### Set path and alias for the deployer
+
+``` { .bash .copy }
+source ./set-env.sh
+```
+
 ## Building the Cloud Pak Deployer image
 By default the Cloud Pak Deployer image is built on top of the `olm-utils` images in `icr.io`. If you're working with a pre-release of the Cloud Pak OLM utils image, you can override the setting as follows:
 
@@ -19,7 +25,7 @@ export CPD_OLM_UTILS_V3_IMAGE=cp.staging.acme.com:5.0.0
 
 Subsequently, run the install commmand:
 ``` { .bash .copy }
-./cp-deploy.sh build
+cp-deploy.sh build
 ```
 
 ## Configuring the alternative repositories and registries
@@ -78,21 +84,21 @@ Before running the deployer with a `cp_alt_repo` object, you need to ensure the 
 
 For the GitHub token, you need to set the token (typically a deploy key) to login to GitHub or GitHub Enterprise.
 ``` { .bash .copy }
-./cp-deploy.sh vault set -vs github-internal-repo=abc123def456
+cp-deploy.sh vault set -vs github-internal-repo=abc123def456
 ```
 
 For the registry credentials, specify the user and password separated by a colon (`:`):
 ``` { .bash .copy }
-./cp-deploy.sh vault set -vs cp-staging="cp-staging-user:cp-staging-password"
+cp-deploy.sh vault set -vs cp-staging="cp-staging-user:cp-staging-password"
 ```
 
 You can also set these tokens on the `cp-deploy.sh env apply` command line.
 ``` { .bash .copy }
-./cp-deploy.sh env apply -f -vs github-internal-repo=abc123def456 -vs cp-staging="cp-staging-user:cp-staging-password
+cp-deploy.sh env apply -f -vs github-internal-repo=abc123def456 -vs cp-staging="cp-staging-user:cp-staging-password
 ```
 
 ## Running the deployer
 To run the deployer you can now use the standard process:
 ``` { .bash .copy }
-./cp-deploy.sh env apply -v
+cp-deploy.sh env apply -v
 ```

@@ -7,19 +7,24 @@ Sometimes you may need to access the OpenShift cluster using the OpenShift clien
 ### Set environment variables
 Make sure you have set the **CONFIG_DIR** and **STATUS_DIR** environment variables to the same values when you ran the `env apply` command. This will ensure that the `oc` command will access the OpenShift cluster(s) of that configuration.
 
+### Set path and alias for the deployer
+
+``` { .bash .copy }
+source ./set-env.sh
+```
 
 ### Optional: prepare OpenShift cluster
 If you have not run the deployer yet and do not intend to install any Cloud Paks, but you do want to access the OpenShift cluster from the command line to check or prepare items, run the deployer with the `--skip-cp-install` flag.
 
 ``` { .bash .copy }
-./cp-deploy.sh env apply --skip-cp-install
+cp-deploy.sh env apply --skip-cp-install
 ```
 
 Deployer will check the configuration, download clients, attempt to login to OpenShift and prepare the OpenShift cluster with the global pull secret and (for Cloud Pak for Data) node settings. After that the deployer will finish without installing any Cloud Pak.
 
 ## Run the Cloud Pak Deployer command line
 ``` { .bash .copy }
-./cp-deploy.sh env cmd 
+cp-deploy.sh env cmd 
 ```
 
 You should see something like this:
