@@ -59,7 +59,7 @@ if ! $(oc get pvc cloud-pak-deployer-status > /dev/null 2>&1 );then
 fi
 
 # Check if Cloud Pak Deployer job is active
-if ! "${DEBUG_ONLY}"
+if ! "${DEBUG_ONLY}";then
   deployer_status=$(oc get job cloud-pak-deployer -o jsonpath='{.status.active}' 2>/dev/null)
   if [ "${deployer_status}" == "1" ];then
       echo "Cloud Pak Deployer job is still active, exiting."
