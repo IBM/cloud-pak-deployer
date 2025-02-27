@@ -554,7 +554,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
 * Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job (From release v3.0.2 onwards).
 
 !!! info
-    You can also choose to start only the debug job and run the deployer in the debug pod. See [Start deployer debug job](./existing-openshift-debug-job.md){target="_blank}
+    You can also choose to start only the debug job and run the deployer in the debug pod. See [Start deployer debug job](./existing-openshift-console-debug-job.md){target="_blank}
 
 ???+ note "Start the deployer"
     ``` { .yaml .copy linenums="1" hl_lines="11" }
