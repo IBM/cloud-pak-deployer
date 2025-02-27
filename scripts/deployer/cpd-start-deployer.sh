@@ -75,7 +75,7 @@ oc delete job cloud-pak-deployer-debug --ignore-not-found
 IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
 
 # Start Cloud Pak Deployer jobs
-if ! "${DEBUG_ONLY}"
+if ! "${DEBUG_ONLY}";then
   echo "Starting the deployer job..."
   oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
 fi
