@@ -125,7 +125,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
         cp4d:
         - project: cpd
           openshift_cluster_name: "{{ env_id }}"
-          cp4d_version: 5.1.0
+          cp4d_version: 5.1.1
           db2u_limited_privileges: False
           use_fs_iam: True
           accept_licenses: True
