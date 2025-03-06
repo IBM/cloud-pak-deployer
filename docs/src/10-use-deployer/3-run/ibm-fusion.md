@@ -34,7 +34,7 @@ There are 5 main steps to run the deployer for Fusion HCI
 ### Deployer configuration and status directories
 Deployer reads the configuration from a directory you set in the `CONFIG_DIR` environment variable. A status directory (`STATUS_DIR` environment variable) is used to log activities, store temporary files, scripts. If you use a File Vault (default), the secrets are kept in the `$STATUS_DIR/vault` directory.
 
-Discover sample configuration YAML files for OpenShift and Cloud Pak here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). To set up Fusion SDS, transfer the ocp-fusion-storage-scale.yaml file to the $CONFIG_DIR/config directory. If you're interested in installing watsonx as well, choose one of the watsonx-*.yaml files and copy it accordingly.
+Discover sample configuration YAML files for OpenShift and Cloud Pak here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). To set up Fusion HCI, transfer the ocp-fusion-storage-scale.yaml file to the $CONFIG_DIR/config directory. If you're interested in installing watsonx as well, choose one of the watsonx-*.yaml files and copy it accordingly.
 
 Example:
 ``` { .bash .copy }
@@ -64,7 +64,11 @@ For special configuration with defaults and dynamic variables, refer to [Advance
 
 ## 2. Prepare the infrastructure
 
-No steps should be required to prepare the infrastructure; this type of installation expects the OpenShift cluster to be up and running with the supported storage classes.
+Fusion HCI/SDS is expected to be configured already with the required storage classes, the user should not require to run any steps in this bullet.
+
+For more information: 
+Fusion HCI: https://www.ibm.com/docs/en/fusion-hci-systems
+Fusion SDS: https://www.ibm.com/docs/en/fusion-software
 
 ## 3. Acquire entitlement keys and secrets
 
@@ -91,7 +95,7 @@ export CP_ENTITLEMENT_KEY=your_cp_entitlement_key
 
 ### Store the OpenShift login command or configuration
 
-Because you will be deploying the Cloud Pak on an existing OpenShift cluster, the deployer needs to be able to access OpenShift. There are thre methods for passing the login credentials of your OpenShift cluster(s) to the deployer process:
+Because you will be deploying the Cloud Pak on the Fusion HCI/SDS cluster, the deployer needs to be able to access OpenShift. There are thre methods for passing the login credentials of your OpenShift cluster(s) to the deployer process:
 
 1. [Generic `oc login` command (preferred)](#option-1---generic-oc-login-command)
 2. [Specific `oc login` command(s)](#option-2---specific-oc-login-commands)
