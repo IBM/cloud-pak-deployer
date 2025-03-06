@@ -1,7 +1,17 @@
 # Cloud Pak Deployer
-The intention of the Cloud Pak Deployer is to simplify the initial installation and also continuous management of OpenShift, watsonx and the IBM Cloud Paks on top of that, driven by automation. It will help you deploy watsonx, Cloud Pak for Data, Cloud Pak for Integration, Cloud Pak for Business Automation and Cloud Pak for Watson AIOps on various OpenShift and infrastructures such as IBM Cloud ROKS, Azure Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), vSphere and also existing OpenShift.
+The intention of the Cloud Pak Deployer is to simplify the initial installation and also continuous management of OpenShift, watsonx and the IBM Cloud Paks on top of that, driven by automation. It will help you deploy watsonx, Cloud Pak for Data, Cloud Pak for Integration, Cloud Pak for Business Automation and Cloud Pak for Watson AIOps on various OpenShift and infrastructures:
 
-The Cloud Pak Deployer was created for a joint project with one of our key partners who need to fully automate the deployment of IBM containerized software based on a configuration that is kept in a Git repository. As additional needs for the deployed environment surface, the configuration is changed, committed, approved and then changes are deployed without destroying the current environment.
+* IBM Cloud ROKS
+* IBM Fusion HCI
+* Azure Red Hat OpenShift (ARO)
+* Azure self-managed Red Hat OpenShift
+* Red Hat OpenShift on AWS (ROSA)
+* AWS self-managed Red Hat OpenShift
+* vSphere
+* Existing OpenShift on x86
+* Existing OpenShift on IBM Power
+
+Cloud Pak Deployer was created for a joint project with one of our key partners who need to fully automate the deployment of IBM containerized software based on a configuration that is kept in a Git repository. As additional needs for the deployed environment surface, the configuration is changed, committed, approved and then changes are deployed without destroying the current environment.
 
 > "If we have seen a screen during deployment, it means something has failed"
 
