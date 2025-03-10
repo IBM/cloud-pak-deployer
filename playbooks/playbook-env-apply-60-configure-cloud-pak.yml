@@ -13,6 +13,14 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
+
+  - stat:
+      path: "{{ config_dir }}/assets/deployer-hook-pre-60-configure-cloud-pak.yml"
+    register: _hook_pre_file
+
+  - include_tasks: "{{ config_dir }}/assets/deployer-hook-pre-60-configure-cloud-pak.yml"
+    when: _hook_pre_file.stat.exists
+
   - name: Configure Cloud Pak for Business Automation
     include_role:
       name: cp4ba-cluster-configure

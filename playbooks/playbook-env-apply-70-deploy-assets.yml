@@ -14,6 +14,13 @@
 
   tasks:
 
+  - stat:
+      path: "{{ config_dir }}/assets/deployer-hook-pre-70-deploy-assets.yml"
+    register: _hook_pre_file
+
+  - include_tasks: "{{ config_dir }}/assets/deployer-hook-pre-70-deploy-assets.yml"
+    when: _hook_pre_file.stat.exists
+
   - name: Deploy Cloud Pak for Business Automation Assets
     include_role:
       name: cp4ba-assets

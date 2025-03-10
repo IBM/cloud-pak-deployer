@@ -11,6 +11,14 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
+
+  - stat:
+      path: "{{ config_dir }}/assets/deployer-hook-pre-40-configure-infra.yml"
+    register: _hook_pre_file
+
+  - include_tasks: "{{ config_dir }}/assets/deployer-hook-pre-40-configure-infra.yml"
+    when: _hook_pre_file.stat.exists
+
   - name: Assemble NFS Servers group
     include_role:
       name: nfs-server
