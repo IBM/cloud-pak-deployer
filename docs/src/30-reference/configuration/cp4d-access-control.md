@@ -65,7 +65,8 @@ Example with OpenLDAP authentication
 zen_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  demo_openldap_name: ibm-openldap
+  demo_openldap_names:
+  - ibm-openldap
   user_groups:
   - name: cp4d-admins
     description: Cloud Pak for Data Administrators
@@ -100,7 +101,7 @@ zen_access_control:
 | project                | `project` of the `cp4d` instance                                                       | Yes       |                |
 | openshift_cluster_name | Reference to the `openshift` name                                                      | Yes       |                |
 | keycloak_name          | Name of the Red Hat SSO (Keycloak) instance on the same OpenShift cluster              | No        |                |
-| demo_openldap_name     | Name of the OpenLDAP instance defined in the `demo_openldap` resoureester              | No        |                |
+| demo_openldap_names[]  | Names of the demo OpenLDAP instances defined in the `demo_openldap` resource           | No        |                |
 | user_groups[]          | Cloud Pak for Data user groups to be configured                                        | Yes       |                |
 | .name                  | Name of the CP4D user group                                                            | Yes       |                |
 | .description           | Description of the CP4D user group                                                     | No        |                |
