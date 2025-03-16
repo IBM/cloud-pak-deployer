@@ -12,6 +12,13 @@
 
   tasks:
 
+  - stat:
+      path: "{{ config_dir }}/assets/deployer-hook-pre-10-validation.yml"
+    register: _hook_pre_file
+
+  - include_tasks: "{{ config_dir }}/assets/deployer-hook-pre-10-validation.yml"
+    when: _hook_pre_file.stat.exists
+  
   - name: Record deployer state
     include_role:
       name: record-deployer-state

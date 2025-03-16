@@ -1,60 +1,31 @@
-demo_openldap:
-- name: cp4d-openldap
-  ldap_config:
-    bind_admin_user: cn=admin,dc=cp,dc=internal
-    base_dn: dc=cp,dc=internal
-    base_dc: cp
-    base_domain: cp.internal
-    user_ou: Users
-    user_id_attribute: uid
-    user_display_name_attribute: cn
-    user_base_dn: ou=Users,dc=cp,dc=internal
-    user_object_class: inetOrgPerson
-    group_ou: Groups
-    group_id_attribute: cn
-    group_display_name_attribute: cn
-    group_base_dn: ou=Groups,dc=cp,dc=internal
-    group_object_class: groupOfUniqueNames
-    group_member_attribute: uniqueMember
-  users:
-  - uid: ttoussaint
-    givenName: Tara
-    sn: Toussaint
-    mail: ttoussaint@cp.internal
-  - uid: rramones
-    givenName: Rosa
-    sn: Ramones
-    mail: rramones@cp.internal
-  - uid: ssharpe
-    givenName: Shelly
-    sn: Sharpe
-    mail: ssharpe@cp.internal
-  - uid: pprimo
-    givenName: Paco
-    sn: Primo
-    mail: pprimo@cp.internal
-  - uid: rroller
-    givenName: Rico
-    sn: Roller
-    mail: rroller@cp.internal
-    # password: specific_password_for_the_user
-  groups:
-  - cn: cp4d-admins
-    members:
-    - uid=ttoussaint,ou=Users,dc=cp,dc=internal
-  - cn: cp4d-data-engineers
-    members:
-    - uid=rramones,ou=Users,dc=cp,dc=internal
-    - uid=ssharpe,ou=Users,dc=cp,dc=internal
-  - cn: cp4d-data-scientists
-    members:
-    - uid=pprimo,ou=Users,dc=cp,dc=internal
-    - uid=ssharpe,ou=Users,dc=cp,dc=internal
-    - uid=rroller,ou=Users,dc=cp,dc=internal
-  - cn: cp4d-monitors
-    members:
-    - uid=pprimo,ou=Users,dc=cp,dc=internal
-  state: installed
+ldap:
+- name: cp4d-ldap
+  ldap_url: ldap://openldap.cp4d-openldap.svc:389
+  ldap_base_dn: dc=cp,dc=internal
+  ldap_bind_dn: cn=admin,dc=cp,dc=internal
+  ldap_bind_password_vault_secret: cp-internal-ldap-bind-password
+  ldap_group_filter: '(&(cn=%v)(objectclass=groupOfUniqueNames))'
+  ldap_group_id_map: '*:cn'
+  ldap_group_member_id_map: 'groupOfUniqueNames:uniqueMember'
+  ldap_user_filter: '(&(uid=%v)(objectclass=inetOrgPerson))'
+  ldap_user_id_map: '*:uid'
+  ldap_case_insensitive: False
+
+# In case of secure LDAP, additional properties can be specified
+# - name: cp4d-ldaps
+#   ldap_url: ldaps://openldap.cp4d-openldap.svc:646
+#   ldap_base_dn: dc=cp,dc=internal
+#   ldap_bind_dn: cn=admin,dc=cp,dc=internal
+#   ldap_bind_password_vault_secret: cp-internal-ldap-bind-password
+#   ldap_group_filter: '(&(cn=%v)(objectclass=groupOfUniqueNames))'
+#   ldap_group_id_map: '*:cn'
+#   ldap_group_member_id_map: 'groupOfUniqueNames:uniqueMember'
+#   ldap_user_filter: '(&(uid=%v)(objectclass=inetOrgPerson))'
+#   ldap_user_id_map: '*:uid'
+#   ldap_case_insensitive: False
+#   ldap_tls_verify_client: demand
+#   ldap_tls_client_cert_vault_secret: cp4d-openldap-cert
+#   ldap_tls_client_key_vault_secret: cp4d-openldap-key
 
 zen_role:
 - name: cp4d-monitoring-role
@@ -64,7 +35,8 @@ zen_role:
   - monitor_platform
 
 zen_access_control:
-- demo_openldap_name: cp4d-openldap
+- ldap_names: 
+  - cp4d-ldap
   user_groups:
   - name: cp4d-admins
     description: Cloud Pak for Data Administrators

@@ -27,7 +27,10 @@ To find the permissions that are allows, you can use the following REST API (GET
 ### Access Control - `zen_access_control`
 The `zen_access_control` object controls the creation of Zen user groups that map identify provider (IdP) groups and define the roles of the user group. A `user_groups` entry must contain at least 1 `roles` and must reference the associated IdP grouop(s).
 
-Example with Red Hat SSO (Keycloak) authentication
+#### Example with Red Hat SSO (Keycloak) authentication
+
+The below configuration references a keycloak (Red Hat SSO) configuration. For the Red hat SSO configuration, refer to [openshift_redhat_sso](./redhat-sso.md).
+
 ```
 zen_access_control:
 - project: cpd
@@ -60,12 +63,53 @@ zen_access_control:
     - kc-cp4d-monitor
 ```
 
-Example with OpenLDAP authentication
+#### Example with LDAP authentication
+
+The below configuration references an LDAP configuration. For the LDAP configuration, refer to [ldap](./ldap.md).
+
 ```
 zen_access_control:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  demo_openldap_name: ibm-openldap
+  ldap_names:
+  - cp4d-ldap
+  user_groups:
+  - name: cp4d-admins
+    description: Cloud Pak for Data Administrators
+    roles:
+    - Administrator
+    ldap_groups:
+    - cn=cp4d-admins,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-data-engineers
+    description: Cloud Pak for Data Data Engineers
+    roles:
+    - User
+    ldap_groups:
+    - cn=cp4d-data-engineers,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-data-scientists
+    description: Cloud Pak for Data Data Scientists
+    roles:
+    - User
+    ldap_groups:
+    - cn=cp4d-data-scientists,ou=Groups,dc=cp,dc=internal
+  - name: cp4d-monitor
+    description: Cloud Pak for Data monitoring
+    roles:
+    - monitor-role
+    ldap_groups:
+    - cn=cp4d-monitor,ou=Groups,dc=cp,dc=internal
+```
+
+#### Example with OpenLDAP authentication
+
+The below configuration references an Demo OpenLDAP configuration. For the Demo OpenLDAP configuration, refer to [demo_openldap](./demo-openldap.md).
+
+```
+zen_access_control:
+- project: cpd
+  openshift_cluster_name: "{{ env_id }}"
+  demo_openldap_names:
+  - ibm-openldap
   user_groups:
   - name: cp4d-admins
     description: Cloud Pak for Data Administrators
@@ -94,13 +138,16 @@ zen_access_control:
 ```
 
 
+![LDAP_Overview](images/ldap_user_groups.png "LDAP connection and User Groups")
+
+
 #### Property explanation
 | Property               | Description                                                                            | Mandatory | Allowed values |
 | ---------------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
 | project                | `project` of the `cp4d` instance                                                       | Yes       |                |
 | openshift_cluster_name | Reference to the `openshift` name                                                      | Yes       |                |
 | keycloak_name          | Name of the Red Hat SSO (Keycloak) instance on the same OpenShift cluster              | No        |                |
-| demo_openldap_name     | Name of the OpenLDAP instance defined in the `demo_openldap` resoureester              | No        |                |
+| demo_openldap_names[]  | Names of the demo OpenLDAP instances defined in the `demo_openldap` resource           | No        |                |
 | user_groups[]          | Cloud Pak for Data user groups to be configured                                        | Yes       |                |
 | .name                  | Name of the CP4D user group                                                            | Yes       |                |
 | .description           | Description of the CP4D user group                                                     | No        |                |

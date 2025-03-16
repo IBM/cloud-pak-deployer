@@ -1,4 +1,4 @@
-# Cloud Pak Asset configuration
+# Cloud Pak for Data Asset configuration
 
 The Cloud Pak Deployer can implement demo assets and accelerators as part of the deployment process to standardize standing up fully-featured demo environments, or to test patches or new versions of the Cloud Pak using pre-defined assets.
 
@@ -12,7 +12,6 @@ You can create one or more subdirectories under the specified location, each hol
 
 The following runtime attributes will be set prior to running the shell script or the Ansible task:
 * If the Cloud Pak for Data instances has the Common Core Services (CCS) custom resource installed, `cpdctl` is configured for the current Cloud Pak for Data instance and the current context is set to the `admin` user of the instance. This means you can run all `cpdctl` commands without first having to login to Cloud Pak for Data.
-* 
 * The current working directory is set to the directory holding the `cp4d-asset.sh` script.
 * When running the `cp4d-asset.sh` shell script, the following environment variables are available:
     - `CP4D_URL`: Cloud Pak for Data URL
