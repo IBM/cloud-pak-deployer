@@ -12,6 +12,9 @@
   debug:
     var: _current_ldap
 
+- set_fact:
+    _ldap_bind_password: ''
+
 - name: Get LDAP bind password from vault secret {{ _current_ldap.bind_password_vault_secret }}
   include_role: 
     name: vault-get-secret
@@ -19,11 +22,32 @@
     secret_name: "{{ _current_ldap.ldap_bind_password_vault_secret }}"
     secret_group: "{{ environment_name }}"
     _p_secret_variable: _ldap_bind_password
+  when: _current_ldap.ldap_bind_password_vault_secret | default('') != ''
 
-- name: Fail if bind password not set
-  fail:
-    msg: "LDAP bind password not set in vault secret {{ _current_ldap.bind_password_vault_secret }}"
-  when: _ldap_bind_password==''
+- fail:
+    msg: "LDAP bind password cannot be empty when vault secret specified"
+  when: 
+  - _current_ldap.ldap_bind_password_vault_secret | default('') != ''
+  - _ldap_bind_password == ''
+
+- name: Get LDAP certificates if tls_verify_client is set to demand
+  block:
+  - include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "{{ _current_ldap.ldap_tls_client_cert_vault_secret }}"
+      secret_group: "{{ environment_name }}"
+      _p_secret_variable: _ldap_tls_client_cert
+  - include_role: 
+      name: vault-get-secret
+    vars:
+      secret_name: "{{ _current_ldap.ldap_tls_client_key_vault_secret }}"
+      secret_group: "{{ environment_name }}"
+      _p_secret_variable: _ldap_tls_client_key
+  - set_fact:
+      _ldap_tls_client_cert_b64: "{{ _ldap_tls_client_cert | b64encode }}"
+      _ldap_tls_client_key_b64: "{{ _ldap_tls_client_key | b64encode }}"
+  when: _current_ldap.ldap_tls_verify_client | default('') != ''
 
 - name: Check if LDAP identity provider {{ _zen_ldap_name }} already exists in Foundational Services
   uri:
@@ -43,11 +67,29 @@
     _fs_iam_ldap_idp_uid: "{{ _fs_iam_ldap_idp.json.idp[0].uid }}"
   when: (_fs_iam_ldap_idp.json.idp | default([])) != []
 
-- debug:
-    var: _to_debug
+- set_fact:
+    _idp_config_check: "{{ _tmp_idp_config }}"
   vars:
-    _to_debug:
-      _current_ldap: "{{ _current_ldap }}"
+    _tmp_idp_config:
+      ldap_url: "{{ _current_ldap.ldap_url }}"
+      ldap_basedn: "{{ _current_ldap.ldap_base_dn }}"
+      ldap_binddn: "{{ _current_ldap.ldap_bind_dn | default('') }}"
+      ldap_bindpassword: "{{ _ldap_bind_password | b64encode | default('') }}"
+
+- set_fact:
+    _idp_config_tls: "{{ _tmp_idp_tls }}"
+  vars:
+    _tmp_idp_tls:
+      ldap_tls_verify_client: "{{ _current_ldap.ldap_tls_verify_client | default('') }}"
+      ldap_tls_client_cert: "{{ _ldap_tls_client_cert_b64 | default('') }}"
+      ldap_tls_client_key: "{{ _ldap_tls_client_key_b64 | default('') }}"
+
+- set_fact:
+    _idp_config_check: "{{ _idp_config_check | ansible.builtin.combine(_idp_config_tls) }}"
+  when: _current_ldap.ldap_tls_verify_client | default('') != ''
+
+- debug:
+    var: _idp_config_check
 
 - name: Validate connection to LDAP {{ _zen_ldap_name }}
   uri:
@@ -59,14 +101,26 @@
     body_format: json
     body:
       name: "{{ _zen_ldap_name }}"
-      idp_config:
-        ldap_url: "{{ _current_ldap.ldap_url }}"
-        ldap_basedn: "{{ _current_ldap.ldap_base_dn }}"
-        ldap_binddn: "{{ _current_ldap.ldap_bind_dn }}"
-        ldap_bindpassword: "{{ _ldap_bind_password | b64encode }}"
+      idp_config: "{{ _idp_config_check }}"
     return_content: yes
     validate_certs: no
     status_code: 200
+
+- set_fact:
+    _idp_config_apply: "{{ _idp_config_check | ansible.builtin.combine(_tmp_idp_config) }}"
+  vars:
+    _tmp_idp_config:
+      ldap_ignorecase: "{{ _current_ldap.ldap_case_insensitive | default(False) | string | lower }}"
+      ldap_userfilter: "{{ _current_ldap.ldap_user_filter }}"
+      ldap_useridmap: "{{ _current_ldap.ldap_user_id_map }}"
+      ldap_groupfilter: "{{ _current_ldap.ldap_group_filter }}"
+      ldap_groupidmap: "{{ _current_ldap.ldap_group_id_map }}"
+      ldap_groupmemberidmap: "{{ _current_ldap.ldap_group_member_id_map }}"
+      ldap_nestedsearch: "false"
+      ldap_pagingsearch: "false"
+
+- debug:
+    var: _idp_config_apply
 
 - name: Create Foundational Services LDAP identity provider {{ _zen_ldap_name }}
   uri:
@@ -81,19 +135,7 @@
       description: "LDAP authentication, identity provider {{ _zen_ldap_name }}"
       protocol: ldap
       type: "Custom"
-      idp_config:
-        ldap_url: "{{ _current_ldap.ldap_url }}"
-        ldap_basedn: "{{ _current_ldap.ldap_base_dn }}"
-        ldap_binddn: "{{ _current_ldap.ldap_bind_dn }}"
-        ldap_bindpassword: "{{ _ldap_bind_password | b64encode }}"
-        ldap_ignorecase: "{{ _current_ldap.ldap_case_insensitive | default(False) | string | lower }}"
-        ldap_userfilter: "{{ _current_ldap.ldap_user_filter }}"
-        ldap_useridmap: "{{ _current_ldap.ldap_user_id_map }}"
-        ldap_groupfilter: "{{ _current_ldap.ldap_group_filter }}"
-        ldap_groupidmap: "{{ _current_ldap.ldap_group_id_map }}"
-        ldap_groupmemberidmap: "{{ _current_ldap.ldap_group_member_id_map }}"
-        ldap_nestedsearch: "false"
-        ldap_pagingsearch: "false"
+      idp_config: "{{ _idp_config_apply }}"
     return_content: yes
     validate_certs: no
     status_code: 200
@@ -113,19 +155,7 @@
       description: "LDAP authentication, identity provider {{ _zen_ldap_name }}"
       protocol: ldap
       type: "Custom"
-      idp_config:
-        ldap_url: "{{ _current_ldap.ldap_url }}"
-        ldap_basedn: "{{ _current_ldap.ldap_base_dn }}"
-        ldap_binddn: "{{ _current_ldap.ldap_bind_dn }}"
-        ldap_bindpassword: "{{ _ldap_bind_password | b64encode }}"
-        ldap_ignorecase: "{{ _current_ldap.ldap_case_insensitive | default(False) | string | lower }}"
-        ldap_userfilter: "{{ _current_ldap.ldap_user_filter }}"
-        ldap_useridmap: "{{ _current_ldap.ldap_user_id_map }}"
-        ldap_groupfilter: "{{ _current_ldap.ldap_group_filter }}"
-        ldap_groupidmap: "{{ _current_ldap.ldap_group_id_map }}"
-        ldap_groupmemberidmap: "{{ _current_ldap.ldap_group_member_id_map }}"
-        ldap_nestedsearch: "false"
-        ldap_pagingsearch: "false"
+      idp_config: "{{ _idp_config_apply }}"
     return_content: yes
     validate_certs: no
     status_code: 200
