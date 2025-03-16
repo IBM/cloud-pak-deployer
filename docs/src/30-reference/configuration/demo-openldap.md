@@ -5,7 +5,7 @@ You can install an OpenLDAP service on your OpenShift cluster for demonstration 
 **Note** Installing an OpenLDAP server must only be done if you have unrestricted OpenShift Container Platform entitlements. When using the Cloud Pak entitlements for Red Hat OpenShift, installing third-party applications like Bitnami OpenLDAP is not allowed.
 
 ## Demonstration OpenLDAP configuration - `demo_openldap`
-A `demo_ldap` resource in the configuration indicates that the Bitname OpenLDAP service is installed on the specified OpenShift cluster. The default OpenShift poject for the OpenLDAP service is `openldap`. You can install several instances on the same OpenShift cluster if necessary, each with its own name and `openldap_project` project.
+A `demo_openldap` resource in the configuration indicates that the Bitname OpenLDAP service is installed on the specified OpenShift cluster. The default OpenShift poject for the OpenLDAP service is `openldap`. You can install several instances on the same OpenShift cluster if necessary, each with its own name and `openldap_project` project.
 
 Sample configuration
 ```
@@ -21,12 +21,10 @@ demo_openldap:
     base_domain: cp.internal
     user_ou: Users
     user_id_attribute: uid
-    user_display_name_attribute: cn
     user_base_dn: ou=Users,dc=cp,dc=internal
     user_object_class: inetOrgPerson
     group_ou: Groups
     group_id_attribute: cn
-    group_display_name_attribute: cn
     group_base_dn: ou=Groups,dc=cp,dc=internal
     group_object_class: groupOfUniqueNames
     group_member_attribute: uniqueMember
@@ -89,12 +87,10 @@ The OpenLDAP name is referenced in the [Cloud Pak for Data Access Control](./cp4
 | .base_domain            | Base domain of the LDAP root, specified as `cp.internal`                   | Yes       |                |
 | .user_ou                | Organizational Unit of users, typically `Users`                            | Yes       |                |
 | .user_id_attribute      | Attribute used to identify user, typically `uid`                           | Yes       |                |
-| .user_display_name_attribute | Common name of the user, typically `cn`                               | Yes       |                |
 | .user_base_dn           | Base domain name of users, typically `user_ou`, followed by `base_dn`      | Yes       |                |
 | .user_object_class      | Object class of the users, typically `inetOrgPerson`                       | Yes       |                |
 | .group_ou               | Organizational Unit of groups, typically `Groups`                          | Yes       |                |
 | .group_id_attribute     | Attribte used to idenfity group, typically `cn`                            | Yes       |                |
-| .group_display_name_attribute | Common name of the group, typically `cn`                             | Yes       |                |
 | .group_base_dn          | Base domain name of groups, typically `group_ou`, followed by `base_dn`    | Yes       |                |
 | .group_object_class     | Object class of the gruops, typically `groupOfUniqueNames`                 | Yes       |                |
 | .group_member_attribute | Attribute used for a member (user) of a group, typically `uniqueMember`    | Yes       |                |

@@ -11,25 +11,33 @@
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
-    - name: Provision infrastructure using Terraform
-      include_role:
-        name: provision-terraform
-      when: cloud_platform == 'ibm-cloud'
 
-    - name: Provision OpenShift using IPI installer
-      include_role:
-        name: provision-ipi
-      loop: "{{ all_config.openshift | default([]) }}"
-      loop_control:
-        loop_var: _current_openshift_cluster
-      when: cloud_platform == 'vsphere'
+  - stat:
+      path: "{{ config_dir }}/assets/deployer-hook-pre-30-provision-infra.yml"
+    register: _hook_pre_file
 
-    - name: Provision infrastructure on AWS
-      include_role:
-        name: provision-aws
-      when: cloud_platform == 'aws'
+  - include_tasks: "{{ config_dir }}/assets/deployer-hook-pre-30-provision-infra.yml"
+    when: _hook_pre_file.stat.exists
 
-    - name: Provision infrastructure on Azure
-      include_role:
-        name: provision-azure
-      when: cloud_platform == 'azure'
+  - name: Provision infrastructure using Terraform
+    include_role:
+      name: provision-terraform
+    when: cloud_platform == 'ibm-cloud'
+
+  - name: Provision OpenShift using IPI installer
+    include_role:
+      name: provision-ipi
+    loop: "{{ all_config.openshift | default([]) }}"
+    loop_control:
+      loop_var: _current_openshift_cluster
+    when: cloud_platform == 'vsphere'
+
+  - name: Provision infrastructure on AWS
+    include_role:
+      name: provision-aws
+    when: cloud_platform == 'aws'
+
+  - name: Provision infrastructure on Azure
+    include_role:
+      name: provision-azure
+    when: cloud_platform == 'azure'

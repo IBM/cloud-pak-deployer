@@ -7,8 +7,15 @@
   - include_tasks: zen-keycloak-client.yml
     when: (_zen_access_control.keycloak_name | default('')) != ''
 
+  - include_tasks: zen-ldap-client.yml
+    loop: "{{ _zen_access_control.ldap_names | default([]) }}"
+    loop_control:
+      loop_var: _zen_ldap_name
+
   - include_tasks: zen-demo-openldap-client.yml
-    when: (_zen_access_control.demo_openldap_name | default('')) != ''
+    loop: "{{ _zen_access_control.demo_openldap_names | default([]) }}"
+    loop_control:
+      loop_var: _zen_demo_openldap_name
 
   - name: Configure Zen user group
     include_tasks: zen-user-group.yml
