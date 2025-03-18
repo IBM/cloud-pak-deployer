@@ -131,6 +131,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           accept_licenses: True
           cartridges:
           - name: cp-foundation
+            scale: level_1
             license_service:
               threads_per_core: 2
           
