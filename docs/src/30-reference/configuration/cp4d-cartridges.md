@@ -54,9 +54,16 @@ Some cartridges may require additional information to correctly install or to cr
 | installation_options | Record of properties that will be applied to the `spec` of the OpenShift Custom Resource | No | |
 
 ### Cartridge `cpfs` or `cp-foundation`
-Defines the Cloud Pak Foundational Services (fka Common Services) which are required for all Cloud Pak for Data installations. Cloud Pak for Data Foundational Services provide functionalities around certificate management, license service, identity and access management (IAM), etc.
+Defines the Cloud Pak Foundational Services (fka Common Services) which are required for all Cloud Pak for Data installations. Cloud Pak for Data Foundational Services provide functionalities around identity and access management (IAM) and other common services.
 
-This cartridge is mandatory for every Cloud Pak for Data instance.
+This cartridge is mandatory for every Cloud Pak for Data and watsonx instance.
+
+#### Additional properties for cartridge `cp-foundation`
+| Property | Description                                                                                                  | Mandatory | Allowed values                              |
+| -------- | ------------------------------------------------------------------------------------------------------------ | --------- | ------------------------------------------- |
+| scale    | Scale configuration of Foundational Services. If the property is not provided, the scale will not be changed | No        | level_1, level_2, level_3, level_4, level_5 |
+| license_service | Properties that will be applied to the IBM license service                                            |           |                                             |
+| .threads_per_core | Specify the threads per core (hyperthreading) that the license service must use to calculate usage  | No        | 1 (default), numeric value                  |
 
 ### Cartridge `cpd_platform` or `lite`
 Defines the Cloud Pak for Data platform operator (fka "lite") which installs the base services needed to operate Cloud Pak for Data, such as the Zen metastore, Zen watchdog and the user interface.

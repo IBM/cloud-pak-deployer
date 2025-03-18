@@ -1,0 +1,22 @@
+---
+- set_fact:
+    _cpfs_component: "{{ _p_current_cp4d_cluster.cartridges | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    query_cartridge: "[?name=='cp-foundation' || name=='cpfs']"
+
+- name: Show Foundational Services cartridge
+  debug:
+    var: _cpfs_component
+
+- block:
+  - name: Generate command to apply configuration if scale was specified for Foundational Services
+    set_fact:
+      _apply_scale_config: "{{ lookup('template', 'apply-scale-config.j2') }}"
+
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Scale Cloud Pak Foundational Services to {{ _cpfs_component.scale | default('level_1') }}
+      _p_command: "{{ _apply_scale_config }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-cpfs-scale.log"
+  when: (_cpfs_component.scale | default('')) != ''
