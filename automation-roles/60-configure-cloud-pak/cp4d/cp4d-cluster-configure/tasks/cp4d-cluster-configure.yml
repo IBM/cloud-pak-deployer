@@ -3,11 +3,10 @@
   debug:
     msg: "Handling configuration for CP4D cluster {{ current_cp4d_cluster.project }}"
 
-- set_fact:
-    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+- include_role:
+    name: get-openshift-cluster
   vars:
-    query: >-
-      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
 - name: Login to the OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_role:
