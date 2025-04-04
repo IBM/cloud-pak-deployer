@@ -125,10 +125,33 @@ Log in as a cluster administrator to be able to run the deployer with the correc
         cp4d:
         - project: cpd
           openshift_cluster_name: "{{ env_id }}"
-          cp4d_version: 5.1.1
+          cp4d_version: 5.1.2
+          cp4d_entitlement: 
+          - cpd-enterprise
+          # - cpd-standard
+          # - cognos-analytics
+          # - data-product-hub
+          # - datastage
+          # - ikc-premium
+          # - ikc-standard
+          # - openpages
+          # - planning-analytics
+          # - product-master
+          # - speech-to-text
+          # - text-to-speech
+          # - watson-assistant
+          # - watson-discovery
+          # - watsonx-ai
+          # - watsonx-code-assistant-ansible
+          # - watsonx-code-assistant-z
+          # - watsonx-data
+          # - watsonx-gov-mm
+          # - watsonx-gov-rc
+          # - watsonx-orchestrate
           db2u_limited_privileges: False
-          use_fs_iam: True
           accept_licenses: True
+          use_fs_iam: True
+          operators_project: cpd-operators
           cartridges:
           - name: cp-foundation
             scale: level_1
@@ -292,7 +315,6 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             description: OpenPages
             state: removed
 
-          # For Planning Analytics, the case version is needed due to defect in olm utils
           - name: planning-analytics
             description: Planning Analytics
             state: removed
