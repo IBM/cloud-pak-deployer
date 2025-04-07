@@ -102,6 +102,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           environment_name: demo
           cloud_platform: existing-ocp
           confirm_destroy: False
+          optimize_deploy: True
           env_id: cpd-demo
 
         openshift:

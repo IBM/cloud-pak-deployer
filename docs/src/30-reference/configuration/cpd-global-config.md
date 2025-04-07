@@ -16,6 +16,7 @@ The following `global_config` variables are automatically copied into a "simple"
 | `universal_admin_user` | User name to be used for admin user (currently not used) |
 | `universal_password` | Password to be used for all (admin) users it not specified in the vault |
 | `confirm_destroy` | Is destroying of clusters, services/cartridges and instances allowed? |
+} `optimize_deploy` | Optimize deployment by skipping components already installed with the correct version? |
 
 For all other variables, you can refer to the qualified form, for example: `"{{ global_config.division }}"`
 
@@ -28,6 +29,7 @@ global_config:
   ibm_cloud_region: eu-de
   universal_password: very_secure_Passw0rd$
   confirm_destroy: False
+  optimize_deploy: True
 ```
 
 If you run the `cp-deploy.sh` command and specify `-e env_id=jupiter-03`, this will override the value in the `global_config` object. The same applies to the other variables.

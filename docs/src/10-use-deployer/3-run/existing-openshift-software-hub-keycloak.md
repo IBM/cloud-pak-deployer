@@ -11,6 +11,7 @@ data:
       environment_name: demo
       cloud_platform: existing-ocp
       confirm_destroy: False
+      optimize_deploy: True
       env_id: cpd-demo
 
     openshift:
