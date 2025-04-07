@@ -37,23 +37,45 @@
     name: openshift-cert-manager
   when: not _install_ibm_cert_manager
 
-- name: Generate apply-cluster-components command
-  set_fact:
-    _apply_cluster_components_command: "{{ lookup('template', 'apply-cluster-components.j2') }}" 
+- name: Get IBMLicensing
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1alpha1
+    kind: ibmlicensings
+    name: instance
+  register: _ibm_licensing
 
-- include_role:
-    name: run-command
+- set_fact:
+    _ibm_licensing_version: "{{ _ibm_licensing.resources[0].spec.version | default('') }}"
+    _ibm_licensing_state: "{{ _ibm_licensing.resources[0].status.state | default('') }}"
+
+- set_fact:
+    _components_ibm_licensing: "{{ _list_components_json.list | json_query(query) | first | default({}) }}"
   vars:
-    _p_command_description: Apply cluster components for OpenShift cluster {{ _p_openshift_cluster_name }}
-    _p_command: "{{ _apply_cluster_components_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log"
+    query: >-
+      [?Component_name=='ibm-licensing']
 
-- name: Generate command to set threads per core
-  set_fact:
-    _set_threads_per_core_command: "{{ lookup('template', 'set-threads.j2') }}" 
+- block:
+  - name: Generate apply-cluster-components command
+    set_fact:
+      _apply_cluster_components_command: "{{ lookup('template', 'apply-cluster-components.j2') }}" 
 
-- include_role:
-    name: run-command
-  vars:
-    _p_command_description: Set threads per core to {{ _threads_per_core }}
-    _p_command: "{{ _set_threads_per_core_command }}"
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Apply cluster components for OpenShift cluster {{ _p_openshift_cluster_name }}
+      _p_command: "{{ _apply_cluster_components_command }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log"
+
+  - name: Generate command to set threads per core
+    set_fact:
+      _set_threads_per_core_command: "{{ lookup('template', 'set-threads.j2') }}" 
+
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Set threads per core to {{ _threads_per_core }}
+      _p_command: "{{ _set_threads_per_core_command }}"
+  when:
+  - _ibm_licensing_state != 'ACTIVE' or
+    _ibm_licensing_version != (_components_ibm_licensing.CASE_Version | default('')) or
+    not (_cpd_optimize_deploy | bool | default(False))
