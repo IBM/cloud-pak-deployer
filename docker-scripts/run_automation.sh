@@ -85,6 +85,7 @@ env|environment)
   run_cmd+=" --extra-vars secret_group_param=${VAULT_GROUP}"
   run_cmd+=" --extra-vars cp_entitlement_key=${CP_ENTITLEMENT_KEY}"
   run_cmd+=" --extra-vars confirm_destroy=${CONFIRM_DESTROY}"
+  run_cmd+=" --extra-vars cpd_optimize_deploy=${CPD_OPTIMIZE_DEPLOY}"
   run_cmd+=" --extra-vars cpd_skip_infra=${CPD_SKIP_INFRA}"
   run_cmd+=" --extra-vars cp_config_only=${CP_CONFIG_ONLY}"
   run_cmd+=" --extra-vars cpd_check_only=${CHECK_ONLY}"
