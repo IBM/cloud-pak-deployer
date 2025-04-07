@@ -10,6 +10,7 @@ global_config:
   environment_name: demo
   cloud_platform: existing-ocp
   confirm_destroy: False
+  optimize_deploy: True
 
 openshift:
 - name: cpd-demo
