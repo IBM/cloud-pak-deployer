@@ -107,6 +107,10 @@
 
 - set_fact:
     _all_cartridges: "{{ _tmp_cartridges }}"
+    _all_cartridges_names: "{{ _tmp_cartridges | map(attribute='olm_utils_name') }}"
+
+- debug:
+    var: _all_cartridges
 
 # Make sure that the dp cartridge is placed at the end
 # - set_fact:
@@ -252,7 +256,8 @@
     _obsolete_cartridges: >-
       {{ _get_cr_status_json.list 
         | rejectattr('Components','in',_surviving_cartridges_names) 
-        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) }}
+        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) 
+        | selectattr('Components','in',_all_cartridges_names) }}
 
 - set_fact:
     _obsolete_cartridges_names: >-
