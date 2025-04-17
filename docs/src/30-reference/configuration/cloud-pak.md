@@ -17,7 +17,7 @@ Defines the Cloud Pak for Data instances to be configured on the OpenShift clust
 cp4d:
 - project: cpd
   openshift_cluster_name: sample
-  cp4d_version: 4.7.3
+  cp4d_version: latest
   use_fs_iam: False
   change_node_settings: True
   db2u_limited_privileges: False
@@ -59,7 +59,7 @@ cp4d:
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
 | openshift_cluster_name | Name of the OpenShift cluster                  | Yes, inferred from openshift       | Existing `openshift` cluster |
-| cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges that do not specify a version | Yes | 4.x.x |
+| cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges. When specifying `latest`, the version will be determined from the olm-utils image | Yes | latest, x.y.z |
 | sequential_install | Deprecated property | No | True (default), False |
 | use_fs_iam | If set to `True` the deployer will enable Foundational Services IAM for authentication | No | False (default), True |
 | use_cp_alt_repo | When set to `False`, deployer will use use the alternative repo specified in `cp_alt_repo` resource | No | True (default), False |

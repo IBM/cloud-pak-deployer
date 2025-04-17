@@ -50,7 +50,7 @@
       until: _databases_details_result_v1.status == 200
       retries: 12
       delay: 5
-      when: current_cp4d_cluster.cp4d_version < '4.7.0'
+      when: _p_cp4d_version < '4.7.0'
 
     - name: Get CP4D Database specifications
       uri:
@@ -66,11 +66,11 @@
       until: _databases_details_result_v2.status == 200
       retries: 12
       delay: 5
-      when: current_cp4d_cluster.cp4d_version >= '4.7.0'
+      when: _p_cp4d_version >= '4.7.0'
 
     - set_fact:
         _databases_details_result: "{{ _databases_details_result_v2 }}"
-      when: current_cp4d_cluster.cp4d_version >= '4.7.0'
+      when: _p_cp4d_version >= '4.7.0'
 
     - debug:
         var: _databases_details_result

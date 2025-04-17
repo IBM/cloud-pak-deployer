@@ -126,7 +126,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
         cp4d:
         - project: cpd
           openshift_cluster_name: "{{ env_id }}"
-          cp4d_version: 5.1.2
+          cp4d_version: latest
           cp4d_entitlement: 
           - cpd-enterprise
           # - cpd-standard

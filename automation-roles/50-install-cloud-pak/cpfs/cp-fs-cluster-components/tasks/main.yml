@@ -2,7 +2,8 @@
 - set_fact:
     _threads_per_core: "{{ _p_license_threads_per_core | default(1) }}"
 
-- include_tasks: get-latest-cp4d-version.yml
+- include_role:
+    name: cp4d-get-latest-version
   when: (_p_cp4d_version | default('')) == ''
 
 - name: Delete offline directory
@@ -78,4 +79,4 @@
   when:
   - _ibm_licensing_state != 'ACTIVE' or
     _ibm_licensing_version != (_components_ibm_licensing.CASE_Version | default('')) or
-    not (_cpd_optimize_deploy | bool | default(False))
+    not _cpd_optimize_deploy
