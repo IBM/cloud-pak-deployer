@@ -239,7 +239,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         # Check that cpd_platform element exists
 
         # Check that version matches x.y.z pattern
-        if not re.match(r"[0-9]\.[0-9]\.[0-9]+",str(ge['cp4d_version'])):
+        if ge['cp4d_version'] != 'latest' and \
+            not re.match(r"[0-9]\.[0-9]\.[0-9]+",str(ge['cp4d_version'])):
             g.appendError(msg="cp4d_version must be in the format of x.y.z, for example 4.0.9")
 
         # If air-gapped install, image registry name must be specified

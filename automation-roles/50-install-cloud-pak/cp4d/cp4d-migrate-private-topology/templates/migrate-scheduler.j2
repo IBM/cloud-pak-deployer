@@ -5,7 +5,7 @@ set -o pipefail
 if [ $(oc get scheduling -A --no-headers 2>/dev/null | wc -l) -ne 0 ];then
     if [ $(oc get scheduling -A --no-headers 2>/dev/null | grep -q 'ibm-scheduling' ) -eq 0 ];then
         migrate-scheduler \
-            --release={{ current_cp4d_cluster.cp4d_version }} \
+            --release={{ _p_cp4d_version }} \
             --license_acceptance=true \
             --from_ns={{ foundational_services_project }} \
             --to_ns={{ scheduling_service_project }} 2>&1 | tee {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-migrate-scheduler.log

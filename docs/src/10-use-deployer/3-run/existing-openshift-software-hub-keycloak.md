@@ -85,7 +85,7 @@ data:
     cp4d:
     - project: cpd
       openshift_cluster_name: "{{ env_id }}"
-      cp4d_version: 5.1.0
+      cp4d_version: latest
       db2u_limited_privileges: False
       use_fs_iam: True
       accept_licenses: True
