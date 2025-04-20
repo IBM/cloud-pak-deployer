@@ -29,12 +29,18 @@
 
   - when: _wxo_instance_lookup_result.json.total_count == 0
     block:
-    - name: Obtain watsonx Orchestrate version
-      shell: |
-        oc get watsonxorchestrate.wo.watsonx.ibm.com -n {{ current_cp4d_cluster.project }} wo -o jsonpath='{.spec.version}'
-      register: _wxo_version
+    - name: Obtain watsonx Orchestrate CR version
+      kubernetes.core.k8s_info:
+        api_version: wo.watsonx.ibm.com/v1
+        kind: WatsonxOrchestrate
+        namespace: "{{ current_cp4d_cluster.project }}"
+        name: wo
+      register: _wxo_cr
 
-    - name: Prepare watsonx Orchestrate instance {{ _wxo_instance.name }} json file
+    - set_fact:
+        _wxo_version: "{{ _wxo_cr.resources[0].status.versionStatus.status }}"
+
+    - name: Prepare watsonx Orchestrate instance {{ _wxo_instance.name }} json file {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wxo_instance.name }}-wxo-instance.json
       template:
         src: wxo-instance.j2
         dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _wxo_instance.name }}-wxo-instance.json"
