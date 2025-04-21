@@ -1,0 +1,23 @@
+---
+- set_fact:
+    _tmp_cartridges: []
+
+- set_fact:
+    _tmp_cartridges: >-
+      {{ _tmp_cartridges
+        + [ _tmp_cartridge ] }}
+  vars:
+    _tmp_cartridge: >-
+      {{ _cartridges_to_install 
+        | selectattr('name','eq',item['name']) 
+        | list 
+        | first 
+        | default([]) }}
+  loop: "{{ _cartridges_to_install }}"
+  when: >-
+    (not (item.Reconciled_Version | default('')).startswith(item.CR_Version) or
+    (item.Status | default('')) != item.cr_status_completed) and
+    (item.Expected_Version | default('')) != 'N/A'
+
+- set_fact:
+    _apply_cartridges: "{{ _tmp_cartridges }}"

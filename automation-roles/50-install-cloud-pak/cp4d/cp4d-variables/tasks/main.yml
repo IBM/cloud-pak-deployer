@@ -120,28 +120,11 @@
 - debug:
     var: _all_cartridges
 
-# Make sure that the dp cartridge is placed at the end
-# - set_fact:
-#     _dp_cartridge: >-
-#       {{ _all_cartridges | selectattr('Component_name','match','dp') | default({}) }}
-
-# - set_fact:
-#     _tmp_cartridges: "{{ _all_cartridges | rejectattr('Component_name','match','dp') }}"
-
-# - set_fact:
-#     _all_cartridges: >-
-#       {{ _tmp_cartridges + _dp_cartridge }}
-
-# - set_fact:
-#     _cartridges_to_install: "{{ _all_cartridges }}"
-#   when: (cpd_test_cartridges | default(False) | bool)
-
 - set_fact:
     _cartridges_to_install: >-
       {{  _all_cartridges | 
             selectattr('state','undefined') | 
             union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
-  # when: not(cpd_test_cartridges | default(False) | bool)
 
 - set_fact:
     _cartridges_to_install_list: >-
@@ -149,9 +132,18 @@
             map(attribute='olm_utils_name') | 
             join(',')}}
 
+# Check if control plane must be installed
+- include_tasks: optimize-control-plane.yml
+
+- set_fact:
+    _apply_cartridges: "{{ _cartridges_to_install }}"
+
+# Optimize cartridges if --optimize-deploy was specified
+- include_tasks: optimize-cartridges.yml
+
 - set_fact:
     _apply_olm_cartridges_list: >-
-      {{ _cartridges_to_install
+      {{ _apply_cartridges
         | map(attribute='olm_utils_name')
         | difference(_v_cp4d_control_plane_cartridges)
         | list
@@ -159,9 +151,9 @@
 
 - set_fact:
     _apply_cr_cartridges: >-
-      {{  _cartridges_to_install | 
+      {{  _apply_cartridges | 
             selectattr('separate_install','undefined') |
-            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+            union(_apply_cartridges | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
 
 - set_fact:
     _apply_cr_cartridges_list: >-
