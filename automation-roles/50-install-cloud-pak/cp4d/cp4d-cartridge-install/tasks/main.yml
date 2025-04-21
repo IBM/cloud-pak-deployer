@@ -44,11 +44,6 @@
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
   when: _apply_cr_cartridges_list != ''
 
-- set_fact:
-    _apply_cr_cartridges_separate: >-
-      {{  _cartridges_to_install 
-        | selectattr('separate_install','defined') | selectattr('separate_install','==',True) }}
-
 - name: Install separate cartridges
   include_tasks: cp4d-install-separate-cr.yml
   loop: "{{ _apply_cr_cartridges_separate | default([]) }}"
