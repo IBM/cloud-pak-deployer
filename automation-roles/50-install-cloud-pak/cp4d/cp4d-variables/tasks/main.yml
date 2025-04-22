@@ -126,6 +126,24 @@
             selectattr('state','undefined') | 
             union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
 
+# Add watson Assistant cartridge if not selected and watsonx Orchestrate is set to installed
+- name: Get watsonx Orchestrate cartridge
+  set_fact:
+    _wxo_cartridge: "{{ _cartridges_to_install | json_query(jsonquery) }}"
+  vars:
+    jsonquery: "[?olm_utils_name=='watsonx_orchestrate']"
+
+- name: Get watson Assistant cartridge
+  set_fact:
+    _wa_cartridge: "{{ _cartridges_to_install | json_query(jsonquery) }}"
+  vars:
+    jsonquery: "[?olm_utils_name=='watson_assistant']"
+
+- include_tasks: add-wa-cartridge.yml
+  when: 
+  - _wxo_cartridge != []
+  - _wa_cartridge == []
+
 - set_fact:
     _cartridges_to_install_list: >-
       {{  _cartridges_to_install | 
