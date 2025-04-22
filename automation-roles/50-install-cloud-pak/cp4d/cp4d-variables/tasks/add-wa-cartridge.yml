@@ -1,0 +1,16 @@
+---
+- name: Get wa cartridge from all_cartridg=es
+  set_fact:
+    _add_wa_cartridge: "{{ _all_cartridges | json_query(jsonquery) }}"
+  vars:
+    jsonquery: "[?olm_utils_name=='watson_assistant']"
+
+- debug:
+    var: _add_wa_cartridge
+
+- set_fact:
+    _add_wa_cartridge: "{{ _add_wa_cartridge | combine({'state':'installed'}) }}"
+
+- set_fact:
+    _cartridges_to_install: >-
+      {{ _cartridges_to_install + [_add_wa_cartridge] }}
