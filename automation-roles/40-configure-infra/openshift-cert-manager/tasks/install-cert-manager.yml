@@ -2,7 +2,7 @@
 - include_role:
     name: run-command
   vars:
-    _p_command_description: Create OpenShift Certificate Manager namespace
+    _p_command_description: Create Red Hat Certificate Manager namespace
     _p_command: "oc create ns cert-manager-operator || true"
 
 - name: Retrieve default channel for Red Hat certificate manager
@@ -33,16 +33,18 @@
 
 - set_fact:
     _cert_manager_channel: "stable-v1.14"
-  when: _cert_manager_max_channel=='stable-v1.15'
+  when: 
+  - _cert_manager_max_channel=='stable-v1.15'
+  - (_cert_manager_packagemanifest.status.channels | map(attribute='name')) is contains('stable-v1.14')
 
 - include_role:
     name: generate-apply-yaml
   vars:
-    _p_apply_yaml_description: Create OpenShift Certificate Manager operator
+    _p_apply_yaml_description: Create Red Hat Certificate Manager operator
     _p_apply_yaml_template: cert-manager-operator.j2
     _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster_name }}-cert-manager-operator.yaml"
 
-- name: Wait until OpenShift Certificate Manager Operator CSV has status Succeeded
+- name: Wait until Red Hat Certificate Manager Operator CSV has status Succeeded
   shell: |
     oc get csv -n cert-manager-operator \
       -l operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator \

@@ -117,9 +117,6 @@
     _all_cartridges: "{{ _tmp_cartridges }}"
     _all_cartridges_names: "{{ _tmp_cartridges | map(attribute='olm_utils_name') }}"
 
-- debug:
-    var: _all_cartridges
-
 - set_fact:
     _cartridges_to_install: >-
       {{  _all_cartridges | 
@@ -156,8 +153,15 @@
 - set_fact:
     _apply_cartridges: "{{ _cartridges_to_install }}"
 
+- debug:
+    var: _apply_cartridges
+
 # Optimize cartridges if --optimize-deploy was specified
 - include_tasks: optimize-cartridges.yml
+  when: _cpd_optimize_deploy
+
+- debug:
+    var: _apply_cartridges
 
 - set_fact:
     _apply_olm_cartridges_list: >-
@@ -180,6 +184,21 @@
         | difference(_v_cp4d_control_plane_cartridges)
         | list
         | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges_separate: >-
+      {{  _apply_cartridges
+          | selectattr('separate_install','defined')
+          | selectattr('separate_install','==',True) }}
+
+- debug:
+    var: _cartridges_to_install
+
+- debug:
+    var: _apply_cartridges
+
+- debug:
+    var: _apply_cr_cartridges_separate
 
 - set_fact:
     _upgrade_cp4d: False

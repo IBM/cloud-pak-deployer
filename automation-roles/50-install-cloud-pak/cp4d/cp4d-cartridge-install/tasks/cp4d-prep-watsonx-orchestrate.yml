@@ -12,6 +12,43 @@
     when: _wa_installed.rc != 0
   when: not cpd_dry_run
 
+- block:
+  - name: Check if Red Hat Certificate Manager is already installed
+    kubernetes.core.k8s_info:
+      api_version: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      label_selectors:
+      - operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator
+    register: _get_red_hat_cert_manager
+  - name: Check if IBM Certificate Manager is installed
+    kubernetes.core.k8s_info:
+      api_version: operators.coreos.com/v1alpha1
+      kind: ClusterServiceVersion
+      namespace: ibm-cert-manager
+      label_selectors:
+      - operators.coreos.com/ibm-cert-manager-operator.ibm-cert-manager
+    register: _get_ibm_cert_manager
+
+  - debug:
+      var: _get_cert_managers
+    vars:
+      _get_cert_managers:
+        _get_ibm_cert_manager: "{{ _get_ibm_cert_manager }}"
+        _get_red_hat_cert_manager: "{{ _get_red_hat_cert_manager }}"
+        _rh_cert_manager_version: "{{ _get_red_hat_cert_manager.resources[0].spec.version | default('') }}"
+
+  - fail:
+      msg: >-
+        If watsonx Orchestrate is installed, Red Hat Certificate Manager 1.14 or the IBM Certificate Manager is mandatory. 
+        Red Hat Certificate Manager {{ _get_red_hat_cert_manager.resources[0].spec.version | default('') }} was found. 
+        Please delete the Red Hat Certificate Manager namespaces cert-manager and cert-manager-operator and set 
+        cp4d.ibm_cert_manager to True. Then re-run deployer.
+    when: 
+    - _get_ibm_cert_manager.resources == []
+    - not (_get_red_hat_cert_manager.resources[0].spec.version | default('')).startswith('1.14')
+  when: 
+  - not cpd_dry_run
+
 - name: Generate OLM utils command to create watsonx Orchestrate subscription
   set_fact:
     _apply_olm_wxo_command: "{{ lookup('template', 'apply-olm-cartridge-wxo.j2') }}" 
