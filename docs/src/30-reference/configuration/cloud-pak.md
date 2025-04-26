@@ -16,11 +16,13 @@ Defines the Cloud Pak for Data instances to be configured on the OpenShift clust
 ``` { .yaml .copy }
 cp4d:
 - project: cpd
+  operators_project: cpd-operators
   openshift_cluster_name: sample
   cp4d_version: latest
   use_fs_iam: False
   change_node_settings: True
   db2u_limited_privileges: False
+  ibm_cert_manager: False
   accept_licenses: False
   openshift_storage_name: nfs-storage
   cp4d_entitlement: 
@@ -58,6 +60,7 @@ cp4d:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | project  | Name of the OpenShift project of the Cloud Pak for Data instance     | Yes       |  |
+| operators_project | Name of the OpenShift project that holds the operators. If not specified, the name will be `project`-operators | No        | Valid OpenShift project name |
 | openshift_cluster_name | Name of the OpenShift cluster                  | Yes, inferred from openshift       | Existing `openshift` cluster |
 | cp4d_version | Cloud Pak for Data version to install, this will determine the version for all cartridges. When specifying `latest`, the version will be determined from the olm-utils image | Yes | latest, x.y.z |
 | sequential_install | Deprecated property | No | True (default), False |
@@ -65,6 +68,7 @@ cp4d:
 | use_cp_alt_repo | When set to `False`, deployer will use use the alternative repo specified in `cp_alt_repo` resource | No | True (default), False |
 | change_node_settings | Controls whether the node settings using the machine configs will be applied onto the OpenShift cluster. | No | True, False |
 | db2u_limited_privileges | Depicts whether Db2U containers run with limited privileges. If they do (`True`), Deployer will create KubeletConfig and Tuned OpenShift resources as per the documentation. | No | False (default), True |
+| ibm_cert_manager | Specify if the IBM certificate manager must be installed instead of the Red Hat certificate Manager | No | False (default), True |
 | accept_licenses | Set to 'True' to accept Cloud Pak licenses. Alternatively the `--accept-all-licenses` can be used for the `cp-deploy.sh` command | No | True, False (default) |
 | cp4d_entitlement | Set to `cpd-enterprise`, `cpd-standard`, `watsonx-data`, `watsonx-ai`, `watsonx-gov-mm`, `watsonx-gov-rc`, dependent on the deployed license, multiple entitlements can be specified | No | For valid values, refer to product documentation |
 | cp4d_production_license | Whether the Cloud Pak for Data is a production license | No | True (default), False |
