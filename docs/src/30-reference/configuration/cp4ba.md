@@ -2,7 +2,7 @@
 
 Contains CP4BA version 24.0.1 IF001.  
 Contains IPM version 2.0.1 REFRESH.
-Contains RPA version 23.0.20.
+Contains RPA version 23.0.20 FP001.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
