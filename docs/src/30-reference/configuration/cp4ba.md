@@ -80,7 +80,7 @@ Contains extra software which makes working with the platform even easier.
 - AKHQ - Web UI kafka browser automatically connected to Kafka instance deployed with CP4BA.
 - OpenSearch Dashboards - Web UI OpenSearch dashboard tool automatically connected to OpenSearch instance deployed with CP4BA.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
-- Mongo Express - Web UI for Mongo DB databases for CP4BA and Process Mining to easier troubleshoot DB.
+- Mongo Express - Web UI for Mongo DB databases for CP4BA to easier troubleshoot DB.
 - CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
 
 ### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
@@ -121,7 +121,7 @@ Contains prerequisites for the whole platform.
 - PostgreSQL - Database storage for the majority of capabilities.
 - OpenLDAP - Directory solution for users and groups definition.
 - MSSQL server - Database storage for RPA server.
-- MongoDB - Database storage for ADS and Process Mining.
+- MongoDB - Database storage for ADS.
 
 ## Environments used for installation 💻
 
