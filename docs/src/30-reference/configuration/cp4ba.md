@@ -1,6 +1,6 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 24.0.1.  
+Contains CP4BA version 24.0.1 IF001.  
 Contains IPM version 2.0.1 REFRESH.
 Contains RPA version 23.0.20.
 
@@ -125,7 +125,7 @@ Contains prerequisites for the whole platform.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.14 with Worker Nodes which in total have free 60 CPU, 128GB Memory for requests.
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.16 with Worker Nodes which in total have free 96 CPU, 384GB Memory for requests.
 
 ## Automated post-deployment tasks ✅
 
