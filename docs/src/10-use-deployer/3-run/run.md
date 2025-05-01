@@ -9,5 +9,5 @@ Cloud Pak Deployer supports various public and private cloud infrastructures. Cl
 * [AWS - Self-managed](aws-self-managed.md)
 * [Azure - ARO](azure-aro.md)
 * [Azure - Self-managed](azure-self-managed.md)
-* [Fusion HCI](fusion-hci.md)
+* [Fusion HCI](ibm-fusion.md)
 * [vSphere](vsphere.md)
