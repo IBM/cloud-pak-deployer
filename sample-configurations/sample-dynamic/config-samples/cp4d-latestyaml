@@ -2,7 +2,7 @@
 cp4d:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 5.1.1
+  cp4d_version: latest
   cp4d_entitlement: 
   - cpd-enterprise
   # - cpd-standard
@@ -30,7 +30,6 @@ cp4d:
   db2u_limited_privileges: False
   use_fs_iam: True
   operators_project: cpd-operators
-  ibm_cert_manager: False
   state: installed
   cartridges:
   - name: cp-foundation
@@ -269,6 +268,10 @@ cp4d:
     # noobaa_cert_secret: noobaa-s3-serving-cert
     state: removed
 
+  # Please note that for watsonx.ai, the following pre-requisites exist:
+  # If you want to use foundation models, you neeed to install the Node Feature Discovery and NVIDIA GPU operators. 
+  #    You can do so by setting the openshift.gpu.install property to True
+  # OpenShift AI is a requirement for watsonx.ai. You can install this by setting the openshift.openshift_ai.install property to True
   - name: watsonx_ai
     description: watsonx.ai
     state: removed
@@ -391,7 +394,6 @@ cp4d:
       enableOpenpages: true
       enableOpenscale: true
 
-  # For successful deployment of watsonx Orchestrate, make sure you set ibm_cert_manager to True
   - name: watsonx_orchestrate
     description: watsonx.orchestrate
     app_connect:

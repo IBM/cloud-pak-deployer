@@ -4,7 +4,7 @@
 - name: Check if config file exists for the specified CP4D version
   find:
     paths: "/opt/ansible/ansible-play/config-vars/"
-    patterns: "release-{{ _p_current_cp4d_cluster.cp4d_version }}.yml"
+    patterns: "release-{{ _p_cp4d_version }}.yml"
   register: _config_file_check
 
 - name: List all config files for the different CP4D versions
@@ -16,12 +16,12 @@
 
 - set_fact:
     _cp4d_config_files: "{{ _list_cp4d_config_files | json_query('files[*].path') | map('regex_replace','.*(\\d+\\.\\d+\\.\\d+).*','\\1') | join(', ') }}"
-    _cp4d_components_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_current_cp4d_cluster.cp4d_version }}-components.csv"
-    _cp4d_components_no_header_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_current_cp4d_cluster.cp4d_version }}-components-no-header.csv"
+    _cp4d_components_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_cp4d_version }}-components.csv"
+    _cp4d_components_no_header_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _p_cp4d_version }}-components-no-header.csv"
 
-- name: Throw an error if config file for Cloud Pak for Data version {{ _p_current_cp4d_cluster.cp4d_version }} does not exist
+- name: Throw an error if config file for Cloud Pak for Data version {{ _p_cp4d_version }} does not exist
   fail:
-    msg: "Error: The Cloud Pak for Data you have selected ({{ _p_current_cp4d_cluster.cp4d_version }}) is not included in the olm-utils image. Versions found: {{ _cp4d_config_files }}"
+    msg: "Error: The Cloud Pak for Data you have selected ({{ _p_cp4d_version }}) is not included in the olm-utils image. Versions found: {{ _cp4d_config_files }}"
   when: _config_file_check.matched == 0
 
 - name: Check if file {{ _cp4d_components_file }} exists
@@ -31,7 +31,7 @@
 
 # Only run olm-utils command when not air-gapped and when file does not exist yet
 - block:
-  - name: Generate OLM command to list components for version {{ _p_current_cp4d_cluster.cp4d_version }}
+  - name: Generate OLM command to list components for version {{ _p_cp4d_version }}
     set_fact:
       _list_components_command: "{{ lookup('template', 'list-components-olm-utils.j2') }}" 
 

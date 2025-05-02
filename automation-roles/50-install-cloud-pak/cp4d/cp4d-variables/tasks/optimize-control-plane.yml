@@ -1,0 +1,16 @@
+---
+- set_fact:
+    _install_control_plane: True
+
+- name: Obtain control plane
+  set_fact:
+    _cpd_control_plane: "{{ _cartridges_to_install | json_query(jmes_query) | first }}"
+  vars:
+    jmes_query: "[?olm_utils_name=='cpd_platform']"
+
+- set_fact:
+    _install_control_plane: False
+  when:
+  - (_cpd_control_plane.Reconciled_Version | default('')).startswith(_cpd_control_plane.CR_Version)
+  - (_cpd_control_plane.Status | default('')) == _cpd_control_plane.cr_status_completed
+  - _cpd_optimize_deploy

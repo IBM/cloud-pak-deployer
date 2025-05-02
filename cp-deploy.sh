@@ -63,6 +63,7 @@ command_usage() {
   echo 
   echo "Options for environment subcommand:"
   echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
+  echo "  --optimize-deploy             Optimize the deployment process by skipping components already deployed with the correct version (\$CPD_OPTIMIZE_DEPLOY)"
   echo
   echo "Options for vault and env subcommands:"
   echo "  --vault-group,-vg <name>          Group of secret (\$VAULT_GROUP)"
@@ -104,6 +105,7 @@ run_env_logs() {
 # --------------------------------------------------------------------------------------------------------- #
 if [ "${ANSIBLE_STANDARD_OUTPUT}" == "" ];then ANSIBLE_STANDARD_OUTPUT=false;fi
 if [ "${CONFIRM_DESTROY}" == "" ];then CONFIRM_DESTROY=false;fi
+if [ "${CPD_OPTIMIZE_DEPLOY}" == "" ];then CPD_OPTIMIZE_DEPLOY=false;fi
 if [ "${CPD_SKIP_INFRA}" == "" ];then CPD_SKIP_INFRA=false;fi
 if [ "${CPD_SKIP_CP_INSTALL}" == "" ];then CPD_SKIP_CP_INSTALL=false;fi
 if [ "${CP_CONFIG_ONLY}" == "" ];then CP_CONFIG_ONLY=false;fi
@@ -508,6 +510,14 @@ while (( "$#" )); do
       command_usage 2
     fi
     export CONFIRM_DESTROY=true
+    shift 1
+    ;;
+  --optimize-deploy)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --optimize-deploy is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    export CPD_OPTIMIZE_DEPLOY=true
     shift 1
     ;;
   --cpd-develop)
@@ -1049,6 +1059,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
   run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
   run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
+  run_cmd+=" -e CPD_OPTIMIZE_DEPLOY=${CPD_OPTIMIZE_DEPLOY}"  
   run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
   run_cmd+=" -e CPD_SKIP_CP_INSTALL=${CPD_SKIP_CP_INSTALL}"
   run_cmd+=" -e CP_CONFIG_ONLY=${CP_CONFIG_ONLY}"
