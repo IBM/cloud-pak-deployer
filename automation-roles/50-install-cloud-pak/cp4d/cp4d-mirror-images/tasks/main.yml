@@ -92,7 +92,7 @@
       path: /opt/ansible/ansible-play/config-vars/release-4.8.5.yml
       regexp: '(.*)- ibm(.*)Runtimes(.*)'
       state: absent
-  when: _p_current_cp4d_cluster.cp4d_version == '4.8.5'
+  when: _p_cp4d_version == '4.8.5'
 
 - name: Copy CASE packages from {{ status_dir }}/work/ to /tmp/work/offline (air-gapped scenario) 
   copy:
@@ -140,12 +140,12 @@
     
       - name: Get the watsonx_ai_ifm case version
         shell: |
-          yq ".release_components_meta.watsonx_ai_ifm.case_version" /opt/ansible/ansible-play/config-vars/release-{{ _p_current_cp4d_cluster.cp4d_version }}.yml
+          yq ".release_components_meta.watsonx_ai_ifm.case_version" /opt/ansible/ansible-play/config-vars/release-{{ _p_cp4d_version }}.yml
         register: _watsonx_ai_ifm_case_version
 
       - name: Find watsonx_ai_ifm images csv file
         find:
-          paths: "{{ status_dir }}/work/offline/{{ _p_current_cp4d_cluster.cp4d_version }}/.ibm-pak/data/cases/ibm-watsonx-ai-ifm/{{ _watsonx_ai_ifm_case_version.stdout }}"
+          paths: "{{ status_dir }}/work/offline/{{ _p_cp4d_version }}/.ibm-pak/data/cases/ibm-watsonx-ai-ifm/{{ _watsonx_ai_ifm_case_version.stdout }}"
           patterns: '*-images.csv'
         register: _watsonx_ai_ifm_images_files
 
@@ -191,7 +191,7 @@
     when: _models_to_install | length > 0
 
   when:
-    - _p_current_cp4d_cluster.cp4d_version >= '5.0.1'
+    - _p_cp4d_version >= '5.0.1'
     - '"watsonx_ai" in _cartridges_to_install_list'  
 
 - name: Generate command to mirror images

@@ -102,6 +102,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           environment_name: demo
           cloud_platform: existing-ocp
           confirm_destroy: False
+          optimize_deploy: True
           env_id: cpd-demo
 
         openshift:
@@ -125,7 +126,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
         cp4d:
         - project: cpd
           openshift_cluster_name: "{{ env_id }}"
-          cp4d_version: 5.1.2
+          cp4d_version: latest
           cp4d_entitlement: 
           - cpd-enterprise
           # - cpd-standard
@@ -152,6 +153,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           accept_licenses: True
           use_fs_iam: True
           operators_project: cpd-operators
+          ibm_cert_manager: False
           cartridges:
           - name: cp-foundation
             scale: level_1
@@ -496,6 +498,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
               enableOpenpages: true
               enableOpenscale: true
 
+          # In case watsonx Orchestrate is installed, no instances must be created for Watson Assistant
           - name: watsonx_orchestrate
             description: watsonx.orchestrate
             app_connect:

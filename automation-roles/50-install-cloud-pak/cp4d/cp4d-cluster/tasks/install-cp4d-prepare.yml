@@ -1,10 +1,4 @@
 ---
-- name: Switch to the correct olm-utils version
-  include_role:
-    name: cp4d-switch-olm-utils
-  vars:
-    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-
 - include_role:
     name: cp4d-variables
   vars:
@@ -16,18 +10,6 @@
   when: 
   - not (cpd_accept_licenses | default(False) | bool)
   - not (current_cp4d_cluster.accept_licenses | default(False) | bool)
-
-- set_fact:
-    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?name=='{{ current_cp4d_cluster.openshift_cluster_name }}']
-
-- name: Login to the OpenShift cluster "{{ current_cp4d_cluster.openshift_cluster_name }}"
-  include_role:
-    name: openshift-login
-  vars:
-    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
 
 - name: Get OpenShift storage classes to use for {{ current_cp4d_cluster.project }} and storage class name {{ current_cp4d_cluster.openshift_storage_name }}
   include_role: 

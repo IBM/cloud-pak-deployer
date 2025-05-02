@@ -23,12 +23,20 @@
     _cpd_accept_licenses: "True"
   when: (cpd_accept_licenses | default(False) | bool) or (_p_current_cp4d_cluster.accept_licenses | default(False) | bool)
 
-- debug:
-    var: _cpd_accept_licenses
+- set_fact:
+    _p_cp4d_version: "{{ _p_current_cp4d_cluster.cp4d_version }}"
+
+- include_role:
+    name: cp4d-get-latest-version
+  when: _p_cp4d_version == 'latest'
+
+- name: Switch to the correct olm-utils version
+  include_role:
+    name: cp4d-switch-olm-utils
 
 - set_fact:
     foundational_services_project: "{{ _p_current_cp4d_cluster.operators_project }}"
-  when: _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
+  when: _p_cp4d_version >= "4.7.0"
 
 # Set the license server project to the correct value, dependent if the license service is already installed in cs-control
 - include_tasks: set-license-service-project.yml
@@ -107,29 +115,31 @@
 
 - set_fact:
     _all_cartridges: "{{ _tmp_cartridges }}"
-
-# Make sure that the dp cartridge is placed at the end
-# - set_fact:
-#     _dp_cartridge: >-
-#       {{ _all_cartridges | selectattr('Component_name','match','dp') | default({}) }}
-
-# - set_fact:
-#     _tmp_cartridges: "{{ _all_cartridges | rejectattr('Component_name','match','dp') }}"
-
-# - set_fact:
-#     _all_cartridges: >-
-#       {{ _tmp_cartridges + _dp_cartridge }}
-
-# - set_fact:
-#     _cartridges_to_install: "{{ _all_cartridges }}"
-#   when: (cpd_test_cartridges | default(False) | bool)
+    _all_cartridges_names: "{{ _tmp_cartridges | map(attribute='olm_utils_name') }}"
 
 - set_fact:
     _cartridges_to_install: >-
       {{  _all_cartridges | 
             selectattr('state','undefined') | 
             union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
-  # when: not(cpd_test_cartridges | default(False) | bool)
+
+# Add watson Assistant cartridge if not selected and watsonx Orchestrate is set to installed
+- name: Get watsonx Orchestrate cartridge
+  set_fact:
+    _wxo_cartridge: "{{ _cartridges_to_install | json_query(jsonquery) }}"
+  vars:
+    jsonquery: "[?olm_utils_name=='watsonx_orchestrate']"
+
+- name: Get watson Assistant cartridge
+  set_fact:
+    _wa_cartridge: "{{ _cartridges_to_install | json_query(jsonquery) }}"
+  vars:
+    jsonquery: "[?olm_utils_name=='watson_assistant']"
+
+- include_tasks: add-wa-cartridge.yml
+  when: 
+  - _wxo_cartridge != []
+  - _wa_cartridge == []
 
 - set_fact:
     _cartridges_to_install_list: >-
@@ -137,9 +147,25 @@
             map(attribute='olm_utils_name') | 
             join(',')}}
 
+# Check if control plane must be installed
+- include_tasks: optimize-control-plane.yml
+
+- set_fact:
+    _apply_cartridges: "{{ _cartridges_to_install }}"
+
+- debug:
+    var: _apply_cartridges
+
+# Optimize cartridges if --optimize-deploy was specified
+- include_tasks: optimize-cartridges.yml
+  when: _cpd_optimize_deploy
+
+- debug:
+    var: _apply_cartridges
+
 - set_fact:
     _apply_olm_cartridges_list: >-
-      {{ _cartridges_to_install
+      {{ _apply_cartridges
         | map(attribute='olm_utils_name')
         | difference(_v_cp4d_control_plane_cartridges)
         | list
@@ -147,9 +173,9 @@
 
 - set_fact:
     _apply_cr_cartridges: >-
-      {{  _cartridges_to_install | 
+      {{  _apply_cartridges | 
             selectattr('separate_install','undefined') |
-            union(_cartridges_to_install | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+            union(_apply_cartridges | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
 
 - set_fact:
     _apply_cr_cartridges_list: >-
@@ -158,6 +184,21 @@
         | difference(_v_cp4d_control_plane_cartridges)
         | list
         | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges_separate: >-
+      {{  _apply_cartridges
+          | selectattr('separate_install','defined')
+          | selectattr('separate_install','==',True) }}
+
+- debug:
+    var: _cartridges_to_install
+
+- debug:
+    var: _apply_cartridges
+
+- debug:
+    var: _apply_cr_cartridges_separate
 
 - set_fact:
     _upgrade_cp4d: False
@@ -183,12 +224,12 @@
     vars:
       _p_preview: True
       
-  - name: Fail if trying to upgrade to {{ _p_current_cp4d_cluster.cp4d_version }} from a release that is lower than 4.6.5
+  - name: Fail if trying to upgrade to {{ _p_cp4d_version }} from a release that is lower than 4.6.5
     fail:
-      msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 or higher from any release earlier than 4.6.5. The currently installed release of CP4D is {{ _installed_ibmcpd_version }}. If you want to upgrade, please first upgrade to CP4D 4.6.5 or 4.6.6 and then upgrade to CP4D {{ _p_current_cp4d_cluster.cp4d_version }}"
+      msg: "Cloud Pak Deployer does not support upgrading to CP4D 4.7 or higher from any release earlier than 4.6.5. The currently installed release of CP4D is {{ _installed_ibmcpd_version }}. If you want to upgrade, please first upgrade to CP4D 4.6.5 or 4.6.6 and then upgrade to CP4D {{ _p_cp4d_version }}"
   when:
     - _upgrade_cp4d
-    - _p_current_cp4d_cluster.cp4d_version >= "4.7.0"
+    - _p_cp4d_version >= "4.7.0"
     - _installed_ibmcpd_version < "4.6.5"
     - not allow_cp4d_upgrade | default(False) | bool
 
@@ -252,7 +293,8 @@
     _obsolete_cartridges: >-
       {{ _get_cr_status_json.list 
         | rejectattr('Components','in',_surviving_cartridges_names) 
-        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) }}
+        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) 
+        | selectattr('Components','in',_all_cartridges_names) }}
 
 - set_fact:
     _obsolete_cartridges_names: >-

@@ -25,26 +25,28 @@
   when:
   - _db2u_dependency | default(False)
 
-- name: Generate authorize instance command for project {{ current_cp4d_cluster.project }}
-  set_fact:
-    _authorize_instance_command: "{{ lookup('template','authorize-instance.j2') }}"
+- block:
+  - name: Generate authorize instance command for project {{ current_cp4d_cluster.project }}
+    set_fact:
+      _authorize_instance_command: "{{ lookup('template','authorize-instance.j2') }}"
 
-- include_role:
-    name: run-command
-  vars:
-    _p_command_description: Generate authorize instance command for project {{ current_cp4d_cluster.project }}
-    _p_command: "{{ _authorize_instance_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log"
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Generate authorize instance command for project {{ current_cp4d_cluster.project }}
+      _p_command: "{{ _authorize_instance_command }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-authorize-instance.log"
 
-- name: Generate setup instance topology command for project {{ current_cp4d_cluster.project }} for CP4D 5.0.0 and lower
-  set_fact:
-    _setup_instance_command: "{{ lookup('template','setup-instance-topology.j2') }}"
-  when: current_cp4d_cluster.cp4d_version < "5.1.0"
+  - name: Generate setup instance topology command for project {{ current_cp4d_cluster.project }} for CP4D 5.0.0 and lower
+    set_fact:
+      _setup_instance_command: "{{ lookup('template','setup-instance-topology.j2') }}"
+    when: _p_cp4d_version < "5.1.0"
 
-- include_role:
-    name: run-command
-  vars:
-    _p_command_description: Setup instance for project {{ current_cp4d_cluster.project }}
-    _p_command: "{{ _setup_instance_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance.log"
-  when: current_cp4d_cluster.cp4d_version < "5.1.0"
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Setup instance for project {{ current_cp4d_cluster.project }}
+      _p_command: "{{ _setup_instance_command }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-setup-instance.log"
+    when: _p_cp4d_version < "5.1.0"
+  when: _install_control_plane

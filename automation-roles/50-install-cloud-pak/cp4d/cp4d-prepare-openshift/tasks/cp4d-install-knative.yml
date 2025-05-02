@@ -2,12 +2,12 @@
 - name: Create the catalog source for IBM Events operator when in air-gapped environment. deploy-knative-eventing doesn't manage local case files
   block:
   - name: Get the cpfs case version
-    shell: yq ".release_components_meta.cpfs.case_version" /opt/ansible/ansible-play/config-vars/release-{{ current_cp4d_cluster.cp4d_version }}.yml
+    shell: yq ".release_components_meta.cpfs.case_version" /opt/ansible/ansible-play/config-vars/release-{{ _p_cp4d_version }}.yml
     register: _cpfs_case_version
 
-  - name: Unpack case file {{ status_dir }}/work/offline/{{ current_cp4d_cluster.cp4d_version }}/.ibm-pak/data/cases/ibm-cp-common-services/{{ _cpfs_case_version.stdout }}/ibm-cp-common-services-{{ _cpfs_case_version }}.tgz to /tmp
+  - name: Unpack case file {{ status_dir }}/work/offline/{{ _p_cp4d_version }}/.ibm-pak/data/cases/ibm-cp-common-services/{{ _cpfs_case_version.stdout }}/ibm-cp-common-services-{{ _cpfs_case_version }}.tgz to /tmp
     unarchive:
-      src: "{{ status_dir }}/work/offline/{{ current_cp4d_cluster.cp4d_version }}/.ibm-pak/data/cases/ibm-cp-common-services/{{ _cpfs_case_version.stdout }}/ibm-cp-common-services-{{ _cpfs_case_version.stdout }}.tgz"
+      src: "{{ status_dir }}/work/offline/{{ _p_cp4d_version }}/.ibm-pak/data/cases/ibm-cp-common-services/{{ _cpfs_case_version.stdout }}/ibm-cp-common-services-{{ _cpfs_case_version.stdout }}.tgz"
       dest: /tmp
       remote_src: True
 
