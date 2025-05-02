@@ -22,32 +22,6 @@
     _p_activity_description: "Installation options file for setup-instance command"
     _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
 
-# - set_fact:
-#     _components_cpd_platform: "{{ _list_components_json.list | json_query(query) | first | default({}) }}"
-#   vars:
-#     query: >-
-#       [?Component_name=='cpd_platform']
-
-# - set_fact:
-#     _cr_status_cpd_platform: "{{ _get_cr_status_json.list | json_query(query) | first | default({}) }}"
-#   vars:
-#     query: >-
-#       [?Components=='cpd_platform']
-
-# - set_fact:
-#     _cpd_platform_component_version: "{{ _components_cpd_platform.CR_Version | default('') }}"
-#     _cpd_platform_cr_reconciled_version: "{{ _cr_status_cpd_platform.Reconciled_Version | default('') }}"
-#     _cpd_platform_cr_status: "{{ _cr_status_cpd_platform.Status | default('') }}"
-
-# - debug:
-#     var: _optimize_deoloy_vars
-#   vars:
-#     _optimize_deoloy_vars:
-#       _cpd_platform_component_version: "{{ _cpd_platform_component_version }}"
-#       _cpd_platform_cr_reconciled_version: "{{ _cpd_platform_cr_reconciled_version }}"
-#       _cpd_platform_cr_status: "{{ _cpd_platform_cr_status }}"
-#       _cpd_optimize_deploy: "{{ _cpd_optimize_deploy }}"
-
 - block:
   - name: Generate setup-instance command for project {{ current_cp4d_cluster.project }} to install Software Hub
     set_fact:
@@ -60,6 +34,3 @@
       _p_command: "{{ _setup_instance_command }}"
       _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-install-software-hub.log"
   when: _install_control_plane
-  # - _cpd_platform_cr_status != 'Completed' or
-  #   _cpd_platform_cr_reconciled_version != _cpd_platform_component_version or
-  #   not _cpd_optimize_deploy
