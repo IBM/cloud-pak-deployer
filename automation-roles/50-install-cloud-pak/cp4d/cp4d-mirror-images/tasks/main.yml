@@ -100,7 +100,6 @@
     dest: /tmp/work/
     remote_src: True
   when: 
-  - _p_source_registry_hostname | default('') == _v_portable_registry
   - not cpd_dry_run
 
 - name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
@@ -109,7 +108,6 @@
     dest: "{{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh"
     mode: u+rwx
   when: 
-  - _p_source_registry_hostname | default('') == _v_portable_registry
   - not cpd_dry_run
 
 - name: Run script that copies mirror log files in background
@@ -118,7 +116,6 @@
   async: 86400
   poll: 0
   when: 
-  - _p_source_registry_hostname | default('') == _v_portable_registry
   - not cpd_dry_run
 
 - name: Collect the cartridges to be mirrored
