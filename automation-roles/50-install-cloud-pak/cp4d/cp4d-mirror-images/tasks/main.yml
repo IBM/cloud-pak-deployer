@@ -178,18 +178,16 @@
         _mirror_model_images: "{{ lookup('template','mirror-model-images.j2') }}"
 
     - include_role:
-        name: log-deployer-activity
+        name: run-command
       vars:
-        _p_activity_description: "Mirror foundation model images"
-        _p_activity_command: "{{ _mirror_model_images }}"
+        _p_command_description: "Mirror model images; detailed logs can be found in {{ status_dir }}/log/mirror_*.log"
+        _p_command: "{{ _mirror_model_images }}"
+        _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log"
+        _p_command_failed_when: False
 
-    - name: Mirror model images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
-      shell: |
-        {{ _mirror_model_images }} 2>&1 | tee {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log 
-      failed_when: False
-      register: _mirror_model_images
-      when: not cpd_dry_run
-    
+    - set_fact:
+      _mirror_model_images: "{{ _run_command_result }}"
+
     when: _models_to_install | length > 0
 
   when:
@@ -201,17 +199,15 @@
     _mirror_images: "{{ lookup('template','mirror-images.j2') }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Mirror images"
-    _p_activity_command: "{{ _mirror_images }}"
+    _p_command_description: "Mirror images; detailed logs can be found in {{ status_dir }}/log/mirror_*.log"
+    _p_command: "{{ _mirror_images }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log"
+    _p_command_failed_when: False
 
-- name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
-  shell: |
-    {{ _mirror_images}} 2>&1 | tee {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log 
-  failed_when: False
-  register: _mirror_images
-  when: not cpd_dry_run
+- set_fact:
+  _mirror_images: "{{ _run_command_result }}"
 
 - block:
 
