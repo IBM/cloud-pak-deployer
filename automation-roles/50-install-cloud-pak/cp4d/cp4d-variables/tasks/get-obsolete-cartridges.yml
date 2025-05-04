@@ -1,0 +1,18 @@
+---
+- set_fact:
+    _obsolete_cartridges: >-
+      {{ _get_cr_status_json.list 
+        | rejectattr('Components','in',_surviving_cartridges_names) 
+        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) 
+        | selectattr('Components','in',_all_cartridges_names) }}
+
+- set_fact:
+    _obsolete_cartridges_names: >-
+      {{ _obsolete_cartridges
+        | map(attribute='Components') }}
+
+- debug:
+    var: _obsolete_cartridges
+
+- debug:
+    var: _obsolete_cartridges_names

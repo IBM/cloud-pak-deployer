@@ -94,13 +94,17 @@
       state: absent
   when: _p_cp4d_version == '4.8.5'
 
+- name: Download case files
+  include_role:
+    name: cp4d-case-save
+  when: not (cpd_airgap | bool)
+
 - name: Copy CASE packages from {{ status_dir }}/work/ to /tmp/work/offline (air-gapped scenario) 
   copy:
     src: "{{ status_dir }}/work/offline"
     dest: /tmp/work/
     remote_src: True
   when: 
-  - _p_source_registry_hostname | default('') == _v_portable_registry
   - not cpd_dry_run
 
 - name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
@@ -109,7 +113,6 @@
     dest: "{{ status_dir}}/cp4d/{{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh"
     mode: u+rwx
   when: 
-  - _p_source_registry_hostname | default('') == _v_portable_registry
   - not cpd_dry_run
 
 - name: Run script that copies mirror log files in background
@@ -118,7 +121,6 @@
   async: 86400
   poll: 0
   when: 
-  - _p_source_registry_hostname | default('') == _v_portable_registry
   - not cpd_dry_run
 
 - name: Collect the cartridges to be mirrored
@@ -176,18 +178,16 @@
         _mirror_model_images: "{{ lookup('template','mirror-model-images.j2') }}"
 
     - include_role:
-        name: log-deployer-activity
+        name: run-command
       vars:
-        _p_activity_description: "Mirror foundation model images"
-        _p_activity_command: "{{ _mirror_model_images }}"
+        _p_command_description: "Mirror model images; detailed logs can be found in {{ status_dir }}/log/mirror_*.log"
+        _p_command: "{{ _mirror_model_images }}"
+        _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log"
+        _p_command_failed_when: False
 
-    - name: Mirror model images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
-      shell: |
-        {{ _mirror_model_images }} 2>&1 | tee {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-model-images.log 
-      failed_when: False
-      register: _mirror_model_images
-      when: not cpd_dry_run
-    
+    - set_fact:
+        _mirror_model_images: "{{ _run_command_result }}"
+
     when: _models_to_install | length > 0
 
   when:
@@ -199,17 +199,15 @@
     _mirror_images: "{{ lookup('template','mirror-images.j2') }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: run-command
   vars:
-    _p_activity_description: "Mirror images"
-    _p_activity_command: "{{ _mirror_images }}"
+    _p_command_description: "Mirror images; detailed logs can be found in {{ status_dir }}/log/mirror_*.log"
+    _p_command: "{{ _mirror_images }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log"
+    _p_command_failed_when: False
 
-- name: Mirror images, log is in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log; detailed logs can be found in {{ status_dir }}/log/mirror_*.log
-  shell: |
-    {{ _mirror_images}} 2>&1 | tee {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-images.log 
-  failed_when: False
-  register: _mirror_images
-  when: not cpd_dry_run
+- set_fact:
+    _mirror_images: "{{ _run_command_result }}"
 
 - block:
 
