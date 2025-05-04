@@ -52,8 +52,6 @@
   include_tasks: list-components-olm-utils.yml
   when: _list_components_json is not defined
 
-- include_tasks: get-cr-status.yml
-
 - name: Get cartridges with CR details
   set_fact:
     _cartridges_with_olm_utils_name: >-
@@ -86,11 +84,11 @@
     msg: "Not all cartridges in the configuration are valid: {{ _undefined_cartridges }}"
   when: _undefined_cartridges!=[]
 
-- name: Add versions details from olm-utils and installed version from get-cr-status
+- name: Add versions details from olm-utils
   set_fact:
     _all_cartridges: >-
       {{ _all_cartridges | default([]) 
-        + [ item | combine(_list_components_json_item) | combine(_get_cr_status_json_item) ]
+        + [ item | combine(_list_components_json_item) ]
       }}
   vars:
     _list_components_json_item: >-
@@ -100,14 +98,11 @@
             | first
             | default([])
           }}
-    _get_cr_status_json_item: >-
-          {{ _get_cr_status_json.list
-            | selectattr('Components','equalto',item['olm_utils_name'])
-            | list
-            | first
-            | default([])
-          }}
   loop: "{{ _cartridges_with_olm_utils_name }}"
+
+- name: Add installed versions from get-cr-status when action is apply
+  include_tasks: add-cr-status.yml
+  when: cpd_action=='apply'
 
 # Remove any cartridges without a defined Component_name
 - set_fact:
@@ -149,6 +144,7 @@
 
 # Check if control plane must be installed
 - include_tasks: optimize-control-plane.yml
+  when: cpd_action=='apply'
 
 - set_fact:
     _apply_cartridges: "{{ _cartridges_to_install }}"
@@ -158,7 +154,9 @@
 
 # Optimize cartridges if --optimize-deploy was specified
 - include_tasks: optimize-cartridges.yml
-  when: _cpd_optimize_deploy
+  when: 
+  - _cpd_optimize_deploy
+  - cpd_action=='apply'
 
 - debug:
     var: _apply_cartridges
@@ -289,23 +287,9 @@
 - debug:
     var: _surviving_cartridges_crs
 
-- set_fact:
-    _obsolete_cartridges: >-
-      {{ _get_cr_status_json.list 
-        | rejectattr('Components','in',_surviving_cartridges_names) 
-        | rejectattr('CR_Kind','in',_surviving_cartridges_crs) 
-        | selectattr('Components','in',_all_cartridges_names) }}
-
-- set_fact:
-    _obsolete_cartridges_names: >-
-      {{ _obsolete_cartridges
-        | map(attribute='Components') }}
-
-- debug:
-    var: _obsolete_cartridges
-
-- debug:
-    var: _obsolete_cartridges_names
+- name: Determine obsolete cartridges
+  include_tasks: get-obsolete-cartridges.yml
+  when: cpd_action=='apply'
 
 - name: Write cartridge to install information to file {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json
   copy:

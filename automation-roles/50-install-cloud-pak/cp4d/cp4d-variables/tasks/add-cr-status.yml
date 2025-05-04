@@ -1,0 +1,18 @@
+---
+- include_tasks: get-cr-status.yml
+
+- name: Add installed version from get-cr-status
+  set_fact:
+    _all_cartridges: >-
+      {{ _all_cartridges | default([]) 
+        + [ item | combine(_get_cr_status_json_item) ]
+      }}
+  vars:
+    _get_cr_status_json_item: >-
+          {{ _get_cr_status_json.list
+            | selectattr('Components','equalto',item['olm_utils_name'])
+            | list
+            | first
+            | default([])
+          }}
+  loop: "{{ _cartridges_with_olm_utils_name }}"
