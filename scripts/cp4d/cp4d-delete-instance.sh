@@ -297,7 +297,7 @@ delete_ibm_crds() {
     for crd in $(oc get crd --no-headers | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl');do
         if [[ "$(oc get ${crd} --no-headers -A 2>/dev/null)" != "" ]] ;then
             log "Not deleting CRD ${crd}, still has some instances"
-        elif grep -q ramendrinstalls.ramendr.isf.ibm.com /tmp/cp4d-delete-instance-csvs.out;then
+        elif grep -q ${crd} /tmp/cp4d-delete-instance-csvs.out;then
             log "Not deleting CRD ${crd}, which is still referred to be a ClusterServiceVersion"
         elif [[ "${crd}" == *ocscluster* ]];then
             log "Not deleting OpenShift Data Foundation CRD ${crd}, still needed"
