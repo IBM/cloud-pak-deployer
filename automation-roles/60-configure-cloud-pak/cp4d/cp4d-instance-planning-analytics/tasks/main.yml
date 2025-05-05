@@ -1,0 +1,33 @@
+---
+- set_fact:
+    _pa_cartridge: "{{ _cartridges_to_install | json_query(query_cartridge) | first | default({}) }}"
+  vars:
+    cartridge_name: "planning_analytics"
+    query_cartridge: "[?olm_utils_name=='{{ cartridge_name }}']"
+
+- name: Show Planning Analytics cartridge
+  debug:
+    var: _pa_cartridge
+
+- set_fact:
+    _configured_pa_instances: []
+- set_fact:
+    _configured_pa_instances: "{{ _pa_cartridge.instances | default([] )}}"
+  when:
+  - _pa_cartridge != {}
+  - (_pa_cartridge.state | default('installed')) == 'installed'
+
+- include_tasks: provision_pa_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: delete_pa_instances.yml
+  when:
+  - (_p_wait_instances | default(False)) == False
+
+- include_tasks: wait_pa_instances.yml
+  when:
+  - (_p_delete_all_instances | default(False)) == False
+  - _p_wait_instances | default(False)
+  - not cpd_dry_run
