@@ -1,0 +1,57 @@
+---
+- name: Show current Planning Analytics instance
+  debug:
+    msg: "{{ _pa_instance }}"
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Provision Planning Analytics instance {{ _pa_instance.name }}"
+    _p_activity_comment: "Use REST API to provision Planning Analytics instance {{ _pa_instance.name }}"
+
+- block:
+  - name: Check if the Planning Analytics instance is already running
+    uri:
+      url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_pa_addon_type }}&display_name={{ _pa_instance.name }}'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _pa_instance_lookup_result
+
+  - name: Determine if Planning Analytics instance already exists
+    debug:
+      msg: "Planning Analytics instance {{ _pa_instance.name }} already exists in OpenShift project {{ current_cp4d_cluster.project }}, will be skipped"
+    when: _pa_instance_lookup_result.json.total_count != 0
+
+  - when: _pa_instance_lookup_result.json.total_count == 0
+    block:
+    - name: Obtain Planning Analytics version
+      shell: |
+        oc get paservice -n {{ current_cp4d_cluster.project }} ibm-planning-analytics-service -o jsonpath='{.spec.version}'
+      register: _pa_version
+
+    - name: Create Planning Analytics configuration file
+      template:
+        src: pa_instance.json.j2
+        dest: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _pa_instance.name }}-pa_instance.json"
+
+    - name: Create Planning Analytics instance
+      shell: |
+        curl -v -k \
+          -H 'Authorization: Bearer {{ _cp4d_bearer_token }}' \
+          -H 'Content-Type: application/json' \
+          -X POST 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances' \
+          -T {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-{{ _pa_instance.name }}-pa_instance.json
+      register: _provision_pa_result
+
+    - name: Show Planning Analytics instance provisioning result
+      debug:
+        msg: "{{ _provision_pa_result }}"
+
+    - set_fact:
+        _provision_pa_result_json: "{{ _provision_pa_result.stdout | from_json }}"
+  when: not cpd_dry_run

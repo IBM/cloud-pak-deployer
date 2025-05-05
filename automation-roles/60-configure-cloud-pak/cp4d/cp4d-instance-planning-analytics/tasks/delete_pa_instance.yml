@@ -1,0 +1,63 @@
+---
+- set_fact:
+    _pa_instance_name: "{{ _pa_instance.display_name }}"
+    _pa_instance_id: "{{ _pa_instance.id }}"
+    _pa_cartridge_listed: {}
+    _delete_pa_instance: False
+
+# If not all instances must be deleted, check if instance still in the configuration
+- block:
+  - set_fact:
+      _pa_cartridge_listed: "{{ _pa_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+    vars:
+      _query_instance: "[?name=='{{ _pa_instance_name }}']" 
+    when: _pa_cartridge.instances is defined
+  - set_fact:
+      _delete_pa_instance: True
+    when: _pa_cartridge_listed == {} or (_pa_cartridge.state | default('installed')) == 'removed'
+  when: (_p_delete_all_instances | default(False)) == False
+
+- set_fact:
+    _delete_pa_instance: True
+  when: (_p_delete_all_instances | default(False)) == True
+
+- name: Fail if Planning Analytics instance will be deleted and destroy is not confirmed
+  fail:
+    msg: "Destroy was not confirmed via --confirm-destroy or global_config confirm_destroy property, will not delete Planning Analytics instance {{ _pa_instance_name }}"
+  when:
+  - _delete_pa_instance | bool
+  - _confirm_destroy | default (False) | bool == False
+
+- name: Deleting Planning Analytics instance {{ _pa_instance_name }}
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _pa_instance_id }}'
+    method: DELETE
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 202
+  register: _pa_instance_delete_result
+  when: _delete_pa_instance | bool
+
+- name: Wait until Planning Analytics instance {{ _pa_instance_name }} has been deleted
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances/{{ _pa_instance_id }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 404
+  register: _pa_instance_exists
+  until: _pa_instance_exists.status == 404
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: _delete_pa_instance | bool
