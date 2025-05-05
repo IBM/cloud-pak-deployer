@@ -1,6 +1,12 @@
 ---
 - include_tasks: get-cr-status.yml
 
+- set_fact:
+    _tmp_cartridges: "{{ _all_cartridges }}"
+
+- set_fact:
+    _all_cartridges: []
+
 - name: Add installed version from get-cr-status
   set_fact:
     _all_cartridges: >-
@@ -15,4 +21,4 @@
             | first
             | default([])
           }}
-  loop: "{{ _cartridges_with_olm_utils_name }}"
+  loop: "{{ _tmp_cartridges }}"

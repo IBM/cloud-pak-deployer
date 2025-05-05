@@ -1,0 +1,20 @@
+---
+- name: Get all current Planning Analytics instances
+  uri:
+    url: 'https://{{ cp4d_url.stdout }}/zen-data/v3/service_instances?addon_type={{ cp4d_pa_addon_type }}'
+    method: GET
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ _cp4d_bearer_token }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _all_pa_instances
+  when: not cpd_dry_run
+
+# Loop through all deployed Planning Analytics instance definitions to check if instance no longer exists in the config
+- name: Loop through each Planning Analytics instance to check if it must be deleted
+  include_tasks: delete_pa_instance.yml
+  loop: "{{ _all_pa_instances.json.service_instances | default([]) }}"
+  loop_control:
+    loop_var: _pa_instance

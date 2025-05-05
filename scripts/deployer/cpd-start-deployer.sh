@@ -67,6 +67,9 @@ if ! "${DEBUG_ONLY}";then
   fi
 fi
 
+# Delete finished cloud-pak-deployer-start pods
+oc delete pods --field-selector=status.phase==Succeeded -l app=cloud-pak-deployer-start
+
 # Delete finished Cloud Pak Deployer jobs
 oc delete job cloud-pak-deployer --ignore-not-found
 oc delete job cloud-pak-deployer-debug --ignore-not-found

@@ -1,0 +1,26 @@
+{
+    "addon_type":"pa",
+    "addon_version":"{{ _pa_version.stdout }}",
+    "display_name":"{{ _pa_instance.name }}",
+    "namespace":"{{ current_cp4d_cluster.project }}",
+    "create_arguments":{
+        "description":"",
+        "metadata":{
+            "addon_version":"{{ _pa_version.stdout }}"
+        },
+        "resources":{},
+        "parameters":{
+            "paw_instance_name":"{{ _pa_instance.name }}",
+            "persistence.class":"{{ ocp_storage_class_block }}",
+            "persistence.mysqlSize":"{{ _pa_instance.mysql_size_gb | default('20') }}Gi",
+            "persistence.couchdbSize":"{{ _pa_instance.couchdb_size_gb | default('20') }}Gi",
+            "persistence.mongoSize":"{{ _pa_instance.mongo_size_gb | default('20') }}Gi",
+            "persistence.redisSize":"{{ _pa_instance.redis_size_gb | default('20') }}Gi",
+            "scaleConfig":"{{ _pa_instance.size | default('small') }}",
+            "common.tm1InternalType":true,
+            "common.tm1Location":"http://pa-service-provider-api:1212",
+            "tm1Service.storageClass":"{{ ocp_storage_class_file }}"
+        }
+    },
+    "transient_fields":{}
+}
