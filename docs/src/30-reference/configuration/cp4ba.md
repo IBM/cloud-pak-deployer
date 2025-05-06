@@ -13,6 +13,7 @@ Contains RPA version 23.0.20 FP001.
 - [Automated post-deployment tasks ✅](#automated-post-deployment-tasks-)
 - [Usage \& operations 📇](#usage--operations-)
 - [Optional post deployment steps ➡️](#optional-post-deployment-steps-️)
+- [Licensing ⚖️](#licensing-️)
 
 ## Disclaimer ✋
 
@@ -29,15 +30,13 @@ Please do not hesitate to create an issue here if needed. Your feedback is appre
 
 ## Documentation base 📝
 
-Deploying CP4BA is based on official documentation which is located at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest.
+Deploying CP4BA is based on official documentation which is located at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation.
 
 Deployment of other parts is also based on respective official documentations.
 
-- IBM Robotic Process Automation (RPA) https://www.ibm.com/docs/en/rpa/latest?topic=installing-rpa-red-hat-openshift-container-platform
-- IBM Automation Assets https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-automation-assets
-- IBM Process Mining https://www.ibm.com/docs/en/process-mining/latest?topic=installing-red-hat-openshift-container-platform-environments
-- IBM Automation Foundation (IAF) https://www.ibm.com/docs/en/cloud-paks/1.0?topic=automation-foundation
-- IBM Cloud Pak Foundational Services (CPFS) https://www.ibm.com/docs/en/cpfs?topic=operator-installing-foundational-services-online
+- IBM Robotic Process Automation (RPA) https://www.ibm.com/docs/en/rpa
+- IBM Process Mining https://www.ibm.com/docs/en/process-mining/
+- IBM Cloud Pak Foundational Services (CPFS) https://www.ibm.com/docs/en/cloud-paks/foundational-services
 
 ## Benefits 🚀
 
@@ -62,7 +61,7 @@ What is not included:
 
 ## What is in the package 📦
 
-When you perform full deployment, as a result you will get full CP4BA platform as seen in the picture. You can also omit some capabilities - this is covered later in this doc.
+When you perform full deployment, as a result you will get full CP4BA platform as seen in the picture. You can fine tune deployment configuration to omit what you dont need, however only full deploument is executed as part of validation activities.
 
 More details about each section from the picture follows below it.
 
@@ -180,3 +179,40 @@ Review and perform post deploy manual steps for RPA as specified in Project *clo
 
 Process Mining  
 Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+
+## Licensing ⚖️
+
+Referrence to licenses of used tools apart from those from IBM
+- phpLDAPadmin
+  - MIT License https://github.com/osixia/docker-phpLDAPadmin/blob/stable/LICENSE (OSI approved https://opensource.org/license/mit)
+- Gitea
+  - MIT License https://github.com/go-gitea/gitea/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
+- Nexus
+  - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!"
+- Roundcube
+  - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
+  - Also using PostgreSQL - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
+  - Also using NGINX - BSD 2-Clause "Simplified" Licenseh ttps://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
+- Cerebro
+  - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
+- AKHQ
+  - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
+- OpenSearch Dashboards
+  - Apache License 2.0 https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
+- Mail server
+  - MIT License https://github.com/docker-mailserver/docker-mailserver/blob/master/LICENSE (OSI approved https://opensource.org/license/mit)
+- Mongo Express
+  - MIT License https://github.com/mongo-express/mongo-express/blob/master/LICENSE.md (OSI approved https://opensource.org/license/mit)
+- CloudBeaver
+  - Apache License 2.0 https://github.com/dbeaver/cloudbeaver/blob/devel/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
+ - PostgreSQL
+  - PostgreSQL itself - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
+  - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/postgresql#license (OSI Approved https://opensource.org/license/apache-2-0)
+- OpenLDAP
+  - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
+  - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
+- MSSQL server
+  - Uses Developer Edition, description at https://learn.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2022?view=sql-server-ver16#sql-server-editions
+- MongoDB
+  - MongoDB itself - Server Side Public License https://www.mongodb.com/legal/licensing/server-side-public-license (Read FAQ at https://www.mongodb.com/legal/licensing/server-side-public-license/faq)
+  - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/mongodb#license (OSI Approved https://opensource.org/license/apache-2-0)
