@@ -72,15 +72,25 @@ More details about each section from the picture follows below it.
 Contains extra software which makes working with the platform even easier.
 
 - phpLDAPadmin - Web UI for OpenLDAP directory making it easier to admin and troubleshoot the LDAP.
+  - Installed if enabled in configuration (default).
 - Gitea - Contains Git server with web UI and is used for ADS and ADP for project sharing and publishing. Organizations for ADS and APD are automatically created. Gitea is connected to OpenLDAP for authentication and authorization.
+  - Installed if ADS or Document Processing is enabled.
 - Nexus - Repository manager which contains pushed ADS java libraries needed for custom development and also for publishing custom ADS jars. Nexus is connected to OpenLDAP for authentication and authorization.
+  - Installed if ADS is enabled.
 - Roundcube - Web UI for included Mail server to be able to browse incoming emails.
+  - Installed if enabled in configuration (default) and if Mail server (below) is installed.
 - Cerebro - Web UI elastic search browser automatically connected to ES instance deployed with CP4BA.
+  - Installed if enabled in configuration (default) and if BAI or BAW is enabled.
 - AKHQ - Web UI kafka browser automatically connected to Kafka instance deployed with CP4BA.
+  - Installed if enabled in configuration (default) and if BAI or BAW with Kafka feature is enabled.
 - OpenSearch Dashboards - Web UI OpenSearch dashboard tool automatically connected to OpenSearch instance deployed with CP4BA.
+  - Installed if enabled in configuration (default) and if BAI or BAW is enabled.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
+  - Installed if CP4BA or RPA is enabled.
 - Mongo Express - Web UI for Mongo DB databases for CP4BA to easier troubleshoot DB.
+  - Installed if enabled in configuration (default) and if MongoDB (from [Pre-requisites](#pre-requisites-section)) is installed.
 - CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
+  - Installed if enabled in configuration (default) and if PostgreSQL or MSSQL (from [Pre-requisites](#pre-requisites-section)) is installed.
 
 ### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
 
@@ -118,9 +128,13 @@ More info available in official docs at https://www.ibm.com/docs/en/cpfs.
 Contains prerequisites for the whole platform.
 
 - PostgreSQL - Database storage for the majority of capabilities.
+  - Installed if CP4BA or IPM is enabled.
 - OpenLDAP - Directory solution for users and groups definition.
-- MSSQL server - Database storage for RPA server.
+  - Always installed.
+- MSSQL server - Database storage for RPA server. 
+  - nstalled if RPA is enbled.
 - MongoDB - Database storage for ADS.
+  - Installed if ADS is enabled.
 
 ## Environments used for installation 💻
 
