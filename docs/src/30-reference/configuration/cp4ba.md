@@ -61,7 +61,7 @@ What is not included:
 
 ## What is in the package 📦
 
-When you perform full deployment, as a result you will get full CP4BA platform as seen in the picture. You can fine tune deployment configuration to omit what you dont need, however only full deploument is executed as part of validation activities.
+Only fully configured CP4BA, RPA and IPM including all Extras and Prerequisites is validated. As validation activities have NOT been executed using partial components, please report any issues you may encounter.
 
 More details about each section from the picture follows below it.
 
