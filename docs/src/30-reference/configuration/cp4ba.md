@@ -59,6 +59,8 @@ What is not included:
 - Workflow Server and Workstream Services - this is a dev deployment. BAW Authoring and (BAW + IAWS) are mutually exclusive in single project.
 - ADP Runtime deployment - this is a dev deployment.
 
+You can review the code [here](https://github.com/IBM/cloud-pak-deployer/blob/main/automation-roles/50-install-cloud-pak/cp4ba/config/tasks/main.yml) and [here](https://github.com/IBM/cloud-pak-deployer/blob/main/automation-roles/50-install-cloud-pak/cp4ba/cp4ba-cluster/tasks/install.yml) to directly view how certain components are enabled based on parameter settings.
+
 ## What is in the package 📦
 
 Only fully configured CP4BA, RPA and IPM including all Extras and Prerequisites is validated. As validation activities have NOT been executed using partial components, please report any issues you may encounter.
