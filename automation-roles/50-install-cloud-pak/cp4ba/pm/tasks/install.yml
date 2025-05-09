@@ -235,6 +235,28 @@
     common_namespace_name: "{{ pm_project_name }}"
     common_output_to_var: "zen_token"
 
+- name: Get all users
+  ansible.builtin.uri:
+    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/user-accounts"
+    method: GET
+    headers:
+      Cookie: ibm-private-cloud-session={{ zen_token }}
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: users_response
+
+- name: Get admin user
+  ansible.builtin.set_fact:
+    admin_user: "{{ users_response.json | json_query(condition_query) }}"
+  vars:
+    condition_query: "[?username == '{{ lc_principal_admin_user }}']"
+
+- name: Get admin user ID
+  ansible.builtin.set_fact:
+    admin_user_id: "{{ admin_user | first | json_query('id') }}"
+
 - name: Get all groups
   ansible.builtin.uri:
     url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
@@ -269,7 +291,7 @@
     -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
     --data-urlencode 'group={"id":"{{ analysts_users_group_id }}",
     "name":"Analysts Users","tenantId":"-1",
-    "users":[{"username":"{{ lc_principal_admin_user }}"}],"groups":[],"authorizations":[]}'
+    "users":[{"username":"{{ lc_principal_admin_user }}","id":"{{ admin_user_id }}"}],"groups":[],"authorizations":[]}'
   changed_when: false
 
 - name: Get Prescriptive permission auths
@@ -355,7 +377,7 @@
     -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
     --data-urlencode 'group={"id":"{{ tm_admins_group_id }}",
     "name":"TaskMiningAdmins","tenantId":"-1",
-    "users":[{"username":"{{ lc_principal_admin_user }}"}],"groups":[],"authorizations":[]}'
+    "users":[{"username":"{{ lc_principal_admin_user }}","id":"{{ admin_user_id }}"}],"groups":[],"authorizations":[]}'
   changed_when: false
 
 - name: Get Classification permission auths
@@ -508,28 +530,6 @@
     "subject":{"id":"{{ tm_admins_group_id }}","type":"group"},"TargetResource":"allTenantResource","permissions":[{"id":"READ"},{"id":"WRITE"}]}'
   changed_when: false
   when: perms_response.json | json_query("data.authorizations[?subject.id == '" + tm_admins_group_id + "']") | length == 0
-
-- name: Get all users
-  ansible.builtin.uri:
-    url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/user-accounts"
-    method: GET
-    headers:
-      Cookie: ibm-private-cloud-session={{ zen_token }}
-    validate_certs: false
-    return_content: true
-    status_code:
-      - 200
-  register: users_response
-
-- name: Get admin user
-  ansible.builtin.set_fact:
-    admin_user: "{{ users_response.json | json_query(condition_query) }}"
-  vars:
-    condition_query: "[?username == '{{ lc_principal_admin_user }}']"
-
-- name: Get admin user ID
-  ansible.builtin.set_fact:
-    admin_user_id: "{{ admin_user | first | json_query('id') }}"
 
 - name: Get admin user
   ansible.builtin.uri:
