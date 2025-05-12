@@ -39,13 +39,14 @@
 
   - fail:
       msg: >-
-        If watsonx Orchestrate is installed, Red Hat Certificate Manager 1.14 or the IBM Certificate Manager is mandatory. 
+        If watsonx Orchestrate 5.0 or 5.1 is installed, Red Hat Certificate Manager 1.14 or the IBM Certificate Manager is mandatory. 
         Red Hat Certificate Manager {{ _get_red_hat_cert_manager.resources[0].spec.version | default('') }} was found. 
         Please delete the Red Hat Certificate Manager namespaces cert-manager and cert-manager-operator and set 
         cp4d.ibm_cert_manager to True. Then re-run deployer.
     when: 
     - _get_ibm_cert_manager.resources == []
     - not (_get_red_hat_cert_manager.resources[0].spec.version | default('')).startswith('1.14')
+    - _p_cp4d_version < "5.2.0"
   when: 
   - not cpd_dry_run
 
