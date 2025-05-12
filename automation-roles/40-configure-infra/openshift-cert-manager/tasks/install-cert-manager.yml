@@ -5,37 +5,31 @@
     _p_command_description: Create Red Hat Certificate Manager namespace
     _p_command: "oc create ns cert-manager-operator || true"
 
-- name: Retrieve default channel for Red Hat certificate manager
-  shell: |
-    oc get packagemanifest openshift-cert-manager-operator -o jsonpath='{.status.defaultChannel}'
-  register: _cert_manager_packagemanifest_default_channel
-  failed_when: False
+- name: Retrieve package manifest for Red Hat Certificate Manager
+  kubernetes.core.k8s_info:
+    api_version: packages.operators.coreos.com/v1
+    kind: PackageManifest
+    name: openshift-cert-manager-operator
+    namespace: default
+  register: _get_red_hat_cert_manager_package
+  until: _get_red_hat_cert_manager_package.resources != []
   retries: 30
   delay: 10
-  until: _cert_manager_packagemanifest_default_channel.rc==0
 
 - set_fact:
-    _cert_manager_default_channel: "{{ _cert_manager_packagemanifest_default_channel.stdout }}"
+    _cert_manager_default_channel: "{{ _get_red_hat_cert_manager_package.resources[0].status.defaultChannel }}"
 
 - set_fact:
     _cert_manager_channel: "{{ _cert_manager_default_channel }}"
 
-- name: Get package manifest to retrieve channels
-  shell: |
-    oc get packagemanifest openshift-cert-manager-operator -o json
-  register: _get_cert_manager_packagemanifest
-
 - set_fact:
-    _cert_manager_packagemanifest: "{{ _get_cert_manager_packagemanifest.stdout | from_json }}"
-
-- set_fact:
-    _cert_manager_max_channel: "{{ _cert_manager_packagemanifest.status.channels | map(attribute='name') | max }}"
+    _cert_manager_max_channel: "{{ _get_red_hat_cert_manager_package.resources[0].status.channels | map(attribute='name') | max }}"
 
 - set_fact:
     _cert_manager_channel: "stable-v1.14"
   when: 
   - _cert_manager_max_channel=='stable-v1.15'
-  - (_cert_manager_packagemanifest.status.channels | map(attribute='name')) is contains('stable-v1.14')
+  - (_get_red_hat_cert_manager_package.resources[0].status.channels | map(attribute='name')) is contains('stable-v1.14')
 
 - include_role:
     name: generate-apply-yaml
@@ -45,16 +39,18 @@
     _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_openshift_cluster_name }}-cert-manager-operator.yaml"
 
 - name: Wait until Red Hat Certificate Manager Operator CSV has status Succeeded
-  shell: |
-    oc get csv -n cert-manager-operator \
-      -l operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator \
-      --no-headers \
-      -o custom-columns='name:metadata.name,phase:status.phase' | \
-      grep -i succeeded | wc -l
-  register: _cert_manager_csv
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    namespace: cert-manager-operator
+    label_selectors:
+    - operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator
+  register: _red_hat_cert_manager_csv
+  until: 
+  - _red_hat_cert_manager_csv.resources != []
+  - _red_hat_cert_manager_csv.resources[0].status.phase | lower == 'succeeded'
   retries: 30
   delay: 30
-  until: _cert_manager_csv.stdout == "1"
   vars:
     ansible_callback_diy_runner_retry_msg: >-
       {%- set result = ansible_callback_diy.result.output -%}
