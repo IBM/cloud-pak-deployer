@@ -1,0 +1,66 @@
+---
+- set_fact:
+    _app_connect: "{{ _current_cp4d_cartridge.app_connect }}"
+
+- name: Download IBM App Connect case file version {{ _app_connect.app_connect_case_version }}
+  get_url:
+    url: "https://github.com/IBM/cloud-pak/raw/master/repo/case/ibm-appconnect/{{ _app_connect.app_connect_case_version }}/ibm-appconnect-{{ _app_connect.app_connect_case_version }}.tgz"
+    dest: "{{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz"
+    owner: root
+    mode: 0644
+  register: _case_download_result
+  until: _case_download_result is succeeded
+  retries: 5
+  delay: 30
+
+- name: Unpack IBM App Connect case file {{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz to /tmp
+  unarchive:
+    src: "{{ status_dir }}/cp4d/ibm-app-connect-{{ _app_connect.app_connect_case_version }}.tar.gz"
+    dest: /tmp
+    remote_src: True
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Create App Connect project {{ _app_connect.app_connect_project }}
+    _p_command: "oc adm new-project {{ _app_connect.app_connect_project }} || true"
+
+- name: Generate command to create IBM App Connect catalog source
+  set_fact:
+    _create_app_connect_catsrc: "{{ lookup('template', 'create-app-connect-catsrc.j2') }}"
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Create IBM App Connect catalog source
+    _p_command: "{{ _create_app_connect_catsrc }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-setup-mcg.log"
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create IBM App Connect operator
+    _p_apply_yaml_template: ibm-app-connect.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-ibm-app-connect.yaml"
+
+- name: Wait for IBM App Connect operator to be installed
+  shell: |
+    oc wait csv --namespace={{ _app_connect.app_connect_project }} \
+    -l=operators.coreos.com/ibm-appconnect.{{ _app_connect.app_connect_project }}='' \
+    --for='jsonpath={.status.phase}'=Succeeded --timeout=30s
+  register: _ibm_app_connect_csv
+  retries: 20
+  delay: 10
+  until: _ibm_app_connect_csv.rc == 0
+  when: not cpd_dry_run
+
+- name: Generate command to create IBM App Connect instance for watsonx Ochestrate
+  set_fact:
+    _create_app_connect_instance: "{{ lookup('template', 'setup-app-connect.j2') }}"
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Create App Connect instance for watsonx Orchestrate
+    _p_command: "{{ _create_app_connect_instance }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-app-connect-instance.log"
