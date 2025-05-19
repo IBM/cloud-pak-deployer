@@ -204,7 +204,7 @@ Referrence to licenses of used tools apart from those from IBM
 - Gitea
   - MIT License https://github.com/go-gitea/gitea/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - Nexus
-  - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!"
+  - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!". Accepted during the deployment using REST API.
 - Roundcube
   - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
   - Also using PostgreSQL - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
