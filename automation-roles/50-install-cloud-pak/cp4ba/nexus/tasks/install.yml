@@ -105,7 +105,7 @@
   register: nexus_query_response
   failed_when: >
     (nexus_query_response.status != 201) and
-    ('Duplicated record' not in nexus_query_response.content)
+    ('Duplicate key' not in nexus_query_response.content)
 
 - name: Prepare nexus role as Nexus admins for {{ lc_principal_admin_group }}
   ansible.builtin.template:
@@ -249,6 +249,28 @@
     status_code: 204
     return_content: true
   register: nexus_response
+
+- name: Accept EULA
+  ansible.builtin.uri:
+    url: "https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/system/eula"
+    method: POST
+    headers:
+      Content-Type: application/json
+    user: admin
+    password: "{{ nexus_universal_password }}"
+    body_format: json
+    body:
+      accepted: "true"
+      disclaimer: "Use of Sonatype Nexus Repository - Community Edition is governed by the End User
+        License Agreement at https://links.sonatype.com/products/nxrm/ce-eula.
+        By returning the value from ‘accepted:false’ to ‘accepted:true’, you acknowledge that you have read and agree to
+        the End User License Agreement at https://links.sonatype.com/products/nxrm/ce-eula."
+    validate_certs: false
+    force_basic_auth: true
+    status_code: 204
+    return_content: true
+  register: nexus_response
+  failed_when: nexus_response.status != 204 and nexus_response.content is not search('EULA has already been accepted')
 
 - name: Set usage entry
   ansible.builtin.include_role:
