@@ -12,8 +12,8 @@ Contains RPA version 23.0.20 FP001.
 - [Environments used for installation 💻](#environments-used-for-installation-)
 - [Automated post-deployment tasks ✅](#automated-post-deployment-tasks-)
 - [Usage \& operations 📇](#usage--operations-)
-- [Optional post deployment steps ➡️](#optional-post-deployment-steps-️)
-- [Licensing ⚖️](#licensing-️)
+- [Optional post deployment steps 📋](#optional-post-deployment-steps-)
+- [Licensing 📑](#licensing-)
 
 ## Disclaimer ✋
 
@@ -185,7 +185,7 @@ For your convenience the following post-deployment setup tasks have been automat
 
 Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
 
-## Optional post deployment steps ➡️
+## Optional post deployment steps 📋
 
 CP4BA  
 Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
@@ -196,39 +196,40 @@ Review and perform post deploy manual steps for RPA as specified in Project *clo
 Process Mining  
 Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
 
-## Licensing ⚖️
+## Licensing 📑
 
 Referrence to licenses of used tools apart from those from IBM
+
 - phpLDAPadmin
-  - MIT License https://github.com/osixia/docker-phpLDAPadmin/blob/stable/LICENSE (OSI approved https://opensource.org/license/mit)
+    - MIT License https://github.com/osixia/docker-phpLDAPadmin/blob/stable/LICENSE (OSI approved https://opensource.org/license/mit)
 - Gitea
-  - MIT License https://github.com/go-gitea/gitea/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
+    - MIT License https://github.com/go-gitea/gitea/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - Nexus
-  - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!". Accepted during the deployment using REST API.
+    - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!". Accepted during the deployment using REST API.
 - Roundcube
-  - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
-  - Also using PostgreSQL - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
-  - Also using NGINX - BSD 2-Clause "Simplified" Licenseh ttps://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
+    - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
+    - Also using PostgreSQL - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
+    - Also using NGINX - BSD 2-Clause "Simplified" Licenseh ttps://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
 - Cerebro
-  - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
+    - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - AKHQ
-  - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
+    - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - OpenSearch Dashboards
-  - Apache License 2.0 https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
+    - Apache License 2.0 https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
 - Mail server
-  - MIT License https://github.com/docker-mailserver/docker-mailserver/blob/master/LICENSE (OSI approved https://opensource.org/license/mit)
+    - MIT License https://github.com/docker-mailserver/docker-mailserver/blob/master/LICENSE (OSI approved https://opensource.org/license/mit)
 - Mongo Express
-  - MIT License https://github.com/mongo-express/mongo-express/blob/master/LICENSE.md (OSI approved https://opensource.org/license/mit)
+    - MIT License https://github.com/mongo-express/mongo-express/blob/master/LICENSE.md (OSI approved https://opensource.org/license/mit)
 - CloudBeaver
-  - Apache License 2.0 https://github.com/dbeaver/cloudbeaver/blob/devel/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
- - PostgreSQL
-  - PostgreSQL itself - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
-  - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/postgresql#license (OSI Approved https://opensource.org/license/apache-2-0)
+    - Apache License 2.0 https://github.com/dbeaver/cloudbeaver/blob/devel/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
+- PostgreSQL
+    - PostgreSQL itself - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
+    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/postgresql#license (OSI Approved https://opensource.org/license/apache-2-0)
 - OpenLDAP
-  - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
-  - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
+    - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
+    - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
 - MSSQL server
-  - Uses Developer Edition, description at https://learn.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2022?view=sql-server-ver16#sql-server-editions
+    - Uses Developer Edition, description at https://learn.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2022?view=sql-server-ver16#sql-server-editions
 - MongoDB
-  - MongoDB itself - Server Side Public License https://www.mongodb.com/legal/licensing/server-side-public-license (Read FAQ at https://www.mongodb.com/legal/licensing/server-side-public-license/faq)
-  - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/mongodb#license (OSI Approved https://opensource.org/license/apache-2-0)
+    - MongoDB itself - Server Side Public License https://www.mongodb.com/legal/licensing/server-side-public-license (Read FAQ at https://www.mongodb.com/legal/licensing/server-side-public-license/faq)
+    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/mongodb#license (OSI Approved https://opensource.org/license/apache-2-0)
