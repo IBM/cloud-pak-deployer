@@ -11,8 +11,8 @@
 
 - name: Show latest release
   debug:
-    msg: "Last file: {{ _cp4d_release_files.files | last | default({}) }}"
+    msg: "Last file: {{ _cp4d_release_files.files | sort(attribute='path') | last | default({}) }}"
 
-- name: Extract release from {{ (_cp4d_release_files.files | last).path }} file
+- name: Extract release from found file
   set_fact:
-    _p_cp4d_version: "{{ (_cp4d_release_files.files | last).path | regex_search('([0-9].[0-9]+.[0-9]+)','\\1') | first }}"
+    _p_cp4d_version: "{{ (_cp4d_release_files.files | sort(attribute='path') | last).path | regex_search('([0-9].[0-9]+.[0-9]+)','\\1') | first }}"
