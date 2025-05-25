@@ -96,6 +96,15 @@
   include_role:
     name: openshift-monitoring
 
+- name: Configure IBM Storage for OpenShift cluster {{ current_openshift_cluster.name }}
+  include_role:
+    name: ibm-storage
+  loop: "{{ all_config.ibm_storage | default([]) }}"
+  loop_control:
+    loop_var: _current_ibm_storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_openshift_cluster.name }}"
+
 - name: Configure GPU for the OpenShift cluster
   include_role:
     name: openshift-gpu
