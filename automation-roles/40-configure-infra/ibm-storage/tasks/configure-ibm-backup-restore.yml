@@ -1,0 +1,33 @@
+---
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create ibm-backup-restore namespace
+    _p_apply_yaml_template: ibm-backup-restore-namespace.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ibm-backup-restore-namespace.yaml"
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Install Backup-Restore service instance
+    _p_apply_yaml_template: ibm-backup-restore-service-instance.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ibm-backup-restore-service.yaml"
+
+- name: Wait until Backup-Restore service instance is completed
+  kubernetes.core.k8s_info:
+    api_version: service.isf.ibm.com/v1
+    kind: FusionServiceInstance
+    namespace: ibm-spectrum-fusion-ns
+    name: ibm-backup-restore-service-instance
+  register: _ibm_backup_restore_service
+  until: 
+  - _ibm_backup_restore_service.resources != []
+  - _ibm_backup_restore_service.resources[0].status.installStatus.status | default('') | lower == 'completed'
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
