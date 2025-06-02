@@ -10,7 +10,15 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g = GeneratorPreProcessor(attributes,fullConfig,moduleVariables)
 
     g('openshift_cluster_name').expandWith('openshift[*]',remoteIdentifier='name')
-    g('install_br').isOptional().mustBeOneOf([True, False])
+    g('backup_restore').isOptional()
+
+    # Now that we have reached this point, we can check the attribute details if the previous checks passed
+    if len(g.getErrors()) == 0:
+        ge=g.getExpandedAttributes()
+        if 'backup_restore' in ge:
+            if 'install' in ge['backup_restore']:
+                if type(ge['backup_restore']['install']) != bool:
+                    g.appendError(msg='Attribute backup_restore must be either true or false if specified. Default is false.')
 
     result = {
         'attributes_updated': g.getExpandedAttributes(),
