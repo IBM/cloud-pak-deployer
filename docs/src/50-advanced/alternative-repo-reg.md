@@ -41,9 +41,10 @@ The `cp_alt_repo` is configured like this:
 cp_alt_repo:
   repo:
     token_secret: github-internal-repo
-    cp_path: https://raw.internal-repo.acme.com/cpd-case-repo/4.8.0/promoted/case-repo-promoted
-    fs_path: https://raw.internal-repo.acme.com/cloud-pak-case-repo/main/repo/case
-    opencontent_path: https://raw.internal-repo.acme.com/cloud-pak-case-repo/main/repo/case
+    helm_path: https://raw.github.ibm.com/IBMSoftwareHub/charts/5.2.0/local
+    cp_path: https://raw.github.ibm.com/PrivateCloud-analytics/cpd-case-repo/5.2.0/promoted/case-repo-promoted
+    fs_path: https://raw.github.ibm.com/IBMPrivateCloud/cloud-pak/master/repo/case
+    opencontent_path: https://raw.github.ibm.com/IBMPrivateCloud/cloud-pak/master/repo/case
   registry_pull_secrets:
   - registry: cp.staging.acme.com
     pull_secret: cp-staging
@@ -69,6 +70,7 @@ cp_alt_repo:
 | -------------- | -------------------------------------------------------------------------------------- | --------- | -------------- |
 | repo           | Repositories to be accessed and the Git token                                          | Yes       |                |
 | repo.token_secret | Secret in the vault that holds the Git login token                                  | Yes       |                |
+| repo.helm_path | Repository path where to find Software Hub helm files (required as from Software Hub 5.2.0) | No        |                |
 | repo.cp_path   | Repository path where to find Cloud Pak CASE files                                     | Yes       |                |
 | repo.fs)path   | Repository path where to find the Foundational Services CASE files                     | Yes       |                |
 | repo.opencontent_path | Repository path where to find the Open Content CASE files                       | Yes       |                |

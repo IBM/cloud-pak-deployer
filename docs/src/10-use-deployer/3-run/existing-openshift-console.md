@@ -133,6 +133,8 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           # - cognos-analytics
           # - data-product-hub
           # - datastage
+          # - data-integration-unstructured-data
+          # - data-lineage
           # - ikc-premium
           # - ikc-standard
           # - openpages
@@ -149,11 +151,13 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           # - watsonx-gov-mm
           # - watsonx-gov-rc
           # - watsonx-orchestrate
+          cp4d_production_license: True
+          accept_licenses: False
           db2u_limited_privileges: False
-          accept_licenses: True
           use_fs_iam: True
           operators_project: cpd-operators
           ibm_cert_manager: False
+          state: installed
           cartridges:
           - name: cp-foundation
             scale: level_1
@@ -165,6 +169,15 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           - name: scheduler 
             state: removed
             
+        #
+        # All tested cartridges. To install, change the "state" property to "installed". To uninstall, change the state
+        # to "removed" or comment out the entire cartridge. Make sure that the "-" and properties are aligned with the lite
+        # cartridge; the "-" is at position 3 and the property starts at position 5.
+        #
+        # If a cartridge has dependencies and you want to install it, you must ensure that the dependent cartridge is also
+        # installed.
+        #
+
           - name: analyticsengine 
             description: Analytics Engine Powered by Apache Spark 
             size: small 
@@ -206,10 +219,6 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           - name: datastage-ent-plus
             description: DataStage Enterprise Plus
             state: removed
-
-            # The default instance is created automatically with the DataStage installation. If you want to create additional instances
-            # uncomment the section below and specify the various scaling options.
-
             # instances:
             #   - name: ds-instance
             #     # Optional settings
@@ -313,6 +322,10 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             wkc_enabled: true
             state: removed
 
+          - name: mongodb
+            description: MongoDB for Cloud Pak for Data
+            state: removed
+            
           - name: openpages
             description: OpenPages
             state: removed
@@ -320,6 +333,13 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           - name: planning-analytics
             description: Planning Analytics
             state: removed
+            instances:
+            - name: pa-instance
+              size: small
+              mysql_size_gb: 20
+              couchdb_size_gb: 20
+              mongo_size_gb: 20
+              redis_size_gb: 20
 
           - name: replication
             description: Data Replication
@@ -391,35 +411,37 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             models:
             - model_id: allam-1-13b-instruct
               state: removed
+              # model_install_parameters can be used for sharding and node pinning according to
+              # instructions at https://www.ibm.com/docs/en/software-hub/5.1.x?topic=setup-adding-foundation-models
+              #model_install_parameters:
+              #  shards: 2
+              #  nodeSelector:
+              #    kubernetes.io/hostname: hostname
             - model_id: codellama-codellama-34b-instruct-hf
+              state: removed
+            - model_id: codestral-2501
               state: removed
             - model_id: codestral-22b
               state: removed
             - model_id: elyza-japanese-llama-2-7b-instruct
               state: removed
-            - model_id: google-flan-ul2
-              state: removed
             - model_id: google-flan-t5-xl
               state: removed
             - model_id: google-flan-t5-xxl
               state: removed
-            - model_id: ibm-granite-7b-lab
-              state: removed
-            - model_id: ibm-granite-8b-japanese
-              state: removed
-            - model_id: ibm-granite-13b-chat-v2
+            - model_id: google-flan-ul2
               state: removed
             - model_id: ibm-granite-13b-instruct-v2
               state: removed
-            - model_id: ibm-granite-20b-multilingual
+            - model_id: granite-3-2-8b-instruct
               state: removed
             - model_id: granite-3-2b-instruct
               state: removed
             - model_id: granite-3-8b-instruct
               state: removed
-            - model_id: granite-guardian-3-2b-instruct
+            - model_id: granite-guardian-3-2b
               state: removed
-            - model_id: granite-guardian-3-8b-instruct
+            - model_id: granite-guardian-3-8b
               state: removed
             - model_id: granite-3b-code-instruct
               state: removed
@@ -445,29 +467,23 @@ Log in as a cluster administrator to be able to run the deployer with the correc
               state: removed
             - model_id: llama-guard-3-11b-vision
               state: removed
-            - model_id: llama-3-1-8b-instruct
-              state: removed
-            - model_id: llama-3-1-70b-instruct
-              state: removed
             - model_id: llama-3-405b-instruct
-              state: removed
-            - model_id: meta-llama-llama-3-8b-instruct
-              state: removed
-            - model_id: meta-llama-llama-3-70b-instruct
               state: removed
             - model_id: meta-llama-llama-2-13b-chat
               state: removed
-            - model_id: mncai-llama-2-13b-dpo-v7
-              state: removed
             - model_id: ministral-8b-instruct
               state: removed
+            - model_id: mistral-small-24b-instruct-2501
+              state: removed
             - model_id: mistral-small-instruct
+              state: removed
+            - model_id: mistral-large-instruct-2411
               state: removed
             - model_id: mistral-large
               state: removed
             - model_id: mistralai-mixtral-8x7b-instruct-v01
               state: removed
-            - model_id: bigscience-mt0-xxl
+            - model_id: pixtral-large-instruct
               state: removed
             - model_id: pixtral-12b
               state: removed
@@ -475,6 +491,16 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             - model_id: all-minilm-l6-v2
               state: removed
             - model_id: all-minilm-l12-v2
+              state: removed
+            - model_id: all-minilm-l12-v2
+              state: removed
+            - model_id: granite-embedding-107m-multilingual
+              state: removed
+            - model_id: granite-embedding-107m-multilingual
+              state: removed
+            - model_id: granite-embedding-278m-multilingual
+              state: removed
+            - model_id: ms-marco-minilm-l-12-v2
               state: removed
             - model_id: ms-marco-minilm-l-12-v2
               state: removed
@@ -489,6 +515,27 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             description: watsonx.data
             state: removed
 
+          - name: watsonx_dataintelligence
+            description: watsonx.data intelligence
+            state: removed
+            installation_options:
+              enableAISearch: false
+              enableContentLinkingForTextToSql: false
+              enableDataGovernanceCatalog: true
+              enableDataLineage: true
+              enableDataProduct: true
+              enableDataQuality: false
+              enableGenerativeAICapabilities: true
+              enableKnowledgeGraph: true
+              enableModelsOn: cpu
+              enableSemanticEmbedding: false
+              enableSemanticEnrichment: true
+              enableTextToSql: false
+
+          - name: watsonx_data_premium
+            description: watsonx.data Premium
+            state: removed
+
           - name: watsonx_governance
             description: watsonx.governance
             state: removed
@@ -498,13 +545,9 @@ Log in as a cluster administrator to be able to run the deployer with the correc
               enableOpenpages: true
               enableOpenscale: true
 
-          # In case watsonx Orchestrate is installed, no instances must be created for Watson Assistant
+          # For successful deployment of watsonx Orchestrate, make sure you set ibm_cert_manager to True
           - name: watsonx_orchestrate
             description: watsonx.orchestrate
-            app_connect:
-              app_connect_project: ibm-app-connect
-              app_connect_case_version: 12.5.0
-              app_connect_channel_version: v12.5
             installation_options:
               watsonx_orchestrate_watsonx_ai_type: false
             instances:
@@ -520,6 +563,10 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             description: watsxonx Code Assistant for Z
             state: removed
 
+          - name: wca-z-ce
+            description: watsxonx Code Assistant for Z Code Explanation
+            state: removed
+
           # For the IBM Knowledge Catalog, you can specify 3 editions: wkx, ikc_premium, or ikc_standard
           # Choose the correct IBM Knowledge Catalog edition below
           - name: wkc
@@ -527,24 +574,24 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             size: small
             state: removed
             installation_options:
-              enableKnowledgeGraph: False
-              enableDataQuality: False
+              enableKnowledgeGraph: True
+              enableDataQuality: True
 
           - name: ikc_premium
             description: IBM Knowledge Catalog - Premium edition
             size: small
             state: removed
             installation_options:
-              enableKnowledgeGraph: False
-              enableDataQuality: False
+              enableKnowledgeGraph: True
+              enableDataQuality: True
 
           - name: ikc_standard
             description: IBM Knowledge Catalog - Standard edition
             size: small
             state: removed
             installation_options:
-              enableKnowledgeGraph: False
-              enableDataQuality: False
+              enableKnowledgeGraph: True
+              enableDataQuality: True
 
           - name: wml
             description: Watson Machine Learning
@@ -572,7 +619,17 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             - ibm-cpd-ws-runtime-241-pygpu
             - ibm-cpd-ws-runtime-241-r
             state: removed 
-    ```
+
+        #
+        # Cartridges where extra work is needed (will not install automatically)
+        # 
+          # Product Master requires set up of the Db2 instance secret before install
+          - name: productmaster
+            description: Product Master
+            size: small  
+
+            state: removed
+```
 
 ## Start the deployer
 * Go to the OpenShift console
