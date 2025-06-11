@@ -1,15 +1,28 @@
 resolvers:
   metadata:
-    description:  resolver file to map cases and registries. Used to get dependency cases
+    description: Resolver file to map cases and registries. Used to get dependency cases
   resources:
+{% if (_cp_alt_repo.repo.helm_path | default('')) != '' %}
+    helmCharts:
+      repositories:
+        devHelmRepo:
+          repositoryInfo:
+            url: "{{ _cp_alt_repo.repo.helm_path }}"
+      helmRepositoryMap:
+      - charts:
+        - chart: "*"
+          version: "*"
+        repositories:
+        - "*"
+{% endif %}
     cases:
       repositories:
         DevGitHub:
           repositoryInfo:
-            url: "https://{{ _case_repo_path_cp }}"
+            url: "{{ _cp_alt_repo.repo.cp_path }}"
         cloudPakCertRepo:
           repositoryInfo:
-            url: "https://{{ _case_repo_path_fs }}"
+            url: "{{ _cp_alt_repo.repo.fs_path }}"
       caseRepositoryMap:
       - cases:
         - case: "*"

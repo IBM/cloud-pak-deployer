@@ -2,6 +2,15 @@ resolversAuth:
   metadata:
     description:  This is the INTERNAL authorization file for downloading CASE packages from an internal repo
   resources:
+{% if (_cp_alt_repo.repo.helm_path | default('')) != '' %}
+    helmCharts:
+      repositories:
+        devHelmRepo:
+          credentials:
+            basic:
+              username: not-specified@not-specified.com
+              password: {{ _case_repo_token }}
+{% endif %}
     cases:
       repositories:
         DevGitHub:
@@ -10,6 +19,11 @@ resolversAuth:
               username: not-specified@not-specified.com
               password: {{ _case_repo_token }}
         cloudPakCertRepo:
+          credentials:
+            basic:
+              username: not-specified@not-specified.com
+              password: {{ _case_repo_token }}
+        customZenRepo:
           credentials:
             basic:
               username: not-specified@not-specified.com

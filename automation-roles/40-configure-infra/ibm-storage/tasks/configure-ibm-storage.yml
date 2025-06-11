@@ -1,0 +1,103 @@
+---
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Install IBM Storage Fusion project IBM operator catalog
+    _p_apply_yaml_template: ibm-storage-fusion-catsrc.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ibm-storage-fusion-catsrc.yaml"
+
+- name: Wait until IBM operator catalog source is ready
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: CatalogSource
+    namespace: openshift-marketplace
+    name: ibm-operator-catalog
+  register: _ibm_operator_catsrc
+  until: 
+  - _ibm_operator_catsrc.resources != []
+  - _ibm_operator_catsrc.resources[0].status.connectionState.lastObservedState | default('') | upper == 'READY'
+  retries: 30
+  delay: 10
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
+
+- name: Get Fusion package manifest isf-operator to obtain default channel
+  kubernetes.core.k8s_info:
+    api_version: packages.operators.coreos.com/v1
+    kind: PackageManifest
+    namespace: default
+    name: isf-operator
+  register: _isf_package
+  until: 
+  - (_isf_package.resources[0].status.defaultChannel | default('')) != ''
+  retries: 30
+  delay: 10
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
+
+- set_fact:
+    _isf_default_channel: "{{ _isf_package.resources[0].status.defaultChannel | default('TO_BE_DETERMINED') }}"
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Install IBM Storage Fusion operator
+    _p_apply_yaml_template: ibm-storage-fusion-operator.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ibm-storage-fusion-operator.yaml"
+
+- name: Wait until Fusion operator CSV has status Succeeded
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    namespace: ibm-spectrum-fusion-ns
+    label_selectors:
+    - operators.coreos.com/isf-operator.ibm-spectrum-fusion-ns
+  register: _ibm_storage_fusion_csv
+  until: 
+  - _ibm_storage_fusion_csv.resources != []
+  - _ibm_storage_fusion_csv.resources[0].status.phase | default('') | lower == 'succeeded'
+  retries: 30
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Apply SpectrumFusion CR to accept license
+    _p_apply_yaml_template: ibm-spectrum-fusion.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-ibm-spectrum-fusion.yaml"
+
+- name: Wait until SpectrumFusion CR has status Completed
+  kubernetes.core.k8s_info:
+    api_version: prereq.isf.ibm.com/v1
+    kind: SpectrumFusion
+    namespace: ibm-spectrum-fusion-ns
+    name: spectrumfusion
+  register: _ibm_spectrum_fusion
+  until: 
+  - _ibm_spectrum_fusion.resources != []
+  - _ibm_spectrum_fusion.resources[0].status.status | default('') | lower == 'completed'
+  retries: 30
+  delay: 10
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
+
+- include_tasks: configure-ibm-backup-restore.yml
+  when: _current_ibm_storage.backup_restore.install | default(False) | bool
