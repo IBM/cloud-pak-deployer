@@ -629,7 +629,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             size: small  
 
             state: removed
-```
+    ```
 
 ## Start the deployer
 * Go to the OpenShift console
