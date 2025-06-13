@@ -152,7 +152,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           # - watsonx-gov-rc
           # - watsonx-orchestrate
           cp4d_production_license: True
-          accept_licenses: False
+          accept_licenses: True
           db2u_limited_privileges: False
           use_fs_iam: True
           operators_project: cpd-operators
@@ -596,7 +596,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           - name: wml
             description: Watson Machine Learning
             size: small
-            state: installed
+            state: removed
 
           - name: wml-accelerator
             description: Watson Machine Learning Accelerator
@@ -606,7 +606,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
 
           - name: ws
             description: Watson Studio
-            state: installed
+            state: removed
 
           - name: ws-pipelines
             description: Watson Studio Pipelines
