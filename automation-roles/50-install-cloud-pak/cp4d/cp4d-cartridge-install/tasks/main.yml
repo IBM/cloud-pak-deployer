@@ -49,3 +49,12 @@
   loop: "{{ _apply_cr_cartridges_separate | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge
+
+- name: Run post-processing scripts
+  include_tasks: cp4d-install-cr-post-processing.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+  when:
+  - not cpd_dry_run
+  - (_install_cartridges_result.rc | default(0)) == 0
