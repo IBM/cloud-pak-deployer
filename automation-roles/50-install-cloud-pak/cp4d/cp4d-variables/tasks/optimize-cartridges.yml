@@ -14,10 +14,11 @@
         | first 
         | default([]) }}
   loop: "{{ _cartridges_to_install }}"
-  when: >-
-    (not (item.Reconciled_Version | default('')).startswith(item.CR_Version) or
-    (item.Status | default('')) != item.cr_status_completed) and
-    (item.Expected_Version | default('')) != 'N/A'
+  when:
+  - (item.Expected_Version | default('')) != 'N/A'
+  - ((item.Reconciled_Version | default('')) != 'N/A' and 
+      not (item.Reconciled_Version | default('')).startswith(item.CR_Version)) or
+      (item.Status | default('')) != item.cr_status_completed
 
 - set_fact:
     _apply_cartridges: "{{ _tmp_cartridges }}"

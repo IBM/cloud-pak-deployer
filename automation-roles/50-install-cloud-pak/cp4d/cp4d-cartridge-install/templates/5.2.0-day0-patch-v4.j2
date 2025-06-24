@@ -1,0 +1,1058 @@
+#!/bin/bash
+#*------------------------------------------------------------
+#* Licensed Materials - Property of IBM
+#*
+#* "Restricted Materials of IBM"
+#* (C) Copyright IBM Corp. 2025 All Rights Reserved.
+#*
+#* US Government Users Restricted Rights - Use, duplication or
+#* disclosure restricted by GSA ADP Schedule Contract with
+#* IBM Corp.
+#*------------------------------------------------------------
+
+#*------------------------------------------------------------
+#* Get Color
+#*    1: Color
+#*------------------------------------------------------------
+
+getColor () {
+    [[ -z $Monochrome ]] && case $1 in
+        Black)      echo "\033[0;30m";;
+        BoldBlack)  echo "\033[1;30m";;
+        Red)        echo "\033[0;31m";;
+        Green)      echo "\033[0;32m";;
+        Blue)       echo "\033[0;34m";;
+        BoldBlue)   echo "\033[1;34m";;
+        Purple)     echo "\033[0;35m";;
+        None)       echo "\033[0m";;
+    esac
+}
+
+#*------------------------------------------------------------
+#* Color Text
+#*    1: Text
+#*------------------------------------------------------------
+
+colorText () {
+    echo -e -n "$*$(getColor None)"
+}
+
+#*------------------------------------------------------------
+#* Bold Text
+#*    1: Text
+#*------------------------------------------------------------
+
+bold () {
+    colorText "$(getColor BoldBlack)$*"
+}
+
+#*------------------------------------------------------------
+#* Always log this message
+#*    1: Message
+#*------------------------------------------------------------
+
+log () {
+    echo -e "[$(date +"%Y-%m-%d %H:%M %Z")] $*$(getColor None)" 1>&2
+}
+
+#*------------------------------------------------------------
+#* Log this Information Message if not Terse
+#*    1: Message
+#*    2: Force Verbose
+#*------------------------------------------------------------
+
+info () {
+    [[ $_LoggingMode == --terse && -z $2 ]] || log "$(getColor Blue)INFO: $1"
+}
+
+#*------------------------------------------------------------
+#* Always log Command To this message
+#*    1: Message
+#*------------------------------------------------------------
+
+logCommand () {
+    echo -e "$(bold [$(date +"%Y-%m-%d %H:%M %Z")] Command to) $(getColor blue)$*$(getColor None):-"
+}
+
+#*------------------------------------------------------------
+#* Always log Content To this message
+#*    1: Message
+#*------------------------------------------------------------
+
+logContent () {
+    echo -e "$(bold [$(date +"%Y-%m-%d %H:%M %Z")] Content of) $(getColor BoldCyan)$*$(getColor None)$(bold :-)"
+}
+
+#*------------------------------------------------------------
+#* Log this Pass Message if not Terse
+#*    1: Message
+#*    2: Force Verbose
+#*------------------------------------------------------------
+
+pass () {
+    [[ $_LoggingMode == --terse && -z $2 ]] || log "$(getColor Green)PASS: $1"
+}
+
+#*------------------------------------------------------------
+#* Always log this Fail Message
+#*    1: Message
+#*------------------------------------------------------------
+
+fail () {
+    log "$(getColor Red)FAIL: $*"
+}
+
+#*------------------------------------------------------------
+#* Always log this Abort Message
+#*    1: Message
+#*------------------------------------------------------------
+
+abort () {
+    log "$(getColor Red)Aborting: $*\n"
+    exit 1
+}
+
+#*------------------------------------------------------------
+#* Abort on Fail
+#*    1: Outcome to achieve
+#*    2: Command to execute
+#*    3: Silently
+#*------------------------------------------------------------
+
+abortOnFail () {
+    local Outcome2Achieve=$1
+    local Command2Execute=$2
+    local Silently=$3
+    cat << EOF >> $LogFile
+
+$(logCommand $Outcome2Achieve)$(echo -e $(getColor Purple))
+$Command2Execute
+$(echo -e $(getColor None))
+EOF
+    [[ -z $Silently ]] && info "  $Outcome2Achieve" force
+    eval "$Command2Execute" >> $LogFile 2>&1 && pass "  $Outcome2Achieve" force || abort "Failed to $Outcome2Achieve"
+}
+
+#*------------------------------------------------------------
+#* Continue on Fail
+#*    1: Outcome to achieve
+#*    2: Command to execute
+#*    3: Silently
+#*------------------------------------------------------------
+
+continueOnFail () {
+    local Outcome2Achieve=$1
+    local Command2Execute=$2
+    local Silently=$3
+    cat << EOF >> $LogFile
+
+$(logCommand $Outcome2Achieve)$(echo -e $(getColor Purple))
+$Command2Execute
+$(echo -e $(getColor None))
+EOF
+    [[ -z $Silently ]] && info "  $Outcome2Achieve" force
+    eval "$Command2Execute" >> $LogFile 2>&1 && pass "  $Outcome2Achieve" force || fail "  $Outcome2Achieve"
+}
+
+#*------------------------------------------------------------
+#* Normal Text
+#*    1: Text
+#*------------------------------------------------------------
+
+normal () {
+    colorText "$(getColor Black)$*"
+}
+
+#*------------------------------------------------------------
+#* Bold Blue Text
+#*    1: Text
+#*------------------------------------------------------------
+
+boldBlue () {
+    colorText "$(getColor BoldBlue)$*"
+}
+
+#*------------------------------------------------------------
+#* Option Name Text
+#*    1: Text
+#*------------------------------------------------------------
+
+option () {
+    colorText "$(getColor Blue)$*"
+}
+
+#*------------------------------------------------------------
+#* Option Value Text
+#*    1: Text
+#*------------------------------------------------------------
+
+value () {
+    colorText "$(getColor Purple)$*"
+}
+
+#*------------------------------------------------------------
+#* Default Text
+#*    1: Text
+#*------------------------------------------------------------
+
+default () {
+    colorText "$(getColor Purple)$*"
+}
+
+#*------------------------------------------------------------
+#* Dashes
+#*    1: Count
+#*------------------------------------------------------------
+
+dashes () {
+    printf '\055%.0s' $(seq $1)
+}
+
+#*------------------------------------------------------------
+#* Show help
+#*------------------------------------------------------------
+
+showHelp () {
+    cat << EOF 1>&2
+
+Usage:
+
+  $(bold $(basename $0)) [$(option --remove)] [$(option --operator) <$(value namespace)>] [$(option --skip)] [$(option --plan)] [$(option --Log) <$(value file)>] [$(option --yes)] [$(option --monochrome)] [$(option --verbose)]
+
+  $(bold $(basename $0)) $(option --load) <$(value host)> { $(option --Auth) <$(value file)> | $(option --as) <$(value user)> $(option --with) <$(value password)> $(option --entitlement) <$(value key)> } [$(option --operator) <$(value namespace)>] [$(option --plan)] [$(option --Log) <$(value file)>] [$(option --yes)] [$(option --monochrome)] [$(option --verbose)]
+
+EOF
+        [[ -z $HiddenOption ]] || cat << EOF 1>&2
+  $(bold $(basename $0)) $(option --configuration) [$(option --monochrome)] [$(option --verbose)]
+
+EOF
+        cat << EOF 1>&2
+  $(bold $(basename $0)) $(option --help) [$(option --monochrome)] [$(option --verbose)]
+
+EOF
+    if [[ $_LoggingMode == --verbose ]]; then
+        cat << EOF 1>&2
+    where
+      $(option --remove)         Remove Day 0 Patch ($(value default):- $(default Apply Day 0 Patch))
+      $(option --operator)       Operator Namespace can be automatically identified unless there are multiple tenants in the cluster
+      $(option --skip)           Skip the check to determine if the service was already patched
+      $(option --plan)           Create script file with commands for review
+
+      $(option --load)           Load Private Registry Host with Patch Images
+      $(option --Auth)           Authentication file with credentials to access the the image repositories, or provide
+      $(option --as)             As User
+      $(option --with)           With Password
+      $(option --entitlement)    ICR Entitlement Key
+
+EOF
+        [[ -z $HiddenOption ]] || cat << EOF 1>&2
+      $(option --configuration)  Query Patch Configuration
+
+EOF
+        cat << EOF 1>&2
+      $(option --Log)            Log File
+      $(option --yes)            Bypass Confirmation
+      $(option --monochrome)     Monochrome Logging
+      $(option --verbose)        Verbose Execution
+EOF
+        [[ -z $HiddenOption ]] || cat << EOF 1>&2
+      $(option --terse)          Terse Execution
+      $(option --Hidden)         Show Hidden options
+EOF
+        cat << EOF 1>&2
+
+      $(option --help)           Print this usage help
+
+Assumptions:
+  Already logged into OpenShift Cluster
+  Script will deploy jq, podman and skopeo if missing
+  Execute Script to apply day-0 patch post install or upgrade but before Postgres Migration
+
+Recommendation:
+  Execute the script in the background with nohup option and redirect standard out to a file for tailing
+  nohup ./$(basename $0) --yes > Redirected.Standard.Out.file &
+
+Reference:
+  https://www.ibm.com/support/pages/node/7236425
+
+EOF
+    fi
+    exit $?
+}
+
+#*------------------------------------------------------------
+#* Log Usage
+#*    1: Message
+#*------------------------------------------------------------
+
+usage () {
+    echo 1>&2
+    fail "$1"
+    echo 1>&2
+    showHelp 1
+}
+
+#*------------------------------------------------------------
+#* Check Parameter
+#*    1: Name of Option
+#*    2: Name of Value
+#*    3: Value specified
+#*------------------------------------------------------------
+
+checkParameter () {
+    [[ -z $3 || $(echo $3 | cut -c1,1) == - ]] && usage "--$1 <$2> not specified"
+}
+
+#*------------------------------------------------------------
+#* Parse Options
+#*------------------------------------------------------------
+
+parseOptions () {
+    unset OperatorNS InstanceNS Skip Plan PrivateRegistry AsUser WithPassword EntitlementKey AuthFile BypassConfirmation Monochrome _LoggingMode
+    _Action=applyPatch
+    for opt in $*; do
+        case $1 in
+            -r | --remove)                                                                       _Action=removePatch;         shift;;
+            -o | --operator)      checkParameter operator namespace $2; OperatorNS=$2;                                        shift 2;;
+            -s | --skip)                                                Skip=true;                                            shift;;
+            -p | --plan)                                                Plan=true;                                            shift;;
+
+            -l | --load)          checkParameter load host $2;          PrivateRegistry=$2;      _Action=loadPrivateRegistry; shift 2;;
+            -a | --as)            checkParameter as user $2;            AsUser=$2;                                            shift 2;;
+            -w | --with)          checkParameter with password $2;      WithPassword=$2;                                      shift 2;;
+            -e | --entitlement)   checkParameter entitlement key $2;    EntitlementKey=$2;                                    shift 2;;
+            -A | --Auth)          checkParameter Auth file $2;          AuthFile=$2;                                          shift 2;;
+
+            -c | --configuration)                                                                _Action=queryConfiguration;  shift;;
+
+            -L | --Log)           checkParameter Log file $2;           LogFile=$2;                                           shift 2;;
+            -y | --yes)                                                 BypassConfirmation=true;                              shift;;
+            -m | --monochrome)                                          Monochrome=true;                                      shift;;
+            -v | --verbose)                                             _LoggingMode=--verbose;                               shift;;
+            -t | --terse)                                               _LoggingMode=--terse;                                 shift;;    # Hidden Option
+            -H | --Hidden)                                              HiddenOption=true;                                    shift;;    # Hidden Option
+
+            -h | --help)                                                                         _Action=showHelp;            shift;;
+            -u | --usage)                                                                        _Action=showHelp;            shift;;
+            *) break;;
+        esac
+    done
+
+    [[ $# -ne 0 ]] && usage "Invalid option $1"
+    [[ $_Action == showHelp ]] && showHelp 0
+
+    [[ $_Action == queryConfiguration ]] && return 0
+
+    if [[ -z $LogFile ]]; then
+        LogFile=$(dirname $0)
+        [[ $LogFile == . ]] || cd $LogFile
+        [[ $(pwd) == / ]] || LogFile=$(pwd)
+        case $_Action in
+            loadPrivateRegistry) LogFile+="/Load.Private.Registry.log";;
+            applyPatch)          LogFile+="/Apply.Day0.Patch.log";;
+            removePatch)         LogFile+="/Remove.Day0.Patch.log";;
+        esac
+    fi
+    if [[ $_Action == loadPrivateRegistry ]]; then
+        if [[ -z $AuthFile ]]; then
+            [[ -z $AsUser         ]] && abort "As User not specified"
+            [[ -z $WithPassword   ]] && abort "With Password not specified"
+            [[ -z $EntitlementKey ]] && abort "ICR Entitlement Key not specified"
+        fi
+        ActionName="Load Private Registry with Patch Images"
+    elif [[ $_Action == applyPatch ]]; then
+        ActionName="Apply Day 0 Patch"
+    elif [[ $_Action == removePatch ]]; then
+        ActionName="Remove Day 0 Patch"
+    fi
+
+    if [[ -z $Plan ]]; then
+        rm -f $LogFile
+        return 0
+    fi
+
+    Plan=$(sed -e "s/.log$/.Plan.sh/" <<< $LogFile)
+    cat << EOF > $Plan
+#!/bin/bash
+
+# $ActionName
+# Location: $(hostname -f):$Plan
+# Generated by $(basename $0) on $(date +"%Y-%m-%d %H:%M %Z")
+
+EOF
+    chmod 755 $Plan
+}
+
+#*------------------------------------------------------------
+#* Initialize Patch Environment
+#*------------------------------------------------------------
+
+initialize () {
+    log "Initialize Patch Environment"
+
+    local Utility="JSON Processor (jq) Utility"
+    info "Checking for $Utility"
+    [[ -z $(which jq 2>/dev/null) ]] && abortOnFail "Configure $Utility" "yum install -y jq"
+
+    if [[ $_Action == loadPrivateRegistry ]]; then
+        Utility="Podman Utility"
+        info "Checking for $Utility"
+        [[ -z $(which podman 2>/dev/null) ]] && abortOnFail "Configure $Utility" "yum install -y podman --allowerasing"
+
+        Utility="Skopeo Utility"
+        info "Checking for $Utility"
+        [[ -z $(which skopeo 2>/dev/null) ]] && abortOnFail "Configure $Utility" "yum install -y skopeo --allowerasing"
+    fi
+
+    info "Checking for Openshift Client"
+    which oc >> /dev/null 2>&1 || abort "Openshift Client not found"
+
+    info "Checking if logged in via Openshift Client"
+    oc whoami >> /dev/null 2>&1 || abort "Not logged in via Openshift Client"
+
+    Release=5.2.0
+
+    if [[ -z $OperatorNS ]]; then
+        OperatorNS=$(oc get Subscription.operators.coreos.com -A 2> /dev/null | awk '{if($2==CPD) print $1}' CPD=cpd-operator)
+        [[ $(wc -w <<< $OperatorNS) -eq 0 ]] && abort "Could not identify Operator Namepsace"
+        [[ $(wc -w <<< $OperatorNS) -gt 1 ]] && abort "Multiple tenants found. Please specify Operator Namepsace"
+    else
+        oc get Subscription.operators.coreos.com cpd-operator --namespace $OperatorNS >/dev/null 2>&1 || abort "Incorrect Operator Namespace $OperatorNS specified"
+    fi
+
+    for Namespace in $(oc get ConfigMap namespace-scope --namespace $OperatorNS --output jsonpath='{.data.namespaces}' | sed -e "s/,/ /g"); do
+        oc get ZenService lite-cr --namespace $Namespace >/dev/null 2>&1 || continue
+        InstanceNS=$Namespace
+        break
+    done
+    [[ -z $InstanceNS ]] && abort "Could not identify Instance Namepsace"
+}
+
+#*------------------------------------------------------------
+#* List Image Digests
+#*
+#* <Kind>|<Type>|<Registry>|<Path>|<Name>|<Tag>|<Digest>
+#*
+#* where:
+#*     <Kind>: Custom Resource Kind
+#*     <Type>: Hotfix, GA
+#*     <Registry>: Registry Host
+#*     <Path>: Image Path
+#*     <Name>: Image Name
+#*     <Tag>: Image Tag
+#*     <Digest>: Image Digest
+#*------------------------------------------------------------
+
+listImageDigests () {
+    cat << EOF | grep -v "^#" | sed '/^\s*$/d'
+CCS|Hotfix|icr.io|cpopen|ibm-cpd-ccs-operator|11.0.0-20250607.170340|eb16562708693b39189f5720a0f90ec76941aa67977d079fd60d5b9594b4e27d
+CCS|Hotfix|icr.io|cpopen|ibm-cpd-ccs-operator-bundle|11.0.0-20250607.170340|3c0aef77beaedac273f3515d26dff01e0f1d904ff550b960ae1a8a7161161e3d
+CCS|Hotfix|icr.io|cpopen|ibm-cpd-ccs-operator-catalog|11.0-20250607.170340|e4b979d3f50440075b6f90630cc3fe2605233f3cc0cea2d312191655cf41dd18
+CCS|GA|icr.io|cpopen|ibm-cpd-ccs-operator-catalog|11.0-20250605.130237|8577a8c9bc0c7cfcb44e6c4539380313e769e98cf4f860a066526e6397fb0fee
+
+CCS|Hotfix|cp.icr.io|cp/cpd|catalog_master|2.0.0-20250606003349-daec6a30|8888454ef284564b0d76841e90a3c1a08b4357ac64845cbcf01e586a72373d97
+CCS|Hotfix|cp.icr.io|cp/cpd|catalog-api-aux_master|2.0.0-20250606003349-daec6a30|afd19ba933b456b6aa98f79d7666d9b5b668480d34522a1f43b9a9b95c642acc
+CCS|Hotfix|cp.icr.io|cp/cpd|catalog-api-jobs|1.0.0-2025065925-eab326e78720|f855e89c7e72e0d569220fd5bcf7f8a42e13fc53b3dff97b3401d72e69d3125c
+CCS|Hotfix|cp.icr.io|cp/cpd|dc-main|1.13.301|8a3f23933774310b4f0e6c0f3903c60c065334cb0e9f3edbd578ba3b1d8258b9
+CCS|Hotfix|cp.icr.io|cp/cpd|portal-catalog|2.5.306|5806f7323c5da3485eae2d7573e657b6cd8304322c6f0ee642702a229d141823
+CCS|Hotfix|cp.icr.io|cp/cpd|portal-job-manager|5.2.0.902|2a8c1d0265d12d9b3b01f78732a994e3728a0aa5102bc37cd639c418264f1072
+CCS|Hotfix|cp.icr.io|cp/cpd|wdp-connect-connection|11.2.164|ca740f0828a0fbb4c2945df44f2c729c353b4b2811e5fd21bc0aa366042fa38c
+CCS|Hotfix|cp.icr.io|cp/cpd|wdp-connect-connector|11.2.164|6e300425bede8b21f0ce81abff1bc2cd4449fd60504d007c68656dbcd1084401
+CCS|Hotfix|cp.icr.io|cp/cpd|wdp-connect-flight-svc|11.2.164|4c485a2bebc5a7294511dbd05bbbeef8844a8d0f89611cc2ed4e2539c92c8d5d
+CCS|Hotfix|cp.icr.io|cp/cpd|wkc-search|5.2.60|431661c99a4373774ecf8f13ba41e149fe6d3afd3d93ecbd00431b78b9b26a5f
+
+DataLineage|Hotfix|icr.io|cpopen|ibm-cpd-datalineage-operator|v5.2.94|a644c0b5b1a0d03dd7afffb5fd6efc86a94f982a1e7d41171d928c1ee798e4eb
+DataLineage|Hotfix|icr.io|cpopen|ibm-cpd-datalineage-operator-bundle|v5.2.94|d301cb41ed6d87cb849d03e2873aa26b584a3b567542cdbed45e920033d3de55
+DataLineage|Hotfix|icr.io|cpopen|ibm-cpd-datalineage-operator-catalog|v5.2.94|30756888d5dafa1a9c8760169f589678cab32f5dacd0c482f9cfca0cdf850fa3
+DataLineage|GA|icr.io|cpopen|ibm-cpd-datalineage-operator-catalog|v5.2.90|62e70ad13a40de9d9417fcb45ca5f86cc667f6f703f388556b8555b95fcdb382
+
+DataLineage|Hotfix|cp.icr.io|cp/cpd|lineage-ui|5.2.306|4250455e341427d8b892f2969b7ee63c058aee37be8bbd360b4115c8e5ae2782
+DataLineage|Hotfix|cp.icr.io|cp/cpd|lineage-scanner-worker|5.2.1|1869ae2c9b8d77bb9bacf5349e540a348e12a3ce40de7dc4050e0760df07bfd5
+
+DataSift|Hotfix|icr.io|cpopen|ibm-cpd-datasift-operator|v5.2.207|f29e4cdd98f50b13647840ecccf3b9d75792e74a7adb432405543deedc284b62
+DataSift|Hotfix|icr.io|cpopen|ibm-cpd-datasift-operator-bundle|v5.2.207|51625dafab9e93eaf5465e6d3ffe2502d786cc914ee5ee466a8d9cde03476068
+DataSift|Hotfix|icr.io|cpopen|ibm-cpd-datasift-operator-catalog|v5.2.207|1c74503693987b5d62c8efbc8e76331db53dbc43c36592671d4c881593e0a777
+DataSift|GA|icr.io|cpopen|ibm-cpd-datasift-operator-catalog|v5.2.199|9b991779c803f84e3ba8d63906d49201d4d465fb250a44669eabd4219f971449
+
+DataSift|Hotfix|cp.icr.io|cp/cpd|datasift-api|1.0.1093|fe865c4b2f1707210f04841ef0c08bb85dcb896ca4b1f679cf9a12d11dc25cbf
+DataSift|Hotfix|cp.icr.io|cp/cpd|datasift-ui|1.0.768|0cc1851d2bfafa7af3f15eb1383b07d85f7cfa959c053edcade65f825dcf926f
+DataSift|Hotfix|cp.icr.io|cp/cpd|action-connectors|1.4.2|f04a190445002354d8250cddbc6f0156663ca468721487c710f925a61b795c24
+DataSift|Hotfix|cp.icr.io|cp/cpd|wdp-connect-adapter-appconnect-flight|0.1.19|71548b28d0655dcd085208ef25f36036d69ce64225fcc3a5b0b4c7722ddbb7ad
+
+DP|Hotfix|icr.io|cpopen|ibm-cpd-dp-operator|v10.0.2454|d8d8b6055229146e828dd1aede1b932d8ab1c0fd12c047a594ee982ccef99e1b
+DP|Hotfix|icr.io|cpopen|ibm-cpd-dp-operator-bundle|v10.0.2454|bfcbfdfe59720f84ffe842531934d2530002c8a64ed3b791ddc7f91340b3c54c
+DP|Hotfix|icr.io|cpopen|ibm-cpd-dp-operator-catalog|v10.0.2454|b2c659ef92d7509c1dcc247ce48b00e82019bfac723bf06f7e419d3432d90c9c
+DP|GA|icr.io|cpopen|ibm-cpd-dp-operator-catalog|v10.0.2451|1cf226c804591328d48717baa94a0539d96097a70600626e5dfdb80cad0102c0
+
+MantaFlow|Hotfix|cp.icr.io|cp/cpd|manta-admin-gui|42.12.5|d2ce169f2308810729701046589741a7b625ef2f87ac14b52a4a92bd071f5518
+MantaFlow|Hotfix|cp.icr.io|cp/cpd|manta-configuration-service|42.12.5|9e1c269bcb0b109f295600988a4ee23be5a0f6a56c5a448e2c4b207f100beb11
+MantaFlow|Hotfix|cp.icr.io|cp/cpd|manta-dataflow|42.12.5|d3e2e263b4bafa46056a0f6fc2a43dbb699e21579427e621df584d121a5f6302
+MantaFlow|Hotfix|cp.icr.io|cp/cpd|manta-flow-agent|42.12.5|0859ab21f4bb969925cd1c4bb01f8bb6f6405cfc6e4d9ff15f3fd82f084425e2
+MantaFlow|Hotfix|cp.icr.io|cp/cpd|manta-init-migrate-neo4j-5|42.12.5|cb66a423ce80b19a602da9446eebc3381a6ab8565336185021f1bb7ef4445c47
+MantaFlow|Hotfix|cp.icr.io|cp/cpd|manta-init-volumes-merge|42.12.5|070fa64ef3452717d1853ae02436636e97dc004649ed76fa61d0a737f1175c62
+
+WatsonxDataIntelligence|Hotfix|icr.io|cpopen|ibm-cpd-watsonx-dataintelligence-operator|v2.2.105|7389d9f29c7f2a6a12b328ab98e32bfaa652151f09cc17734cf93acd5e7d53e9
+WatsonxDataIntelligence|Hotfix|icr.io|cpopen|ibm-cpd-watsonx-dataintelligence-operator-bundle|v2.2.105|700c5c0128d2a4bb1c58d5e62cfca3037d8e1463ef9b077596bf288f9b67f649
+WatsonxDataIntelligence|Hotfix|icr.io|cpopen|ibm-cpd-watsonx-dataintelligence-operator-catalog|v2.2.105|6568502c97774493d5b586b8103ee31652e56fbf5a7bced9d1b936c87f53f0c3
+WatsonxDataIntelligence|GA|icr.io|cpopen|ibm-cpd-watsonx-dataintelligence-operator-catalog|v2.2.100|48fc285ae783c45cb1fd7b654c8daac1da9a30c68763d726731ffe33ace1ec9d
+
+WKC|Hotfix|icr.io|cpopen|ibm-cpd-wkc-operator|v5.2.245|17261183886acc29a588c5c75eac6ef8ec4046480cf1c867004e606410038e04
+WKC|Hotfix|icr.io|cpopen|ibm-cpd-wkc-operator-bundle|v5.2.245|59b813ad155ee5468446b78acf7d49f42c6729ebe0748e9083d95fec529d1564
+WKC|Hotfix|icr.io|cpopen|ibm-cpd-wkc-operator-catalog|v5.2.245|dc8b7664ebc98216520cf5093ae80ce129f4f069aed1f7095ae863467d930361
+WKC|GA|icr.io|cpopen|ibm-cpd-wkc-operator-catalog|v5.2.215|74adf4fa326f635ed372d59cfb1c0569d45ba15f5da232f68f055b8b0018ccd8
+
+WKC|Hotfix|cp.icr.io|cp/cpd|metadata-discovery|5.2.14|76b266822fa67e119f424124ef5206a8e9fcf7e9135753eeb307e95f8ea9d89d
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-data-rules|520.0.91|1ad5ebe6c61828138900f9c03f6d280088a1e36cfe1c2809f731b0c5c08ccb3d
+WKC|Hotfix|cp.icr.io|cp/cpd|wdp-profiling|520.0.45|1f05909dddaa64531d1e944edd589d26ec4bb378eef3e5913144bb17f3cf8df0
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-gov-ui|5.2.339|b5dc5a811bdc9490f1901da1a58ba276e6fc965c675e8e999946f45be2be0a8b
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-metadata-imports-ui|5.2.722|2b8c825fc5fbc4fd0f0d89b770ee6c424e079339e3f7d9ecbe6a510857be1e43
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-glossary-service|5.2.44|adae189100f0c29a2bf9f6da2d70cc5ae535d94254e5c751f2d0b02efd31ef62
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-mde-service-manager|1.19.210|68a323ddfd05a1feab45df0d0c68e5a0f2ab0baa1c8fc6d65e77dafdb3887a27
+WKC|Hotfix|cp.icr.io|cp/cpd|term-assignment-service|7.1.3|10f8c3e53daff786fa5d1fa86bf2e7b1ded2de3e928da6414b18143afa455b5a
+WKC|Hotfix|cp.icr.io|cp/cpd|dp-transform|5.2.4|426a2cce30e1531472460bbd0d9564a88c63290cf08d73a2ff73fc20c1a256a6
+WKC|Hotfix|cp.icr.io|cp/cpd|data-privacy|5.2.10|56521083f1a7c7e87074f501b263c73e7f6cb020629b04394d57bc3df6a3f6c5
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-data-lineage-rest|5.3.81|c3670c7d11c5acaa9cb3b8ba6f978d9bc8e9e3763d1fbdadd09abd5547bb35ba
+WKC|Hotfix|cp.icr.io|cp/cpd|wdp-kg-ingestion-rest|5.3.100|760cb33d2fa0b2ad46d67934e274265612952bb5caef495912030b66707b65ca
+WKC|Hotfix|cp.icr.io|cp/cpd|profiling-template|5.1.57|503933987ce65a0ecec6449b2009387d25a1188c057d5b6aff9cd6ace46dd8c7
+WKC|Hotfix|cp.icr.io|cp/cpd|wkc-db2-postgres-data-migration|5.2.189-amd64|3ad04a15b3e9e647394fe5fe37a88bd8eb99e1b56e48713712a75aa4e200afaa
+EOF
+}
+
+#*------------------------------------------------------------
+#* Query Image Digests
+#*------------------------------------------------------------
+
+queryImageDigests () {
+    echo
+    log "$(boldBlue Image Digests)\n"
+
+    local Format=" %-34s  %-17s  %-20s  %-21s  %-60s  %-41s  %-75s\n"
+    [[ $Monochrome ]] && Format=" %-23s  %-6s  %-9s  %-10s  %-49s  %-30s  %-64s\n"
+    printf "  $Format" "$(bold Resource Kind)" $(bold Type)   $(bold Registry) "$(bold Image Path)" "$(bold Image Name)" "$(bold Image Tag)"  "$(bold Image Digest)"
+    printf "  $Format"  $(bold $(dashes 23))   $(bold ------) $(bold ---------) $(bold ----------)   $(bold $(dashes 49)) $(bold $(dashes 30)) $(bold $(dashes 64))
+    while IFS= read -r ImageDigest; do
+        printf "  $Format" $(normal $(cut -d'|' -f1 <<< $ImageDigest)) \
+                           $(normal $(cut -d'|' -f2 <<< $ImageDigest)) \
+                           $(normal $(cut -d'|' -f3 <<< $ImageDigest)) \
+                           $(normal $(cut -d'|' -f4 <<< $ImageDigest)) \
+                           $(normal $(cut -d'|' -f5 <<< $ImageDigest)) \
+                           $(normal $(cut -d'|' -f6 <<< $ImageDigest)) \
+                           $(normal $(cut -d'|' -f7 <<< $ImageDigest))
+    done < <(listImageDigests)
+}
+
+#*------------------------------------------------------------
+#* List Patches
+#*
+#* <Kind>|<Version>|<Status>|<Subscription>
+#*
+#* where:
+#*     <Kind>: Custom Resource Kind
+#*     <Version>: Custom Resource Version
+#*     <Status>: Status Field
+#*     <Subscription>: Subscription Name
+#*------------------------------------------------------------
+
+listPatches () {
+    cat << EOF | grep -v "^#" | sed '/^\s*$/d'
+CCS|11.0.0|ccsStatus|ibm-cpd-ccs-operator
+WKC|5.2.0|wkcStatus|ibm-cpd-wkc-operator-catalog-subscription
+DataLineage|5.2.0|datalineageStatus|ibm-cpd-datalineage-operator-catalog-subscription
+DataSift|5.2.0|datasiftStatus|ibm-cpd-datasift-operator-catalog-subscription
+DP|5.2.0|dpStatus|ibm-cpd-dp-operator-catalog-subscription
+MantaFlow|42.12.0|status|
+WatsonxDataIntelligence|2.2.0|watsonxdataintelligenceStatus|ibm-cpd-watsonx-dataintelligence-operator-catalog-subscription
+EOF
+}
+
+#*------------------------------------------------------------
+#* Query Patches
+#*------------------------------------------------------------
+
+queryPatches () {
+    echo
+    log "$(boldBlue Patches)\n"
+
+    local Format=" %-34s  %-18s  %-40s  %-73s\n"
+    [[ $Monochrome ]] && Format=" %-23s  %-7s  %-29s  %-62s\n"
+    printf "  $Format" "$(bold Resource Kind)" $(bold Version) "$(bold Status Field)" "$(bold Subscription Name)"
+    printf "  $Format"  $(bold $(dashes 23))   $(bold -------)  $(bold $(dashes 29))   $(bold $(dashes 62))
+    while IFS= read -r Patch; do
+        printf "  $Format" $(normal $(cut -d'|' -f1 <<< $Patch)) \
+                           $(normal $(cut -d'|' -f2 <<< $Patch)) \
+                           $(normal $(cut -d'|' -f3 <<< $Patch)) \
+                           $(normal $(cut -d'|' -f4 <<< $Patch)) 
+    done < <(listPatches)
+}
+
+#*------------------------------------------------------------
+#* Load Images
+#*    1: Resource Kind
+#*------------------------------------------------------------
+
+loadImages () {
+    local ResourceKind=$1
+    info "Copy Hotfix Images for $ResourceKind" force
+    while IFS= read -r ImageDigest; do
+        local SourceRegistry=$(cut -d'|' -f3 <<< $ImageDigest)
+        local ImagePath=$(cut -d'|' -f4 <<< $ImageDigest)
+        local ImageName=$(cut -d'|' -f5 <<< $ImageDigest)
+        local ImageDigest=$(cut -d'|' -f7 <<< $ImageDigest)
+        local Outcome2Achieve="Copy $ImageName to Private Registry"
+        info "  $Outcome2Achieve" force
+        if [[ -z $Plan ]]; then
+            cat << EOF >> $LogFile
+
+$(logCommand $Outcome2Achieve)$(echo -e $(getColor Purple))
+skopeo copy --all \\
+    --authfile "$AuthFile" \\
+    --dest-tls-verify=false \\
+    --src-tls-verify=false \\
+    docker://$SourceRegistry/$ImagePath/$ImageName@sha256:$ImageDigest \\
+    docker://$PrivateRegistry/$ImagePath/$ImageName@sha256:$ImageDigest
+$(echo -e $(getColor None))
+EOF
+            skopeo copy --all \
+                --authfile "$AuthFile" \
+                --dest-tls-verify=false \
+                --src-tls-verify=false \
+                docker://$SourceRegistry/$ImagePath/$ImageName@sha256:$ImageDigest \
+                docker://$PrivateRegistry/$ImagePath/$ImageName@sha256:$ImageDigest >> $LogFile 2>&1 || abort "Failed to $Outcome2Achieve"
+        else
+            cat << EOF >> $Plan
+
+# $Outcome2Achieve
+skopeo copy --all \\
+    --authfile "$AuthFile" \\
+    --dest-tls-verify=false \\
+    --src-tls-verify=false \\
+    docker://$SourceRegistry/$ImagePath/$ImageName@sha256:$ImageDigest \\
+    docker://$PrivateRegistry/$ImagePath/$ImageName@sha256:$ImageDigest
+EOF
+        fi
+    done < <(listImageDigests | awk -F'|' '{if($1==Kind && $2==Type) print $0}' Kind=$ResourceKind Type=Hotfix)
+}
+
+#*------------------------------------------------------------
+#* Load Private Registry
+#*------------------------------------------------------------
+
+loadPrivateRegistry () {
+    log "$ActionName"
+    [[ -z $Plan ]] && info "Track progress via log file $(basename $LogFile)" force
+    local CurrentRelease=$(oc get Ibmcpd ibmcpd-cr --namespace $InstanceNS --output jsonpath='{.status.currentVersion}')
+    [[ $CurrentRelease == $Release ]] || fail "IBM Cloud Pak for Data Cluster $CurrentRelease instance is not at the expected $Release level"
+
+    if [[ -z $AuthFile ]]; then
+        AuthFile="$([[ -z $Plan ]] && dirname $LogFile || dirname $Plan)/Authentication.json"
+        podman login $PrivateRegistry --username $AsUser --password $WithPassword --tls-verify=false > /dev/null 2>&1 ||\
+            abort "Failed to Login to Private Registry, $PrivateRegistry"
+        podman login cp.icr.io --username cp --password $EntitlementKey --tls-verify=false > /dev/null 2>&1 ||\
+            abort "Failed to Login to cp.icr.io"
+        info "  Generate Authentication File, $AuthFile"
+        jq --null-input \
+           --arg EntitlementAuth $(echo -n "cp:$EntitlementKey" | base64 -w0) \
+           --arg PrivateRegistry $PrivateRegistry \
+           --arg PrivateRegistryAuth $(echo -n "$AsUser:$WithPassword" | base64 -w0) \
+           '.auths += {($PrivateRegistry):
+                        {"auth":  $PrivateRegistryAuth,
+                         "email": "unused"},
+                       "cp.icr.io":
+                        {"auth":  $EntitlementAuth,
+                         "email": "unused"}}' > $AuthFile
+        cat << EOF >> $LogFile
+
+$(logContent Authentication File, $AuthFile)$(echo -e $(getColor Purple))
+$(jq --color-output . $AuthFile)
+$(echo -e $(getColor None))
+EOF
+    else
+        for Registry in $PrivateRegistry cp.icr.io; do
+            local PullSecret=$(jq --raw-output --arg Registry $Registry '.auths | .[$Registry].auth' $AuthFile | base64 -d)
+            podman login $Registry --username $(cut -d':' -f1 <<< $PullSecret) --password $(cut -d':' -f2 <<< $PullSecret) --tls-verify=false > /dev/null 2>&1 ||\
+                abort "Failed to Login to Registry, $Registry using the information from $AuthFile"
+        done
+    fi
+
+    while IFS= read -r Patch; do
+        local ResourceKind=$(cut -d'|' -f1 <<< $Patch)
+        local SubscriptionName=$(cut -d'|' -f4 <<< $Patch)
+        if [[ -z $SubscriptionName ]]; then
+            for ResourceName in $(oc get $ResourceKind --namespace $InstanceNS --output name 2>/dev/null | cut -d'/' -f2); do
+                oc get $ResourceKind $ResourceName --namespace $InstanceNS >/dev/null 2>&1 || continue
+                loadImages $ResourceKind
+                break
+            done
+        else
+            oc get Subscription.operators.coreos.com $SubscriptionName --namespace $OperatorNS >/dev/null 2>&1 || continue
+            loadImages $ResourceKind
+        fi
+    done < <(listPatches)
+}
+
+#*------------------------------------------------------------
+#* Wait for Reconcile to Complete
+#*    1: Resource Kind
+#*    2: Resource Name
+#*------------------------------------------------------------
+
+wait4Reconcile2Complete () {
+    local ResourceKind=$1
+    local ResourceName=$2
+    local Counter=0
+    while [[ $(oc get $ResourceKind $ResourceName --namespace $InstanceNS \
+                  --output jsonpath="{.status.$StatusField}") == Completed ]]; do
+        (( Counter++ ))
+        [[ $(expr $Counter % 60) -eq 0 ]] && break
+        [[ $(expr $Counter % 12) -eq 0 ]] && info "  Still waiting for $ResourceKind $ResourceName reconcile to begin after $(expr $Counter / 6) mins ..." force
+        sleep 10
+    done
+    Counter=0
+    while [[ $(oc get $ResourceKind $ResourceName --namespace $InstanceNS \
+                  --output jsonpath="{.status.$StatusField}") != Completed ]]; do
+        (( Counter++ ))
+        [[ $(expr $Counter % 30) -eq 0 ]] && info "  Still waiting for $ResourceKind $ResourceName reconcile to complete after $(expr $Counter / 6) mins ..." force
+        sleep 10
+    done
+    pass "$ResourceKind $ResourceName has reconciled" force
+}
+
+#*------------------------------------------------------------
+#* Patch Operand
+#*    1: Resource Kind
+#*    2: Resource Version
+#*    3: Status Field
+#*------------------------------------------------------------
+
+patchOperand () {
+    local ResourceKind=$1
+    local ResourceVersion=$2
+    local StatusField=$3
+    local PatchType=json
+    local PatchJSON='{}'
+    if [[ $_Action == applyPatch ]]; then
+        PatchType=merge
+        while IFS= read -r ImageDigest; do
+            local ImageName=$(cut -d'|' -f5 <<< $ImageDigest)
+            local ImageTag=$(cut -d'|' -f6 <<< $ImageDigest)
+            local ImageDigest=$(cut -d'|' -f7 <<< $ImageDigest)
+            PatchJSON=$(jq --arg ImageName $ImageName \
+                           --arg PatchImage "sha256:$ImageDigest" \
+                           '.spec.image_digests += {($ImageName): $PatchImage}' <<< $PatchJSON |\
+                        jq --arg ImageName $ImageName \
+                           --arg ImageTag $ImageTag \
+                           '.spec.image_tags += {($ImageName): $ImageTag}')
+        done < <(listImageDigests | awk -F'|' '{if($1==Kind && $2==Type) print $0}' Kind=$ResourceKind Type=Hotfix)
+    else
+        PatchJSON=$(jq --null-input \
+                       '[{"op":   "remove",
+                          "path": "/spec/image_digests"},
+                         {"op":   "remove",
+                          "path": "/spec/image_tags"}]')
+    fi
+    for ResourceName in $(oc get $ResourceKind --namespace $InstanceNS --output name 2>/dev/null | cut -d'/' -f2); do
+        oc get $ResourceKind $ResourceName --namespace $InstanceNS >/dev/null 2>&1 || continue
+        local SpecVersion=$(oc get $ResourceKind $ResourceName --namespace $InstanceNS --output jsonpath='{.spec.version}' 2>/dev/null)
+        if [[ $SpecVersion != $ResourceVersion ]]; then
+            fail "Skip patching $ResourceKind $ResourceName as Spec Version $SpecVersion does not matched expected Spec Version $ResourceVersion"
+            continue
+        fi
+        local Outcome2Achieve="$ActionName $([[ $_Action == applyPatch ]] && echo to || echo from) $ResourceKind $ResourceName"
+        if [[ -z $Plan ]]; then
+            cat << EOF >> $LogFile
+
+$(logCommand $Outcome2Achieve)$(echo -e $(getColor Purple))
+oc patch $ResourceKind $ResourceName --namespace $InstanceNS --type $PatchType --patch '
+$(jq --color-output . <<< $PatchJSON)
+'
+$(echo -e $(getColor None))
+EOF
+            info "$Outcome2Achieve" force
+            oc patch $ResourceKind $ResourceName --namespace $InstanceNS \
+               --type $PatchType --patch $(jq --compact-output . <<< $PatchJSON) >> $LogFile 2>&1 || abort "Failed to $Outcome2Achieve"
+            pass "$Outcome2Achieve" force
+            wait4Reconcile2Complete $ResourceKind $ResourceName
+        else
+            cat << EOF >> $Plan
+
+# $Outcome2Achieve
+oc patch $ResourceKind $ResourceName --namespace $InstanceNS --type $PatchType --patch '
+$(jq . <<< $PatchJSON)
+'
+EOF
+        fi
+    done
+}
+
+#*------------------------------------------------------------
+#* Delete Subscription
+#*------------------------------------------------------------
+
+deleteSubscription () {
+    local ClusterServiceVersion=$(jq --raw-output .status.installedCSV <<< $SubscriptionJSON)
+    if [[ $ClusterServiceVersion == null ]]; then
+        local SpecName=$(jq --raw-output .spec.name <<< $SubscriptionJSON)
+        for Name4CSV in $(oc get ClusterServiceVersion --namespace $OperatorNS --output custom-columns=":metadata.name" --no-headers); do
+            [[ $Name4CSV =~ $SpecName\. ]] || continue
+            ClusterServiceVersion=$Name4CSV
+            break
+        done
+    fi
+
+    local Subscription=$(jq --raw-output .metadata.name <<< $SubscriptionJSON)
+    abortOnFail "Delete Subscription $Subscription" \
+                "oc delete Subscription.operators.coreos.com $Subscription --namespace $OperatorNS"
+
+    [[ $ClusterServiceVersion == null ]] && return 0
+    local ControlPlane=$(oc get ClusterServiceVersion $ClusterServiceVersion --namespace $OperatorNS \
+                            --output jsonpath='{.spec.install.spec.deployments[0].spec.selector.matchLabels.control-plane}' 2>/dev/null)
+
+    abortOnFail "Delete Cluster Service Version $ClusterServiceVersion" \
+                "oc delete ClusterServiceVersion $ClusterServiceVersion --namespace $OperatorNS"
+    local Counter=0
+    while [[ ! -z $(oc get Pod --selector control-plane=$ControlPlane --namespace $OperatorNS --no-headers 2> /dev/null) ]]; do
+        (( Counter++ ))
+        [[ $(expr $Counter % 30) -eq 0 ]] && abort "Subscription $Subscription still not deleted after $(expr $Counter / 6) mins"
+        [[ $(expr $Counter % 6) -eq 0 ]] && info "  Still waiting for Subscription $Subscription after $(expr $Counter / 6) mins ..." force
+        sleep 10
+    done
+}
+
+#*------------------------------------------------------------
+#* Patch Operator
+#*    1: Resource Kind
+#*    2: Resource Version
+#*    3: Status Field
+#*    4: Subscription Name
+#*------------------------------------------------------------
+
+patchOperator () {
+    local ResourceKind=$1
+    local ResourceVersion=$2
+    local StatusField=$3
+    local Subscription=$4
+    local SubscriptionJSON=$(oc get Subscription.operators.coreos.com $Subscription --namespace $OperatorNS --output json 2>/dev/null)
+    [[ -z $SubscriptionJSON ]] && return 0
+    local ClusterServiceVersion=$(jq --raw-output .status.installedCSV <<< $SubscriptionJSON)
+    local SpecName=$(jq --raw-output .spec.name <<< $SubscriptionJSON)
+    local CatalogSource=$(jq --raw-output .spec.source <<< $SubscriptionJSON)
+    local CatalogSourceJSON=$(oc get CatalogSource $CatalogSource --namespace $OperatorNS --output json)
+    local Image=$(jq --raw-output .spec.image <<< $CatalogSourceJSON)
+    local ImageName=$(cut -d'@' -f1 <<< $Image | awk -F'/' '{print $NF}')
+    local ImageType=$([[ $_Action == applyPatch ]] && echo Hotfix || echo GA)
+    local ImageDigest=$(listImageDigests | awk -F'|' '{if($1==Kind && $2==Type && $5==Name) print $7}' Kind=$ResourceKind Type=$ImageType Name=$ImageName)
+    local Artifact="Catalog Source $CatalogSource for Subscription $Subscription"
+    if [[ -z $Skip && $(cut -d':' -f2 <<< $Image) == $ImageDigest ]]; then
+        pass "  Found $Artifact is already patched. Skipping ..." force
+        return 0
+    fi
+    local Outcome2Achieve="$ActionName $([[ $_Action == applyPatch ]] && echo to || echo from) $Artifact"
+    local PatchJSON=$(jq --null-input \
+                         --arg Value "$(cut -d':' -f1 <<< $Image):$ImageDigest" \
+                         '. |= [{"op":   "replace",
+                                 "path": "/spec/image",
+                                 "value": $Value}]')
+    if [[ -z $Plan ]]; then
+        cat << EOF >> $LogFile
+
+$(logCommand $Outcome2Achieve)$(echo -e $(getColor Purple))
+oc patch CatalogSource $CatalogSource --namespace $OperatorNS --type json --patch '
+$(jq --color-output . <<< $PatchJSON)
+'
+$(echo -e $(getColor None))
+EOF
+        info "$Outcome2Achieve" force
+        oc patch CatalogSource $CatalogSource --namespace $OperatorNS \
+           --type json --patch $(jq --compact-output . <<< $PatchJSON) >> $LogFile 2>&1 || abort "Failed to $Outcome2Achieve"
+        local Counter=0
+        while [[ $(oc get CatalogSource $CatalogSource --namespace $OperatorNS \
+                      --output jsonpath='{.status.connectionState.lastObservedState}') == READY ]]; do
+            (( Counter++ ))
+            [[ $(expr $Counter % 12) -eq 0 ]] && break
+            [[ $(expr $Counter % 6) -eq 0 ]] && info "  Still waiting to $Outcome2Achieve to start after $(expr $Counter / 6) mins ..." force
+            sleep 10
+        done
+        info "  $Artifact reconciling after patching" force
+        Counter=0
+        while [[ $(oc get CatalogSource $CatalogSource --namespace $OperatorNS \
+                      --output jsonpath='{.status.connectionState.lastObservedState}') != READY ]]; do
+            (( Counter++ ))
+            [[ $(expr $Counter % 6) -eq 0 ]] && info "  Still waiting for $Artifact to reconcile after $(expr $Counter / 6) mins ..." force
+            sleep 10
+        done
+        pass "  $Artifact patched" force
+
+        deleteSubscription
+
+        Outcome2Achieve="Create Subscription $Subscription"
+        cat << EOS >> $LogFile
+
+$(logCommand $Outcome2Achieve)$(echo -e $(getColor Purple))
+cat << EOF | oc apply -f -
+$(jq --color-output \
+     'del(.metadata.annotations) |
+      del(.metadata.creationTimestamp) |
+      del(.metadata.generation) |
+      del(.metadata.resourceVersion) |
+      del(.metadata.uid) |
+      del(.status)' <<< $SubscriptionJSON)
+$(echo -e $(getColor Purple))EOF
+$(echo -e $(getColor None))
+EOS
+        local Attempt=1
+        while true; do
+            info "  $Outcome2Achieve" force
+            jq 'del(.metadata.annotations) |
+                del(.metadata.creationTimestamp) |
+                del(.metadata.generation) |
+                del(.metadata.resourceVersion) |
+                del(.metadata.uid) |
+                del(.status)' <<< $SubscriptionJSON | oc apply -f - >> $LogFile 2>&1 || abort "Fail to $Outcome2Achieve"
+            ClusterServiceVersion=null
+            unset CreatedCSV
+            Counter=0
+            while true; do
+                (( Counter++ ))
+                if [[ $ClusterServiceVersion == null ]]; then
+                    SubscriptionJSON=$(oc get Subscription.operators.coreos.com $Subscription --namespace $OperatorNS --output json 2>/dev/null)
+                    ClusterServiceVersion=$(jq --raw-output .status.installedCSV <<< $SubscriptionJSON)
+                fi
+                if [[ $ClusterServiceVersion != null && \
+                      $(oc get ClusterServiceVersion $ClusterServiceVersion --namespace $OperatorNS \
+                           --output jsonpath='{.status.phase}' 2>/dev/null) == Succeeded ]]; then
+                    CreatedCSV=true
+                    break
+                elif [[ $(expr $Counter % 36) -eq 0 ]]; then
+                    break
+                fi
+                [[ $(expr $Counter % 12) -eq 0 ]] && \
+                    info "  Still waiting for Cluster Service Version $ClusterServiceVersion to be ready after $(expr $Counter / 6) mins ..." force
+                sleep 10
+            done
+            [[ -z $CreatedCSV ]] || break
+            if [[ $ClusterServiceVersion == null ]]; then
+                for Name4CSV in $(oc get ClusterServiceVersion --namespace $OperatorNS --output custom-columns=":metadata.name" --no-headers); do
+                    [[ $Name4CSV =~ $SpecName\. ]] || continue
+                    ClusterServiceVersion=$Name4CSV
+                    break
+                done
+                [[ $ClusterServiceVersion == null ]] \
+                   && fail "Cluster Service Version $ClusterServiceVersion was not created within 6 mins" \
+                   || fail "Cluster Service Version $ClusterServiceVersion did not register with Subscription $Subscription within 6 mins"
+            else
+                fail "Cluster Service Version $ClusterServiceVersion did not report Succeeded within 6 mins"
+            fi
+            [[ $Attempt -eq 3 ]] && abort "Failed to create Subscription $Subscription even after 3 attempts"
+            deleteSubscription
+            (( Attempt++ ))
+        done
+        pass "  $Outcome2Achieve" force
+        [[ $_Action == applyPatch ]] && \
+           continueOnFail "Add label to Cluster Service Version $ClusterServiceVersion to indicate Day 0 Hotfix has been applied" \
+                          "oc label ClusterServiceVersion $ClusterServiceVersion support.operator.ibm.com/hotfix=true --namespace $OperatorNS"
+        for ResourceName in $(oc get $ResourceKind --namespace $InstanceNS --output name 2>/dev/null | cut -d'/' -f2); do
+            oc get $ResourceKind $ResourceName --namespace $InstanceNS >/dev/null 2>&1 || continue
+            wait4Reconcile2Complete $ResourceKind $ResourceName
+        done
+        [[ $_Action == applyPatch && $ResourceKind == WKC ]] && \
+           continueOnFail "Enable Unstructured Data Ingestion" \
+                          "oc set env deployment/wdp-kg-ingestion-service --namespace $InstanceNS kg_unstructured_data_enabled=true"
+    else
+        log "  $ActionName $Artifact"
+        cat << EOF >> $Plan
+# $Outcome2Achieve
+oc patch CatalogSource $CatalogSource --namespace $OperatorNS --type json --patch '
+$(jq . <<< $PatchJSON)
+'
+
+# Delete Subscription $Subscription
+oc delete Subscription.operators.coreos.com $Subscription --namespace $OperatorNS
+
+EOF
+        [[ $ClusterServiceVersion == null ]] || cat << EOF >> $Plan
+# Delete Cluster Service Version $ClusterServiceVersion
+oc delete ClusterServiceVersion $ClusterServiceVersion --namespace $OperatorNS
+
+EOF
+        cat << EOS >> $Plan
+# Create Subscription $Subscription
+cat << EOF | oc apply -f -
+$(jq 'del(.status) |
+      del(.metadata.annotations) |
+      del(.metadata.creationTimestamp) |
+      del(.metadata.generation) |
+      del(.metadata.resourceVersion) |
+      del(.metadata.uid)' <<< $SubscriptionJSON)
+EOF
+
+EOS
+        [[ $_Action == applyPatch ]] && cat << EOF >> $Plan
+# Add label to Cluster Service Version $ClusterServiceVersion to indicate Day 0 Hotfix has been applied
+oc label ClusterServiceVersion $ClusterServiceVersion support.operator.ibm.com/hotfix=true --namespace $OperatorNS
+
+EOF
+        [[ $_Action == applyPatch && $ResourceKind == WKC ]] && cat << EOF >> $Plan
+# Enable Unstructured Data Ingestion
+oc set env deployment/wdp-kg-ingestion-service --namespace $InstanceNS kg_unstructured_data_enabled=true
+
+EOF
+    fi
+}
+
+#*------------------------------------------------------------
+#* Apply Patch
+#*------------------------------------------------------------
+
+applyPatch () {
+    log "$ActionName"
+    [[ $(oc get Ibmcpd ibmcpd-cr --namespace $InstanceNS --output jsonpath='{.status.currentVersion}') == $Release ]] ||\
+        abort "IBM Cloud Pak for Data Cluster instance is not at the expected $Release level"
+    [[ -z $Plan ]] && info "Track progress via log file $(basename $LogFile)" force
+    while IFS= read -r Patch; do
+        local ResourceKind=$(cut -d'|' -f1 <<< $Patch)
+        local ResourceVersion=$(cut -d'|' -f2 <<< $Patch)
+        local StatusField=$(cut -d'|' -f3 <<< $Patch)
+        local SubscriptionName=$(cut -d'|' -f4 <<< $Patch)
+        if [[ -z $SubscriptionName ]]; then
+            patchOperand $ResourceKind $ResourceVersion $StatusField
+        else
+            patchOperator $ResourceKind $ResourceVersion $StatusField $SubscriptionName
+        fi
+    done < <(listPatches)
+}
+
+#*------------------------------------------------------------
+#* Main
+#*------------------------------------------------------------
+
+parseOptions $*
+
+if [[ $_Action == queryConfiguration ]]; then
+    queryImageDigests
+    queryPatches
+    echo
+else
+    initialize
+    if [[ -z $BypassConfirmation && -z $Plan ]]; then
+        cat << EOF
+
+Recommended to specify [$(option --yes)] option and execute this script in the
+background via nohup while redirecting standard out to a file of your choice.
+
+Do you want to $ActionName? Please confirm (Y/N)
+EOF
+        unset Response
+        while [[ ! "|Y|y|N|n|" =~ "|$Response|" ]]; do
+            read Response
+            [[ "|N|n|" =~ "|$Response|" ]] && abort "$ActionName"
+            [[ "|Y|y|" =~ "|$Response|" ]] && break
+            echo "Valid response is either Y or N"
+        done
+    fi
+    [[ $_Action == loadPrivateRegistry ]] && loadPrivateRegistry || applyPatch
+    [[ -z $Plan ]] && pass "$ActionName has been successfully completed" force
+    echo 
+    [[ -z $Plan ]] || cat $Plan
+fi
+
+exit 0
