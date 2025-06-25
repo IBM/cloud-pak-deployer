@@ -1,0 +1,70 @@
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_postgresql_project }}"
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
+# Based on
+# https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=ads-creating-automation-decision-services-database-secrets-without-running-provided-scripts
+- name: ADSDESIGNERDB DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        -- create user adsdesigner
+        CREATE ROLE adsdesigner WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- please modify location follow your requirement
+        CREATE TABLESPACE adsdesignerdb_tbs OWNER adsdesigner LOCATION '/bitnami/postgresql/tablespaces/adsdesignerdb_tbs';
+        GRANT CREATE ON TABLESPACE adsdesignerdb_tbs TO adsdesigner;
+
+        -- create database adsdesignerdb
+        CREATE DATABASE adsdesignerdb OWNER adsdesigner TABLESPACE adsdesignerdb_tbs TEMPLATE template0 ENCODING UTF8;
+        -- Connect to your database and create schema
+        \c adsdesignerdb;
+        CREATE SCHEMA IF NOT EXISTS ads AUTHORIZATION adsdesigner;
+        GRANT ALL ON SCHEMA ads TO adsdesigner;
+
+        -- create a schema for adsdesignerdb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE adsdesigner;
+        ALTER DATABASE adsdesignerdb SET search_path TO ads;
+        REVOKE CONNECT ON DATABASE adsdesignerdb FROM PUBLIC;
+      EOF"
+  register: command_status
+
+# Based on
+# https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=ads-creating-automation-decision-services-database-secrets-without-running-provided-scripts
+- name: ADSRUNTIMEDB DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        -- create user adsruntime
+        CREATE ROLE adsruntime WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- please modify location follow your requirement
+        CREATE TABLESPACE adsruntimedb_tbs OWNER adsruntime LOCATION '/bitnami/postgresql/tablespaces/adsruntimedb_tbs';
+        GRANT CREATE ON TABLESPACE adsruntimedb_tbs TO adsruntime;
+
+        -- create database adsruntimedb
+        CREATE DATABASE adsruntimedb OWNER adsruntime TABLESPACE adsruntimedb_tbs TEMPLATE template0 ENCODING UTF8;
+        -- Connect to your database and create schema
+        \c adsruntimedb;
+        CREATE SCHEMA IF NOT EXISTS ads AUTHORIZATION adsruntime;
+        GRANT ALL ON SCHEMA ads TO adsruntime;
+
+        -- create a schema for adsruntimedb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE adsruntime;
+        ALTER DATABASE adsruntimedb SET search_path TO ads;
+        REVOKE CONNECT ON DATABASE adsruntimedb FROM PUBLIC;
+      EOF"
+  register: command_status
