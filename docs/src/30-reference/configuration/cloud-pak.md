@@ -576,7 +576,6 @@ cp4ba:
           ads_runtime: true # Runtime (ADS)
         gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-configuring-generative-ai-secret
           apiKey: <watsonx_ai_api_key>
-          authUrl: https://iam.bluemix.net/identity/token
           mlUrl: https://us-south.ml.cloud.ibm.com
           projectId: <project_id>          
       content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
@@ -621,6 +620,10 @@ cp4ba:
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
           kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
+        gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai
+          apiKey: <watsonx_ai_api_key>
+          mlUrl: https://us-south.ml.cloud.ibm.com
+          projectId: <project_id>
   
   # Section for IBM Process mining
   pm:
@@ -737,8 +740,7 @@ Placed in `cp4ba.patterns.decisions_ads` key.
 | optional_components.ads_runtime          | Set to `true` to enable Runtime | Yes | true, false |
 | gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=services-configuring-generative-ai-secret | false  | Object |
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
-| gen_ai.authUrl          | Set to real value of your Watsonx.AI platform | false | Your real value |
-| gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
 | gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
 
 #### Content pattern properties
@@ -796,6 +798,10 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
 | optional_components.kafka          | Set to `true` to enable kafka service for workflow authoring. | Yes | true, false |
+| gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai | false  | Object |
+| gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
 
 ### Process Mining properties
 
