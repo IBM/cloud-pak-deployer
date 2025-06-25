@@ -7,10 +7,9 @@ spec:
   license:
     accept: true
   version: "{{ rpa_version }}"
+  blockStorageClass: "{{ rpa_block_storage_class_name }}"
+  fileStorageClass: "{{ rpa_storage_class_name }}"
   tls: {}
-  systemQueueProvider:
-    storage:
-      class: "{{ rpa_storage_class_name }}"      
   api:
     externalConnection:
       secretName: rpa-db
@@ -25,13 +24,6 @@ spec:
       server: "{{ rpa_mail_hostname }}"
       userSecret:
         secretName: rpa-smtp
-    storage:
-      hot:
-        size: 7Gi
-        class: "{{ rpa_storage_class_name }}"
-      archive:
-        size: 11Gi
-        class: "{{ rpa_storage_class_name }}"
   ui:
     replicas: 1
   ocr:
@@ -39,18 +31,18 @@ spec:
   antivirus:
     replicas: 1
     autoUpdateEnabled: true
-    template:
-      pod:
-        spec:
-          containers:
-            - name: clam-av-api
-              resources:
-                limits:
-                  ephemeral-storage: 1Gi # TODO last seen 2025-02-07 with 23.0.20 / 2.3.0, otherwise pod is evicted
-            - name: clam-av-scanner
-              resources:
-                limits:
-                  ephemeral-storage: 1Gi # TODO last seen 2025-02-07 with 23.0.20 / 2.3.0, otherwise pod is evicted
+#    template:
+#      pod:
+#        spec:
+#          containers:
+#            - name: clam-av-api
+#              resources:
+#                limits:
+#                  ephemeral-storage: 1Gi # TODO last seen 2025-02-07 with 23.0.20 / 2.3.0, otherwise pod is evicted
+#            - name: clam-av-scanner
+#              resources:
+#                limits:
+#                  ephemeral-storage: 1Gi # TODO last seen 2025-02-07 with 23.0.20 / 2.3.0, otherwise pod is evicted
   audit:
     forwardingEnabled: false
   nlp:
