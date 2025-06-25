@@ -23,6 +23,35 @@
       EOF"
   register: command_status
 
+- name: ADPGGDB DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        -- create user adpgg
+        CREATE ROLE adpgg WITH INHERIT LOGIN ENCRYPTED PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- please modify location follow your requirement
+        CREATE TABLESPACE adpggdb_tbs OWNER adpgg LOCATION '/bitnami/postgresql/tablespaces/adpggdb_tbs';
+        GRANT CREATE ON TABLESPACE adpggdb_tbs TO adpgg;
+
+        -- create database adpggdb
+        CREATE DATABASE adpggdb OWNER adpgg TABLESPACE adpggdb_tbs TEMPLATE template0 ENCODING UTF8;
+        -- Connect to your database and create schema
+        \c adpggdb;
+        CREATE SCHEMA IF NOT EXISTS adpgg AUTHORIZATION adpgg;
+        GRANT ALL ON SCHEMA adpgg TO adpgg;
+
+        -- create a schema for adpggdb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE adpgg;
+        ALTER DATABASE adpggdb SET search_path TO adpgg;
+        REVOKE CONNECT ON DATABASE adpggdb FROM PUBLIC;
+      EOF"
+  register: command_status
+
 - name: ADP proj DBs
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
