@@ -45,7 +45,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('roundcube_enabled').isOptional().mustBeOneOf([True, False])
     g('cerebro_enabled').isOptional().mustBeOneOf([True, False])
     g('akhq_enabled').isOptional().mustBeOneOf([True, False])
-    g('mongo_express_enabled').isOptional().mustBeOneOf([True, False])
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed
     if len(g.getErrors()) == 0:

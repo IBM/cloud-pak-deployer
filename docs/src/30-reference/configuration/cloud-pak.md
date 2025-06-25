@@ -663,9 +663,6 @@ cp4ba:
   # Set to false if you don't want to install (or remove) AKHQ
   akhq_enabled: true
 
-  # Set to false if you don't want to install (or remove) Mongo Express
-  mongo_express_enabled: true
-
   # Set to false if you don't want to install (or remove) phpLDAPAdmin
   phpldapadmin_enabled: true
 
@@ -834,6 +831,5 @@ The following properties are defined on the project level.
 | roundcube_enabled                         | Set to `true` to enable Roundcube. Client for mail. | Yes  | true, false |
 | cerebro_enabled                         | Set to `true` to enable Cerebro. Client for ElasticSearch in CP4BA. | Yes  | true, false |
 | akhq_enabled                         | Set to `true` to enable AKHQ. Client for Kafka in CP4BA. | Yes  | true, false |
-| mongo_express_enabled                         | Set to `true` to enable Mongo Express. Client for MongoDB. | Yes  | true, false |
 | phpldapadmin_enabled                         | Set to `true` to enable phpLDApAdmin. Client for OpenLDAP. | Yes  | true, false |
 | opensearch_dashboards_enabled                         | Set to `true` to enable OpenSearch Dashboards. Client for OpenSearch. | Yes  | true, false |
