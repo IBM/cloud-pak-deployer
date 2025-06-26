@@ -29,9 +29,20 @@
 
         -- create tablespace for gcddb
         CREATE TABLESPACE gcddb_tbs OWNER gcddb LOCATION '/bitnami/postgresql/tablespaces/gcddb_tbs';
+        GRANT CREATE ON TABLESPACE gcddb TO gcddb;
 
         -- create database gcddb
-        CREATE DATABASE gcddb OWNER gcddb TEMPLATE template0 ENCODING UTF8 TABLESPACE gcddb_tbs;
+        CREATE DATABASE gcddb OWNER gcddb TABLESPACE gcddb TEMPLATE template0 ENCODING UTF8;
+
+        -- Connect to your database and create schema
+        \c gcddb;
+        CREATE SCHEMA IF NOT EXISTS gcddb AUTHORIZATION gcddb;
+        GRANT ALL ON SCHEMA gcddb TO gcddb;
+
+        -- create a schema for gcddb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE gcddb;
+        ALTER DATABASE gcddb SET search_path TO gcddb;
         REVOKE CONNECT ON DATABASE gcddb FROM PUBLIC;
       EOF"
   register: command_status
@@ -58,9 +69,20 @@
 
         -- create tablespace for contentdb
         CREATE TABLESPACE contentdb_tbs OWNER contentdb LOCATION '/bitnami/postgresql/tablespaces/contentdb_tbs';
+        GRANT CREATE ON TABLESPACE contentdb_tbs TO contentdb;
 
         -- create database contentdb
-        CREATE DATABASE contentdb OWNER contentdb TEMPLATE template0 ENCODING UTF8 TABLESPACE contentdb_tbs;
+        CREATE DATABASE contentdb OWNER contentdb TABLESPACE contentdb_tbs TEMPLATE template0 ENCODING UTF8;
+
+        -- Connect to your database and create schema
+        \c contentdb;
+        CREATE SCHEMA IF NOT EXISTS contentdb AUTHORIZATION contentdb;
+        GRANT ALL ON SCHEMA contentdb TO contentdb;
+
+        -- create a schema for contentdb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE contentdb;
+        ALTER DATABASE contentdb SET search_path TO contentdb;
         REVOKE CONNECT ON DATABASE contentdb FROM PUBLIC;
       EOF"
   register: command_status

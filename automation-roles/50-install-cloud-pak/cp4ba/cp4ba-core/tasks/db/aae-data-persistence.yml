@@ -30,9 +30,20 @@
 
         -- create tablespace for aeos
         CREATE TABLESPACE aeos_tbs OWNER aeos LOCATION '/bitnami/postgresql/tablespaces/aeos_tbs';
+        GRANT CREATE ON TABLESPACE aeos_tbs TO aeos;
 
         -- create database aeos
-        CREATE DATABASE aeos OWNER aeos TEMPLATE template0 ENCODING UTF8 TABLESPACE aeos_tbs;
+        CREATE DATABASE aeos OWNER aeos TABLESPACE aeos_tbs TEMPLATE template0 ENCODING UTF8;
+
+        -- Connect to your database and create schema
+        \c aeos;
+        CREATE SCHEMA IF NOT EXISTS aeos AUTHORIZATION aeos;
+        GRANT ALL ON SCHEMA aeos TO aeos;
+
+        -- create a schema for aeos and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE aeos;
+        ALTER DATABASE aeos SET search_path TO aeos;
         REVOKE CONNECT ON DATABASE aeos FROM PUBLIC;
       EOF"
   register: command_status
