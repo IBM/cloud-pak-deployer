@@ -7,6 +7,14 @@
       - app=postgresql
   register: postgresql_pod
 
+- name: ADSDESIGNERDB DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir -p /bitnami/postgresql/tablespaces/adsdesignerdb_tbs
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
+
 # Based on
 # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=ads-creating-automation-decision-services-database-secrets-without-running-provided-scripts
 - name: ADSDESIGNERDB DB
@@ -37,6 +45,14 @@
         REVOKE CONNECT ON DATABASE adsdesignerdb FROM PUBLIC;
       EOF"
   register: command_status
+
+- name: ADSRUNTIMEDB DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir -p /bitnami/postgresql/tablespaces/adsruntimedb_tbs
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
 # Based on
 # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=ads-creating-automation-decision-services-database-secrets-without-running-provided-scripts
