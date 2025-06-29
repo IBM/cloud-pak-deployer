@@ -348,9 +348,9 @@ parseOptions () {
         [[ $LogFile == . ]] || cd $LogFile
         [[ $(pwd) == / ]] || LogFile=$(pwd)
         case $_Action in
-            loadPrivateRegistry) LogFile+="/Load.Private.Registry.log";;
-            applyPatch)          LogFile+="/Apply.Day0.Patch.log";;
-            removePatch)         LogFile+="/Remove.Day0.Patch.log";;
+            loadPrivateRegistry) LogFile+="/Load.Private.Registry.$$.log";;
+            applyPatch)          LogFile+="/Apply.Day0.Patch.$$.log";;
+            removePatch)         LogFile+="/Remove.Day0.Patch.$$.log";;
         esac
     fi
     if [[ $_Action == loadPrivateRegistry ]]; then
@@ -954,7 +954,8 @@ EOS
             oc get $ResourceKind $ResourceName --namespace $InstanceNS >/dev/null 2>&1 || continue
             wait4Reconcile2Complete $ResourceKind $ResourceName
         done
-        [[ $_Action == applyPatch && $ResourceKind == WKC ]] && \
+        [[ $_Action == applyPatch && $ResourceKind == WKC && \
+           ! -z $(oc get deployment/wdp-kg-ingestion-service --namespace $InstanceNS --no-headers 2> /dev/null) ]] && \
            continueOnFail "Enable Unstructured Data Ingestion" \
                           "oc set env deployment/wdp-kg-ingestion-service --namespace $InstanceNS kg_unstructured_data_enabled=true"
     else
@@ -991,7 +992,8 @@ EOS
 oc label ClusterServiceVersion $ClusterServiceVersion support.operator.ibm.com/hotfix=true --namespace $OperatorNS
 
 EOF
-        [[ $_Action == applyPatch && $ResourceKind == WKC ]] && cat << EOF >> $Plan
+        [[ $_Action == applyPatch && $ResourceKind == WKC && \
+           ! -z $(oc get deployment/wdp-kg-ingestion-service --namespace $InstanceNS --no-headers 2> /dev/null) ]] && cat << EOF >> $Plan
 # Enable Unstructured Data Ingestion
 oc set env deployment/wdp-kg-ingestion-service --namespace $InstanceNS kg_unstructured_data_enabled=true
 
