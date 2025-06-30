@@ -1,0 +1,32 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/1.0?topic=configuration-operational-datastore
+# Username change is not described
+- name: Prepare yaml file for admin OpenSearch user Secret
+  ansible.builtin.template:
+    src: iaf/opensearch-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/opensearch-secret.yaml"
+    mode: u+rwx
+
+- name: Add admin OpenSearch user Secret
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/opensearch-secret.yaml"
+
+- name: Retrieve default certification
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: retrieve-default-certification
+  vars:
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
+
+- name: Prepare yaml file for OpenSearch SSL Secret
+  ansible.builtin.template:
+    src: iaf/opensearch-ssl-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/opensearch-ssl-secret.yaml"
+    mode: u+rwx
+
+- name: Add OpenSearch SSL Secret
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/opensearch-ssl-secret.yaml"
