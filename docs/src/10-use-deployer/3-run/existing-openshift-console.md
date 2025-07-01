@@ -584,6 +584,10 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             installation_options:
               enableKnowledgeGraph: True
               enableDataQuality: True
+              enableSemanticEnrichment: False
+              enableAISearch: False
+              enableModelsOn: cpu
+              useFDB: False
 
           - name: ikc_standard
             description: IBM Knowledge Catalog - Standard edition
@@ -592,6 +596,10 @@ Log in as a cluster administrator to be able to run the deployer with the correc
             installation_options:
               enableKnowledgeGraph: True
               enableDataQuality: True
+              enableSemanticEnrichment: False
+              enableAISearch: False
+              enableModelsOn: cpu
+              useFDB: False
 
           - name: wml
             description: Watson Machine Learning
