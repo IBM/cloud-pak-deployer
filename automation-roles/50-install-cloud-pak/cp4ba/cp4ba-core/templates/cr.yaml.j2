@@ -30,7 +30,6 @@ spec:
     sc_image_repository: cp.icr.io
     sc_iam:
       default_admin_username: cpfsadmin
-    sc_generate_sample_network_policies: true
     trusted_certificate_list: ['global-ca', 'default-ca']
     encryption_key_secret: ibm-iaws-shared-key-secret
     storage_configuration:
@@ -73,36 +72,23 @@ spec:
       lc_group_filter: "{{ lc_custom_group_filter }}"
 {% endif %}
     scim_configuration_iam:
-      ## This attribute MUST be set to an LDAP attribute that is unique and immutable
-      user_unique_id_attribute: ibm-entryuuid
+      user_unique_id_attribute: entryuuid
       user_external_id_attribute: dn
       user_emails_attribute: mail
       user_name_attribute: uid
       user_display_name_attribute: cn
       user_groups_attribute: memberOf
-      user_object_class_attribute: person
+      user_object_class_attribute: inetOrgPerson
       user_principal_name_attribute: uid
       user_given_name_attribute: cn
       user_family_name_attribute: sn
       user_full_name_attribute: cn
-      ## Optional:  Uncomment 'user_custom_mapping' and add any custom mapping below
-      # user_custom_mapping:
-        # <scim_attr_name> : <ldap attr name>
-        # like below
-        # ibmentryuuid : ibm-entryuuid
-      ## This attribute MUST be set to an LDAP attribute that is unique and immutable
-      group_unique_id_attribute: ibm-entryuuid
+      group_unique_id_attribute: entryuuid
       group_external_id_attribute: dn
       group_display_name_attribute : cn
       group_members_attribute: member
       group_object_class_attribute: groupOfNames
       group_name_attribute: cn
       group_principal_name_attribute: cn
-      ## Optional:  Uncomment 'group_custom_mapping' and add any custom mapping below
-      # group_custom_mapping:
-        # <scim_attr_name> : <ldap attr name>
-        # like below
-        # ibmentryuuid : ibm-entryuuid
   datasource_configuration:
     dc_ssl_enabled: false
-    
