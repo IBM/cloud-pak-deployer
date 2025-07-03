@@ -648,8 +648,9 @@ cp4ba:
     cr_custom:
       spec:
         # Configures the NLP provider component of IBM RPA. You can disable it by specifying 0. https://www.ibm.com/docs/en/rpa/latest?topic=platform-configuring-rpa-custom-resources#basic-setup
-        nlp:
-          replicas: 1
+        sizeMapping:
+          watson-nlp:
+            replicas: 1
 
   # Set to false if you don't want to install (or remove) CloudBeaver (PostgreSQL, DB2, MSSQL UI)
   cloudbeaver_enabled: true

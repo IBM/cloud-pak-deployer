@@ -10,40 +10,16 @@ spec:
   blockStorageClass: "{{ rpa_block_storage_class_name }}"
   fileStorageClass: "{{ rpa_storage_class_name }}"
   tls: {}
+  zen:
+    managed: false  
   api:
-    externalConnection:
-      secretName: rpa-db
+    databaseConnectionSecretName: rpa-db
     firstTenant:
       name: ibm
-      owner:
-        ownersecret:
-          secretName: rpa-first-tenant-owner
-    replicas: 1
+      ownerSecretName: rpa-first-tenant-owner
     smtp:
       port: 587
       server: "{{ rpa_mail_hostname }}"
-      userSecret:
-        secretName: rpa-smtp
-  ui:
-    replicas: 1
-  ocr:
-    replicas: 1
-  antivirus:
-    replicas: 1
-    autoUpdateEnabled: true
-#    template:
-#      pod:
-#        spec:
-#          containers:
-#            - name: clam-av-api
-#              resources:
-#                limits:
-#                  ephemeral-storage: 1Gi # TODO last seen 2025-02-07 with 23.0.20 / 2.3.0, otherwise pod is evicted
-#            - name: clam-av-scanner
-#              resources:
-#                limits:
-#                  ephemeral-storage: 1Gi # TODO last seen 2025-02-07 with 23.0.20 / 2.3.0, otherwise pod is evicted
+      userSecretName: rpa-smtp
   audit:
     forwardingEnabled: false
-  nlp:
-    replicas: 1
