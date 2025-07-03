@@ -157,6 +157,7 @@ Log in as a cluster administrator to be able to run the deployer with the correc
           use_fs_iam: True
           operators_project: cpd-operators
           ibm_cert_manager: False
+          install_day0_patch: True
           state: installed
           cartridges:
           - name: cp-foundation
