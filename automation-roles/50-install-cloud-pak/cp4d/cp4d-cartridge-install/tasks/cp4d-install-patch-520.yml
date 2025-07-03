@@ -5,13 +5,28 @@
     dest: "{{ status_dir}}/cp4d/{{ current_cp4d_cluster.project }}-5.2.0-day0-patch-v5.sh"
     mode: u+rwx
 
+- name: Generate command to run CP4D/Software Hub 5.2.0 day-0 patch planning script
+  set_fact:
+    _apply_520_patch_command_plan: "{{ lookup('template', '5.2.0-day0-patch-v5-run.j2') }}"
+  vars:
+    _p_patch_plan: True
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Generate script to apply day-0 patch for CP4D/Software Hub 5.2.0
+    _p_command: "{{ _apply_520_patch_command_plan }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-5.2.0-day0-patch-plan-v5.log"
+
 - name: Generate command to run CP4D/Software Hub 5.2.0 day-0 patch script
   set_fact:
     _apply_520_patch_command: "{{ lookup('template', '5.2.0-day0-patch-v5-run.j2') }}"
-    
+  vars:
+    _p_patch_plan: False
+
 - include_role:
     name: run-command
   vars:
     _p_command_description: Apply day-0 patch for CP4D/Software Hub 5.2.0
     _p_command: "{{ _apply_520_patch_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}--5.2.0-day0-patch-v5.log"
+    _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-5.2.0-day0-patch-v5.log"
