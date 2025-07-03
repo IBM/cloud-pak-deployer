@@ -142,7 +142,7 @@ With proper sizing of the cluster and provided RWX File and RWO Block Storage Cl
 
 For your convenience the following post-deployment setup tasks have been automated:
 
-- CPFS - OCP Ingress certificate is used for better SSL trusting.
+- CPFS - OpenSearch cpadmin user added as admin.
 - Zen - Users and Groups added.
 - Zen - Administrative group is given all available privileges from all pillars.
 - Zen - Regular groups are given developer privileges from all pillars.
