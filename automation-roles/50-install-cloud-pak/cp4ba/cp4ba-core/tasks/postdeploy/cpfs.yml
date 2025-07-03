@@ -208,6 +208,20 @@
       ansible.builtin.set_fact:
         os_password: "{{ os_secret.resources[0].data['opensearch-admin'] | b64decode }}"
 
+    - name: Create OpenSearch internal user
+      ansible.builtin.uri:
+        url: "https://opensearch-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/_plugins/_security/api/internalusers/{{ lc_principal_admin_user }}"
+        method: PUT
+        user: opensearch-admin
+        password: "{{ os_password }}"
+        body_format: json
+        body:
+          password: "{{ lc_principal_admin_password }}"
+          backend_roles: ["admin", "snapshotrestore"]
+          attributes: {}
+        status_code: 201
+        validate_certs: false
+
     - name: Set usage entry for OpenSearch
       ansible.builtin.include_role:
         name: usage
@@ -223,7 +237,9 @@
 
           ## Credentials
 
-          - opensearch-admin / {{ os_password }}
+          - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+          - opensearch-admin / {{ os_password }} (default admin user)
 
           "
 
