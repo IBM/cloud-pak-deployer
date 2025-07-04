@@ -808,7 +808,7 @@ deleteSubscription () {
                             --output jsonpath='{.spec.install.spec.deployments[0].spec.selector.matchLabels.control-plane}' 2>/dev/null)
 
     abortOnFail "Delete Cluster Service Version $ClusterServiceVersion" \
-                "oc delete ClusterServiceVersion $ClusterServiceVersion --namespace $OperatorNS"
+                "oc delete ClusterServiceVersion $ClusterServiceVersion --namespace $OperatorNS --ignore-not-found"
     local Counter=0
     while [[ ! -z $(oc get Pod --selector control-plane=$ControlPlane --namespace $OperatorNS --no-headers 2> /dev/null) ]]; do
         (( Counter++ ))
@@ -882,7 +882,7 @@ EOF
         done
         pass "  $Artifact patched" force
 
-        deleteSubscription
+        # deleteSubscription
 
         Outcome2Achieve="Create Subscription $Subscription"
         cat << EOS >> $LogFile
@@ -901,6 +901,7 @@ $(echo -e $(getColor None))
 EOS
         local Attempt=1
         while true; do
+            deleteSubscription
             info "  $Outcome2Achieve" force
             jq 'del(.metadata.annotations) |
                 del(.metadata.creationTimestamp) |
@@ -922,7 +923,7 @@ EOS
                            --output jsonpath='{.status.phase}' 2>/dev/null) == Succeeded ]]; then
                     CreatedCSV=true
                     break
-                elif [[ $(expr $Counter % 36) -eq 0 ]]; then
+                elif [[ $(expr $Counter % 72) -eq 0 ]]; then
                     break
                 fi
                 [[ $(expr $Counter % 12) -eq 0 ]] && \
@@ -937,13 +938,13 @@ EOS
                     break
                 done
                 [[ $ClusterServiceVersion == null ]] \
-                   && fail "Cluster Service Version $ClusterServiceVersion was not created within 6 mins" \
-                   || fail "Cluster Service Version $ClusterServiceVersion did not register with Subscription $Subscription within 6 mins"
+                   && fail "Cluster Service Version $ClusterServiceVersion was not created within 12 mins" \
+                   || fail "Cluster Service Version $ClusterServiceVersion did not register with Subscription $Subscription within 12 mins"
             else
-                fail "Cluster Service Version $ClusterServiceVersion did not report Succeeded within 6 mins"
+                fail "Cluster Service Version $ClusterServiceVersion did not report Succeeded within 12 mins"
             fi
-            [[ $Attempt -eq 3 ]] && abort "Failed to create Subscription $Subscription even after 3 attempts"
-            deleteSubscription
+            [[ $Attempt -eq 5 ]] && abort "Failed to create Subscription $Subscription even after 5 attempts"
+            # deleteSubscription
             (( Attempt++ ))
         done
         pass "  $Outcome2Achieve" force
