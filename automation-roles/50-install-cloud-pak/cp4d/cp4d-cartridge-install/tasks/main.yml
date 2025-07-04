@@ -18,12 +18,6 @@
   vars:
     _p_subscription_scope: cartridges
 
-- include_tasks: cp4d-install-patch-520.yml
-  when: 
-  - current_cp4d_cluster.state=='installed'
-  - _p_cp4d_version == '5.2.0'
-  - current_cp4d_cluster.install_day0_patch | default(True) | bool
-
 - name: Populate {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
   lineinfile:
     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
@@ -55,6 +49,12 @@
   loop: "{{ _apply_cr_cartridges_separate | default([]) }}"
   loop_control:
     loop_var: _current_cp4d_cartridge
+
+- include_tasks: cp4d-install-patch-520.yml
+  when: 
+  - current_cp4d_cluster.state=='installed'
+  - _p_cp4d_version == '5.2.0'
+  - current_cp4d_cluster.install_day0_patch | default(True) | bool
 
 - name: Run post-processing scripts
   include_tasks: cp4d-install-cr-post-processing.yml
