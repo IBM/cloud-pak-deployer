@@ -1,15 +1,4 @@
 ---
-- set_fact:
-    cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
-
-- name: Get admin password {{ cp4d_admin_password_vault_key_name }} from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "{{ cp4d_admin_password_vault_key_name }}"
-    secret_group: "{{ environment_name }}"
-    _p_secret_variable: _cp4d_admin_password
-
 - name: Get Route to Cloud Pak for Data
   shell: |
     oc --namespace {{ current_cp4d_cluster.project }} get route -l component=ibm-nginx \
@@ -31,6 +20,25 @@
     _cp4d_admin_user: "cpadmin"
   when: _iam_integration
 
+- set_fact:
+    cp4d_admin_password_vault_key_name: "cp4d_admin_{{ current_cp4d_cluster.project| replace('-','_') }}_{{ current_cp4d_cluster.openshift_cluster_name| replace('-','_') }}"
+
+- name: Get admin password {{ cp4d_admin_password_vault_key_name }} from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_password
+
+- name: Get admin API key {{ current_cp4d_cluster.project }}-{{ _cp4d_admin_user }}-api-key from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ current_cp4d_cluster.project }}-{{ _cp4d_admin_user }}-api-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_api_key
+
 - name: Make sure that directory {{ status_dir }}/cloud-paks exists
   file:
     path: "{{ status_dir }}/cloud-paks"
@@ -47,3 +55,4 @@
       CP4D URL: https://{{ cp4d_url.stdout }}
       CP4D User: {{ _cp4d_admin_user }}
       CP4D {{ _cp4d_admin_user }} password: {{ _cp4d_admin_password }}
+      CP4D {{ _cp4d_admin_user }} API key {{ _cp4d_admin_api_key }}

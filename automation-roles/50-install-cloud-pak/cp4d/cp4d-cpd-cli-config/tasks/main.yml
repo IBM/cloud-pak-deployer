@@ -1,0 +1,14 @@
+---
+- name: Retrieve Cloud Pak for Data admin API key for {{ _p_current_cp4d_cluster.project }}-{{ _cp4d_user }} from the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _p_current_cp4d_cluster.project }}-{{ _cp4d_user }}-api-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_api_key
+
+- name: Generate cpd-cli config script {{ status_dir }}/cp4d/cpd-cli-{{ _p_current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh
+  template:
+    src: cpd-cli-config.j2
+    dest: "{{ status_dir }}/cp4d/cpd-cli-{{ _p_current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh"
+    mode: u+rwx
