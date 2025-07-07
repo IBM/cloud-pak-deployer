@@ -1,7 +1,7 @@
 ---
 - set_fact:
     _threads_per_core: "{{ _p_license_threads_per_core | default(1) }}"
-    _ibm_cert_manager: "{{ _p_ibm_cert_manager | bool | default(False) }}"
+    _ibm_cert_manager: "{{ _p_ibm_cert_manager | default(False) | bool }}"
 
 - include_role:
     name: cp4d-get-latest-version
@@ -69,7 +69,7 @@
     _ibm_licensing_state: "{{ _ibm_licensing.resources[0].status.state | default('') }}"
 
 - set_fact:
-    _components_ibm_licensing: "{{ _list_components_json.list | json_query(query) | first | default({}) }}"
+    _components_ibm_licensing: "{{ _list_components_json.list | default([]) | json_query(query) | first | default({}) }}"
   vars:
     query: >-
       [?Component_name=='ibm-licensing']
