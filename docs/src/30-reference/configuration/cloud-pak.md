@@ -624,6 +624,7 @@ cp4ba:
           apiKey: watsonx_ai_api_key
           mlUrl: https://us-south.ml.cloud.ibm.com
           projectId: project_id
+          defaultFoundationModel: meta-llama/llama-3-3-70b-instruct
   
   # Section for IBM Process mining
   pm:
@@ -800,6 +801,7 @@ Placed in `cp4ba.patterns.workflow` key.
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
 | gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model | false | Your real value, (default) meta-llama/llama-3-3-70b-instruct |
 
 ### Process Mining properties
 
