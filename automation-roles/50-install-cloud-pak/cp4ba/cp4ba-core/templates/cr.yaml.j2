@@ -30,8 +30,6 @@ spec:
     sc_image_repository: cp.icr.io
     sc_iam:
       default_admin_username: cpfsadmin
-    sc_egress_configuration:
-      sc_restricted_internet_access: false
     trusted_certificate_list: ['global-ca', 'default-ca']
     encryption_key_secret: ibm-iaws-shared-key-secret
     storage_configuration:
@@ -39,6 +37,8 @@ spec:
       sc_medium_file_storage_classname: "{{ cp4ba_storage_class_name }}"
       sc_fast_file_storage_classname: "{{ cp4ba_storage_class_name }}"
       sc_block_storage_classname: "{{ cp4ba_block_storage_class_name }}"
+    sc_audit_logging:
+      enabled: true      
   ldap_configuration:
     lc_selected_ldap_type: "{{ lc_selected_ldap_type }}"
     lc_ldap_server: "{{ lc_ldap_server }}"
@@ -71,5 +71,24 @@ spec:
       lc_user_filter: "{{ lc_custom_user_filter }}"
       lc_group_filter: "{{ lc_custom_group_filter }}"
 {% endif %}
+    scim_configuration_iam:
+      user_unique_id_attribute: dn
+      user_external_id_attribute: dn
+      user_emails_attribute: mail
+      user_name_attribute: uid
+      user_display_name_attribute: cn
+      user_groups_attribute: memberOf
+      user_object_class_attribute: inetOrgPerson
+      user_principal_name_attribute: uid
+      user_given_name_attribute: cn
+      user_family_name_attribute: sn
+      user_full_name_attribute: cn
+      group_unique_id_attribute: dn
+      group_external_id_attribute: dn
+      group_display_name_attribute : cn
+      group_members_attribute: member
+      group_object_class_attribute: groupOfNames
+      group_name_attribute: cn
+      group_principal_name_attribute: cn
   datasource_configuration:
     dc_ssl_enabled: false

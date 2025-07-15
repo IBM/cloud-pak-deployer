@@ -488,16 +488,16 @@
         force: false
         src: "{{ cp4ba_output_directory }}/kafkauser-secret.yaml"
 
-- name: Wait for ElasticSearch instance Ready state
+- name: Wait for OpenSearch instance Ready state
   ansible.builtin.include_role:
     name: common
     tasks_from: wait-resource-condition
   vars:
-    common_api_version: elasticsearch.opencontent.ibm.com/v1
-    common_resource_kind: ElasticsearchCluster
+    common_api_version: opensearch.cloudpackopen.ibm.com/v1
+    common_resource_kind: Cluster
     common_resource_name: opensearch
     common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Started
+    common_condition_name: Available
     common_retries: 30
     common_delay: 60
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
@@ -581,7 +581,6 @@
       #   _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name + '-tm-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-mongo-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-gitgateway-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-viewone-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-cpds-deploy', '') }}"

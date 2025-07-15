@@ -1,8 +1,8 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 24.0.1 IF001.  
-Contains IPM version 2.0.1 REFRESH.
-Contains RPA version 23.0.20 FP001.
+Contains CP4BA version 25.0.0.  
+Contains IPM version 2.0.2.
+Contains RPA version 30.0.0.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -89,8 +89,6 @@ Contains extra software which makes working with the platform even easier.
   - Installed if enabled in configuration (default) and if BAI or BAW is enabled.
 - Mail server - For various mail integrations e.g. from BAN, BAW and RPA.
   - Installed if CP4BA or RPA is enabled.
-- Mongo Express - Web UI for Mongo DB databases for CP4BA to easier troubleshoot DB.
-  - Installed if enabled in configuration (default) and if MongoDB (from [Pre-requisites](#pre-requisites-section)) is installed.
 - CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
   - Installed if enabled in configuration (default) and if PostgreSQL or MSSQL (from [Pre-requisites](#pre-requisites-section)) is installed.
 
@@ -122,7 +120,7 @@ Contains services which are reused by Cloud Paks.
 
 More info available in official docs at https://www.ibm.com/docs/en/cpfs.
 
-- License metering - Tracks license usage.
+- License service - Tracks license usage.
 - Certificate Manager - Provides certificate handling.
 
 ### Pre-requisites section<!-- omit in toc -->
@@ -135,8 +133,6 @@ Contains prerequisites for the whole platform.
   - Always installed.
 - MSSQL server - Database storage for RPA server. 
   - nstalled if RPA is enbled.
-- MongoDB - Database storage for ADS.
-  - Installed if ADS is enabled.
 
 ## Environments used for installation 💻
 
@@ -146,11 +142,11 @@ With proper sizing of the cluster and provided RWX File and RWO Block Storage Cl
 
 For your convenience the following post-deployment setup tasks have been automated:
 
-- CPFS - OCP Ingress certificate is used for better SSL trusting.
+- CPFS - OpenSearch cpadmin user added as admin.
 - Zen - Users and Groups added.
 - Zen - Administrative group is given all available privileges from all pillars.
 - Zen - Regular groups are given developer privileges from all pillars.
-- Zen - Service account created in CPFS IAM and Zen and Zen API key is generated for convenient and stable usage.
+- Zen - Service account created in CPFS IM and Zen and Zen API key is generated for convenient and stable usage.
 - Zen - OCP Ingress certificate is used for better SSL trusting.
 - Workforce Insights - Connection setup. You just need to create WFI dashboard. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=secrets-creating-custom-bpc-workforce-secret
 - ADS - Nexus connection setup and all ADS plugins loaded.
@@ -218,8 +214,6 @@ Referrence to licenses of used tools apart from those from IBM
     - Apache License 2.0 https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
 - Mail server
     - MIT License https://github.com/docker-mailserver/docker-mailserver/blob/master/LICENSE (OSI approved https://opensource.org/license/mit)
-- Mongo Express
-    - MIT License https://github.com/mongo-express/mongo-express/blob/master/LICENSE.md (OSI approved https://opensource.org/license/mit)
 - CloudBeaver
     - Apache License 2.0 https://github.com/dbeaver/cloudbeaver/blob/devel/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - PostgreSQL
@@ -230,6 +224,3 @@ Referrence to licenses of used tools apart from those from IBM
     - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
 - MSSQL server
     - Uses Developer Edition, description at https://learn.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2022?view=sql-server-ver16#sql-server-editions
-- MongoDB
-    - MongoDB itself - Server Side Public License https://www.mongodb.com/legal/licensing/server-side-public-license (Read FAQ at https://www.mongodb.com/legal/licensing/server-side-public-license/faq)
-    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/mongodb#license (OSI Approved https://opensource.org/license/apache-2-0)
