@@ -20,7 +20,8 @@
 
         -- create database appdb -- default template tablespace
         CREATE DATABASE appdb OWNER appdb TEMPLATE template0 ENCODING UTF8;
-        REVOKE CONNECT ON DATABASE appdb FROM PUBLIC;
+        -- The following grant is used for databases
+        GRANT ALL PRIVILEGES ON DATABASE appdb TO appdb;
       EOF"
   register: command_status
 
@@ -36,12 +37,11 @@
         CREATE USER basdb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database basdb -- default template tablespace
-        CREATE DATABASE basdb OWNER basdb TEMPLATE template0 ENCODING UTF8;
-        REVOKE CONNECT ON DATABASE basdb FROM PUBLIC;
+        CREATE DATABASE basdb WITH OWNER basdb ENCODING UTF8;
 
         -- Connect to your database and create schema
         \c basdb;
-        SET ROLE basdb;
-        CREATE SCHEMA IF NOT EXISTS basdb;
+        CREATE SCHEMA IF NOT EXISTS basdb AUTHORIZATION basdb;
+        GRANT ALL ON SCHEMA basdb TO basdb;
       EOF"
   register: command_status

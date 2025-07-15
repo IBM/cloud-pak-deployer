@@ -17,14 +17,14 @@
     api_version: v1
     kind: Secret
     namespace: "{{ opensearch_dashboards_cp4ba_project_name }}"
-    name: "opensearch-ibm-elasticsearch-cred-secret"
+    name: "opensearch-admin-user"
   register: os_secret
   retries: 40
   delay: 15
 
 - name: Set OpenSearch password
   ansible.builtin.set_fact:
-    os_password: "{{ os_secret.resources[0].data.elastic | b64decode }}"
+    os_password: "{{ os_secret.resources[0].data['opensearch-admin'] | b64decode }}"
 
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
@@ -86,6 +86,8 @@
 
       ## Credentials
 
-      - elastic / {{ os_password }}
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      - opensearch-admin / {{ os_password }} (default admin user)
 
       "

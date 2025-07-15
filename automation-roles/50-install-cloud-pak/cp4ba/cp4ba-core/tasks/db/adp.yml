@@ -7,6 +7,14 @@
       - app=postgresql
   register: postgresql_pod
 
+- name: ADPBASE DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir -p /bitnami/postgresql/tablespaces/adpbase_tbs
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
+
 - name: ADPBASE DB
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
@@ -18,10 +26,64 @@
         CREATE USER adpbase WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database adpbase -- default template tablespace
-        CREATE DATABASE adpbase OWNER adpbase TEMPLATE template0 ENCODING UTF8;
-        REVOKE CONNECT ON DATABASE adpbase FROM PUBLIC;
+        CREATE TABLESPACE "adpbase_tbs" OWNER "adpbase" LOCATION '/bitnami/postgresql/tablespaces/adpbase_tbs';
+        CREATE DATABASE "adpbase" OWNER "adpbase" TEMPLATE template0 ENCODING UTF8 TABLESPACE "adpbase_tbs";
+        REVOKE CONNECT ON DATABASE "adpbase" FROM PUBLIC;
+        GRANT ALL ON DATABASE "adpbase" TO "adpbase";
       EOF"
   register: command_status
+
+- name: ADPGGDB DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir -p /bitnami/postgresql/tablespaces/adpggdb_tbs
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
+
+- name: ADPGGDB DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        -- create user adpgg
+        CREATE USER adpgg WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- please modify location follow your requirement
+        CREATE TABLESPACE adpggdb_tbs OWNER adpgg LOCATION '/bitnami/postgresql/tablespaces/adpggdb_tbs';
+        GRANT CREATE ON TABLESPACE adpggdb_tbs TO adpgg;
+
+        -- create database adpggdb
+        CREATE DATABASE adpggdb OWNER adpgg TABLESPACE adpggdb_tbs TEMPLATE template0 ENCODING UTF8;
+        -- Connect to your database and create schema
+        \c adpggdb;
+        CREATE SCHEMA IF NOT EXISTS adpgg AUTHORIZATION adpgg;
+        GRANT ALL ON SCHEMA adpgg TO adpgg;
+
+        -- create a schema for adpggdb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE adpgg;
+        ALTER DATABASE adpggdb SET search_path TO adpgg;
+        REVOKE CONNECT ON DATABASE adpggdb FROM PUBLIC;
+      EOF"
+  register: command_status
+
+- name: Proj DBs prepare tablespaces
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: mkdir -p /bitnami/postgresql/tablespaces/{{ item }}_tbs
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
+  with_items:
+    - proj1
+    - proj2
+    - proj3
+    - proj4
+    - proj5
+    - proj6
 
 - name: ADP proj DBs
   kubernetes.core.k8s_exec:
@@ -34,8 +96,10 @@
         CREATE USER {{ item }} WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database {{ item }} -- default template tablespace
-        CREATE DATABASE {{ item }} OWNER {{ item }} TEMPLATE template0 ENCODING UTF8;
-        REVOKE CONNECT ON DATABASE {{ item }} FROM PUBLIC;
+        CREATE TABLESPACE "{{ item }}_tbs" OWNER "{{ item }}" LOCATION '/bitnami/postgresql/tablespaces/{{ item }}_tbs';
+        CREATE DATABASE "{{ item }}" OWNER "{{ item }}" TEMPLATE template0 ENCODING UTF8 TABLESPACE "{{ item }}_tbs";
+        REVOKE CONNECT ON DATABASE "{{ item }}" FROM PUBLIC;
+        GRANT ALL ON DATABASE "{{ item }}" TO "{{ item }}";
       EOF"
   register: command_status
   with_items:
@@ -69,9 +133,20 @@
 
         -- create tablespace for devos1
         CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/bitnami/postgresql/tablespaces/devos1_tbs';
+        GRANT CREATE ON TABLESPACE devos1_tbs TO devos1;
 
         -- create database devos1
-        CREATE DATABASE devos1 OWNER devos1 TEMPLATE template0 ENCODING UTF8 TABLESPACE devos1_tbs;
+        CREATE DATABASE devos1 OWNER devos1 TABLESPACE devos1_tbs TEMPLATE template0 ENCODING UTF8;
+
+        -- Connect to your database and create schema
+        \c devos1;
+        CREATE SCHEMA IF NOT EXISTS devos1 AUTHORIZATION devos1;
+        GRANT ALL ON SCHEMA devos1 TO devos1;
+
+        -- create a schema for devos1 and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE devos1;
+        ALTER DATABASE devos1 SET search_path TO devos1;
         REVOKE CONNECT ON DATABASE devos1 FROM PUBLIC;
       EOF"
   register: command_status
@@ -124,7 +199,7 @@
       export confirmation=y;
       export ssl=No;
       export table_space_already_defined=1;
-      export tablespace_name=pg_default;
+      export tablespace_name=adpbase_tbs;
       ./InitBaseDB.sh;
       '
   register: command_status
@@ -166,7 +241,7 @@
       export confirmation=y;
       export ssl=No;
       export table_space_already_defined=1;
-      export tablespace_name=pg_default;
+      export tablespace_name={{ item }}_tbs;
       ./InitTenantDB.sh;
       '
   register: command_status

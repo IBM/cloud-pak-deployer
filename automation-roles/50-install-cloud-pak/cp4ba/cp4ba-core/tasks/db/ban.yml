@@ -30,9 +30,20 @@
 
         -- create tablespace for icndb
         CREATE TABLESPACE icndb_tbs OWNER icndb LOCATION '/bitnami/postgresql/tablespaces/icndb_tbs';
+        GRANT CREATE ON TABLESPACE icndb_tbs TO icndb;
 
         -- create database icndb
-        CREATE DATABASE icndb OWNER icndb TEMPLATE template0 ENCODING UTF8 TABLESPACE icndb_tbs;
+        CREATE DATABASE icndb OWNER icndb TABLESPACE icndb_tbs TEMPLATE template0 ENCODING UTF8;
+
+        -- Connect to your database and create schema
+        \c icndb;
+        CREATE SCHEMA IF NOT EXISTS icndb AUTHORIZATION icndb;
+        GRANT ALL ON SCHEMA icndb TO icndb;
+
+        -- create a schema for icndb and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE icndb;
+        ALTER DATABASE icndb SET search_path TO icndb;
         REVOKE CONNECT ON DATABASE icndb FROM PUBLIC;
       EOF"
   register: command_status

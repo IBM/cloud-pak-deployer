@@ -424,3 +424,23 @@
     common_pg_username: zen_user
     common_pg_password: "{{ zen_pg_password }}"
   when: _current_cp4ba_cluster.cloudbeaver_enabled
+
+# Generate Zen Audit usage
+- name: Set usage entry for Zen audit
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CP4BA-Zen-Audit
+    usage_entry_value:
+      "Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=administering-generating-logs-auditing-purposes
+
+      View audit logging outputs using the followign command
+
+      ```bash
+
+      oc logs -f -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} | grep zen-audit | awk '{print $1}'`
+
+      ```
+
+      "
