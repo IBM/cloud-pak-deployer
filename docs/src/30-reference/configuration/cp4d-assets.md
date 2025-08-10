@@ -11,7 +11,7 @@ A `cp4d_asset` entry defines one or more assets to be deployed for a specific Cl
 You can create one or more subdirectories under the specified location, each holding an asset to be deployed. The deployer finds all `cp4d-asset.sh` scripts and `cp4d-asset.yaml` Ansible task files and runs them.
 
 The following runtime attributes will be set prior to running the shell script or the Ansible task:
-* If the Cloud Pak for Data instances has the Common Core Services (CCS) custom resource installed, `cpdctl` is configured for the current Cloud Pak for Data instance and the current context is set to the `admin` user of the instance. This means you can run all `cpdctl` commands without first having to login to Cloud Pak for Data.
+* If the Cloud Pak for Data resource is installed, `cpd-cli` is configured for the current Cloud Pak for Data instance and the current context is set to the CP4D admin user of the instance. This means you can run all `cpd-cli` commands without first having to login to Cloud Pak for Data. You can also manually create and set the contect by running the `$STATUS_DIR/cp4d/cpd-cli-<project>-<cp4d-admin-user>` script.
 * The current working directory is set to the directory holding the `cp4d-asset.sh` script.
 * When running the `cp4d-asset.sh` shell script, the following environment variables are available:
     - `CP4D_URL`: Cloud Pak for Data URL
@@ -53,7 +53,7 @@ function retrieve_project {
     project_name=$1
 
     # First check if project already exists
-    project_id=$(cpdctl project list \
+    project_id=$(cpd-cli project list \
         --output json | \
         jq -r --arg project_name $project_name \
         'if .total_results==0 then "" else .resources[] | select(.entity.name == $project_name) | .metadata.guid end')
@@ -74,11 +74,11 @@ function create_project {
         echo "Creating project $project_name"
         storage_id=$(uuidgen)
         storage=$(jq --arg storage_id $storage_id '. | .guid=$storage_id | .type="assetfiles"' <<< '{}')
-        cpdctl project create --name $project_name --storage "$storage"
+        cpd-cli project create --name $project_name --storage "$storage"
     fi
 
     # Find project_id to return
-    project_id=$(cpdctl project list \
+    project_id=$(cpd-cli project list \
         --output json | \
         jq -r --arg project_name $project_name \
         'if .total_results==0 then "" else .resources[] | select(.entity.name == $project_name) | .metadata.guid end')
@@ -88,20 +88,20 @@ function create_project {
 function import_project {
     project_id=$1
     zip_file=$2
-    import_id=$(cpdctl asset import start \
+    import_id=$(cpd-cli asset import start \
         --project-id $project_id --import-file $zip_file \
         --output json --jmes-query "metadata.id" --raw-output)
     
-    cpdctl asset import get --project-id $project_id --import-id $import_id --output json
+    cpd-cli asset import get --project-id $project_id --import-id $import_id --output json
 
 }
 
 # Function to run jobs
 function run_jobs {
     project_id=$1
-    for job in $(cpdctl job list --project-id $project_id \
+    for job in $(cpd-cli job list --project-id $project_id \
         --output json | jq -r '.results[] | .metadata.asset_id');do
-        cpdctl job run create --project-id $project_id --job-id $job --job-run "{}"
+        cpd-cli job run create --project-id $project_id --job-id $job --job-run "{}"
     done
 }
 
