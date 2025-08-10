@@ -1,0 +1,32 @@
+---
+- name: Check if existing API key {{ current_cp4d_cluster.project }}-{{ _cp4d_user }}-api-key exists in the vault
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ current_cp4d_cluster.project }}-{{ _cp4d_user }}-api-key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_api_key_vault
+
+- block:
+  - name: Generate API key for admin user {{ _cp4d_user }}
+    uri:
+      url: 'https://{{ _current_cp4d_url.stdout }}/usermgmt/v1/user/apiKey'
+      method: GET
+      headers:
+        Content-Type: application/json
+        Authorization: "Bearer {{ _cp4d_bearer_token }}"
+      force: yes
+      return_content: yes
+      validate_certs: no
+      status_code: 200
+    register: _cp4d_get_api_key
+
+  - name: Store the CP4D admin API key into the vault as {{ current_cp4d_cluster.project }}-{{ _cp4d_user }}-api-key
+    include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ current_cp4d_cluster.project }}-{{ _cp4d_user }}-api-key"
+      secret_description: "CP4D admin API key for {{ current_cp4d_cluster.project }}, cluster {{ current_cp4d_cluster.openshift_cluster_name }}"
+      secret_payload: "{{ _cp4d_get_api_key.json.apiKey }}"
+      secret_group: "{{ environment_name }}"
+  when: _cp4d_admin_api_key_vault==''

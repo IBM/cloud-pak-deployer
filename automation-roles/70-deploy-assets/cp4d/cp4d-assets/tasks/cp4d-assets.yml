@@ -25,27 +25,31 @@
   vars:
     _p_openshift_cluster_name: "{{ _current_cp4d_cluster.openshift_cluster_name }}"
 
-- name: Get Route to Cloud Pak for Data
+- set_fact:
+    _cp4d_admin_password_vault_key_name: "cp4d_admin_{{ _current_cp4d_cluster.project | replace('-','_') }}_{{ _current_cp4d_cluster.openshift_cluster_name | replace('-','_') }}"
+
+- name: Retrieve CP4D admin password from vault secret {{ _cp4d_admin_password_vault_key_name }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _cp4d_admin_password_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _cp4d_admin_password_vault
+
+- name: Login to Cloud Pak for Data as the admin user
+  include_role:
+    name: cp4d-login
+  vars:
+    _p_cp4d_project: "{{ _current_cp4d_cluster.project }}"
+    _p_cp4d_password: "{{ _cp4d_admin_password_vault }}"
+
+- name: Generate cpd-cli config script
+  include_role:
+    name: cp4d-cpd-cli-config
+
+- name: Run cpd-cli config script {{ config_dir }}/cp4d/{{ _current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh
   shell: |
-    oc --namespace {{ _current_cp4d_cluster.project }} get route -l component=ibm-nginx \
-        -o jsonpath="{.items[0].spec.host}"
-  register: _cp4d_url
-
-- name: Check if CCS is installed in OpenShift project {{ _current_cp4d_cluster.project }}
-  shell: |
-    oc get ccs ccs-cr -n {{ _current_cp4d_cluster.project }}
-  failed_when: False
-  register: _get_ccs
-
-- name: Install and configure cpdctl if CCS is installed in OpenShift project {{ _current_cp4d_cluster.project }}
-  block:
-    - name: Install cpdctl tool
-      include_tasks: install-cpdctl.yml
-
-    - name: Configure cpdctl context for cluster {{ _current_cp4d_cluster.project }}
-      include_tasks: configure-cpdctl.yml
-
-  when: _get_ccs.rc == 0
+    {{ config_dir }}/cp4d/cpd-cli-{{ _current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh
 
 - stat:
     path: "{{ config_dir }}/{{_current_cp4d_asset.asset_location }}/cp4d-asset.sh"
