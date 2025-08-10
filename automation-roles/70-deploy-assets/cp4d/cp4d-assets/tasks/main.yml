@@ -1,3 +1,17 @@
 ---
+- name: Deploying assets for Cloud Pak for Data cluster {{ current_cp4d_cluster.project }}
+  debug:
+    msg: "Handling deploy assets for CP4D cluster {{ _current_cp4d_asset.project }}"
+
+- set_fact:
+    _current_cp4d_cluster: "{{ all_config.cp4d | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?project=='{{ _current_cp4d_asset.project }}']
+
+- fail:
+    msg: "CP4D resource {{ _current_cp4d_asset.project }} was not found for asset."
+  when: _current_cp4d_cluster=={}
+
 - include_tasks: cp4d-assets.yml
-  when: current_cp4d_cluster.state=='installed'
+  when: (_current_cp4d_cluster.state | default('installed')) == 'installed'
