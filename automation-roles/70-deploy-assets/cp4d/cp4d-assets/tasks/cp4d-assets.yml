@@ -32,10 +32,12 @@
 - name: Generate cpd-cli config script
   include_role:
     name: cp4d-cpd-cli-config
+  vars:
+    _p_current_cp4d_cluster: "{{ _current_cp4d_cluster }}"
 
 - name: Run cpd-cli config script {{ config_dir }}/cp4d/{{ _current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh
   shell: |
-    {{ config_dir }}/cp4d/cpd-cli-{{ _current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh
+    {{ status_dir }}/cp4d/cpd-cli-{{ _current_cp4d_cluster.project }}-{{ _cp4d_user }}.sh
 
 - stat:
     path: "{{ config_dir }}/{{_current_cp4d_asset.asset_location }}/cp4d-asset.sh"
