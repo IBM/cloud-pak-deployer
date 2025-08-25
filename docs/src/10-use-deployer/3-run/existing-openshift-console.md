@@ -667,6 +667,10 @@ Log in as a cluster administrator to be able to run the deployer with the correc
         command: ["/bin/sh","-xc"]
         args: 
           - /cloud-pak-deployer/scripts/deployer/cpd-start-deployer.sh
+        envFrom:
+        - configMapRef:
+            name: cloud-pak-deployer-env
+            optional: true
       restartPolicy: Never
       securityContext:
         runAsUser: 0
