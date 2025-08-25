@@ -1,0 +1,40 @@
+# Setting environment variables for the deployer
+
+Some environments may have a need for special settings when running the deployer. Many of these such as the use of a proxy server for external communications can be configured using environment variables. You can create configuration map (ConfigMap) `cloud-pak-deployer-env` to set environment variables for the deployer jobs.
+
+
+## Create the environment ConfigMap for external connections via a proxy server
+
+* Go to the OpenShift console
+* Click the "+" sign at the top of the page
+* Update the environment variables and/or add new ones
+???+ note "Set the entitlement key"
+    ``` { .yaml .copy }
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cloud-pak-deployer-env
+      namespace: cloud-pak-deployer
+    data:
+      http_proxy: http://192.168.217.111:31288
+      https_proxy: http://192.168.217.111:3128
+      no_proxy: kubernetes.default,.default,.cluster.local,.example.com,.svc,10.0.0.0/16,10.0.0.0/8,10.128.0.0/16,127.0.0.1,172.16.0.0/12,172.18.10.0/27,172.30.0.0/16,192.168.0.0/16,api-int.cpd.example.com,localhost
+    ```
+
+## Create environment variable to run deployer with dry-run
+
+* Go to the OpenShift console
+* Click the "+" sign at the top of the page
+* Update the environment variables and/or add new ones
+???+ note "Set the entitlement key"
+    ``` { .yaml .copy }
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cloud-pak-deployer-env
+      namespace: cloud-pak-deployer
+    data:
+      CPD_DRY_RUN: true
+    ``
