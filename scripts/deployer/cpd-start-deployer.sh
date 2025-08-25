@@ -26,6 +26,9 @@ while (( "$#" )); do
   esac
 done
 
+echo "Environment variables:"
+env
+
 # Check if we can connect to the OpenShift cluster
 oc cluster-info > /dev/null 2>&1
 if [ $? -ne 0 ];then
