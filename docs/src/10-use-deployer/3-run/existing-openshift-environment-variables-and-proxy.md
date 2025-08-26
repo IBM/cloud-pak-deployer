@@ -22,6 +22,9 @@ Some environments may have a need for special settings when running the deployer
       no_proxy: kubernetes.default,.default,.cluster.local,.example.com,.svc,10.0.0.0/16,10.0.0.0/8,10.128.0.0/16,127.0.0.1,172.16.0.0/12,172.18.10.0/27,172.30.0.0/16,192.168.0.0/16,api-int.cpd.example.com,localhost
     ```
 
+!!! warning
+    Please ensure that you specify the correct proxy server and also include the servers that must not be connected via the proxy server. The OpenShift-internal host names such as `kubernetes.default` and IP addresses such as `172.30.0.0/16` must always be configured in `no_proxy`, otherwise the installation of services will not work.
+
 ## Create environment variable to run deployer with dry-run
 
 * Go to the OpenShift console
@@ -37,4 +40,6 @@ Some environments may have a need for special settings when running the deployer
       namespace: cloud-pak-deployer
     data:
       CPD_DRY_RUN: true
-    ``
+    ```
+
+For a full list of environment variables, open the debug pod and run `/cloud-pak-deployer/cp-deploy.sh --help`.
