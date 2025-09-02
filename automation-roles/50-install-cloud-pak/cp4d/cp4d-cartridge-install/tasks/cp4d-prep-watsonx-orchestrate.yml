@@ -109,7 +109,9 @@
     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
     marker: "# {mark} watsonx_orchestrate options #"
     block: |2
+        watson_orchestrate_install_mode: {{ _current_cp4d_cartridge.installation_options.watson_orchestrate_install_mode | default(omit) }}
         watsonx_orchestrate_watsonx_ai_type: {{ _current_cp4d_cartridge.installation_options.watsonx_orchestrate_watsonx_ai_type | default(false) }}
+        watson_orchestrate_ootb_models: {{ _current_cp4d_cartridge.installation_options.watson_orchestrate_ootb_models | default([]) }}
 
 - block:
   - name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log
