@@ -1,0 +1,11 @@
+---
+- name: Get OpenShift DataScienceCluster
+  kubernetes.core.k8s_info:
+    api_version: datasciencecluster.opendatahub.io/v1
+    kind: DataScienceCluster
+    name: default-dsc
+  register: _dsc
+
+- fail:
+    msg: OpenShift AI is yet not installed on the ROKS cluster; you must enable the Red Hat OpenShift AI add-on for the cluster
+  when: _dsc.resources[0] | default({}) == {}
