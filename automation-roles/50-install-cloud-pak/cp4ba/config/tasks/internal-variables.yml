@@ -12,13 +12,16 @@ collateral_project_name: "{{ _current_cp4ba_cluster.collateral_project | default
 external_share_google: false
 
 # main platform admin user
-principal_admin_user: cpadmin
+principal_admin_user: "{{ _current_cp4ba_cluster.principal_admin_user | default('cpadmin')}}"
+
+# CPFS admin user
+cpfs_admin_user: "{{ _current_cp4ba_cluster.cpfs_admin_user | default('cpfsadmin')}}"
 
 lc_principal_admin_user: "{{ ldap_configuration.lc_principal_admin_user | default(principal_admin_user) }}"
 lc_principal_admin_password: "{{ ldap_configuration.lc_principal_admin_password | default(universal_password) }}"
 lc_principal_admin_group: "{{ ldap_configuration.lc_principal_admin_group | default('cpadmins') }}"
 lc_admin_groups: "{{ ldap_configuration.lc_admin_groups | default(['cpadmins']) }}"
-lc_admin_users: "{{ ldap_configuration.lc_admin_users | default(['cpadmin']) }}"
+lc_admin_users: "{{ ldap_configuration.lc_admin_users | default([lc_principal_admin_user]) }}"
 lc_general_groups: "{{ ldap_configuration.lc_general_groups | default(['cpusers', 'cpusers1']) }}"
 lc_selected_ldap_type: "{{ ldap_configuration.lc_selected_ldap_type | default('Custom') }}"
 lc_ldap_server: "{{ ldap_configuration.lc_ldap_server | default('openldap.'+openldap_project_name+'.svc.cluster.local') }}"
@@ -100,7 +103,7 @@ akhq_action: "{{ global_action }}"
 akhq_project_name: "{{ collateral_project_name }}"
 akhq_universal_password: "{{ universal_password }}"
 akhq_cp4ba_project_name: "{{ cp4ba_project_name }}"
-akhq_admin_user: "{{ principal_admin_user }}"
+akhq_admin_user: "{{ lc_principal_admin_user }}"
 akhq_storage_class_name: "{{ storage_class_name }}"
 
 opensearch_dashboards_action: "{{ global_action }}"
