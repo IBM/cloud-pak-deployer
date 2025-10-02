@@ -1,0 +1,35 @@
+---
+- name: Login to IBM Cloud
+  include_role:
+    name: login-ibmcloud
+
+- include_role:
+    name: openshift-get-version
+
+- name: Retrieve available OpenShift AI versions
+  shell: |
+    ibmcloud oc cluster addon versions --addon openshift-ai --output json
+  register: _openshift_ai_versions
+
+- name: Generate ibmcloud addon enable command for entitlement for cluster {{ _p_openshift_cluster.name }}
+  set_fact: 
+    _ibmcloud_addon_enable_command: "{{ lookup('template','roks-openshift-ai-addon.j2') }}"
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Enable OpenShift AI add-on for cluster {{ _p_openshift_cluster.name }}
+    _p_command: "{{ _ibmcloud_addon_enable_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_openshift_cluster.name }}-enable-openshift-ai.log"
+
+- name: Wait until OpenShift AI DataScienceCluster default-dsc is ready
+  kubernetes.core.k8s_info:
+    api_version: datasciencecluster.opendatahub.io/v1
+    kind: DataScienceCluster
+    name: default-dsc
+  register: _openshift_ai_dsc_status
+  retries: 60
+  delay: 30
+  until: (_openshift_ai_dsc_status.resources[0].status.phase | default('') | lower) == "ready"
+
+- fail:
