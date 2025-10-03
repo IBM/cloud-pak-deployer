@@ -1,19 +1,6 @@
 ---
-- name: Insert watsonx.data intelligence options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} watsonx_dataintelligence options #"
-    block: |2
-        watsonx_dataintelligence:
-          enableAISearch: {{ _current_cp4d_cartridge.installation_options.enableAISearch | default(false) }}
-          enableContentLinkingForTextToSql: {{ _current_cp4d_cartridge.installation_options.enableContentLinkingForTextToSql | default(false) }}
-          enableDataGovernanceCatalog: {{ _current_cp4d_cartridge.installation_options.enableDataGovernanceCatalog | default(true) }}
-          enableDataLineage: {{ _current_cp4d_cartridge.installation_options.enableDataLineage | default(true) }}
-          enableDataProduct: {{ _current_cp4d_cartridge.installation_options.enableDataProduct | default(true) }}
-          enableDataQuality: {{ _current_cp4d_cartridge.installation_options.enableDataQuality | default(false) }}
-          enableGenerativeAICapabilities: {{ _current_cp4d_cartridge.installation_options.enableGenerativeAICapabilities | default(true) }}
-          enableKnowledgeGraph: {{ _current_cp4d_cartridge.installation_options.enableKnowledgeGraph | default(true) }}
-          enableModelsOn: {{ _current_cp4d_cartridge.installation_options.enableModelsOn | default('cpu') }}
-          enableSemanticEmbedding: {{ _current_cp4d_cartridge.installation_options.enableSemanticEmbedding | default(false) }}
-          enableSemanticEnrichment: {{ _current_cp4d_cartridge.installation_options.enableSemanticEnrichment | default(true) }}
-          enableTextToSql: {{ _current_cp4d_cartridge.installation_options.enableTextToSql | default(false) }}
+- name: Set installation options for watsonx.data intelligence
+  include_tasks: cp4d-installation-options.yml
+  vars:
+    _cartridge_name: watsonx_dataintelligence
+    _root_options: False
