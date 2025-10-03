@@ -68,6 +68,17 @@
   vars:
     common_output_to_var: "apps_endpoint_domain"
 
-- name: Set cpdeployer_namespace from file or default
+- name: Check if namespace file exists
+  ansible.builtin.stat:
+    path: /var/run/secrets/kubernetes.io/serviceaccount/namespace
+  register: namespace_file_stat
+
+- name: Read namespace from file if it exists
   ansible.builtin.set_fact:
-    cpdeployer_namespace: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') | default('cloud-pak-deployer') | trim }}"
+    cpdeployer_namespace: "{{ lookup('file', '/var/run/secrets/kubernetes.io/serviceaccount/namespace') | trim }}"
+  when: namespace_file_stat.stat.exists
+
+- name: Set default namespace if file doesn't exist
+  ansible.builtin.set_fact:
+    cpdeployer_namespace: "cloud-pak-deployer"
+  when: not namespace_file_stat.stat.exists
