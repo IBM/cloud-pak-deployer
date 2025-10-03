@@ -106,19 +106,11 @@
     when: not cpd_dry_run
   when: _p_cp4d_version < "5.0.0"
 
-# - name: Insert watsonx Orchestrate options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-#   blockinfile:
-#     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-#     marker: "# {mark} watsonx_orchestrate options #"
-#     block: |
-#         {{ _current_cp4d_cartridge.installation_options | to_yaml }}
-#   when: (_current_cp4d_cartridge.installation_options | default({})) != {}
-
-- ansible.builtin.lineinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml" 
-    line: "{{ item.key }}: {{ item.value }}"
-    insertafter: EOF
-  loop: "{{ _current_cp4d_cartridge.installation_options | dict2items }}"
+- name: Set installation options for watsonx Orchestrate
+  include_tasks: cp4d-installation-options.yml
+  vars:
+    _cartridge_name: watsonx_orchestrate
+    _root_options: True
 
 - block:
   - name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log

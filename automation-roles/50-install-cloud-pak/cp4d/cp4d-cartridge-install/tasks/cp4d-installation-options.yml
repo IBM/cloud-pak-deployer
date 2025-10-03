@@ -1,0 +1,17 @@
+---
+- set_fact:
+    _template_file: installation-options-custom-spec.j2
+    
+- set_fact:
+    _template_file: installation-options-root.j2
+  when: _root_options | default(False)
+
+- name: Insert {{ _cartridge_name }} installation options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
+  blockinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    marker: "# {mark} {{ _cartridge_name }} options #"
+    block: |
+        {{ lookup('template', _template_file) }}
+  vars:
+    _installation_options: "{{ _current_cp4d_cartridge.installation_options }}"
+  when: (_current_cp4d_cartridge.installation_options | default({})) != {}

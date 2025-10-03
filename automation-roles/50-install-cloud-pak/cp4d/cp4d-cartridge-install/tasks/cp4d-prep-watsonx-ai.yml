@@ -1,9 +1,6 @@
 ---
-- name: Insert watsonx.ai options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} watsonx_ai options #"
-    block: |2
-        watsonx_ai:
-          tuning_disabled: {{ _current_cp4d_cartridge.installation_options.tuning_disabled | default(false) }}
-          lite_install: {{ _current_cp4d_cartridge.installation_options.lite_install | default(false) }}
+- name: Set installation options for watsonx.ai
+  include_tasks: cp4d-installation-options.yml
+  vars:
+    _cartridge_name: watsonx_ai
+    _root_options: False
