@@ -3,10 +3,17 @@
     name: run-command
   vars:
     _p_command_description: Uninstall scheduling service from project {{ _scheduler_project }} 
-    _p_command: "oc delete Scheduling ibm-cpd-scheduler -n {{ _scheduler_project }} --ignore-not-found --wait=true || true"
+    _p_command: "oc delete scheduling.scheduler.spectrumcomputing.ibm.com ibm-cpd-scheduler -n {{ _scheduler_project }} --ignore-not-found --wait=true || true"
 
 - include_role:
     name: run-command
   vars:
     _p_command_description: Delete scheduler project {{ _scheduler_project }} 
-    _p_command: "oc delete ns {{ _scheduler_project }} --ignore-not-found"
+    _p_command: "oc delete ns {{ _scheduler_project }} --ignore-not-found --wait=true"
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Delete scheduler CRD 
+    _p_command: "oc delete crd scheduling.scheduler.spectrumcomputing.ibm.com --ignore-not-found"
+
