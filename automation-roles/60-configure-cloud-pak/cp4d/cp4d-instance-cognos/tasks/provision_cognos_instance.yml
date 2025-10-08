@@ -289,41 +289,8 @@
       - set_fact:
           _cognos_instance_create_result_json: "{{ _cognos_instance_create_result.stdout | from_json }}"
 
-      - when: _ca_cp4d_version == "4.0"
-        block:
-        - name: Wait until Cognos Analytics artifacts pod has started and is ready
-          shell: |
-            oc get po \
-              -n {{ current_cp4d_cluster.project }} \
-              -l app.kubernetes.io/component=ca-artifacts \
-              --no-headers \
-              -o=jsonpath='{.items[?(.status.containerStatuses[0].ready==true)].metadata.name}'
-          register: _ca_artifacts_pod
-          retries: 60
-          delay: 10
-          until:
-            - _ca_artifacts_pod.rc==0
-            - _ca_artifacts_pod.stdout!=''
-
-        - name: Wait for a bit so that all Cognos Analytics containers are starting
-          pause:
-            seconds: 90
-
-        - name: Destroy the artifacts pod so Cognos Analytics instance provisioning continues
-          shell: |
-            oc delete pod \
-              -n {{ current_cp4d_cluster.project }} \
-              {{ _ca_artifacts_pod.stdout }}
-
       - name: Cognos Analytics instance being provisioned
         debug:
           msg: "Cognos Analytics instance being provisioned. ID: {{ _cognos_instance_create_result_json.id }}. Provisioning can take up to 70 minutes to complete"
 
-      - name: Label DB2 STS when using internal metastore
-        shell: |
-          oc label sts \
-            -n {{ current_cp4d_cluster.project }} \
-              c-db2oltp-{{ _internal_db2_instance_id }}-db2u cognos_instance_id={{ _cognos_instance_create_result_json.id }} \
-              --overwrite
-        when: not _internal_db2_instance_id == ""
   when: not cpd_dry_run

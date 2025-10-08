@@ -34,12 +34,12 @@ There are 5 main steps to run the deployer for Fusion HCI
 ### Deployer configuration and status directories
 Deployer reads the configuration from a directory you set in the `CONFIG_DIR` environment variable. A status directory (`STATUS_DIR` environment variable) is used to log activities, store temporary files, scripts. If you use a File Vault (default), the secrets are kept in the `$STATUS_DIR/vault` directory.
 
-Discover sample configuration YAML files for OpenShift and Cloud Pak here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). To set up Fusion HCI, transfer the ocp-fusion-storage-scale.yaml file to the $CONFIG_DIR/config directory. If you're interested in installing watsonx as well, choose one of the watsonx-*.yaml files and copy it accordingly.
+Discover sample configuration YAML files for OpenShift and Cloud Pak here: [sample configuration](https://github.com/IBM/cloud-pak-deployer/tree/main/sample-configurations/sample-dynamic/config-samples). To set up Fusion HCI, transfer the ocp-existing-fusion-storage-scale.yaml file to the $CONFIG_DIR/config directory. If you're interested in installing watsonx as well, choose one of the watsonx-*.yaml files and copy it accordingly.
 
 Example:
 ``` { .bash .copy }
 mkdir -p $HOME/cpd-config/config
-cp sample-configurations/sample-dynamic/config-samples/ocp-fusion-storage-scale.yaml $HOME/cpd-config/config/
+cp sample-configurations/sample-dynamic/config-samples/ocp-existing-fusion-storage-scale.yaml $HOME/cpd-config/config/
 cp sample-configurations/sample-dynamic/config-samples/watsonx-480.yaml $HOME/cpd-config/config/
 ```
 
