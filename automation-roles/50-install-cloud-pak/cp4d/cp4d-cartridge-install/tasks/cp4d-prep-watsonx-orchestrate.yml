@@ -1,6 +1,6 @@
 ---
 - block:
-  - name: Check if Watson Assistant has been installed {{ _p_current_cp4d_cluster.project }}
+  - name: Check if Watson Assistant has been installed {{ _p_current_cp4d_cluster.project }} if watsonx Orchestrate installed in default mode
     shell: |
       oc get WatsonAssistant wa -n {{ _p_current_cp4d_cluster.project }}
     failed_when: False
@@ -10,7 +10,9 @@
     fail:
       msg: Watson Assistant has not been installed in project {{ _p_current_cp4d_cluster.project }}
     when: _wa_installed.rc != 0
-  when: not cpd_dry_run
+  when: 
+  - not cpd_dry_run
+  - (_current_cp4d_cartridge.installation_options.watson_orchestrate_install_mode | default('')) != 'lite'
 
 - block:
   - name: Check if Red Hat Certificate Manager is already installed
@@ -104,13 +106,11 @@
     when: not cpd_dry_run
   when: _p_cp4d_version < "5.0.0"
 
-- name: Insert watsonx Orchestrate options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} watsonx_orchestrate options #"
-    block: |
-        {{ _current_cp4d_cartridge.installation_options | to_yaml }}
-  when: (_current_cp4d_cartridge.installation_options | default({})) != {}
+- name: Set installation options for watsonx Orchestrate
+  include_tasks: cp4d-installation-options.yml
+  vars:
+    _cartridge_name: watsonx_orchestrate
+    _root_options: True
 
 - block:
   - name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log

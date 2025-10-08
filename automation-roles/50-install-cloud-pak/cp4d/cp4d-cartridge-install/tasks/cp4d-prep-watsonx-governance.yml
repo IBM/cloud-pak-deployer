@@ -1,11 +1,6 @@
 ---
-- name: Insert watsonx.governance options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} watsonx_governance options #"
-    block: |2
-        watsonx_governance:
-          installType: {{ _current_cp4d_cartridge.installation_options.installType | default(all) }}
-          enableFactsheet: {{ _current_cp4d_cartridge.installation_options.enableFactsheet | default(true) }}
-          enableOpenpages: {{ _current_cp4d_cartridge.installation_options.enableOpenpages | default(true) }}
-          enableOpenscale: {{ _current_cp4d_cartridge.installation_options.enableOpenscale | default(true) }}
+- name: Set installation options for watsonx.governance
+  include_tasks: cp4d-installation-options.yml
+  vars:
+    _cartridge_name: watsonx_governance
+    _root_options: False
