@@ -1,0 +1,13 @@
+---
+- set_fact:
+    _scheduler: "{{ _current_cp4d_scheduler.cartridges | json_query(query) | first | default({}) }}"
+  vars:
+    query: >-
+      [?name=='scheduler']
+
+- set_fact:
+    _cp4d_install_scheduler: True
+  when: 
+  - _current_cp4d_scheduler.openshift_cluster_name == _p_current_cp4d_cluster.openshift_cluster_name
+  - _scheduler != {}
+  - (_scheduler.state | default('installed')) == 'installed'

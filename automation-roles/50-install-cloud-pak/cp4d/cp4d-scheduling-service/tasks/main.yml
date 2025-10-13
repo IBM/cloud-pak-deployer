@@ -13,18 +13,8 @@
     _scheduler_project: cpd-scheduler
   when: _get_cpd_scheduler.rc == 0
 
-- set_fact:
-    _scheduler: "{{ _p_current_cp4d_cluster.cartridges | json_query(query) | first | default({}) }}"
-  vars:
-    query: >-
-      [?name=='scheduler']
-
-- debug:
-    var: _scheduler
-
-- include_tasks: install-scheduler.yml
-  when: 
-  - _scheduler != {} and (_scheduler.state | default('installed')) == 'installed'
+- include_tasks: check-install-scheduler.yml
+  when: _cp4d_install_scheduler
 
 - include_tasks: uninstall-scheduler.yml
-  when: _scheduler == {} or (_scheduler.state | default('installed')) == 'removed'
+  when: not _cp4d_install_scheduler

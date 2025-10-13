@@ -297,6 +297,15 @@
     content: "{{ _cartridges_to_install | default([]) | to_json }}"
     dest: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-cartridges.json"
 
+- set_fact:
+    _cp4d_install_scheduler: False
+
+- name: Check if scheduler must be installed
+  include_tasks: check-cp4d-scheduler.yml
+  loop_control:
+    loop_var: _current_cp4d_scheduler
+  loop: "{{ all_config.cp4d | default([]) }}"
+
 - name: Set up alternative repository and registry if specified
   include_role:
     name: cp-alternative-repo
