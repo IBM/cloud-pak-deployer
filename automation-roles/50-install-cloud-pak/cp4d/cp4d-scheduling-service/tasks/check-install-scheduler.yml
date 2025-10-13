@@ -1,0 +1,11 @@
+---
+- name: Check if scheduler is already installed
+  kubernetes.core.k8s_info:
+    api_version: scheduler.spectrumcomputing.ibm.com/v1
+    kind: Scheduling
+    name: ibm-cpd-scheduler
+    namespace: "{{ scheduling_service_project }}"
+  register: _get_scheduler
+
+- include_tasks: install-scheduler.yml
+  when: not _cpd_optimize_deploy or _get_scheduler.resources==[]
