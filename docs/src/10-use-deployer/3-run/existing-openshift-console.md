@@ -81,9 +81,8 @@ Log in as a cluster administrator to be able to run the deployer with the correc
 * Update the `cp4d` element and select the version and cartridges you want to install
 
 !!! info
-    The below is an example of a Software Hub installation with Watson Studio and Watson Machine Learning activated. Other example configurations:
+    The below is an example of a Software Hub installation. Other example configurations:
     
-    * [Only Software Hub](./existing-openshift-software-hub-only.md){target="_blank}
     * [Software Hub with Keycloak as the identity provider](./existing-openshift-software-hub-keycloak.md){target="_blank}
     * [Software Hub watsonx.ai](./existing-openshift-software-hub-watsonx-ai.md){target="_blank}
 
@@ -546,7 +545,6 @@ Log in as a cluster administrator to be able to run the deployer with the correc
               enableOpenpages: true
               enableOpenscale: true
 
-          # For successful deployment of watsonx Orchestrate, make sure you set ibm_cert_manager to True
           - name: watsonx_orchestrate
             description: watsonx.orchestrate
             installation_options:
