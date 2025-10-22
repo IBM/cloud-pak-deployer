@@ -334,7 +334,7 @@ while (( "$#" )); do
     fi
     # Check if the environment variable has the format of key=value
     extra_key=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f1)
-    extra_value=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f2)
+    extra_value=$(echo ${CURRENT_EXTRA_VAR} | cut -s -d= -f2-)
     if [[ "${extra_key}" == "" || "${extra_value}" == "" ]];then
       echo "Error: --extra-vars must be specified as <key>=<value>."
       command_usage 2
