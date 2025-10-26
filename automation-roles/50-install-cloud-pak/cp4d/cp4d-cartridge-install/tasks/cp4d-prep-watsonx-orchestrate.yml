@@ -1,19 +1,4 @@
 ---
-# - block:
-#   - name: Check if Watson Assistant has been installed {{ _p_current_cp4d_cluster.project }} if watsonx Orchestrate installed in default mode
-#     shell: |
-#       oc get WatsonAssistant wa -n {{ _p_current_cp4d_cluster.project }}
-#     failed_when: False
-#     register: _wa_installed
-
-#   - name: Fail if Watson Assistant has not been installed in project {{ _p_current_cp4d_cluster.project }}
-#     fail:
-#       msg: Watson Assistant has not been installed in project {{ _p_current_cp4d_cluster.project }}
-#     when: _wa_installed.rc != 0
-#   when: 
-#   - not cpd_dry_run
-#   - (_current_cp4d_cartridge.installation_options.watson_orchestrate_install_mode | default('')) != 'lite'
-
 - block:
   - name: Check if Red Hat Certificate Manager is already installed
     kubernetes.core.k8s_info:
@@ -51,18 +36,6 @@
     - _p_cp4d_version < "5.2.0"
   when: 
   - not cpd_dry_run
-
-- name: Generate OLM utils command to create watsonx Orchestrate subscription
-  set_fact:
-    _apply_olm_wxo_command: "{{ lookup('template', 'apply-olm-cartridge-wxo.j2') }}" 
-
-- include_role:
-    name: run-command
-  vars:
-    _p_command_description: Run apply-olm command to install watsonx Orchestrate subscriptions
-    _p_command: "{{ _apply_olm_wxo_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-olm-wxo.log"
-    _p_command_failed_when: False
 
 - include_tasks: cp4d-prep-wxo-app-connect.yml
   when: _p_cp4d_version < "5.1.3"
@@ -117,6 +90,14 @@
   vars:
     _cartridge_name: watsonx_orchestrate
     _root_options: True
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create OperandRequest when doing watsonx Orchestrate lite installation
+    _p_apply_yaml_template: wxo-lite-operand-request.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/openshift/{{ _p_current_cp4d_cluster.project }}-wxo-lite-operand-request.yaml"
+  when: (_current_cp4d_cartridge.installation_options.watson_orchestrate_install_mode | default('')) == 'lite'
 
 - block:
   - name: Starting background task to patch OpsManager and RabbitMQCluster. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-wxo-48-patch.log
