@@ -1,16 +1,40 @@
 ---
-- name: Use olm-utils-v2
-  unarchive:
-    src: /olm-utils/opt-ansible-v2.tar.gz
-    dest: /opt/ansible
-    remote_src: True
-  when: 
-  - _p_cp4d_version >= "4.7.0"
-  - _p_cp4d_version < "5.0.0"
-
 - name: Use olm-utils-v3
   unarchive:
     src: /olm-utils/opt-ansible-v3.tar.gz
     dest: /opt/ansible
     remote_src: True
-  when: _p_cp4d_version >= "5.0.0"
+  when: 
+  - _p_cp4d_version >= "5.0.0"
+  - _p_cp4d_version < "5.3.0"
+
+- name: Use olm-utils-v4
+  unarchive:
+    src: /olm-utils/opt-ansible-v4.tar.gz
+    dest: /opt/ansible
+    remote_src: True
+  when: _p_cp4d_version >= "5.3.0"
+
+- set_fact:
+    _olm_utils_image: "{{ lookup('file',_deployer_dir+'/.version-info/olm-utils-v3-image.txt').split(':')[0] }}"
+    _olm_utils_image_manifest: "{{ (lookup('file',_deployer_dir+'/.version-info/olm-utils-v3-manifest.json') | from_json) }}"
+  when: 
+  - _p_cp4d_version >= "5.0.0"
+  - _p_cp4d_version < "5.3.0"
+
+- set_fact:
+    _olm_utils_image: "{{ lookup('file',_deployer_dir+'/.version-info/olm-utils-v4-image.txt').split(':')[0] }}"
+    _olm_utils_image_manifest: "{{ (lookup('file',_deployer_dir+'/.version-info/olm-utils-v4-manifest.json') | from_json) }}"
+  when: _p_cp4d_version >= "5.3.0"
+
+- debug:
+    var: IMAGE_ARCH
+
+- set_fact:
+    _olm_utils_image_digest: "{{ (_olm_utils_image_manifest.manifests | json_query(query) | first).digest }}"
+  vars:
+    query: >-
+      [?platform.architecture=='{{ IMAGE_ARCH }}']
+
+- set_fact:
+    _olm_utils_image_full: "{{ _olm_utils_image }}@{{ _olm_utils_image_digest }}"
