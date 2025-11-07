@@ -669,25 +669,25 @@ if ! $INSIDE_CONTAINER;then
   # If running "build" subcommand, build the image
   if [ "$SUBCOMMAND" == "build" ];then
     # If images have not been overridden, set the variables here
-    if [ -z $CPD_OLM_UTILS_V2_IMAGE ];then
-      if [[ "${IMAGE_ARCH}" == "amd64" || "${IMAGE_ARCH}" == "arm64" ]]; then
-        export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest
-      else
-        export CPD_OLM_UTILS_V2_IMAGE=icr.io/cpopen/cpd/olm-utils-v2:latest.${IMAGE_ARCH}
-      fi
-    else
-      echo "Custom olm-utils-v2 image ${CPD_OLM_UTILS_V2_IMAGE} will be used."
-    fi
-
-    # If images have not been overridden, set the variables here
     if [ -z $CPD_OLM_UTILS_V3_IMAGE ];then
-      if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
+      if [[ "${IMAGE_ARCH}" == "amd64" || "${IMAGE_ARCH}" == "arm64" ]]; then
         export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest
       else
         export CPD_OLM_UTILS_V3_IMAGE=icr.io/cpopen/cpd/olm-utils-v3:latest.${IMAGE_ARCH}
       fi
     else
       echo "Custom olm-utils-v3 image ${CPD_OLM_UTILS_V3_IMAGE} will be used."
+    fi
+
+    # If images have not been overridden, set the variables here
+    if [ -z $CPD_OLM_UTILS_V4_IMAGE ];then
+      if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
+        export CPD_OLM_UTILS_V4_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:latest
+      else
+        export CPD_OLM_UTILS_V4_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:latest.${IMAGE_ARCH}
+      fi
+    else
+      echo "Custom olm-utils-v4 image ${CPD_OLM_UTILS_V4_IMAGE} will be used."
     fi
 
     echo "Building Cloud Pak Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG}"
@@ -700,6 +700,11 @@ if ! $INSIDE_CONTAINER;then
     chmod +x ${SCRIPT_DIR}/.version-info/version-info.sh
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
+    # Store the base image manifests
+    echo -n ${CPD_OLM_UTILS_V3_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v3-image.txt
+    ${CPD_CONTAINER_ENGINE} manifest inspect ${CPD_OLM_UTILS_V3_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v3-manifest.json
+    echo -n ${CPD_OLM_UTILS_V4_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v4-image.txt
+    ${CPD_CONTAINER_ENGINE} manifest inspect ${CPD_OLM_UTILS_V4_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v4-manifest.json
     # Build the image
     if [ "${IMAGE_ARCH}" == "amd64" ]; then
       DOCKERFILE=Dockerfile
@@ -709,8 +714,8 @@ if ! $INSIDE_CONTAINER;then
     ${CPD_CONTAINER_ENGINE} build -t cloud-pak-deployer:${CPD_IMAGE_TAG} \
       --pull \
       -f ${SCRIPT_DIR}/${DOCKERFILE} \
-      --build-arg CPD_OLM_UTILS_V2_IMAGE=${CPD_OLM_UTILS_V2_IMAGE} \
       --build-arg CPD_OLM_UTILS_V3_IMAGE=${CPD_OLM_UTILS_V3_IMAGE} \
+      --build-arg CPD_OLM_UTILS_V4_IMAGE=${CPD_OLM_UTILS_V4_IMAGE} \
       --platform linux/${IMAGE_ARCH} \
       ${SCRIPT_DIR}
     if "$CPD_CLEANUP";then 
@@ -973,15 +978,15 @@ if [[ "${ACTION}" == "download" ]] && ! ${CHECK_ONLY};then
   echo "Saving Deployer container image cloud-pak-deployer:${CPD_IMAGE_TAG} into ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar"
   ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/cloud-pak-deployer-image.tar cloud-pak-deployer:${CPD_IMAGE_TAG}
 
-  echo "Removing old archives for olm-utils-v2 container image"
-  rm -f ${STATUS_DIR}/downloads/olm-utils-v2-image.tar
-  echo "Saving container image ${CPD_OLM_UTILS_V2_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-v2-image.tar"
-  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-v2-image.tar ${CPD_OLM_UTILS_V2_IMAGE}
-
   echo "Removing old archives for olm-utils-v3 container image"
   rm -f ${STATUS_DIR}/downloads/olm-utils-v3-image.tar
   echo "Saving container image ${CPD_OLM_UTILS_V3_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-v3-image.tar"
   ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-v3-image.tar ${CPD_OLM_UTILS_V3_IMAGE}
+
+  echo "Removing old archives for olm-utils-v4 container image"
+  rm -f ${STATUS_DIR}/downloads/olm-utils-v4-image.tar
+  echo "Saving container image ${CPD_OLM_UTILS_V4_IMAGE} into ${STATUS_DIR}/downloads/olm-utils-v4-image.tar"
+  ${CPD_CONTAINER_ENGINE} save -o ${STATUS_DIR}/downloads/olm-utils-v4-image.tar ${CPD_OLM_UTILS_V4_IMAGE}
 fi
 
 # Build command when not running inside container
@@ -1021,6 +1026,7 @@ if ! $INSIDE_CONTAINER;then
   run_cmd+=" -e IBM_CLOUD_API_KEY=${IBM_CLOUD_API_KEY}"
   run_cmd+=" -e CP_ENTITLEMENT_KEY=${CP_ENTITLEMENT_KEY}"
   run_cmd+=" -e ARCH=${ARCH}"
+  run_cmd+=" -e IMAGE_ARCH=${IMAGE_ARCH}"
 
   if [ ! -z $VAULT_GROUP ];then
     run_cmd+=" -e VAULT_GROUP=${VAULT_GROUP}"

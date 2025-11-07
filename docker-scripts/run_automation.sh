@@ -97,6 +97,7 @@ env|environment)
   run_cmd+=" --extra-vars cpd_test_cartridges=${CPD_TEST_CARTRIDGES}"
   run_cmd+=" --extra-vars cpd_accept_licenses=${CPD_ACCEPT_LICENSES}"
   run_cmd+=" --extra-vars ARCH=${ARCH}"
+  run_cmd+=" --extra-vars IMAGE_ARCH=${IMAGE_ARCH}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
