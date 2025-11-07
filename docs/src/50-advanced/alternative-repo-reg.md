@@ -15,12 +15,12 @@ source ./set-env.sh
 By default the Cloud Pak Deployer image is built on top of the `olm-utils` images in `icr.io`. If you're working with a pre-release of the Cloud Pak OLM utils image, you can override the setting as follows:
 
 ``` { .bash .copy }
-export CPD_OLM_UTILS_V2_IMAGE=cp.staging.acme.com:4.8.0
+export CPD_OLM_UTILS_V3_IMAGE=cp.staging.acme.com:5.2.0
 ```
 
-Or, for Cloud Pak for Data 5.0:
+Or, for Cloud Pak for Data 5.3:
 ``` { .bash .copy }
-export CPD_OLM_UTILS_V3_IMAGE=cp.staging.acme.com:5.0.0
+export CPD_OLM_UTILS_V4_IMAGE=cp.staging.acme.com:5.3.0
 ```
 
 Subsequently, run the install commmand:
