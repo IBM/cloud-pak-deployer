@@ -1,12 +1,12 @@
 # Container image including olm-utils
-ARG CPD_OLM_UTILS_V2_IMAGE="icr.io/cpopen/cpd/olm-utils-v2:latest"
 ARG CPD_OLM_UTILS_V3_IMAGE="icr.io/cpopen/cpd/olm-utils-v3:latest"
+ARG CPD_OLM_UTILS_V4_IMAGE="icr.io/cpopen/cpd/olm-utils-v3:latest"
 
-FROM ${CPD_OLM_UTILS_V2_IMAGE} as olm-utils-v2
+FROM ${CPD_OLM_UTILS_V3_IMAGE} as olm-utils-v3
 RUN cd /opt/ansible && \
-    tar czf /tmp/opt-ansible-v2.tar.gz *
+    tar czf /tmp/opt-ansible-v3.tar.gz *
 
-FROM ${CPD_OLM_UTILS_V3_IMAGE} as olmn-utils-v3
+FROM ${CPD_OLM_UTILS_V4_IMAGE} as olmn-utils-v4
 
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
@@ -49,10 +49,10 @@ RUN mkdir -p /cloud-pak-deployer && \
 COPY . /cloud-pak-deployer/
 COPY ./deployer-web/nginx.conf   /etc/nginx/
 
-COPY --from=olm-utils-v2 /tmp/opt-ansible-v2.tar.gz /olm-utils/
+COPY --from=olm-utils-v3 /tmp/opt-ansible-v3.tar.gz /olm-utils/
 
 RUN cd /opt/ansible && \
-    tar czf /olm-utils/opt-ansible-v3.tar.gz *
+    tar czf /olm-utils/opt-ansible-v4.tar.gz *
 
 # BUG with building wheel 
 #RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
