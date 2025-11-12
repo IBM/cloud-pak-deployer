@@ -2,7 +2,7 @@
 cp4d:
 - project: cpd
   openshift_cluster_name: "{{ env_id }}"
-  cp4d_version: 5.2.0
+  cp4d_version: 5.2.2
   cp4d_entitlement: 
   - cpd-enterprise
   # - cpd-standard
@@ -239,6 +239,10 @@ cp4d:
     description: Synthetic Data Generator
     state: removed
 
+  - name: udp
+    description: Data Integration for Unstructured Data
+    state: removed
+
   - name: voice-gateway
     description: Voice Gateway
     replicas: 1
@@ -410,6 +414,9 @@ cp4d:
   - name: watsonx_data_premium
     description: watsonx.data Premium
     state: removed
+    installation_options:
+      wxd_premium_enable_models_on: gpu
+      license_type: premium
 
   - name: watsonx_governance
     description: watsonx.governance
@@ -420,11 +427,13 @@ cp4d:
       enableOpenpages: true
       enableOpenscale: true
 
-  # For successful deployment of watsonx Orchestrate, make sure you set ibm_cert_manager to True
   - name: watsonx_orchestrate
     description: watsonx.orchestrate
     installation_options:
-      watsonx_orchestrate_watsonx_ai_type: false
+      # watson_orchestrate_install_mode: lite
+      watson_orchestrate_watsonx_ai_type: true
+      watson_orchestrate_ootb_models:
+      - ibm-slate-30m-english-rtrvr
     instances:
     - name: wxo-instance
       description: "watsonx Orchestrate instance"

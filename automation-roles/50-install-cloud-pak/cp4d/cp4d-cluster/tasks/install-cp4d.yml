@@ -23,16 +23,6 @@
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - not (cpd_skip_mirror | bool)
 
-- name: Migrate to private topology on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }} if upgrading to CP4D 4.7.0 or higher
-  include_role: 
-    name: cp4d-migrate-private-topology
-  vars:
-    _p_preview: False
-  when:
-  - _upgrade_cp4d
-  - _installed_ibmcpd_version < "4.7.0"
-  - _p_cp4d_version >= "4.7.0"
-
 - name: Activate license service and certificate manager on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_role:
     name: cp-fs-cluster-components
@@ -42,7 +32,6 @@
     _p_ibm_cert_manager: "{{ current_cp4d_cluster.ibm_cert_manager | default(false) }}"
     _p_migrate_topology: False
     _p_preview: False
-  when: _p_cp4d_version >= "4.7.0"
 
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
