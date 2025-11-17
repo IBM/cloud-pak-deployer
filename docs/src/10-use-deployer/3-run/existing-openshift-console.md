@@ -7,6 +7,27 @@ See the deployer in action deploying IBM watsonx.ai on an existing OpenShift clu
 ## Log in to the OpenShift cluster
 Log in as a cluster administrator to be able to run the deployer with the correct permissions.
 
+## TechZone clusters and Watson Studio Pipelines (Pipeline Orchestration)
+
+!!! warning "OpenShift Pipelines must be removed manually"
+    The Watson Studio Pipelines cartridge (also referred to as Pipeline Orchestration) installs its own Tekton controllers.  
+    TechZone OpenShift clusters already include the Red Hat OpenShift Pipelines operator that owns the same Tekton
+    resources, so the install fails if both are present. The Cloud Pak Deployer does **not** uninstall shared cluster
+    components. Remove OpenShift Pipelines yourself **before** you add `ws-pipelines` to the configuration.
+
+Follow these steps once per cluster:
+
+1. Sign in to the OpenShift web console with a cluster-admin user.
+2. Go to `Operators` → `Installed Operators`, open **OpenShift Pipelines** (namespace `openshift-operators`), choose **Actions → Uninstall**, keep *Delete operand resources* selected, and confirm.
+3. Wait until the operator disappears from the list and the `openshift-pipelines-operator` CSV is removed.
+4. Verify that no `TektonConfig` instance is left. The following command should return *No resources found*:
+   ```bash
+   oc get tektonconfig
+   ```
+5. If a `tekton-pipelines` project still exists, delete it to remove the remaining webhooks.
+
+TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops the TechZone pipeline that would normally start the deployer. After completing the above steps, start the deployer directly from the OpenShift console (as described below). You can reinstall OpenShift Pipelines from OperatorHub again after Watson Studio Pipelines has been successfully deployed.
+
 ## Prepare the deployer project
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
