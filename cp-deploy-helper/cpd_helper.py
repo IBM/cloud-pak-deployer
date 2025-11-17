@@ -17,10 +17,29 @@ from typing import Any, Dict, List, Tuple
 
 CATALOG_PATH = Path(__file__).with_name("service_catalog.json")
 DEFAULT_BASE_DIR = Path.home() / "cloud-pak-deployer"
-DEFAULT_CONFIG_SUBDIR = "configuration"
-DEFAULT_STATUS_SUBDIR = "status"
+DEFAULT_CONFIG_SUBDIR = "cpd-config"
+DEFAULT_STATUS_SUBDIR = "cpd-status"
 DEFAULT_CONFIG_FILENAME = "cpd-config.yaml"
 STATE_FILENAME = "helper-state.json"
+ASCII_BANNER = r"""
+  ___ ____  __  __ 
+ |_ _| __ )|  \/  |
+  | ||  _ \| |\/| |
+  | || |_) | |  | |
+ |___|____/|_|  |_|
+
+      IBM Cloud Pak Deployer Helper
+"""
+COLOR_BLUE = "\033[94m"
+COLOR_RESET = "\033[0m"
+SUPPORTED_STORAGE_CLASSES = [
+    "auto",
+    "managed-nfs-storage",
+    "ocs-storagecluster-cephfs",
+    "ocs-storagecluster-ceph-rbd",
+    "portworx-shared-gp3",
+    "rook-cephfs",
+]
 
 
 def load_catalog() -> List[Dict[str, Any]]:
@@ -97,6 +116,10 @@ def prompt_secret(message: str, existing: str | None = None) -> str:
 
 def ensure_directory(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
+
+
+def print_banner() -> None:
+    print(COLOR_BLUE + ASCII_BANNER + COLOR_RESET)
 
 
 def select_profile(profiles: List[Dict[str, Any]], previous_id: str | None) -> Dict[str, Any]:
@@ -721,9 +744,7 @@ def write_env_file(path: Path, config_dir: Path, status_dir: Path,
 
 
 def main() -> None:
-    print("=" * 72)
-    print("IBM Cloud Pak Deployer helper")
-    print("=" * 72)
+    print_banner()
 
     profiles = load_catalog()
 
@@ -768,6 +789,9 @@ def main() -> None:
     cluster_name = prompt_text("Cluster name", openshift_defaults.get("cluster_name", env_id), required=True)
     domain_name = prompt_text("Cluster domain name", openshift_defaults.get("domain_name", "example.com"),
                               required=True)
+    print("\nSupported storage classes (choose one or enter a custom value):")
+    for option in SUPPORTED_STORAGE_CLASSES:
+        print(f"  - {option}")
     storage_class = prompt_text("Default storage class",
                                 openshift_defaults.get("mcg", {}).get("storage_class", "managed-nfs-storage"),
                                 required=True)
