@@ -1058,6 +1058,10 @@ if ! $INSIDE_CONTAINER;then
 
   run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
   run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
+  run_cmd+=" -e ANSIBLE_FORCE_COLOR=1"
+  run_cmd+=" -e PY_COLORS=1"
+  run_cmd+=" -e FORCE_COLOR=1"
+  run_cmd+=" -e TERM=xterm-256color"
   run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
   run_cmd+=" -e CPD_OPTIMIZE_DEPLOY=${CPD_OPTIMIZE_DEPLOY}"  
   run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
