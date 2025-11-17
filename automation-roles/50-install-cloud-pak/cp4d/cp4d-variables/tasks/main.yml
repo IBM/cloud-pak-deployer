@@ -161,6 +161,33 @@
 - debug:
     var: _apply_cartridges
 
+# Detect if Watson Studio Pipelines is part of this deployment so we can guard against Tekton conflicts
+- set_fact:
+    _ws_pipelines_requested: "{{ 'ws_pipelines' in (_apply_cartridges | map(attribute='olm_utils_name') | list) }}"
+
+- block:
+  - name: Check if OpenShift Pipelines (Tekton) is installed
+    command: oc get tektonconfig -o json
+    register: _tektonconfig_query
+    changed_when: False
+    failed_when: False
+
+  - set_fact:
+      _tektonconfig_items_count: "{{ (_tektonconfig_query.stdout | from_json).items | length }}"
+    when:
+    - _tektonconfig_query.rc == 0
+    - (_tektonconfig_query.stdout | length) > 0
+
+  - name: Fail when OpenShift Pipelines is detected
+    fail:
+      msg: >-
+        Watson Studio Pipelines cannot be installed while OpenShift Pipelines (Tekton) is present on the cluster.
+        Remove the OpenShift Pipelines operator (and its TektonConfig resource) before running the deployer.
+        See docs/src/10-use-deployer/3-run/existing-openshift-console.md#techzone-clusters-and-watson-studio-pipelines
+        for step-by-step removal instructions.
+    when: (_tektonconfig_items_count | default(0) | int) > 0
+  when: _ws_pipelines_requested
+
 - set_fact:
     _apply_olm_cartridges_list: >-
       {{ _apply_cartridges
