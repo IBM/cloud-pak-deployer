@@ -47,6 +47,32 @@ export STATUS_DIR=$HOME/cpd-status
 - `CONFIG_DIR`: Directory that holds the configuration, it must have a `config` subdirectory which contains the configuration `yaml` files.
 - `STATUS_DIR`: The directory where the Cloud Pak Deployer keeps all status information and logs files.
 
+### Optional: Use the configuration helper
+
+If you prefer a guided experience, run the interactive helper that now ships with the deployer:
+
+``` { .bash .copy }
+python3 cp-deploy-helper/cpd_helper.py
+```
+
+The helper:
+
+- prompts for the entitlement key, directory locations, OpenShift login information, and `env_id`
+- displays a menu of Cloud Pak for Data services and cartridges, ensuring that required dependencies stay selected while validating your choices
+- writes a ready-to-use `configuration/config/cpd-config.yaml` file plus a `set-env.sh` script under the same workspace directory level as the configuration and status directories
+- stores the helper state (including sensitive values) so that you can re-run the wizard at any time to update the configuration without editing YAML files manually
+
+The helper script creates a workspace such as `$HOME/cloud-pak-deployer/` with the following structure:
+
+```
+cloud-pak-deployer/
+├── configuration/    # value for CONFIG_DIR, contains the config/ subdirectory
+├── status/           # value for STATUS_DIR
+└── set-env.sh        # exports CONFIG_DIR, STATUS_DIR, and the collected secrets
+```
+
+Review and protect the generated files, as the helper stores the OpenShift credentials and the IBM entitlement key inside `set-env.sh` (file permissions are restricted to the current user, but you should still guard the file carefully).
+
 #### Optional: advanced configuration
 If the deployer configuration is kept on GitHub, follow the instructions in [GitHub configuration](../../50-advanced/advanced-configuration.md#using-a-github-repository-for-the-configuration).
 
