@@ -5,8 +5,9 @@ manually before running `cp-deploy.sh`. The helper:
 
 - prompts for the configuration and status directory, OpenShift details and
   IBM entitlement key
-- lets you choose which Cloud Pak profile you want to install (Cloud Pak for
-  Data & watsonx, Cloud Pak for Business Automation, or Cloud Pak for Integration)
+- lets you choose which Cloud Pak profile you want to install (watsonx, Cloud Pak
+  for Data & Software Hub, Cloud Pak for Integration, Cloud Pak for Business
+  Automation, or Cloud Pak for Watson AIOps)
 - dynamically builds a `config/cpd-config.yaml` file that contains the OpenShift
   section plus the Cloud Pak profile you selected
 - provides curated menus for CP4D cartridges, CP4BA patterns/add-ons, and CP4I
@@ -30,15 +31,20 @@ The wizard walks through the following flow:
    pre-populated.
 4. Provide the OpenShift API URL, user, password/token, and the IBM entitlement key.
 5. Complete the profile-specific wizard:
-   - **Cloud Pak for Data & watsonx:** choose the entitlements and cartridges to
-     install. Required cartridges are locked, optional ones can be toggled from
-     the menu.
+   - **watsonx:** choose the entitlements and cartridges to install for
+     watsonx.ai, watsonx.data, watsonx.governance, and watsonx Code Assistant.
+     Required cartridges are locked, optional ones can be toggled from the menu.
+   - **Cloud Pak for Data & Software Hub:** pick the Cloud Pak for Data cartridges,
+     including Software Hub workloads, that you want to deploy.
    - **Cloud Pak for Business Automation:** toggle each pattern (decisions, workflow,
      document processing…) and the additional helper services (Process Mining,
      RPA, helper UIs).
    - **Cloud Pak for Integration:** select the integration instances (Navigator,
      App Connect, API Connect, Event Streams, MQ, etc.) and configure whether
      the top-level operator should manage them.
+   - **Cloud Pak for Watson AIOps:** choose which instances (AI Manager, Event
+     Manager, Turbonomic, Instana, Infrastructure, demo content) to install and
+     let the wizard generate the corresponding instance definitions.
 6. Confirm the wizard summary. The helper writes `configuration/config/cpd-config.yaml`
    and a workspace-specific `set-env.sh`. Sensitive data such as entitlement keys
    and OpenShift credentials are stored only in `helper-state.json` and

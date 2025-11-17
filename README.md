@@ -2,10 +2,11 @@
 
 Cloud Pak Deployer simplifies both the initial installation and the ongoing
 management of OpenShift and the Cloud Paks on top of it. The toolkit now
-supports Cloud Pak for Data & watsonx, Cloud Pak for Business Automation, and
-Cloud Pak for Integration across infrastructures such as IBM Cloud ROKS, Azure
-Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), VMWare vSphere and
-existing Red Hat OpenShift environments.
+supports watsonx, Cloud Pak for Data & Software Hub, Cloud Pak for Integration,
+Cloud Pak for Business Automation, and Cloud Pak for Watson AIOps across
+infrastructures such as IBM Cloud ROKS, Azure Red Hat OpenShift (ARO), Red Hat
+OpenShift on AWS (ROSA), VMWare vSphere and existing Red Hat OpenShift
+environments.
 
 To make the onboarding easier for every Cloud Pak profile, the repository ships
 an interactive helper (`cp-deploy-helper/cpd_helper.py`). The helper collects
