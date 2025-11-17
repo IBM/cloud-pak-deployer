@@ -1,360 +1,581 @@
-[
-  {
-    "name": "cp-foundation",
-    "description": "Cloud Pak foundational services (required)",
-    "required": true,
-    "default_state": "installed",
-    "template": {
-      "name": "cp-foundation",
-      "scale": "level_1",
-      "license_service": {
-        "threads_per_core": 2
-      }
-    }
-  },
-  {
-    "name": "lite",
-    "description": "Cloud Pak for Data lite modules (required)",
-    "required": true,
-    "default_state": "installed",
-    "template": {
-      "name": "lite"
-    }
-  },
-  {
-    "name": "scheduler",
-    "description": "Default workload scheduler",
-    "default_state": "removed",
-    "template": {
-      "name": "scheduler"
-    }
-  },
-  {
-    "name": "analyticsengine",
-    "description": "Analytics Engine Powered by Apache Spark",
-    "template": {
-      "name": "analyticsengine",
-      "description": "Analytics Engine Powered by Apache Spark",
-      "size": "small"
-    }
-  },
-  {
-    "name": "bigsql",
-    "description": "Db2 Big SQL",
-    "template": {
-      "name": "bigsql",
-      "description": "Db2 Big SQL"
-    }
-  },
-  {
-    "name": "ca",
-    "description": "Cognos Analytics",
-    "template": {
-      "name": "ca",
-      "description": "Cognos Analytics",
-      "size": "small",
+{
+  "profiles": [
+    {
+      "id": "cp4d",
+      "name": "Cloud Pak for Data & watsonx",
+      "type": "cp4d",
+      "description": "Interactive builder for Cloud Pak for Data / watsonx deployments.",
+      "entitlements": [
+        "cpd-enterprise",
+        "cpd-standard",
+        "cognos-analytics",
+        "data-product-hub",
+        "datastage",
+        "data-integration-unstructured-data",
+        "data-lineage",
+        "ikc-premium",
+        "ikc-standard",
+        "openpages",
+        "planning-analytics",
+        "product-master",
+        "speech-to-text",
+        "text-to-speech",
+        "watson-assistant",
+        "watson-discovery",
+        "watsonx-ai",
+        "watsonx-code-assistant-ansible",
+        "watsonx-code-assistant-z",
+        "watsonx-data",
+        "watsonx-gov-mm",
+        "watsonx-gov-rc",
+        "watsonx-orchestrate"
+      ],
+      "cartridges": [
+        {
+          "name": "cp-foundation",
+          "description": "Cloud Pak foundational services (required)",
+          "required": true,
+          "default_state": "installed",
+          "template": {
+            "name": "cp-foundation",
+            "scale": "level_1",
+            "license_service": {
+              "threads_per_core": 2
+            }
+          }
+        },
+        {
+          "name": "lite",
+          "description": "Cloud Pak for Data lite modules (required)",
+          "required": true,
+          "default_state": "installed",
+          "template": {
+            "name": "lite"
+          }
+        },
+        {
+          "name": "scheduler",
+          "description": "Default workload scheduler",
+          "default_state": "removed",
+          "template": {
+            "name": "scheduler"
+          }
+        },
+        {
+          "name": "analyticsengine",
+          "description": "Analytics Engine Powered by Apache Spark",
+          "template": {
+            "name": "analyticsengine",
+            "description": "Analytics Engine Powered by Apache Spark",
+            "size": "small"
+          }
+        },
+        {
+          "name": "bigsql",
+          "description": "Db2 Big SQL",
+          "template": {
+            "name": "bigsql",
+            "description": "Db2 Big SQL"
+          }
+        },
+        {
+          "name": "ca",
+          "description": "Cognos Analytics",
+          "template": {
+            "name": "ca",
+            "description": "Cognos Analytics",
+            "size": "small",
+            "instances": [
+              {
+                "name": "ca-instance",
+                "metastore_ref": "ca-metastore"
+              }
+            ]
+          }
+        },
+        {
+          "name": "dashboard",
+          "description": "Cognos Dashboards",
+          "template": {
+            "name": "dashboard",
+            "description": "Cognos Dashboards"
+          }
+        },
+        {
+          "name": "datagate",
+          "description": "Db2 Data Gate",
+          "template": {
+            "name": "datagate",
+            "description": "Db2 Data Gate"
+          }
+        },
+        {
+          "name": "datalineage",
+          "description": "IBM MANTA Data Lineage",
+          "template": {
+            "name": "datalineage",
+            "description": "IBM MANTA Data Lineage",
+            "size": "small"
+          }
+        },
+        {
+          "name": "dataproduct",
+          "description": "Data Product Hub",
+          "template": {
+            "name": "dataproduct",
+            "description": "Data Product Hub"
+          }
+        },
+        {
+          "name": "datastage-ent",
+          "description": "DataStage Enterprise",
+          "template": {
+            "name": "datastage-ent",
+            "description": "DataStage Enterprise"
+          }
+        },
+        {
+          "name": "datastage-ent-plus",
+          "description": "DataStage Enterprise Plus",
+          "template": {
+            "name": "datastage-ent-plus",
+            "description": "DataStage Enterprise Plus"
+          }
+        },
+        {
+          "name": "db2",
+          "description": "Db2 OLTP",
+          "template": {
+            "name": "db2",
+            "description": "Db2 OLTP",
+            "size": "small",
+            "instances": [
+              {
+                "name": "ca-metastore",
+                "metadata_size_gb": 20,
+                "data_size_gb": 20,
+                "backup_size_gb": 20,
+                "transactionlog_size_gb": 20
+              }
+            ]
+          }
+        },
+        {
+          "name": "db2wh",
+          "description": "Db2 Warehouse",
+          "template": {
+            "name": "db2wh",
+            "description": "Db2 Warehouse"
+          }
+        },
+        {
+          "name": "dmc",
+          "description": "Db2 Data Management Console",
+          "template": {
+            "name": "dmc",
+            "description": "Db2 Data Management Console",
+            "instances": [
+              {
+                "name": "data-management-console",
+                "description": "Data Management Console",
+                "size": "medium",
+                "storage_size_gb": 50
+              }
+            ]
+          }
+        },
+        {
+          "name": "dods",
+          "description": "Decision Optimization",
+          "template": {
+            "name": "dods",
+            "description": "Decision Optimization",
+            "size": "small"
+          }
+        },
+        {
+          "name": "dp",
+          "description": "Data Privacy",
+          "template": {
+            "name": "dp",
+            "description": "Data Privacy",
+            "size": "small"
+          }
+        },
+        {
+          "name": "dpra",
+          "description": "Data Privacy Risk Assessment",
+          "template": {
+            "name": "dpra",
+            "description": "Data Privacy Risk Assessment"
+          }
+        },
+        {
+          "name": "dv",
+          "description": "Data Virtualization",
+          "template": {
+            "name": "dv",
+            "description": "Data Virtualization",
+            "size": "small",
+            "instances": [
+              {
+                "name": "data-virtualization"
+              }
+            ]
+          }
+        },
+        {
+          "name": "edb_cp4d",
+          "description": "EDB Postgres",
+          "template": {
+            "name": "edb_cp4d",
+            "description": "EDB Postgres",
+            "instances": [
+              {
+                "name": "instance1",
+                "version": "15.4"
+              }
+            ]
+          }
+        },
+        {
+          "name": "factsheet",
+          "description": "AI Factsheets",
+          "template": {
+            "name": "factsheet",
+            "description": "AI Factsheets",
+            "size": "small"
+          }
+        },
+        {
+          "name": "hee",
+          "description": "Execution Engine for Apache Hadoop",
+          "template": {
+            "name": "hee",
+            "description": "Execution Engine for Apache Hadoop",
+            "size": "small"
+          }
+        },
+        {
+          "name": "mantaflow",
+          "description": "MANTA Automated Lineage",
+          "template": {
+            "name": "mantaflow",
+            "description": "MANTA Automated Lineage",
+            "size": "small"
+          }
+        },
+        {
+          "name": "match360",
+          "description": "IBM Match 360",
+          "template": {
+            "name": "match360",
+            "description": "IBM Match 360",
+            "size": "small",
+            "wkc_enabled": true
+          }
+        },
+        {
+          "name": "openpages",
+          "description": "OpenPages with Watson",
+          "template": {
+            "name": "openpages",
+            "description": "OpenPages with Watson",
+            "size": "small"
+          }
+        },
+        {
+          "name": "planning-analytics",
+          "description": "Planning Analytics",
+          "template": {
+            "name": "planning-analytics",
+            "description": "Planning Analytics",
+            "size": "small"
+          }
+        },
+        {
+          "name": "product-master",
+          "description": "Product Master",
+          "template": {
+            "name": "product-master",
+            "description": "Product Master"
+          }
+        },
+        {
+          "name": "speech-to-text",
+          "description": "Speech to Text",
+          "template": {
+            "name": "speech-to-text",
+            "description": "Speech to Text"
+          }
+        },
+        {
+          "name": "text-to-speech",
+          "description": "Text to Speech",
+          "template": {
+            "name": "text-to-speech",
+            "description": "Text to Speech"
+          }
+        },
+        {
+          "name": "watson-assistant",
+          "description": "Watson Assistant",
+          "template": {
+            "name": "watson-assistant",
+            "description": "Watson Assistant"
+          }
+        },
+        {
+          "name": "watson-discovery",
+          "description": "Watson Discovery",
+          "template": {
+            "name": "watson-discovery",
+            "description": "Watson Discovery"
+          }
+        },
+        {
+          "name": "watsonx-ai",
+          "description": "watsonx.ai",
+          "template": {
+            "name": "watsonx-ai",
+            "description": "watsonx.ai"
+          }
+        },
+        {
+          "name": "watsonx-code-assistant-ansible",
+          "description": "watsonx Code Assistant for Ansible",
+          "template": {
+            "name": "watsonx-code-assistant-ansible",
+            "description": "watsonx Code Assistant for Ansible"
+          }
+        },
+        {
+          "name": "watsonx-code-assistant-z",
+          "description": "watsonx Code Assistant for IBM Z",
+          "template": {
+            "name": "watsonx-code-assistant-z",
+            "description": "watsonx Code Assistant for IBM Z"
+          }
+        },
+        {
+          "name": "watsonx-data",
+          "description": "watsonx.data",
+          "template": {
+            "name": "watsonx-data",
+            "description": "watsonx.data"
+          }
+        },
+        {
+          "name": "watsonx-gov-mm",
+          "description": "watsonx.governance model management",
+          "template": {
+            "name": "watsonx-gov-mm",
+            "description": "watsonx.governance model management"
+          }
+        },
+        {
+          "name": "watsonx-gov-rc",
+          "description": "watsonx.governance risk and compliance",
+          "template": {
+            "name": "watsonx-gov-rc",
+            "description": "watsonx.governance risk and compliance"
+          }
+        },
+        {
+          "name": "watsonx-orchestrate",
+          "description": "watsonx Orchestrate",
+          "template": {
+            "name": "watsonx-orchestrate",
+            "description": "watsonx Orchestrate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cp4ba",
+      "name": "Cloud Pak for Business Automation",
+      "type": "cp4ba",
+      "description": "Helper for Cloud Pak for Business Automation patterns and add-ons.",
+      "defaults": {
+        "project": "cp4ba",
+        "collateral_project": "cp4ba-collateral",
+        "cpfs_profile_size": "small",
+        "profile_size": "small",
+        "openshift_storage_name": "auto-storage"
+      },
+      "patterns": [
+        { "id": "foundation", "label": "Foundation (BAS, BAI, AE)", "required": true },
+        { "id": "decisions", "label": "Operational Decision Manager", "default": true },
+        { "id": "decisions_ads", "label": "Automation Decision Services", "default": true },
+        { "id": "content", "label": "FileNet Content Manager", "default": true },
+        { "id": "application", "label": "Business Automation Application", "default": true },
+        { "id": "document_processing", "label": "Automation Document Processing", "default": true },
+        { "id": "workflow", "label": "Business Automation Workflow", "default": true }
+      ],
+      "addons": [
+        { "id": "pm", "label": "Process Mining", "default": true },
+        { "id": "rpa", "label": "Robotic Process Automation", "default": true },
+        { "id": "cloudbeaver_enabled", "label": "CloudBeaver UI", "default": true },
+        { "id": "roundcube_enabled", "label": "Roundcube", "default": true },
+        { "id": "cerebro_enabled", "label": "Cerebro", "default": true },
+        { "id": "akhq_enabled", "label": "AKHQ", "default": true },
+        { "id": "mongo_express_enabled", "label": "Mongo Express", "default": true },
+        { "id": "phpldapadmin_enabled", "label": "phpLDAPAdmin", "default": true },
+        { "id": "opensearch_dashboards_enabled", "label": "OpenSearch Dashboards", "default": true }
+      ]
+    },
+    {
+      "id": "cp4i",
+      "name": "Cloud Pak for Integration",
+      "type": "cp4i",
+      "description": "Helper for Cloud Pak for Integration instances.",
+      "defaults": {
+        "project": "cp4i",
+        "cp4i_version": "2021.4.1",
+        "openshift_storage_name": "nfs-rook-ceph",
+        "use_case_files": true,
+        "accept_licenses": false,
+        "use_top_level_operator": false,
+        "top_level_operator_channel": "v1.5",
+        "top_level_operator_case_version": "2.5.0",
+        "operators_in_all_namespaces": true
+      },
       "instances": [
         {
-          "name": "ca-instance",
-          "metastore_ref": "ca-metastore"
+          "id": "platform-navigator",
+          "label": "Platform Navigator",
+          "required": true,
+          "template": {
+            "name": "integration-navigator",
+            "type": "platform-navigator",
+            "license": "L-RJON-C7QG3S",
+            "channel": "v5.2",
+            "case_version": "1.5.0"
+          }
+        },
+        {
+          "id": "api-management",
+          "label": "API Connect",
+          "template": {
+            "name": "apic1",
+            "type": "api-management",
+            "license": "L-RJON-C7BJ42",
+            "version": "10.0.4.0",
+            "channel": "v2.4",
+            "case_version": "3.0.5"
+          }
+        },
+        {
+          "id": "integration-dashboard",
+          "label": "App Connect Enterprise dashboard",
+          "default": true,
+          "template": {
+            "name": "ace1",
+            "type": "integration-dashboard",
+            "license": "L-APEH-C79J9U",
+            "version": "12.0",
+            "channel": "v3.1",
+            "case_version": "3.1.0"
+          }
+        },
+        {
+          "id": "designer",
+          "label": "App Connect Designer",
+          "template": {
+            "name": "designer1",
+            "type": "integration-design",
+            "license": "L-KSBM-C87FU2",
+            "version": "12.0",
+            "channel": "v3.0",
+            "case_version": "3.0.0"
+          }
+        },
+        {
+          "id": "aspera",
+          "label": "Aspera High-Speed Transfer",
+          "template": {
+            "name": "aspera1",
+            "type": "high-speed-transfer-server",
+            "aspera_key": "",
+            "redis_version": "5.0.9",
+            "version": "4.0.0",
+            "channel": "v1.4",
+            "case_version": "1.4.0"
+          }
+        },
+        {
+          "id": "asset-repo",
+          "label": "Automation Assets",
+          "template": {
+            "name": "asset-repo1",
+            "type": "automation-assets",
+            "license": "L-PNAA-C68928",
+            "version": "2021.4.1-2",
+            "channel": "v1.4",
+            "case_version": "1.4.2"
+          }
+        },
+        {
+          "id": "datapower",
+          "label": "DataPower Gateway",
+          "template": {
+            "name": "data-power1",
+            "type": "enterprise-gateway",
+            "admin_password_secret": "",
+            "license": "L-RJON-BYDR3Q",
+            "version": "10.0-cd",
+            "channel": "v1.5",
+            "case_version": "1.5.0"
+          }
+        },
+        {
+          "id": "event-endpoint-management",
+          "label": "Event Endpoint Management",
+          "template": {
+            "name": "epm1",
+            "type": "event-endpoint-management",
+            "license": "L-RJON-C7BJ42",
+            "version": "10.0.4.0",
+            "channel": "v2.4",
+            "case_version": "3.0.5"
+          }
+        },
+        {
+          "id": "event-streams",
+          "label": "Event Streams",
+          "template": {
+            "name": "es1",
+            "type": "event-streams",
+            "version": "10.5.0",
+            "channel": "v2.5",
+            "case_version": "1.5.2"
+          }
+        },
+        {
+          "id": "mq",
+          "label": "MQ Queue Manager",
+          "template": {
+            "name": "mq1",
+            "type": "messaging",
+            "queue_manager_name": "QUICKSTART",
+            "license": "L-RJON-C7QG3S",
+            "version": "9.2.4.0-r1",
+            "channel": "v1.7",
+            "case_version": "1.7.0"
+          }
+        },
+        {
+          "id": "tracing",
+          "label": "Integration Tracing",
+          "template": {
+            "name": "tracing1",
+            "type": "integration-tracing",
+            "version": "2021.4.1-2",
+            "channel": "v2.5",
+            "case_version": "2.5.2"
+          }
         }
       ]
     }
-  },
-  {
-    "name": "dashboard",
-    "description": "Cognos Dashboards",
-    "template": {
-      "name": "dashboard",
-      "description": "Cognos Dashboards"
-    }
-  },
-  {
-    "name": "datagate",
-    "description": "Db2 Data Gate",
-    "template": {
-      "name": "datagate",
-      "description": "Db2 Data Gate"
-    }
-  },
-  {
-    "name": "datalineage",
-    "description": "IBM MANTA Data Lineage",
-    "template": {
-      "name": "datalineage",
-      "description": "IBM MANTA Data Lineage",
-      "size": "small"
-    }
-  },
-  {
-    "name": "dataproduct",
-    "description": "Data Product Hub",
-    "template": {
-      "name": "dataproduct",
-      "description": "Data Product Hub"
-    }
-  },
-  {
-    "name": "datastage-ent",
-    "description": "DataStage Enterprise",
-    "template": {
-      "name": "datastage-ent",
-      "description": "DataStage Enterprise"
-    }
-  },
-  {
-    "name": "datastage-ent-plus",
-    "description": "DataStage Enterprise Plus",
-    "template": {
-      "name": "datastage-ent-plus",
-      "description": "DataStage Enterprise Plus"
-    }
-  },
-  {
-    "name": "db2",
-    "description": "Db2 OLTP",
-    "template": {
-      "name": "db2",
-      "description": "Db2 OLTP",
-      "size": "small",
-      "instances": [
-        {
-          "name": "ca-metastore",
-          "metadata_size_gb": 20,
-          "data_size_gb": 20,
-          "backup_size_gb": 20,
-          "transactionlog_size_gb": 20
-        }
-      ]
-    }
-  },
-  {
-    "name": "db2wh",
-    "description": "Db2 Warehouse",
-    "template": {
-      "name": "db2wh",
-      "description": "Db2 Warehouse"
-    }
-  },
-  {
-    "name": "dmc",
-    "description": "Db2 Data Management Console",
-    "template": {
-      "name": "dmc",
-      "description": "Db2 Data Management Console",
-      "instances": [
-        {
-          "name": "data-management-console",
-          "description": "Data Management Console",
-          "size": "medium",
-          "storage_size_gb": 50
-        }
-      ]
-    }
-  },
-  {
-    "name": "dods",
-    "description": "Decision Optimization",
-    "template": {
-      "name": "dods",
-      "description": "Decision Optimization",
-      "size": "small"
-    }
-  },
-  {
-    "name": "dp",
-    "description": "Data Privacy",
-    "template": {
-      "name": "dp",
-      "description": "Data Privacy",
-      "size": "small"
-    }
-  },
-  {
-    "name": "dpra",
-    "description": "Data Privacy Risk Assessment",
-    "template": {
-      "name": "dpra",
-      "description": "Data Privacy Risk Assessment"
-    }
-  },
-  {
-    "name": "dv",
-    "description": "Data Virtualization",
-    "template": {
-      "name": "dv",
-      "description": "Data Virtualization",
-      "size": "small",
-      "instances": [
-        {
-          "name": "data-virtualization"
-        }
-      ]
-    }
-  },
-  {
-    "name": "edb_cp4d",
-    "description": "EDB Postgres",
-    "template": {
-      "name": "edb_cp4d",
-      "description": "EDB Postgres",
-      "instances": [
-        {
-          "name": "instance1",
-          "version": "15.4"
-        }
-      ]
-    }
-  },
-  {
-    "name": "factsheet",
-    "description": "AI Factsheets",
-    "template": {
-      "name": "factsheet",
-      "description": "AI Factsheets",
-      "size": "small"
-    }
-  },
-  {
-    "name": "hee",
-    "description": "Execution Engine for Apache Hadoop",
-    "template": {
-      "name": "hee",
-      "description": "Execution Engine for Apache Hadoop",
-      "size": "small"
-    }
-  },
-  {
-    "name": "mantaflow",
-    "description": "MANTA Automated Lineage",
-    "template": {
-      "name": "mantaflow",
-      "description": "MANTA Automated Lineage",
-      "size": "small"
-    }
-  },
-  {
-    "name": "match360",
-    "description": "IBM Match 360",
-    "template": {
-      "name": "match360",
-      "description": "IBM Match 360",
-      "size": "small",
-      "wkc_enabled": true
-    }
-  },
-  {
-    "name": "openpages",
-    "description": "OpenPages with Watson",
-    "template": {
-      "name": "openpages",
-      "description": "OpenPages with Watson",
-      "size": "small"
-    }
-  },
-  {
-    "name": "planning-analytics",
-    "description": "Planning Analytics",
-    "template": {
-      "name": "planning-analytics",
-      "description": "Planning Analytics",
-      "size": "small"
-    }
-  },
-  {
-    "name": "product-master",
-    "description": "Product Master",
-    "template": {
-      "name": "product-master",
-      "description": "Product Master"
-    }
-  },
-  {
-    "name": "speech-to-text",
-    "description": "Speech to Text",
-    "template": {
-      "name": "speech-to-text",
-      "description": "Speech to Text"
-    }
-  },
-  {
-    "name": "text-to-speech",
-    "description": "Text to Speech",
-    "template": {
-      "name": "text-to-speech",
-      "description": "Text to Speech"
-    }
-  },
-  {
-    "name": "watson-assistant",
-    "description": "Watson Assistant",
-    "template": {
-      "name": "watson-assistant",
-      "description": "Watson Assistant"
-    }
-  },
-  {
-    "name": "watson-discovery",
-    "description": "Watson Discovery",
-    "template": {
-      "name": "watson-discovery",
-      "description": "Watson Discovery"
-    }
-  },
-  {
-    "name": "watsonx-ai",
-    "description": "watsonx.ai",
-    "template": {
-      "name": "watsonx-ai",
-      "description": "watsonx.ai"
-    }
-  },
-  {
-    "name": "watsonx-code-assistant-ansible",
-    "description": "watsonx Code Assistant for Ansible",
-    "template": {
-      "name": "watsonx-code-assistant-ansible",
-      "description": "watsonx Code Assistant for Ansible"
-    }
-  },
-  {
-    "name": "watsonx-code-assistant-z",
-    "description": "watsonx Code Assistant for IBM Z",
-    "template": {
-      "name": "watsonx-code-assistant-z",
-      "description": "watsonx Code Assistant for IBM Z"
-    }
-  },
-  {
-    "name": "watsonx-data",
-    "description": "watsonx.data",
-    "template": {
-      "name": "watsonx-data",
-      "description": "watsonx.data"
-    }
-  },
-  {
-    "name": "watsonx-gov-mm",
-    "description": "watsonx.governance model management",
-    "template": {
-      "name": "watsonx-gov-mm",
-      "description": "watsonx.governance model management"
-    }
-  },
-  {
-    "name": "watsonx-gov-rc",
-    "description": "watsonx.governance risk and compliance",
-    "template": {
-      "name": "watsonx-gov-rc",
-      "description": "watsonx.governance risk and compliance"
-    }
-  },
-  {
-    "name": "watsonx-orchestrate",
-    "description": "watsonx Orchestrate",
-    "template": {
-      "name": "watsonx-orchestrate",
-      "description": "watsonx Orchestrate"
-    }
-  }
-]
+  ]
+}
