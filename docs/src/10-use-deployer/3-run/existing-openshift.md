@@ -6,6 +6,26 @@ When running the Cloud Pak Deployer on an existing OpenShift cluster, the follow
 - The appropriate storage class(es) have been pre-created
 - You have cluster administrator permissions to OpenShift (except when using `--dry-run`)
 
+!!! warning "Remove OpenShift Pipelines before installing Watson Studio Pipelines"
+    The Watson Studio Pipelines (a.k.a. Pipeline Orchestration) cartridge deploys its own Tekton controllers.  
+    If the cluster already contains the Red Hat OpenShift Pipelines operator (common on TechZone clusters),
+    Tekton resources conflict and the install fails. Cloud Pak Deployer will now check for `TektonConfig` objects
+    and abort early, but you must remove OpenShift Pipelines yourself before you add `ws-pipelines` to a configuration.
+
+    1. Run `oc get tektonconfig`. If it reports *No resources found*, you are ready to proceed.
+    2. Otherwise remove Tekton and the operator components:
+       ```bash
+       oc delete tektonconfig --all
+       oc delete csv -n openshift-operators \
+         "$(oc get csv -n openshift-operators -o jsonpath='{.items[?(@.spec.displayName=="OpenShift Pipelines")].metadata.name}')"
+       oc delete subscription -n openshift-operators \
+         "$(oc get subscription -n openshift-operators -o jsonpath='{.items[?(@.spec.name=="openshift-pipelines-operator")].metadata.name}')"
+       oc delete project tekton-pipelines --ignore-not-found
+       ```
+    3. Re-run `oc get tektonconfig` and continue when it reports *No resources found*.
+
+    You can reinstall the OpenShift Pipelines operator from OperatorHub after Watson Studio Pipelines is deployed.
+
 !!! info
     If you don't want to make changes to the OpenShift cluster and only want to review the steps deployer will run, you can use the `--dry-run` option with `cp-deploy.sh`. This will generate a log file `$STATUS_DIR/log/deployer-activities.log`, which lists the steps deployer will execute when running without `--dry-run`. Please note that the dry-run option has only been implemented for Cloud Pak for Data i.e. watsonx.
 
