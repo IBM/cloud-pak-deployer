@@ -58,9 +58,10 @@ python3 cp-deploy-helper/cpd_helper.py
 The helper:
 
 - prompts for the entitlement key, directory locations, OpenShift login information, and `env_id`
-- displays a menu of Cloud Pak for Data services and cartridges, ensuring that required dependencies stay selected while validating your choices
+- lets you select which Cloud Pak profile to configure (Cloud Pak for Data & watsonx, Cloud Pak for Business Automation, or Cloud Pak for Integration)
+- displays a menu of components (CP4D cartridges, CP4BA patterns/add-ons, CP4I instances) while ensuring that required dependencies stay selected
 - writes a ready-to-use `configuration/config/cpd-config.yaml` file plus a `set-env.sh` script under the same workspace directory level as the configuration and status directories
-- stores the helper state (including sensitive values) so that you can re-run the wizard at any time to update the configuration without editing YAML files manually
+- stores the helper state (including sensitive values) so that you can re-run the wizard at any time to update the configuration without editing YAML files manually. See [Guided configuration with the helper](interactive-helper.md) for the full walkthrough.
 
 The helper script creates a workspace such as `$HOME/cloud-pak-deployer/` with the following structure:
 

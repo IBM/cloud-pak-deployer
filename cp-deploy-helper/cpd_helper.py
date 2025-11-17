@@ -8,10 +8,11 @@ import json
 import os
 import shlex
 import sys
+from copy import deepcopy
 from datetime import datetime
 from getpass import getpass
 from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List, Tuple
 
 
 CATALOG_PATH = Path(__file__).with_name("service_catalog.json")
@@ -20,39 +21,18 @@ DEFAULT_CONFIG_SUBDIR = "configuration"
 DEFAULT_STATUS_SUBDIR = "status"
 DEFAULT_CONFIG_FILENAME = "cpd-config.yaml"
 STATE_FILENAME = "helper-state.json"
-DEFAULT_ENTITLEMENTS = [
-    "cpd-enterprise",
-    "cpd-standard",
-    "cognos-analytics",
-    "data-product-hub",
-    "datastage",
-    "data-integration-unstructured-data",
-    "data-lineage",
-    "ikc-premium",
-    "ikc-standard",
-    "openpages",
-    "planning-analytics",
-    "product-master",
-    "speech-to-text",
-    "text-to-speech",
-    "watson-assistant",
-    "watson-discovery",
-    "watsonx-ai",
-    "watsonx-code-assistant-ansible",
-    "watsonx-code-assistant-z",
-    "watsonx-data",
-    "watsonx-gov-mm",
-    "watsonx-gov-rc",
-    "watsonx-orchestrate",
-]
 
 
 def load_catalog() -> List[Dict[str, Any]]:
     try:
         with CATALOG_PATH.open(encoding="utf-8") as handle:
-            return json.load(handle)
+            data = json.load(handle)
     except FileNotFoundError as err:
         sys.exit(f"Unable to load service catalog: {err}")
+    profiles = data.get("profiles", [])
+    if not profiles:
+        sys.exit("No Cloud Pak profiles defined in service_catalog.json")
+    return profiles
 
 
 def prompt_text(message: str, default: str | None = None, required: bool = False,
@@ -119,12 +99,33 @@ def ensure_directory(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
-def choose_services(catalog: List[Dict[str, Any]],
-                    previous: List[str] | None = None) -> List[str]:
+def select_profile(profiles: List[Dict[str, Any]], previous_id: str | None) -> Dict[str, Any]:
+    print("\nCloud Pak profiles available:")
+    default_index = None
+    for idx, profile in enumerate(profiles, start=1):
+        marker = "*" if profile["id"] == previous_id else " "
+        print(f"  {idx}){marker} {profile['name']}: {profile.get('description', '')}")
+        if profile["id"] == previous_id:
+            default_index = idx
+    while True:
+        default_value = str(default_index) if default_index else None
+        answer = prompt_text("Select Cloud Pak profile", default_value, required=True)
+        try:
+            number = int(answer)
+        except ValueError:
+            print("Enter the number that matches the profile.")
+            continue
+        if 1 <= number <= len(profiles):
+            return profiles[number - 1]
+        print("Invalid selection.")
+
+
+def choose_cp4d_cartridges(catalog: List[Dict[str, Any]],
+                           previous: List[str] | None = None) -> List[str]:
     required = {item["name"] for item in catalog if item.get("required")}
     optional = [item for item in catalog if item["name"] not in required]
 
-    default_selected: Set[str] = set(previous or [])
+    default_selected = set(previous or [])
     if not default_selected:
         default_selected = {
             item["name"] for item in optional
@@ -148,7 +149,7 @@ def choose_services(catalog: List[Dict[str, Any]],
     print("press Enter to keep the current selection.")
 
     answer = prompt_text("Selection", default=None, required=False).strip().lower()
-    selected_optional: Set[str]
+    selected_optional: set[str]
     if not answer:
         selected_optional = default_selected
     elif answer == "all":
@@ -172,21 +173,22 @@ def choose_services(catalog: List[Dict[str, Any]],
     return [entry["name"] for entry in catalog if entry["name"] in final_selection]
 
 
-def choose_entitlements(previous: List[str] | None = None) -> List[str]:
-    print("\nConfigure the CP4D entitlements. Select the subscriptions")
-    print("that apply to your deployment.")
+def choose_entitlements(available: List[str], previous: List[str] | None = None) -> List[str]:
+    if not available:
+        return []
     current = previous or ["cpd-enterprise"]
-    for idx, entitlement in enumerate(DEFAULT_ENTITLEMENTS, start=1):
+    print("\nConfigure the entitlements for your subscription.")
+    for idx, entitlement in enumerate(available, start=1):
         marker = "x" if entitlement in current else " "
         print(f"  {idx:>2}) [{marker}] {entitlement}")
     print("Enter comma-separated numbers to toggle entitlements.")
-    print("Press Enter to keep the current values.")
+    print("Type 'all' or 'none', or press Enter to keep the current values.")
 
     answer = prompt_text("Entitlements", default=None, required=False).strip().lower()
     if not answer:
         return current
     if answer == "all":
-        return DEFAULT_ENTITLEMENTS.copy()
+        return available.copy()
     if answer == "none":
         return []
     try:
@@ -196,7 +198,7 @@ def choose_entitlements(previous: List[str] | None = None) -> List[str]:
         return current
 
     selected = []
-    for idx, entitlement in enumerate(DEFAULT_ENTITLEMENTS, start=1):
+    for idx, entitlement in enumerate(available, start=1):
         if idx in numbers:
             selected.append(entitlement)
     if not selected:
@@ -206,8 +208,6 @@ def choose_entitlements(previous: List[str] | None = None) -> List[str]:
 
 def build_cartridges(selected: List[str],
                      catalog: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    from copy import deepcopy
-
     selected_set = set(selected)
     cartridges: List[Dict[str, Any]] = []
     for item in catalog:
@@ -215,6 +215,388 @@ def build_cartridges(selected: List[str],
         template["state"] = "installed" if item.get("required") or item["name"] in selected_set else "removed"
         cartridges.append(template)
     return cartridges
+
+
+def choose_cp4ba_patterns(profile: Dict[str, Any], previous: Dict[str, bool] | None = None) -> Dict[str, bool]:
+    selections: Dict[str, bool] = {}
+    prev = previous or {}
+    print("\nCloud Pak for Business Automation patterns:")
+    for pattern in profile.get("patterns", []):
+        pattern_id = pattern["id"]
+        if pattern.get("required"):
+            selections[pattern_id] = True
+            print(f"  [required] {pattern['label']}")
+            continue
+        default = prev.get(pattern_id, pattern.get("default", True))
+        selections[pattern_id] = prompt_bool(f"Enable {pattern['label']}?", default)
+    return selections
+
+
+def choose_cp4ba_addons(profile: Dict[str, Any], previous: Dict[str, bool] | None = None) -> Dict[str, bool]:
+    selections: Dict[str, bool] = {}
+    prev = previous or {}
+    if not profile.get("addons"):
+        return selections
+    print("\nAdditional services and accelerators:")
+    for addon in profile["addons"]:
+        default = prev.get(addon["id"], addon.get("default", True))
+        selections[addon["id"]] = prompt_bool(f"Enable {addon['label']}?", default)
+    return selections
+
+
+def choose_cp4i_instances(instances: List[Dict[str, Any]],
+                          previous: List[str] | None = None) -> Tuple[List[str], List[Dict[str, Any]]]:
+    required_ids = [item["id"] for item in instances if item.get("required")]
+    optional = [item for item in instances if item["id"] not in required_ids]
+    default_selected = set(previous or [])
+    if not default_selected:
+        default_selected = {item["id"] for item in optional if item.get("default")}
+
+    print("\nSelect the Cloud Pak for Integration instances to create.")
+    for req_id in required_ids:
+        entry = next(item for item in instances if item["id"] == req_id)
+        print(f"  [required] {entry['label']}")
+
+    if optional:
+        print("\nOptional instances:")
+        for idx, entry in enumerate(optional, start=1):
+            marker = "x" if entry["id"] in default_selected else " "
+            print(f"  {idx:>2}) [{marker}] {entry['label']}")
+        print("Enter comma-separated numbers to enable optional instances (Enter to keep current values).")
+
+        answer = prompt_text("Instances", default=None, required=False).strip().lower()
+        selected_optional: set[str]
+        if not answer:
+            selected_optional = default_selected
+        elif answer == "all":
+            selected_optional = {item["id"] for item in optional}
+        elif answer == "none":
+            selected_optional = set()
+        else:
+            try:
+                numbers = [int(part.strip()) for part in answer.split(",") if part.strip()]
+            except ValueError:
+                print("Invalid selection, keeping current values.")
+                numbers = []
+            selected_optional = set()
+            for number in numbers:
+                if 1 <= number <= len(optional):
+                    selected_optional.add(optional[number - 1]["id"])
+                else:
+                    print(f"Ignoring unknown option {number}.")
+    else:
+        selected_optional = set()
+
+    selected_ids = set(required_ids) | selected_optional
+    ordered_ids = [item["id"] for item in instances if item["id"] in selected_ids]
+    payload = [deepcopy(item["template"]) for item in instances if item["id"] in selected_ids]
+    return ordered_ids, payload
+
+
+def build_cp4d_section(profile: Dict[str, Any],
+                       stored_config: Dict[str, Any],
+                       profile_state: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    defaults = stored_config or {}
+    previous_state = profile_state or {}
+    project = prompt_text("CP4D project/namespace", defaults.get("project", "cpd"), required=True)
+    operators_project = prompt_text("CP4D operators project", defaults.get("operators_project", "cpd-operators"),
+                                    required=True)
+    cp4d_version = prompt_text("CP4D version (latest recommended)",
+                               defaults.get("cp4d_version", "latest"), required=True)
+    accept_licenses = prompt_bool("Accept product licenses now?",
+                                  defaults.get("accept_licenses", True))
+    production_license = prompt_bool("Use production licenses?",
+                                     defaults.get("cp4d_production_license", True))
+    entitlements = choose_entitlements(profile.get("entitlements", []),
+                                       previous_state.get("entitlements") or defaults.get("cp4d_entitlement"))
+    selected_services = choose_cp4d_cartridges(profile.get("cartridges", []),
+                                               previous_state.get("selected_services"))
+    cartridges = build_cartridges(selected_services, profile.get("cartridges", []))
+    payload = [
+        {
+            "project": project,
+            "openshift_cluster_name": "{{ env_id }}",
+            "cp4d_version": cp4d_version,
+            "cp4d_entitlement": entitlements,
+            "cp4d_production_license": production_license,
+            "accept_licenses": accept_licenses,
+            "db2u_limited_privileges": False,
+            "use_fs_iam": True,
+            "operators_project": operators_project,
+            "ibm_cert_manager": False,
+            "install_day0_patch": True,
+            "state": "installed",
+            "cartridges": cartridges,
+        }
+    ]
+    return payload, {
+        "selected_services": selected_services,
+        "entitlements": entitlements,
+        "project": project,
+        "operators_project": operators_project,
+        "cp4d_version": cp4d_version,
+    }
+
+
+def build_cp4ba_patterns(toggle: Dict[str, bool]) -> Dict[str, Any]:
+    return {
+        "foundation": {
+            "optional_components": {
+                "bas": True,
+                "bai": True,
+                "ae": True,
+            }
+        },
+        "decisions": {
+            "enabled": toggle.get("decisions", True),
+            "optional_components": {
+                "decision_center": True,
+                "decision_runner": True,
+                "decision_server_runtime": True,
+            },
+            "cr_custom": {
+                "spec": {
+                    "odm_configuration": {
+                        "decisionCenter": {
+                            "disabledDecisionModel": False
+                        }
+                    }
+                }
+            }
+        },
+        "decisions_ads": {
+            "enabled": toggle.get("decisions_ads", True),
+            "optional_components": {
+                "ads_designer": True,
+                "ads_runtime": True,
+            },
+            "gen_ai": {
+                "apiKey": "watsonx_ai_api_key",
+                "mlUrl": "https://us-south.ml.cloud.ibm.com",
+                "projectId": "project_id",
+            }
+        },
+        "content": {
+            "enabled": toggle.get("content", True),
+            "optional_components": {
+                "cmis": True,
+                "css": True,
+                "es": True,
+                "tm": True,
+                "ier": True,
+                "icc4sap": False,
+            }
+        },
+        "application": {
+            "enabled": toggle.get("application", True),
+            "optional_components": {
+                "app_designer": True,
+                "ae_data_persistence": True,
+            }
+        },
+        "document_processing": {
+            "enabled": toggle.get("document_processing", True),
+            "optional_components": {
+                "document_processing_designer": True,
+            },
+            "cr_custom": {
+                "spec": {
+                    "ca_configuration": {
+                        "ocrextraction": {
+                            "use_iocr": "auto",
+                            "deep_learning_object_detection": {
+                                "enabled": True
+                            }
+                        },
+                        "deeplearning": {
+                            "gpu_enabled": False,
+                            "nodelabel_key": "nvidia.com/gpu.present",
+                            "nodelabel_value": "true",
+                            "replica_count": 1,
+                        }
+                    }
+                }
+            }
+        },
+        "workflow": {
+            "enabled": toggle.get("workflow", True),
+            "optional_components": {
+                "baw_authoring": True,
+                "kafka": True,
+            },
+            "gen_ai": {
+                "apiKey": "watsonx_ai_api_key",
+                "mlUrl": "https://us-south.ml.cloud.ibm.com",
+                "projectId": "project_id",
+                "defaultFoundationModel": "meta-llama/llama-3-3-70b-instruct",
+            }
+        },
+    }
+
+
+def build_cp4ba_section(profile: Dict[str, Any],
+                        stored_config: Dict[str, Any],
+                        profile_state: Dict[str, Any],
+                        context: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    defaults = profile.get("defaults", {})
+    existing = stored_config or {}
+    previous_state = profile_state or {}
+    project = prompt_text("CP4BA project/namespace", existing.get("project", defaults.get("project", "cp4ba")),
+                          required=True)
+    collateral_project = prompt_text("CP4BA collateral project",
+                                     existing.get("collateral_project", defaults.get("collateral_project",
+                                                                                      "cp4ba-collateral")),
+                                     required=True)
+    storage_name = prompt_text("CP4BA storage class",
+                               existing.get("openshift_storage_name",
+                                            defaults.get("openshift_storage_name",
+                                                         context.get("storage_class", "auto-storage"))),
+                               required=True)
+    accept_licenses = prompt_bool("Accept CP4BA licenses now?",
+                                  existing.get("accept_licenses", False))
+    cpfs_profile = prompt_text("Foundational services profile size",
+                               existing.get("cpfs_profile_size", defaults.get("cpfs_profile_size", "small")),
+                               required=True)
+    cp4ba_profile_size = prompt_text("CP4BA profile size",
+                                     existing.get("cp4ba", {}).get("profile_size",
+                                                                   defaults.get("profile_size", "small")),
+                                     required=True)
+
+    pattern_state = choose_cp4ba_patterns(profile, previous_state.get("patterns"))
+    addon_state = choose_cp4ba_addons(profile, previous_state.get("addons"))
+
+    pm_enabled = addon_state.get("pm", True)
+    rpa_enabled = addon_state.get("rpa", True)
+
+    payload = [
+        {
+            "project": project,
+            "collateral_project": collateral_project,
+            "openshift_cluster_name": "{{ env_id }}",
+            "openshift_storage_name": storage_name,
+            "accept_licenses": accept_licenses,
+            "state": "installed",
+            "cpfs_profile_size": cpfs_profile,
+            "cp4ba": {
+                "enabled": True,
+                "profile_size": cp4ba_profile_size,
+                "patterns": build_cp4ba_patterns(pattern_state),
+            },
+            "pm": {
+                "enabled": pm_enabled,
+                "cr_custom": {
+                    "spec": {
+                        "processmining": {
+                            "storage": {
+                                "redis": {
+                                    "install": False
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "rpa": {
+                "enabled": rpa_enabled,
+                "cr_custom": {
+                    "spec": {
+                        "nlp": {
+                            "replicas": 1
+                        }
+                    }
+                }
+            },
+            "cloudbeaver_enabled": addon_state.get("cloudbeaver_enabled", True),
+            "roundcube_enabled": addon_state.get("roundcube_enabled", True),
+            "cerebro_enabled": addon_state.get("cerebro_enabled", True),
+            "akhq_enabled": addon_state.get("akhq_enabled", True),
+            "mongo_express_enabled": addon_state.get("mongo_express_enabled", True),
+            "phpldapadmin_enabled": addon_state.get("phpldapadmin_enabled", True),
+            "opensearch_dashboards_enabled": addon_state.get("opensearch_dashboards_enabled", True),
+        }
+    ]
+    return payload, {
+        "project": project,
+        "collateral_project": collateral_project,
+        "patterns": pattern_state,
+        "addons": addon_state,
+        "cpfs_profile_size": cpfs_profile,
+        "profile_size": cp4ba_profile_size,
+    }
+
+
+def build_cp4i_section(profile: Dict[str, Any],
+                       stored_config: Dict[str, Any],
+                       profile_state: Dict[str, Any],
+                       context: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    defaults = profile.get("defaults", {})
+    existing = stored_config or {}
+    previous_state = profile_state or {}
+    project = prompt_text("CP4I project/namespace", existing.get("project", defaults.get("project", "cp4i")),
+                          required=True)
+    storage_name = prompt_text("CP4I storage class", existing.get("openshift_storage_name",
+                                                                  defaults.get("openshift_storage_name",
+                                                                               context.get("storage_class",
+                                                                                           "managed-nfs-storage"))),
+                               required=True)
+    cp4i_version = prompt_text("CP4I version", existing.get("cp4i_version", defaults.get("cp4i_version",
+                                                                                         "2021.4.1")), required=True)
+    use_case_files = prompt_bool("Use CASE files?", existing.get("use_case_files", defaults.get("use_case_files", True)))
+    accept_licenses = prompt_bool("Accept CP4I licenses now?",
+                                  existing.get("accept_licenses", defaults.get("accept_licenses", False)))
+    use_top_level_operator = prompt_bool("Use top-level operator?",
+                                         existing.get("use_top_level_operator",
+                                                      defaults.get("use_top_level_operator", False)))
+    top_level_channel = existing.get("top_level_operator_channel",
+                                     defaults.get("top_level_operator_channel", "v1.5"))
+    top_level_case = existing.get("top_level_operator_case_version",
+                                  defaults.get("top_level_operator_case_version", "2.5.0"))
+    if use_top_level_operator:
+        top_level_channel = prompt_text("Top-level operator channel", top_level_channel, required=True)
+        top_level_case = prompt_text("Top-level operator CASE version", top_level_case, required=True)
+
+    operators_all_namespaces = prompt_bool("Install operators cluster-wide?",
+                                           existing.get("operators_in_all_namespaces",
+                                                        defaults.get("operators_in_all_namespaces", True)))
+
+    selected_ids, instances_payload = choose_cp4i_instances(profile.get("instances", []),
+                                                            previous_state.get("selected_instances"))
+
+    entry: Dict[str, Any] = {
+        "project": project,
+        "openshift_cluster_name": "{{ env_id }}",
+        "openshift_storage_name": storage_name,
+        "cp4i_version": cp4i_version,
+        "use_case_files": use_case_files,
+        "accept_licenses": accept_licenses,
+        "use_top_level_operator": use_top_level_operator,
+        "operators_in_all_namespaces": operators_all_namespaces,
+        "instances": instances_payload,
+    }
+    if use_top_level_operator:
+        entry["top_level_operator_channel"] = top_level_channel
+        entry["top_level_operator_case_version"] = top_level_case
+
+    return [entry], {
+        "project": project,
+        "storage_name": storage_name,
+        "cp4i_version": cp4i_version,
+        "selected_instances": selected_ids,
+    }
+
+
+def build_profile_section(profile: Dict[str, Any],
+                          stored_config: Dict[str, Any],
+                          profile_state: Dict[str, Any],
+                          context: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    profile_type = profile.get("type")
+    if profile_type == "cp4d":
+        return build_cp4d_section(profile, stored_config, profile_state)
+    if profile_type == "cp4ba":
+        return build_cp4ba_section(profile, stored_config, profile_state, context)
+    if profile_type == "cp4i":
+        return build_cp4i_section(profile, stored_config, profile_state, context)
+    raise ValueError(f"Unsupported profile type: {profile_type}")
 
 
 def format_yaml(data: Any, indent: int = 0) -> str:
@@ -279,6 +661,8 @@ def main() -> None:
     print("IBM Cloud Pak Deployer helper")
     print("=" * 72)
 
+    profiles = load_catalog()
+
     default_base = Path(os.environ.get("CPD_HELPER_HOME", DEFAULT_BASE_DIR))
     base_dir = Path(prompt_text("Helper workspace directory", str(default_base), required=True)).expanduser()
 
@@ -291,6 +675,10 @@ def main() -> None:
             print(f"Loaded existing helper state from {state_path}")
         except json.JSONDecodeError:
             print("Could not parse existing helper state, starting fresh.")
+
+    profile = select_profile(profiles, state.get("selected_profile"))
+    profile_states = state.get("profiles_state", {})
+    profile_state = profile_states.get(profile["id"], {})
 
     default_config_dir = state.get("config_dir") or str(base_dir / DEFAULT_CONFIG_SUBDIR)
     default_status_dir = state.get("status_dir") or str(base_dir / DEFAULT_STATUS_SUBDIR)
@@ -316,26 +704,11 @@ def main() -> None:
     cluster_name = prompt_text("Cluster name", openshift_defaults.get("cluster_name", env_id), required=True)
     domain_name = prompt_text("Cluster domain name", openshift_defaults.get("domain_name", "example.com"),
                               required=True)
-    storage_class = prompt_text("Default storage class", openshift_defaults.get("mcg", {}).get("storage_class",
-                                                                                              "managed-nfs-storage"),
+    storage_class = prompt_text("Default storage class",
+                                openshift_defaults.get("mcg", {}).get("storage_class", "managed-nfs-storage"),
                                 required=True)
     mcg_install = prompt_bool("Install OpenShift Data Foundation (MCG)?",
                               openshift_defaults.get("mcg", {}).get("install", False))
-
-    cp4d_defaults = (defaults.get("cp4d") or [{}])[0]
-    project = prompt_text("CP4D project/namespace", cp4d_defaults.get("project", "cpd"), required=True)
-    operators_project = prompt_text("CP4D operators project", cp4d_defaults.get("operators_project", "cpd-operators"),
-                                    required=True)
-    cp4d_version = prompt_text("CP4D version (latest recommended)",
-                               cp4d_defaults.get("cp4d_version", "latest"), required=True)
-    accept_licenses = prompt_bool("Accept product licenses now?",
-                                  cp4d_defaults.get("accept_licenses", True))
-    production_license = prompt_bool("Use production licenses?",
-                                     cp4d_defaults.get("cp4d_production_license", True))
-
-    entitlements = choose_entitlements(cp4d_defaults.get("cp4d_entitlement"))
-    catalog = load_catalog()
-    selected_services = choose_services(catalog, state.get("selected_services"))
 
     oc_info = state.get("oc_info", {})
     api_url = prompt_text("OpenShift API URL", oc_info.get("api_url", "https://api.cluster.example.com:6443"),
@@ -344,7 +717,12 @@ def main() -> None:
     oc_password = prompt_secret("OpenShift password or token", oc_info.get("password"))
     entitlement_key = prompt_secret("IBM Cloud entitlement key", state.get("entitlement_key"))
 
-    cartridges = build_cartridges(selected_services, catalog)
+    stored_profile_config = (defaults.get(profile["id"]) or [{}])
+    stored_profile_entry = stored_profile_config[0] if stored_profile_config else {}
+    context = {"storage_class": storage_class}
+    profile_payload, profile_state_update = build_profile_section(profile, stored_profile_entry,
+                                                                  profile_state, context)
+
     config_data: Dict[str, Any] = {
         "global_config": {
             "environment_name": env_name,
@@ -379,23 +757,7 @@ def main() -> None:
                 ],
             }
         ],
-        "cp4d": [
-            {
-                "project": project,
-                "openshift_cluster_name": "{{ env_id }}",
-                "cp4d_version": cp4d_version,
-                "cp4d_entitlement": entitlements,
-                "cp4d_production_license": production_license,
-                "accept_licenses": accept_licenses,
-                "db2u_limited_privileges": False,
-                "use_fs_iam": True,
-                "operators_project": operators_project,
-                "ibm_cert_manager": False,
-                "install_day0_patch": True,
-                "state": "installed",
-                "cartridges": cartridges,
-            }
-        ],
+        profile["id"]: profile_payload,
     }
 
     yaml_content = "---\n" + format_yaml(config_data) + "\n"
@@ -410,13 +772,15 @@ def main() -> None:
                    entitlement_key)
     print(f"Environment file created at {env_file_path} (contains sensitive data).")
 
+    profile_states[profile["id"]] = profile_state_update
     state.update({
         "base_dir": str(base_dir),
         "config_dir": str(config_dir),
         "status_dir": str(status_dir),
         "config_filename": config_filename,
         "config": config_data,
-        "selected_services": selected_services,
+        "profiles_state": profile_states,
+        "selected_profile": profile["id"],
         "oc_info": {
             "api_url": api_url,
             "username": oc_user,
@@ -425,6 +789,8 @@ def main() -> None:
         "entitlement_key": entitlement_key,
         "updated": datetime.utcnow().isoformat() + "Z",
     })
+    if profile["id"] == "cp4d":
+        state["selected_services"] = profile_state_update.get("selected_services", [])
     write_file(state_path, json.dumps(state, indent=2) + "\n", secret=True)
     print(f"State stored at {state_path}")
     print("\nNext steps:")

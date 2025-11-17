@@ -1,6 +1,11 @@
 # Running the Cloud Pak Deployer
 
-Cloud Pak Deployer supports various public and private cloud infrastructures. Click on the links below, or in the left menu to find details about running the deployer on each of the following infrastructures:
+Cloud Pak Deployer supports various public and private cloud infrastructures.
+For most installations you can start with the [interactive helper](interactive-helper.md)
+to generate the configuration and environment structure automatically.
+
+Click on the links below, or in the left menu, to find details about running the
+deployer on each of the following infrastructures:
 
 * [Existing OpenShift](existing-openshift.md)
 * [Existing OpenShift using console](existing-openshift-console.md)

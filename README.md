@@ -1,8 +1,24 @@
 # Cloud Pak Deployer
 
-The intention of the Cloud Pak Deployer is to simplify the initial installation and also continuous management of OpenShift and the Cloud Paks on top of that, driven by automation. It will help you deploy (currently) Cloud Pak for Data on various Red Hat OpenShift and infrastructures such as IBM Cloud ROKS, Azure Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), VMWare vSphere and also on existing Red Hat OpenShift environments.
+Cloud Pak Deployer simplifies both the initial installation and the ongoing
+management of OpenShift and the Cloud Paks on top of it. The toolkit now
+supports Cloud Pak for Data & watsonx, Cloud Pak for Business Automation, and
+Cloud Pak for Integration across infrastructures such as IBM Cloud ROKS, Azure
+Red Hat OpenShift (ARO), Red Hat OpenShift on AWS (ROSA), VMWare vSphere and
+existing Red Hat OpenShift environments.
 
-The Cloud Pak Deployer was created for a joint project with one of our key partners who need to fully automate the deployment of Cloud Pak for Data on IBM Cloud based on a configuration that is kept in a Git repository, and make changes to it via configuration changes, i.e. GitOps.
+To make the onboarding easier for every Cloud Pak profile, the repository ships
+an interactive helper (`cp-deploy-helper/cpd_helper.py`). The helper collects
+the IBM entitlement key, OpenShift access information, and the Cloud Pak
+components you want to deploy, then generates a ready-to-run configuration and
+environment script. You can still use raw YAML/GitOps workflows, but the helper
+is the fastest way to build or update a configuration safely.
+
+The Cloud Pak Deployer was created for a joint project with one of our key
+partners who needed to fully automate the deployment of Cloud Pak for Data on
+IBM Cloud based on a configuration kept in Git, and then make changes via
+configuration updates (GitOps). The same approach now applies to the additional
+Cloud Paks.
 
 A couple of notes from the authors:
 * If you find this repository useful, please **"Star"** it on GitHub to advertise it to a wider community
