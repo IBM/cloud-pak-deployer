@@ -173,10 +173,16 @@ def choose_cp4d_cartridges(catalog: List[Dict[str, Any]],
     return [entry["name"] for entry in catalog if entry["name"] in final_selection]
 
 
-def choose_entitlements(available: List[str], previous: List[str] | None = None) -> List[str]:
+def choose_entitlements(available: List[str], previous: List[str] | None = None,
+                        default_selection: List[str] | None = None) -> List[str]:
     if not available:
         return []
-    current = previous or ["cpd-enterprise"]
+    if previous:
+        current = previous
+    elif default_selection:
+        current = default_selection
+    else:
+        current = [available[0]]
     print("\nConfigure the entitlements for your subscription.")
     for idx, entitlement in enumerate(available, start=1):
         marker = "x" if entitlement in current else " "
@@ -308,7 +314,8 @@ def build_cp4d_section(profile: Dict[str, Any],
     production_license = prompt_bool("Use production licenses?",
                                      defaults.get("cp4d_production_license", True))
     entitlements = choose_entitlements(profile.get("entitlements", []),
-                                       previous_state.get("entitlements") or defaults.get("cp4d_entitlement"))
+                                       previous_state.get("entitlements") or defaults.get("cp4d_entitlement"),
+                                       profile.get("default_entitlements"))
     selected_services = choose_cp4d_cartridges(profile.get("cartridges", []),
                                                previous_state.get("selected_services"))
     cartridges = build_cartridges(selected_services, profile.get("cartridges", []))
@@ -585,6 +592,61 @@ def build_cp4i_section(profile: Dict[str, Any],
     }
 
 
+def choose_cp4aiops_instances(instances: List[Dict[str, Any]],
+                              previous: List[str] | None = None) -> Tuple[List[Dict[str, Any]], List[str]]:
+    prev_selected = set(previous or [])
+    payload: List[Dict[str, Any]] = []
+    selected_ids: List[str] = []
+    for item in instances:
+        template = deepcopy(item["template"])
+        required = item.get("required", False)
+        if required:
+            use_instance = True
+        else:
+            default_choice = item["id"] in prev_selected if prev_selected else item.get("default", False)
+            use_instance = prompt_bool(f"Install {item['label']}?", default_choice)
+        template["install"] = bool(use_instance)
+        payload.append(template)
+        if use_instance:
+            selected_ids.append(item["id"])
+    return payload, selected_ids
+
+
+def build_cp4aiops_section(profile: Dict[str, Any],
+                           stored_config: Dict[str, Any],
+                           profile_state: Dict[str, Any],
+                           context: Dict[str, Any]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    defaults = profile.get("defaults", {})
+    existing = stored_config or {}
+    previous_state = profile_state or {}
+    project = prompt_text("CP4WAIOps project/namespace", existing.get("project", defaults.get("project", "cp4waiops")),
+                          required=True)
+    storage_name = prompt_text("CP4WAIOps storage class",
+                               existing.get("openshift_storage_name",
+                                            defaults.get("openshift_storage_name",
+                                                         context.get("storage_class", "auto-storage"))),
+                               required=True)
+    accept_licenses = prompt_bool("Accept CP4WAIOps licenses now?",
+                                  existing.get("accept_licenses", defaults.get("accept_licenses", False)))
+
+    instances_payload, selected_ids = choose_cp4aiops_instances(profile.get("instances", []),
+                                                                previous_state.get("selected_instances"))
+
+    entry: Dict[str, Any] = {
+        "project": project,
+        "openshift_cluster_name": "{{ env_id }}",
+        "openshift_storage_name": storage_name,
+        "accept_licenses": accept_licenses,
+        "instances": instances_payload,
+    }
+
+    return [entry], {
+        "project": project,
+        "storage_name": storage_name,
+        "selected_instances": selected_ids,
+    }
+
+
 def build_profile_section(profile: Dict[str, Any],
                           stored_config: Dict[str, Any],
                           profile_state: Dict[str, Any],
@@ -596,6 +658,8 @@ def build_profile_section(profile: Dict[str, Any],
         return build_cp4ba_section(profile, stored_config, profile_state, context)
     if profile_type == "cp4i":
         return build_cp4i_section(profile, stored_config, profile_state, context)
+    if profile_type == "cp4aiops":
+        return build_cp4aiops_section(profile, stored_config, profile_state, context)
     raise ValueError(f"Unsupported profile type: {profile_type}")
 
 
@@ -789,7 +853,7 @@ def main() -> None:
         "entitlement_key": entitlement_key,
         "updated": datetime.utcnow().isoformat() + "Z",
     })
-    if profile["id"] == "cp4d":
+    if profile.get("type") == "cp4d":
         state["selected_services"] = profile_state_update.get("selected_services", [])
     write_file(state_path, json.dumps(state, indent=2) + "\n", secret=True)
     print(f"State stored at {state_path}")

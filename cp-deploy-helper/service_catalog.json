@@ -1,10 +1,116 @@
 {
   "profiles": [
     {
-      "id": "cp4d",
-      "name": "Cloud Pak for Data & watsonx",
+      "id": "watsonx",
+      "name": "watsonx",
       "type": "cp4d",
-      "description": "Interactive builder for Cloud Pak for Data / watsonx deployments.",
+      "description": "Guided builder for standalone watsonx deployments (watsonx.ai, watsonx.data, watsonx.governance, watsonx Code Assistant).",
+      "entitlements": [
+        "watsonx-ai",
+        "watsonx-data",
+        "watsonx-gov-mm",
+        "watsonx-gov-rc",
+        "watsonx-code-assistant-ansible",
+        "watsonx-code-assistant-z",
+        "watsonx-orchestrate"
+      ],
+      "default_entitlements": [
+        "watsonx-ai"
+      ],
+      "cartridges": [
+        {
+          "name": "cp-foundation",
+          "description": "Cloud Pak foundational services (required)",
+          "required": true,
+          "default_state": "installed",
+          "template": {
+            "name": "cp-foundation",
+            "scale": "level_1",
+            "license_service": {
+              "threads_per_core": 2
+            }
+          }
+        },
+        {
+          "name": "lite",
+          "description": "Cloud Pak for Data lite modules (required)",
+          "required": true,
+          "default_state": "installed",
+          "template": {
+            "name": "lite"
+          }
+        },
+        {
+          "name": "scheduler",
+          "description": "Default workload scheduler",
+          "default_state": "removed",
+          "template": {
+            "name": "scheduler"
+          }
+        },
+        {
+          "name": "watsonx_ai",
+          "description": "watsonx.ai foundation",
+          "template": {
+            "name": "watsonx_ai",
+            "description": "watsonx.ai"
+          }
+        },
+        {
+          "name": "watsonx_data",
+          "description": "watsonx.data",
+          "template": {
+            "name": "watsonx_data",
+            "description": "watsonx.data"
+          }
+        },
+        {
+          "name": "watsonx_gov_mm",
+          "description": "watsonx.governance model management",
+          "template": {
+            "name": "watsonx-gov-mm",
+            "description": "watsonx.governance model management"
+          }
+        },
+        {
+          "name": "watsonx_gov_rc",
+          "description": "watsonx.governance risk and compliance",
+          "template": {
+            "name": "watsonx-gov-rc",
+            "description": "watsonx.governance risk and compliance"
+          }
+        },
+        {
+          "name": "watsonx_code_assistant_ansible",
+          "description": "watsonx Code Assistant for Ansible",
+          "template": {
+            "name": "watsonx-code-assistant-ansible",
+            "description": "watsonx Code Assistant for Ansible"
+          }
+        },
+        {
+          "name": "watsonx_code_assistant_z",
+          "description": "watsonx Code Assistant for IBM Z",
+          "template": {
+            "name": "watsonx-code-assistant-z",
+            "description": "watsonx Code Assistant for IBM Z"
+          }
+        },
+        {
+          "name": "watsonx_orchestrate",
+          "description": "watsonx Orchestrate",
+          "template": {
+            "name": "watsonx-orchestrate",
+            "description": "watsonx Orchestrate"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cp4d_software_hub",
+      "name": "Cloud Pak for Data & Software Hub",
+      "type": "cp4d",
+      "description": "Interactive builder for Cloud Pak for Data deployments including Software Hub scenarios.",
       "entitlements": [
         "cpd-enterprise",
         "cpd-standard",
@@ -29,6 +135,9 @@
         "watsonx-gov-mm",
         "watsonx-gov-rc",
         "watsonx-orchestrate"
+      ],
+      "default_entitlements": [
+        "cpd-enterprise"
       ],
       "cartridges": [
         {
@@ -392,39 +501,6 @@
       ]
     },
     {
-      "id": "cp4ba",
-      "name": "Cloud Pak for Business Automation",
-      "type": "cp4ba",
-      "description": "Helper for Cloud Pak for Business Automation patterns and add-ons.",
-      "defaults": {
-        "project": "cp4ba",
-        "collateral_project": "cp4ba-collateral",
-        "cpfs_profile_size": "small",
-        "profile_size": "small",
-        "openshift_storage_name": "auto-storage"
-      },
-      "patterns": [
-        { "id": "foundation", "label": "Foundation (BAS, BAI, AE)", "required": true },
-        { "id": "decisions", "label": "Operational Decision Manager", "default": true },
-        { "id": "decisions_ads", "label": "Automation Decision Services", "default": true },
-        { "id": "content", "label": "FileNet Content Manager", "default": true },
-        { "id": "application", "label": "Business Automation Application", "default": true },
-        { "id": "document_processing", "label": "Automation Document Processing", "default": true },
-        { "id": "workflow", "label": "Business Automation Workflow", "default": true }
-      ],
-      "addons": [
-        { "id": "pm", "label": "Process Mining", "default": true },
-        { "id": "rpa", "label": "Robotic Process Automation", "default": true },
-        { "id": "cloudbeaver_enabled", "label": "CloudBeaver UI", "default": true },
-        { "id": "roundcube_enabled", "label": "Roundcube", "default": true },
-        { "id": "cerebro_enabled", "label": "Cerebro", "default": true },
-        { "id": "akhq_enabled", "label": "AKHQ", "default": true },
-        { "id": "mongo_express_enabled", "label": "Mongo Express", "default": true },
-        { "id": "phpldapadmin_enabled", "label": "phpLDAPAdmin", "default": true },
-        { "id": "opensearch_dashboards_enabled", "label": "OpenSearch Dashboards", "default": true }
-      ]
-    },
-    {
       "id": "cp4i",
       "name": "Cloud Pak for Integration",
       "type": "cp4i",
@@ -573,6 +649,196 @@
             "version": "2021.4.1-2",
             "channel": "v2.5",
             "case_version": "2.5.2"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cp4ba",
+      "name": "Cloud Pak for Business Automation",
+      "type": "cp4ba",
+      "description": "Helper for Cloud Pak for Business Automation patterns and add-ons.",
+      "defaults": {
+        "project": "cp4ba",
+        "collateral_project": "cp4ba-collateral",
+        "cpfs_profile_size": "small",
+        "profile_size": "small",
+        "openshift_storage_name": "auto-storage"
+      },
+      "patterns": [
+        {
+          "id": "foundation",
+          "label": "Foundation (BAS, BAI, AE)",
+          "required": true
+        },
+        {
+          "id": "decisions",
+          "label": "Operational Decision Manager",
+          "default": true
+        },
+        {
+          "id": "decisions_ads",
+          "label": "Automation Decision Services",
+          "default": true
+        },
+        {
+          "id": "content",
+          "label": "FileNet Content Manager",
+          "default": true
+        },
+        {
+          "id": "application",
+          "label": "Business Automation Application",
+          "default": true
+        },
+        {
+          "id": "document_processing",
+          "label": "Automation Document Processing",
+          "default": true
+        },
+        {
+          "id": "workflow",
+          "label": "Business Automation Workflow",
+          "default": true
+        }
+      ],
+      "addons": [
+        {
+          "id": "pm",
+          "label": "Process Mining",
+          "default": true
+        },
+        {
+          "id": "rpa",
+          "label": "Robotic Process Automation",
+          "default": true
+        },
+        {
+          "id": "cloudbeaver_enabled",
+          "label": "CloudBeaver UI",
+          "default": true
+        },
+        {
+          "id": "roundcube_enabled",
+          "label": "Roundcube",
+          "default": true
+        },
+        {
+          "id": "cerebro_enabled",
+          "label": "Cerebro",
+          "default": true
+        },
+        {
+          "id": "akhq_enabled",
+          "label": "AKHQ",
+          "default": true
+        },
+        {
+          "id": "mongo_express_enabled",
+          "label": "Mongo Express",
+          "default": true
+        },
+        {
+          "id": "phpldapadmin_enabled",
+          "label": "phpLDAPAdmin",
+          "default": true
+        },
+        {
+          "id": "opensearch_dashboards_enabled",
+          "label": "OpenSearch Dashboards",
+          "default": true
+        }
+      ]
+    },
+    {
+      "id": "cp4aiops",
+      "name": "Cloud Pak for Watson AIOps",
+      "type": "cp4aiops",
+      "description": "Helper for configuring the Watson AIOps instances (AI Manager, Event Manager, Turbonomic, Instana, Infrastructure).",
+      "defaults": {
+        "project": "cp4waiops",
+        "openshift_storage_name": "auto-storage",
+        "accept_licenses": false
+      },
+      "instances": [
+        {
+          "id": "aimanager",
+          "label": "AI Manager",
+          "required": true,
+          "template": {
+            "name": "cp4waiops-aimanager",
+            "kind": "AIManager",
+            "install": true,
+            "waiops_size": "small",
+            "waiops_name": "ibm-cp-watson-aiops",
+            "subscription_channel": "v3.6",
+            "freeze_catalog": false
+          }
+        },
+        {
+          "id": "aimanager_demo",
+          "label": "AI Manager demo content",
+          "template": {
+            "name": "cp4waiops-aimanager-demo-content",
+            "kind": "AIManagerDemoContent",
+            "install": false
+          }
+        },
+        {
+          "id": "eventmanager",
+          "label": "Event Manager",
+          "template": {
+            "name": "cp4waiops-eventmanager",
+            "kind": "EventManager",
+            "install": false,
+            "subscription_channel": "v1.11",
+            "starting_csv": "noi.v1.7.0",
+            "noi_version": "1.6.6"
+          }
+        },
+        {
+          "id": "eventmanager_demo",
+          "label": "Event Manager demo content",
+          "template": {
+            "name": "cp4waiops-eventmanager-demo",
+            "kind": "EventManagerDemoContent",
+            "install": false
+          }
+        },
+        {
+          "id": "turbonomic",
+          "label": "Turbonomic",
+          "template": {
+            "name": "cp4waiops-turbonomic",
+            "kind": "Turbonomic",
+            "install": false
+          }
+        },
+        {
+          "id": "instana",
+          "label": "Instana",
+          "template": {
+            "name": "cp4waiops-instana",
+            "kind": "Instana",
+            "install": false
+          }
+        },
+        {
+          "id": "infrastructure",
+          "label": "Infrastructure management",
+          "template": {
+            "name": "cp4waiops-infrastructure-management",
+            "kind": "InfrastructureManagement",
+            "install": false
+          }
+        },
+        {
+          "id": "elk",
+          "label": "ELK stack",
+          "template": {
+            "name": "cp4waiops-elk",
+            "kind": "ELK",
+            "install": false
           }
         }
       ]

@@ -1,4 +1,4 @@
-# Adding users to Keycloak to be used in Software Hub (Cloud Pak for Data/watsonx)
+# Adding users to Keycloak to be used in Software Hub (Cloud Pak for Data & Software Hub / watsonx)
 
 When `redhat-sso` is present in your configuration yaml files, the deployer will install Keycloak and create the defined groups and Software Hub. Below are the steps to add users to Keycloak and associate them with the pre-defined groups.
 

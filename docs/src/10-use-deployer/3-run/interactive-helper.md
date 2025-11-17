@@ -4,8 +4,8 @@ The Cloud Pak Deployer ships an interactive helper script that collects all the
 inputs normally needed for a manual installation (`CONFIG_DIR`, `STATUS_DIR`,
 OpenShift access credentials, IBM entitlement key, and the Cloud Pak component
 selection). The helper works for every Cloud Pak profile supported by the
-deployer: Cloud Pak for Data & watsonx, Cloud Pak for Business Automation, and
-Cloud Pak for Integration.
+deployer: watsonx, Cloud Pak for Data & Software Hub, Cloud Pak for Integration,
+Cloud Pak for Business Automation, and Cloud Pak for Watson AIOps.
 
 ## When to use the helper
 
@@ -46,9 +46,11 @@ python3 cp-deploy-helper/cpd_helper.py
    restricted to the current user).
 
 5. **Profile-specific questionnaire**:
-   - *Cloud Pak for Data & watsonx*: choose entitlements and cartridges from a
-     curated list. Required cartridges remain selected, optional cartridges can
-     be toggled individually or in bulk.
+   - *watsonx*: choose entitlements and cartridges from a curated list.
+     Required cartridges remain selected, optional cartridges can be toggled
+     individually or in bulk.
+   - *Cloud Pak for Data & Software Hub*: select the CP4D cartridges and Software
+     Hub workloads you want to deploy.
    - *Cloud Pak for Business Automation*: enable or disable each pattern
      (Decisions, Workflow, Document Processing, etc.) and helper services such
      as Process Mining, RPA, AKHQ, or CloudBeaver. The helper auto-fills the
@@ -56,6 +58,9 @@ python3 cp-deploy-helper/cpd_helper.py
    - *Cloud Pak for Integration*: pick the integration instances (Navigator, App
      Connect, API Connect, Event Streams, MQ, and more) and define whether to
      use the top-level operator along with its channel and CASE version.
+   - *Cloud Pak for Watson AIOps*: choose which instances (AI Manager, Event
+     Manager, Turbonomic, Instana, Infrastructure, demo content) should be
+     installed and the helper will configure the install flags.
 
 6. **Generation** – the helper writes `configuration/config/cpd-config.yaml`
    aligned with the selected profile, updates the helper state, and refreshes

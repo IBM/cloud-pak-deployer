@@ -2,7 +2,9 @@
 
 Cloud Pak Deployer supports various public and private cloud infrastructures.
 For most installations you can start with the [interactive helper](interactive-helper.md)
-to generate the configuration and environment structure automatically.
+to generate the configuration and environment structure automatically for
+watsonx, Cloud Pak for Data & Software Hub, Cloud Pak for Integration, Cloud Pak
+for Business Automation, or Cloud Pak for Watson AIOps.
 
 Click on the links below, or in the left menu, to find details about running the
 deployer on each of the following infrastructures:
