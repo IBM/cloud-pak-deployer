@@ -36,6 +36,17 @@ show_deployer_info() {
   fi
 }
 
+if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=false;fi
+
+ANSI_FILTER_CMD=""
+if [ "${CPD_NO_COLOR}" != "true" ]; then
+  if command -v python3 >/dev/null 2>&1; then
+    ANSI_FILTER_CMD="python3 ${SCRIPT_DIR}/strip-ansi-stream.py"
+  elif command -v python >/dev/null 2>&1; then
+    ANSI_FILTER_CMD="python ${SCRIPT_DIR}/strip-ansi-stream.py"
+  fi
+fi
+
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
@@ -131,7 +142,11 @@ env|environment)
   echo "  Commit timestamp: ${COMMIT_TIMESTAMP}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "  Commit message  : ${COMMIT_MESSAGE}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
-  run_cmd+=" 2>&1 | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log"
+  if [ "${ANSI_FILTER_CMD}" != "" ]; then
+    run_cmd+=" 2>&1 | tee >(${ANSI_FILTER_CMD} ${STATUS_DIR}/log/cloud-pak-deployer.log)"
+  else
+    run_cmd+=" 2>&1 | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log"
+  fi
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
   set -o pipefail
   eval $run_cmd
@@ -211,5 +226,3 @@ version)
   ;;
 
 esac
-
-
