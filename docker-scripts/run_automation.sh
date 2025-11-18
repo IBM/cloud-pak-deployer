@@ -38,15 +38,6 @@ show_deployer_info() {
 
 if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=false;fi
 
-ANSI_FILTER_CMD=""
-if [ "${CPD_NO_COLOR}" != "true" ]; then
-  if command -v python3 >/dev/null 2>&1; then
-    ANSI_FILTER_CMD="python3 ${SCRIPT_DIR}/strip-ansi-stream.py"
-  elif command -v python >/dev/null 2>&1; then
-    ANSI_FILTER_CMD="python ${SCRIPT_DIR}/strip-ansi-stream.py"
-  fi
-fi
-
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}
