@@ -380,6 +380,29 @@
     "users":[{"username":"{{ lc_principal_admin_user }}","id":"{{ admin_user_id }}"}],"groups":[],"authorizations":[]}'
   changed_when: false
 
+- name: Get TutorialAdmin group
+  ansible.builtin.set_fact:
+    tutorial_admin_group: "{{ groups_response.json | json_query(condition_query) }}"
+  vars:
+    condition_query: "data.groups[?name == 'TutorialAdmin']"
+
+- name: Get TutorialAdmin group ID
+  ansible.builtin.set_fact:
+    tutorial_admin_group_id: "{{ tutorial_admin_group | first | json_query('id') }}"
+
+# Overwrites the current members of TM admin group
+# ansible.builtin.uri not working
+- name: Add admin to TutorialAdmin group
+  ansible.builtin.command: |
+    curl -kX 'POST' \
+    'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ tutorial_admin_group_id }}' \
+    -H 'Content-Type: application/x-www-form-urlencoded' \
+    -H 'Cookie: ibm-private-cloud-session={{ zen_token }}' \
+    --data-urlencode 'group={"id":"{{ tutorial_admin_group_id }}",
+    "name":"TutorialAdmin","tenantId":"-1",
+    "users":[{"username":"{{ lc_principal_admin_user }}","id":"{{ admin_user_id }}"}],"groups":[],"authorizations":[]}'
+  changed_when: false
+
 - name: Get Classification permission auths
   ansible.builtin.uri:
     url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations?tenantId=-1&resource=68"
