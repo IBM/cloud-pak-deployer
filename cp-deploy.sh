@@ -56,6 +56,7 @@ command_usage() {
   echo "  --clean-up                    Remove the container after the run is completed. Remove old images after build. (\$CPD_CLEANUP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
+  echo "  --no-color                    Disable ANSI color codes in the output (\$CPD_NO_COLOR)"
   echo
   echo "Cloud Pak Deployer development options:"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
@@ -117,6 +118,7 @@ if [ "${CPD_CLEANUP}" == "" ];then CPD_CLEANUP=false;fi
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${CPD_TEST_CARTRIDGES}" == "" ];then CPD_TEST_CARTRIDGES=false;fi
 if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
+if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=false;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
@@ -494,6 +496,10 @@ while (( "$#" )); do
       command_usage 2
     fi
     export CPD_SKIP_INFRA=true
+    shift 1
+    ;;
+  --no-color)
+    export CPD_NO_COLOR=true
     shift 1
     ;;
   --skip-cp-install)
@@ -1058,6 +1064,18 @@ if ! $INSIDE_CONTAINER;then
 
   run_cmd+=" -e ANSIBLE_VERBOSE=${ANSIBLE_VERBOSE}"
   run_cmd+=" -e ANSIBLE_STANDARD_OUTPUT=${ANSIBLE_STANDARD_OUTPUT}"
+  run_cmd+=" -e CPD_NO_COLOR=${CPD_NO_COLOR}"
+  if [ "${CPD_NO_COLOR}" != "true" ];then
+    run_cmd+=" -e ANSIBLE_FORCE_COLOR=1"
+    run_cmd+=" -e PY_COLORS=1"
+    run_cmd+=" -e FORCE_COLOR=1"
+    run_cmd+=" -e TERM=xterm-256color"
+  else
+    run_cmd+=" -e ANSIBLE_FORCE_COLOR=0"
+    run_cmd+=" -e ANSIBLE_NOCOLOR=1"
+    run_cmd+=" -e PY_COLORS=0"
+    run_cmd+=" -e FORCE_COLOR=0"
+  fi
   run_cmd+=" -e CONFIRM_DESTROY=${CONFIRM_DESTROY}"
   run_cmd+=" -e CPD_OPTIMIZE_DEPLOY=${CPD_OPTIMIZE_DEPLOY}"  
   run_cmd+=" -e CPD_SKIP_INFRA=${CPD_SKIP_INFRA}"
@@ -1144,6 +1162,22 @@ if ! $INSIDE_CONTAINER;then
 
 # Run the below when cp-deploy.sh is started inside the container
 else
+  export CPD_NO_COLOR=${CPD_NO_COLOR}
+
+  if [ "${CPD_NO_COLOR}" != "true" ];then
+    export ANSIBLE_FORCE_COLOR=1
+    export PY_COLORS=1
+    export FORCE_COLOR=1
+    if [ "${TERM}" == "" ];then
+      export TERM=xterm-256color
+    fi
+  else
+    export ANSIBLE_FORCE_COLOR=0
+    export ANSIBLE_NOCOLOR=1
+    export PY_COLORS=0
+    export FORCE_COLOR=0
+  fi
+
   # Export extra variables
   if [ ${#arrExtraKey[@]} -ne 0 ];then
     for (( i=0; i<${#arrExtraKey[@]}; i++ ));do
