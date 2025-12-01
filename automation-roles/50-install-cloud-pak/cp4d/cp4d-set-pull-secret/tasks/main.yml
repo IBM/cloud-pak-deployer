@@ -1,0 +1,14 @@
+---
+- include_tasks: set-entitled-registry-pull-secret.yml
+  when: 
+  - (_p_current_cp4d_cluster.image_registry_name | default("")) == ""
+  - (all_config.cp_alt_repo | default({})) == {}
+
+- include_tasks: set-private-registry-pull-secret.yml
+  when: 
+  - (_p_current_cp4d_cluster.image_registry_name | default("")) != ""
+  - (all_config.cp_alt_repo | default({})) == {}
+
+- include_tasks: set-alt-registries-pull-secret.yml
+  when: 
+  - (all_config.cp_alt_repo | default({})) != {}
