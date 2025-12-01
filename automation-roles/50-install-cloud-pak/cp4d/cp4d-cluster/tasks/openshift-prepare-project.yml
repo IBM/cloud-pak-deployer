@@ -14,11 +14,25 @@
     _p_command_description: Create operators project {{ current_cp4d_cluster.operators_project }}
     _p_command: "oc new-project {{ current_cp4d_cluster.operators_project }} || true"
 
+- name: Set pull-secret for operators project {{ current_cp4d_cluster.operators_project }}
+  include_role:
+    name: cp4d-set-pull-secret
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_namespace: "{{ current_cp4d_cluster.operators_project }}"
+
 - include_role:
     name: run-command
   vars:
     _p_command_description: Create instance project {{ current_cp4d_cluster.project }}
     _p_command: "oc new-project {{ current_cp4d_cluster.project }} || true"
+
+- name: Set pull-secret for instance project {{ current_cp4d_cluster.project }}
+  include_role:
+    name: cp4d-set-pull-secret
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_namespace: "{{ current_cp4d_cluster.project }}"
 
 # Set configmap to control if Db2U must run with elevated or limited privileges
 - include_tasks: cp4d-db2u-configmap.yml
