@@ -32,6 +32,9 @@ RUN export PYVER=$(python -c "import sys;print('{}.{}'.format(sys.version_info[0
     yum install -y gcc python${PYVER}-devel && \
     pip3 install --no-cache-dir jmespath pyyaml argparse python-benedict pyvmomi psutil && \
     sed -i 's|#!/usr/bin/python.*|#!/usr/bin/python3.9|g' /usr/bin/yum-config-manager && \
+    if [[ "$(pip list | grep kubernetes | awk '{print $2}')" == "34.1.0" ]] && \
+        $(sed '173!d' /usr/local/lib/python3.12/site-packages/kubernetes/client/configuration.py | grep -q no_proxy);then \
+        sed -i -e '173d' /usr/local/lib/python3.12/site-packages/kubernetes/client/configuration.py;fi && \
     yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
     yum install -y vault && \
     yum install -y nginx && \

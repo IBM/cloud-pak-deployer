@@ -116,9 +116,9 @@
   when: _current_cp4ba_cluster.cloudbeaver_enabled
 
 - name: When BTS enabled
-  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or
-    _current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer or
-    _current_cp4ba_cluster.cp4ba.patterns.application.enabled
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer
+    or _current_cp4ba_cluster.cp4ba.patterns.application.enabled
+    or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
   block:
     - name: Get BTS PostgreSQL secret
       kubernetes.core.k8s_info:
@@ -282,7 +282,7 @@
           $(oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} -o jsonpath='{.status.secret}') \
           -o jsonpath='{.data.password}' | base64 -d```)
 
-          - Alternative custom user: cpadmin / {{ universal_password }}
+          - Alternative custom user: {{ lc_principal_admin_user }} / {{ universal_password }}
 
           ## Configuration for Kafka connection
 

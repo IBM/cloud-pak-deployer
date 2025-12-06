@@ -53,6 +53,8 @@ if ! $(oc get pvc cloud-pak-deployer-status > /dev/null 2>&1 );then
         export DEPLOYER_SC=ocs-external-storagecluster-cephfs
     elif oc get sc ibmc-file-gold-gid > /dev/null 2>&1;then
         export DEPLOYER_SC=ibmc-file-gold-gid
+    elif oc get sc ibmc-vpc-file-1000-iops > /dev/null 2>&1;then
+        export DEPLOYER_SC=ibmc-vpc-file-1000-iops
     else
         echo "No supported storage class found for the deployer job, exiting."
         exit 1
