@@ -53,7 +53,12 @@
   when: _p_cp4d_version < "5.1.0"
 
 - include_tasks: install-software-hub.yml
-  when: _p_cp4d_version >= "5.1.0"
+  when: 
+  - _p_cp4d_version >= "5.1.0"
+  - _p_cp4d_version < "5.3.0"
+
+- include_tasks: install-software-hub-component.yml
+  when: _p_cp4d_version >= "5.3.0"
 
 - name: Add Cloud Pak for Data route to /etc/hosts for vSphere
   include_tasks: vsphere-configure-etc-hosts.yml
