@@ -2,11 +2,6 @@
 - include_role:
     name: cp4d-variables
 
-- name: Create /tmp/work directory
-  file:
-    path: /tmp/work
-    state: directory
-
 - name: Generate case-download command to download case files
   set_fact:
     _case_download_command: "{{ lookup('template', 'case-download.j2') }}" 
@@ -18,18 +13,13 @@
     _p_command: "{{ _case_download_command }}"
     _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-case-download.log"
 
-- name: Create {{ status_dir }}/work directory if not present yet
-  file:
-    path: "{{ status_dir }}/work"
-    state: directory
-
-- name: Remove {{ status_dir }}/work/offline to remove any previous CASE files
+- name: Remove {{ status_dir }}/work to remove any previous CASE files
   ansible.builtin.file:
-    path: "{{ status_dir }}/work/offline"
+    path: "{{ status_dir }}/work"
     state: absent
 
 - name: Copy case files to {{ status_dir }}/work/offline/{{ _p_cp4d_version }}
   copy:
-    src: "/tmp/work/offline"
-    dest: "{{ status_dir }}/work/"
+    src: "/tmp/work"
+    dest: "{{ status_dir }}"
     remote_src: True
