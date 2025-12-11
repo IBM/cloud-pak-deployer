@@ -299,7 +299,7 @@
       - 409
   register: cpfsadmin_response
 
-- name: Add cpadminservice to zen
+- name: Add cpmanagerservice to zen
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user"
     method: POST
@@ -308,8 +308,8 @@
       Authorization: "Bearer {{ zen_token }}"
     body_format: json
     body:
-      username: cpadminservice
-      displayName: cpadminservice
+      username: cpmanagerservice
+      displayName: cpmanagerservice
       user_roles:
         - zen_administrator_role
         - iaf-automation-admin
@@ -321,7 +321,7 @@
     status_code:
       - 201
       - 409
-  register: cpadminservice_response
+  register: cpmanagerservice_response
 
 - name: Get Usage configmap
   kubernetes.core.k8s_info:
@@ -335,8 +335,8 @@
 
 - name: Find zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
-      if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
+    zen_api_key: "{{ usage.resources[0].data['cpmanagerservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
+      if usage.resources | length != 0 and usage.resources[0].data['cpmanagerservice-zen-api-key'] is defined }}"
   vars:
     regexp: 'the UI: (.*)'
 
@@ -349,7 +349,7 @@
         tasks_from: iam-token-user
       vars:
         common_cpfs_project: "{{ cp4ba_project_name }}"
-        common_user: "cpadminservice"
+        common_user: "cpmanagerservice"
         common_password: "{{ cp4ba_universal_password }}"
         common_output_to_var: "iam_token"
 
@@ -359,12 +359,12 @@
         tasks_from: zen-token
       vars:
         common_iam_token: "{{ iam_token }}"
-        common_user: "cpadminservice"
+        common_user: "cpmanagerservice"
         common_namespace_name: "{{ cp4ba_project_name }}"
         common_output_to_var: "zen_token"
 
     # Based on network traffic
-    - name: Generate Zen API key for cpadminservice
+    - name: Generate Zen API key for cpmanagerservice
       ansible.builtin.uri:
         url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/apiKey"
         method: GET
@@ -379,20 +379,20 @@
         zen_api_key_new: "{{ zen_api_key_response.json.apiKey }}"
 
     # Regenerate usage with zen_api_key
-    - name: Set usage entry for cpadminservice user
+    - name: Set usage entry for cpmanagerservice user
       ansible.builtin.include_role:
         name: usage
         tasks_from: set-entry
       vars:
-        usage_entry_name: cpadminservice-zen-api-key
+        usage_entry_name: cpmanagerservice-zen-api-key
         usage_entry_value:
           "Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=access-using-zen-api-key-authentication
           If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service account with username \
-          *cpadminservice* has been prepared for you with the generated api key.
+          *cpmanagerservice* has been prepared for you with the generated api key.
 
-          Zen API key for cpadminservice user as generated in the UI: {{ zen_api_key_new }}
+          Zen API key for cpmanagerservice user as generated in the UI: {{ zen_api_key_new }}
 
-          Zen API key for cpadminservice user in the form of header: ZenApiKey {{ 'cpadminservice:' + zen_api_key_new | b64encode }}
+          Zen API key for cpmanagerservice user in the form of header: ZenApiKey {{ 'cpmanagerservice:' + zen_api_key_new | b64encode }}
 
           "
 

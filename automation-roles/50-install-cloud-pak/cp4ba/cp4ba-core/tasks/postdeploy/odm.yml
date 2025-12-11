@@ -59,7 +59,7 @@
   with_items: "{{ lc_admin_groups }}"
 
 # Needed as group related permissions are updated only after first real login via browser
-- name: Add all ODM roles to default admin user and cpadminservice
+- name: Add all ODM roles to default admin user and cpmanagerservice
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ item }}?add_roles=true"
     method: PUT
@@ -77,7 +77,7 @@
     status_code:
       - 200
   with_items:
-    - cpadminservice
+    - cpmanagerservice
     - "{{ lc_principal_admin_user }}"
 
 - name: Add ODM regular roles to group {{ item }}
@@ -139,8 +139,8 @@
 
 - name: Find zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
-      if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
+    zen_api_key: "{{ usage.resources[0].data['cpmanagerservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
+      if usage.resources | length != 0 and usage.resources[0].data['cpmanagerservice-zen-api-key'] is defined }}"
   vars:
     regexp: 'the UI: (.*)'
 
@@ -154,7 +154,7 @@
     body:
       {
         "authenticationKind": "OAUTH",
-        "loginServer": "cpadminservice",
+        "loginServer": "cpmanagerservice",
         "loginPassword": "{{ zen_api_key }}"
       }
     validate_certs: false
@@ -178,7 +178,7 @@
     body:
       {
         "authenticationKind": "OAUTH",
-        "loginServer": "cpadminservice",
+        "loginServer": "cpmanagerservice",
         "loginPassword": "{{ zen_api_key }}"
       }
     validate_certs: false
