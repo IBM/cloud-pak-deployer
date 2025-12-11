@@ -163,7 +163,8 @@ For your convenience the following post-deployment setup tasks have been automat
 - IER - Task Manager pod has TM_JOB_URL parameter set.
 - IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
-- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), BAW (BAWTOS) and ADP (DEVOS1) objectstores.
+- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), IER (FPOS, ROS), BAW (BAWTOS, BAWDOS, BAWDOCS), AE (AEOS) and ADP (DEVOS1) objectstores.
+- FNCM - Set default storage policy for Document class and its subclasses to FileSystem based ASA instead of DB.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/24.x?topic=events-using-event-handler-filenet-content-manager
