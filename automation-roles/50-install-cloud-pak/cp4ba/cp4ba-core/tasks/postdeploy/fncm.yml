@@ -29,10 +29,21 @@
   ansible.builtin.set_fact:
     os_list: ["CONTENT"]
 
-- name: Add BAWTOS to OS list
+- name: Add IER to OS list
   ansible.builtin.set_fact:
-    os_list: "{{ os_list + ['BAWTOS'] }}"
+    os_list: "{{ os_list + ['FPOS', 'ROS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+
+- name: Add BAW to OS list
+  ansible.builtin.set_fact:
+    os_list: "{{ os_list + ['BAWTOS', 'BAWDOS', 'BAWDOCS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Add BAW to OS list
+  ansible.builtin.set_fact:
+    os_list: "{{ os_list + ['AEOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and
+    _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.ae_data_persistence
 
 - name: Add DEVOS1 to OS list
   ansible.builtin.set_fact:
@@ -70,6 +81,10 @@
       - 200
   register: graphql_response
   failed_when: "'errors' in graphql_response.content"
+  with_items: "{{ os_list }}"
+
+- name: Setup FNCM Subscription for ECM Content event
+  ansible.builtin.include_tasks: fncm-asa-storage-policy.yml
   with_items: "{{ os_list }}"
 
 - name: Set usage entry
