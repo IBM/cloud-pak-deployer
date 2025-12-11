@@ -12,19 +12,19 @@ collateral_project_name: "{{ _current_cp4ba_cluster.collateral_project | default
 external_share_google: false
 
 # main platform admin user
-principal_admin_user: "{{ _current_cp4ba_cluster.principal_admin_user | default('cpadmin')}}"
+principal_admin_user: "{{ _current_cp4ba_cluster.principal_admin_user | default('cpmanager')}}"
 
 # CPFS admin user
-cpfs_admin_user: "{{ _current_cp4ba_cluster.cpfs_admin_user | default('cpfsadmin')}}"
+cpfs_admin_user: "{{ _current_cp4ba_cluster.cpfs_admin_user | default('cpadmin')}}"
 
 lc_principal_admin_user: "{{ ldap_configuration.lc_principal_admin_user | default(principal_admin_user) }}"
 lc_principal_admin_password: "{{ ldap_configuration.lc_principal_admin_password | default(universal_password) }}"
-lc_principal_admin_group: "{{ ldap_configuration.lc_principal_admin_group | default('cpadmins') }}"
-lc_admin_groups: "{{ ldap_configuration.lc_admin_groups | default(['cpadmins']) }}"
+lc_principal_admin_group: "{{ ldap_configuration.lc_principal_admin_group | default('cpmanagers') }}"
+lc_admin_groups: "{{ ldap_configuration.lc_admin_groups | default(['cpmanagers']) }}"
 lc_admin_users: "{{ ldap_configuration.lc_admin_users | default([lc_principal_admin_user]) }}"
 lc_general_groups: "{{ ldap_configuration.lc_general_groups | default(['cpusers', 'cpusers1']) }}"
 lc_selected_ldap_type: "{{ ldap_configuration.lc_selected_ldap_type | default('Custom') }}"
-lc_ldap_server: "{{ ldap_configuration.lc_ldap_server | default('openldap.'+openldap_project_name+'.svc.cluster.local') }}"
+lc_ldap_server: "{{ ldap_configuration.lc_ldap_server | default('openldap.' + openldap_project_name + '.svc.cluster.local') }}"
 lc_bind_secret: "{{ ldap_configuration.lc_bind_secret | default('ldap-bind-secret') }}"
 lc_ldap_base_dn: "{{ ldap_configuration.lc_ldap_base_dn | default('dc=cp,dc=internal') }}"
 lc_ldap_dc: "{{ ldap_configuration.lc_ldap_dc | default('cp') }}"
@@ -43,10 +43,10 @@ lc_ldap_group_id_attribute: "{{ ldap_configuration.lc_ldap_group_id_attribute | 
 lc_ldap_group_name_attribute: "{{ ldap_configuration.lc_ldap_group_name_attribute | default('*:cn') }}"
 lc_ldap_group_display_name_attr: "{{ ldap_configuration.lc_ldap_group_display_name_attr | default('cn') }}"
 lc_ldap_group_membership_search_filter: "{{ ldap_configuration.lc_ldap_group_membership_search_filter
-    | default('(|(&(objectclass='+lc_ldap_group_object_class+')(member={0}))(&(objectclass=groupofuniquenames)(uniquemember={0})))') }}"
+    | default('(|(&(objectclass=' + lc_ldap_group_object_class + ')(member={0}))(&(objectclass=groupofuniquenames)(uniquemember={0})))') }}"
 lc_ldap_group_member_id_map: "{{ ldap_configuration.lc_ldap_group_member_id_map | default(lc_ldap_group_object_class + ':member') }}"
 
-lc_bind_admin_user: "{{ ldap_configuration.lc_bind_admin_user | default('cn=admin,'+ lc_ldap_base_dn) }}"
+lc_bind_admin_user: "{{ ldap_configuration.lc_bind_admin_user | default('cn=admin,' + lc_ldap_base_dn) }}"
 lc_bind_admin_password: "{{ ldap_configuration.lc_bind_admin_password | default(universal_password) }}"
 
 ca_key_path: "{{ generic_directory }}/global-ca/global-ca.key"
