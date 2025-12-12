@@ -167,7 +167,6 @@
     wait_timeout: 15
 
 # Based on validate successful deployment by following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=platform-how-validate-successful-installation
-# TODO waiting only for UIReady as Ready status is currently broken
 - name: Wait for ProcessMining to be UIReady
   ansible.builtin.include_role:
     name: common
@@ -181,7 +180,6 @@
     common_retries: 30
     common_delay: 120
 
-# TODO waiting only for pods ready as Ready status is currently broken START
 - name: Query for IPM pods and wait for them
   kubernetes.core.k8s_info:
     api_version: v1
@@ -193,7 +191,6 @@
   until: pods.resources | json_query('[?status.containerStatuses[0].ready == `true`].metadata.name') | length >= 10
   retries: 30
   delay: 30
-# TODO waiting only for pods ready as Ready status is currently broken END
 
 - name: Wait for PM Zen Extension
   ansible.builtin.include_role:
