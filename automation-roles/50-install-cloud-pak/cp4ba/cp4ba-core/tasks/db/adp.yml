@@ -11,7 +11,11 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/adpbase_tbs
+    command: >
+      bash -c "
+        mkdir -p /var/lib/postgresql/data/tablespaces/adpbase_tbs;
+        chown postgres:postgres /var/lib/postgresql/data/tablespaces/adpbase_tbs;
+      "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -26,7 +30,7 @@
         CREATE USER adpbase WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database adpbase -- default template tablespace
-        CREATE TABLESPACE "adpbase_tbs" OWNER "adpbase" LOCATION '/bitnami/postgresql/tablespaces/adpbase_tbs';
+        CREATE TABLESPACE "adpbase_tbs" OWNER "adpbase" LOCATION '/var/lib/postgresql/data/tablespaces/adpbase_tbs';
         CREATE DATABASE "adpbase" OWNER "adpbase" TEMPLATE template0 ENCODING UTF8 TABLESPACE "adpbase_tbs";
         REVOKE CONNECT ON DATABASE "adpbase" FROM PUBLIC;
         GRANT ALL ON DATABASE "adpbase" TO "adpbase";
@@ -37,7 +41,11 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/adpggdb_tbs
+    command: >
+      bash -c "
+        mkdir -p /var/lib/postgresql/data/tablespaces/adpggdb_tbs;
+        chown postgres:postgres /var/lib/postgresql/data/tablespaces/adpggdb_tbs;
+      "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -52,7 +60,7 @@
         CREATE USER adpgg WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- please modify location follow your requirement
-        CREATE TABLESPACE adpggdb_tbs OWNER adpgg LOCATION '/bitnami/postgresql/tablespaces/adpggdb_tbs';
+        CREATE TABLESPACE adpggdb_tbs OWNER adpgg LOCATION '/var/lib/postgresql/data/tablespaces/adpggdb_tbs';
         GRANT CREATE ON TABLESPACE adpggdb_tbs TO adpgg;
 
         -- create database adpggdb
@@ -74,7 +82,11 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/{{ item }}_tbs
+    command: >
+      bash -c "
+        mkdir -p /var/lib/postgresql/data/tablespaces/{{ item }}_tbs;
+        chown postgres:postgres /var/lib/postgresql/data/tablespaces/{{ item }}_tbs;
+      "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
   with_items:
@@ -96,7 +108,7 @@
         CREATE USER {{ item }} WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database {{ item }} -- default template tablespace
-        CREATE TABLESPACE "{{ item }}_tbs" OWNER "{{ item }}" LOCATION '/bitnami/postgresql/tablespaces/{{ item }}_tbs';
+        CREATE TABLESPACE "{{ item }}_tbs" OWNER "{{ item }}" LOCATION '/var/lib/postgresql/data/tablespaces/{{ item }}_tbs';
         CREATE DATABASE "{{ item }}" OWNER "{{ item }}" TEMPLATE template0 ENCODING UTF8 TABLESPACE "{{ item }}_tbs";
         REVOKE CONNECT ON DATABASE "{{ item }}" FROM PUBLIC;
         GRANT ALL ON DATABASE "{{ item }}" TO "{{ item }}";
@@ -117,7 +129,11 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
-    command: mkdir -p /bitnami/postgresql/tablespaces/devos1_tbs
+    command: >
+      bash -c "
+        mkdir -p /var/lib/postgresql/data/tablespaces/devos1_tbs;
+        chown postgres:postgres /var/lib/postgresql/data/tablespaces/devos1_tbs;
+      "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -132,7 +148,7 @@
         CREATE USER devos1 WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for devos1
-        CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/bitnami/postgresql/tablespaces/devos1_tbs';
+        CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/var/lib/postgresql/data/tablespaces/devos1_tbs';
         GRANT CREATE ON TABLESPACE devos1_tbs TO devos1;
 
         -- create database devos1
