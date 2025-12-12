@@ -22,17 +22,6 @@
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'ban/cr.yaml.j2') | from_yaml, recursive=true) }}"
 
-# - name: Add BAN Google IDP configuration to CR
-#   ansible.builtin.set_fact:
-#     cr: "{{ cr | combine(ban_insert, recursive=true) }}"
-#   vars:
-#     ban_insert:
-#       spec:
-#         navigator_configuration:
-#           icn_production_setting:
-#             jvm_customize_options: DELIM=;-Dcom.filenet.authentication.ExShareGID.AuthTokenOrder=oidc,oauth,ltpa
-#   when: cp4ba_external_share_google and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
-
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-studio
 - name: Add BAS component
   ansible.builtin.set_fact:
@@ -128,11 +117,6 @@
     components: "{{ components + ['css'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
-# - name: Add FNCM components
-#   ansible.builtin.set_fact:
-#     components: "{{ components + ['es'] }}"
-#   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
-
 - name: Add FNCM components
   ansible.builtin.set_fact:
     components: "{{ components + ['tm'] }}"
@@ -157,11 +141,6 @@
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-css.yaml.j2') | from_yaml, recursive=true) }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
-
-# - name: Add FNCM to CR
-#   ansible.builtin.set_fact:
-#     cr: "{{ cr | combine(lookup('template', 'fncm/cr-es.yaml.j2') | from_yaml, recursive=true) }}"
-#   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
@@ -198,26 +177,6 @@
                   cr.spec.initialize_configuration.ic_icn_init_info.icn_desktop }}"
             verify_configuration:
               vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
-
-
-# - name: Google and IDP for External Share
-#   block:
-
-#     - name: Add Google TLS to CR
-#       ansible.builtin.set_fact:
-#         cr: "{{ cr | combine(google_tls_insert, recursive=true) }}"
-#       vars:
-#         google_tls_insert:
-#           spec:
-#             shared_configuration:
-#               trusted_certificate_list: "{{ cr.spec.shared_configuration.trusted_certificate_list + ['google-tls'] }}"
-
-
-#     - name: Add IDP configuration to CR
-#       ansible.builtin.set_fact:
-#         cr: "{{ cr | combine(lookup('template', 'fncm/cr-es-gid.yaml.j2') | from_yaml, recursive=true) }}"
-
-#   when: cp4ba_external_share_google and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-application
 - name: Add AAE pattern
@@ -575,8 +534,6 @@
         _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name + '-cmis-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-graphql-deploy', '') }}"
-      # - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-      #   _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name + '-tm-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-gitgateway-deploy', '') }}"
