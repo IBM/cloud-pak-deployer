@@ -754,7 +754,6 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.cmis          | Set to `true` to enable CMIS | Yes | true, false |
 | optional_components.css          | Set to `true` to enable Content Search Services | Yes | true, false |
-| optional_components.es          | Set to `true` to enable External Share. Currently not functional. | Yes | true, false |
 | optional_components.tm          | Set to `true` to enable Task Manager | Yes | true, false |
 | optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |

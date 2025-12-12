@@ -54,7 +54,7 @@ Deployment of other parts is also based on respective official documentations.
 What is not included:
 
 - ICCs - not covered.
-- FNCM External share - Currently not supported with ZEN & IAM as per limitation on [FNCM limitations](https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=notes-known-limitations-issues#concept_gmf_x1h_1fb__ecm)
+- FNCM External share - Not supported with ZEN
 - Asset Repository - it is more part of CP4I.
 - Workflow Server and Workstream Services - this is a dev deployment. BAW Authoring and (BAW + IAWS) are mutually exclusive in single project.
 - ADP Runtime deployment - this is a dev deployment.
