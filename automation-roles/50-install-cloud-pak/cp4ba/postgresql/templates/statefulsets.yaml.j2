@@ -36,8 +36,8 @@ spec:
                 - >
                   exec pg_isready
 
-                  [ -f /opt/bitnami/postgresql/tmp/.initialized ] || [ -f
-                  /bitnami/postgresql/.initialized ]
+                  [ -f /opt/var/lib/postgresql/data/tmp/.initialized ] || [ -f
+                  /var/lib/postgresql/data/.initialized ]
             failureThreshold: 18
             periodSeconds: 10
           readinessProbe:
@@ -68,7 +68,7 @@ spec:
             - name: POSTGRESQL_VOLUME_DIR
               value: /bitnami/postgresql
             - name: PGDATA
-              value: /bitnami/postgresql/data
+              value: /var/lib/postgresql/data/data
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -108,18 +108,18 @@ spec:
               mountPath: /tmp
               subPath: tmp-dir
             - name: empty-dir
-              mountPath: /opt/bitnami/postgresql/conf
+              mountPath: /opt/var/lib/postgresql/data/conf
               subPath: app-conf-dir
             - name: empty-dir
-              mountPath: /opt/bitnami/postgresql/tmp
+              mountPath: /opt/var/lib/postgresql/data/tmp
               subPath: app-tmp-dir
             - name: empty-dir
-              mountPath: /opt/bitnami/postgresql/logs
+              mountPath: /opt/var/lib/postgresql/data/logs
               subPath: app-logs-dir
             - name: postgresql-data
               mountPath: /bitnami/postgresql
             - name: postgresql-extended-config
-              mountPath: /bitnami/postgresql/conf/conf.d/
+              mountPath: /var/lib/postgresql/data/conf/conf.d/
       volumes:
         - name: empty-dir
           emptyDir: {}
@@ -142,3 +142,81 @@ spec:
           requests:
             storage: 5Gi
         volumeMode: Filesystem
+
+
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  namespace: "{{ postgresql_project_name }}"
+spec:
+  serviceName: postgresql
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgresql
+  template:
+    metadata:
+      labels:
+        app: postgresql
+    spec:
+      serviceAccountName: postgresql
+      serviceAccount: postgresql
+      containers:
+        - name: postgresql
+          args:
+            - '-c'
+            - max_prepared_transactions=500
+            - '-c'
+            - max_connections=500
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1024Mi
+            limits:
+              cpu: 4000m
+              memory: 4096Mi
+          livenessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U \$POSTGRES_USER -d \$POSTGRES_DB
+            failureThreshold: 6
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U \$POSTGRES_USER -d \$POSTGRES_DB
+            failureThreshold: 6
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          startupProbe:
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U \$POSTGRES_USER -d \$POSTGRES_DB
+            failureThreshold: 18
+            periodSeconds: 10            
+          image: "{{ postgresql_image }}"
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: postgresql-config
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgresql-data
+      volumes:
+        - name: postgresql-data
+          persistentVolumeClaim:
+            claimName: postgresql-data        
