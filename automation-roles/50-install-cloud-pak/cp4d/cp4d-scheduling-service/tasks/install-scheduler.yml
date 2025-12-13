@@ -1,4 +1,16 @@
 ---
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Create scheduling project {{ scheduling_service_project }}
+    _p_command: "oc new-project {{ scheduling_service_project }} || true"
+
+- name: Set pull-secret for operators project {{ scheduling_service_project }}
+  include_role:
+    name: cp4d-set-pull-secret
+  vars:
+    _p_pull_secret_namespace: "{{ scheduling_service_project }}"
+
 - name: Generate scheduler command
   set_fact:
     _apply_scheduler_command: "{{ lookup('template','apply-scheduler.j2') }}"

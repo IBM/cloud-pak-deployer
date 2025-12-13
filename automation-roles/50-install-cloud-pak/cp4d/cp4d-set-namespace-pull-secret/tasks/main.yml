@@ -1,0 +1,41 @@
+---
+- name: Get existing ibm-entitlement-key pull secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: ibm-entitlement-key
+    namespace: "{{ _p_namespace }}"
+  register: _ibm_entitlement_key
+
+- name: Extract and decode .dockerconfigjson
+  ansible.builtin.set_fact:
+    _dockerconfig: "{{ _ibm_entitlement_key.resources[0].data['.dockerconfigjson'] | b64decode | from_json }}"
+  when: _ibm_entitlement_key.resources != []
+
+- name: Create empty .dockerconfigjson
+  ansible.builtin.set_fact:
+    _dockerconfig: "{{ lookup('template','dockerconfigjson.j2') }}"
+  when: _ibm_entitlement_key.resources == []
+
+- name: Add registry entry
+  ansible.builtin.set_fact:
+    _updated_dockerconfig: |
+      {{ _dockerconfig | 
+          combine({'auths': _dockerconfig['auths'] |
+            combine({_p_registry: {'auth': (_p_secret_value | b64encode) } } ) 
+            }
+          ) 
+      }}
+
+- name: Update ibm-entitlement-key pull secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ibm-entitlement-key
+        namespace: "{{ _p_namespace }}"
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: "{{ _updated_dockerconfig | to_json | b64encode }}"

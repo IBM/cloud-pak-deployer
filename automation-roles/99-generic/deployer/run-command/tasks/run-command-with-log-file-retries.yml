@@ -9,6 +9,7 @@
   shell: |
     set -o pipefail
     {{ _p_command }} 2>&1 | tee -a {{ _p_command_log_file | default('/tmp/command-log-file.log') }}
+  environment: "{{ _p_command_environment | default({}) }}"
   register: _run_command_result
   until: _run_command_result.rc == 0
   retries: "{{ _p_command_retries }}"

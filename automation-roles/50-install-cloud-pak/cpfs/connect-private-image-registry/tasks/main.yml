@@ -2,18 +2,18 @@
 - name: Validate mandatory variables are defined
   assert:
     that:
-      - (current_cp4d_cluster.image_registry_name | default("")) != ""
+      - (_p_current_cp4d_cluster.image_registry_name | default("")) != ""
 
 - name: Retrieve image registry details
   set_fact:
     current_image_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
   vars:
     query: >-
-      [?name=='{{ current_cp4d_cluster.image_registry_name }}']
+      [?name=='{{ _p_current_cp4d_cluster.image_registry_name }}']
 
 - name: Fail if the registry details for the image registry have not been found
   fail:
-    msg: "Image registry details for image_registry_name {{ current_cp4d_cluster.image_registry_name }} not found."
+    msg: "Image registry details for image_registry_name {{ _p_current_cp4d_cluster.image_registry_name }} not found."
   when: 
   - current_image_registry | default({}) == {}
 
@@ -29,18 +29,18 @@
   include_role: 
     name: vault-get-secret
   vars:
-    secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
+    secret_name: "image-registry-{{ _p_current_cp4d_cluster.image_registry_name }}"
     secret_group: "{{ environment_name }}"
     _p_secret_variable: private_registry_auth
 
 - name: Fail if the credentials for the image registry have not been found in the vault
   fail:
-    msg: "Vault secret image-registry-{{ current_cp4d_cluster.image_registry_name }} not found; this must exist for image registry {{ current_cp4d_cluster.image_registry_name }}"
+    msg: "Vault secret image-registry-{{ _p_current_cp4d_cluster.image_registry_name }} not found; this must exist for image registry {{ _p_current_cp4d_cluster.image_registry_name }}"
   when: private_registry_auth == ""
 
 - name: Fail if the credentials are not in the correct format of "user:password"
   fail:
-    msg: "Private registry credentials in vault secret image-registry-{{ current_cp4d_cluster.image_registry_name }} must in the format of user:password"
+    msg: "Private registry credentials in vault secret image-registry-{{ _p_current_cp4d_cluster.image_registry_name }} must in the format of user:password"
   when: not (private_registry_auth is search(':'))
 
 - set_fact:

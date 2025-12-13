@@ -6,17 +6,8 @@
 - set_fact:
     _cp4d_cartridges_installed_successfully: True
 
-- name: Create catalog sources for Cloud Pak for Data cartridges in project {{ _p_current_cp4d_cluster.project }}
-  include_role:
-    name: cp4d-catalog-source
-  vars:
-    _p_catsrc_scope: cartridges
-
-- name: Create subscriptions for Cloud Pak for Data cartridges in project {{ _p_current_cp4d_cluster.project }}
-  include_role:
-    name: cp4d-subscriptions
-  vars:
-    _p_subscription_scope: cartridges
+- include_tasks: cp4d-create-subscriptions-olm-utils.yml
+  when: _p_cp4d_version < '5.3.0'
 
 - name: Populate {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
   lineinfile:
@@ -42,7 +33,14 @@
   when: not cpd_dry_run
 
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
-  when: _apply_cr_cartridges_list != ''
+  when: 
+  - _apply_cr_cartridges_list != ''
+  - _p_cp4d_version < '5.3.0'
+
+- include_tasks: cp4d-install-cartridges.yml
+  when: 
+  - _apply_cr_cartridges_list != ''
+  - _p_cp4d_version >= '5.3.0'
 
 - name: Install separate cartridges
   include_tasks: cp4d-install-separate-cr.yml
