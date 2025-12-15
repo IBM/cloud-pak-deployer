@@ -12,6 +12,30 @@
     common_namespace_name: "{{ roundcube_project_name }}"
     common_output_directory: "{{ roundcube_output_directory }}"
 
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ roundcube_postgresql_project }}"
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
+- name: Roundcube DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ roundcube_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        -- create user roundcube
+        CREATE USER roundcube WITH PASSWORD '{{ roundcube_universal_password }}';
+
+        -- create database roundcube
+        CREATE DATABASE roundcube OWNER roundcube TEMPLATE template0 ENCODING UTF8;
+      EOF"
+  register: command_status
+
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
@@ -24,7 +48,6 @@
     - persistentvolumeclaims
     - rolebindings
     - services
-    - deployments-db
     - deployments
 
 - name: Add {{ item.name }}
@@ -41,7 +64,6 @@
     - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
-    - {name: deployments-db, wait_sleep: 15, wait_timeout: 600}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
 
 - name: Get OCP Apps Endpoint
