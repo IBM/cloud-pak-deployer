@@ -1,0 +1,45 @@
+---
+- name: Retrieve current password for Data Observability
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _p_current_cp4d_cluster.project }}-data-observability-postgres-password"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _data_observability_postgres_password
+
+- block:
+  - name: Generate password if not set yet
+    include_role:
+      name: generate-password
+  - name: Set password for Data Observability
+    ansible.builtin.include_role:
+      name: vault-set-secret
+    vars:
+      secret_name: "{{ _p_current_cp4d_cluster.project }}-data-observability-postgres-password"
+      secret_description: "Postgres password for Data Observability"
+      secret_payload: "{{ _p_generated_password }}"
+      secret_group: "{{ environment_name }}"
+  - set_fact:
+      _data_observability_postgres_password: "{{ _p_generated_password }}"
+  when: _data_observability_postgres_password==''
+
+- include_role:
+    name: generate-apply-yaml
+  vars:
+    _p_apply_yaml_description: Create postgres deployment for Data Observability
+    _p_apply_yaml_template: cp4d-wxs-integration-postgres.j2
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-cp4d-wxs-integration-postgres.yml"
+
+- name: Create Data Observability Postgres secret
+  kubernetes.core.k8s:
+    state: present
+    api_version: v1
+    kind: Secret
+    name: databand-postgres
+    namespace: "{{ _p_current_cp4d_cluster.project }}"
+    definition:
+      stringData:
+        connection.postgres.authentication.password: "{{ _data_observability_postgres_password }}"
+        connection.postgres.authentication.username: postgres
+        connection.postgres.hosts.0.hostname: "{{ 'postgresql.' + current_cp4d_cluster.project + '.svc' }}"
+        connection.postgres.hosts.0.port: '5432'

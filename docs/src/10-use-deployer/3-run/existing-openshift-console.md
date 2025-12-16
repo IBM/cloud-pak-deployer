@@ -536,6 +536,16 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             description: watsonx.data
             state: removed
 
+          - name: watsonx_dataintegration
+            description: watsonx.data integration
+            state: removed
+            installation_options:
+              enableBatchBulkETL: true
+              enableRealtimeStreaming: true
+              enableDataObservability: true
+              enableUnstructuredDataIntegration: true
+              enableReplication: true
+
           - name: watsonx_dataintelligence
             description: watsonx.data intelligence
             state: removed
@@ -556,6 +566,9 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
           - name: watsonx_data_premium
             description: watsonx.data Premium
             state: removed
+            installation_options:
+              wxd_premium_enable_models_on: gpu
+              license_type: premium
 
           - name: watsonx_governance
             description: watsonx.governance
@@ -569,7 +582,10 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
           - name: watsonx_orchestrate
             description: watsonx.orchestrate
             installation_options:
-              watsonx_orchestrate_watsonx_ai_type: false
+              # watson_orchestrate_install_mode: lite
+              watson_orchestrate_watsonx_ai_type: true
+              watson_orchestrate_ootb_models:
+              - ibm-slate-30m-english-rtrvr
             instances:
             - name: wxo-instance
               description: "watsonx Orchestrate instance"
