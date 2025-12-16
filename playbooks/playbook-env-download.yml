@@ -66,6 +66,10 @@
         secret_payload: "{{ cp_entitlement_key }}"
       when: 
       - (cp_entitlement_key | default("")) != ""
+
+    - name: Prepare deployer environment
+      include_role:
+        name: prepare-deployer
     when: not (cpd_check_only | default(False) | bool)
 
 - name: 20 - Download CLIs and case files
@@ -163,6 +167,7 @@
 
       when:
       - not (cpd_skip_mirror | bool)
+      # - all_config.cp_alt_repo is not defined
 
     # Mirror images to portable or private registry
     - block:

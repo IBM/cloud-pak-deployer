@@ -1,0 +1,14 @@
+install-components \
+    --release={{ _p_cp4d_version }} \
+    --license_acceptance={{ _cpd_accept_licenses | default(False) | string | lower }} \
+    --preview={{ _p_preview_script | default(False) | string | lower }} \
+    --upgrade={{ _upgrade_cp4d | default(False) | string | lower }} \
+    --operator_ns={{ _p_current_cp4d_cluster.operators_project }} \
+    --instance_ns={{ _p_current_cp4d_cluster.project }} \
+    --param-file={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml \
+    --components={{ _apply_cr_cartridges_list }} \
+{%- if _storage_type == "pwx" -%}
+    --storage_vendor=portworx
+{%- else -%}
+    --file_storage_class={{ ocp_storage_class_file }} --block_storage_class={{ ocp_storage_class_block }}
+{%- endif -%}

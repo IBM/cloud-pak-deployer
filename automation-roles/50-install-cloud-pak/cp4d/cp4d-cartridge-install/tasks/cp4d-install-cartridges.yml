@@ -5,29 +5,27 @@
   loop_control:
     loop_var: _current_cp4d_cartridge
 
-- name: Generate apply-cr command to install cartridges
+- name: Generate install-components command to install cartridges
   set_fact:
-    _apply_cr_command: "{{ lookup('template', 'apply-cr-cartridges.j2') }}"
+    _install_components_command: "{{ lookup('template', 'install-components-cartridges.j2') }}"
   vars:
     _p_preview_script: False
-
-- name: Show apply-cr command for install cartridges
-  debug:
-    var: _apply_cr_command
 
 - include_role:
     name: run-command
   vars:
-    _p_command_description: Run apply-cr command to install cartridges into project {{ _p_current_cp4d_cluster.project }}
-    _p_command: "{{ _apply_cr_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-apply-cr-cartridges.log"
+    _p_command_description: Run install-components command to install cartridges into project {{ _p_current_cp4d_cluster.project }}
+    _p_command: "{{ _install_components_command }}"
+    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-install-components.log"
     _p_command_failed_when: False
+    _p_command_environment:
+      OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"  
 
 - block:
   - set_fact:
       _install_cartridges_result: "{{ _run_command_result }}"
 
-  - name: Fail if there was an error installing the cartridge(s) using apply-cr
+  - name: Fail if there was an error installing the cartridge(s) using install-components
     fail:
       msg: "{{ _install_cartridges_result }}"
     when: 

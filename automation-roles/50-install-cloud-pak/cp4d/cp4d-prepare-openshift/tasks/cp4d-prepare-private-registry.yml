@@ -2,23 +2,9 @@
 - name: Connect to private image registry
   include_role: 
     name: connect-private-image-registry
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
 - name: Create ImageContentSourcePolicy for the Cloud Pak with private registry
   include_role:
     name: cp-ocp-icsp
-
-- name: Get pull secret for image registry {{ current_cp4d_cluster.image_registry_name }} from the vault
-  include_role: 
-    name: vault-get-secret
-  vars:
-    secret_name: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
-    secret_group: "{{ environment_name }}"
-- name: Validate if container registry credentials secret is available
-  fail: msg="Container registry credentials secret image-registry-{{ current_cp4d_cluster.image_registry_name }} from group {{ environment_name }} is empty"
-  when: secret_value== ""
-- name: Set the global pull secret for the private registry
-  include_role:
-    name: cp-ocp-global-pull-secret
-  vars:
-    _p_registry_url: "{{ private_registry_url }}" 
-    _p_registry_pull_secret: "{{ secret_value }}"
