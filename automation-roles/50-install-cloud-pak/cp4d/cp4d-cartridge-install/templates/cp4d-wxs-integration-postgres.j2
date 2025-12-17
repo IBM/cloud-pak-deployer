@@ -20,6 +20,7 @@ items:
   stringData:
     database-name: databand
     database-password: {{ _data_observability_postgres_password }}
+    database-admin-password: {{ _data_observability_postgres_password }}
     database-user: databand
 - apiVersion: v1
   kind: Service
@@ -90,6 +91,11 @@ items:
               secretKeyRef:
                 key: database-password
                 name: postgresql
+          - name: POSTGRESQL_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: database-admin-password
+                name: postgresql
           - name: POSTGRESQL_DATABASE
             valueFrom:
               secretKeyRef:
@@ -137,7 +143,7 @@ items:
         - postgresql
         from:
           kind: ImageStreamTag
-          name: postgresql:10-el8
+          name: postgresql:12-el8
           namespace: openshift
         lastTriggeredImage: ""
       type: ImageChange
