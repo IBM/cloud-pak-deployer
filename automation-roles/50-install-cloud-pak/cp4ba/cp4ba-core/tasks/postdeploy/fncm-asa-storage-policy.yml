@@ -141,11 +141,11 @@
     return_content: true
     status_code:
       - 200
-  register: graphql_response
+  register: sweep_jobs_response
   failed_when: "'errors' in graphql_response.content"
 
 - name: Move Content
-  when: graphql_response.json.data.repositoryObjects.independentObjects | length == 0
+  when: sweep_jobs_response.json.data.repositoryObjects.independentObjects | length == 0
   block:
     - name: Move Content to use FileSystem ASA
       ansible.builtin.uri:
