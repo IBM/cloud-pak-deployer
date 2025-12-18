@@ -822,6 +822,15 @@ Placed in `rpa` key on the project level.
 | enabled                         | Set to `true` to enable `rpa`. | Yes  | true, false |
 | cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
 
+### Business Automation Manager Open Editions properties
+
+Used to configure Business Automation Manager Open Editions.  
+Placed in `bamoe` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `bamoe`. | Yes  | true, false |
+
 ### Other properties
 
 Used to configure extra UIs.  
