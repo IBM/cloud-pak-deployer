@@ -15,8 +15,8 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        mkdir -p /var/lib/postgresql/data/tablespaces/gcddb_tbs;
-        chown postgres:postgres /var/lib/postgresql/data/tablespaces/gcddb_tbs;
+        mkdir -p /pgsqldata/gcddb_tbs;
+        chown postgres:postgres /pgsqldata/gcddb_tbs;
       "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
@@ -32,7 +32,7 @@
         CREATE USER gcddb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for gcddb
-        CREATE TABLESPACE gcddb_tbs OWNER gcddb LOCATION '/var/lib/postgresql/data/tablespaces/gcddb_tbs';
+        CREATE TABLESPACE gcddb_tbs OWNER gcddb LOCATION '/pgsqldata/gcddb_tbs';
         GRANT CREATE ON TABLESPACE gcddb_tbs TO gcddb;
 
         -- create database gcddb
@@ -59,8 +59,8 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        mkdir -p /var/lib/postgresql/data/tablespaces/contentdb_tbs;
-        chown postgres:postgres /var/lib/postgresql/data/tablespaces/contentdb_tbs;
+        mkdir -p /pgsqldata/contentdb_tbs;
+        chown postgres:postgres /pgsqldata/contentdb_tbs;
       "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
@@ -76,7 +76,7 @@
         CREATE USER contentdb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for contentdb
-        CREATE TABLESPACE contentdb_tbs OWNER contentdb LOCATION '/var/lib/postgresql/data/tablespaces/contentdb_tbs';
+        CREATE TABLESPACE contentdb_tbs OWNER contentdb LOCATION '/pgsqldata/contentdb_tbs';
         GRANT CREATE ON TABLESPACE contentdb_tbs TO contentdb;
 
         -- create database contentdb

@@ -181,7 +181,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - exec pg_isready -U \$POSTGRES_USER -d \$POSTGRES_DB
+                - exec pg_isready
             failureThreshold: 6
             initialDelaySeconds: 30
             periodSeconds: 10
@@ -192,7 +192,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - exec pg_isready -U \$POSTGRES_USER -d \$POSTGRES_DB
+                - exec pg_isready
             failureThreshold: 6
             initialDelaySeconds: 5
             periodSeconds: 10
@@ -203,7 +203,7 @@ spec:
               command:
                 - /bin/sh
                 - -c
-                - exec pg_isready -U \$POSTGRES_USER -d \$POSTGRES_DB
+                - exec pg_isready
             failureThreshold: 18
             periodSeconds: 10            
           image: "{{ postgresql_image }}"
@@ -214,9 +214,14 @@ spec:
             - secretRef:
                 name: postgresql-config
           volumeMounts:
-            - mountPath: /var/lib/postgresql/data
+            - mountPath: /var/lib/postgresql
               name: postgresql-data
+            - mountPath: /pgsqldata
+              name: postgresql-tablespaces              
       volumes:
         - name: postgresql-data
           persistentVolumeClaim:
-            claimName: postgresql-data        
+            claimName: postgresql-data
+        - name: postgresql-tablespaces
+          persistentVolumeClaim:
+            claimName: postgresql-tablespaces            

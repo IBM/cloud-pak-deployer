@@ -13,8 +13,8 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        mkdir -p /var/lib/postgresql/data/tablespaces/adpbase_tbs;
-        chown postgres:postgres /var/lib/postgresql/data/tablespaces/adpbase_tbs;
+        mkdir -p /pgsqldata/adpbase_tbs;
+        chown postgres:postgres /pgsqldata/adpbase_tbs;
       "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
@@ -30,7 +30,7 @@
         CREATE USER adpbase WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database adpbase -- default template tablespace
-        CREATE TABLESPACE "adpbase_tbs" OWNER "adpbase" LOCATION '/var/lib/postgresql/data/tablespaces/adpbase_tbs';
+        CREATE TABLESPACE "adpbase_tbs" OWNER "adpbase" LOCATION '/pgsqldata/adpbase_tbs';
         CREATE DATABASE "adpbase" OWNER "adpbase" TEMPLATE template0 ENCODING UTF8 TABLESPACE "adpbase_tbs";
         REVOKE CONNECT ON DATABASE "adpbase" FROM PUBLIC;
         GRANT ALL ON DATABASE "adpbase" TO "adpbase";
@@ -43,8 +43,8 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        mkdir -p /var/lib/postgresql/data/tablespaces/adpggdb_tbs;
-        chown postgres:postgres /var/lib/postgresql/data/tablespaces/adpggdb_tbs;
+        mkdir -p /pgsqldata/adpggdb_tbs;
+        chown postgres:postgres /pgsqldata/adpggdb_tbs;
       "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
@@ -60,7 +60,7 @@
         CREATE USER adpgg WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- please modify location follow your requirement
-        CREATE TABLESPACE adpggdb_tbs OWNER adpgg LOCATION '/var/lib/postgresql/data/tablespaces/adpggdb_tbs';
+        CREATE TABLESPACE adpggdb_tbs OWNER adpgg LOCATION '/pgsqldata/adpggdb_tbs';
         GRANT CREATE ON TABLESPACE adpggdb_tbs TO adpgg;
 
         -- create database adpggdb
@@ -84,8 +84,8 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        mkdir -p /var/lib/postgresql/data/tablespaces/{{ item }}_tbs;
-        chown postgres:postgres /var/lib/postgresql/data/tablespaces/{{ item }}_tbs;
+        mkdir -p /pgsqldata/{{ item }}_tbs;
+        chown postgres:postgres /pgsqldata/{{ item }}_tbs;
       "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
@@ -108,7 +108,7 @@
         CREATE USER {{ item }} WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create database {{ item }} -- default template tablespace
-        CREATE TABLESPACE "{{ item }}_tbs" OWNER "{{ item }}" LOCATION '/var/lib/postgresql/data/tablespaces/{{ item }}_tbs';
+        CREATE TABLESPACE "{{ item }}_tbs" OWNER "{{ item }}" LOCATION '/pgsqldata/{{ item }}_tbs';
         CREATE DATABASE "{{ item }}" OWNER "{{ item }}" TEMPLATE template0 ENCODING UTF8 TABLESPACE "{{ item }}_tbs";
         REVOKE CONNECT ON DATABASE "{{ item }}" FROM PUBLIC;
         GRANT ALL ON DATABASE "{{ item }}" TO "{{ item }}";
@@ -131,8 +131,8 @@
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
     command: >
       bash -c "
-        mkdir -p /var/lib/postgresql/data/tablespaces/devos1_tbs;
-        chown postgres:postgres /var/lib/postgresql/data/tablespaces/devos1_tbs;
+        mkdir -p /pgsqldata/devos1_tbs;
+        chown postgres:postgres /pgsqldata/devos1_tbs;
       "
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
@@ -148,7 +148,7 @@
         CREATE USER devos1 WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for devos1
-        CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/var/lib/postgresql/data/tablespaces/devos1_tbs';
+        CREATE TABLESPACE devos1_tbs OWNER devos1 LOCATION '/pgsqldata/devos1_tbs';
         GRANT CREATE ON TABLESPACE devos1_tbs TO devos1;
 
         -- create database devos1
