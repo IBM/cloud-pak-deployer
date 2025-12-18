@@ -3,6 +3,7 @@
 Contains CP4BA version 25.0.0-IF001.  
 Contains IPM version 2.1.0.
 Contains RPA version 30.0.1.
+Contains BAMOE version 9.3.1.
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -36,6 +37,7 @@ Deployment of other parts is also based on respective official documentations.
 
 - IBM Robotic Process Automation (RPA) https://www.ibm.com/docs/en/rpa
 - IBM Process Mining https://www.ibm.com/docs/en/process-mining/
+- IBM Business Automation Manager Open Editions https://www.ibm.com/docs/en/ibamoe
 - IBM Cloud Pak Foundational Services (CPFS) https://www.ibm.com/docs/en/cloud-paks/foundational-services
 
 ## Benefits 🚀
@@ -63,7 +65,7 @@ You can review the code [here](https://github.com/IBM/cloud-pak-deployer/blob/ma
 
 ## What is in the package 📦
 
-Only fully configured CP4BA, RPA and IPM including all Extras and Prerequisites is validated. As validation activities have NOT been executed using partial components, please report any issues you may encounter.
+Only fully configured CP4BA, RPA, IPM and BAMOE including all Extras and Prerequisites is validated. As validation activities have NOT been executed using partial components, please report any issues you may encounter.
 
 More details about each section from the picture follows below it.
 
@@ -92,9 +94,9 @@ Contains extra software which makes working with the platform even easier.
 - CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
   - Installed if enabled in configuration (default) and if PostgreSQL or MSSQL (from [Pre-requisites](#pre-requisites-section)) is installed.
 
-### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
+### Business Automation section<!-- omit in toc -->
 
-#### CP4BA capabilities<!-- omit in toc -->
+#### Business Automation capabilities<!-- omit in toc -->
 
 CP4BA capabilities are in purple color.
 
@@ -111,6 +113,8 @@ Magenta color is used for additional capabilities.
 More info for Process Mining is available in official docs at https://www.ibm.com/docs/en/process-mining/latest.
 
 More info for RPA is available in official docs at https://www.ibm.com/docs/en/rpa/latest.
+
+More info for BAMOE is available in official docs at https://www.ibm.com/docs/en/ibamoe.
 
 Assets are currently not deployed.
 
@@ -136,7 +140,7 @@ Contains prerequisites for the whole platform.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.16 with Worker Nodes which in total have free 96 CPU, 384GB Memory for requests.
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.18 with Worker Nodes which in total have free 96 CPU, 384GB Memory for requests.
 
 ## Automated post-deployment tasks ✅
 
