@@ -205,7 +205,6 @@ Referrence to licenses of used tools apart from those from IBM
     - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!". Accepted during the deployment using REST API.
 - Roundcube
     - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
-    - Also using PostgreSQL - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
     - Also using NGINX - BSD 2-Clause "Simplified" Licenseh ttps://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
 - Cerebro
     - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
@@ -218,8 +217,7 @@ Referrence to licenses of used tools apart from those from IBM
 - CloudBeaver
     - Apache License 2.0 https://github.com/dbeaver/cloudbeaver/blob/devel/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - PostgreSQL
-    - PostgreSQL itself - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
-    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/postgresql#license (OSI Approved https://opensource.org/license/apache-2-0)
+    - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
 - OpenLDAP
     - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
     - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
