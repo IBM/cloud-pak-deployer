@@ -6,7 +6,7 @@ FROM ${CPD_OLM_UTILS_V3_IMAGE} as olm-utils-v3
 RUN cd /opt/ansible && \
     tar czf /tmp/opt-ansible-v3.tar.gz *
 
-FROM ${CPD_OLM_UTILS_V4_IMAGE} as olmn-utils-v4
+FROM ${CPD_OLM_UTILS_V4_IMAGE} as olm-utils-v4
 
 LABEL authors="Arthur Laimbock, \
             Markus Wiegleb, \
