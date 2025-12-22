@@ -1,18 +1,10 @@
 ---
-- name: Install cluster-scoped resources using file {{ status_dir }}/work/cluster_scoped_resources.yaml
-  kubernetes.core.k8s:
-    src: "{{ status_dir }}/work/cluster_scoped_resources.yaml"
-    apply: true
-    state: present
-  when: not _upgrade_cp4d
-
 - include_role:
     name: run-command
   vars:
-    _p_command_description: Upgrade cluster-scoped resources using file {{ status_dir }}/work/cluster_scoped_resources.yaml
+    _p_command_description: Install cluster-scoped resources using file {{ status_dir }}/work/cluster_scoped_resources.yaml
     _p_command: "{{ lookup('template','apply_cluster_scoped_forced.j2') }}"
     _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cluster-scoped-resources.log"
-  when: _upgrade_cp4d
 
 - name: Delete installation options file
   file:
