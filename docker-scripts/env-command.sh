@@ -44,12 +44,19 @@ if [ -e $STATUS_DIR/openshift/kubeconfig ];then
   echo "Current OpenShift context : $oc_context"
   echo "Current OpenShift API endpoint: $oc_api_endpoint"
   echo "Current OpenShift console URL: $oc_console_endpoint"
-  echo
 else
   echo "No existing OpenShift configuration found, you will need to login to OpenShift first."
 fi
 
+OLM_UTILS_IMAGE_PREFIX=$(cat $(ls -1 /cloud-pak-deployer/.version-info/olm-utils-v*.txt | tail -1) | cut -d: -f1)
+OLM_UTILS_IMAGE_DIGEST=$(jq -r '.manifests[0].digest' $(ls -1 /cloud-pak-deployer/.version-info/olm-utils-v*manifest.json | tail -1))
+export OLM_UTILS_IMAGE="${OLM_UTILS_IMAGE_PREFIX}@${OLM_UTILS_IMAGE_DIGEST}"
+echo "Environment variable OLM_UTILS_IMAGE set to ${OLM_UTILS_IMAGE}"
+
+echo
+
 export PATH=${PATH}:/cloud-pak-deployer
+cd /cloud-pak-deployer
 
 /bin/bash
 
