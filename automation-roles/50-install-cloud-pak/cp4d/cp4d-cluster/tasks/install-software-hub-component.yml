@@ -6,34 +6,6 @@
     _p_command: "{{ lookup('template','apply_cluster_scoped_forced.j2') }}"
     _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cluster-scoped-resources.log"
 
-- name: Delete installation options file
-  file:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    state: absent
-
-- name: Populate {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
-  lineinfile:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    line: "custom_spec:"
-    insertbefore: "BOF"
-    state: present
-    create: True
-
-- name: Insert Software Hub options into {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} CPD Platform options #"
-    block: |2
-        cpd_platform:
-          cloudpakfordata: true
-          iamIntegration: {{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}
-
-- include_role:
-    name: log-deployer-activity
-  vars:
-    _p_activity_description: "Installation options file for install-components command"
-    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-
 - block:
   - name: Generate install-components command for project {{ current_cp4d_cluster.project }} to install Software Hub
     set_fact:

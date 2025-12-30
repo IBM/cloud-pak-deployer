@@ -1,10 +1,6 @@
 ---
-- name: "Install Watson Studio runtimes for cartridge {{ _current_cp4d_cartridge.olm_utils_name }}"
-  debug:
-    msg: ""
+- include_tasks: cp4d-install-cr-ws_runtimes-apply-cr.yml
+  when: _p_cp4d_version < '5.3.0'
 
-- name: Install runtime {{ _ws_runtime }}
-  include_tasks: cp4d-install-cr-ws_runtime.yml
-  loop: "{{ _current_cp4d_cartridge.runtimes | default([]) }}"
-  loop_control:
-    loop_var: _ws_runtime
+- include_tasks: cp4d-install-separate-component.yml
+  when: _p_cp4d_version >= '5.3.0'

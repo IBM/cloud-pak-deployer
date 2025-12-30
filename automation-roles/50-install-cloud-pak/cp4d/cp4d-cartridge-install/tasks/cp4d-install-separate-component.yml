@@ -1,16 +1,4 @@
 ---
-- name: Check if cartridge installation options file exists
-  stat:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-install-options.yml"
-  register: _cartridge_install_options_file
-
-- include_role:
-    name: log-deployer-activity
-  vars:
-    _p_activity_description: "Installation options file for install-component of cartridge {{ _current_cp4d_cartridge.olm_utils_name }}"
-    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-install-options.yml"
-  when: _cartridge_install_options_file.stat.exists
-
 - name: Generate install-components command to install cartridge {{ _current_cp4d_cartridge.olm_utils_name }}
   set_fact:
     _install_components_command: "{{ lookup('template', 'install-components-separate.j2') }}"

@@ -1,0 +1,24 @@
+---
+- name: Populate custom_spec options into {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
+  lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+    line: "custom_spec:"
+    state: present
+    create: True
+  when: _p_cp4d_version < '5.3.0'
+
+- name: Populate non_olm options into {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml 
+  lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+    line: "non_olm:"
+    state: present
+    create: True
+  when: _p_cp4d_version >= '5.3.0'
+
+- name: Populate override_components_meta options into {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml 
+  lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+    line: "override_components_meta:"
+    state: present
+    create: True
+  when: _p_cp4d_version >= '5.3.0'
