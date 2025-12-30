@@ -1,17 +1,60 @@
 ---
 - set_fact:
+    _cartridge_name: "{{ _current_cp4d_cartridge.olm_utils_name }}"
+    _installation_options_section: 'custom_spec:'
+  when: _p_cp4d_version < '5.3.0'
+
+- set_fact:
+    _cartridge_name: "{{ _current_cp4d_cartridge.installation_options_header | default(_current_cp4d_cartridge.olm_utils_name) }}"
+    _installation_options_section: "{{ _current_cp4d_cartridge.installation_options_section | default('non_olm:') }}"
+  when: _p_cp4d_version >= '5.3.0'
+
+- set_fact:
     _template_file: installation-options-custom-spec.j2
     
 - set_fact:
     _template_file: installation-options-root.j2
-  when: _root_options | default(False)
+  when: 
+  - _current_cp4d_cartridge.installation_options_root | default(False)
+  - _p_cp4d_version < '5.3.0'
 
-- name: Insert {{ _cartridge_name }} installation options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
+- name: Insert {{ _cartridge_name }} installation options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml, section {{ _installation_options_section }}
   blockinfile:
     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
     marker: "# {mark} {{ _cartridge_name }} options #"
     block: |
         {{ lookup('template', _template_file) }}
+    insertafter: "{{ _installation_options_section }}"
   vars:
     _installation_options: "{{ _current_cp4d_cartridge.installation_options }}"
-  when: (_current_cp4d_cartridge.installation_options | default({})) != {}
+  when: 
+  - (_current_cp4d_cartridge.installation_options | default({})) != {}
+  - _p_cp4d_version >= '5.3.0'
+
+- name: Insert {{ _cartridge_name }} installation options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml, section {{ _installation_options_section }}
+  blockinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    marker: "# {mark} {{ _cartridge_name }} options #"
+    block: |
+        {{ lookup('template', _template_file) }}
+    insertafter: "{{ _installation_options_section }}"
+  vars:
+    _installation_options: "{{ _current_cp4d_cartridge.installation_options }}"
+  when: 
+  - (_current_cp4d_cartridge.installation_options | default({})) != {}
+  - _p_cp4d_version < '5.3.0'
+  - not (_current_cp4d_cartridge.installation_options_root | default(False))
+
+- name: Insert {{ _cartridge_name }} root installation options into {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
+  blockinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
+    marker: "# {mark} {{ _cartridge_name }} options #"
+    insertbefore: BOF
+    block: |
+        {{ lookup('template', _template_file) }}
+  vars:
+    _installation_options: "{{ _current_cp4d_cartridge.installation_options }}"
+  when: 
+  - (_current_cp4d_cartridge.installation_options | default({})) != {}
+  - _p_cp4d_version < '5.3.0'
+  - _current_cp4d_cartridge.installation_options_root | default(False)
