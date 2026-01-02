@@ -1,9 +1,17 @@
 install-components \
+    --release={{ _p_cp4d_version }} \
+    --license_acceptance={{ _cpd_accept_licenses | default(False) | string | lower }} \
+    --preview={{ _p_preview_script | default(False) | string | lower }} \
+    --upgrade={{ _upgrade_cp4d | default(False) | string | lower }} \
     --operator_ns={{ current_cp4d_cluster.operators_project }} \
     --instance_ns={{ current_cp4d_cluster.project }} \
-    --components=cpd_platform \
-    --release={{ _p_cp4d_version }} \
-    --upgrade={{ _upgrade_cp4d | default(False) | string | lower }} \
+{% if _installation_options_set %}
+    --param-file={{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml \
+{% endif %}
+{% if _storage_type == "pwx" %}
+    --storage_vendor=portworx \
+{% else %}
     --file_storage_class={{ ocp_storage_class_file }} \
     --block_storage_class={{ ocp_storage_class_block }} \
-    --license_acceptance=true
+{% endif %}
+    --components=cpd_platform

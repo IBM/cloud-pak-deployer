@@ -6,9 +6,12 @@ apply-cr \
     -v \
     --cpd_instance_ns={{ _p_current_cp4d_cluster.project }} \
     --components={{ _current_cp4d_cartridge.olm_utils_name }} \
-    --param-file={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-{{ _current_cp4d_cartridge.olm_utils_name }}-install-options.yml \
-{%- if _storage_type == "pwx" -%}
+{% if _installation_options_set %}
+    --param-file={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml \
+{% endif %}
+{% if _storage_type == "pwx" %}
     --storage_vendor=portworx
-{%- else -%}
-    --file_storage_class={{ ocp_storage_class_file }} --block_storage_class={{ ocp_storage_class_block }}
-{%- endif -%}
+{% else %}
+    --file_storage_class={{ ocp_storage_class_file }} \
+    --block_storage_class={{ ocp_storage_class_block }}
+{% endif %}

@@ -1,19 +1,18 @@
 ---
-- name: Insert Software Hub options into {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} CPD Platform options #"
-    insertafter: "custom_spec:"
-    block: |2
-        cpd_platform:
-          cloudpakfordata: true
-          iamIntegration: {{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}
+- set_fact:
+    _cpd_platform_installation_options:
+      installation_options:
+        cloudpakfordata: true
+        iamIntegration: "{{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: cp4d-installation-options
   vars:
-    _p_activity_description: "Installation options file for Software Hub"
-    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+    _p_cp4d_project: "{{ current_cp4d_cluster.project }}"
+    _p_current_cp4d_cartridge: {}
+    _p_cartridge_name: 'cpd_platform'
+    _p_section: 'custom_spec'
+    _p_installation_options: "{{ _cpd_platform_installation_options }}"
 
 - block:
   - name: Generate setup-instance command for project {{ current_cp4d_cluster.project }} to install Software Hub
