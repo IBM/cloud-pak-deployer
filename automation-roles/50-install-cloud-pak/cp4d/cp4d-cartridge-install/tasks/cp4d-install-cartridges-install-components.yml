@@ -1,9 +1,10 @@
 ---
-- name: Run pre-processing scripts
-  include_tasks: cp4d-install-cr-pre-processing.yml
-  loop: "{{ _apply_cr_cartridges | default([]) }}"
-  loop_control:
-    loop_var: _current_cp4d_cartridge
+- set_fact:
+    _p_apply_cartridges_list: >-
+      {{  _p_apply_cartridges 
+        | map(attribute='olm_utils_name')
+        | list
+        | join(',')}}
 
 - name: Generate install-components command to install cartridges
   set_fact:
