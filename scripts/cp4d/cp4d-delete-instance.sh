@@ -338,13 +338,13 @@ delete_cluster_wide_cr_config() {
     echo "Deleting MutatingWebhookConfigurations"
     oc delete MutatingWebhookConfiguration ibm-common-service-webhook-configuration --ignore-not-found
     oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration --ignore-not-found
-    oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration-${CP4D_PROJECT}-operators --ignore-not-found
-    oc delete MutatingWebhookConfiguration postgresql-operator-mutating-webhook-configuration-${CP4D_PROJECT}-operators --ignore-not-found
+    oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration-${OPERATOR_NS} --ignore-not-found
+    oc delete MutatingWebhookConfiguration postgresql-operator-mutating-webhook-configuration-${OPERATOR_NS} --ignore-not-found
 
     echo "Deleting ValidatingWebhookConfiguration"
     oc delete ValidatingWebhookConfiguration ibm-common-service-validating-webhook-cpd-operators --ignore-not-found
     oc delete ValidatingWebhookConfiguration ibm-cs-ns-mapping-webhook-configuration --ignore-not-found
-    oc delete ValidatingWebhookConfiguration postgresql-operator-validating-webhook-configuration-${CP4D_PROJECT}-operators --ignore-not-found
+    oc delete ValidatingWebhookConfiguration postgresql-operator-validating-webhook-configuration-${OPERATOR_NS} --ignore-not-found
 
     echo "Deleting common-service maps"
     oc delete cm -n kube-public common-service-maps --ignore-not-found
