@@ -1,0 +1,46 @@
+---
+- set_fact:
+    _installation_options_set: True
+
+- set_fact:
+    _current_installation_options: {}
+
+- name: Check if installation options file {{ status_dir }}/cp4d/{{ _p_cp4d_project }}-install-options.yml exists
+  stat:
+    path: "{{ status_dir }}/cp4d/{{ _p_cp4d_project }}-install-options.yml"
+  register: _options_file
+
+- name: Lookup current installation options from file {{ status_dir }}/cp4d/{{ _p_cp4d_project }}-install-options.yml
+  set_fact:
+    _current_installation_options: "{{ lookup('file',status_dir + '/cp4d/'+_p_cp4d_project+'-install-options.yml') | from_yaml }}"
+  when: _options_file.stat.exists
+
+- set_fact:
+    _cartridge_name: "{{ _p_cartridge_name }}"
+  when: _p_cp4d_version < '5.3.0'
+
+- set_fact:
+    _cartridge_name: "{{ _p_current_cp4d_cartridge.installation_options_header | default(_p_cartridge_name) }}"
+  when: _p_cp4d_version >= '5.3.0'
+
+- set_fact:
+    _template_file: 'installation-options-root.j2'
+  when: (_p_section | default('')) == ''
+
+- set_fact:
+    _template_file: 'installation-options-non-root.j2'
+  when: (_p_section | default('')) != ''
+
+- name: Generate new installation options
+  set_fact:
+    _added_installation_options: "{{ lookup('template',_template_file) | from_yaml }}"
+
+- name: Merge new installation options with existing ones
+  set_fact:
+    _updated_installation_options: "{{ _current_installation_options | combine(_added_installation_options, recursive=True) }}"
+
+- name: Write updated installation options into file {{ status_dir }}/cp4d/{{ _p_cp4d_project }}-install-options.yml
+  copy:
+    content: "{{ _updated_installation_options | to_nice_yaml(indent=2) }}"
+    dest: "{{ status_dir }}/cp4d/{{ _p_cp4d_project }}-install-options.yml"
+    remote_src: True

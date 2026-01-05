@@ -13,33 +13,20 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
     _p_subscription_scope: platform
 
-- name: Delete installation options file
-  file:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    state: absent
-
-- name: Populate {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
-  lineinfile:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    line: "custom_spec:"
-    insertbefore: "BOF"
-    state: present
-    create: True
-
-- name: Insert cpd_platform options into {{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml
-  blockinfile:
-    path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
-    marker: "# {mark} CPD Platform options #"
-    block: |2
-        cpd_platform:
-          cloudpakfordata: true
-          iamIntegration: {{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}
+- set_fact:
+    _cpd_platform_installation_options:
+      installation_options:
+        cloudpakfordata: true
+        iamIntegration: "{{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}"
 
 - include_role:
-    name: log-deployer-activity
+    name: cp4d-installation-options
   vars:
-    _p_activity_description: "Installation options file for apply-cr command"
-    _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+    _p_cp4d_project: "{ current_cp4d_cluster.project }}"
+    _p_current_cp4d_cartridge: {}
+    _p_cartridge_name: 'cpd_platform'
+    _p_section: 'custom_spec'
+    _p_installation_options: "{{ _cpd_platform_installation_options }}"
 
 - name: Generate apply-cr command to install Cloud Pak for Data platform
   set_fact:
@@ -53,6 +40,7 @@
     _p_command_description: Run apply-cr to install Cloud Pak for Data platform
     _p_command: "{{ _apply_cr_command }}"
     _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-apply-cr-cpd-platform.log"
+    _p_cpd_cli_manage: True
 
 # Wait for ZenService to be created (can take 10-15 minutes)
 - name: Wait for ZenService to be completed

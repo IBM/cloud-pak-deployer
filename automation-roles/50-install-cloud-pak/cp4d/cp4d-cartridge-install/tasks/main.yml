@@ -9,13 +9,11 @@
 - include_tasks: cp4d-create-subscriptions-olm-utils.yml
   when: _p_cp4d_version < '5.3.0'
 
-- name: Populate {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml
-  lineinfile:
-    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml"
-    line: "custom_spec:"
-    insertbefore: "BOF"
-    state: present
-    create: True
+- name: Set installation options for cartridges that will be installed
+  include_tasks: cp4d-installation-options.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
 
 - block:
   - name: Starting background task to patch Db2U clusters. Logs are in {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-db2u-temp-patch.log
@@ -32,12 +30,22 @@
       var: _patch_db2u
   when: not cpd_dry_run
 
+- name: Run pre-processing scripts
+  include_tasks: cp4d-install-cr-pre-processing.yml
+  loop: "{{ _cartridges_to_install | default([]) }}"
+  loop_control:
+    loop_var: _current_cp4d_cartridge
+
 - include_tasks: cp4d-install-cartridges-olm-utils.yml
+  vars:
+    _p_apply_cartridges: "{{ _apply_cr_cartridges }}"
   when: 
   - _apply_cr_cartridges_list != ''
   - _p_cp4d_version < '5.3.0'
 
-- include_tasks: cp4d-install-cartridges.yml
+- include_tasks: cp4d-install-cartridges-install-components.yml
+  vars:
+    _p_apply_cartridges: "{{ _apply_cr_cartridges }}"
   when: 
   - _apply_cr_cartridges_list != ''
   - _p_cp4d_version >= '5.3.0'
@@ -50,9 +58,9 @@
 
 - include_tasks: cp4d-install-patch-520.yml
   when: 
-  - current_cp4d_cluster.state=='installed'
+  - _p_current_cp4d_cluster.state=='installed'
   - _p_cp4d_version == '5.2.0'
-  - current_cp4d_cluster.install_day0_patch | default(True) | bool
+  - _p_current_cp4d_cluster.install_day0_patch | default(True) | bool
 
 - name: Run post-processing scripts
   include_tasks: cp4d-install-cr-post-processing.yml
