@@ -27,6 +27,18 @@
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
 
+- name: Remove bamoe-maven-settings Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: "000-bamoe-maven-settings"
+    namespace: "{{ bamoe_project_name }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
 - name: Remove Empty Project
   ansible.builtin.include_role:
     name: common

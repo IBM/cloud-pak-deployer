@@ -184,18 +184,18 @@ For your convenience the following post-deployment setup tasks have been automat
 
 ## Usage & operations 📇
 
-Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Endpoints, access info and other useful information is available in CP4BA Project (by default cp4ba) in ConfigMap *000-usage* after installation.
 
 ## Optional post deployment steps 📋
 
 CP4BA  
-Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Review and perform post deploy manual steps for CP4BA as specified in CP4BA Project (by default cp4ba) in ConfigMap *000-cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
 RPA  
-Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Review and perform post deploy manual steps for RPA as specified in CP4BA Project (by default cp4ba) in ConfigMap *000-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
 Process Mining  
-Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Review and perform post deploy manual steps for IPM as specified in CP4BA Project (by default cp4ba) in ConfigMap *000-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
 ## Licensing 📑
 
