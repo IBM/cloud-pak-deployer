@@ -73,6 +73,26 @@
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ bamoe_output_directory }}"
 
+- name: Prepare Maven Settings
+  ansible.builtin.template:
+    src: maven-settings.xml.j2
+    dest: "{{ bamoe_output_directory }}/maven-settings.xml"
+    mode: u+rwx
+
+- name: Prepare Maven Config Map
+  ansible.builtin.template:
+    src: bamoe-maven-settings-configmap.yaml.j2
+    dest: "{{ bamoe_output_directory }}/bamoe-maven-settings-configmap.yaml"
+    mode: u+rwx
+
+- name: Add the BAMOE maven config map
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ bamoe_output_directory }}/bamoe-maven-settings-configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
@@ -90,4 +110,5 @@
 
       - BAMOE Maven repository: https://bamoe-maven-repository-{{ bamoe_project_name }}.{{ apps_endpoint_domain }}
 
+      - Maven Settings XML for BAMOE Maven repository is in Project {{ bamoe_project_name }} in ConfigMap 000-{{ _current_cp4ba_cluster.project }}-bamoe-maven-settings
       "
