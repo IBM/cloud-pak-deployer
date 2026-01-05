@@ -6,7 +6,14 @@
 
 - name: Generate get-cr-status command to get CR status for CP4D project {{ _p_current_cp4d_cluster.project }}
   set_fact:
-    _get_cr_status_command: "{{ lookup('template', 'get-cr-status.j2') }}" 
+    _get_cr_status_command: "{{ lookup('template', 'get-cr-status.j2') }}"
+
+- include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Get status of CRs for project {{ _p_current_cp4d_cluster.project }}"
+    _p_activity_command: "{{ _get_cr_status_command }}"
+    _p_cpd_cli_manage: True
 
 - name: Run get-cr-status command 
   shell: |
