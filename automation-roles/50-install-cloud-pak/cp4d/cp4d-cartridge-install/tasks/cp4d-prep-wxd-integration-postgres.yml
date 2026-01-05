@@ -28,7 +28,7 @@
   vars:
     _p_apply_yaml_description: Create postgres deployment for Data Observability
     _p_apply_yaml_template: cp4d-wxs-integration-postgres.j2
-    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-cp4d-wxs-integration-postgres.yml"
+    _p_apply_yaml_output_file: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-cp4d-wxs-integration-postgres.yml"
 
 - name: Create Data Observability Postgres secret
   kubernetes.core.k8s:
@@ -41,5 +41,5 @@
       stringData:
         connection.postgres.authentication.password: "{{ _data_observability_postgres_password }}"
         connection.postgres.authentication.username: postgres
-        connection.postgres.hosts.0.hostname: "{{ 'postgresql.' + current_cp4d_cluster.project + '-databand.svc' }}"
+        connection.postgres.hosts.0.hostname: "{{ 'postgresql.' + _p_current_cp4d_cluster.project + '-databand.svc' }}"
         connection.postgres.hosts.0.port: '5432'
