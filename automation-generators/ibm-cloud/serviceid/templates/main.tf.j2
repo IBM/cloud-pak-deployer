@@ -1,13 +1,13 @@
-resource "ibm_iam_service_id" "{{generator.attributes.name | replace("-", "_") }}" {
+resource "ibm_iam_service_id" "{{ generator.attributes.name | replace("-", "_") }}" {
   name        = "{{ generator.attributes.name }}"
   description = "{{ generator.attributes.description | default("") }}"
 }
 
 {% if generator.attributes.servicekeys is defined %}
 {% for servicekey in generator.attributes.servicekeys %}
-resource "ibm_iam_service_api_key" "{{generator.attributes.name | replace("-", "_") }}_{{servicekey.name | replace("-", "_")}}" {
+resource "ibm_iam_service_api_key" "{{ generator.attributes.name | replace("-", "_") }}_{{ servicekey.name | replace("-", "_") }}" {
     name = "{{ servicekey.name }}"
-    iam_service_id = ibm_iam_service_id.{{generator.attributes.name | replace("-", "_") }}.iam_id
+    iam_service_id = ibm_iam_service_id.{{ generator.attributes.name | replace("-", "_") }}.iam_id
 }
 {% endfor %}
 {% endif %}
