@@ -24,7 +24,7 @@
   community.crypto.openssh_keypair:
     path: "{{ ssh_tempdir.path }}/{{ ssh_key_item.name }}"
     type: rsa
-    comment: "provision-key for {{ssh_key_item.name}}"
+    comment: "provision-key for {{ ssh_key_item.name }}"
   when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
 - name: Show SSH key file name
@@ -38,7 +38,7 @@
   vars:
     secret_name: "{{ ssh_key_item.name }}-ssh-key"
     secret_description: "Managed private SSH key for environment {{ environment_name }}"
-    secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + ssh_key_item.name) }}"
+    secret_payload: "{{ lookup('file', ssh_tempdir.path + '/' + ssh_key_item.name) }}"
     secret_group: "{{ environment_name }}"
   when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 
@@ -50,7 +50,7 @@
   vars:
     secret_name: "{{ ssh_key_item.name }}-ssh-pub-key"
     secret_description: "Managed public SSH key for environment {{ environment_name }}"
-    secret_payload: "{{lookup('file', ssh_tempdir.path + '/' + ssh_key_item.name + '.pub') }}"
+    secret_payload: "{{ lookup('file', ssh_tempdir.path + '/' + ssh_key_item.name + '.pub') }}"
     secret_group: "{{ environment_name }}"
   when: 'ssh_key_item.managed | default(False) | bool and ssh_private_key_value == ""'
 

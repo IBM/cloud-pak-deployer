@@ -31,15 +31,15 @@
 #       code: 1
 
 
-resource "ibm_is_network_acl" "{{generator.attributes.name | replace("-", "_") }}" {
-  name           = "{{generator.attributes.name}}"
-  vpc            = data.ibm_is_vpc.{{generator.attributes.vpc_name | replace("-", "_") }}.id
+resource "ibm_is_network_acl" "{{ generator.attributes.name | replace("-", "_") }}" {
+  name           = "{{ generator.attributes.name }}"
+  vpc            = data.ibm_is_vpc.{{ generator.attributes.vpc_name | replace("-", "_") }}.id
   resource_group = data.ibm_resource_group.thisresourcegroup.id
 }
 
 {% for rule in generator.attributes.rules %}
-resource "ibm_is_network_acl_rule" "{{generator.attributes.name | replace("-", "_") }}_{{ rule.name | replace("-", "_") }}" {
-    network_acl  = ibm_is_network_acl.{{generator.attributes.name | replace("-", "_") }}.id
+resource "ibm_is_network_acl_rule" "{{ generator.attributes.name | replace("-", "_") }}_{{ rule.name | replace("-", "_") }}" {
+    network_acl  = ibm_is_network_acl.{{ generator.attributes.name | replace("-", "_") }}.id
     name         = "{{ rule.name }}"
     action       = "{{ rule.action }}"
     source       = "{{ rule.source }}"

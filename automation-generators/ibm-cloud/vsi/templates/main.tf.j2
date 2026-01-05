@@ -1,15 +1,15 @@
-data "ibm_is_image" "{{generator.attributes.name | replace("-", "_") }}" {
-    name = "{{generator.attributes.infrastructure.image}}"
+data "ibm_is_image" "{{ generator.attributes.name | replace("-", "_") }}" {
+    name = "{{ generator.attributes.infrastructure.image }}"
 }
 
 {% if generator.attributes.storage is defined %}
 {% for storage in generator.attributes.storage %}
-resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}" {
-    name           = "{{generator.attributes.name}}-disk-{{storage.name}}"
+resource "ibm_is_volume" "{{ generator.attributes.name | replace("-", "_") }}_{{ storage.name | replace("-", "_") }}" {
+    name           = "{{ generator.attributes.name }}-disk-{{ storage.name }}"
     resource_group = data.ibm_resource_group.thisresourcegroup.id
-    profile        = "{{storage.profile}}"
-    zone           = "{{generator.attributes.infrastructure.zone }}"
-    capacity       = {{storage.size}}
+    profile        = "{{ storage.profile }}"
+    zone           = "{{ generator.attributes.infrastructure.zone }}"
+    capacity       = {{ storage.size }}
     lifecycle {
       ignore_changes = [ resource_group ]
     }
@@ -17,28 +17,28 @@ resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}_{{s
 {% endfor %}
 {% endif %}
 
-resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" {
-    name = "{{generator.attributes.name }}"
+resource "ibm_is_instance" "{{ generator.attributes.name | replace("-", "_") }}" {
+    name = "{{ generator.attributes.name }}"
     resource_group =  data.ibm_resource_group.thisresourcegroup.id
-    profile = "{{generator.attributes.infrastructure.profile}}"
+    profile = "{{ generator.attributes.infrastructure.profile }}"
 
     keys = [
         {% for item in generator.attributes.infrastructure.get('keys',[]) %}
-            data.ibm_is_ssh_key.{{item | replace("-", "_") }}.id
+            data.ibm_is_ssh_key.{{ item | replace("-", "_") }}.id
         {% endfor %}
     ]
-    zone = "{{generator.attributes.infrastructure.zone }}"
-    vpc = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_")}}.id
-    image = data.ibm_is_image.{{generator.attributes.name | replace("-", "_") }}.id
+    zone = "{{ generator.attributes.infrastructure.zone }}"
+    vpc = ibm_is_vpc.{{ generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
+    image = data.ibm_is_image.{{ generator.attributes.name | replace("-", "_") }}.id
     
     boot_volume {
-        name = "{{generator.attributes.name }}-disk-boot"
+        name = "{{ generator.attributes.name }}-disk-boot"
     }
     primary_network_interface {
-        name = "{{generator.attributes.name }}-nic"
-        subnet = ibm_is_subnet.{{generator.attributes.infrastructure.subnet | replace("-", "_") }}.id
+        name = "{{ generator.attributes.name }}-nic"
+        subnet = ibm_is_subnet.{{ generator.attributes.infrastructure.subnet | replace("-", "_") }}.id
         {% if generator.attributes.infrastructure.primary_ipv4_address is defined %}
-        primary_ipv4_address = "{{generator.attributes.infrastructure.primary_ipv4_address}}"
+        primary_ipv4_address = "{{ generator.attributes.infrastructure.primary_ipv4_address }}"
         {% endif %}
         allow_ip_spoofing = "{{ generator.attributes.infrastructure.allow_ip_spoofing | default('false') | lower }}"
     }
@@ -46,7 +46,7 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
 {% if generator.attributes.storage is defined %}
     volumes = [
         {% for storage in generator.attributes.storage %}
-        ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}_{{storage.name | replace("-", "_") }}.id{{ "," if not loop.last else "" }}
+        ibm_is_volume.{{ generator.attributes.name | replace("-", "_") }}_{{ storage.name | replace("-", "_") }}.id{{ "," if not loop.last else "" }}
         {% endfor %}
     ]
 {% endif %}
@@ -56,9 +56,9 @@ resource "ibm_is_instance" "{{generator.attributes.name | replace("-", "_") }}" 
 }
 
 {% if generator.attributes.infrastructure.public_ip is defined and generator.attributes.infrastructure.public_ip is sameas true %}
-resource "ibm_is_floating_ip" "{{generator.attributes.name | replace("-", "_") }}" {
-  name           = "{{generator.attributes.name}}"
-  target         = ibm_is_instance.{{generator.attributes.name | replace("-", "_")}}.primary_network_interface[0].id
+resource "ibm_is_floating_ip" "{{ generator.attributes.name | replace("-", "_") }}" {
+  name           = "{{ generator.attributes.name }}"
+  target         = ibm_is_instance.{{ generator.attributes.name | replace("-", "_") }}.primary_network_interface[0].id
   resource_group = data.ibm_resource_group.thisresourcegroup.id
 }
 {% endif %}
@@ -67,5 +67,5 @@ resource "ibm_is_floating_ip" "{{generator.attributes.name | replace("-", "_") }
 {# nice to have for debugging #}
 
 /* generator.attributes:
-{{generator.attributes | to_nice_json}}
+{{ generator.attributes | to_nice_json }}
 */

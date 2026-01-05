@@ -1,17 +1,17 @@
-resource "ibm_resource_instance" "{{generator.attributes.name | replace("-", "_") }}" {
+resource "ibm_resource_instance" "{{ generator.attributes.name | replace("-", "_") }}" {
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
-    name     = "{{generator.attributes.name }}"
-    plan     = "{{generator.attributes.plan }}"
-    location = "{{generator.attributes.location }}"
+    name     = "{{ generator.attributes.name }}"
+    plan     = "{{ generator.attributes.plan }}"
+    location = "{{ generator.attributes.location }}"
     service  =  "cloud-object-storage"
 }
 
 {% if generator.attributes.buckets is defined %}
 {% for bucket in generator.attributes.buckets %}
 
-resource "ibm_cos_bucket" "{{generator.attributes.name | replace("-", "_") }}_{{bucket.name | replace("-", "_")}}" {
+resource "ibm_cos_bucket" "{{ generator.attributes.name | replace("-", "_") }}_{{ bucket.name | replace("-", "_") }}" {
     bucket_name = "{{ bucket.name }}"
-    resource_instance_id = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.id
+    resource_instance_id = ibm_resource_instance.{{ generator.attributes.name | replace("-", "_") }}.id
     endpoint_type = "{{ bucket.endpoint_type | default("public") }}"
     storage_class = "{{ bucket.storage_class | default("standard") }}"
     {% if bucket.cross_region_location is defined %}
@@ -31,12 +31,12 @@ resource "ibm_cos_bucket" "{{generator.attributes.name | replace("-", "_") }}_{{
 {% for serviceid in generator.attributes.serviceids %}
 
 resource "ibm_iam_service_policy" "policy" {
-  iam_service_id = ibm_iam_service_id.{{serviceid.name | replace("-", "_") }}.id
-  roles          = {{serviceid.roles | default([]) | to_json }}
+  iam_service_id = ibm_iam_service_id.{{ serviceid.name | replace("-", "_") }}.id
+  roles          = {{ serviceid.roles | default([]) | to_json }}
 
   resources {
     service              = "cloud-object-storage"
-    resource_instance_id = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.guid
+    resource_instance_id = ibm_resource_instance.{{ generator.attributes.name | replace("-", "_") }}.guid
   }
 }
 

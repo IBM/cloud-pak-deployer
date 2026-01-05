@@ -1,8 +1,8 @@
 {% if (generator.attributes.managed | default(True)) %}
 
-resource "ibm_is_ssh_key" "{{generator.attributes.name | replace("-", "_") }}" {
-  name       = "{{generator.attributes.name}}"
-  public_key = join(" ", [ split(" ","{{sshkey_value}}")[0], split(" ","{{sshkey_value}}")[1] ])
+resource "ibm_is_ssh_key" "{{ generator.attributes.name | replace("-", "_") }}" {
+  name       = "{{ generator.attributes.name }}"
+  public_key = join(" ", [ split(" ","{{ sshkey_value }}")[0], split(" ","{{ sshkey_value }}")[1] ])
   resource_group = data.ibm_resource_group.thisresourcegroup.id
   lifecycle {
     ignore_changes = [ public_key, resource_group ]
@@ -13,11 +13,11 @@ resource "ibm_is_ssh_key" "{{generator.attributes.name | replace("-", "_") }}" {
 
 # Extra data element so we can always refer to it from other objects
 
-data "ibm_is_ssh_key" "{{generator.attributes.name | replace("-", "_") }}" {
-  name       = "{{generator.attributes.name}}"
+data "ibm_is_ssh_key" "{{ generator.attributes.name | replace("-", "_") }}" {
+  name       = "{{ generator.attributes.name }}"
 {% if (generator.attributes.managed | default(True)) %}
     depends_on = [
-        ibm_is_ssh_key.{{generator.attributes.name | replace("-", "_") }}
+        ibm_is_ssh_key.{{ generator.attributes.name | replace("-", "_") }}
     ]
 {% endif %}
 }

@@ -1,20 +1,20 @@
 # Generate assets if OpenShift cluster is managed
 {% if (generator.attributes.managed | default(True)) %}
 
-resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
-    name = "{{generator.attributes.name}}"
+resource "ibm_container_vpc_cluster" "{{ generator.attributes.name | replace("-", "_") }}" {
+    name = "{{ generator.attributes.name }}"
     {% if generator.attributes.infrastructure.cos_name is not defined  %}
-    cos_instance_crn = ibm_resource_instance.{{generator.attributes.name | replace("-", "_") }}.id
+    cos_instance_crn = ibm_resource_instance.{{ generator.attributes.name | replace("-", "_") }}.id
     {% else %}
-    cos_instance_crn = ibm_resource_instance.{{generator.attributes.infrastructure.cos_name | replace("-", "_") }}.id
+    cos_instance_crn = ibm_resource_instance.{{ generator.attributes.infrastructure.cos_name | replace("-", "_") }}.id
     {% endif %}
-    kube_version = "{{generator.attributes.ocp_version}}_openshift"
-    flavor       = "{{generator.attributes.compute_flavour}}"
+    kube_version = "{{ generator.attributes.ocp_version }}_openshift"
+    flavor       = "{{ generator.attributes.compute_flavour }}"
     {% if generator.attributes.secondary_storage is defined  %}
     secondary_storage = "{{ generator.attributes.secondary_storage }}"
     {% endif %}
     entitlement  = "cloud_pak"
-    vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
+    vpc_id       = ibm_is_vpc.{{ generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
     worker_count = "{{ ((generator.attributes.compute_nodes) / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
     disable_public_service_endpoint = {{ generator.attributes.infrastructure.private_only | default(False) | string | lower }}
@@ -27,8 +27,8 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
 {% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
     zones {
-        subnet_id = ibm_is_subnet.{{item | replace("-", "_") }}.id
-        name      = "{{subnet.zone}}"
+        subnet_id = ibm_is_subnet.{{ item | replace("-", "_") }}.id
+        name      = "{{ subnet.zone }}"
     }
 
 {% endfor %}
@@ -36,14 +36,14 @@ resource "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-",
 
 {% for item in generator.attributes.openshift_storage %}
 {% if item.storage_type == "odf" %}
-resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace("-", "_") }}_ocs" {
-    cluster           = "{{generator.attributes.name }}"
-    worker_pool_name  = "{{generator.attributes.name }}-{{item.odf_storage_label}}"
+resource "ibm_container_vpc_worker_pool" "{{ generator.attributes.name | replace("-", "_") }}_ocs" {
+    cluster           = "{{ generator.attributes.name }}"
+    worker_pool_name  = "{{ generator.attributes.name }}-{{ item.odf_storage_label }}"
     flavor       = "{{ item.storage_flavour | default('bx2.16x64') }}"
     {% if item.secondary_storage is defined  %}
     secondary_storage = "{{ item.secondary_storage }}"
     {% endif %}
-    vpc_id       = ibm_is_vpc.{{generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
+    vpc_id       = ibm_is_vpc.{{ generator.attributes.infrastructure.vpc_name | replace("-", "_") }}.id
     worker_count      = "{{ (3 / (generator.attributes.infrastructure.get('subnets',[]) | length)) | int }}"
     resource_group_id = data.ibm_resource_group.thisresourcegroup.id
 
@@ -54,8 +54,8 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
 {% for item in generator.attributes.infrastructure.get('subnets',[]) %}
 {% set subnet = generator.config.subnet | selectattr("name", "equalto", item) | list | first %}
     zones {
-        subnet_id = ibm_is_subnet.{{item | replace("-", "_") }}.id
-        name      = "{{subnet.zone}}"
+        subnet_id = ibm_is_subnet.{{ item | replace("-", "_") }}.id
+        name      = "{{ subnet.zone }}"
     }
 
 {% endfor %}
@@ -66,33 +66,33 @@ resource "ibm_container_vpc_worker_pool" "{{generator.attributes.name | replace(
 
 {% if item.storage_type == "pwx" %}
 
-data "ibm_container_cluster_config" "{{generator.attributes.name | replace("-", "_") }}" {
-  cluster_name_id   = "{{generator.attributes.name}}"
+data "ibm_container_cluster_config" "{{ generator.attributes.name | replace("-", "_") }}" {
+  cluster_name_id   = "{{ generator.attributes.name }}"
   resource_group_id = data.ibm_resource_group.thisresourcegroup.id
-  config_dir        = "{{status_dir}}/terraform/kubeconfig"
+  config_dir        = "{{ status_dir }}/terraform/kubeconfig"
   depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]
 }
 
 #provider "kubernetes" {
-#  config_path = data.ibm_container_cluster_config.{{generator.attributes.name | replace("-", "_") }}.config_file_path
+#  config_path = data.ibm_container_cluster_config.{{ generator.attributes.name | replace("-", "_") }}.config_file_path
 #}
 
 //locals used only in openshift.tf
 locals {
-  kube_config_path = data.ibm_container_cluster_config.{{generator.attributes.name | replace("-", "_") }}.config_file_path
-  compute_nodes     = {{generator.attributes.compute_nodes}}
+  kube_config_path = data.ibm_container_cluster_config.{{ generator.attributes.name | replace("-", "_") }}.config_file_path
+  compute_nodes     = {{ generator.attributes.compute_nodes }}
   enable           = true
 
   // Storage parameters
   install_storage  = true
-  storage_capacity = {{item.pwx_storage_size_gb}} 
-  storage_iops     = {{item.pwx_storage_iops}}
-  storage_profile  = "{{item.pwx_storage_profile}}"
+  storage_capacity = {{ item.pwx_storage_size_gb }} 
+  storage_iops     = {{ item.pwx_storage_iops }}
+  storage_profile  = "{{ item.pwx_storage_profile }}"
 
   // Portworx parameters
-  region              = "{{ibm_cloud_region}}"
-  cluster_id          = "{{generator.attributes.name}}"
-  unique_id           = "{{generator.attributes.name}}"
+  region              = "{{ ibm_cloud_region }}"
+  cluster_id          = "{{ generator.attributes.name }}"
+  unique_id           = "{{ generator.attributes.name }}"
 
   create_external_etcd = true
   etcd_username        = "portworxetcduser"
@@ -102,7 +102,7 @@ locals {
 }
 
 
-data "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
+data "ibm_container_vpc_cluster" "{{ generator.attributes.name | replace("-", "_") }}" {
   depends_on = [ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}]  
   count = local.enable ? 1 : 0
   name = local.cluster_id
@@ -112,60 +112,60 @@ data "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_"
 {% endif %}
 }
 
-data "ibm_container_vpc_cluster_worker" "{{generator.attributes.name | replace("-", "_") }}" {
+data "ibm_container_vpc_cluster_worker" "{{ generator.attributes.name | replace("-", "_") }}" {
   count = local.enable ? local.compute_nodes : 0
   cluster_name_id   = local.cluster_id
   resource_group_id = data.ibm_resource_group.thisresourcegroup.id
-  worker_id         = length(data.ibm_container_vpc_cluster.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster.{{generator.attributes.name | replace("-", "_") }}[0].workers[count.index] : 0
+  worker_id         = length(data.ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}[0].workers[count.index] : 0
 }
 
-data "ibm_iam_auth_token" "{{generator.attributes.name | replace("-", "_") }}" {}
+data "ibm_iam_auth_token" "{{ generator.attributes.name | replace("-", "_") }}" {}
 
 # ibm_is_subnet is currently bugged. On a run, it can error with an expi.workers[count.index]red or bad token. A subsequent rerun fixes this, 
 # but this script should run the first time without any problems.
-data "ibm_is_subnet" "{{generator.attributes.name | replace("-", "_") }}" {
+data "ibm_is_subnet" "{{ generator.attributes.name | replace("-", "_") }}" {
   count = local.enable ? local.compute_nodes : 0
-  identifier = length(data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}[count.index].network_interfaces[0].subnet_id : 0
+  identifier = length(data.ibm_container_vpc_cluster_worker.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{ generator.attributes.name | replace("-", "_") }}[count.index].network_interfaces[0].subnet_id : 0
 }
 
 # Create a block storage volume per compute node.
-resource "ibm_is_volume" "{{generator.attributes.name | replace("-", "_") }}" {
+resource "ibm_is_volume" "{{ generator.attributes.name | replace("-", "_") }}" {
   depends_on = [
-    data.ibm_is_subnet.{{generator.attributes.name | replace("-", "_") }}
+    data.ibm_is_subnet.{{ generator.attributes.name | replace("-", "_") }}
   ]
 
   count = local.enable && local.install_storage ? local.compute_nodes : 0 
   
   capacity = local.storage_capacity
   iops = local.storage_profile == "custom" ? local.storage_iops : null
-  name = length(data.ibm_container_vpc_cluster.{{generator.attributes.name | replace("-", "_") }}) > 0 ? "${local.unique_id}-pwx-${split("-", data.ibm_container_vpc_cluster.{{generator.attributes.name | replace("-", "_") }}[0].workers[count.index])[4]}" : "${local.unique_id}-pwx"
+  name = length(data.ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? "${local.unique_id}-pwx-${split("-", data.ibm_container_vpc_cluster.{{ generator.attributes.name | replace("-", "_") }}[0].workers[count.index])[4]}" : "${local.unique_id}-pwx"
   profile = local.storage_profile
   resource_group = data.ibm_resource_group.thisresourcegroup.id
-  zone = length(data.ibm_is_subnet.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_is_subnet.{{generator.attributes.name | replace("-", "_") }}[count.index].zone : ""
+  zone = length(data.ibm_is_subnet.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_is_subnet.{{ generator.attributes.name | replace("-", "_") }}[count.index].zone : ""
 }
 
 # Attach block storage to compute nodes
-resource "null_resource" "volume_attachment_{{generator.attributes.name | replace("-", "_") }}" {
+resource "null_resource" "volume_attachment_{{ generator.attributes.name | replace("-", "_") }}" {
   count = local.enable && local.install_storage ? local.compute_nodes : 0 
 
   depends_on = [
-    ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}
+    ibm_is_volume.{{ generator.attributes.name | replace("-", "_") }}
   ]
   
   triggers = {
-    volume = length(ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}) > 0 ? ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
-    worker = length(data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
+    volume = length(ibm_is_volume.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? ibm_is_volume.{{ generator.attributes.name | replace("-", "_") }}[count.index].id : 0
+    worker = length(data.ibm_container_vpc_cluster_worker.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{ generator.attributes.name | replace("-", "_") }}[count.index].id : 0
   }
 
   provisioner "local-exec" {
     environment = {
       IBMCLOUD_API_KEY  = var.ibmcloud_api_key
-      TOKEN             = data.ibm_iam_auth_token.{{generator.attributes.name | replace("-", "_") }}.iam_access_token
+      TOKEN             = data.ibm_iam_auth_token.{{ generator.attributes.name | replace("-", "_") }}.iam_access_token
       REGION            = local.region
       RESOURCE_GROUP_ID = data.ibm_resource_group.thisresourcegroup.id
       CLUSTER_ID        = local.cluster_id
-      COMPUTE_ID        = length(data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0
-      VOLUME_ID         = length(ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}) > 0 ? ibm_is_volume.{{generator.attributes.name | replace("-", "_") }}[count.index].id : 0      
+      COMPUTE_ID        = length(data.ibm_container_vpc_cluster_worker.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? data.ibm_container_vpc_cluster_worker.{{ generator.attributes.name | replace("-", "_") }}[count.index].id : 0
+      VOLUME_ID         = length(ibm_is_volume.{{ generator.attributes.name | replace("-", "_") }}) > 0 ? ibm_is_volume.{{ generator.attributes.name | replace("-", "_") }}[count.index].id : 0      
     }
 
     interpreter = ["/bin/bash", "-c"]
@@ -177,7 +177,7 @@ resource "null_resource" "volume_attachment_{{generator.attributes.name | replac
 #############################################
 # Create 'Databases for Etcd' service instance
 #############################################
-resource "ibm_database" "etcd_{{generator.attributes.name | replace("-", "_") }}" {
+resource "ibm_database" "etcd_{{ generator.attributes.name | replace("-", "_") }}" {
   count = local.enable && local.create_external_etcd ? 1 : 0
   location = local.region
   members_cpu_allocation_count = 9
@@ -198,12 +198,12 @@ resource "ibm_database" "etcd_{{generator.attributes.name | replace("-", "_") }}
 # find the object in the connectionstrings list in which the `name` is local.etcd_username
 locals {
   etcd_user_connectionstring = (local.create_external_etcd ?
-                                ibm_database.etcd_{{generator.attributes.name | replace("-", "_") }}[0].connectionstrings[index(ibm_database.etcd_{{generator.attributes.name | replace("-", "_") }}[0].connectionstrings[*].name, local.etcd_username)] :
+                                ibm_database.etcd_{{ generator.attributes.name | replace("-", "_") }}[0].connectionstrings[index(ibm_database.etcd_{{ generator.attributes.name | replace("-", "_") }}[0].connectionstrings[*].name, local.etcd_username)] :
                                 null)
 }
 
 
-resource "null_resource" "etc_pwx_secret_{{generator.attributes.name | replace("-", "_") }}" {
+resource "null_resource" "etc_pwx_secret_{{ generator.attributes.name | replace("-", "_") }}" {
   provisioner "local-exec" {
     environment = {
       IBMCLOUD_API_KEY  = var.ibmcloud_api_key
@@ -222,10 +222,10 @@ resource "null_resource" "etc_pwx_secret_{{generator.attributes.name | replace("
 ##################################
 # Install Portworx on the cluster
 ##################################
-resource "ibm_resource_instance" "portworx_{{generator.attributes.name | replace("-", "_") }}" {
+resource "ibm_resource_instance" "portworx_{{ generator.attributes.name | replace("-", "_") }}" {
   depends_on = [
-    null_resource.volume_attachment_{{generator.attributes.name | replace("-", "_") }},
-    null_resource.etc_pwx_secret_{{generator.attributes.name | replace("-", "_") }}
+    null_resource.volume_attachment_{{ generator.attributes.name | replace("-", "_") }},
+    null_resource.etc_pwx_secret_{{ generator.attributes.name | replace("-", "_") }}
   ]
 
 
@@ -267,8 +267,8 @@ resource "ibm_resource_instance" "portworx_{{generator.attributes.name | replace
 # Retrieve assets if OpenShift cluster is NOT managed
 {% if not (generator.attributes.managed | default(True)) %}
 
-data "ibm_container_vpc_cluster" "{{generator.attributes.name | replace("-", "_") }}" {
-    name = "{{generator.attributes.name}}"
+data "ibm_container_vpc_cluster" "{{ generator.attributes.name | replace("-", "_") }}" {
+    name = "{{ generator.attributes.name }}"
 }
 
 {% endif %}
