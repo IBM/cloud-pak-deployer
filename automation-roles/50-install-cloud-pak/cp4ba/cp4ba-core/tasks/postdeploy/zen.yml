@@ -328,7 +328,7 @@
     api_version: v1
     kind: ConfigMap
     namespace: "{{ cp4ba_output_namespace }}"
-    name: "{{ _current_cp4ba_cluster.project }}-usage"
+    name: 000-usage
   register: usage
   retries: 40
   delay: 15
@@ -377,6 +377,10 @@
     - name: Get zen api key
       ansible.builtin.set_fact:
         zen_api_key_new: "{{ zen_api_key_response.json.apiKey }}"
+
+    - name: Set new zen api key
+      ansible.builtin.set_fact:
+        zen_api_key: "{{ zen_api_key_new }}"
 
     # Regenerate usage with zen_api_key
     - name: Set usage entry for cpmanagerservice user
