@@ -46,32 +46,16 @@
     tasks_from: create-edge-route
   vars:
     common_namespace_name: "{{ bamoe_project_name }}"
-    common_route_name: bamoe-canvas
-    common_service_name: bamoe-canvas
+    common_route_name: "{{ item }}"
+    common_service_name: "{{ item }}"
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ bamoe_output_directory }}"
-
-- name: Crete Edge Route
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-edge-route
-  vars:
-    common_namespace_name: "{{ bamoe_project_name }}"
-    common_route_name: bamoe-management-console
-    common_service_name: bamoe-management-console
-    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
-    common_output_directory: "{{ bamoe_output_directory }}"
-
-- name: Crete Edge Route
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-edge-route
-  vars:
-    common_namespace_name: "{{ bamoe_project_name }}"
-    common_route_name: bamoe-maven-repository
-    common_service_name: bamoe-maven-repository
-    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
-    common_output_directory: "{{ bamoe_output_directory }}"
+  with_items:
+    - bamoe-canvas
+    - bamoe-cors-proxy
+    - bamoe-extended-services
+    - bamoe-management-console
+    - bamoe-maven-repository
 
 - name: Prepare Maven Settings
   ansible.builtin.template:

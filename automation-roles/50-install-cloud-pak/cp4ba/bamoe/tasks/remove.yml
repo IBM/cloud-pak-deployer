@@ -39,6 +39,23 @@
     wait_sleep: 15
     wait_timeout: 15
 
+- name: Remove Routes
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ bamoe_project_name }}"
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - bamoe-canvas
+    - bamoe-cors-proxy
+    - bamoe-extended-services
+    - bamoe-management-console
+    - bamoe-maven-repository
+
 - name: Remove Empty Project
   ansible.builtin.include_role:
     name: common
