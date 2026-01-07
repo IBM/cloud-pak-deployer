@@ -58,28 +58,6 @@
   delay: 60
   until: (route.resources[0].spec.tls.certificate | trim) == (decoded_content | trim)
 
-- name: Delete Zen ibm-nginx pods
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Pod
-    namespace: "{{ cp4ba_project_name }}"
-    label_selectors:
-      - app.kubernetes.io/component=ibm-nginx
-
-- name: Wait for Zen ibm-nginx Deployment Available State
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: ibm-nginx
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 80
-    common_delay: 15
-
 - name: Get OCP Apps domain
   ansible.builtin.include_role:
     name: common
