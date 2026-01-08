@@ -167,3 +167,32 @@ spec:
             limits:
               cpu: 500m
               memory: 256Mi
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-mcp-server
+  namespace: "{{ bamoe_project_name }}"
+  labels:
+    app: bamoe-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-mcp-server
+  template:
+    metadata:
+      labels:
+        app: bamoe-mcp-server
+    spec:
+      containers:
+        - name: bamoe-mcp-server
+          image: "{{ bamoe_mcp_server_image }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MCP_SERVER_OPENAPI_URLS
+              value: "<your_business_services_OpenAPIv3_path>"
+          ports:
+            - name: http
+              containerPort: 8080
