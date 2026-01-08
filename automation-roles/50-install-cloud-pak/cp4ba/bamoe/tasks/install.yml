@@ -56,6 +56,7 @@
     - bamoe-extended-services
     - bamoe-management-console
     - bamoe-maven-repository
+    - bamoe-mcp-server
 
 - name: Prepare Maven Settings
   ansible.builtin.template:
@@ -96,4 +97,20 @@
 
       - Maven Settings XML for BAMOE Maven repository is in Project {{ bamoe_project_name }}
       in ConfigMap 000-bamoe-maven-settings
+
+      ## MCP Server configuration for watsonx Orchestrate
+
+      Based on
+      https://www.ibm.com/docs/en/ibamoe/9.3.x?topic=ia-exposing-bamoe-capabilities-ai-agents-through-mcp-server-tech-preview#_execution_and_lifecycle_management
+
+      MCP server is created as a stub without an actual connected BAMOE Business Service and thus will not work.
+      You must update Project {{ bamoe_project_name }},
+      Deployment bamoe-mcp-server, MCP_SERVER_OPENAPI_URLS environments variable to point ot your actual Business Service.
+
+      Deployment bamoe-mcp-server, MCP_SERVER_OPENAPI_URLS environments variable to point ot your actual Business Service.
+
+      MCP server type: Remote
+
+      MCP server URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/mcp
+
       "
