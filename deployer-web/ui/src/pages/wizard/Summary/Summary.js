@@ -5,9 +5,6 @@ import './Summary.scss'
 import yaml from 'js-yaml';
 
 const Summary = ({cloudPlatform, 
-                  IBMCloudSettings, 
-                  AWSSettings, 
-                  storage, 
                   CPDCartridgesData, 
                   CPICartridgesData, 
                   locked,
@@ -35,21 +32,9 @@ const Summary = ({cloudPlatform,
     const [editable, setEditable] = useState(false)
 
     const createSummaryData = async () => { 
-        let region=""    
-        switch (cloudPlatform) {
-            case "ibm-cloud":               
-                region=IBMCloudSettings.region
-                break
-            case "aws":                
-                region=AWSSettings.region
-                break
-            default:
-        }  
         let body = {
             "envId": envId,
             "cloud": cloudPlatform,
-            "region": region,
-            "storages": storage,
             "cp4d": CPDCartridgesData,
             "cp4i": CPICartridgesData,
             "cp4dLicense":cp4dLicense,

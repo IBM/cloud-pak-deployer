@@ -30,8 +30,8 @@ app = Flask(__name__,static_url_path='')
 
 parent = Path(os.path.dirname(os.path.realpath(__file__))).parent
 app.logger.info('Parent path of python script: {}'.format(parent))
-cp_base_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/cloud-pak')
-ocp_base_config_path = os.path.join(parent,'sample-configurations/web-ui-base-config/ocp')
+cp_base_config_path = os.path.join(parent,'sample-configurations/sample-dynamic/config-samples')
+ocp_base_config_path = os.path.join(parent,'ample-configurations/sample-dynamic/config-samples')
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
 
@@ -157,6 +157,8 @@ def oc_login():
     oc_login_command=body['oc_login_command']
     oc_login_command = oc_login_command.strip()
 
+    app.logger.info(body)
+
     pattern = r'oc(\s+)login(\s)(.*)'    
     isOcLoginCmd = re.match(pattern, oc_login_command)    
 
@@ -169,7 +171,9 @@ def oc_login():
             result["code"]=proc.returncode
         else:
             errors = str(errorlog,  'utf-8').split("\n")  
-            result={"code": proc.returncode,"error": errors[-2]}   
+            result={"code": proc.returncode,"error": errors[-2]}
+            app.logger.info(result)
+            app.logger.info(errors)
         proc.stdin.close()
 
         return json.dumps(result)
@@ -182,47 +186,47 @@ def get_deployer_status():
 
     # Check if the env apply process is active
     result['deployer_active']=False
-    for proc in psutil.process_iter():
-        # app.logger.info(proc.cmdline())
-        if '/cloud-pak-deployer/cp-deploy.sh' in proc.cmdline() and \
-            'env' in proc.cmdline() and ('apply' in proc.cmdline() or 'download' in proc.cmdline()):
-            result['deployer_active']=True
-    deploy_state_log_path = status_dir + '/state/deployer-state.out'
+    # for proc in psutil.process_iter():
+    #     # app.logger.info(proc.cmdline())
+    #     if '/cloud-pak-deployer/cp-deploy.sh' in proc.cmdline() and \
+    #         'env' in proc.cmdline() and ('apply' in proc.cmdline() or 'download' in proc.cmdline()):
+    #         result['deployer_active']=True
+    # deploy_state_log_path = status_dir + '/state/deployer-state.out'
 
-    # app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
-    try:
-        with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
-            temp={}
-        with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
-            temp={}
-            content = f.read()
-            f.close()
-            # app.logger.info(content)
-            docs=yaml.safe_load_all(content)
-            for doc in docs:
-                temp={**temp, **doc}
-            if 'deployer_stage' in temp:
-                result['deployer_stage']=temp['deployer_stage']
-            if 'last_step' in temp:
-                result['last_step']=temp['last_step']
-            if 'percentage_completed' in temp:
-                result['percentage_completed']=temp['percentage_completed']
-            if 'completion_state' in temp:
-                result['completion_state']=temp['completion_state']
-            if 'mirror_current_image' in temp:
-                result['mirror_current_image']=temp['mirror_current_image']
-            if 'mirror_number_images' in temp:
-                result['mirror_number_images']=temp['mirror_number_images']
-            if 'service_state' in temp:
-                result['service_state']=temp['service_state']
-    except FileNotFoundError:
-        app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
-    except PermissionError:
-        app.logger.warning('Permission error while reading file {}'.format(deploy_state_log_path))
-    except IOError:
-        app.logger.warning('IO Error while reading file {}'.format(deploy_state_log_path))
-    except:
-        app.logger.warning('internal server error')
+    # # app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
+    # try:
+    #     with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
+    #         temp={}
+    #     with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
+    #         temp={}
+    #         content = f.read()
+    #         f.close()
+    #         # app.logger.info(content)
+    #         docs=yaml.safe_load_all(content)
+    #         for doc in docs:
+    #             temp={**temp, **doc}
+    #         if 'deployer_stage' in temp:
+    #             result['deployer_stage']=temp['deployer_stage']
+    #         if 'last_step' in temp:
+    #             result['last_step']=temp['last_step']
+    #         if 'percentage_completed' in temp:
+    #             result['percentage_completed']=temp['percentage_completed']
+    #         if 'completion_state' in temp:
+    #             result['completion_state']=temp['completion_state']
+    #         if 'mirror_current_image' in temp:
+    #             result['mirror_current_image']=temp['mirror_current_image']
+    #         if 'mirror_number_images' in temp:
+    #             result['mirror_number_images']=temp['mirror_number_images']
+    #         if 'service_state' in temp:
+    #             result['service_state']=temp['service_state']
+    # except FileNotFoundError:
+    #     app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
+    # except PermissionError:
+    #     app.logger.warning('Permission error while reading file {}'.format(deploy_state_log_path))
+    # except IOError:
+    #     app.logger.warning('IO Error while reading file {}'.format(deploy_state_log_path))
+    # except:
+    #     app.logger.warning('internal server error')
     return result
 
 @app.route('/api/v1/configuration',methods=["GET"])
@@ -252,34 +256,46 @@ def check_configuration():
         with open(generated_config_yaml_path, "r", encoding='UTF-8') as f:
             temp={}
             content = f.read()
-            # app.logger.info(content)
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
+
+            if 'openshift' in temp:
+                result['data']['openshift']=temp['openshift']
+                del temp['openshift']
+            else:
+                app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
+
+            if 'global_config' in temp:
+                result['data']['global_config']=temp['global_config']
+                del temp['global_config']
+            else:
+                app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
 
             if 'cp4d' in temp:
                 result['data']['cp4d']=temp['cp4d']
                 del temp['cp4d']
             else:
-                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4i.yaml'))
-                result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d.yaml')['cp4d']
+                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+                result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
 
             if 'cp4i' in temp:
                 result['data']['cp4i']=temp['cp4i']
                 del temp['cp4i']
             else:
-                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i.yaml'))
-                result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
+                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+                result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
 
-            result['data']['ocp']=temp
-            if 'env_id' not in result['data']['ocp']['global_config']:
-                result['data']['ocp']['global_config']['env_id']='demo'
-                app.logger.warning("Added env_id to global_config: {}".format(result['data']['ocp']['global_config']))
+            if 'env_id' not in result['data']['global_config']:
+                result['data']['global_config']['env_id']='demo'
+                app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
 
             result['code'] = 0
             result['message'] = "Successfully retrieved configuration."
             f.close()
-            # app.logger.info('Result of reading file: {}'.format(result))
+            app.logger.info('Result of reading file: {}'.format(result))
     except FileNotFoundError:
         result['code'] = 404
         result['message'] = "Configuration File is not found."
@@ -292,11 +308,11 @@ def check_configuration():
         result['message'] = "IO Error."
     return result
 
-@app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
-def getCartridges(cloudpak):
-    if cloudpak not in ['cp4d', 'cp4i']:
-       return make_response('Bad Request', 400)
-    return loadYamlFile(cp_base_config_path+'/{}.yaml'.format(cloudpak))
+# @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
+# def getCartridges(cloudpak):
+#     if cloudpak not in ['cp4d', 'cp4i']:
+#        return make_response('Bad Request', 400)
+#     return loadYamlFile(cp_base_config_path+'/{}.yaml'.format(cloudpak))
 
 @app.route('/api/v1/logs',methods=["GET"])
 def getLogs():
@@ -395,12 +411,6 @@ def createConfig():
     cp4d_config=loadYamlFile(cp_base_config_path+'/cp4d.yaml')
     cp4i_config=loadYamlFile(cp_base_config_path+'/cp4i.yaml')
 
-    # Update for region
-    if cloud=="ibm-cloud":
-        ocp_config['global_config']['ibm_cloud_region']=region
-    elif cloud=="aws":
-        ocp_config['global_config']['aws_region']=region
-
     # Update for EnvId
     ocp_config['global_config']['env_id']=env_id
 
@@ -431,6 +441,8 @@ def updateConfig():
     if 'cp4d' not in body or 'cp4i' not in body or 'cp4dVersion' not in body or 'cp4iVersion' not in body or 'cp4dLicense' not in body or 'cp4iLicense' not in body or 'CP4DPlatform' not in body or 'CP4IPlatform' not in body:
        return make_response('Bad Request', 400)
 
+    app.logger.info("Configuration received by updateConfig {}".format(body))
+
     cp4d_cartridges=body['cp4d']
     cp4i_instances=body['cp4i']
     cp4dLicense=body['cp4dLicense']
@@ -450,11 +462,6 @@ def updateConfig():
         docs=yaml.safe_load_all(content)
         for doc in docs:
             temp={**temp, **doc}
-
-        if 'cp4d' not in temp:
-            temp['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d.yaml')['cp4d']
-        if 'cp4i' not in temp:
-            temp['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i.yaml')['cp4i']
 
         # app.logger.info("temp: {}".format(temp))
         cp4d_selected=CP4DPlatform
@@ -541,4 +548,4 @@ Summary
    https://<host machine>:8080  
 ******************************************************************************
     """)
-    app.run(host='0.0.0.0', port='32080', debug=False)    
+    app.run(host='0.0.0.0', port='32080', debug=True)    

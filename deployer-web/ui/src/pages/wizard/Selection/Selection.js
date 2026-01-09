@@ -36,10 +36,10 @@ const Selection = ({setCpdWizardMode,
       const getEnviromentVariables = async() => {
         setLoadingEnviromentVariables(true)
         await axios.get('/api/v1/environment-variable').then(res =>{   
-          setLoadingEnviromentVariables(false)  
+          setLoadingEnviromentVariables(false)
           if (res.data.CPD_WIZARD_MODE === "existing-ocp") {
             setCpdWizardMode("existing-ocp")
-            setSelection("Configure+Deploy")
+            setSelection("Configure")
             setCurrentIndex(1)
             //platform will be existing-ocp
           }else if (res.data.CPD_WIZARD_MODE === "deploy") {
@@ -91,7 +91,6 @@ const Selection = ({setCpdWizardMode,
          valueSelected={selection}         
          >
          <RadioButton labelText="Configure & Deploy" value="Configure+Deploy" id="400" />
-         <RadioButton labelText="Configure & Download" value="Configure+Download" id="401"/>
          <RadioButton labelText="Configure" value="Configure" id="402" />     
       </RadioButtonGroup>
 
