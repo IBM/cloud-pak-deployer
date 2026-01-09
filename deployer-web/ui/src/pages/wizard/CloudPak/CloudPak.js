@@ -48,64 +48,49 @@ const CloudPak = ({
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
     const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
 
-    useEffect(()=>{
-      const getConfiguration = async() => {
-        setLoadingConfiguration(true)  
-        await axios.get('/api/v1/configuration').then(res =>{   
-          setLoadingConfiguration(false)   
-          setLoadConfigurationErr(false)     
+    useEffect(() => {
+      const getConfiguration = async () => {
+        setLoadingConfiguration(true)
+        await axios.get('/api/v1/configuration').then(res => {
+          setLoadingConfiguration(false)
+          setLoadConfigurationErr(false)
           setConfiguration(res.data)
 
-          console.log(res)
-         
+          console.log('res.data', res.data)
+
           if (res.data.code === 0) {
             setLocked(true)
-            
-            let cloud=res.data.data.global_config.cloud_platform
+
+            let cloud = res.data.data.global_config.cloud_platform
             setCloudPlatform(cloud)
             setEnvId(res.data.data.global_config.env_id)
+            if (res.data.data.cp4d[0]) {
+              setCp4dVersion(res.data.data.cp4d[0].cp4d_version)
+              setCp4dLicense(res.data.data.cp4d[0].accept_licenses)
+              setCPDCartridgesData(res.data.data.cp4d[0].cartridges)
+            }
+            if (res.data.data.cp4i[0]) {
+              setCp4iVersion(res.data.data.cp4i[0].cp4i_version)
+              setCp4iLicense(res.data.data.cp4i[0].accept_licenses)
+              setCPICartridgesData(res.data.data.cp4i[0].instances)
+            }
+
           }
         }, err => {
-          setLoadingConfiguration(false) 
+          setLoadingConfiguration(false)
           setLoadConfigurationErr(true)
           console.log(err)
-        });         
-      }      
+        });
+      }
 
-      if(loadConfigurationErr) {
+      if (loadConfigurationErr) {
         return
       }
       //Load configuration
-      // if (JSON.stringify(configuration) === "{}") {
-        getConfiguration()        
-      // }
-
-
-      if(configuration.data.cp4d[0].cp4d_version) {
-        setCp4dVersion(configuration.data.cp4d[0].cp4d_version)
+      if (JSON.stringify(configuration) === "{}") {
+        getConfiguration()
       }
-      if(configuration.data.cp4d[0].accept_licenses) {
-        setCp4dLicense(configuration.data.cp4d[0].accept_licenses)
-      }
-      if(configuration.data.cp4d[0].cartridges) {
-        setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
-      } else {
-        setCPDCartridgesData([])
-      }
-
-      if(configuration.data.cp4i[0].cp4i_version) {
-        setCp4iVersion(configuration.data.cp4i[0].cp4i_version)
-      }
-      if(configuration.data.cp4i[0].accept_licenses) {
-        setCp4iLicense(configuration.data.cp4i[0].accept_licenses)
-      }
-      if(configuration.data.cp4i[0].instances) {
-        setCPICartridgesData(configuration.data.cp4i[0].instances)
-      } else {
-        setCPICartridgesData([])
-      }    
-      setWizardError(false)
-    },[])
+    }, [])
 
     useEffect(() => {
       updateCP4DPlatformCheckBox(CPDCartridgesData)
@@ -254,7 +239,7 @@ const CloudPak = ({
           { loadConfigurationErr && <InlineNotification className="cpd-error"
           {...errorConfigurationProps()}        
             /> } 
-          { (loadingConfiguration || loadingCPD ||loadingCPI) && <Loading /> }  
+          { (loadingConfiguration && !loadConfigurationErr) && <Loading /> }  
           { (loadCPDErr ||loadCPIErr) && <InlineNotification className="cpd-error"
               {...errorProps()}        
             /> 
