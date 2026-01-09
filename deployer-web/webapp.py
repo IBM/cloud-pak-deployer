@@ -437,6 +437,8 @@ def createConfig():
 def updateConfig():
     global generated_config_yaml_path
 
+    app.logger.info("Received updateConfig: {}".format(request.get_data()))
+
     body = json.loads(request.get_data())
     if 'cp4d' not in body or 'cp4i' not in body or 'cp4dVersion' not in body or 'cp4iVersion' not in body or 'cp4dLicense' not in body or 'cp4iLicense' not in body or 'CP4DPlatform' not in body or 'CP4IPlatform' not in body:
        return make_response('Bad Request', 400)
