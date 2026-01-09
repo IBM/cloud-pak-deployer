@@ -3,7 +3,9 @@ import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
 
-const CloudPak = ({CPDCartridgesData, 
+const CloudPak = ({
+                  setCloudPlatform, 
+                  CPDCartridgesData, 
                   setCPDCartridgesData, 
                   CPICartridgesData, 
                   setCPICartridgesData, 
@@ -11,7 +13,9 @@ const CloudPak = ({CPDCartridgesData,
                   setEntitlementKey, 
                   setWizardError,
                   configuration,
+                  setConfiguration,
                   locked,
+                  setLocked,
                   cp4dLicense,
                   cp4iLicense,
                   cp4dVersion,
@@ -26,107 +30,95 @@ const CloudPak = ({CPDCartridgesData,
                   setCP4IPlatformCheckBox,
                   adminPassword,
                   setAdminPassword,
+                  envId,
+                  setEnvId,
                 }) => {
+
+    
+    const [loadingConfiguration, setLoadingConfiguration] = useState(false)
+    const [loadConfigurationErr, setLoadConfigurationErr] = useState(false)    
+    
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadingCPI, setLoadingCPI] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
 
+    const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
     const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
+    const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
 
     useEffect(()=>{
-      const fetchCloudPakData =async () => {        
-        await axios.get('/api/v1/cartridges/cp4d').then(res =>{   
-            setLoadingCPD(false)  
-            if (res.data.cp4d[0].cartridges) {
-              setCPDCartridgesData(res.data.cp4d[0].cartridges) 
-            }             
-            if (res.data.cp4d[0].accept_licenses) {
-              setCp4dLicense(res.data.cp4d[0].accept_licenses)
-            }
-            if (res.data.cp4d[0].cp4d_version) {
-              setCp4dVersion(res.data.cp4d[0].cp4d_version)
-            }                    
+      const getConfiguration = async() => {
+        setLoadingConfiguration(true)  
+        await axios.get('/api/v1/configuration').then(res =>{   
+          setLoadingConfiguration(false)   
+          setLoadConfigurationErr(false)     
+          setConfiguration(res.data)
+
+          console.log(res)
+         
+          if (res.data.code === 0) {
+            setLocked(true)
+            
+            let cloud=res.data.data.global_config.cloud_platform
+            setCloudPlatform(cloud)
+            setEnvId(res.data.data.global_config.env_id)
+          }
         }, err => {
-            setLoadingCPD(false)
-            setLoadCPDErr(true)          
-            console.log(err)
-        });                
-      }
-      
-      const fetchCloudPakIntegration =async () => {        
-        await axios.get('/api/v1/cartridges/cp4i').then(res =>{  
-            setLoadingCPI(false)   
-            if (res.data.cp4i[0].instances) {  
-              setCPICartridgesData(res.data.cp4i[0].instances) 
-            }     
-            if (res.data.cp4i[0].accept_licenses) {
-              setCp4iLicense(res.data.cp4i[0].accept_licenses)
-            }
-            if (res.data.cp4i[0].cp4i_version) {
-              setCp4iVersion(res.data.cp4i[0].cp4i_version)
-            }   
-            // updateCPIParentCheckBox(res.data)                        
-        }, err => {
-            setLoadingCPI(false)
-            setLoadCPIErr(true)            
-            console.log(err)
+          setLoadingConfiguration(false) 
+          setLoadConfigurationErr(true)
+          console.log(err)
         });         
-      }  
+      }      
 
-      if (locked) {  
-        if(configuration.data.cp4d[0].cp4d_version) {
-          setCp4dVersion(configuration.data.cp4d[0].cp4d_version)
-        }
-        if(configuration.data.cp4d[0].accept_licenses) {
-          setCp4dLicense(configuration.data.cp4d[0].accept_licenses)
-        }
-        if(configuration.data.cp4d[0].cartridges) {
-          setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
-        } else {
-          setCPDCartridgesData([])
-        }
+      if(loadConfigurationErr) {
+        return
+      }
+      //Load configuration
+      // if (JSON.stringify(configuration) === "{}") {
+        getConfiguration()        
+      // }
 
-        if(configuration.data.cp4i[0].cp4i_version) {
-          setCp4iVersion(configuration.data.cp4i[0].cp4i_version)
-        }
-        if(configuration.data.cp4i[0].accept_licenses) {
-          setCp4iLicense(configuration.data.cp4i[0].accept_licenses)
-        }
-        if(configuration.data.cp4i[0].instances) {
-          setCPICartridgesData(configuration.data.cp4i[0].instances)
-        } else {
-          setCPICartridgesData([])
-        }    
-        setWizardError(false)
+
+      if(configuration.data.cp4d[0].cp4d_version) {
+        setCp4dVersion(configuration.data.cp4d[0].cp4d_version)
+      }
+      if(configuration.data.cp4d[0].accept_licenses) {
+        setCp4dLicense(configuration.data.cp4d[0].accept_licenses)
+      }
+      if(configuration.data.cp4d[0].cartridges) {
+        setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
       } else {
-        if (CPDCartridgesData.length === 0) {
-            //CP4D 
-            setLoadingCPD(true)     
-            fetchCloudPakData() 
-        }
-        if (CPICartridgesData.length === 0) {
-            //CP4I
-            setLoadingCPI(true)
-            fetchCloudPakIntegration() 
-        }
-      }  
-      // eslint-disable-next-line
+        setCPDCartridgesData([])
+      }
+
+      if(configuration.data.cp4i[0].cp4i_version) {
+        setCp4iVersion(configuration.data.cp4i[0].cp4i_version)
+      }
+      if(configuration.data.cp4i[0].accept_licenses) {
+        setCp4iLicense(configuration.data.cp4i[0].accept_licenses)
+      }
+      if(configuration.data.cp4i[0].instances) {
+        setCPICartridgesData(configuration.data.cp4i[0].instances)
+      } else {
+        setCPICartridgesData([])
+      }    
+      setWizardError(false)
     },[])
 
     useEffect(() => {
       updateCP4DPlatformCheckBox(CPDCartridgesData)
-      updateCP4IPlatformCheckBox(CPICartridgesData)  
+      updateCP4IPlatformCheckBox(CPICartridgesData)
      
-      if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
+      if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) && entitlementKey !== '' ) {
         setWizardError(false)
       }
       else {
         setWizardError(true)
       }
       // eslint-disable-next-line
-    }, [CPDCartridgesData, CPICartridgesData, entitlementKey, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense, CP4DPlatformCheckBox, CP4IPlatformCheckBox])
+    }, [configuration, CPDCartridgesData, CPICartridgesData, entitlementKey, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense, CP4DPlatformCheckBox, CP4IPlatformCheckBox])
 
     const errorProps = () => ({
       kind: 'error',
@@ -180,8 +172,32 @@ const CloudPak = ({CPDCartridgesData,
       })                
     }
 
+    const EnvIdOnChange = (e) => {
+      switch (e.target.id) {
+        case "131":
+          setEnvId(e.target.value);
+          if (e.target.value === '') {
+            setOCPEnvIdInvalid(true)
+            setWizardError(true)
+            return
+          } else {
+            setOCPEnvIdInvalid(false)
+          }     
+          break;
+        default:
+      }  
+    }
+
     const entitlementKeyOnChange = (e) => {
-      setEntitlementKey(e.target.value);    
+      setEntitlementKey(e.target.value);
+      if (e.target.value === '') {
+        setEntitlementKeyInvalid(true)
+        setWizardError(true)
+        return
+      } else {
+        setEntitlementKeyInvalid(false)
+      }
+      setWizardError(false)
     }
 
     const adminPaswordOnChnage = (e) => {
@@ -210,7 +226,15 @@ const CloudPak = ({CPDCartridgesData,
         setCp4dVersionInvalid(false)
       }
       setWizardError(false)     
-    }  
+    } 
+
+    const errorConfigurationProps = () => ({
+      kind: 'error',
+      lowContrast: true,
+      role: 'error',
+      title: 'Unable to get Configuration from server.',
+      hideCloseButton: false,
+    });    
 
     const [cp4dExpand, setcp4dExpand] = useState(false)
     const [cp4iExpand, setcp4iExpand] = useState(false)
@@ -227,19 +251,27 @@ const CloudPak = ({CPDCartridgesData,
 
     return (
         <>  
-          { (loadingCPD ||loadingCPI) && <Loading /> }  
+          { loadConfigurationErr && <InlineNotification className="cpd-error"
+          {...errorConfigurationProps()}        
+            /> } 
+          { (loadingConfiguration || loadingCPD ||loadingCPI) && <Loading /> }  
           { (loadCPDErr ||loadCPIErr) && <InlineNotification className="cpd-error"
               {...errorProps()}        
             /> 
           }
-          <div className="cloud-pak">   
 
-            <div className='cpd-container'> 
-            {/* Entitlement */}
-              <div>
+          <div className="cloud-pak">
+
+            <div className='cpd-container'>
+            <div>
+              <div className="infra-items">Environment ID</div>
+              <TextInput onChange={EnvIdOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
+            </div>
+
+            <div>
               <div className="cloud-pak-items">Entitlement key</div>
-              <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} />
-            </div> 
+              <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} invalidText="Entitlement key is required." invalid={isEntitlementKeyInvalid} />
+            </div>
 
             <div>
               <div className="cloud-pak-items">Admin Password</div>
@@ -253,7 +285,7 @@ const CloudPak = ({CPDCartridgesData,
               <div>
                 
                 <Accordion>                
-                  <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>                
+                  <AccordionItem title="IBM Software Hub" open={cp4dExpand}>                
                     
                     <div className="cpd-version">
                       <div className="item">Version:</div>

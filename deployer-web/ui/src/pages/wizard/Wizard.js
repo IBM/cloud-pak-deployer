@@ -1,6 +1,5 @@
 import React from 'react';
 import Infrastructure from './Infrastructure/Infrastructure';
-import Storage from './Storage/Storage';
 import Selection from './Selection/Selection';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
@@ -36,25 +35,11 @@ const Wizard = ({setHeaderTitle,
   const [configuration, setConfiguration] = useState({})
   const [locked, setLocked] = useState(false)
   const [envId, setEnvId] = useState("")
-  //---IBM Cloud
-  const [IBMCloudSettings, setIBMCloudSettings] = useState({
-    IBMAPIKey: '',
-    region: '',
-  })
-  //---AWS
-  const [AWSSettings, setAWSSettings] = useState({
-    accessKeyID: '',
-    secretAccessKey:'',
-  })
   //---Existing OpenShift
   const [OCPSettings, setOCPSettings] = useState({
     ocLoginCmd:'',
   })  
   const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
-
-  //Storage
-  const [storage, setStorage] = useState([])
-  const [storagesOptions, setStoragesOptions] = useState([])
 
   //Cloud Pak
   const [CPDCartridgesData, setCPDCartridgesData] = useState([])
@@ -199,14 +184,11 @@ const Wizard = ({setHeaderTitle,
   const createDeployment = async() => {
     setLoadingDeployStatus(true)
     const body = {
-      "env":{
-          "ibmCloudAPIKey":IBMCloudSettings.IBMAPIKey
-      },
+      "env":{},
       "entitlementKey": entitlementKey,
       "cloud": cloudPlatform,
       "envId": envId,
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
-      "region": IBMCloudSettings.region,
       "adminPassword": adminPassword,
     }    
     setCurrentIndex(10)
@@ -373,29 +355,22 @@ const Wizard = ({setHeaderTitle,
           <ProgressStep
             onClick={() => setCurrentIndex(1)}
             current={currentIndex === 1}
-            label={'Infrastructure'}
+            label={'OCP Login'}
             description="Step 2"
           />
 
           <ProgressStep
-            onClick={() => setCurrentIndex(2)}
+            onClick={() => setCurrentIndex(3)}
             current={currentIndex === 2}
-            label={'Storage'}
+            label={'Config'}
             description="Step 3"
           />
 
           <ProgressStep
             onClick={() => setCurrentIndex(3)}
             current={currentIndex === 3}
-            label={'Cloud Pak'}
-            description="Step 4"
-          />
-
-          <ProgressStep
-            onClick={() => setCurrentIndex(4)}
-            current={currentIndex === 4}
             label={'Summary'}
-            description="Step 5"
+            description="Step 4"
           />    
        </ProgressIndicator>  
     )
@@ -592,18 +567,10 @@ const Wizard = ({setHeaderTitle,
         {currentIndex === 1 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
-                                    IBMCloudSettings={IBMCloudSettings}
-                                    setIBMCloudSettings={setIBMCloudSettings}                                      
-                                    AWSSettings={AWSSettings}
-                                    setAWSSettings={setAWSSettings}
                                     OCPSettings={OCPSettings}
                                     setOCPSettings={setOCPSettings}                                    
                                     setWizardError={setWizardError}
                                     ocLoginErr={ocLoginErr}
-                                    configuration={configuration}
-                                    setConfiguration={setConfiguration}
-                                    locked={locked}
-                                    setLocked={setLocked}
                                     isOcLoginCmdInvalid={isOcLoginCmdInvalid}
                                     setOcLoginCmdInvalid={setOcLoginCmdInvalid}
                                     envId={envId}
@@ -625,18 +592,10 @@ const Wizard = ({setHeaderTitle,
                                     setPortable={setPortable}
                               >
                               </Infrastructure> : null} 
-        {currentIndex === 2 ? <Storage 
+                              
+        {currentIndex === 2 ? <CloudPak
                                     cloudPlatform={cloudPlatform} 
-                                    setStorage={setStorage} 
-                                    storage={storage} 
-                                    storagesOptions={storagesOptions} 
-                                    setStoragesOptions={setStoragesOptions}
-                                    setWizardError={setWizardError}
-                                    configuration={configuration}
-                                    locked={locked}
-                              >                                    
-                              </Storage> : null}    
-        {currentIndex === 3 ? <CloudPak
+                                    setCloudPlatform={setCloudPlatform} 
                                     entitlementKey={entitlementKey} 
                                     setEntitlementKey={setEntitlementKey}
                                     CPDCartridgesData={CPDCartridgesData}
@@ -645,7 +604,11 @@ const Wizard = ({setHeaderTitle,
                                     setCPICartridgesData={setCPICartridgesData}                                    
                                     setWizardError={setWizardError}
                                     configuration={configuration}
+                                    setConfiguration={setConfiguration}
                                     locked={locked}
+                                    setLocked={setLocked}
+                                    envId={envId}
+                                    setEnvId={setEnvId}            
                                     cp4dLicense={cp4dLicense}
                                     cp4iLicense={cp4iLicense}
                                     cp4dVersion={cp4dVersion}
@@ -661,12 +624,10 @@ const Wizard = ({setHeaderTitle,
                                     adminPassword={adminPassword}
                                     setAdminPassword={setAdminPassword}
                               >
-                              </CloudPak> : null}    
-        {currentIndex === 4 ? <Summary 
+                              </CloudPak> : null}
+
+        {currentIndex === 3 ? <Summary 
                                     cloudPlatform={cloudPlatform} 
-                                    IBMCloudSettings={IBMCloudSettings}                                                                      
-                                    AWSSettings={AWSSettings}
-                                    storage={storage} 
                                     CPDCartridgesData={CPDCartridgesData}
                                     setCPDCartridgesData={setCPDCartridgesData}
                                     CPICartridgesData={CPICartridgesData}
