@@ -1,6 +1,6 @@
 import axios from "axios";
 import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "carbon-components-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import './Infrastructure.scss'
 
 const Infrastructure = ({cloudPlatform, 
@@ -35,10 +35,20 @@ const Infrastructure = ({cloudPlatform,
     //Existing OCP
     const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
 
-    const [isRegistryHostnameInvalid, setRegistryHostnameInvalid] = useState(false)  
+    const [isRegistryHostnameInvalid, setRegistryHostnameInvalid] = useState(false)
     const [isRegistryNSInvalid, setRegistryNSInvalid] = useState(false)
     const [isRegistryUserInvalid, setRegistryUserInvalid] = useState(false)
-    const [isregistryPasswordInvalid, setregistryPasswordInvalid] = useState(false)   
+    const [isregistryPasswordInvalid, setregistryPasswordInvalid] = useState(false)
+
+    // Ref for oc login command input
+    const ocLoginInputRef = useRef(null)
+
+    // Auto-focus the oc login input when component mounts and conditions are met
+    useEffect(() => {
+      if (selection !== "Configure+Download" && cloudPlatform === 'existing-ocp' && ocLoginInputRef.current) {
+        ocLoginInputRef.current.focus()
+      }
+    }, [selection, cloudPlatform])
 
     useEffect(() => {
       if (selection!== "Configure+Download") {
@@ -200,7 +210,7 @@ const Infrastructure = ({cloudPlatform,
                 </div>
                 <div>
                   <div className="infra-items">oc login command</div>
-                  <TextInput onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
+                  <TextInput ref={ocLoginInputRef} onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
                 </div>
             </> : null}
         </div> }

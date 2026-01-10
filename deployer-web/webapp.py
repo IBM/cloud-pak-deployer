@@ -286,14 +286,17 @@ def check_configuration():
                 if 'cp4d' in temp:
                     result['data']['cp4d']=temp['cp4d']
                     del temp['cp4d']
+                    result['metadata']['selectedCloudPak'] = 'software-hub' 
                 elif 'cp4i' in temp:
                     result['data']['cp4i']=temp['cp4i']
                     del temp['cp4i']
+                    result['metadata']['selectedCloudPak'] = 'cp4i' 
                 else:
                     app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
                     result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
                     app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
                     result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
+                    result['metadata']['selectedCloudPak'] = 'software-hub' 
 
                 f.close()
 
@@ -319,6 +322,7 @@ def check_configuration():
         result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
         app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
         result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
+        result['metadata']['selectedCloudPak'] = 'software-hub' 
         result['code'] = 0
         result['message'] = "Successfully created new configuration."
         app.logger.info('Result: {}'.format(result))
@@ -326,6 +330,43 @@ def check_configuration():
     if 'env_id' not in result['data']['global_config']:
         result['data']['global_config']['env_id']='demo'
         app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
+
+    return result
+
+@app.route('/api/v1/configuration',methods=["PUT"])
+def updateConfiguration():
+
+    # app.logger.info("Received updateConfiguration: {}".format(request.get_data()))
+
+    body = json.loads(request.get_data())
+
+    full_configuration=body['configuration']
+    app.logger.info("Full configuration: {}".format(json.dumps(full_configuration, indent=4)))
+    config_file_path=full_configuration['metadata']['config_file_path']
+
+    app.logger.info("File to be updated: {}".format(config_file_path))
+
+    global_config_yaml = yaml.safe_dump({'global_config': full_configuration['data']['global_config']})
+    all_in_one = '---\n'+global_config_yaml
+
+    openshift_yaml = yaml.safe_dump({'openshift': full_configuration['data']['openshift']})
+    all_in_one = all_in_one + '\n\n' + openshift_yaml
+
+    if 'cp4d' in full_configuration['data'] and full_configuration['metadata']['selectedCloudPak'] == 'software-hub':
+        cp4d_yaml = yaml.safe_dump({'cp4d': full_configuration['data']['cp4d']})
+        all_in_one = all_in_one + '\n\n' + cp4d_yaml
+    if 'cp4i' in full_configuration['data'] and full_configuration['metadata']['selectedCloudPak'] == 'cp4i':
+        cp4i_yaml=yaml.safe_dump({'cp4i': full_configuration['data']['cp4i']})
+        all_in_one = all_in_one + '\n\n' + cp4i_yaml
+        
+    with open(generated_config_yaml_path, 'w', encoding='UTF-8') as f1:
+        f1.write(all_in_one)
+        f1.close()
+
+    with open(generated_config_yaml_path, "r", encoding='UTF-8') as f1:
+        result={}
+        result["config"]=f1.read()
+        f1.close()
 
     return result
 
@@ -462,7 +503,7 @@ def updateConfig():
 
     body = json.loads(request.get_data())
 
-    app.logger.info("Configuration received by updateConfig {}".format(body))
+    app.logger.info("Configuration received by updateConfig {}".format(json.dumps(body, indent=4)))
 
     cp4d_cartridges=body['cp4d']
     cp4i_instances=body['cp4i']
@@ -475,11 +516,12 @@ def updateConfig():
 
     app.logger.info("File to be updated: {}".format(generated_config_yaml_path))
 
-    with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f1:
+    with open(generated_config_yaml_path, 'a+', encoding='UTF-8') as f1:
         temp: dict[Any, Any]={}
         cp4d_config={}
         cp4i_config={}
         ocp_config={}
+        f1.seek(0)
         content = f1.read()
         f1.close()
         docs=yaml.safe_load_all(content)
