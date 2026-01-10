@@ -24,10 +24,6 @@ const CloudPak = ({
                   setCp4iLicense,
                   setCp4dVersion,
                   setCp4iVersion,
-                  CP4DPlatformCheckBox,
-                  CP4IPlatformCheckBox,
-                  setCP4DPlatformCheckBox,
-                  setCP4IPlatformCheckBox,
                   adminPassword,
                   setAdminPassword,
                   envId,
@@ -51,15 +47,16 @@ const CloudPak = ({
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
     const [isEntitlementKeyInvalid, setEntitlementKeyInvalid] = useState(false)
 
+    // Runs only after initial rendering
     useEffect(() => {
       const getConfiguration = async () => {
         setLoadingConfiguration(true)
         await axios.get('/api/v1/configuration').then(res => {
           setLoadingConfiguration(false)
           setLoadConfigurationErr(false)
+          
           setConfiguration(res.data)
-
-          console.log('res', res)
+          console.log(res.data)
 
           if (res.data.code === 0) {
             setLocked(true)
@@ -68,14 +65,12 @@ const CloudPak = ({
             setCloudPlatform(cloud)
             setEnvId(res.data.data.global_config.env_id)
             setExistingConfigFile(res.data.metadata.config_file_exists)
+
             if (res.data.data.cp4d) {
               if (res.data.data.cp4d[0]) {
                 setCp4dVersion(res.data.data.cp4d[0].cp4d_version)
                 setCp4dLicense(res.data.data.cp4d[0].accept_licenses)
                 setCPDCartridgesData(res.data.data.cp4d[0].cartridges)
-                if (existingConfigFile) {
-                  setSelectedCloudPak('software-hub')
-                }
               }
             }
             if (res.data.data.cp4i) {
@@ -83,9 +78,6 @@ const CloudPak = ({
                 setCp4iVersion(res.data.data.cp4i[0].cp4i_version)
                 setCp4iLicense(res.data.data.cp4i[0].accept_licenses)
                 setCPICartridgesData(res.data.data.cp4i[0].instances)
-                if (existingConfigFile) {
-                  setSelectedCloudPak('cp4i')
-                }
               }
             }
 
@@ -106,18 +98,49 @@ const CloudPak = ({
       }
     }, [])
 
+    // Runs after any of the dependencies change (array of dependencies)
     useEffect(() => {
-      updateCP4DPlatformCheckBox(CPDCartridgesData)
-      updateCP4IPlatformCheckBox(CPICartridgesData)
-     
+      
+      if (configuration && configuration.metadata) {
+        configuration.metadata.entitlementKey = entitlementKey
+        setConfiguration(configuration)
+      }
+
+      if (configuration && configuration.data && configuration.data.global_config) {
+        configuration.data.global_config.universal_password = adminPassword
+        setConfiguration(configuration)
+      }
+
+      if (configuration && configuration.metadata) {
+        configuration.metadata.selectedCloudPak = selectedCloudPak
+        setConfiguration(configuration)
+      }
+
+      if (configuration && configuration.data && 'cp4d' in configuration.data) {
+        configuration.data.cp4d[0].accept_licenses=cp4dLicense
+        setConfiguration(configuration)
+      }
+
+      if (configuration && configuration.data && 'cp4i' in configuration.data) {
+        configuration.data.cp4i[0].accept_licenses=cp4iLicense
+        setConfiguration(configuration)
+      }
+      
       if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) && entitlementKey !== '' ) {
         setWizardError(false)
       }
       else {
         setWizardError(true)
       }
+
+      // TEMP
+      console.log('CPDCartridgesData', CPDCartridgesData)
+      console.log('entitlementKey', entitlementKey)
+      console.log('adminPassword', adminPassword)
+      console.log('selectedCloudPak', selectedCloudPak)
+
       // eslint-disable-next-line
-    }, [configuration, CPDCartridgesData, CPICartridgesData, entitlementKey, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense, CP4DPlatformCheckBox, CP4IPlatformCheckBox])
+    }, [configuration, CPDCartridgesData, CPICartridgesData, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
 
     const errorProps = () => ({
       kind: 'error',
@@ -127,20 +150,6 @@ const CloudPak = ({
       hideCloseButton: false,
     });      
     
-    const updateCP4DPlatformCheckBox = (data) => {
-      let selectedItem = data.filter(item => item.state === "installed")  
-      if (selectedItem.length > 0) {
-        setCP4DPlatformCheckBox(true)
-      }
-    }
-
-    const updateCP4IPlatformCheckBox = (data) => {
-      let selectedItem = data.filter(item => item.state === "installed")  
-      if (selectedItem.length > 0) {
-        setCP4IPlatformCheckBox(true)
-      }
-    }
-
     const changeCPDChildCheckBox = (e) => {
       setCPDCartridgesData((data)=>{
         const newCPDCartridgesData = data.map((item)=>{
@@ -199,7 +208,7 @@ const CloudPak = ({
       setWizardError(false)
     }
 
-    const adminPaswordOnChnage = (e) => {
+    const adminPaswordOnChange = (e) => {
       setAdminPassword(e.target.value)
     }
 
@@ -235,21 +244,15 @@ const CloudPak = ({
       hideCloseButton: false,
     });    
 
-    const [cp4dExpand, setcp4dExpand] = useState(false)
-    const [cp4iExpand, setcp4iExpand] = useState(false)
+    const [cp4dExpand, setcp4dExpand] = useState(true)
+    const [cp4iExpand, setcp4iExpand] = useState(true)
 
     useEffect(() => {
+      setSelectedCloudPak('software-hub')
       if (locked) {
-        let cp4dItem = configuration.data.cp4d[0].cartridges.filter(item => item.state === "installed")
-        setcp4dExpand( cp4dItem.length > 0 )
-        let cp4IItem = configuration.data.cp4i[0].instances.filter(item => item.state === "installed")
-        setcp4iExpand( cp4IItem.length > 0 )
-        
-        // Set selected radio button based on what's installed
-        if (cp4dItem.length > 0) {
-          setSelectedCloudPak('software-hub')
-        } else if (cp4IItem.length > 0) {
-          setSelectedCloudPak('cp4i')
+        if (configuration && configuration.data) {
+          if ('cp4d' in configuration.data) { setSelectedCloudPak('software-hub') }
+          else { setSelectedCloudPak('cp4i') }
         }
       }
       // eslint-disable-next-line
@@ -285,7 +288,7 @@ const CloudPak = ({
 
             <div>
               <div className="cloud-pak-items">Admin Password</div>
-              <PasswordInput onChange={adminPaswordOnChnage} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
+              <PasswordInput onChange={adminPaswordOnChange} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
             </div> 
 
             {/* CP4D */}

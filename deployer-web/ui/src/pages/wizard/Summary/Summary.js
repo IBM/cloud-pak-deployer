@@ -7,6 +7,8 @@ import yaml from 'js-yaml';
 const Summary = ({cloudPlatform, 
                   CPDCartridgesData, 
                   CPICartridgesData, 
+                  configuration,
+                  setConfiguration,
                   locked,
                   envId,
                   cp4dLicense,
@@ -55,18 +57,22 @@ const Summary = ({cloudPlatform,
         });            
     }
     
-    const updateSummaryData = async () => {  
+    const updateSummaryData = async () => {
         let body = {
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,   
-        }  
-        await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            // "cp4d": CPDCartridgesData,
+            // "cp4i": CPICartridgesData,
+            // "cp4dLicense":cp4dLicense,
+            // "cp4iLicense":cp4iLicense,
+            // "cp4dVersion":cp4dVersion,
+            // "cp4iVersion":cp4iVersion,
+            // "CP4DPlatform":CP4DPlatformCheckBox,
+            // "CP4IPlatform":CP4IPlatformCheckBox,
+            "configuration":configuration
+        }
+
+        console.log('body: ', body)
+
+        await axios.put('/api/v1/configuration', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
             setSummaryLoading(false)        
             setSummaryInfo(res.data.config)
             setTempSummaryInfo(res.data.config)

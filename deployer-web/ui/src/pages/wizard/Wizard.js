@@ -360,7 +360,7 @@ const Wizard = ({setHeaderTitle,
           />
 
           <ProgressStep
-            onClick={() => setCurrentIndex(3)}
+            onClick={() => setCurrentIndex(2)}
             current={currentIndex === 2}
             label={'Config'}
             description="Step 3"
@@ -524,11 +524,11 @@ const Wizard = ({setHeaderTitle,
           { isDeployStart ? null: 
           <div>
             <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
-            {currentIndex === 4 ?
-              <ActionBySelect />
-              :
-              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
-            }            
+                {currentIndex === 3 ?
+                  <ActionBySelect />
+                  :
+                  <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
+                }            
           </div>
           }          
         </div> 
@@ -617,10 +617,6 @@ const Wizard = ({setHeaderTitle,
                                     setCp4iLicense={setCp4iLicense}
                                     setCp4dVersion={setCp4dVersion}
                                     setCp4iVersion={setCp4iVersion}
-                                    CP4DPlatformCheckBox={CP4DPlatformCheckBox}
-                                    CP4IPlatformCheckBox={CP4IPlatformCheckBox}
-                                    setCP4DPlatformCheckBox={setCP4DPlatformCheckBox}
-                                    setCP4IPlatformCheckBox={setCP4IPlatformCheckBox}
                                     adminPassword={adminPassword}
                                     setAdminPassword={setAdminPassword}
                               >
