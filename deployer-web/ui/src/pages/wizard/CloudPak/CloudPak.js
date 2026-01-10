@@ -1,4 +1,4 @@
-import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput} from 'carbon-components-react';
+import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,RadioButton,RadioButtonGroup} from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
@@ -35,6 +35,9 @@ const CloudPak = ({
                 }) => {
 
     
+    const [selectedCloudPak, setSelectedCloudPak] = useState('software-hub')
+    const [existingConfigFile, setExistingConfigFile] = useState(false)
+    
     const [loadingConfiguration, setLoadingConfiguration] = useState(false)
     const [loadConfigurationErr, setLoadConfigurationErr] = useState(false)    
     
@@ -56,7 +59,7 @@ const CloudPak = ({
           setLoadConfigurationErr(false)
           setConfiguration(res.data)
 
-          console.log('res.data', res.data)
+          console.log('res', res)
 
           if (res.data.code === 0) {
             setLocked(true)
@@ -64,15 +67,26 @@ const CloudPak = ({
             let cloud = res.data.data.global_config.cloud_platform
             setCloudPlatform(cloud)
             setEnvId(res.data.data.global_config.env_id)
-            if (res.data.data.cp4d[0]) {
-              setCp4dVersion(res.data.data.cp4d[0].cp4d_version)
-              setCp4dLicense(res.data.data.cp4d[0].accept_licenses)
-              setCPDCartridgesData(res.data.data.cp4d[0].cartridges)
+            setExistingConfigFile(res.data.metadata.config_file_exists)
+            if (res.data.data.cp4d) {
+              if (res.data.data.cp4d[0]) {
+                setCp4dVersion(res.data.data.cp4d[0].cp4d_version)
+                setCp4dLicense(res.data.data.cp4d[0].accept_licenses)
+                setCPDCartridgesData(res.data.data.cp4d[0].cartridges)
+                if (existingConfigFile) {
+                  setSelectedCloudPak('software-hub')
+                }
+              }
             }
-            if (res.data.data.cp4i[0]) {
-              setCp4iVersion(res.data.data.cp4i[0].cp4i_version)
-              setCp4iLicense(res.data.data.cp4i[0].accept_licenses)
-              setCPICartridgesData(res.data.data.cp4i[0].instances)
+            if (res.data.data.cp4i) {
+              if (res.data.data.cp4i[0]) {
+                setCp4iVersion(res.data.data.cp4i[0].cp4i_version)
+                setCp4iLicense(res.data.data.cp4i[0].accept_licenses)
+                setCPICartridgesData(res.data.data.cp4i[0].instances)
+                if (existingConfigFile) {
+                  setSelectedCloudPak('cp4i')
+                }
+              }
             }
 
           }
@@ -224,15 +238,26 @@ const CloudPak = ({
     const [cp4dExpand, setcp4dExpand] = useState(false)
     const [cp4iExpand, setcp4iExpand] = useState(false)
 
-    useEffect(() => {  
+    useEffect(() => {
       if (locked) {
-        let cp4dItem = configuration.data.cp4d[0].cartridges.filter(item => item.state === "installed") 
+        let cp4dItem = configuration.data.cp4d[0].cartridges.filter(item => item.state === "installed")
         setcp4dExpand( cp4dItem.length > 0 )
-        let cp4IItem = configuration.data.cp4i[0].instances.filter(item => item.state === "installed") 
+        let cp4IItem = configuration.data.cp4i[0].instances.filter(item => item.state === "installed")
         setcp4iExpand( cp4IItem.length > 0 )
-      } 
+        
+        // Set selected radio button based on what's installed
+        if (cp4dItem.length > 0) {
+          setSelectedCloudPak('software-hub')
+        } else if (cp4IItem.length > 0) {
+          setSelectedCloudPak('cp4i')
+        }
+      }
       // eslint-disable-next-line
     }, [])
+
+    const handleCloudPakSelection = (value) => {
+      setSelectedCloudPak(value)
+    }
 
     return (
         <>  
@@ -266,11 +291,35 @@ const CloudPak = ({
             {/* CP4D */}
             <div>
               <div className="cloud-pak-items">IBM Cloud Pak</div>
+              
+              {/* Radio buttons for Cloud Pak selection */}
+              <div className="cloud-pak-radio-group">
+                <RadioButtonGroup
+                  legendText="Select Cloud Pak"
+                  name="cloud-pak-selection"
+                  valueSelected={selectedCloudPak}
+                  onChange={handleCloudPakSelection}
+                  disabled={existingConfigFile}
+                >
+                  <RadioButton
+                    labelText="Software Hub"
+                    value="software-hub"
+                    id="radio-software-hub"
+                  />
+                  <RadioButton
+                    labelText="Cloud Pak for Integration"
+                    value="cp4i"
+                    id="radio-cp4i"
+                  />
+                </RadioButtonGroup>
+              </div>
+
               {/* CP4D */}
+              {selectedCloudPak === 'software-hub' && (
               <div>
                 
-                <Accordion>                
-                  <AccordionItem title="IBM Software Hub" open={cp4dExpand}>                
+                <Accordion>
+                  <AccordionItem title="IBM Software Hub" open={cp4dExpand}>
                     
                     <div className="cpd-version">
                       <div className="item">Version:</div>
@@ -286,7 +335,6 @@ const CloudPak = ({
                       <div className="item">Cartridges:</div>
                     </div>
 
-                    <Checkbox onClick={()=>(setCP4DPlatformCheckBox((CP4DPlatformCheckBox)=>(!CP4DPlatformCheckBox)))} labelText="IBM Cloud Pak for Data Platform" id="cp4d-platform" key="cp4d-platform" checked={CP4DPlatformCheckBox} />
                     { CPDCartridgesData.map((item)=>{
                       if (item.state) {
                         return (
@@ -297,10 +345,12 @@ const CloudPak = ({
                     }) } 
                   
                   </AccordionItem>
-                </Accordion> 
+                </Accordion>
               </div>
+              )}
 
-            {/* CP4I */}          
+            {/* CP4I */}
+            {selectedCloudPak === 'cp4i' && (
             <div>
                 <Accordion>                
                   <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
@@ -318,8 +368,6 @@ const CloudPak = ({
                       <div className="item">Cartridges:</div>
                     </div>
 
-                    <Checkbox onClick={()=>(setCP4IPlatformCheckBox((CP4IPlatformCheckBox)=>(!CP4IPlatformCheckBox)))} labelText="IBM Cloud Pak for Integration Platform" id="cp4i-platform" key="cp4i-platform" checked={CP4IPlatformCheckBox} />
-
                     { CPICartridgesData.map((item)=>{
                       if (item.state) {
                         return (
@@ -330,8 +378,9 @@ const CloudPak = ({
                     }) } 
                     
                   </AccordionItem>
-                </Accordion> 
+                </Accordion>
               </div>
+            )}
 
             </div>
             </div> 
