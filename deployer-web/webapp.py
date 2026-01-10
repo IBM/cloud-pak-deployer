@@ -1,3 +1,4 @@
+from typing import Any
 from flask import Flask, send_from_directory,request,make_response,send_file
 import sys, psutil, subprocess, os
 import json, yaml, re
@@ -144,7 +145,6 @@ def downloadLog ():
 
         return send_file(log_zip, as_attachment=True)
 
-
 @app.route('/api/v1/oc-login',methods=["POST"])
 def oc_login():
     result = {
@@ -235,13 +235,17 @@ def check_configuration():
         "code":-1,
         "message":"",
         "data":{},
+        "metadata":{},
     }
 
     global generated_config_yaml_path
 
+    existing_config_file=False
     found_config_files=glob.glob(config_dir+'/config/*.yaml')
     if len(found_config_files) == 0:
         generated_config_yaml_path = config_dir+'/config/cpd-config.yaml'
+        existing_config_file=False
+        
     elif len(found_config_files) > 1:
         errmsg="More than 1 yaml file found in directory {}. Wizard can be used for 0 or 1 config files.".format(config_dir+'/config')
         app.logger.error(errmsg)
@@ -250,62 +254,79 @@ def check_configuration():
         return result
     else:
         generated_config_yaml_path = found_config_files[0]
+        existing_config_file=True
 
-    app.logger.info('Config file that will be updated is {}'.format(generated_config_yaml_path))
-    try:
-        with open(generated_config_yaml_path, "r", encoding='UTF-8') as f:
-            temp={}
-            content = f.read()
-            docs=yaml.safe_load_all(content)
-            for doc in docs:
-                temp={**temp, **doc}
+    result['metadata']['config_file_exists'] = existing_config_file 
 
-            if 'openshift' in temp:
-                result['data']['openshift']=temp['openshift']
-                del temp['openshift']
-            else:
-                app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
-                result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
+    app.logger.info('Config file that will be used is {}'.format(generated_config_yaml_path))
+    result['metadata']['config_file_path'] = generated_config_yaml_path
+    if (existing_config_file):
+        try:
+            with open(generated_config_yaml_path, "r", encoding='UTF-8') as f:
+                temp={}
+                content = f.read()
+                docs=yaml.safe_load_all(content)
+                for doc in docs:
+                    temp={**temp, **doc}
 
-            if 'global_config' in temp:
-                result['data']['global_config']=temp['global_config']
-                del temp['global_config']
-            else:
-                app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
-                result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
+                if 'global_config' in temp:
+                    result['data']['global_config']=temp['global_config']
+                    del temp['global_config']
+                else:
+                    app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                    result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
 
-            if 'cp4d' in temp:
-                result['data']['cp4d']=temp['cp4d']
-                del temp['cp4d']
-            else:
-                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
-                result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
+                if 'openshift' in temp:
+                    result['data']['openshift']=temp['openshift']
+                    del temp['openshift']
+                else:
+                    app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                    result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
 
-            if 'cp4i' in temp:
-                result['data']['cp4i']=temp['cp4i']
-                del temp['cp4i']
-            else:
-                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
-                result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
+                if 'cp4d' in temp:
+                    result['data']['cp4d']=temp['cp4d']
+                    del temp['cp4d']
+                elif 'cp4i' in temp:
+                    result['data']['cp4i']=temp['cp4i']
+                    del temp['cp4i']
+                else:
+                    app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+                    result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
+                    app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+                    result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
 
-            if 'env_id' not in result['data']['global_config']:
-                result['data']['global_config']['env_id']='demo'
-                app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
+                f.close()
 
-            result['code'] = 0
-            result['message'] = "Successfully retrieved configuration."
-            f.close()
-            app.logger.info('Result of reading file: {}'.format(result))
-    except FileNotFoundError:
-        result['code'] = 404
-        result['message'] = "Configuration File is not found."
-        app.logger.warning('Error while reading file {}'.format(generated_config_yaml_path))
-    except PermissionError:
-        result['code'] = 401
-        result['message'] = "Permission Error."
-    except IOError:
-        result['code'] = 101
-        result['message'] = "IO Error."
+                result['code'] = 0
+                result['message'] = "Successfully retrieved configuration."
+                app.logger.info('Result of reading file: {}'.format(result))
+        except FileNotFoundError:
+            result['code'] = 404
+            result['message'] = "Configuration File is not found."
+            app.logger.warning('Error while reading file {}'.format(generated_config_yaml_path))
+        except PermissionError:
+            result['code'] = 401
+            result['message'] = "Permission Error."
+        except IOError:
+            result['code'] = 101
+            result['message'] = "IO Error."
+    else:
+        app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+        result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
+        app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+        result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
+        app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+        result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
+        app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+        result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
+        result['code'] = 0
+        result['message'] = "Successfully created new configuration."
+        app.logger.info('Result: {}'.format(result))
+
+    if 'env_id' not in result['data']['global_config']:
+        result['data']['global_config']['env_id']='demo'
+        app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
+
     return result
 
 # @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
@@ -440,8 +461,6 @@ def updateConfig():
     app.logger.info("Received updateConfig: {}".format(request.get_data()))
 
     body = json.loads(request.get_data())
-    if 'cp4d' not in body or 'cp4i' not in body or 'cp4dVersion' not in body or 'cp4iVersion' not in body or 'cp4dLicense' not in body or 'cp4iLicense' not in body or 'CP4DPlatform' not in body or 'CP4IPlatform' not in body:
-       return make_response('Bad Request', 400)
 
     app.logger.info("Configuration received by updateConfig {}".format(body))
 
@@ -454,8 +473,10 @@ def updateConfig():
     CP4DPlatform=body['CP4DPlatform']
     CP4IPlatform=body['CP4IPlatform']
 
+    app.logger.info("File to be updated: {}".format(generated_config_yaml_path))
+
     with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f1:
-        temp={}
+        temp: dict[Any, Any]={}
         cp4d_config={}
         cp4i_config={}
         ocp_config={}
