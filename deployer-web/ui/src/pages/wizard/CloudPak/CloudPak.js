@@ -140,7 +140,7 @@ const CloudPak = ({
       console.log('selectedCloudPak', selectedCloudPak)
 
       // eslint-disable-next-line
-    }, [configuration, CPDCartridgesData, CPICartridgesData, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
+    }, [CPDCartridgesData, CPICartridgesData, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
 
     const errorProps = () => ({
       kind: 'error',

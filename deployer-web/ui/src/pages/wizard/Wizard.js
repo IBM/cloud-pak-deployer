@@ -628,6 +628,7 @@ const Wizard = ({setHeaderTitle,
                                     setCPDCartridgesData={setCPDCartridgesData}
                                     CPICartridgesData={CPICartridgesData}
                                     setCPICartridgesData={setCPICartridgesData}
+                                    setConfiguration={setConfiguration}
                                     configuration={configuration}
                                     locked={locked}
                                     cp4dLicense={cp4dLicense}
