@@ -77,20 +77,7 @@ def mirror():
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
     body = json.loads(request.get_data())
-    with open(generated_config_yaml_path, 'r', encoding='UTF-8') as f:
-        content = f.read()
-        docs=yaml.load_all(content, Loader=yaml.FullLoader)
-        f.close()
-        for doc in docs:
-            if 'global_config' in doc.keys():
-                global_env_id=doc['global_config']['env_id']
-            if 'openshift' in doc.keys():
-                openshift_name=doc['openshift'][0]['name'].replace('{{ env_id }}',global_env_id)
-            if 'cp4d' in doc.keys():
-                cp4d_project=doc['cp4d'][0]['project'].replace('{{ env_id }}',global_env_id)
     deployer_env = os.environ.copy()
-    if body['cloud']=='ibm-cloud':
-      deployer_env['IBM_CLOUD_API_KEY']=body['env']['ibmCloudAPIKey']
     deployer_env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
     deployer_env['CONFIG_DIR']=config_dir
     deployer_env['STATUS_DIR']=status_dir
@@ -98,16 +85,13 @@ def deploy():
     if 'adminPassword' in body and body['adminPassword']!='':
         cp4d_admin_password=body['adminPassword']
     
-    app.logger.info('openshift name: {}'.format(openshift_name))
     app.logger.info('oc login command: {}'.format(body['oc_login_command']))
 
     # Assemble the deploy command
-    deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
+    deploy_command=['cp-deploy.sh']
     deploy_command+=['env','apply']
     deploy_command+=['-e=env_id={}'.format(body['envId'])]
-    deploy_command+=['-vs={}-oc-login={}'.format(openshift_name, body['oc_login_command'])]
-    if cp4d_admin_password!='':
-        deploy_command+=['-vs=cp4d_admin_{}_{}={}'.format(cp4d_project.replace('-','_'), openshift_name.replace('-','_'), cp4d_admin_password)]
+    deploy_command+=['-vs=oc-login={}'.format(body['oc_login_command'])]
     deploy_command+=['-v']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
@@ -423,155 +407,6 @@ def loadYamlFile(path):
         app.logger.error('Error while reading file {}'.format(path))
         raise Exception('Error while reading file {}'.format(path))
     return result
-
-def mergeSaveConfig(ocp_config, cp4d_config, cp4i_config):
-    global generated_config_yaml_path
-
-    ocp_yaml=yaml.safe_dump(ocp_config)
-    
-    all_in_one = '---\n'+ocp_yaml
-    if cp4d_config!={}:
-        cp4d_yaml=yaml.safe_dump(cp4d_config)
-        cp4d_yaml = '\n\n'+cp4d_yaml
-        all_in_one = all_in_one + cp4d_yaml
-    if cp4i_config!={}:
-        cp4i_yaml=yaml.safe_dump(cp4i_config)
-        cp4i_yaml = '\n\n'+cp4i_yaml
-        all_in_one = all_in_one + cp4i_yaml
-
-    with open(generated_config_yaml_path, 'w', encoding='UTF-8') as f1:
-        f1.write(all_in_one)
-        f1.close()
-
-    with open(generated_config_yaml_path, "r", encoding='UTF-8') as f1:
-        result={}
-        result["config"]=f1.read()
-        f1.close()
-    return json.dumps(result) 
-
-@app.route('/api/v1/createConfig',methods=["POST"])
-def createConfig():
-    body = json.loads(request.get_data())
-    if 'envId' not in body or 'cloud' not in body or 'cp4d' not in body or 'cp4i' not in body or 'storages' not in body or 'cp4dVersion' not in body or 'cp4iVersion' not in body or 'cp4dLicense' not in body or 'cp4iLicense' not in body or 'CP4DPlatform' not in body or 'CP4IPlatform' not in body:
-       return make_response('Bad Request', 400)
-
-    env_id=body['envId']
-    cloud=body['cloud']
-    region=body['region']
-    cp4d=body['cp4d']
-    cp4i=body['cp4i']
-    storages=body['storages']
-    cp4dLicense=body['cp4dLicense']
-    cp4iLicense=body['cp4iLicense']
-    cp4dVersion=body['cp4dVersion']
-    cp4iVersion=body['cp4iVersion']
-    CP4DPlatform=body['CP4DPlatform']
-    CP4IPlatform=body['CP4IPlatform']
-    
-    # Load the base yaml files
-    ocp_config=loadYamlFile(ocp_base_config_path+'/{}.yaml'.format(cloud))
-    cp4d_config=loadYamlFile(cp_base_config_path+'/cp4d.yaml')
-    cp4i_config=loadYamlFile(cp_base_config_path+'/cp4i.yaml')
-
-    # Update for EnvId
-    ocp_config['global_config']['env_id']=env_id
-
-    # Update for cp4d
-    cp4d_selected=CP4DPlatform
-    if cp4d_selected:
-        cp4d_config['cp4d'][0]['cartridges']=cp4d
-        cp4d_config['cp4d'][0]['accept_licenses']=cp4dLicense
-        cp4d_config['cp4d'][0]['cp4d_version']=cp4dVersion
-    else:
-        cp4d_config={}
-    # Update for cp4i
-    cp4i_selected=CP4IPlatform
-    if cp4i_selected:
-        cp4i_config['cp4i'][0]['instances']=cp4i
-        cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
-        cp4i_config['cp4i'][0]['cp4i_version']=cp4iVersion
-    else:
-        cp4i_config={}
-
-    return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
-
-@app.route('/api/v1/updateConfig',methods=["PUT"])
-def updateConfig():
-    global generated_config_yaml_path
-
-    app.logger.info("Received updateConfig: {}".format(request.get_data()))
-
-    body = json.loads(request.get_data())
-
-    app.logger.info("Configuration received by updateConfig {}".format(json.dumps(body, indent=4)))
-
-    cp4d_cartridges=body['cp4d']
-    cp4i_instances=body['cp4i']
-    cp4dLicense=body['cp4dLicense']
-    cp4iLicense=body['cp4iLicense']
-    cp4dVersion=body['cp4dVersion']
-    cp4iVersion=body['cp4iVersion']
-    CP4DPlatform=body['CP4DPlatform']
-    CP4IPlatform=body['CP4IPlatform']
-
-    app.logger.info("File to be updated: {}".format(generated_config_yaml_path))
-
-    with open(generated_config_yaml_path, 'a+', encoding='UTF-8') as f1:
-        temp: dict[Any, Any]={}
-        cp4d_config={}
-        cp4i_config={}
-        ocp_config={}
-        f1.seek(0)
-        content = f1.read()
-        f1.close()
-        docs=yaml.safe_load_all(content)
-        for doc in docs:
-            temp={**temp, **doc}
-
-        # app.logger.info("temp: {}".format(temp))
-        cp4d_selected=CP4DPlatform
-        if cp4d_selected:
-            cp4d_config['cp4d']=temp['cp4d']
-            cp4d_config['cp4d'][0]['cartridges']=cp4d_cartridges
-            cp4d_config['cp4d'][0]['accept_licenses']=cp4dLicense
-            cp4d_config['cp4d'][0]['cp4d_version']=cp4dVersion
-        del temp['cp4d']
-
-        cp4i_selected=CP4IPlatform
-        if cp4i_selected:
-            cp4i_config['cp4i']=temp['cp4i']
-            cp4i_config['cp4i'][0]['instances']=cp4i_instances
-            cp4i_config['cp4i'][0]['accept_licenses']=cp4iLicense
-            cp4i_config['cp4i'][0]['cp4i_version']=cp4iVersion
-        del temp['cp4i']
-        
-        ocp_config=temp
-        if 'env_id' not in ocp_config['global_config']:
-            ocp_config['global_config']['env_id']='demo'
-        
-    return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
-
-@app.route('/api/v1/saveConfig',methods=["POST"])
-def saveConfig():
-    body = json.loads(request.get_data())
-    if not body['config']:
-       return make_response('Bad Request', 400)
-
-    config_data=body['config']
-
-    cp4d_config={}
-    cp4i_config={}
-    ocp_config={}
-    
-    if 'cp4d' in config_data:
-        cp4d_config['cp4d']=config_data['cp4d']
-        del config_data['cp4d']
-    if 'cp4i' in config_data:
-        cp4i_config['cp4i']=config_data['cp4i']
-        del config_data['cp4i']
-    ocp_config=config_data
-
-    return mergeSaveConfig(ocp_config, cp4d_config, cp4i_config)
 
 @app.route('/api/v1/environment-variable',methods=["GET"])
 def environmentVariable():
