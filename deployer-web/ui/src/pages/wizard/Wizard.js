@@ -21,6 +21,10 @@ const Wizard = ({setHeaderTitle,
   const [ocLoginErr, setOcLoginErr] = useState(false)
   const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
+  //Environment variables loading
+  const [loadingEnviromentVariables, setLoadingEnviromentVariables] = useState(false)
+  const [loadEnviromentVariablesErr, setloadEnviromentVariablesErr] = useState(false)
+
   //DeployStart hidden wizard
   const [isDeployStart, setDeployStart] = useState(false);
   const [isDeployErr, setDeployErr] = useState(false);
@@ -326,8 +330,50 @@ const Wizard = ({setHeaderTitle,
     });
   }
 
-  useEffect(() => {     
-    if (isDeployStart && !isDeployErr) {   
+  useEffect(() => {
+    const getEnviromentVariables = async() => {
+      setLoadingEnviromentVariables(true)
+      await axios.get('/api/v1/environment-variable').then(res =>{
+        setLoadingEnviromentVariables(false)
+        if (res.data.CPD_WIZARD_MODE === "existing-ocp") {
+          setCpdWizardMode("existing-ocp")
+          setSelection("Configure")
+          setCurrentIndex(1)
+        }else if (res.data.CPD_WIZARD_MODE === "deploy") {
+          setCpdWizardMode("deploy")
+          setSelection("Configure+Deploy")
+          setCurrentIndex(1)
+        } else if (res.data.CPD_WIZARD_MODE === "download") {
+          setCpdWizardMode("download")
+          setSelection("Configure+Download")
+          setCurrentIndex(1)
+        } else if (res.data.CPD_WIZARD_MODE === "configure") {
+          setCpdWizardMode("configure")
+          setSelection("Configure")
+          setCurrentIndex(1)
+        }
+
+        if (res.data.CPD_WIZARD_PAGE_TITLE && res.data.CPD_WIZARD_PAGE_TITLE !== headerTitle) {
+          setHeaderTitle(res.data.CPD_WIZARD_PAGE_TITLE)
+        }
+        if (res.data.STATUS_DIR) {
+          setStatusDir(res.data.STATUS_DIR)
+        }
+        if (res.data.CONFIG_DIR) {
+          setConfigDir(res.data.CONFIG_DIR)
+        }
+      }, err => {
+        setLoadingEnviromentVariables(false)
+        setloadEnviromentVariablesErr(true)
+        console.log(err)
+      });
+    }
+    getEnviromentVariables();
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    if (isDeployStart && !isDeployErr) {
       if (!deployerStatus) {
         clearInterval(scheduledJob)
       }
@@ -512,10 +558,22 @@ const Wizard = ({setHeaderTitle,
     )
   }
 
+  const errorEnviromentVariablesProps = () => ({
+    kind: 'error',
+    lowContrast: true,
+    role: 'error',
+    title: 'Unable to get variables from server.',
+    hideCloseButton: false,
+  });
+
   return (
     <>
      <div className="wizard-container">
       <div className="wizard-container__page">
+        {loadEnviromentVariablesErr && <InlineNotification className="cpd-error"
+          {...errorEnviromentVariablesProps()}
+        />}
+        {loadingEnviromentVariables && <Loading />}
         <div className='wizard-container__page-header'>
           <div className='wizard-container__page-header-title'>         
             <h2>Deploy Wizard</h2>
@@ -553,16 +611,11 @@ const Wizard = ({setHeaderTitle,
           <DeployerProgressIndicator />                   
         } 
         {currentIndex === 0 ? <Selection
-                            setSelection={setSelection} 
+                            setSelection={setSelection}
                             setCpdWizardMode={setCpdWizardMode}
                             selection={selection}
-                            setCurrentIndex={setCurrentIndex}
-                            setConfigDir={setConfigDir}
-                            setStatusDir={setStatusDir}
-                            setHeaderTitle={setHeaderTitle}
-                            headerTitle={headerTitle}
                       >
-                      </Selection> : null} 
+                      </Selection> : null}
       
         {currentIndex === 1 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
