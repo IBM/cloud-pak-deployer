@@ -247,27 +247,29 @@ const Wizard = ({setHeaderTitle,
     let result = {}
         
     try {                   
-        yaml.loadAll(tempSummaryInfo, function (doc) {
-            result = {...doc, ...result}
-        }); 
-        body['config'] = result 
-        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-          setLoadingDeployStatus(false)
-          setCurrentIndex(10)
-          setDeployStart(true)
-          setSaveConfig(true)
 
+        let body = {
+            "configuration":configuration
+        }
+
+        console.log('body: ', body)
+
+        await axios.put('/api/v1/configuration', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            setLoadingDeployStatus(false)
+            setCurrentIndex(10)
+            setDeployStart(true)
+            setSaveConfig(true)
+            
           if (selection==="Configure+Deploy") {
             createDeployment();
           } else if (selection==="Configure+Download") {
             createDownload();
           }
-          
-      }, err => {
-        setLoadingDeployStatus(false)
-        setShowErr(true)
-        console.log(err)          
-      });  
+        }, err => {
+            setLoadingDeployStatus(false) 
+            setShowErr(true)
+            console.log(err)
+        });   
 
     } catch (error) {
         setLoadingDeployStatus(false)

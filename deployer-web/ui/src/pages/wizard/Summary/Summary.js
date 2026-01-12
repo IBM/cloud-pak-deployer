@@ -50,11 +50,20 @@ const Summary = ({
         setSummaryLoading(false)        
     }     
 
-    useEffect(() => {        
-        if (locked) {
-            setSummaryLoading(true) 
-            updateSummaryData()
-        } 
+    useEffect(() => {
+        console.log('useEffect() in Summary.js')
+        console.log('configuration: ', configuration)
+
+        // Convert configuration.data to YAML text if it's an object
+        const configText = yaml.dump(configuration.data);
+        
+        setSummaryInfo(configText)
+        setTempSummaryInfo(configText)
+
+        // if (locked) {
+        //     setSummaryLoading(true)
+        //     updateSummaryData()
+        // }
         // eslint-disable-next-line
     }, []);
 
