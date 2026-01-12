@@ -238,8 +238,30 @@
 
       Based on https://github.com/DecisionsDev/ibm-odm-decision-mcp-server
 
-      Install command:
-      uvx --from git+https://github.com/DecisionsDev/ibm-odm-decision-mcp-server.git ibm-odm-decision-mcp-server
-      --url https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res --username cpmanagerservice --zenapikey {{ zen_api_key }}
+      orchestrate connections add --app-id odm-mcp-server-connection
+
+      orchestrate connections configure --app-id odm-mcp-server-connection --environment draft --type team --kind key_value
+
+      orchestrate connections set-credentials --app-id odm-mcp-server-connection \\
+
+        --environment draft \\
+
+        --entries ODM_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res \\
+
+        --entries ODM_USERNAME=cpmanagerservice \\
+
+        --entries ZENAPIKEY={{ zen_api_key }}
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name odm-mcp-server \\
+
+        --description \"odm-mcp-server\" \\
+
+        --command \"uvx --from git+https://github.com/DecisionsDev/ibm-odm-decision-mcp-server.git ibm-odm-decision-mcp-server\" \\
+
+        --tools \"*\" \\
+
+        --app-id odm-mcp-server-connection
 
       "
