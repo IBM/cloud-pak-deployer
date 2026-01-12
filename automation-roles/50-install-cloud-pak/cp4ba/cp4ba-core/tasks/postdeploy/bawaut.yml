@@ -172,11 +172,28 @@
 
       Based on https://github.com/ibmbpm/ibm-baw-mcp-server
 
-      Paremeters for Key Value connection:
-      API_KEY=ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}
-      ENDPOINT=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas
+      orchestrate connections add --app-id baw-mcp-server-connection
 
-      Install command:
-      uvx --from git+https://github.com/ibmbpm/ibm-baw-mcp-server ibm-baw-mcp-server
+      orchestrate connections configure --app-id baw-mcp-server-connection --environment draft --type team --kind key_value
+
+      orchestrate connections set-credentials --app-id baw-mcp-server-connection \\
+
+        --environment draft \\
+
+        --entries ENDPOINT=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas \\
+
+        --entries API_KEY=ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name baw-mcp-server \\
+
+        --description \"baw-mcp-server\" \\
+
+        --command \"uvx --from git+https://github.com/ibmbpm/ibm-baw-mcp-server ibm-baw-mcp-server\" \\
+
+        --tools \"*\" \\
+
+        --app-id baw-mcp-server-connection
 
       "

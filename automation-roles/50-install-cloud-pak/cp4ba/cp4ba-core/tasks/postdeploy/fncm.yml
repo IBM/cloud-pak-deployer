@@ -171,13 +171,40 @@
 
       Based on https://github.com/ibm-ecm/ibm-content-services-mcp-server
 
-      Paremeters for Key Value connection:
-      USERNAME={{ lc_principal_admin_user }}
-      PASSWORD={{ lc_principal_admin_password }}
-      SERVER_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql
-      OBJECT_STORE=OS1
+      orchestrate connections add --app-id core-cs-mcp-server-connection
 
-      Install command:
-      uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server core-cs-mcp-server
+      orchestrate connections configure --app-id core-cs-mcp-server-connection --environment draft --type team --kind key_value
+
+      orchestrate connections set-credentials --app-id core-cs-mcp-server-connection \\
+
+        --environment draft \\
+
+        --entries SERVER_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql \\
+
+        --entries OBJECT_STORE=CONTENT \\
+
+        --entries ZENIAM_ZEN_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth \\
+
+        --entries ZENIAM_IAM_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken \\
+
+        --entries ZENIAM_IAM_GRANT_TYPE=password \\
+
+        --entries ZENIAM_IAM_SCOPE=openid \\
+
+        --entries ZENIAM_IAM_USER={{ lc_principal_admin_user }} \\
+
+        --entries ZENIAM_IAM_PASSWORD={{ lc_principal_admin_password }}
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name core-cs-mcp-server \\
+
+        --description \"core-cs-mcp-server\" \\
+
+        --command \"uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server core-cs-mcp-server\" \\
+
+        --tools \"*\" \\
+
+        --app-id core-cs-mcp-server-connection
 
       "

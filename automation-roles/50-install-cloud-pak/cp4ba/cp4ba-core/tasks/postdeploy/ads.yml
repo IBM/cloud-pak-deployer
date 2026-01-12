@@ -202,8 +202,34 @@
 
       Based on https://github.com/DecisionsDev/ibm-decision-intelligence-mcp-server/
 
-      Install command:
-      npx -y di-mcp-server --authentication-mode zenapikey --zen-username cpmanagerservice --zen-apikey {{ zen_api_key }}
-      --url https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/v1 --deployment-spaces embedded
+      orchestrate connections add --app-id ads-mcp-server-connection
+
+      orchestrate connections configure --app-id ads-mcp-server-connection --environment draft --type team --kind key_value
+
+      orchestrate connections set-credentials --app-id ads-mcp-server-connection \\
+
+        --environment draft \\
+
+        --entries URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/v1 \\
+
+        --entries AUTHENTICATION_MODE=zenapikey \\
+
+        --entries ZEN_USERNAME=cpmanagerservice \\
+
+        --entries ZEN_APIKEY={{ zen_api_key }} \\
+
+        --entries DEPLOYMENT_SPACES=embedded
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name ads-mcp-server \\
+
+        --description \"ads-mcp-server\" \\
+
+        --command \"npx -y di-mcp-server\" \\
+
+        --tools \"*\" \\
+
+        --app-id ads-mcp-server-connection
 
       "
