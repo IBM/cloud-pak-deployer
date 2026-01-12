@@ -676,16 +676,25 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
                 syomModels: []
                 ootbModels: []
 
+          - name: wca
+            description: watsonx Code Assistant
+            installation_options:
+              similarity_feature:
+                enabled: false
+              rag_enabled:
+                enabled: true
+            state: removed
+
           - name: wca-ansible
-            description: watsxonx Code Assistant for Red Hat Ansible Lightspeed
+            description: watsonx Code Assistant for Red Hat Ansible Lightspeed
             state: removed
 
           - name: wca-z
-            description: watsxonx Code Assistant for Z
+            description: watsonx Code Assistant for Z
             state: removed
 
           - name: wca-z-ce
-            description: watsxonx Code Assistant for Z Code Explanation
+            description: watsonx Code Assistant for Z Code Explanation
             state: removed
 
           - name: wkc
