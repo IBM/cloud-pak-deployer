@@ -1,32 +1,23 @@
 ---
-- block:
+- ansible.builtin.stat:
+    path: "{{ role_path }}/tasks/cp4d-install-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.yml"
+  register: _install_cr_script
 
-  - name: Run pre-processing script
-    include_tasks: cp4d-install-cr-pre-processing.yml
-
-  - ansible.builtin.stat:
-      path: "{{ role_path }}/tasks/cp4d-install-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.yml"
-    register: _install_cr_script
-
-  # Run generic separate install script if specific script does not exist for cartridge
-  - include_tasks: cp4d-install-separate-cr-apply.yml
-    when: 
-    - not _install_cr_script.stat.exists
-    - _p_cp4d_version < '5.3.0'
-
-  - include_tasks: cp4d-install-separate-component.yml
-    when: 
-    - not _install_cr_script.stat.exists
-    - _p_cp4d_version >= '5.3.0'
-
-  # Run specific separate install script if script exists for cartridge
-  - include_tasks: "cp4d-install-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.yml"
-    when: _install_cr_script.stat.exists
-
-  - name: Run post-processing scripts
-    include_tasks: cp4d-install-cr-post-processing.yml
-    when:
-    - (_install_cartridges_result.rc | default(0))==0
-
+# Run generic separate install script if specific script does not exist for cartridge
+- include_tasks: cp4d-install-cartridges-olm-utils.yml
+  vars:
+    _p_apply_cartridges: "[{{ _current_cp4d_cartridge }}]"
   when: 
-  - (_current_cp4d_cartridge.separate_install | default(False) | bool)
+  - not _install_cr_script.stat.exists
+  - _p_cp4d_version < '5.3.0'
+
+- include_tasks: cp4d-install-cartridges-install-components.yml
+  vars:
+    _p_apply_cartridges: "[{{ _current_cp4d_cartridge }}]"
+  when: 
+  - not _install_cr_script.stat.exists
+  - _p_cp4d_version >= '5.3.0'
+
+# Run specific separate install script if script exists for cartridge
+- include_tasks: "cp4d-install-cr-{{ _current_cp4d_cartridge.olm_utils_name }}.yml"
+  when: _install_cr_script.stat.exists
