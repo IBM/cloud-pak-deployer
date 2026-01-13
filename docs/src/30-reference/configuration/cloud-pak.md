@@ -620,6 +620,8 @@ cp4ba:
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
           kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
+          workflow_assistant: true # Will enable Authoring assistant for workflow authoring.
+          workplace_assistant: true # Will enable Workplace assistant.
         gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai
           apiKey: watsonx_ai_api_key
           mlUrl: https://us-south.ml.cloud.ibm.com
@@ -796,6 +798,8 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
 | optional_components.kafka          | Set to `true` to enable kafka service for workflow authoring. | Yes | true, false |
+| optional_components.workflow_assistant          | Set to `true` to enable Authoring assistant for workflow authoring. | Yes | true, false |
+| optional_components.workplace_assistant          | Set to `true` to enable Workplace assistant. | Yes | true, false |
 | gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai | false  | Object |
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
