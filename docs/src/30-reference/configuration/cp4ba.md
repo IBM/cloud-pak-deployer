@@ -176,6 +176,8 @@ For your convenience the following post-deployment setup tasks have been automat
 - BAW - Added stub configurations for watsonx.ai integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-generative-ai
 - BAW - Enabled Process Admin audit log. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-audit-log
 - BAW - Added stub configurations for Git integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=integration-integrating-github
+- BAW - Added stub configuration for Workplace and Authoring assistants.https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=customizing-configuring-authoring-assistant
+- BAW - Added stub configuration for watsonx Orchestrate integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=services-integrating-ai-agents
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.
