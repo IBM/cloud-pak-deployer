@@ -85,6 +85,21 @@
     pod: "{{ cpe_pod_name }}"
     command: java -classpath /opt/ibm/wlp/usr/servers/defaultServer/jaceLib/Jace.jar /tmp/EnableCaseHistory.java
 
+- name: Get Zen Api Key configmap
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ cp4ba_output_namespace }}"
+    name: 000-cpmanagerservice-zen-api-key
+  register: zenapikey_cm
+  retries: 40
+  delay: 15
+
+- name: Set zen api key
+  ansible.builtin.set_fact:
+    zen_api_key: "{{ zenapikey_cm.resources[0].data['cpmanagerservice-zen-api-key'] }}"
+  when: zenapikey_cm.resources | length != 0
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
