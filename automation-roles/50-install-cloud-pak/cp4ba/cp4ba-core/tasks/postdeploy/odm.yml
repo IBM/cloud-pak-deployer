@@ -127,22 +127,20 @@
   vars:
     condition_query: "elements[?name == 'Decision Service Execution'].id"
 
-- name: Get Usage configmap
+- name: Get Zen Api Key configmap
   kubernetes.core.k8s_info:
     api_version: v1
     kind: ConfigMap
     namespace: "{{ cp4ba_output_namespace }}"
-    name: cp4ba-usage
-  register: usage
+    name: 000-cpmanagerservice-zen-api-key
+  register: zenapikey_cm
   retries: 40
   delay: 15
 
-- name: Find zen api key
+- name: Set zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['cpmanagerservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
-      if usage.resources | length != 0 and usage.resources[0].data['cpmanagerservice-zen-api-key'] is defined }}"
-  vars:
-    regexp: 'the UI: (.*)'
+    zen_api_key: "{{ zenapikey_cm.resources[0].data['cpmanagerservice-zen-api-key'] }}"
+  when: zenapikey_cm.resources | length != 0
 
 - name: Update credentials for server
   ansible.builtin.uri:
