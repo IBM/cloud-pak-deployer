@@ -579,6 +579,23 @@
     common_delay: 120
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
+- name: Wait for Deployment Workflow Agent to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 30
+    common_delay: 120
+  with_items:
+    - "{{ cp4ba_cr_meta_name }}-workflow-server-agent"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workflow_assistant or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workplace_assistant
+
 - name: StatefulSets wait_list - document_processing
   ansible.builtin.set_fact:
     wait_list:
@@ -696,18 +713,6 @@
     common_retries: 60
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
-
-# PFS now part of BAS
-# - name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
-#   ansible.builtin.include_role:
-#     name: common
-#     tasks_from: wait-statefulset-available
-#   vars:
-#     common_resource_name: "{{ cp4ba_cr_meta_name }}-pfs"
-#     common_resource_namespace: "{{ cp4ba_project_name }}"
-#     common_retries: 60
-#     common_delay: 120
-#   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
 - name: Deployments wait_list - decision_ads
   ansible.builtin.set_fact:
