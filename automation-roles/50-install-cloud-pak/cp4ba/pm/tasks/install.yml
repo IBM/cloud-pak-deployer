@@ -342,7 +342,7 @@
         status_code:
           - 200
 
-    - name: Get all groups
+    - name: Get all groups TaskMiningAdmins
       ansible.builtin.uri:
         url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
         method: GET
@@ -352,13 +352,13 @@
         return_content: true
         status_code:
           - 200
-      register: groups_response
+      register: groups_response_tmadmins
       retries: 10
       delay: 60
 
     - name: Get TaskMiningAdmins group
       ansible.builtin.set_fact:
-        tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
+        tm_admins_group: "{{ groups_response_tmadmins.json | json_query(condition_query) }}"
       vars:
         condition_query: "data.groups[?name == 'TaskMiningAdmins']"
 
