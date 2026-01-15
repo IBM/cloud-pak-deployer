@@ -800,11 +800,11 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components.kafka          | Set to `true` to enable kafka service for workflow authoring. | Yes | true, false |
 | optional_components.workflow_assistant          | Set to `true` to enable Authoring assistant for workflow authoring. | Yes | true, false |
 | optional_components.workplace_assistant          | Set to `true` to enable Workplace assistant. | Yes | true, false |
-| gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai | false  | Object |
+| gen_ai          |  Sub object for definition of GenAI connection. For Gen AI Service Flow, Authoring Assistant and Workplace Assistant | false  | Object |
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
 | gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
-| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model | false | Your real value, (default) meta-llama/llama-3-3-70b-instruct |
+| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model (Only for Gen AI Service flow) | false | Your real value, (default) meta-llama/llama-3-3-70b-instruct |
 
 ### Process Mining properties
 
