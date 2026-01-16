@@ -41,7 +41,6 @@
     state: present
     src: "{{ cp4ba_output_directory }}/bawaut-lombardi-custom-xml-secret.yaml"
 
-
 # Based on https://www.ibm.com/docs/en/baw/24.x?topic=customizing-business-automation-workflow-containers-properties
 - name: Prepare yaml file for BAWAUT Liberty server Secret
   ansible.builtin.template:
@@ -53,3 +52,19 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ cp4ba_output_directory }}/bawaut-liberty-custom-xml-secret.yaml"
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=customizing-configuring-authoring-assistant
+- name: Prepare yaml file for BAWAUT Workflow assistant Secret
+  ansible.builtin.template:
+    src: bawaut/bawaut-ibm-workflow-assistant-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/bawaut-ibm-workflow-assistant-secret.yaml"
+    mode: u+rwx
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workflow_assistant or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workplace_assistant
+
+- name: Add BAWAUT Workflow assistant Secret
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/bawaut-ibm-workflow-assistant-secret.yaml"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workflow_assistant or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workplace_assistant

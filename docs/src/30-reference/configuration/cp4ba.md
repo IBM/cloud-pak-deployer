@@ -1,8 +1,9 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 25.0.0-IF001.  
-Contains IPM version 2.0.3.
-Contains RPA version 30.0.0 FP001.
+Contains CP4BA version 25.0.1.  
+Contains IPM version 2.1.0.  
+Contains RPA version 30.0.1.  
+Contains BAMOE version 9.3.1.  
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -36,6 +37,7 @@ Deployment of other parts is also based on respective official documentations.
 
 - IBM Robotic Process Automation (RPA) https://www.ibm.com/docs/en/rpa
 - IBM Process Mining https://www.ibm.com/docs/en/process-mining/
+- IBM Business Automation Manager Open Editions https://www.ibm.com/docs/en/ibamoe
 - IBM Cloud Pak Foundational Services (CPFS) https://www.ibm.com/docs/en/cloud-paks/foundational-services
 
 ## Benefits 🚀
@@ -54,7 +56,7 @@ Deployment of other parts is also based on respective official documentations.
 What is not included:
 
 - ICCs - not covered.
-- FNCM External share - Currently not supported with ZEN & IAM as per limitation on [FNCM limitations](https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/22.0.1?topic=notes-known-limitations-issues#concept_gmf_x1h_1fb__ecm)
+- FNCM External share - Not supported with ZEN
 - Asset Repository - it is more part of CP4I.
 - Workflow Server and Workstream Services - this is a dev deployment. BAW Authoring and (BAW + IAWS) are mutually exclusive in single project.
 - ADP Runtime deployment - this is a dev deployment.
@@ -63,7 +65,7 @@ You can review the code [here](https://github.com/IBM/cloud-pak-deployer/blob/ma
 
 ## What is in the package 📦
 
-Only fully configured CP4BA, RPA and IPM including all Extras and Prerequisites is validated. As validation activities have NOT been executed using partial components, please report any issues you may encounter.
+Only fully configured CP4BA, RPA, IPM and BAMOE including all Extras and Prerequisites is validated. As validation activities have NOT been executed using partial components, please report any issues you may encounter.
 
 More details about each section from the picture follows below it.
 
@@ -92,9 +94,9 @@ Contains extra software which makes working with the platform even easier.
 - CloudBeaver - Web UI for Postgresql and MSSQL databases making it easier to admin and troubleshoot the DBs.
   - Installed if enabled in configuration (default) and if PostgreSQL or MSSQL (from [Pre-requisites](#pre-requisites-section)) is installed.
 
-### CP4BA (Cloud Pak for Business Automation) section<!-- omit in toc -->
+### Business Automation section<!-- omit in toc -->
 
-#### CP4BA capabilities<!-- omit in toc -->
+#### Business Automation capabilities<!-- omit in toc -->
 
 CP4BA capabilities are in purple color.
 
@@ -111,6 +113,8 @@ Magenta color is used for additional capabilities.
 More info for Process Mining is available in official docs at https://www.ibm.com/docs/en/process-mining/latest.
 
 More info for RPA is available in official docs at https://www.ibm.com/docs/en/rpa/latest.
+
+More info for BAMOE is available in official docs at https://www.ibm.com/docs/en/ibamoe.
 
 Assets are currently not deployed.
 
@@ -136,7 +140,7 @@ Contains prerequisites for the whole platform.
 
 ## Environments used for installation 💻
 
-With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.16 with Worker Nodes which in total have free 96 CPU, 384GB Memory for requests.
+With proper sizing of the cluster and provided RWX File and RWO Block Storage Class, CP4BA deployed with Deployer should be working on any OpenShift 4.18 with Worker Nodes which in total have free 96 CPU, 384GB Memory for requests.
 
 ## Automated post-deployment tasks ✅
 
@@ -163,7 +167,8 @@ For your convenience the following post-deployment setup tasks have been automat
 - IER - Task Manager pod has TM_JOB_URL parameter set.
 - IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
-- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), BAW (BAWTOS) and ADP (DEVOS1) objectstores.
+- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), IER (FPOS, ROS), BAW (BAWTOS, BAWDOS, BAWDOCS), AE (AEOS) and ADP (DEVOS1) objectstores.
+- FNCM - Set default storage policy for Document class and its subclasses to FileSystem based ASA instead of DB.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/24.x?topic=events-using-event-handler-filenet-content-manager
@@ -171,6 +176,8 @@ For your convenience the following post-deployment setup tasks have been automat
 - BAW - Added stub configurations for watsonx.ai integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-generative-ai
 - BAW - Enabled Process Admin audit log. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-audit-log
 - BAW - Added stub configurations for Git integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=integration-integrating-github
+- BAW - Added stub configuration for Workplace and Authoring assistants.https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=customizing-configuring-authoring-assistant
+- BAW - Added stub configuration for watsonx Orchestrate integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=services-integrating-ai-agents
 - BAI - extra flink task manager added for custom event processing.
 - RPA - Bot Developer permission added to administrative user.
 - IPM - Task mining related permissions added to admin user.
@@ -179,18 +186,18 @@ For your convenience the following post-deployment setup tasks have been automat
 
 ## Usage & operations 📇
 
-Endpoints, access info and other useful information is available in Project *cloud-pak-deployer* in ConfigMap *cp4ba-usage* in *usage.md* file after installation. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Endpoints, access info and other useful information is available in CP4BA Project (by default cp4ba) in ConfigMap *000-usage* after installation.
 
 ## Optional post deployment steps 📋
 
 CP4BA  
-Review and perform post deploy manual steps for CP4BA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Review and perform post deploy manual steps for CP4BA as specified in CP4BA Project (by default cp4ba) in ConfigMap *000-cp4ba-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
 RPA  
-Review and perform post deploy manual steps for RPA as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Review and perform post deploy manual steps for RPA as specified in CP4BA Project (by default cp4ba) in ConfigMap *000-rpa-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
 Process Mining  
-Review and perform post deploy manual steps for IPM as specified in Project *cloud-pak-deployer* in ConfigMap *cp4ba-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode. The ConfigMap name can begin with a different name if you customized main CP4BA project name.
+Review and perform post deploy manual steps for IPM as specified in CP4BA Project (by default cp4ba) in ConfigMap *000-pm-postdeploy* in *postdeploy.md* file. It is best to copy the contents and open it in nice MarkDown editor like VSCode.
 
 ## Licensing 📑
 
@@ -204,8 +211,7 @@ Referrence to licenses of used tools apart from those from IBM
     - Own EULA at https://www.sonatype.com/dnt/usage/community-edition-eula https://help.sonatype.com/en/ce-onboarding.html Source at https://help.sonatype.com/en/ce-onboarding.html#what-is-sonatype-nexus-repository-community-edition- states that "Sonatype Nexus Repository Community Edition is the perfect solution to help individual developers and small teams manage their components effectively—for free!". Accepted during the deployment using REST API.
 - Roundcube
     - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
-    - Also using PostgreSQL - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
-    - Also using NGINX - BSD 2-Clause "Simplified" Licenseh ttps://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
+    - Also using NGINX - BSD 2-Clause "Simplified" License https://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
 - Cerebro
     - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - AKHQ
@@ -217,8 +223,7 @@ Referrence to licenses of used tools apart from those from IBM
 - CloudBeaver
     - Apache License 2.0 https://github.com/dbeaver/cloudbeaver/blob/devel/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - PostgreSQL
-    - PostgreSQL itself - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
-    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/postgresql#license (OSI Approved https://opensource.org/license/apache-2-0)
+    - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
 - OpenLDAP
     - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
     - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license

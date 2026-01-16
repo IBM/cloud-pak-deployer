@@ -1,0 +1,123 @@
+- name: Create BAMOE directory for generated files
+  ansible.builtin.file:
+    path: "{{ bamoe_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ bamoe_project_name }}"
+    common_output_directory: "{{ bamoe_output_directory }}"
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+  when: apps_endpoint_domain is not defined
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ bamoe_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - services
+    - deployments
+
+- name: Add {{ item.name }}
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ bamoe_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+
+- name: Crete Edge Route
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-edge-route
+  vars:
+    common_namespace_name: "{{ bamoe_project_name }}"
+    common_route_name: "{{ item }}"
+    common_service_name: "{{ item }}"
+    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
+    common_output_directory: "{{ bamoe_output_directory }}"
+  with_items:
+    - bamoe-canvas
+    - bamoe-cors-proxy
+    - bamoe-extended-services
+    - bamoe-management-console
+    - bamoe-maven-repository
+    - bamoe-mcp-server
+
+- name: Prepare Maven Settings
+  ansible.builtin.template:
+    src: maven-settings.xml.j2
+    dest: "{{ bamoe_output_directory }}/maven-settings.xml"
+    mode: u+rwx
+
+- name: Prepare Maven Config Map
+  ansible.builtin.template:
+    src: bamoe-maven-settings-configmap.yaml.j2
+    dest: "{{ bamoe_output_directory }}/bamoe-maven-settings-configmap.yaml"
+    mode: u+rwx
+
+- name: Add the BAMOE maven config map
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ bamoe_output_directory }}/bamoe-maven-settings-configmap.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Business-Automation-Manager-Open-Editions
+    usage_entry_value:
+      "# Business Automation Manager Open Editions
+
+      ## Endpoints
+
+      - BAMOE Canvas: https://bamoe-canvas-{{ bamoe_project_name }}.{{ apps_endpoint_domain }}
+
+      - BAMOE Management Console: https://bamoe-management-console-{{ bamoe_project_name }}.{{ apps_endpoint_domain }}
+
+      - BAMOE Maven repository: https://bamoe-maven-repository-{{ bamoe_project_name }}.{{ apps_endpoint_domain }}
+
+      - Maven Settings XML for BAMOE Maven repository is in Project {{ bamoe_project_name }}
+      in ConfigMap 000-bamoe-maven-settings
+
+      ## MCP Server configuration for watsonx Orchestrate
+
+      Based on
+      https://www.ibm.com/docs/en/ibamoe/9.3.x?topic=ia-exposing-bamoe-capabilities-ai-agents-through-mcp-server-tech-preview#_execution_and_lifecycle_management
+
+      MCP server is created as a stub without an actual connected BAMOE Business Service and thus will not work.
+      You must update Project {{ bamoe_project_name }},
+      Deployment bamoe-mcp-server, MCP_SERVER_OPENAPI_URLS environments variable to point ot your actual Business Service.
+      You can deploy a sample using BAMOE Canvas based on https://www.ibm.com/docs/en/ibamoe/9.3.x?topic=canvas-dev-deployments
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name bamoe-mcp-server \\
+
+        --description \"bamoe-mcp-server\" \\
+
+        --url \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/mcp\" \\
+
+        --transport streamable_http \\
+
+        --tools \"*\"
+
+      "

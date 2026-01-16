@@ -59,7 +59,7 @@
   with_items: "{{ lc_admin_groups }}"
 
 # Needed as group related permissions are updated only after first real login via browser
-- name: Add all ODM roles to default admin user and cpadminservice
+- name: Add all ODM roles to default admin user and cpmanagerservice
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ item }}?add_roles=true"
     method: PUT
@@ -77,7 +77,7 @@
     status_code:
       - 200
   with_items:
-    - cpadminservice
+    - cpmanagerservice
     - "{{ lc_principal_admin_user }}"
 
 - name: Add ODM regular roles to group {{ item }}
@@ -127,22 +127,20 @@
   vars:
     condition_query: "elements[?name == 'Decision Service Execution'].id"
 
-- name: Get Usage configmap
+- name: Get Zen Api Key configmap
   kubernetes.core.k8s_info:
     api_version: v1
     kind: ConfigMap
     namespace: "{{ cp4ba_output_namespace }}"
-    name: cp4ba-usage
-  register: usage
+    name: 000-cpmanagerservice-zen-api-key
+  register: zenapikey_cm
   retries: 40
   delay: 15
 
-- name: Find zen api key
+- name: Set zen api key
   ansible.builtin.set_fact:
-    zen_api_key: "{{ usage.resources[0].data['cpadminservice-zen-api-key'] | regex_search(regexp,'\\1') | list | first
-      if usage.resources | length != 0 and usage.resources[0].data['cpadminservice-zen-api-key'] is defined }}"
-  vars:
-    regexp: 'the UI: (.*)'
+    zen_api_key: "{{ zenapikey_cm.resources[0].data['cpmanagerservice-zen-api-key'] }}"
+  when: zenapikey_cm.resources | length != 0
 
 - name: Update credentials for server
   ansible.builtin.uri:
@@ -154,7 +152,7 @@
     body:
       {
         "authenticationKind": "OAUTH",
-        "loginServer": "cpadminservice",
+        "loginServer": "cpmanagerservice",
         "loginPassword": "{{ zen_api_key }}"
       }
     validate_certs: false
@@ -178,7 +176,7 @@
     body:
       {
         "authenticationKind": "OAUTH",
-        "loginServer": "cpadminservice",
+        "loginServer": "cpmanagerservice",
         "loginPassword": "{{ zen_api_key }}"
       }
     validate_certs: false
@@ -233,5 +231,35 @@
       - For ODM REST auth with {{ lc_principal_admin_user }} user or other LDAP users, follow guide on \
       https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?\
       topic=access-using-zen-api-key-authentication with REST Authorization header with ZenApiKey type
+
+      ## MCP Server configuration for watsonx Orchestrate
+
+      Based on https://github.com/DecisionsDev/ibm-odm-decision-mcp-server
+
+      orchestrate connections add --app-id odm-mcp-server-connection
+
+      orchestrate connections configure --app-id odm-mcp-server-connection --environment draft --type team --kind key_value
+
+      orchestrate connections set-credentials --app-id odm-mcp-server-connection \\
+
+        --environment draft \\
+
+        --entries ODM_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res \\
+
+        --entries ODM_USERNAME=cpmanagerservice \\
+
+        --entries ZENAPIKEY={{ zen_api_key }}
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name odm-mcp-server \\
+
+        --description \"odm-mcp-server\" \\
+
+        --command \"uvx --from git+https://github.com/DecisionsDev/ibm-odm-decision-mcp-server.git ibm-odm-decision-mcp-server\" \\
+
+        --tools \"*\" \\
+
+        --app-id odm-mcp-server-connection
 
       "

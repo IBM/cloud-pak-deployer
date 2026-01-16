@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    bamoe_output_directory: "{{ bamoe_base_dir }}/{{ bamoe_dir_name }}"
+
+- name: Remove bamoe directory for generated files
+  ansible.builtin.file:
+    path: "{{ bamoe_output_directory }}"
+    state: absent
+
+- name: Install bamoe
+  ansible.builtin.include_tasks: install.yml
+  when: "bamoe_action == 'install'"
+
+- name: Remove bamoe
+  ansible.builtin.include_tasks: remove.yml
+  when: "bamoe_action == 'remove'"
