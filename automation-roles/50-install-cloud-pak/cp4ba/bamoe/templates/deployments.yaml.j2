@@ -1,0 +1,201 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-extended-services
+  namespace: "{{ bamoe_project_name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-extended-services
+  template:
+    metadata:
+      labels:
+        app: bamoe-extended-services
+      annotations:
+        productID: 72984f114b54496a8a44be139154a988
+        productName: IBM Process Automation Manager Open Edition
+        productMetric: VIRTUAL_PROCESSOR_CORE
+        productChargedContainers: All
+    spec:
+      containers:
+        - name: bamoe-extended-services
+          image: "{{ bamoe_extended_services_image }}"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-cors-proxy
+  namespace: "{{ bamoe_project_name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-cors-proxy
+  template:
+    metadata:
+      labels:
+        app: bamoe-cors-proxy
+      annotations:
+        productID: 72984f114b54496a8a44be139154a988
+        productName: IBM Process Automation Manager Open Edition
+        productMetric: VIRTUAL_PROCESSOR_CORE
+        productChargedContainers: All
+    spec:
+      containers:
+        - name: bamoe-cors-proxy
+          image: "{{ bamoe_cors_proxy_image }}"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-canvas
+  namespace: "{{ bamoe_project_name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-canvas
+  template:
+    metadata:
+      labels:
+        app: bamoe-canvas
+      annotations:
+        productID: 72984f114b54496a8a44be139154a988
+        productName: IBM Process Automation Manager Open Edition
+        productMetric: VIRTUAL_PROCESSOR_CORE
+        productChargedContainers: All
+    spec:
+      containers:
+        - name: bamoe-canvas
+          image: "{{ bamoe_canvas_image }}"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: KIE_SANDBOX_EXTENDED_SERVICES_URL
+              value: "https://bamoe-extended-services-{{ bamoe_project_name }}.{{ apps_endpoint_domain }}"
+            - name: KIE_SANDBOX_CORS_PROXY_URL
+              value: "https://bamoe-cors-proxy-{{ bamoe_project_name }}.{{ apps_endpoint_domain }}"
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-management-console
+  namespace: "{{ bamoe_project_name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-management-console
+  template:
+    metadata:
+      labels:
+        app: bamoe-management-console
+      annotations:
+        productID: 72984f114b54496a8a44be139154a988
+        productName: IBM Process Automation Manager Open Edition
+        productMetric: VIRTUAL_PROCESSOR_CORE
+        productChargedContainers: All
+    spec:
+      containers:
+        - name: bamoe-management-console
+          image: "{{ bamoe_management_console_image }}"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-maven-repository
+  namespace: "{{ bamoe_project_name }}"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-maven-repository
+  template:
+    metadata:
+      labels:
+        app: bamoe-maven-repository
+      annotations:
+        productID: 72984f114b54496a8a44be139154a988
+        productName: IBM Process Automation Manager Open Edition
+        productMetric: VIRTUAL_PROCESSOR_CORE
+        productChargedContainers: All
+    spec:
+      containers:
+        - name: bamoe-maven-repository
+          image: "{{ bamoe_maven_repository_image }}"
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: 20m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bamoe-mcp-server
+  namespace: "{{ bamoe_project_name }}"
+  labels:
+    app: bamoe-mcp-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bamoe-mcp-server
+  template:
+    metadata:
+      labels:
+        app: bamoe-mcp-server
+    spec:
+      containers:
+        - name: bamoe-mcp-server
+          image: "{{ bamoe_mcp_server_image }}"
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MCP_SERVER_OPENAPI_URLS
+              value: "<your_business_services_OpenAPIv3_path>"
+            - name: MCP_SERVER_PORT
+              value: '8080'
+            - name: QUARKUS_OIDC_ENABLED
+              value: 'false'
+          ports:
+            - name: http
+              containerPort: 8080

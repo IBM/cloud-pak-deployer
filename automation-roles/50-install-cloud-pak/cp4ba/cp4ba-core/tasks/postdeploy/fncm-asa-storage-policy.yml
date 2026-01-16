@@ -1,0 +1,221 @@
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    common_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
+
+- name: Find default db policy ID
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "query {
+          repositoryObjects(repositoryIdentifier: \"{{ item }}\", from: \"StoragePolicy\") {
+            independentObjects {
+              objectReference {
+                identifier
+              }
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content"
+
+- name: Parse SP ID
+  ansible.builtin.set_fact:
+    sp_id: "{{ graphql_response.json.data.repositoryObjects.independentObjects[0].objectReference.identifier }}"
+
+- name: Find ASA ID
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "query {
+          repositoryObjects(repositoryIdentifier: \"{{ item }}\", from: \"CmAdvancedStorageArea\") {
+            independentObjects {
+              objectReference {
+                identifier
+              }
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content"
+
+- name: Parse ASA ID
+  ansible.builtin.set_fact:
+    asa_id: "{{ graphql_response.json.data.repositoryObjects.independentObjects[0].objectReference.identifier }}"
+
+- name: Repurpose default db policy to use FileSystem ASA
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          changeObject(
+            repositoryIdentifier: \"{{ item }}\"
+            classIdentifier: \"StoragePolicy\"
+            identifier: \"{{ sp_id }}\"
+            properties: [{FilterExpression: \"Id = {{ asa_id }}\"}, {DisplayName: \"Default ASA Storage Policy\"},
+            {DescriptiveText: \"Default ASA Storage Policy\"}]
+            actions: [{type: UPDATE}]
+          ) {
+            className
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content"
+
+- name: Find All Move Content Job Sweeps
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "query {
+          repositoryObjects(repositoryIdentifier: \"{{ item }}\", from: \"CmBulkMoveContentJob\") {
+            independentObjects {
+              objectReference {
+                identifier
+              }
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: sweep_jobs_response
+  failed_when: "'errors' in graphql_response.content"
+
+- name: Move Content
+  when: sweep_jobs_response.json.data.repositoryObjects.independentObjects | length == 0
+  block:
+    - name: Move Content to use FileSystem ASA
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "mutation {
+              changeObject(
+                repositoryIdentifier: \"{{ item }}\"
+                properties: [{DisplayName: \"Move Content to ASA\"}, {DescriptiveText: \"Move Content to ASA\"},
+                  {IsEnabled: true},{IncludeSubclassesRequested: true}, {UpdateStoragePolicy: true}]
+                objectProperties: [{identifier: \"StoragePolicy\",
+                  objectReferenceValue: {identifier: \"{{ sp_id }}\"}},
+                {identifier: \"SweepTarget\",
+                  objectReferenceValue: {identifier: \"Document\"}}]
+                actions: [{type: CREATE, subCreateAction: {classId: \"CmBulkMoveContentJob\"}}]
+              ) {
+                className
+                properties(includes: [\"Id\"]) {
+                  id
+                  value
+                }
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+
+    - name: Parse Sweep Job ID
+      ansible.builtin.set_fact:
+        sj_id: "{{ graphql_response.json.data.changeObject.properties[0].value }}"
+
+    - name: Wait for Sweep Job completed
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "query {
+              object(
+                repositoryIdentifier: \"{{ item }}\"
+                classIdentifier: \"CmBulkMoveContentJob\"
+                identifier: \"{{ sj_id }}\"
+              ) {
+                properties(includes:[\"SweepEndDate\"]) {
+                  id
+                  value
+                }
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+      retries: 5
+      delay: 15
+      until: graphql_response.json.data.object.properties[0].value is not none

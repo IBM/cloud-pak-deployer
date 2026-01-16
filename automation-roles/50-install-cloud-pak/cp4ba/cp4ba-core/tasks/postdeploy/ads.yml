@@ -98,7 +98,7 @@
   with_items: "{{ lc_admin_groups }}"
 
 # Needed as group related permissions are updated only after first real login via browser
-- name: Add ADS roles to default admin user and cpadminservice
+- name: Add ADS roles to default admin user and cpmanagerservice
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/usermgmt/v1/user/{{ item }}?add_roles=true"
     method: PUT
@@ -117,7 +117,7 @@
     status_code:
       - 200
   with_items:
-    - cpadminservice
+    - cpmanagerservice
     - "{{ lc_principal_admin_user }}"
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=credentials-configuring-maven-repository-manager
@@ -172,6 +172,21 @@
   failed_when: git_provider_response.status != 200 and
     git_provider_response.json.message is not search('It is not allowed to create more than one git provider.')
 
+- name: Get Zen Api Key configmap
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: ConfigMap
+    namespace: "{{ cp4ba_output_namespace }}"
+    name: 000-cpmanagerservice-zen-api-key
+  register: zenapikey_cm
+  retries: 40
+  delay: 15
+
+- name: Set zen api key
+  ansible.builtin.set_fact:
+    zen_api_key: "{{ zenapikey_cm.resources[0].data['cpmanagerservice-zen-api-key'] }}"
+  when: zenapikey_cm.resources | length != 0
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
@@ -197,5 +212,39 @@
       ## Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      ## MCP Server configuration for watsonx Orchestrate
+
+      Based on https://github.com/DecisionsDev/ibm-decision-intelligence-mcp-server/
+
+      orchestrate connections add --app-id ads-mcp-server-connection
+
+      orchestrate connections configure --app-id ads-mcp-server-connection --environment draft --type team --kind key_value
+
+      orchestrate connections set-credentials --app-id ads-mcp-server-connection \\
+
+        --environment draft \\
+
+        --entries URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/v1 \\
+
+        --entries AUTHENTICATION_MODE=zenapikey \\
+
+        --entries ZEN_USERNAME=cpmanagerservice \\
+
+        --entries ZEN_APIKEY={{ zen_api_key }} \\
+
+        --entries DEPLOYMENT_SPACES=embedded
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name ads-mcp-server \\
+
+        --description \"ads-mcp-server\" \\
+
+        --command \"npx -y di-mcp-server\" \\
+
+        --tools \"*\" \\
+
+        --app-id ads-mcp-server-connection
 
       "

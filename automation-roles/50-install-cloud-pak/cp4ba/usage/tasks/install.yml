@@ -1,13 +1,27 @@
+- name: Create usage directory for generated files
+  ansible.builtin.file:
+    path: "{{ usage_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ usage_project_name }}"
+    common_output_directory: "{{ usage_output_directory }}"
+
 - name: Prepare usage Config Map
   ansible.builtin.template:
     src: usage-configmap.yaml.j2
-    dest: "{{ generic_directory }}/usage-configmap.yaml"
+    dest: "{{ usage_output_directory }}/usage-configmap.yaml"
     mode: u+rwx
 
 - name: Add the usage config map
   kubernetes.core.k8s:
     state: present
-    src: "{{ generic_directory }}/usage-configmap.yaml"
+    src: "{{ usage_output_directory }}/usage-configmap.yaml"
     wait: true
     wait_sleep: 15
     wait_timeout: 15

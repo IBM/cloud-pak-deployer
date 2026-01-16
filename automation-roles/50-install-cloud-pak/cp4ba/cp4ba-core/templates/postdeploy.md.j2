@@ -9,6 +9,8 @@ The following list specifies when you need to perform particular post-deployment
     - [IBM Content Navigator for Microsoft Office](#ibm-content-navigator-for-microsoft-office) - When you want to use NMO feature.
   - [Business Automation Studio (BAS) (foundation pattern)](#business-automation-studio-bas-foundation-pattern)
     - [Enable GenAI](#enable-genai) - When you want to use Gen AI features.
+    - [Enable Workflow Assistants](#enable-workflow-assistants) - When you want to use Workflow Assistants features.
+    - [Enable watsonx Orchestrate integration](#enable-watsonx-orchestrate-integration) - When you want to use watsonx Orchestrate integration features.
     - [Enable Git integration](#enable-git-integration) - When you want to use Git integration.
     - [Deploy toolkits and configurators](#deploy-toolkits-and-configurators) - When you want to call ODM from Business Application using Automation Services.
   - [Business Automation Insights (BAI) (foundation pattern)](#business-automation-insights-bai-foundation-pattern)
@@ -22,9 +24,6 @@ The following list specifies when you need to perform particular post-deployment
     - [Develop custom libraries](#develop-custom-libraries) - When you want to create your custom ADS libraries.
     - [Configure GenAI secret parameters](#configure-genai-secret-parameters) - When you want to use GenAI rules.
   - [FileNet Content Manager (FNCM) (content pattern)](#filenet-content-manager-fncm-content-pattern)
-    - [Update Google OIDC redirect URIs](#update-google-oidc-redirect-uris) - (don't use now) When you configured Google ID for External Share.
-    - [External Share](#external-share) - (don't use now) When you want to use External Share.
-    - [External Share capability in BAN](#external-share-capability-in-ban) - (don't use now) When you want to use External Share.
     - [IER configuration](#ier-configuration) - When you want to configure IBM Enterprise Records.
 
 For some of the tasks you need to interact with OpenShift using oc CLI. Use the following templates to log in and switch project.
@@ -90,6 +89,34 @@ In Project {{ cp4ba_project_name }}, in Secret wfs-lombardi-custom-xml-secret, s
 
 In Project {{ cp4ba_project_name }}, in Pods, search for *icp4adeploy-bastudio-deployment-0* and delete the pod to restart BAS.
 
+### Enable Workflow Assistants
+
+Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=customizing-configuring-authoring-assistant
+
+Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=customizing-configuring-workplace-assistant
+
+The secret is already created for you with stubs.
+
+Perform the following tasks form the OpenShift console.
+
+In Project {{ cp4ba_project_name }}, in Secret ibm-workflow-assistant-secrets, search for *watsonx_ai_api_key* and *project_id* and modify values with your real once from your watsonx.ai instance.
+
+In Project {{ cp4ba_project_name }}, in Secret ibm-workflow-assistant-secrets, you canalso modify WATSONX_URL for your watsonx.ai instance.
+
+In Project {{ cp4ba_project_name }}, in Pods, search for *icp4adeploy-workflow-server-agent-* and delete the pod to restart Agent backend.
+
+### Enable watsonx Orchestrate integration
+
+Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=services-integrating-ai-agents
+
+Teh secret is already created for you with stubs.
+
+Perform the following tasks form the OpenShift console.
+
+In Project {{ cp4ba_project_name }}, in Secret wfs-liberty-custom-xml-secret, search for *https://api.hostname/instances/tenant_id* and modify hostname and tenant_id with your real values.
+
+In Project {{ cp4ba_project_name }}, in Pods, search for *icp4adeploy-bastudio-deployment-0* and delete the pod to restart BAS.
+
 ### Enable Git Integration
 
 Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=integration-integrating-github
@@ -152,14 +179,14 @@ Please note that after using this trust store, eclipse marketplace and updates m
 When configuring RES connection in Deployment use  
 URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res  
 Method: Zen API Key  
-UserID: cpadminservice  
-API Key: As found in Project {{ cpdeployer_namespace }}, ConfigMap {{ cp4ba_project_name }}-usage, key cpadminservice-zen-api-key
+UserID: cpmanagerservice  
+API Key: As found in Project {{ _current_cp4ba_cluster.project }}, ConfigMap 000-{{ cp4ba_project_name }}-usage, key cpmanagerservice-zen-api-key
 
 When configuring Decision Center use  
 URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/decisioncenter  
 Authentication: Zen API Key  
-User ID: cpadminservice  
-API Key: As found in Project {{ cpdeployer_namespace }}, ConfigMap {{ cp4ba_project_name }}-usage, key cpadminservice-zen-api-key
+User ID: cpmanagerservice  
+API Key: As found in Project {{ _current_cp4ba_cluster.project }}, ConfigMap 000-{{ cp4ba_project_name }}-usage, key cpmanagerservice-zen-api-key
 
 ## Automation Decision Services (ADS) (decisions_ads pattern)
 
@@ -204,7 +231,7 @@ To find out how to create and add External libraries to ADS, follow https://gith
 
 To be able to follow the above guide from my environment, I needed to perform the following.
 
-Add settings for Nexus in my local maven settings .m2\settings.xml (Available in Project *{{ cpdeployer_namespace }}*, in ConfigMap *{{ _current_cp4ba_cluster.project }}-nexus-maven-settings* in *settings.xml* file)  
+Add settings for Nexus in my local maven settings .m2\settings.xml (Available in Project *{{ _current_cp4ba_cluster.project }}*, in ConfigMap *000-{{ _current_cp4ba_cluster.project }}-nexus-maven-settings* in *settings.xml* file)  
 
 
 Installed JDK 16 Oracle, added to path.
@@ -228,150 +255,11 @@ Then the ADS pods restart automatically and that enables GenAI successful connec
 
 Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=tasks-filenet-content-manager
 
-### Update Google OIDC redirect URIs
-
-If you plan to use Google ID for External Share  
-Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-configuring-redirect-url-identity-provider and  
-on https://developers.google.com/identity/protocols/oauth2/openid-connect#setredirecturi  
-Watch video and follow with your own google account and Client ID you used in the pre-deploy section  
-[Video fncm-es-google-oidc-post.mp4 download](https://github.com/apollo-business-automation/ibm-cp4ba-enterprise-deployment/blob/main/assets/fncm-es-google-oidc-post.mp4?raw=true) 
-#TODO errata for redirect uris when this starts to work
-
-### External Share
-
-Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-configuring-external-share-after-deployment
-
-If you plan to use External Share  
-
-Configure SMTP  
-Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=users-configuring-content-platform-engine-external-sharing point 3
-
-Go to Acce console https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/acce/    
-Login with Enterprise LDAP with {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}  
-On P8DOMAIN domain navigate to *SMTP Subsystem*  
-Check *Enable email services*  
-SMTP host: {{ cp4ba_mail_hostname }}  
-SMTP port: 25  
-Email from ID: system@cp.internal 
-Default email reply-to ID: system@cp.internal 
-Email login ID: mailuser  
-Email login password: {{ cp4ba_universal_password }}  
-Click Save  
-
-
-Configure external LDAP in FNCM CPE  
-If you plan to use external LDAP for External Share  
-Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=users-configuring-content-platform-engine-external-sharing point 2
-
-Go to Acce console https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/acce/  
-On P8DOMAIN domain navigate to *Directory Configuration*  
-Click on ExternalRealm  
-find *Exclude From Authenticated Users* property and set it to True  
-click Save  
-click Close  
-
-
-Document class access  
-If you plan to use external LDAP for External Share  
-Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=users-configuring-content-platform-engine-external-sharing point 4  
-
-Go to Acce console https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/acce/  
-Navigate to CONTENT object store > Data Design > Classes > Document > Security tab  
-Click Add Permissions > Add User/Group Permission  
-Search in realm: ExternalRealm (o=cpext)    
-Search by: #  
-Click Search  
-Add *#REALM-USERS* to *Selected Users and Groups*  
-Permission group: View all properties, Create instance  
-Click OK  
-Click Save  
-
-Folder class access  
-If you plan to use external LDAP for External Share  
-Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=users-configuring-content-platform-engine-external-sharing point 5
-
-Go to Acce console https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/acce/    
-Navigate to CONTENT object store > Data Design > Classes > Folder > Security tab  
-Click Add Permissions > Add User/Group Permission  
-Search in realm: ExternalRealm (o=cpext)  
-Search by: #  
-Click Search  
-add *#REALM-USERS* to *Selected Users and Groups*  
-Permission group: View all properties, Create instance  
-Click OK  
-Click Save  
-
-### External Share capability in BAN
-
-Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=cesad-configuring-share-plug-in-in-business-automation-navigator  
-Based on https://www.ibm.com/docs/en/content-navigator/latest?topic=components-configuring-external-share  
-
-If you plan to use External Share  
-
-To successfully configure External share you will need to use Ingress access to BAN.
-Go to navigator https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/navigator/?desktop=admin  
-If a pop-up occurs, click Cancel  
-Go to Plug-ins  
-Click New Plug-in  
-
-New Plug-in screen  
-JAR file path: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/contentapi/plugins/sharePlugin.jar  
-Click Load  
-Click Save  
-REST API URL: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/contentapi/rest/share/v1  
-Click Verify  
-Repositories: select CONTENT  
-Click Configure Share  
- 
-Configure Share for CONTENT screen  
-External URL: https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/navigator  
-External desktop: New desktop  
-  Desktop name: External Share CONTENT  
-  Desktop ID: ExternalShareCONTENT  
-Consent agreement: Welcome to CP4A  
-Click OK  
-This may take some time, and the request can time out. Click OK after a minute again, and it should complete successfully. In the meantime External share container is configuring object store behind the scenes.  
-Click Save and Close  
-
-Based on https://www.ibm.com/docs/en/content-navigator/latest?topic=share-configuring-menu-action  
-
-Navigate to Menus  
-Filter for *Default document context menu*  
-Select the first occurrence  
-Click Copy  
-
-New Menu screen  
-Name: Share Document Context Menu  
-Move Share from *Available* to *Selected:*  
-Move it up under *Preview*  
-Click Save and Close  
-
-Filter for *Default folder context menu*  
-Select the first occurrence  
-Click Copy  
-
-New Menu screen  
-Name: Share Folder Context Menu  
-Move Share from *Available* to *Selected:*  
-Move it up under *Delete*  
-Click Save and Close  
-
-Navigate to Desktops  
-Click on CONTENT  
-Click Edit  
-Click Menus tab  
-Under Context Menus > Content Context Menus  
-Document context menu: Share Document Context Menu  
-Folder context menu: Share Folder Context Menu  
-Click save and Close  
-
-If you want to share content, use https://ingress-es-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/navigator/?desktop=CONTENT
-
 ### IER configuration
 
 Follow official documentation at https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=fcm-configuring-enterprise-records,
 https://www.ibm.com/docs/en/enterprise-records/latest?topic=in-configuring-content-navigator-task-manager-enterprise-records#frmco011__1 to finish IER configuration.  
-URLs are available in *{{ cpdeployer_namespace }}* Project in *cp4ba-usage* ConfigMap (IER application plugin URL).
+URLs are available in *{{ _current_cp4ba_cluster.project }}* Project in *000-{{ cp4ba_project_name }}-usage* ConfigMap (IER application plugin URL).
 
 Some steps were already automated:
 - FPOS and ROS object stores were created
