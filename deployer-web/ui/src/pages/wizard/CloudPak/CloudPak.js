@@ -32,7 +32,7 @@ const CloudPak = ({
 
     
     const [selectedCloudPak, setSelectedCloudPak] = useState('software-hub')
-    const [existingConfigFile, setExistingConfigFile] = useState(false)
+    const [existingConfig, setExistingConfig] = useState(false)
     
     const [loadingConfiguration, setLoadingConfiguration] = useState(false)
     const [loadConfigurationErr, setLoadConfigurationErr] = useState(false)    
@@ -64,7 +64,7 @@ const CloudPak = ({
             let cloud = res.data.data.global_config.cloud_platform
             setCloudPlatform(cloud)
             setEnvId(res.data.data.global_config.env_id)
-            setExistingConfigFile(res.data.metadata.config_file_exists)
+            setExistingConfig(res.data.metadata.existing_config)
 
             if (res.data.data.cp4d) {
               if (res.data.data.cp4d[0]) {
@@ -302,7 +302,7 @@ const CloudPak = ({
                   name="cloud-pak-selection"
                   valueSelected={selectedCloudPak}
                   onChange={handleCloudPakSelection}
-                  disabled={existingConfigFile}
+                  disabled={existingConfig}
                 >
                   <RadioButton
                     labelText="Software Hub"
