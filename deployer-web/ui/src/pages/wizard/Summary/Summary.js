@@ -7,7 +7,6 @@ import yaml from 'js-yaml';
 const Summary = ({ 
     configuration,
     setConfiguration,
-    locked,
     summaryLoading,
     setSummaryLoading,
     configDir,
@@ -60,10 +59,6 @@ const Summary = ({
         setSummaryInfo(configText)
         setTempSummaryInfo(configText)
 
-        // if (locked) {
-        //     setSummaryLoading(true)
-        //     updateSummaryData()
-        // }
         // eslint-disable-next-line
     }, []);
 
