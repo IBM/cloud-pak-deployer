@@ -29,10 +29,10 @@ dictConfig(
 
 app = Flask(__name__,static_url_path='')
 
-parent = Path(os.path.dirname(os.path.realpath(__file__))).parent
-app.logger.info('Parent path of python script: {}'.format(parent))
-cp_base_config_path = os.path.join(parent,'sample-configurations/sample-dynamic/config-samples')
-ocp_base_config_path = os.path.join(parent,'ample-configurations/sample-dynamic/config-samples')
+deployer_dir = Path(os.path.dirname(os.path.realpath(__file__))).parent
+app.logger.info('Deployer directory: {}'.format(deployer_dir))
+cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
+ocp_base_config_path = os.path.join(deployer_dir,'ample-configurations/sample-dynamic/config-samples')
 running_context=str(os.getenv('CONTEXT', default='local'))
 deployer_project = str(os.getenv('DEPLOYER_PROJECT', default='cloud-pak-deployer'))
 config_dir=str(os.getenv('CONFIG_DIR'))
@@ -41,9 +41,13 @@ status_dir=str(os.getenv('STATUS_DIR'))
 Path( status_dir+'/log' ).mkdir( parents=True, exist_ok=True )
 Path( config_dir+'/config' ).mkdir( parents=True, exist_ok=True )
 
+#
+# Root
+#
+
 @app.route('/')
 def index():
-    return send_from_directory(app.static_folder,'index.html')
+    return send_from_directory(str(app.static_folder),'index.html')
 
 @app.route('/api/v1/mirror',methods=["POST"])
 def mirror():
@@ -73,24 +77,36 @@ def mirror():
 
     return 'running'
 
+#
+# Start deployment
+#
+
 @app.route('/api/v1/deploy',methods=["POST"])
 def deploy():
     body = json.loads(request.get_data())
     deployer_env = os.environ.copy()
+    deployer_env['envId'] = body['envId']
+    deployer_env['OCP_OC_LOGIN'] = body['oc_login_command']
     deployer_env['CP_ENTITLEMENT_KEY']=body['entitlementKey']
     deployer_env['CONFIG_DIR']=config_dir
     deployer_env['STATUS_DIR']=status_dir
-    cp4d_admin_password=''
     if 'adminPassword' in body and body['adminPassword']!='':
-        cp4d_admin_password=body['adminPassword']
-    
-    app.logger.info('oc login command: {}'.format(body['oc_login_command']))
+        deployer_env['adminPassword']=body['adminPassword']
 
-    # Assemble the deploy command
-    deploy_command=['cp-deploy.sh']
-    deploy_command+=['env','apply']
-    deploy_command+=['-e=env_id={}'.format(body['envId'])]
-    deploy_command+=['-vs=oc-login={}'.format(body['oc_login_command'])]
+    if (running_context == 'local'):
+        result=deploy_local(deployer_env)
+    else:
+        result=deploy_openshift(deployer_env)
+
+    return result
+
+def deploy_local(deployer_env):
+    deploy_command=['cp-deploy.sh','env']
+    deploy_command+=['-e=env_id={}'.format(deployer_env['envId'])]
+    deploy_command+=['-vs=oc-login={}'.format(deployer_env['OCP_OC_LOGIN'])]
+    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(deployer_env['CP_ENTITLEMENT_KEY'])]
+    if 'adminPassword' in deployer_env and deployer_env['adminPassword']!='':
+        deploy_command+=['-e=cp4d_admin_password={}'.format(deployer_env['adminPassword'])]
     deploy_command+=['-v']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
@@ -100,22 +116,36 @@ def deploy():
 
     return 'running'
 
+def deploy_openshift(deployer_env):
+    deploy_command=['oc','create','-f',f'{deployer_dir}/scripts/deployer/assets/cloud-pak-deployer-start.yaml']
+    app.logger.info('deploy command: {}'.format(deploy_command))
+
+    process = subprocess.Popen(deploy_command, 
+                    universal_newlines=True,
+                    env=deployer_env)
+
+    return 'running'
+
+#
+# Download logs
+#
+
 @app.route('/api/v1/download-log',methods=["POST"])
 def downloadLog ():
     body = json.loads(request.get_data())
     print(body, file=sys.stderr)
 
     if 'deployerLog' not in body :
-       return make_response('Bad Request', 400)
+        return make_response('Bad Request', 400)
 
     deployerLog=body['deployerLog']
 
     if deployerLog != "deployer-log" and deployerLog != "all-logs":
-       return make_response('Bad Request', 400)   
+        return make_response('Bad Request', 400)   
 
     if deployerLog == "deployer-log":
         log_path = status_dir + '/log/cloud-pak-deployer.log'
-        return send_file(log_path, as_attachment=True)
+        send_file(log_path, as_attachment=True)
     
     if deployerLog == "all-logs":
         log_zip = '/tmp/logs.zip'
@@ -126,7 +156,13 @@ def downloadLog ():
             log_zip_file.write(os.path.join(log_folder_path, f), f, zipfile.ZIP_DEFLATED)
         log_zip_file.close()
 
-        return send_file(log_zip, as_attachment=True)
+        send_file(log_zip, as_attachment=True)
+    
+    return make_response('OK', 200)
+
+#
+# OpenShift login
+#
 
 @app.route('/api/v1/oc-login',methods=["POST"])
 def oc_login():
@@ -163,6 +199,21 @@ def oc_login():
     else:
         return make_response('Bad Request', 400) 
 
+#
+# Deployer status
+#
+
+@app.route('/api/v1/deployer-status',methods=["GET"])
+def get_deployer_status():
+    result = {}
+
+    if (running_context == 'local'):
+        result=get_deployer_status_local()
+    else:
+        result=get_deployer_status_openshift()
+
+    return result
+
 def get_deployer_status_local():
     result = {}
     # Check if the env apply process is active
@@ -177,17 +228,106 @@ def get_deployer_status_local():
             except:
                 pass
     deploy_state_log_path = status_dir + '/state/deployer-state.out'
-    get_deployer_state(deploy_state_log_path, result)
+    get_deployer_status_details(deploy_state_log_path, result)
     return(result)
 
-def get_deployer_state(deploy_state_log_path, result):
-        # app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
+def get_deployer_status_openshift():
+    result = {}
+    # Check if the env apply process is active
+    result['deployer_active']=False
+
+    oc_get_deployer_start=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-start','-o=json']
+    app.logger.info('Get cloud-pak-deployer-start pods: {}'.format(oc_get_deployer_start))
+
+    try:
+        process = subprocess.Popen(oc_get_deployer_start,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            deployer_start_pods=json.loads(stdout)
+            for ds in deployer_start_pods['items']:
+                if 'status' in ds and 'phase' in ds['status']:
+                    if ds['status']['phase'] in ['Pending','Running']:
+                        result['deployer_active']=True
+        
+    except Exception as e:
+        app.logger.info('Error while getting cloud-pak-deployer-start pods: {}, assuming deployer is not started'.format(str(e)))
+        result['deployer_active']=False
+
+    oc_get_deployer=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer','-o=json']
+    app.logger.info('Get cloud-pak-deployer pods: {}'.format(oc_get_deployer))
+
+    try:
+        process = subprocess.Popen(oc_get_deployer,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            deployer_pods=json.loads(stdout)
+            for dp in deployer_pods['items']:
+                if 'status' in dp and 'phase' in dp['status']:
+                    if dp['status']['phase'] in ['Pending','Running']:
+                        result['deployer_active']=True
+        
+    except Exception as e:
+        app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
+        result['deployer_active']=False
+
+    oc_get_debug=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-debug','-o=json']
+    app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
+
+    try:
+        process = subprocess.Popen(oc_get_debug,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            deployer_debug=json.loads(stdout)
+            for dd in deployer_debug['items']:
+                if 'status' in dd and 'phase' in dd['status']:
+                    if dd['status']['phase'] in ['Running']:
+                        result['deployer_active']=True
+
+                        oc_get_state=['oc','cp','-n=cloud-pak-deployer',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
+                        app.logger.info('Get cloud-pak-deployer state: {}'.format(oc_get_state))
+
+                        try:
+                            process = subprocess.Popen(oc_get_state,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            universal_newlines=True)
+                            
+                            stdout, stderr = process.communicate()
+
+                            if process.returncode == 0:
+                                deploy_state_log_path = '/tmp/deployer-state.out'
+                                result=get_deployer_status_details(deploy_state_log_path, result)
+                            
+                        except Exception as e:
+                            app.logger.info('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+
+    except Exception as e:
+        app.logger.info('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
+
+    return(result)
+
+def get_deployer_status_details(deploy_state_log_path, result):
+    app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
     try:
         with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
             temp={}
-            content = f.read()
+            content = f.read().replace('\\','')
             f.close()
-            # app.logger.info(content)
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
@@ -211,17 +351,89 @@ def get_deployer_state(deploy_state_log_path, result):
         app.logger.warning('Permission error while reading file {}'.format(deploy_state_log_path))
     except IOError:
         app.logger.warning('IO Error while reading file {}'.format(deploy_state_log_path))
-    except:
-        app.logger.warning('internal server error')
+    except Exception as e:
+        app.logger.warning('Internal server error: {}'.format(e))
+
+    return result
+
+#
+# Deployer configuration
+#
+
+@app.route('/api/v1/configuration',methods=["GET"])
+def read_configuration():
+    config_result: dict[str, Any] = {
+        "code":-1,
+        "message":"",
+        "content":"",
+        "data":{},
+        "metadata":{},
+    }
+
+    app.logger.info(running_context)
+    app.logger.info(config_dir)
+    read_result={}
+    if (running_context == 'local'):
+        read_result = read_configuration_from_file()
+    else:
+        read_result = read_configuration_from_openshift()
 
 
-# @app.route('/api/v1/deployer-status',methods=["GET"])
-# def get_deployer_status():
-#     result = {}
+    if (read_result['code'] == 0): 
+        if (read_result['metadata']['existing_config']):
+            app.logger.info(config_result['content'])
+            temp=yaml.load(read_result['content'], Loader=yaml.FullLoader)
+            app.logger.info(temp)
+            # for doc in docs:
+            #     temp={**temp, **doc}
 
-#     if ()
+            if 'global_config' in temp:
+                config_result['data']['global_config']=temp['global_config']
+            else:
+                app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
 
-#     return result
+            if 'openshift' in temp:
+                config_result['data']['openshift']=temp['openshift']
+            else:
+                app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                config_result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
+
+            if 'cp4d' in temp:
+                config_result['data']['cp4d']=temp['cp4d']
+                config_result['metadata']['selectedCloudPak'] = 'software-hub'
+            elif 'cp4i' in temp:
+                config_result['data']['cp4i']=temp['cp4i']
+                config_result['metadata']['selectedCloudPak'] = 'cp4i'
+            else:
+                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+                config_result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
+                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+                config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
+                config_result['metadata']['selectedCloudPak'] = 'software-hub'
+
+            if 'env_id' not in config_result['data']['global_config']:
+                config_result['data']['global_config']['env_id']='demo'
+                app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
+
+            config_result['code'] = 0
+            config_result['message'] = "Successfully converted input to configuration."
+            app.logger.info('Result of reading configuration: {}'.format(config_result))
+        else:
+            app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+            config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
+            app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+            config_result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
+            app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+            config_result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
+            app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+            config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
+            config_result['metadata']['selectedCloudPak'] = 'software-hub' 
+            config_result['code'] = 0
+            config_result['message'] = "Successfully created new configuration."
+            app.logger.info('Result of creating configuration: {}'.format(config_result))
+
+    return config_result
 
 def read_configuration_from_file() -> dict[str, Any]:
     file_result = {
@@ -333,81 +545,6 @@ def read_configuration_from_openshift() -> dict[str, Any]:
     configmap_result['code'] = 0
 
     return configmap_result
-
-@app.route('/api/v1/configuration',methods=["GET"])
-def read_configuration():
-    config_result: dict[str, Any] = {
-        "code":-1,
-        "message":"",
-        "content":"",
-        "data":{},
-        "metadata":{},
-    }
-
-    app.logger.info(running_context)
-    app.logger.info(config_dir)
-    read_result={}
-    if (running_context == 'local'):
-        read_result = read_configuration_from_file()
-    else:
-        read_result = read_configuration_from_openshift()
-
-
-    if (read_result['code'] == 0): 
-        if (read_result['metadata']['existing_config']):
-            app.logger.info(config_result['content'])
-            temp=yaml.load(read_result['content'], Loader=yaml.FullLoader)
-            app.logger.info(temp)
-            # for doc in docs:
-            #     temp={**temp, **doc}
-
-            if 'global_config' in temp:
-                config_result['data']['global_config']=temp['global_config']
-            else:
-                app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
-                config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
-
-            if 'openshift' in temp:
-                config_result['data']['openshift']=temp['openshift']
-            else:
-                app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
-                config_result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
-
-            if 'cp4d' in temp:
-                config_result['data']['cp4d']=temp['cp4d']
-                config_result['metadata']['selectedCloudPak'] = 'software-hub'
-            elif 'cp4i' in temp:
-                config_result['data']['cp4i']=temp['cp4i']
-                config_result['metadata']['selectedCloudPak'] = 'cp4i'
-            else:
-                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
-                config_result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
-                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
-                config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
-                config_result['metadata']['selectedCloudPak'] = 'software-hub'
-
-            if 'env_id' not in config_result['data']['global_config']:
-                config_result['data']['global_config']['env_id']='demo'
-                app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
-
-            config_result['code'] = 0
-            config_result['message'] = "Successfully converted input to configuration."
-            app.logger.info('Result of reading configuration: {}'.format(config_result))
-        else:
-            app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
-            config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
-            app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
-            config_result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
-            app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
-            config_result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
-            app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
-            config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
-            config_result['metadata']['selectedCloudPak'] = 'software-hub' 
-            config_result['code'] = 0
-            config_result['message'] = "Successfully created new configuration."
-            app.logger.info('Result of creating configuration: {}'.format(config_result))
-
-    return config_result
 
 def format_configuration_yaml(full_configuration):
     global_config_yaml = yaml.safe_dump({'global_config': full_configuration['data']['global_config']})
