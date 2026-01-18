@@ -183,7 +183,6 @@ def oc_login():
 
     if isOcLoginCmd:
         proc = subprocess.Popen(oc_login_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        proc.stdin.write(b"n\n")
         outputlog, errorlog = proc.communicate()   
 
         if  proc.returncode == 0: 
@@ -193,7 +192,6 @@ def oc_login():
             result={"code": proc.returncode,"error": errors[-2]}
             app.logger.info(result)
             app.logger.info(errors)
-        proc.stdin.close()
 
         return json.dumps(result)
     else:
@@ -296,7 +294,6 @@ def get_deployer_status_openshift():
             for dd in deployer_debug['items']:
                 if 'status' in dd and 'phase' in dd['status']:
                     if dd['status']['phase'] in ['Running']:
-                        result['deployer_active']=True
 
                         oc_get_state=['oc','cp','-n=cloud-pak-deployer',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
                         app.logger.info('Get cloud-pak-deployer state: {}'.format(oc_get_state))
@@ -414,8 +411,9 @@ def read_configuration():
 
             if 'env_id' not in config_result['data']['global_config']:
                 config_result['data']['global_config']['env_id']='demo'
-                app.logger.warning("Added env_id to global_config: {}".format(result['data']['global_config']))
+                app.logger.warning("Added env_id to global_config: {}".format(config_result['data']['global_config']))
 
+            config_result['metadata']['existing_config'] = True
             config_result['code'] = 0
             config_result['message'] = "Successfully converted input to configuration."
             app.logger.info('Result of reading configuration: {}'.format(config_result))
@@ -429,6 +427,7 @@ def read_configuration():
             app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
             config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
             config_result['metadata']['selectedCloudPak'] = 'software-hub' 
+            config_result['metadata']['existing_config'] = False
             config_result['code'] = 0
             config_result['message'] = "Successfully created new configuration."
             app.logger.info('Result of creating configuration: {}'.format(config_result))
@@ -562,15 +561,33 @@ def format_configuration_yaml(full_configuration):
 
     return all_in_one
 
+@app.route('/api/v1/configuration',methods=["PUT"])
+def update_configuration():
+
+    body = json.loads(request.get_data())
+
+    full_configuration=body['configuration']
+    app.logger.info("Full configuration: {}".format(json.dumps(full_configuration, indent=4)))
+
+    app.logger.info(running_context)
+    app.logger.info(config_dir)
+    read_result={}
+    if (running_context == 'local'):
+        result=update_configuration_file(full_configuration)
+    else:
+        result=update_configuration_openshift(full_configuration)
+
+    return result
+
 def update_configuration_file(full_configuration):
 
     all_in_one = format_configuration_yaml(full_configuration)
         
-    with open(generated_config_yaml_path, 'w', encoding='UTF-8') as f1:
+    with open(full_configuration['metadata']['config_file_path'], 'w', encoding='UTF-8') as f1:
         f1.write(all_in_one)
         f1.close()
 
-    with open(generated_config_yaml_path, "r", encoding='UTF-8') as f1:
+    with open(full_configuration['metadata']['config_file_path'], "r", encoding='UTF-8') as f1:
         result={}
         result["config"]=f1.read()
         f1.close()
@@ -629,25 +646,6 @@ def update_configuration_openshift(full_configuration):
 
     return result
 
-
-@app.route('/api/v1/configuration',methods=["PUT"])
-def update_configuration():
-
-    body = json.loads(request.get_data())
-
-    full_configuration=body['configuration']
-    app.logger.info("Full configuration: {}".format(json.dumps(full_configuration, indent=4)))
-
-    app.logger.info(running_context)
-    app.logger.info(config_dir)
-    read_result={}
-    if (running_context == 'local'):
-        result=update_configuration_file(full_configuration)
-    else:
-        result=update_configuration_openshift(full_configuration)
-
-    return result
-
 # @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 # def getCartridges(cloudpak):
 #     if cloudpak not in ['cp4d', 'cp4i']:
@@ -663,31 +661,6 @@ def getLogs():
     if os.path.exists(log_path):
         result["logs"]=open(log_path,"r").read()
     return json.dumps(result)
-
-@app.route('/api/v1/region/<cloud>',methods=["GET"])
-def getRegion(cloud):
-   ressult={}
-   with open(inventory_config_path+'/{}.inv'.format(cloud),'r') as f:
-       lines = f.readlines()
-       for line in lines:
-         if 'ibm_cloud_region' in line:
-             ressult['region'] = line.split('=')[1].replace('\n','')
-             break
-   return json.dumps(ressult)
-
-@app.route('/api/v1/storages/<cloud>',methods=["GET"])
-def getStorages(cloud):
-    ocp_config=""
-    with open(ocp_base_config_path+'/{}.yaml'.format(cloud), encoding='UTF-8') as f:
-        read_all = f.read()
-
-    yaml=YAML(typ='safe')
-    datas = yaml.load(read_all, Loader=yaml.FullLoader)
-    for data in datas:
-        if 'openshift' in data.keys():
-            ocp_config = data['openshift'][0]['openshift_storage']
-            break
-    return json.dumps(ocp_config)
 
 def loadYamlFile(path):
     result={}
@@ -740,7 +713,7 @@ Please access the below URL for the web console:
 ******************************************************************************
 Summary
  * Web console HTTPS URL:
-   https://<host machine>:8080  
+   http://0.0.0.0:8080  
 ******************************************************************************
     """)
-    app.run(host='0.0.0.0', port='32080', debug=True)    
+    app.run(host='0.0.0.0', port=32080, debug=True)    

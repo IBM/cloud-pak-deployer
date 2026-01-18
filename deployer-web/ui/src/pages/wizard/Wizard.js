@@ -37,7 +37,6 @@ const Wizard = ({setHeaderTitle,
   //Infrastructure
   const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
   const [configuration, setConfiguration] = useState({})
-  const [locked, setLocked] = useState(false)
   const [envId, setEnvId] = useState("")
   //---Existing OpenShift
   const [OCPSettings, setOCPSettings] = useState({
@@ -105,22 +104,20 @@ const Wizard = ({setHeaderTitle,
       if (result!==0) {
         return
       } else {
-       //test OC Login Cmd success
-        if (locked) {
-          let deployerStatus = await checkDeployerStatus();
-          if (deployerStatus===1){
-            setCheckDeployerStatusErr(false) 
-            setCurrentIndex(10)
-            setDeployStart(true)  
-            setDeployErr(false) 
-            getDeployStatus()
-            refreshStatus() 
-            return 
-          } 
-          if (deployerStatus===-1) {
-            setCheckDeployerStatusErr(true) 
-            return
-          }
+        //test OC Login Cmd success
+        let deployerStatus = await checkDeployerStatus();
+        if (deployerStatus===1){
+          setCheckDeployerStatusErr(false) 
+          setCurrentIndex(10)
+          setDeployStart(true)  
+          setDeployErr(false) 
+          getDeployStatus()
+          refreshStatus() 
+          return 
+        } 
+        if (deployerStatus===-1) {
+          setCheckDeployerStatusErr(true) 
+          return
         }
       }
     }
@@ -158,30 +155,30 @@ const Wizard = ({setHeaderTitle,
     return result
   }
 
-  const testOcLoginCmd = async() => {
-    let patt = /oc\s+login\s+/;    
+  const testOcLoginCmd = async () => {
+    let patt = /oc\s+login\s+/;
     if (!patt.test(OCPSettings.ocLoginCmd.trim())) {
       setOcLoginCmdInvalid(true)
-      setLoadingDeployStatus(false) 
+      setLoadingDeployStatus(false)
       return
-    }   
+    }
     setOcLoginCmdInvalid(false)
-    const body={
+    const body = {
       "oc_login_command": OCPSettings.ocLoginCmd
     }
-    let result=-1
-    await axios.post('/api/v1/oc-login', body).then(res =>{     
-      result=res.data.code            
-      if (result!==0) {
-        setOcLoginErr(true)    
+    let result = -1
+    await axios.post('/api/v1/oc-login', body).then(res => {
+      result = res.data.code
+      if (result !== 0) {
+        setOcLoginErr(true)
       } else {
-        setOcLoginErr(false)  
-      }      
+        setOcLoginErr(false)
+      }
     }, err => {
       setOcLoginErr(true)
     }
-    );  
-    setLoadingDeployStatus(false) 
+    );
+    setLoadingDeployStatus(false)
     return result;
   }
 
@@ -521,7 +518,7 @@ const Wizard = ({setHeaderTitle,
             />
           </div>
           {deployState.length > 0 && 
-              <div className="deploy-item">Deployer State:  
+              <div className="deploy-item">Status of services:  
                 <div className="deploy-item__state">
                   {tables.map((table)=>(
                         
@@ -660,8 +657,6 @@ const Wizard = ({setHeaderTitle,
                                     setWizardError={setWizardError}
                                     configuration={configuration}
                                     setConfiguration={setConfiguration}
-                                    locked={locked}
-                                    setLocked={setLocked}
                                     envId={envId}
                                     setEnvId={setEnvId}            
                                     cp4dLicense={cp4dLicense}
@@ -685,7 +680,6 @@ const Wizard = ({setHeaderTitle,
                                     setCPICartridgesData={setCPICartridgesData}
                                     setConfiguration={setConfiguration}
                                     configuration={configuration}
-                                    locked={locked}
                                     cp4dLicense={cp4dLicense}
                                     cp4iLicense={cp4iLicense}
                                     cp4dVersion={cp4dVersion}

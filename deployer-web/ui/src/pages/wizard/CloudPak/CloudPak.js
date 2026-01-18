@@ -14,8 +14,6 @@ const CloudPak = ({
                   setWizardError,
                   configuration,
                   setConfiguration,
-                  locked,
-                  setLocked,
                   cp4dLicense,
                   cp4iLicense,
                   cp4dVersion,
@@ -36,6 +34,9 @@ const CloudPak = ({
     
     const [loadingConfiguration, setLoadingConfiguration] = useState(false)
     const [loadConfigurationErr, setLoadConfigurationErr] = useState(false)    
+
+    const [envIdLocked, setEnvIdLocked] = useState(false)
+
     
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
@@ -56,32 +57,28 @@ const CloudPak = ({
           setLoadConfigurationErr(false)
           
           setConfiguration(res.data)
-          console.log(res.data)
+          // console.log(res.data)
 
-          if (res.data.code === 0) {
-            setLocked(true)
+          let cloud = res.data.data.global_config.cloud_platform
+          setCloudPlatform(cloud)
+          setEnvId(res.data.data.global_config.env_id)
+          setExistingConfig(res.data.metadata.existing_config)
 
-            let cloud = res.data.data.global_config.cloud_platform
-            setCloudPlatform(cloud)
-            setEnvId(res.data.data.global_config.env_id)
-            setExistingConfig(res.data.metadata.existing_config)
-
-            if (res.data.data.cp4d) {
-              if (res.data.data.cp4d[0]) {
-                setCp4dVersion(res.data.data.cp4d[0].cp4d_version)
-                setCp4dLicense(res.data.data.cp4d[0].accept_licenses)
-                setCPDCartridgesData(res.data.data.cp4d[0].cartridges)
-              }
+          if (res.data.data.cp4d) {
+            if (res.data.data.cp4d[0]) {
+              setCp4dVersion(res.data.data.cp4d[0].cp4d_version)
+              setCp4dLicense(res.data.data.cp4d[0].accept_licenses)
+              setCPDCartridgesData(res.data.data.cp4d[0].cartridges)
             }
-            if (res.data.data.cp4i) {
-              if (res.data.data.cp4i[0]) {
-                setCp4iVersion(res.data.data.cp4i[0].cp4i_version)
-                setCp4iLicense(res.data.data.cp4i[0].accept_licenses)
-                setCPICartridgesData(res.data.data.cp4i[0].instances)
-              }
-            }
-
           }
+          if (res.data.data.cp4i) {
+            if (res.data.data.cp4i[0]) {
+              setCp4iVersion(res.data.data.cp4i[0].cp4i_version)
+              setCp4iLicense(res.data.data.cp4i[0].accept_licenses)
+              setCPICartridgesData(res.data.data.cp4i[0].instances)
+            }
+          }
+
         }, err => {
           setLoadingConfiguration(false)
           setLoadConfigurationErr(true)
@@ -249,11 +246,9 @@ const CloudPak = ({
 
     useEffect(() => {
       setSelectedCloudPak('software-hub')
-      if (locked) {
-        if (configuration && configuration.data) {
-          if ('cp4d' in configuration.data) { setSelectedCloudPak('software-hub') }
-          else { setSelectedCloudPak('cp4i') }
-        }
+      if (configuration && configuration.data) {
+        if ('cp4d' in configuration.data) { setSelectedCloudPak('software-hub') }
+        else { setSelectedCloudPak('cp4i') }
       }
       // eslint-disable-next-line
     }, [])
@@ -278,7 +273,7 @@ const CloudPak = ({
             <div className='cpd-container'>
             <div>
               <div className="infra-items">Environment ID</div>
-              <TextInput onChange={EnvIdOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={locked}/>
+              <TextInput onChange={EnvIdOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={existingConfig}/>
             </div>
 
             <div>
