@@ -232,6 +232,7 @@ def get_deployer_status_local():
 def get_deployer_status_openshift():
     result = {}
     # Check if the env apply process is active
+    deployer_starting=False
     result['deployer_active']=False
 
     oc_get_deployer_start=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-start','-o=json']
@@ -251,70 +252,72 @@ def get_deployer_status_openshift():
                 if 'status' in ds and 'phase' in ds['status']:
                     if ds['status']['phase'] in ['Pending','Running']:
                         result['deployer_active']=True
+                        deployer_starting=True
         
     except Exception as e:
         app.logger.info('Error while getting cloud-pak-deployer-start pods: {}, assuming deployer is not started'.format(str(e)))
         result['deployer_active']=False
 
-    oc_get_deployer=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer','-o=json']
-    app.logger.info('Get cloud-pak-deployer pods: {}'.format(oc_get_deployer))
+    if (not deployer_starting):
+        oc_get_deployer=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer','-o=json']
+        app.logger.info('Get cloud-pak-deployer pods: {}'.format(oc_get_deployer))
 
-    try:
-        process = subprocess.Popen(oc_get_deployer,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        universal_newlines=True)
-        
-        stdout, stderr = process.communicate()
-        
-        if process.returncode == 0:
-            deployer_pods=json.loads(stdout)
-            for dp in deployer_pods['items']:
-                if 'status' in dp and 'phase' in dp['status']:
-                    if dp['status']['phase'] in ['Pending','Running']:
-                        result['deployer_active']=True
-        
-    except Exception as e:
-        app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
-        result['deployer_active']=False
+        try:
+            process = subprocess.Popen(oc_get_deployer,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            universal_newlines=True)
+            
+            stdout, stderr = process.communicate()
+            
+            if process.returncode == 0:
+                deployer_pods=json.loads(stdout)
+                for dp in deployer_pods['items']:
+                    if 'status' in dp and 'phase' in dp['status']:
+                        if dp['status']['phase'] in ['Pending','Running']:
+                            result['deployer_active']=True
+            
+        except Exception as e:
+            app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
+            result['deployer_active']=False
 
-    oc_get_debug=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-debug','-o=json']
-    app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
+        oc_get_debug=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-debug','-o=json']
+        app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
 
-    try:
-        process = subprocess.Popen(oc_get_debug,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        universal_newlines=True)
-        
-        stdout, stderr = process.communicate()
-        
-        if process.returncode == 0:
-            deployer_debug=json.loads(stdout)
-            for dd in deployer_debug['items']:
-                if 'status' in dd and 'phase' in dd['status']:
-                    if dd['status']['phase'] in ['Running']:
+        try:
+            process = subprocess.Popen(oc_get_debug,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
+                            universal_newlines=True)
+            
+            stdout, stderr = process.communicate()
+            
+            if process.returncode == 0:
+                deployer_debug=json.loads(stdout)
+                for dd in deployer_debug['items']:
+                    if 'status' in dd and 'phase' in dd['status']:
+                        if dd['status']['phase'] in ['Running']:
 
-                        oc_get_state=['oc','cp','-n=cloud-pak-deployer',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
-                        app.logger.info('Get cloud-pak-deployer state: {}'.format(oc_get_state))
+                            oc_get_state=['oc','cp','-n=cloud-pak-deployer',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
+                            app.logger.info('Get cloud-pak-deployer state: {}'.format(oc_get_state))
 
-                        try:
-                            process = subprocess.Popen(oc_get_state,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE,
-                                            universal_newlines=True)
-                            
-                            stdout, stderr = process.communicate()
+                            try:
+                                process = subprocess.Popen(oc_get_state,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                universal_newlines=True)
+                                
+                                stdout, stderr = process.communicate()
 
-                            if process.returncode == 0:
-                                deploy_state_log_path = '/tmp/deployer-state.out'
-                                result=get_deployer_status_details(deploy_state_log_path, result)
-                            
-                        except Exception as e:
-                            app.logger.info('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                                if process.returncode == 0:
+                                    deploy_state_log_path = '/tmp/deployer-state.out'
+                                    result=get_deployer_status_details(deploy_state_log_path, result)
+                                
+                            except Exception as e:
+                                app.logger.info('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
 
-    except Exception as e:
-        app.logger.info('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
+        except Exception as e:
+            app.logger.info('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
 
     return(result)
 

@@ -288,9 +288,13 @@ const Wizard = ({setHeaderTitle,
 
         if(res.data.deployer_stage) {
           setDeployerStage(res.data.deployer_stage)
+        } else {
+          setDeployerStage("")
         }
         if(res.data.last_step) {
           setDeployerLastStep(res.data.last_step)
+        } else {
+          setDeployerLastStep("")
         }
         if(res.data.service_state) {
           setDeployState(res.data.service_state)
