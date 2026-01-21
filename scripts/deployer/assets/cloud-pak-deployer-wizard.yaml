@@ -1,0 +1,67 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: cloud-pak-deployer-wizard
+objects:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: cloud-pak-deployer-wizard
+    namespace: cloud-pak-deployer
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: cloud-pak-deployer-wizard
+    template:
+      metadata:
+        name: cloud-pak-deployer-wizard
+        labels:
+          app: cloud-pak-deployer-wizard
+      spec:
+        containers:
+        - name: cloud-pak-deployer
+          image: ${IMAGE}
+          imagePullPolicy: Always
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          ports:
+          - containerPort: 8080
+            protocol: TCP
+            env:
+            - name: CPD_DEPLOYER_PROJECT
+              value: cloud-pak-deployer
+            - name: CPD_CONTEXT
+              value: openshift
+          command: ["/bin/sh","-xc"]
+          args: 
+            - /cloud-pak-deployer/cp-deploy.sh env wizard -v
+        securityContext:
+          runAsUser: 0
+        serviceAccountName: cloud-pak-deployer-sa
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: cloud-pak-deployer-wizard-svc
+    namespace: cloud-pak-deployer    
+  spec:
+    selector:                  
+      app: cloud-pak-deployer-wizard
+    ports:
+    - nodePort: 0
+      port: 8080            
+      protocol: TCP
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: cloud-pak-deployer-wizard
+  spec:
+    tls:
+      termination: edge
+    to:
+      kind: Service
+      name: cloud-pak-deployer-wizard-svc
+      weight: null
+parameters:
+- description: Image to be used by the container in the Job
+  name: IMAGE
