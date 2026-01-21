@@ -4,84 +4,33 @@ import { useEffect, useState } from "react";
 import './Summary.scss'
 import yaml from 'js-yaml';
 
-const Summary = ({cloudPlatform, 
-                  IBMCloudSettings, 
-                  AWSSettings, 
-                  storage, 
-                  CPDCartridgesData, 
-                  CPICartridgesData, 
-                  locked,
-                  envId,
-                  cp4dLicense,
-                  cp4iLicense,
-                  cp4dVersion,
-                  cp4iVersion,
-                  CP4DPlatformCheckBox,
-                  CP4IPlatformCheckBox,
-                  summaryLoading,
-                  setSummaryLoading,
-                  configDir,
-                  statusDir,
-                  tempSummaryInfo,
-                  setTempSummaryInfo,
-                  configInvalid,
-                  setConfigInvalid,
-                  showErr,
-                  setShowErr
-                }) => {
+const Summary = ({ 
+    configuration,
+    setConfiguration,
+    summaryLoading,
+    setSummaryLoading,
+    configDir,
+    statusDir,
+    tempSummaryInfo,
+    setTempSummaryInfo,
+    configInvalid,
+    setConfigInvalid,
+    showErr,
+    setShowErr
+}) => {
 
     
     const [summaryInfo, setSummaryInfo] = useState("")      
     const [editable, setEditable] = useState(false)
 
-    const createSummaryData = async () => { 
-        let region=""    
-        switch (cloudPlatform) {
-            case "ibm-cloud":               
-                region=IBMCloudSettings.region
-                break
-            case "aws":                
-                region=AWSSettings.region
-                break
-            default:
-        }  
+    const updateSummaryData = async () => {
         let body = {
-            "envId": envId,
-            "cloud": cloudPlatform,
-            "region": region,
-            "storages": storage,
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,      
+            "configuration":configuration
         }
-        await axios.post('/api/v1/createConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{  
-            setSummaryLoading(false)          
-            setSummaryInfo(res.data.config)
-            setTempSummaryInfo(res.data.config)
-        }, err => {
-            setSummaryLoading(false)  
-            setShowErr(true)
-            console.log(err)
-        });            
-    }
-    
-    const updateSummaryData = async () => {  
-        let body = {
-            "cp4d": CPDCartridgesData,
-            "cp4i": CPICartridgesData,
-            "cp4dLicense":cp4dLicense,
-            "cp4iLicense":cp4iLicense,
-            "cp4dVersion":cp4dVersion,
-            "cp4iVersion":cp4iVersion,
-            "CP4DPlatform":CP4DPlatformCheckBox,
-            "CP4IPlatform":CP4IPlatformCheckBox,   
-        }  
-        await axios.put('/api/v1/updateConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+
+        console.log('body: ', body)
+
+        await axios.put('/api/v1/configuration', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
             setSummaryLoading(false)        
             setSummaryInfo(res.data.config)
             setTempSummaryInfo(res.data.config)
@@ -93,27 +42,23 @@ const Summary = ({cloudPlatform,
     }
 
     const saveSummaryData = async (body) => {         
-        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-            setEditable(false)
-            setSummaryLoading(false)        
-            setSummaryInfo(res.data.config)
-            setTempSummaryInfo(res.data.config)
-        }, err => {
-            setSummaryLoading(false) 
-            setShowErr(true)
-            console.log(err)
-        });          
+        console.log('body: ', body)
+        configuration.data = body.config
+        setConfiguration(configuration)
+        setEditable(false)
+        setSummaryLoading(false)        
     }     
 
-    useEffect(() => {        
-        if (locked) {
-            setSummaryLoading(true) 
-            updateSummaryData()
-        } 
-        else {
-            setSummaryLoading(true)  
-            createSummaryData()
-        }        
+    useEffect(() => {
+        console.log('useEffect() in Summary.js')
+        console.log('configuration: ', configuration)
+
+        // Convert configuration.data to YAML text if it's an object
+        const configText = yaml.dump(configuration.data);
+        
+        setSummaryInfo(configText)
+        setTempSummaryInfo(configText)
+
         // eslint-disable-next-line
     }, []);
 
@@ -138,6 +83,7 @@ const Summary = ({cloudPlatform,
                 result = {...doc, ...result}
             }); 
             body['config'] = result
+            setSummaryInfo(tempSummaryInfo)
             setSummaryLoading(true)      
             await saveSummaryData(body)
 

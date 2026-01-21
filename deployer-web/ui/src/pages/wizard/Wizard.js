@@ -1,6 +1,5 @@
 import React from 'react';
 import Infrastructure from './Infrastructure/Infrastructure';
-import Storage from './Storage/Storage';
 import Selection from './Selection/Selection';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
@@ -22,6 +21,10 @@ const Wizard = ({setHeaderTitle,
   const [ocLoginErr, setOcLoginErr] = useState(false)
   const [checkDeployerStatusErr, setCheckDeployerStatusErr] = useState(false)
 
+  //Environment variables loading
+  const [loadingEnviromentVariables, setLoadingEnviromentVariables] = useState(false)
+  const [loadEnviromentVariablesErr, setloadEnviromentVariablesErr] = useState(false)
+
   //DeployStart hidden wizard
   const [isDeployStart, setDeployStart] = useState(false);
   const [isDeployErr, setDeployErr] = useState(false);
@@ -34,27 +37,12 @@ const Wizard = ({setHeaderTitle,
   //Infrastructure
   const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
   const [configuration, setConfiguration] = useState({})
-  const [locked, setLocked] = useState(false)
   const [envId, setEnvId] = useState("")
-  //---IBM Cloud
-  const [IBMCloudSettings, setIBMCloudSettings] = useState({
-    IBMAPIKey: '',
-    region: '',
-  })
-  //---AWS
-  const [AWSSettings, setAWSSettings] = useState({
-    accessKeyID: '',
-    secretAccessKey:'',
-  })
   //---Existing OpenShift
   const [OCPSettings, setOCPSettings] = useState({
     ocLoginCmd:'',
   })  
   const [isOcLoginCmdInvalid, setOcLoginCmdInvalid] = useState(false)
-
-  //Storage
-  const [storage, setStorage] = useState([])
-  const [storagesOptions, setStoragesOptions] = useState([])
 
   //Cloud Pak
   const [CPDCartridgesData, setCPDCartridgesData] = useState([])
@@ -116,22 +104,20 @@ const Wizard = ({setHeaderTitle,
       if (result!==0) {
         return
       } else {
-       //test OC Login Cmd success
-        if (locked) {
-          let deployerStatus = await checkDeployerStatus();
-          if (deployerStatus===1){
-            setCheckDeployerStatusErr(false) 
-            setCurrentIndex(10)
-            setDeployStart(true)  
-            setDeployErr(false) 
-            getDeployStatus()
-            refreshStatus() 
-            return 
-          } 
-          if (deployerStatus===-1) {
-            setCheckDeployerStatusErr(true) 
-            return
-          }
+        //test OC Login Cmd success
+        let deployerStatus = await checkDeployerStatus();
+        if (deployerStatus===1){
+          setCheckDeployerStatusErr(false) 
+          setCurrentIndex(10)
+          setDeployStart(true)  
+          setDeployErr(false) 
+          getDeployStatus()
+          refreshStatus() 
+          return 
+        } 
+        if (deployerStatus===-1) {
+          setCheckDeployerStatusErr(true) 
+          return
         }
       }
     }
@@ -169,44 +155,41 @@ const Wizard = ({setHeaderTitle,
     return result
   }
 
-  const testOcLoginCmd = async() => {
-    let patt = /oc\s+login\s+/;    
+  const testOcLoginCmd = async () => {
+    let patt = /oc\s+login\s+/;
     if (!patt.test(OCPSettings.ocLoginCmd.trim())) {
       setOcLoginCmdInvalid(true)
-      setLoadingDeployStatus(false) 
+      setLoadingDeployStatus(false)
       return
-    }   
+    }
     setOcLoginCmdInvalid(false)
-    const body={
+    const body = {
       "oc_login_command": OCPSettings.ocLoginCmd
     }
-    let result=-1
-    await axios.post('/api/v1/oc-login', body).then(res =>{     
-      result=res.data.code            
-      if (result!==0) {
-        setOcLoginErr(true)    
+    let result = -1
+    await axios.post('/api/v1/oc-login', body).then(res => {
+      result = res.data.code
+      if (result !== 0) {
+        setOcLoginErr(true)
       } else {
-        setOcLoginErr(false)  
-      }      
+        setOcLoginErr(false)
+      }
     }, err => {
       setOcLoginErr(true)
     }
-    );  
-    setLoadingDeployStatus(false) 
+    );
+    setLoadingDeployStatus(false)
     return result;
   }
 
   const createDeployment = async() => {
     setLoadingDeployStatus(true)
     const body = {
-      "env":{
-          "ibmCloudAPIKey":IBMCloudSettings.IBMAPIKey
-      },
+      "env":{},
       "entitlementKey": entitlementKey,
       "cloud": cloudPlatform,
       "envId": envId,
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
-      "region": IBMCloudSettings.region,
       "adminPassword": adminPassword,
     }    
     setCurrentIndex(10)
@@ -261,27 +244,29 @@ const Wizard = ({setHeaderTitle,
     let result = {}
         
     try {                   
-        yaml.loadAll(tempSummaryInfo, function (doc) {
-            result = {...doc, ...result}
-        }); 
-        body['config'] = result 
-        await axios.post('/api/v1/saveConfig', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-          setLoadingDeployStatus(false)
-          setCurrentIndex(10)
-          setDeployStart(true)
-          setSaveConfig(true)
 
+        let body = {
+            "configuration":configuration
+        }
+
+        console.log('body: ', body)
+
+        await axios.put('/api/v1/configuration', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
+            setLoadingDeployStatus(false)
+            setCurrentIndex(10)
+            setDeployStart(true)
+            setSaveConfig(true)
+            
           if (selection==="Configure+Deploy") {
             createDeployment();
           } else if (selection==="Configure+Download") {
             createDownload();
           }
-          
-      }, err => {
-        setLoadingDeployStatus(false)
-        setShowErr(true)
-        console.log(err)          
-      });  
+        }, err => {
+            setLoadingDeployStatus(false) 
+            setShowErr(true)
+            console.log(err)
+        });   
 
     } catch (error) {
         setLoadingDeployStatus(false)
@@ -303,9 +288,13 @@ const Wizard = ({setHeaderTitle,
 
         if(res.data.deployer_stage) {
           setDeployerStage(res.data.deployer_stage)
+        } else {
+          setDeployerStage("")
         }
         if(res.data.last_step) {
           setDeployerLastStep(res.data.last_step)
+        } else {
+          setDeployerLastStep("")
         }
         if(res.data.service_state) {
           setDeployState(res.data.service_state)
@@ -344,8 +333,50 @@ const Wizard = ({setHeaderTitle,
     });
   }
 
-  useEffect(() => {     
-    if (isDeployStart && !isDeployErr) {   
+  useEffect(() => {
+    const getEnviromentVariables = async() => {
+      setLoadingEnviromentVariables(true)
+      await axios.get('/api/v1/environment-variable').then(res =>{
+        setLoadingEnviromentVariables(false)
+        if (res.data.CPD_WIZARD_MODE === "existing-ocp") {
+          setCpdWizardMode("existing-ocp")
+          setSelection("Configure")
+          setCurrentIndex(1)
+        }else if (res.data.CPD_WIZARD_MODE === "deploy") {
+          setCpdWizardMode("deploy")
+          setSelection("Configure+Deploy")
+          setCurrentIndex(1)
+        } else if (res.data.CPD_WIZARD_MODE === "download") {
+          setCpdWizardMode("download")
+          setSelection("Configure+Download")
+          setCurrentIndex(1)
+        } else if (res.data.CPD_WIZARD_MODE === "configure") {
+          setCpdWizardMode("configure")
+          setSelection("Configure")
+          setCurrentIndex(1)
+        }
+
+        if (res.data.CPD_WIZARD_PAGE_TITLE && res.data.CPD_WIZARD_PAGE_TITLE !== headerTitle) {
+          setHeaderTitle(res.data.CPD_WIZARD_PAGE_TITLE)
+        }
+        if (res.data.STATUS_DIR) {
+          setStatusDir(res.data.STATUS_DIR)
+        }
+        if (res.data.CONFIG_DIR) {
+          setConfigDir(res.data.CONFIG_DIR)
+        }
+      }, err => {
+        setLoadingEnviromentVariables(false)
+        setloadEnviromentVariablesErr(true)
+        console.log(err)
+      });
+    }
+    getEnviromentVariables();
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    if (isDeployStart && !isDeployErr) {
       if (!deployerStatus) {
         clearInterval(scheduledJob)
       }
@@ -373,29 +404,22 @@ const Wizard = ({setHeaderTitle,
           <ProgressStep
             onClick={() => setCurrentIndex(1)}
             current={currentIndex === 1}
-            label={'Infrastructure'}
+            label={'OCP Login'}
             description="Step 2"
           />
 
           <ProgressStep
             onClick={() => setCurrentIndex(2)}
             current={currentIndex === 2}
-            label={'Storage'}
+            label={'Config'}
             description="Step 3"
           />
 
           <ProgressStep
             onClick={() => setCurrentIndex(3)}
             current={currentIndex === 3}
-            label={'Cloud Pak'}
-            description="Step 4"
-          />
-
-          <ProgressStep
-            onClick={() => setCurrentIndex(4)}
-            current={currentIndex === 4}
             label={'Summary'}
-            description="Step 5"
+            description="Step 4"
           />    
        </ProgressIndicator>  
     )
@@ -498,7 +522,7 @@ const Wizard = ({setHeaderTitle,
             />
           </div>
           {deployState.length > 0 && 
-              <div className="deploy-item">Deployer State:  
+              <div className="deploy-item">Status of services:  
                 <div className="deploy-item__state">
                   {tables.map((table)=>(
                         
@@ -537,10 +561,22 @@ const Wizard = ({setHeaderTitle,
     )
   }
 
+  const errorEnviromentVariablesProps = () => ({
+    kind: 'error',
+    lowContrast: true,
+    role: 'error',
+    title: 'Unable to get variables from server.',
+    hideCloseButton: false,
+  });
+
   return (
     <>
      <div className="wizard-container">
       <div className="wizard-container__page">
+        {loadEnviromentVariablesErr && <InlineNotification className="cpd-error"
+          {...errorEnviromentVariablesProps()}
+        />}
+        {loadingEnviromentVariables && <Loading />}
         <div className='wizard-container__page-header'>
           <div className='wizard-container__page-header-title'>         
             <h2>Deploy Wizard</h2>
@@ -549,11 +585,11 @@ const Wizard = ({setHeaderTitle,
           { isDeployStart ? null: 
           <div>
             <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
-            {currentIndex === 4 ?
-              <ActionBySelect />
-              :
-              <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
-            }            
+                {currentIndex === 3 ?
+                  <ActionBySelect />
+                  :
+                  <Button className="wizard-container__page-header-button" onClick={clickNext} disabled={wizardError}>Next</Button>
+                }            
           </div>
           }          
         </div> 
@@ -578,32 +614,19 @@ const Wizard = ({setHeaderTitle,
           <DeployerProgressIndicator />                   
         } 
         {currentIndex === 0 ? <Selection
-                            setSelection={setSelection} 
+                            setSelection={setSelection}
                             setCpdWizardMode={setCpdWizardMode}
                             selection={selection}
-                            setCurrentIndex={setCurrentIndex}
-                            setConfigDir={setConfigDir}
-                            setStatusDir={setStatusDir}
-                            setHeaderTitle={setHeaderTitle}
-                            headerTitle={headerTitle}
                       >
-                      </Selection> : null} 
+                      </Selection> : null}
       
         {currentIndex === 1 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
-                                    IBMCloudSettings={IBMCloudSettings}
-                                    setIBMCloudSettings={setIBMCloudSettings}                                      
-                                    AWSSettings={AWSSettings}
-                                    setAWSSettings={setAWSSettings}
                                     OCPSettings={OCPSettings}
                                     setOCPSettings={setOCPSettings}                                    
                                     setWizardError={setWizardError}
                                     ocLoginErr={ocLoginErr}
-                                    configuration={configuration}
-                                    setConfiguration={setConfiguration}
-                                    locked={locked}
-                                    setLocked={setLocked}
                                     isOcLoginCmdInvalid={isOcLoginCmdInvalid}
                                     setOcLoginCmdInvalid={setOcLoginCmdInvalid}
                                     envId={envId}
@@ -625,18 +648,10 @@ const Wizard = ({setHeaderTitle,
                                     setPortable={setPortable}
                               >
                               </Infrastructure> : null} 
-        {currentIndex === 2 ? <Storage 
+                              
+        {currentIndex === 2 ? <CloudPak
                                     cloudPlatform={cloudPlatform} 
-                                    setStorage={setStorage} 
-                                    storage={storage} 
-                                    storagesOptions={storagesOptions} 
-                                    setStoragesOptions={setStoragesOptions}
-                                    setWizardError={setWizardError}
-                                    configuration={configuration}
-                                    locked={locked}
-                              >                                    
-                              </Storage> : null}    
-        {currentIndex === 3 ? <CloudPak
+                                    setCloudPlatform={setCloudPlatform} 
                                     entitlementKey={entitlementKey} 
                                     setEntitlementKey={setEntitlementKey}
                                     CPDCartridgesData={CPDCartridgesData}
@@ -645,7 +660,9 @@ const Wizard = ({setHeaderTitle,
                                     setCPICartridgesData={setCPICartridgesData}                                    
                                     setWizardError={setWizardError}
                                     configuration={configuration}
-                                    locked={locked}
+                                    setConfiguration={setConfiguration}
+                                    envId={envId}
+                                    setEnvId={setEnvId}            
                                     cp4dLicense={cp4dLicense}
                                     cp4iLicense={cp4iLicense}
                                     cp4dVersion={cp4dVersion}
@@ -654,25 +671,19 @@ const Wizard = ({setHeaderTitle,
                                     setCp4iLicense={setCp4iLicense}
                                     setCp4dVersion={setCp4dVersion}
                                     setCp4iVersion={setCp4iVersion}
-                                    CP4DPlatformCheckBox={CP4DPlatformCheckBox}
-                                    CP4IPlatformCheckBox={CP4IPlatformCheckBox}
-                                    setCP4DPlatformCheckBox={setCP4DPlatformCheckBox}
-                                    setCP4IPlatformCheckBox={setCP4IPlatformCheckBox}
                                     adminPassword={adminPassword}
                                     setAdminPassword={setAdminPassword}
                               >
-                              </CloudPak> : null}    
-        {currentIndex === 4 ? <Summary 
+                              </CloudPak> : null}
+
+        {currentIndex === 3 ? <Summary 
                                     cloudPlatform={cloudPlatform} 
-                                    IBMCloudSettings={IBMCloudSettings}                                                                      
-                                    AWSSettings={AWSSettings}
-                                    storage={storage} 
                                     CPDCartridgesData={CPDCartridgesData}
                                     setCPDCartridgesData={setCPDCartridgesData}
                                     CPICartridgesData={CPICartridgesData}
                                     setCPICartridgesData={setCPICartridgesData}
+                                    setConfiguration={setConfiguration}
                                     configuration={configuration}
-                                    locked={locked}
                                     cp4dLicense={cp4dLicense}
                                     cp4iLicense={cp4iLicense}
                                     cp4dVersion={cp4dVersion}
