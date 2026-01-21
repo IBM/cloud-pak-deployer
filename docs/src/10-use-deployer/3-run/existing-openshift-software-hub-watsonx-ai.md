@@ -397,6 +397,15 @@ data:
           description: "watsonx Orchestrate instance"
         state: removed
 
+      - name: wca
+        description: watsonx Code Assistant
+        installation_options:
+          similarity_feature:
+            enabled: false
+          rag_enabled:
+            enabled: true
+        state: removed
+
       - name: wca-ansible
         description: watsxonx Code Assistant for Red Hat Ansible Lightspeed
         state: removed

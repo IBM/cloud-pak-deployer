@@ -447,12 +447,21 @@ data:
           description: "watsonx Orchestrate instance"
         state: removed
 
+      - name: wca
+        description: watsonx Code Assistant
+        installation_options:
+          similarity_feature:
+            enabled: false
+          rag_enabled:
+            enabled: true
+        state: removed
+
       - name: wca-ansible
-        description: watsxonx Code Assistant for Red Hat Ansible Lightspeed
+        description: watsonx Code Assistant for Red Hat Ansible Lightspeed
         state: removed
 
       - name: wca-z
-        description: watsxonx Code Assistant for Z
+        description: watsonx Code Assistant for Z
         state: removed
 
       # For the IBM Knowledge Catalog, you can specify 3 editions: wkx, ikc_premium, or ikc_standard
