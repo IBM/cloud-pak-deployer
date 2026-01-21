@@ -34,7 +34,7 @@ app.logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 ocp_base_config_path = os.path.join(deployer_dir,'ample-configurations/sample-dynamic/config-samples')
 running_context=str(os.getenv('CONTEXT', default='local'))
-deployer_project = str(os.getenv('DEPLOYER_PROJECT', default='cloud-pak-deployer'))
+deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-deployer'))
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
 
@@ -235,7 +235,7 @@ def get_deployer_status_openshift():
     deployer_starting=False
     result['deployer_active']=False
 
-    oc_get_deployer_start=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-start','-o=json']
+    oc_get_deployer_start=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-start','-o=json']
     app.logger.info('Get cloud-pak-deployer-start pods: {}'.format(oc_get_deployer_start))
 
     try:
@@ -259,7 +259,7 @@ def get_deployer_status_openshift():
         result['deployer_active']=False
 
     if (not deployer_starting):
-        oc_get_deployer=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer','-o=json']
+        oc_get_deployer=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer','-o=json']
         app.logger.info('Get cloud-pak-deployer pods: {}'.format(oc_get_deployer))
 
         try:
@@ -281,7 +281,7 @@ def get_deployer_status_openshift():
             app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
             result['deployer_active']=False
 
-        oc_get_debug=['oc','get','-n=cloud-pak-deployer','pods','-l=app=cloud-pak-deployer-debug','-o=json']
+        oc_get_debug=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-debug','-o=json']
         app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
 
         try:
@@ -298,7 +298,7 @@ def get_deployer_status_openshift():
                     if 'status' in dd and 'phase' in dd['status']:
                         if dd['status']['phase'] in ['Running']:
 
-                            oc_get_state=['oc','cp','-n=cloud-pak-deployer',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
+                            oc_get_state=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
                             app.logger.info('Get cloud-pak-deployer state: {}'.format(oc_get_state))
 
                             try:
@@ -506,11 +506,7 @@ def read_configuration_from_openshift() -> dict[str, Any]:
     existing_config=False
 
     cm_command=['oc']
-    cm_command += ['extract']
-    cm_command += ['-n=cloud-pak-deployer']
-    cm_command += ['configmap/cloud-pak-deployer-config']
-    cm_command += ['--keys=cpd-config.yaml']
-    cm_command += ['--to=-']
+    cm_command += ['extract',f'-n={deployer_project}','configmap/cloud-pak-deployer-config','--keys=cpd-config.yaml','--to=-']
     app.logger.info('Retrieving config map command: {}'.format(cm_command))
 
     try:
@@ -612,10 +608,7 @@ def update_configuration_openshift(full_configuration):
 
     # First try to create config map, in case it doesn't exist yet
     create_cm_command=['oc']
-    create_cm_command += ['create']
-    create_cm_command += ['-n=cloud-pak-deployer']
-    create_cm_command += ['configmap']
-    create_cm_command += ['cloud-pak-deployer-config']
+    create_cm_command += ['create',f'-n={deployer_project}','configmap','cloud-pak-deployer-config']
     app.logger.info('Create config map command: {}'.format(create_cm_command))
 
     process = subprocess.Popen(create_cm_command,
@@ -629,12 +622,7 @@ def update_configuration_openshift(full_configuration):
     if process.returncode != 0:
         app.logger.info(f"Error creating config map: {stderr}, ignoring")
 
-    update_cm_command=['oc']
-    update_cm_command += ['set']
-    update_cm_command += ['data']
-    update_cm_command += ['-n=cloud-pak-deployer']
-    update_cm_command += ['configmap/cloud-pak-deployer-config']
-    update_cm_command += ['--from-file=cpd-config.yaml=/tmp/cpd-config.yaml']
+    update_cm_command=['oc','set','data',f'-n={deployer_project}','configmap/cloud-pak-deployer-config','--from-file=cpd-config.yaml=/tmp/cpd-config.yaml']
     app.logger.info('Set data for config map command: {}'.format(update_cm_command))
 
     process = subprocess.Popen(update_cm_command,
