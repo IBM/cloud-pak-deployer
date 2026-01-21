@@ -10,6 +10,14 @@ command_usage() {
   exit 1
 }
 
+check_configmap_exists() {
+  local configmap_name=$1
+  if ! oc get cm "${configmap_name}" > /dev/null 2>&1; then
+    return 1
+  fi
+  return 0
+}
+
 # Check that subcommand is valid
 PARAMS=""
 while (( "$#" )); do
@@ -18,6 +26,11 @@ while (( "$#" )); do
     export DEBUG_ONLY=true
     shift 1
     ;;
+  --wizard)
+    export CPD_WIZARD=true
+    shift 1
+    ;;
+
   *) 
     echo "Invalid option."
     command_usage 1
@@ -36,12 +49,9 @@ if [ $? -ne 0 ];then
     exit 1
 fi
 
-# Check if the cloud-pak-deployer-config configmap exists
-if ! $(oc get cm cloud-pak-deployer-config > /dev/null);then
-    echo "ConfigMap cloud-pak-deployer-config not found in the current project. Please create before starting deployer. Exiting."
-    exit 1
-fi
-
+#
+# General steps
+#
 # Determine if the PVC must be created
 if ! $(oc get pvc cloud-pak-deployer-status > /dev/null 2>&1 );then
     echo "Determining storage class for cloud-pak-deployer-status PVC..."
@@ -63,31 +73,61 @@ if ! $(oc get pvc cloud-pak-deployer-status > /dev/null 2>&1 );then
     oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-status-pvc.yaml -p DEPLOYER_SC=${DEPLOYER_SC} | oc apply -f -
 fi
 
-# Check if Cloud Pak Deployer job is active
-if ! "${DEBUG_ONLY}";then
-  deployer_status=$(oc get job cloud-pak-deployer -o jsonpath='{.status.active}' 2>/dev/null)
-  if [ "${deployer_status}" == "1" ];then
-      echo "Cloud Pak Deployer job is still active, exiting."
-      exit 1
-  fi
-fi
-
 # Delete finished cloud-pak-deployer-start pods
 oc delete pods --field-selector=status.phase==Succeeded -l app=cloud-pak-deployer-start
 
-# Delete finished Cloud Pak Deployer jobs
-oc delete job cloud-pak-deployer --ignore-not-found
-oc delete job cloud-pak-deployer-debug --ignore-not-found
-
 # Determine image
+# TODO: Change :test to :latest
 IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
+if [ $? ];then
+  IMAGE="quay.io/cloud-pak-deployer/cloud-pak-deployer:test"
+fi
+echo $IMAGE
 
-# Start Cloud Pak Deployer jobs
-if ! "${DEBUG_ONLY}";then
+if [ "$CPD_DEBUG" ]; then
+  # Check if the cloud-pak-deployer-config configmap exists
+  if ! check_configmap_exists "cloud-pak-deployer-config"; then
+      echo "ConfigMap cloud-pak-deployer-config not found in the current project. Please create before starting deployer. Exiting."
+      exit 1
+  fi
+
+  # Delete finished Cloud Pak Deployer debug jobs
+  oc delete job cloud-pak-deployer-debug --ignore-not-found
+
+  echo "Starting the deployer debug job..."
+  oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-debug-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
+
+elif [ "$CPD_WIZARD" ]; then
+
+  echo "Starting the deployer wizard..."
+  oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-wizard.yaml -p IMAGE=${IMAGE} | oc apply -f -
+
+else
+  # Check if the cloud-pak-deployer-config configmap exists
+  if ! check_configmap_exists "cloud-pak-deployer-config"; then
+      echo "ConfigMap cloud-pak-deployer-config not found in the current project. Please create before starting deployer. Exiting."
+      exit 1
+  fi
+
+  # Check if Cloud Pak Deployer job is active
+  if ! "${DEBUG_ONLY}";then
+    deployer_status=$(oc get job cloud-pak-deployer -o jsonpath='{.status.active}' 2>/dev/null)
+    if [ "${deployer_status}" == "1" ];then
+        echo "Cloud Pak Deployer job is still active, exiting."
+        exit 1
+    fi
+  fi
+
+  # Delete finished Cloud Pak Deployer jobs
+  oc delete job cloud-pak-deployer --ignore-not-found
+  oc delete job cloud-pak-deployer-debug --ignore-not-found
+
   echo "Starting the deployer job..."
   oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
+
+  echo "Starting the deployer debug job..."
+  oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-debug-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
+
 fi
 
-# Start a debug job (sleep infinity) so that we can easily get access to the deployer logs
-echo "Starting the deployer debug job..."
-oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-debug-job.yaml -p IMAGE=${IMAGE} | oc apply -f -
+exit 0

@@ -33,7 +33,7 @@ deployer_dir = Path(os.path.dirname(os.path.realpath(__file__))).parent
 app.logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 ocp_base_config_path = os.path.join(deployer_dir,'ample-configurations/sample-dynamic/config-samples')
-running_context=str(os.getenv('CONTEXT', default='local'))
+running_context=str(os.getenv('CPD_CONTEXT', default='local'))
 deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-deployer'))
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
