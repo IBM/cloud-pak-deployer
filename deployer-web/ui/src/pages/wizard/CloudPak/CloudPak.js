@@ -1,10 +1,11 @@
-import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,RadioButton,RadioButtonGroup} from 'carbon-components-react';
+import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,RadioButton,RadioButtonGroup,CodeSnippet} from 'carbon-components-react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
 
 const CloudPak = ({
-                  setCloudPlatform, 
+                  setCloudPlatform,
+                  selection,
                   CPDCartridgesData, 
                   setCPDCartridgesData, 
                   CPICartridgesData, 
@@ -33,7 +34,9 @@ const CloudPak = ({
     const [existingConfig, setExistingConfig] = useState(false)
     
     const [loadingConfiguration, setLoadingConfiguration] = useState(false)
-    const [loadConfigurationErr, setLoadConfigurationErr] = useState(false)    
+    const [loadConfigurationErr, setLoadConfigurationErr] = useState(false) 
+    
+    const [openShiftConnection, setOpenShiftConnection] = useState({})
 
     const [envIdLocked, setEnvIdLocked] = useState(false)
 
@@ -86,12 +89,26 @@ const CloudPak = ({
         });
       }
 
+      const getOpenShiftConnection = async() => {
+        await axios.get('/api/v1/oc-check-connection').then(res =>{
+          setOpenShiftConnection(res.data)
+        }, err => {
+          console.log(err)
+          setOpenShiftConnection(false)
+        });
+      }
+
       if (loadConfigurationErr) {
         return
       }
       //Load configuration
       if (JSON.stringify(configuration) === "{}") {
         getConfiguration()
+      }
+
+      // Get OpenShift cluster info
+      if (selection==="Configure+Deploy") {
+        getOpenShiftConnection()
       }
     }, [])
 
@@ -271,8 +288,14 @@ const CloudPak = ({
           <div className="cloud-pak">
 
             <div className='cpd-container'>
+
             <div>
-              <div className="infra-items">Environment ID</div>
+              <div className="cloud-pak-items">OpenShift server</div>
+              <CodeSnippet type="single">{openShiftConnection.server}</CodeSnippet>
+            </div>
+
+            <div>
+              <div className="cloud-pak-items">Environment ID</div>
               <TextInput onChange={EnvIdOnChange} placeholder="Environment ID" id="131" labelText="" value={envId} invalidText="Environment ID can not be empty." invalid={isOCPEnvIdInvalid} disabled={existingConfig}/>
             </div>
 
@@ -382,6 +405,7 @@ const CloudPak = ({
 
             </div>
             </div> 
+
           </div>   
      
         </>

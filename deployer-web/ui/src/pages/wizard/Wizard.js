@@ -658,6 +658,7 @@ const Wizard = ({setHeaderTitle,
         {currentIndex === 1 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
+                                    selection={selection}
                                     OCPSettings={OCPSettings}
                                     setOCPSettings={setOCPSettings}                                    
                                     setWizardError={setWizardError}
@@ -668,7 +669,6 @@ const Wizard = ({setHeaderTitle,
                                     setEnvId={setEnvId}
                                     checkDeployerStatusErr={checkDeployerStatusErr}
                                     cpdWizardMode={cpdWizardMode}
-                                    selection={selection}
                                     registryHostname={registryHostname}
                                     setRegistryHostname={setRegistryHostname}
                                     registryPort={registryPort}
@@ -687,6 +687,7 @@ const Wizard = ({setHeaderTitle,
         {currentIndex === 2 ? <CloudPak
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
+                                    selection={selection}
                                     entitlementKey={entitlementKey} 
                                     setEntitlementKey={setEntitlementKey}
                                     CPDCartridgesData={CPDCartridgesData}
