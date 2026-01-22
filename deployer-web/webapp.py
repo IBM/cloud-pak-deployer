@@ -198,6 +198,105 @@ def oc_login():
         return make_response('Bad Request', 400) 
 
 #
+# OpenShift connection check
+#
+
+@app.route('/api/v1/oc-check-connection',methods=["GET"])
+def oc_check_connection():
+    result = {
+        "connected": False,
+        "user": "",
+        "server": "",
+        "cluster_version": "",
+        "kubernetes_version": "",
+        "error": ""
+    }
+    
+    app.logger.info("Checking OpenShift connection status")
+    
+    # Step 1: Check if user is logged in with 'oc whoami'
+    try:
+        proc = subprocess.Popen(
+            'oc whoami',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode == 0:
+            result["user"] = str(stdout, 'utf-8').strip()
+            app.logger.info(f"Connected as user: {result['user']}")
+        else:
+            error_msg = str(stderr, 'utf-8').strip()
+            result["error"] = "Not logged in to OpenShift cluster"
+            app.logger.info(f"Not connected: {error_msg}")
+            return json.dumps(result)
+            
+    except Exception as e:
+        result["error"] = f"Error checking connection: {str(e)}"
+        app.logger.error(f"Exception during oc whoami: {str(e)}")
+        return json.dumps(result)
+    
+    # Step 2: Get server URL with 'oc whoami --show-server'
+    try:
+        proc = subprocess.Popen(
+            'oc whoami --show-server',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode == 0:
+            result["server"] = str(stdout, 'utf-8').strip()
+            app.logger.info(f"Server URL: {result['server']}")
+        else:
+            app.logger.warning("Could not retrieve server URL")
+            
+    except Exception as e:
+        app.logger.error(f"Exception during oc whoami --show-server: {str(e)}")
+    
+    # Step 3: Get version info with 'oc version -o json'
+    try:
+        proc = subprocess.Popen(
+            'oc version -o json',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode == 0:
+            version_data = json.loads(str(stdout, 'utf-8'))
+            
+            # Extract OpenShift version
+            if 'openshiftVersion' in version_data:
+                result["cluster_version"] = version_data['openshiftVersion']
+            
+            # Extract Kubernetes version from server version
+            if 'serverVersion' in version_data and 'gitVersion' in version_data['serverVersion']:
+                result["kubernetes_version"] = version_data['serverVersion']['gitVersion']
+            
+            app.logger.info(f"Cluster version: {result['cluster_version']}, Kubernetes version: {result['kubernetes_version']}")
+        else:
+            app.logger.warning("Could not retrieve version information")
+            
+    except json.JSONDecodeError as e:
+        app.logger.error(f"Error parsing version JSON: {str(e)}")
+    except Exception as e:
+        app.logger.error(f"Exception during oc version: {str(e)}")
+    
+    # If we got this far, we're connected
+    result["connected"] = True
+    app.logger.info("OpenShift connection check completed successfully")
+    
+    return json.dumps(result)
+
+#
 # Deployer status
 #
 
