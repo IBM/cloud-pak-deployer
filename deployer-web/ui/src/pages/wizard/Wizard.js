@@ -96,6 +96,28 @@ const Wizard = ({setHeaderTitle,
   } 
 
   const clickNext = async()=> {
+    if (currentIndex === 0 && cloudPlatform === "existing-ocp" && selection !== "Configure+Download") {
+      let result=await checkOpenShiftConnected();
+      // If already logged into OpenShift, skip oc login
+      if (result===1) {
+        setCurrentIndex(2)
+        let deployerStatus = await checkDeployerStatus();
+        if (deployerStatus===1){
+          setCheckDeployerStatusErr(false) 
+          setCurrentIndex(10)
+          setDeployStart(true)  
+          setDeployErr(false) 
+          getDeployStatus()
+          refreshStatus() 
+          return 
+        } 
+        if (deployerStatus===-1) {
+          setCheckDeployerStatusErr(true) 
+          return
+        }
+        return
+      }
+    }
     if (currentIndex === 1 && cloudPlatform === "existing-ocp" && selection !== "Configure+Download") {
       setLoadingDeployStatus(true) 
       let result=await testOcLoginCmd();
@@ -104,7 +126,6 @@ const Wizard = ({setHeaderTitle,
       if (result!==0) {
         return
       } else {
-        //test OC Login Cmd success
         let deployerStatus = await checkDeployerStatus();
         if (deployerStatus===1){
           setCheckDeployerStatusErr(false) 
@@ -146,6 +167,20 @@ const Wizard = ({setHeaderTitle,
     let result = 0;
     await axios.get('/api/v1/deployer-status').then(res =>{
       if (res.data.deployer_active===true) {
+        result = 1;
+      }      
+    }, err => {
+        console.log(err) 
+        result = -1;       
+    });
+    return result
+  }
+
+  const checkOpenShiftConnected = async() => {
+    let result = 0;
+    await axios.get('/api/v1/oc-check-connection').then(res =>{
+
+      if (res.data.connected===true) {
         result = 1;
       }      
     }, err => {
