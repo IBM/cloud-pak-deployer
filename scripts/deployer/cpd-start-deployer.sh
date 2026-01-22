@@ -99,6 +99,17 @@ if [ "$CPD_DEBUG" ]; then
 
 elif [ "$CPD_WIZARD" ]; then
 
+  export LC_ALL=C
+  oc create secret generic cloud-pak-deployer-wizard-proxy \
+    --from-literal=session_secret=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c43)
+  unset LC_ALL
+
+  oc annotate serviceaccount cloud-pak-deployer-sa \
+    serviceaccounts.openshift.io/oauth-redirectreference.wizard='{"kind":"OAuthRedirectReference","apiVersion":"v1","reference":{"kind":"Route","name":"wizard"}}'
+
+  # Delete finished Cloud Pak Deployer wizard
+  oc delete deployment cloud-pak-deployer-wizard --ignore-not-found
+
   echo "Starting the deployer wizard..."
   oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-wizard.yaml -p IMAGE=${IMAGE} | oc apply -f -
 
