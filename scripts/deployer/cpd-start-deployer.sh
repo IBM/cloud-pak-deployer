@@ -80,7 +80,7 @@ oc delete pods --field-selector=status.phase==Succeeded -l app=cloud-pak-deploye
 # TODO: Change :test to :latest
 IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
 if [ $? ];then
-  IMAGE="quay.io/cloud-pak-deployer/cloud-pak-deployer:test"
+  IMAGE="quay.io/cloud-pak-deployer/cloud-pak-deployer:latest"
 fi
 echo $IMAGE
 
