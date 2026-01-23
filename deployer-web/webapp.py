@@ -174,7 +174,7 @@ def downloadLog ():
 
     if deployerLog == "deployer-log":
         log_path = status_dir + '/log/cloud-pak-deployer.log'
-        send_file(log_path, as_attachment=True)
+        return send_file(log_path, as_attachment=True)
     
     if deployerLog == "all-logs":
         log_zip = '/tmp/logs.zip'
@@ -185,10 +185,8 @@ def downloadLog ():
             log_zip_file.write(os.path.join(log_folder_path, f), f, zipfile.ZIP_DEFLATED)
         log_zip_file.close()
 
-        send_file(log_zip, as_attachment=True)
+        return send_file(log_zip, as_attachment=True)
     
-    return make_response('OK', 200)
-
 #
 # OpenShift login
 #
