@@ -133,7 +133,7 @@ def deploy_openshift(deployer_env):
     if process.returncode != 0:
         app.logger.info(f"Error creating secret: {stderr}, ignoring")
 
-    update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=CP_ENTITLEMENT_KEY={deployer_env['CP_ENTITLEMENT_KEY']}']
+    update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=cp-entitlement-key={deployer_env['CP_ENTITLEMENT_KEY']}']
     app.logger.info('Set data for secret command: {}'.format(update_secret_command))
 
     process = subprocess.Popen(update_secret_command,
