@@ -34,6 +34,7 @@ app.logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 ocp_base_config_path = os.path.join(deployer_dir,'ample-configurations/sample-dynamic/config-samples')
 running_context=str(os.getenv('CPD_CONTEXT', default='local'))
+app.logger.info('Deployer context: {}'.format(running_context))
 deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-deployer'))
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
@@ -117,6 +118,34 @@ def deploy_local(deployer_env):
     return 'running'
 
 def deploy_openshift(deployer_env):
+
+    create_secret_command=['oc','create',f'-n={deployer_project}','secret','generic','cloud-pak-entitlement-key']
+    app.logger.info('Create secret command: {}'.format(create_secret_command))
+
+    process = subprocess.Popen(create_secret_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    
+    stdout, stderr = process.communicate()
+    
+    # Update the config map
+    if process.returncode != 0:
+        app.logger.info(f"Error creating secret: {stderr}, ignoring")
+
+    update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=CP_ENTITLEMENT_KEY={deployer_env['CP_ENTITLEMENT_KEY']}']
+    app.logger.info('Set data for secret command: {}'.format(update_secret_command))
+
+    process = subprocess.Popen(update_secret_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    
+    stdout, stderr = process.communicate()
+    
+    if process.returncode != 0:
+        app.logger.info(f"Error creating secret: {stderr}")        
+
     deploy_command=['oc','create','-f',f'{deployer_dir}/scripts/deployer/assets/cloud-pak-deployer-start.yaml']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
@@ -196,6 +225,105 @@ def oc_login():
         return json.dumps(result)
     else:
         return make_response('Bad Request', 400) 
+
+#
+# OpenShift connection check
+#
+
+@app.route('/api/v1/oc-check-connection',methods=["GET"])
+def oc_check_connection():
+    result = {
+        "connected": False,
+        "user": "",
+        "server": "",
+        "cluster_version": "",
+        "kubernetes_version": "",
+        "error": ""
+    }
+    
+    app.logger.info("Checking OpenShift connection status")
+    
+    # Step 1: Check if user is logged in with 'oc whoami'
+    try:
+        proc = subprocess.Popen(
+            'oc whoami',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode == 0:
+            result["user"] = str(stdout, 'utf-8').strip()
+            app.logger.info(f"Connected as user: {result['user']}")
+        else:
+            error_msg = str(stderr, 'utf-8').strip()
+            result["error"] = "Not logged in to OpenShift cluster"
+            app.logger.info(f"Not connected: {error_msg}")
+            return json.dumps(result)
+            
+    except Exception as e:
+        result["error"] = f"Error checking connection: {str(e)}"
+        app.logger.error(f"Exception during oc whoami: {str(e)}")
+        return json.dumps(result)
+    
+    # Step 2: Get server URL with 'oc whoami --show-server'
+    try:
+        proc = subprocess.Popen(
+            'oc whoami --show-server',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode == 0:
+            result["server"] = str(stdout, 'utf-8').strip()
+            app.logger.info(f"Server URL: {result['server']}")
+        else:
+            app.logger.warning("Could not retrieve server URL")
+            
+    except Exception as e:
+        app.logger.error(f"Exception during oc whoami --show-server: {str(e)}")
+    
+    # Step 3: Get version info with 'oc version -o json'
+    try:
+        proc = subprocess.Popen(
+            'oc version -o json',
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        stdout, stderr = proc.communicate()
+        
+        if proc.returncode == 0:
+            version_data = json.loads(str(stdout, 'utf-8'))
+            
+            # Extract OpenShift version
+            if 'openshiftVersion' in version_data:
+                result["cluster_version"] = version_data['openshiftVersion']
+            
+            # Extract Kubernetes version from server version
+            if 'serverVersion' in version_data and 'gitVersion' in version_data['serverVersion']:
+                result["kubernetes_version"] = version_data['serverVersion']['gitVersion']
+            
+            app.logger.info(f"Cluster version: {result['cluster_version']}, Kubernetes version: {result['kubernetes_version']}")
+        else:
+            app.logger.warning("Could not retrieve version information")
+            
+    except json.JSONDecodeError as e:
+        app.logger.error(f"Error parsing version JSON: {str(e)}")
+    except Exception as e:
+        app.logger.error(f"Exception during oc version: {str(e)}")
+    
+    # If we got this far, we're connected
+    result["connected"] = True
+    app.logger.info("OpenShift connection check completed successfully")
+    
+    return json.dumps(result)
 
 #
 # Deployer status
@@ -607,8 +735,7 @@ def update_configuration_openshift(full_configuration):
         f1.close()
 
     # First try to create config map, in case it doesn't exist yet
-    create_cm_command=['oc']
-    create_cm_command += ['create',f'-n={deployer_project}','configmap','cloud-pak-deployer-config']
+    create_cm_command=['oc','create',f'-n={deployer_project}','configmap','cloud-pak-deployer-config']
     app.logger.info('Create config map command: {}'.format(create_cm_command))
 
     process = subprocess.Popen(create_cm_command,
@@ -671,26 +798,14 @@ def loadYamlFile(path):
 def environmentVariable():
     result={}
 
-    if 'CPD_WIZARD_PAGE_TITLE' in os.environ:
-      result['CPD_WIZARD_PAGE_TITLE']=os.environ['CPD_WIZARD_PAGE_TITLE']
-    else:
-      result['CPD_WIZARD_PAGE_TITLE']="Cloud Pak Deployer"
+    running_context=str(os.getenv('CPD_CONTEXT', default='local'))
 
-    if 'CPD_WIZARD_MODE' in os.environ:
-      result['CPD_WIZARD_MODE']=os.environ['CPD_WIZARD_MODE']
-    else:
-      result['CPD_WIZARD_MODE']=""
+    result['CPD_WIZARD_PAGE_TITLE']=os.getenv('CPD_WIZARD_PAGE_TITLE', default='Cloud Pak Deployer')
+    result['CPD_WIZARD_MODE']=os.getenv('CPD_WIZARD_MODE', default='')
+    result['STATUS_DIR']=os.getenv('STATUS_DIR', default='')
+    result['CONFIG_DIR']=os.getenv('CONFIG_DIR', default='')
+    result['CPD_CONTEXT']=os.getenv('CPD_CONTEXT', default='local')
 
-    if 'STATUS_DIR' in os.environ:
-      result['STATUS_DIR']=os.environ['STATUS_DIR']
-    else:
-      result['STATUS_DIR']=""
-
-    if 'CONFIG_DIR' in os.environ:
-      result['CONFIG_DIR']=os.environ['CONFIG_DIR']
-    else:
-      result['CONFIG_DIR']=""
-    
     return result
 
 import logging

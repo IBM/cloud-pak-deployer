@@ -7,7 +7,6 @@ objects:
   kind: Deployment
   metadata:
     name: cloud-pak-deployer-wizard
-    namespace: cloud-pak-deployer
   spec:
     replicas: 1
     selector:
@@ -26,7 +25,8 @@ objects:
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
           ports:
-          - containerPort: 8080
+          - name: wizard
+            containerPort: 8080
             protocol: TCP
           env:
             - name: CPD_DEPLOYER_PROJECT
@@ -36,31 +36,76 @@ objects:
           command: ["/bin/sh","-xc"]
           args: 
             - /cloud-pak-deployer/cp-deploy.sh env wizard -v
+        - name: oauth-proxy 
+          args:
+            - -provider=openshift
+            - -https-address=:8888
+            - -http-address=
+            - -email-domain=*
+            - -upstream=http://localhost:8080
+            - -tls-cert=/etc/tls/private/tls.crt
+            - -tls-key=/etc/tls/private/tls.key
+            - -cookie-secret-file=/etc/proxy/secrets/session_secret
+            - -openshift-service-account=cloud-pak-deployer-sa
+            - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+            - -skip-auth-regex=^/metrics
+          image: quay.io/openshift/origin-oauth-proxy:4.16
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: oauth-proxy
+              containerPort: 8888    
+              protocol: TCP
+          volumeMounts:
+            - mountPath: /etc/tls/private
+              name: cloud-pak-deployer-wizard-tls
+            - mountPath: /etc/proxy/secrets
+              name: cloud-pak-deployer-wizard-proxy
         securityContext:
           runAsUser: 0
+        volumes:
+          - name: cloud-pak-deployer-wizard-tls
+            secret:
+              defaultMode: 420
+              secretName: cloud-pak-deployer-wizard-tls
+          - name: cloud-pak-deployer-wizard-proxy
+            secret:
+              defaultMode: 420
+              secretName: cloud-pak-deployer-wizard-proxy
         serviceAccountName: cloud-pak-deployer-sa
 - apiVersion: v1
   kind: Service
   metadata:
-    name: cloud-pak-deployer-wizard-svc
-    namespace: cloud-pak-deployer    
+    annotations:
+      service.alpha.openshift.io/serving-cert-secret-name: cloud-pak-deployer-wizard-tls
+    name: wizard-svc
   spec:
     selector:                  
       app: cloud-pak-deployer-wizard
     ports:
-    - nodePort: 0
+    - name: proxy
+      port: 8888
+      protocol: TCP
+      targetPort: oauth-proxy
+    - name: wizard
       port: 8080            
       protocol: TCP
+      targetPort: wizard
+    type: ClusterIP
+
 - apiVersion: route.openshift.io/v1
   kind: Route
   metadata:
-    name: cloud-pak-deployer-wizard
+    name: wizard
   spec:
+    wildcardPolicy: None
     tls:
-      termination: edge
+      insecureEdgeTerminationPolicy: Redirect
+      termination: reencrypt
+    port:
+      targetPort: proxy
     to:
       kind: Service
-      name: cloud-pak-deployer-wizard-svc
+      name: wizard-svc
       weight: null
 parameters:
 - description: Image to be used by the container in the Job

@@ -78,6 +78,7 @@ const Wizard = ({setHeaderTitle,
   const [deployState, setDeployState] = useState([])
   const [configDir, setConfigDir] = useState('')
   const [statusDir, setStatusDir] = useState('')
+  const [deployerContext, setDeployerContext] = useState('local')
 
   const [saveConfig, setSaveConfig] = useState(false)
 
@@ -96,7 +97,36 @@ const Wizard = ({setHeaderTitle,
   } 
 
   const clickNext = async()=> {
-    if (currentIndex === 1 && cloudPlatform === "existing-ocp" && selection !== "Configure+Download") {
+    console.log(currentIndex,deployerContext,selection)
+    if (currentIndex === 0 && deployerContext === "openshift" && selection !== "Configure+Download") {
+      let result=await checkOpenShiftConnected();
+      // If already logged into OpenShift, skip oc login
+      if (result===1) {
+        setCurrentIndex(2)
+        let deployerStatus = await checkDeployerStatus();
+        if (deployerStatus===1){
+          setCheckDeployerStatusErr(false) 
+          setCurrentIndex(10)
+          setDeployStart(true)  
+          setDeployErr(false) 
+          getDeployStatus()
+          refreshStatus() 
+          return 
+        } 
+        if (deployerStatus===-1) {
+          setCheckDeployerStatusErr(true) 
+          return
+        }
+        return
+      }
+    }
+
+    if (currentIndex === 0 && deployerContext === "local" && selection === "Configure") {
+      setCurrentIndex(2)
+      return
+    }
+
+    if (currentIndex === 1 && selection !== "Configure+Download") {
       setLoadingDeployStatus(true) 
       let result=await testOcLoginCmd();
 
@@ -104,7 +134,6 @@ const Wizard = ({setHeaderTitle,
       if (result!==0) {
         return
       } else {
-        //test OC Login Cmd success
         let deployerStatus = await checkDeployerStatus();
         if (deployerStatus===1){
           setCheckDeployerStatusErr(false) 
@@ -146,6 +175,20 @@ const Wizard = ({setHeaderTitle,
     let result = 0;
     await axios.get('/api/v1/deployer-status').then(res =>{
       if (res.data.deployer_active===true) {
+        result = 1;
+      }      
+    }, err => {
+        console.log(err) 
+        result = -1;       
+    });
+    return result
+  }
+
+  const checkOpenShiftConnected = async() => {
+    let result = 0;
+    await axios.get('/api/v1/oc-check-connection').then(res =>{
+
+      if (res.data.connected===true) {
         result = 1;
       }      
     }, err => {
@@ -365,6 +408,11 @@ const Wizard = ({setHeaderTitle,
         if (res.data.CONFIG_DIR) {
           setConfigDir(res.data.CONFIG_DIR)
         }
+
+        if (res.data.CPD_CONTEXT) {
+          setDeployerContext(res.data.CPD_CONTEXT)
+        }
+
       }, err => {
         setLoadingEnviromentVariables(false)
         setloadEnviromentVariablesErr(true)
@@ -623,6 +671,7 @@ const Wizard = ({setHeaderTitle,
         {currentIndex === 1 ? <Infrastructure
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
+                                    selection={selection}
                                     OCPSettings={OCPSettings}
                                     setOCPSettings={setOCPSettings}                                    
                                     setWizardError={setWizardError}
@@ -633,7 +682,6 @@ const Wizard = ({setHeaderTitle,
                                     setEnvId={setEnvId}
                                     checkDeployerStatusErr={checkDeployerStatusErr}
                                     cpdWizardMode={cpdWizardMode}
-                                    selection={selection}
                                     registryHostname={registryHostname}
                                     setRegistryHostname={setRegistryHostname}
                                     registryPort={registryPort}
@@ -652,6 +700,7 @@ const Wizard = ({setHeaderTitle,
         {currentIndex === 2 ? <CloudPak
                                     cloudPlatform={cloudPlatform} 
                                     setCloudPlatform={setCloudPlatform} 
+                                    selection={selection}
                                     entitlementKey={entitlementKey} 
                                     setEntitlementKey={setEntitlementKey}
                                     CPDCartridgesData={CPDCartridgesData}
