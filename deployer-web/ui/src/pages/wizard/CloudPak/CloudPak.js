@@ -147,12 +147,6 @@ const CloudPak = ({
         setWizardError(true)
       }
 
-      // TEMP
-      console.log('CPDCartridgesData', CPDCartridgesData)
-      console.log('entitlementKey', entitlementKey)
-      console.log('adminPassword', adminPassword)
-      console.log('selectedCloudPak', selectedCloudPak)
-
       // eslint-disable-next-line
     }, [CPDCartridgesData, CPICartridgesData, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
 
@@ -289,10 +283,12 @@ const CloudPak = ({
 
             <div className='cpd-container'>
 
-            <div>
-              <div className="cloud-pak-items">OpenShift server</div>
-              <CodeSnippet type="single">{openShiftConnection.server}</CodeSnippet>
-            </div>
+            {openShiftConnection.server &&
+              <div>
+                <div className="cloud-pak-items">OpenShift server</div>
+                <CodeSnippet type="single">{openShiftConnection.server}</CodeSnippet>
+              </div>
+            }
 
             <div>
               <div className="cloud-pak-items">Environment ID</div>
