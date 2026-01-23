@@ -78,6 +78,7 @@ const Wizard = ({setHeaderTitle,
   const [deployState, setDeployState] = useState([])
   const [configDir, setConfigDir] = useState('')
   const [statusDir, setStatusDir] = useState('')
+  const [deployerContext, setDeployerContext] = useState('local')
 
   const [saveConfig, setSaveConfig] = useState(false)
 
@@ -96,7 +97,8 @@ const Wizard = ({setHeaderTitle,
   } 
 
   const clickNext = async()=> {
-    if (currentIndex === 0 && cloudPlatform === "existing-ocp" && selection !== "Configure+Download") {
+    console.log(currentIndex,deployerContext,selection)
+    if (currentIndex === 0 && deployerContext === "openshift" && selection !== "Configure+Download") {
       let result=await checkOpenShiftConnected();
       // If already logged into OpenShift, skip oc login
       if (result===1) {
@@ -118,7 +120,13 @@ const Wizard = ({setHeaderTitle,
         return
       }
     }
-    if (currentIndex === 1 && cloudPlatform === "existing-ocp" && selection !== "Configure+Download") {
+
+    if (currentIndex === 0 && deployerContext === "local" && selection === "Configure") {
+      setCurrentIndex(2)
+      return
+    }
+
+    if (currentIndex === 1 && selection !== "Configure+Download") {
       setLoadingDeployStatus(true) 
       let result=await testOcLoginCmd();
 
@@ -400,6 +408,11 @@ const Wizard = ({setHeaderTitle,
         if (res.data.CONFIG_DIR) {
           setConfigDir(res.data.CONFIG_DIR)
         }
+
+        if (res.data.CPD_CONTEXT) {
+          setDeployerContext(res.data.CPD_CONTEXT)
+        }
+
       }, err => {
         setLoadingEnviromentVariables(false)
         setloadEnviromentVariablesErr(true)

@@ -34,6 +34,7 @@ app.logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 ocp_base_config_path = os.path.join(deployer_dir,'ample-configurations/sample-dynamic/config-samples')
 running_context=str(os.getenv('CPD_CONTEXT', default='local'))
+app.logger.info('Deployer context: {}'.format(running_context))
 deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-deployer'))
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
@@ -770,26 +771,14 @@ def loadYamlFile(path):
 def environmentVariable():
     result={}
 
-    if 'CPD_WIZARD_PAGE_TITLE' in os.environ:
-      result['CPD_WIZARD_PAGE_TITLE']=os.environ['CPD_WIZARD_PAGE_TITLE']
-    else:
-      result['CPD_WIZARD_PAGE_TITLE']="Cloud Pak Deployer"
+    running_context=str(os.getenv('CPD_CONTEXT', default='local'))
 
-    if 'CPD_WIZARD_MODE' in os.environ:
-      result['CPD_WIZARD_MODE']=os.environ['CPD_WIZARD_MODE']
-    else:
-      result['CPD_WIZARD_MODE']=""
+    result['CPD_WIZARD_PAGE_TITLE']=os.getenv('CPD_WIZARD_PAGE_TITLE', default='Cloud Pak Deployer')
+    result['CPD_WIZARD_MODE']=os.getenv('CPD_WIZARD_MODE', default='')
+    result['STATUS_DIR']=os.getenv('STATUS_DIR', default='')
+    result['CONFIG_DIR']=os.getenv('CONFIG_DIR', default='')
+    result['CPD_CONTEXT']=os.getenv('CPD_CONTEXT', default='local')
 
-    if 'STATUS_DIR' in os.environ:
-      result['STATUS_DIR']=os.environ['STATUS_DIR']
-    else:
-      result['STATUS_DIR']=""
-
-    if 'CONFIG_DIR' in os.environ:
-      result['CONFIG_DIR']=os.environ['CONFIG_DIR']
-    else:
-      result['CONFIG_DIR']=""
-    
     return result
 
 import logging
