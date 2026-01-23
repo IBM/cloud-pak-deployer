@@ -118,6 +118,34 @@ def deploy_local(deployer_env):
     return 'running'
 
 def deploy_openshift(deployer_env):
+
+    create_secret_command=['oc','create',f'-n={deployer_project}','secret','generic','cloud-pak-entitlement-key']
+    app.logger.info('Create secret command: {}'.format(create_secret_command))
+
+    process = subprocess.Popen(create_secret_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    
+    stdout, stderr = process.communicate()
+    
+    # Update the config map
+    if process.returncode != 0:
+        app.logger.info(f"Error creating secret: {stderr}, ignoring")
+
+    update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=CP_ENTITLEMENT_KEY={deployer_env['CP_ENTITLEMENT_KEY']}']
+    app.logger.info('Set data for secret command: {}'.format(update_secret_command))
+
+    process = subprocess.Popen(update_secret_command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    universal_newlines=True)
+    
+    stdout, stderr = process.communicate()
+    
+    if process.returncode != 0:
+        app.logger.info(f"Error creating secret: {stderr}")        
+
     deploy_command=['oc','create','-f',f'{deployer_dir}/scripts/deployer/assets/cloud-pak-deployer-start.yaml']
     app.logger.info('deploy command: {}'.format(deploy_command))
 
@@ -707,8 +735,7 @@ def update_configuration_openshift(full_configuration):
         f1.close()
 
     # First try to create config map, in case it doesn't exist yet
-    create_cm_command=['oc']
-    create_cm_command += ['create',f'-n={deployer_project}','configmap','cloud-pak-deployer-config']
+    create_cm_command=['oc','create',f'-n={deployer_project}','configmap','cloud-pak-deployer-config']
     app.logger.info('Create config map command: {}'.format(create_cm_command))
 
     process = subprocess.Popen(create_cm_command,
