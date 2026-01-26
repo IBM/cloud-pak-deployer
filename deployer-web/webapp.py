@@ -505,13 +505,11 @@ def read_configuration():
         read_result = read_configuration_from_openshift()
 
 
-    if (read_result['code'] == 0): 
+    if (read_result['code'] == 0):
+        config_result['metadata']=read_result['metadata']
         if (read_result['metadata']['existing_config']):
             app.logger.info(config_result['content'])
             temp=yaml.load(read_result['content'], Loader=yaml.FullLoader)
-            app.logger.info(temp)
-            # for doc in docs:
-            #     temp={**temp, **doc}
 
             if 'global_config' in temp:
                 config_result['data']['global_config']=temp['global_config']
@@ -542,10 +540,9 @@ def read_configuration():
                 config_result['data']['global_config']['env_id']='demo'
                 app.logger.warning("Added env_id to global_config: {}".format(config_result['data']['global_config']))
 
-            config_result['metadata']['existing_config'] = True
             config_result['code'] = 0
             config_result['message'] = "Successfully converted input to configuration."
-            app.logger.info('Result of reading configuration: {}'.format(config_result))
+            app.logger.info('Result of reading configuration: {}'.format(json.dumps(config_result,indent=2)))
         else:
             app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
             config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
@@ -556,10 +553,9 @@ def read_configuration():
             app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
             config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
             config_result['metadata']['selectedCloudPak'] = 'software-hub' 
-            config_result['metadata']['existing_config'] = False
             config_result['code'] = 0
             config_result['message'] = "Successfully created new configuration."
-            app.logger.info('Result of creating configuration: {}'.format(config_result))
+            app.logger.info('Result of creating configuration: {}'.format(json.dumps(config_result,indent=2)))
 
     return config_result
 
@@ -620,7 +616,7 @@ def read_configuration_from_file() -> dict[str, Any]:
     return file_result
 
 def read_configuration_from_openshift() -> dict[str, Any]:
-    configmap_result = {
+    config_result = {
         "code":-1,
         "message":"",
         "content":"",
@@ -629,8 +625,11 @@ def read_configuration_from_openshift() -> dict[str, Any]:
     """
     Read configuration content from an OpenShift ConfigMap
     """
-    existing_config=False
-
+    
+    config_result['metadata']['existing_config'] = False
+    config_result['metadata']['cp_entitlement_key'] = ""
+    
+    # Get configuration from the cloud-pak-deployer-config configmap
     cm_command=['oc']
     cm_command += ['extract',f'-n={deployer_project}','configmap/cloud-pak-deployer-config','--keys=cpd-config.yaml','--to=-']
     app.logger.info('Retrieving config map command: {}'.format(cm_command))
@@ -644,31 +643,57 @@ def read_configuration_from_openshift() -> dict[str, Any]:
         stdout, stderr = process.communicate()
         
         if process.returncode == 0:
-            existing_config=True
-            configmap_result['content']=stdout
-            configmap_result['message'] = "Successfully retrieved configuration from config map"
+            config_result['metadata']['existing_config'] = True
+            config_result['content']=stdout
+            config_result['message'] = "Successfully retrieved configuration from config map"
         else:
-            existing_config=False
-            configmap_result['content']=""
-            configmap_result['message'] = "Config map not retrieved, assuming non-existing config"
+            config_result['metadata']['existing_config'] = False
+            config_result['content']=""
+            config_result['message'] = "Config map not retrieved, assuming non-existing config"
         
         app.logger.info(f"Successfully executed oc extract command. Output length: {len(stdout)}")
         
     except subprocess.SubprocessError as e:
         app.logger.info('Subprocess error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
-        configmap_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
-        existing_config=False
-        configmap_result['content']=""
+        config_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
+        config_result['metadata']['existing_config'] = False
+        config_result['content']=""
     except Exception as e:
         app.logger.info('Error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
-        configmap_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
-        existing_config=False
-        configmap_result['content']=""
+        config_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
+        config_result['metadata']['existing_config'] = False
+        config_result['content']=""
 
-    configmap_result['metadata']['existing_config'] = existing_config 
-    configmap_result['code'] = 0
+    entitlement_command=['oc']
+    entitlement_command += ['extract',f'-n={deployer_project}','secret/cloud-pak-entitlement-key','--keys=cp-entitlement-key','--to=-']
+    app.logger.info('Retrieving secret command: {}'.format(entitlement_command))
 
-    return configmap_result
+    try:
+        process = subprocess.Popen(entitlement_command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+        
+        stdout, stderr = process.communicate()
+
+        if process.returncode == 0:
+            existing_config=True
+            config_result['metadata']['cp_entitlement_key']=stdout
+            config_result['message'] = "Successfully retrieved entitlement key from secret"
+        else:
+            existing_config=False
+            config_result['metadata']['cp_entitlement_key']=""
+            config_result['message'] = "Secret not retrieved, assuming entitlement key not set"
+        
+    except Exception as e:
+        app.logger.info('Error while retrieving secret: {}, assuming non-existing entitlement key'.format(str(e)))
+        config_result['metadata']['cp_entitlement_key']=""
+    
+    config_result['code'] = 0
+
+    app.logger.info(config_result)
+
+    return config_result
 
 def format_configuration_yaml(full_configuration):
     global_config_yaml = yaml.safe_dump({'global_config': full_configuration['data']['global_config']})

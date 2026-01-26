@@ -113,14 +113,18 @@ const Summary = ({
                 />           
             }
 
-            <div className="directory">
-                <div className="item">Configuration Directory:</div>
-                <CodeSnippet type="single">{configDir}</CodeSnippet>
-            </div>
-            <div className="directory">
-                <div className="item">Status Directory:</div>
-                <CodeSnippet type="single">{statusDir}</CodeSnippet>
-            </div>
+            {configDir &&
+                <div className="directory">
+                    <div className="item">Configuration Directory:</div>
+                    <CodeSnippet type="single">{configDir}</CodeSnippet>
+                </div>
+            }
+            {statusDir &&
+                <div className="directory">
+                    <div className="item">Status Directory:</div>
+                    <CodeSnippet type="single">{statusDir}</CodeSnippet>
+                </div>
+            }
             {editable ? 
                 <div className="flex-right">
                     <div >

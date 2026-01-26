@@ -15,14 +15,6 @@ const CloudPak = ({
                   setWizardError,
                   configuration,
                   setConfiguration,
-                  cp4dLicense,
-                  cp4iLicense,
-                  cp4dVersion,
-                  cp4iVersion,
-                  setCp4dLicense,
-                  setCp4iLicense,
-                  setCp4dVersion,
-                  setCp4iVersion,
                   adminPassword,
                   setAdminPassword,
                   envId,
@@ -46,6 +38,11 @@ const CloudPak = ({
     const [loadingCPI, setLoadingCPI] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
 
+    const [cp4dLicense, setCp4dLicense] = useState(false)
+    const [cp4iLicense, setCp4iLicense] = useState(false)
+    const [cp4dVersion, setCp4dVersion] = useState('')
+    const [cp4iVersion, setCp4iVersion] = useState('')
+
     const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
     const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
     const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
@@ -58,13 +55,18 @@ const CloudPak = ({
         await axios.get('/api/v1/configuration').then(res => {
           setLoadingConfiguration(false)
           setLoadConfigurationErr(false)
-          
+
           setConfiguration(res.data)
-          // console.log(res.data)
 
           let cloud = res.data.data.global_config.cloud_platform
           setCloudPlatform(cloud)
           setEnvId(res.data.data.global_config.env_id)
+          if (res.data.data.global_config.universal_password) {
+            setAdminPassword(res.data.data.global_config.universal_password)
+          }
+          if (res.data.metadata.cp_entitlement_key) {
+            setEntitlementKey(res.data.metadata.cp_entitlement_key)
+          }
           setExistingConfig(res.data.metadata.existing_config)
 
           if (res.data.data.cp4d) {
@@ -101,15 +103,17 @@ const CloudPak = ({
       if (loadConfigurationErr) {
         return
       }
-      //Load configuration
-      if (JSON.stringify(configuration) === "{}") {
-        getConfiguration()
-      }
 
       // Get OpenShift cluster info
       if (selection==="Configure+Deploy") {
         getOpenShiftConnection()
       }
+
+      //Load configuration
+      if (JSON.stringify(configuration) === "{}") {
+        getConfiguration()
+      }
+
     }, [])
 
     // Runs after any of the dependencies change (array of dependencies)

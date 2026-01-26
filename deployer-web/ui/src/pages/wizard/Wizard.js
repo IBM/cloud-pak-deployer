@@ -52,11 +52,6 @@ const Wizard = ({setHeaderTitle,
   const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
   const [adminPassword, setAdminPassword] = useState('')
 
-  const [cp4dLicense, setCp4dLicense] = useState(false)
-  const [cp4iLicense, setCp4iLicense] = useState(false)
-  const [cp4dVersion, setCp4dVersion] = useState("")
-  const [cp4iVersion, setCp4iVersion] = useState("")
-
   //summary
   const [summaryLoading, setSummaryLoading] = useState(false)
   const [tempSummaryInfo, setTempSummaryInfo] = useState("") 
@@ -712,14 +707,6 @@ const Wizard = ({setHeaderTitle,
                                     setConfiguration={setConfiguration}
                                     envId={envId}
                                     setEnvId={setEnvId}            
-                                    cp4dLicense={cp4dLicense}
-                                    cp4iLicense={cp4iLicense}
-                                    cp4dVersion={cp4dVersion}
-                                    cp4iVersion={cp4iVersion}
-                                    setCp4dLicense={setCp4dLicense}
-                                    setCp4iLicense={setCp4iLicense}
-                                    setCp4dVersion={setCp4dVersion}
-                                    setCp4iVersion={setCp4iVersion}
                                     adminPassword={adminPassword}
                                     setAdminPassword={setAdminPassword}
                               >
@@ -733,10 +720,6 @@ const Wizard = ({setHeaderTitle,
                                     setCPICartridgesData={setCPICartridgesData}
                                     setConfiguration={setConfiguration}
                                     configuration={configuration}
-                                    cp4dLicense={cp4dLicense}
-                                    cp4iLicense={cp4iLicense}
-                                    cp4dVersion={cp4dVersion}
-                                    cp4iVersion={cp4iVersion}
                                     envId={envId}
                                     CP4DPlatformCheckBox={CP4DPlatformCheckBox}
                                     CP4IPlatformCheckBox={CP4IPlatformCheckBox}
