@@ -32,7 +32,7 @@ app = Flask(__name__,static_url_path='')
 deployer_dir = Path(os.path.dirname(os.path.realpath(__file__))).parent
 app.logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
-ocp_base_config_path = os.path.join(deployer_dir,'ample-configurations/sample-dynamic/config-samples')
+ocp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 running_context=str(os.getenv('CPD_CONTEXT', default='local'))
 app.logger.info('Deployer context: {}'.format(running_context))
 deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-deployer'))
@@ -170,7 +170,7 @@ def downloadLog ():
     deployerLog=body['deployerLog']
 
     if deployerLog != "deployer-log" and deployerLog != "all-logs":
-        return make_response('Bad Request', 400)   
+        return make_response('Bad Request', 400)
 
     if deployerLog == "deployer-log":
         log_path = status_dir + '/log/cloud-pak-deployer.log'
@@ -186,6 +186,8 @@ def downloadLog ():
         log_zip_file.close()
 
         return send_file(log_zip, as_attachment=True)
+    
+    return make_response('Bad Request', 400)
     
 #
 # OpenShift login

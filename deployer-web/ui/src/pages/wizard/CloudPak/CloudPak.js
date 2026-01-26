@@ -30,9 +30,6 @@ const CloudPak = ({
     
     const [openShiftConnection, setOpenShiftConnection] = useState({})
 
-    const [envIdLocked, setEnvIdLocked] = useState(false)
-
-    
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadingCPI, setLoadingCPI] = useState(false)
