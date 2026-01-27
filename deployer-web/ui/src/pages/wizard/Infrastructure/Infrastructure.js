@@ -1,5 +1,5 @@
 import axios from "axios";
-import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "carbon-components-react";
+import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "@carbon/react";
 import { useEffect, useState, useRef } from "react";
 import './Infrastructure.scss'
 

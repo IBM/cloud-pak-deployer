@@ -3,8 +3,7 @@ import Infrastructure from './Infrastructure/Infrastructure';
 import Selection from './Selection/Selection';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
-import { ProgressIndicator, ProgressStep, Button, InlineNotification, Loading, RadioButtonGroup, RadioButton, Table, TableHead, TableRow, TableBody, TableCell, TableHeader} from 'carbon-components-react';
-import ProgressBar from 'carbon-components-react/lib/components/ProgressBar'
+import { ProgressIndicator, ProgressStep, ProgressBar, Button, InlineNotification, Loading, RadioButtonGroup, RadioButton, Table, TableHead, TableRow, TableBody, TableCell, TableHeader} from '@carbon/react';
 import Summary from './Summary/Summary';
 import axios from 'axios';
 import CloudPak from './CloudPak/CloudPak';
@@ -375,6 +374,7 @@ const Wizard = ({setHeaderTitle,
     const getEnviromentVariables = async() => {
       setLoadingEnviromentVariables(true)
       await axios.get('/api/v1/environment-variable').then(res =>{
+        console.log(res)
         setLoadingEnviromentVariables(false)
         if (res.data.CPD_WIZARD_MODE === "existing-ocp") {
           setCpdWizardMode("existing-ocp")

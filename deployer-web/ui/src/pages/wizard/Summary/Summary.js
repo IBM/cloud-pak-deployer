@@ -1,10 +1,10 @@
 import axios from "axios";
-import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet, Button, TextArea } from "carbon-components-react";
+import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet, Button, TextArea } from "@carbon/react";
 import { useEffect, useState } from "react";
 import './Summary.scss'
 import yaml from 'js-yaml';
 
-const Summary = ({ 
+const Summary = ({
     configuration,
     setConfiguration,
     summaryLoading,
@@ -19,35 +19,35 @@ const Summary = ({
     setShowErr
 }) => {
 
-    
-    const [summaryInfo, setSummaryInfo] = useState("")      
+
+    const [summaryInfo, setSummaryInfo] = useState("")
     const [editable, setEditable] = useState(false)
 
     const updateSummaryData = async () => {
         let body = {
-            "configuration":configuration
+            "configuration": configuration
         }
 
         console.log('body: ', body)
 
-        await axios.put('/api/v1/configuration', body, {headers: {"Content-Type": "application/json"}}).then(res =>{   
-            setSummaryLoading(false)        
+        await axios.put('/api/v1/configuration', body, { headers: { "Content-Type": "application/json" } }).then(res => {
+            setSummaryLoading(false)
             setSummaryInfo(res.data.config)
             setTempSummaryInfo(res.data.config)
         }, err => {
-            setSummaryLoading(false) 
+            setSummaryLoading(false)
             setShowErr(true)
             console.log(err)
-        });          
+        });
     }
 
-    const saveSummaryData = async (body) => {         
+    const saveSummaryData = async (body) => {
         console.log('body: ', body)
         configuration.data = body.config
         setConfiguration(configuration)
         setEditable(false)
-        setSummaryLoading(false)        
-    }     
+        setSummaryLoading(false)
+    }
 
     useEffect(() => {
         console.log('useEffect() in Summary.js')
@@ -55,7 +55,7 @@ const Summary = ({
 
         // Convert configuration.data to YAML text if it's an object
         const configText = yaml.dump(configuration.data);
-        
+
         setSummaryInfo(configText)
         setTempSummaryInfo(configText)
 
@@ -68,30 +68,30 @@ const Summary = ({
         role: 'error',
         title: 'Failed to save configuration in the server.',
         hideCloseButton: false,
-    });  
-    
+    });
+
     const clickEditBtn = () => {
         setEditable(true)
     }
 
-    const clickSaveBtn = async() => { 
+    const clickSaveBtn = async () => {
         let body = {}
         let result = {}
-            
-        try {                
+
+        try {
             yaml.loadAll(tempSummaryInfo, function (doc) {
-                result = {...doc, ...result}
-            }); 
+                result = { ...doc, ...result }
+            });
             body['config'] = result
             setSummaryInfo(tempSummaryInfo)
-            setSummaryLoading(true)      
+            setSummaryLoading(true)
             await saveSummaryData(body)
 
         } catch (error) {
             setConfigInvalid(true)
             console.error(error)
             return
-        }        
+        }
     }
 
     const clickCancelBtn = () => {
@@ -104,13 +104,13 @@ const Summary = ({
         setTempSummaryInfo(e.target.value)
     }
 
-    return (      
-        <>     
-            <div className="summary-title">Summary</div> 
-            {showErr &&           
+    return (
+        <>
+            <div className="summary-title">Summary</div>
+            {showErr &&
                 <InlineNotification className="summary-error"
-                    {...errorProps()}        
-                />           
+                    {...errorProps()}
+                />
             }
 
             {configDir &&
@@ -125,38 +125,32 @@ const Summary = ({
                     <CodeSnippet type="single">{statusDir}</CodeSnippet>
                 </div>
             }
-            {editable ? 
-                <div className="flex-right">
-                    <div >
-                        <Button onClick={clickCancelBtn} className="wizard-container__page-header-button">Cancel</Button> 
-                    </div>
-                    <div>
-                        <Button onClick={clickSaveBtn} className="wizard-container__page-header-button">Save</Button> 
-                    </div>
-                </div>
-                :
-                <div className="align-right">
-                    <Button onClick={clickEditBtn} className="wizard-container__page-header-button" disabled={showErr || summaryLoading} >Edit</Button> 
-                </div>            
-            }          
-
             <div className="configuration">
-                <Tabs type="container">
-                    <Tab id="configuration" label="Configuration">
-                        {
-                            summaryLoading ? <InlineLoading />: 
-                                editable ? 
-                                <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="">
-                                </TextArea>
-                                :
-                                <CodeSnippet type="multi" feedback="Copied to clipboard" maxCollapsedNumberOfRows={40}>
-                                    {summaryInfo}                                   
-                                </CodeSnippet>                                                    
-                        }    
-                    </Tab>
-                </Tabs>
-            </div>      
-        </>        
+                {editable ?
+                    <div className="flex-right">
+                        <div >
+                            <Button onClick={clickCancelBtn} className="wizard-container__page-header-button">Cancel</Button>
+                        </div>
+                        <div>
+                            <Button onClick={clickSaveBtn} className="wizard-container__page-header-button">Save</Button>
+                        </div>
+                    </div>
+                    :
+                    <div className="align-right">
+                        <Button onClick={clickEditBtn} className="wizard-container__page-header-button" disabled={showErr || summaryLoading} >Edit</Button>
+                    </div>
+                }
+                {
+                    summaryLoading ? <InlineLoading /> :
+                        editable ?
+                            <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Configuration (YAML)">
+                            </TextArea>
+                            :
+                            <TextArea className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} labelText="Configuration (YAML)" readOnly={true}>
+                            </TextArea>
+                }
+            </div>
+        </>
     )
 }
 

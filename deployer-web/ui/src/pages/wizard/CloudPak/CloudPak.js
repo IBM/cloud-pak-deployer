@@ -1,4 +1,4 @@
-import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,RadioButton,RadioButtonGroup,CodeSnippet} from 'carbon-components-react';
+import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,RadioButton,RadioButtonGroup,CodeSnippet} from '@carbon/react';
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'

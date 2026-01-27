@@ -1,4 +1,4 @@
-import { RadioButton, RadioButtonGroup } from "carbon-components-react";
+import { RadioButton, RadioButtonGroup } from "@carbon/react";
 
 
 const Selection = ({setCpdWizardMode,
