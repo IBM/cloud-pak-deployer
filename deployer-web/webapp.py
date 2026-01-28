@@ -697,21 +697,8 @@ def read_configuration_from_openshift() -> dict[str, Any]:
 
     return config_result
 
-def format_configuration_yaml(full_configuration):
-    global_config_yaml = yaml.safe_dump({'global_config': full_configuration['data']['global_config']})
-    all_in_one = '---\n'+global_config_yaml
 
-    openshift_yaml = yaml.safe_dump({'openshift': full_configuration['data']['openshift']})
-    all_in_one = all_in_one + '\n\n' + openshift_yaml
 
-    if 'cp4d' in full_configuration['data'] and full_configuration['metadata']['selectedCloudPak'] == 'software-hub':
-        cp4d_yaml = yaml.safe_dump({'cp4d': full_configuration['data']['cp4d']})
-        all_in_one = all_in_one + '\n\n' + cp4d_yaml
-    if 'cp4i' in full_configuration['data'] and full_configuration['metadata']['selectedCloudPak'] == 'cp4i':
-        cp4i_yaml=yaml.safe_dump({'cp4i': full_configuration['data']['cp4i']})
-        all_in_one = all_in_one + '\n\n' + cp4i_yaml
-
-    return all_in_one
 
 @app.route('/api/v1/configuration',methods=["PUT"])
 def update_configuration():
@@ -788,6 +775,103 @@ def update_configuration_openshift(full_configuration):
         app.logger.info(f"Error creating updating map: {stderr}")        
 
     return result
+
+#
+# Format configuration YAML
+#
+
+@app.route('/api/v1/format-configuration',methods=["POST"])
+def format_configuration():
+    formatted_config: dict[str, Any] = {
+        "code":-1,
+        "message":"",
+        "data":{},
+    }
+
+    body = json.loads(request.get_data())
+
+    formatted_config['data']=format_configuration_yaml(body)
+    formatted_config['code'] = 0
+
+    return formatted_config
+
+
+def format_configuration_yaml(full_configuration):
+    global_config_yaml = yaml.safe_dump({'global_config': full_configuration['data']['global_config']})
+    all_in_one = '---\n'+global_config_yaml
+
+    openshift_yaml = yaml.safe_dump({'openshift': full_configuration['data']['openshift']})
+    all_in_one = all_in_one + '\n\n' + openshift_yaml
+
+    if 'cp4d' in full_configuration['data'] and full_configuration['metadata']['selectedCloudPak'] == 'software-hub':
+        # Sort cp4d dictionary by value type before dumping
+        cp4d_data = full_configuration['data']['cp4d']
+        if isinstance(cp4d_data, list):
+            # If cp4d is a list, sort each dictionary in the list
+            sorted_cp4d_data = []
+            for item in cp4d_data:
+                if isinstance(item, dict):
+                    sorted_item = dict(sort_cp4d_dict(item.items()))
+                    sorted_cp4d_data.append(sorted_item)
+                else:
+                    sorted_cp4d_data.append(item)
+            cp4d_yaml = yaml.safe_dump({'cp4d': sorted_cp4d_data}, sort_keys=False)
+        else:
+            # If cp4d is a dict, sort it
+            sorted_cp4d = dict(sort_cp4d_dict(cp4d_data.items()))
+            cp4d_yaml = yaml.safe_dump({'cp4d': sorted_cp4d}, sort_keys=False)
+        all_in_one = all_in_one + '\n\n' + cp4d_yaml
+    if 'cp4i' in full_configuration['data'] and full_configuration['metadata']['selectedCloudPak'] == 'cp4i':
+        cp4i_yaml=yaml.safe_dump({'cp4i': full_configuration['data']['cp4i']})
+        all_in_one = all_in_one + '\n\n' + cp4i_yaml
+
+    return all_in_one
+
+def sort_cp4d_dict(items):
+    """
+    Sort cp4d dictionary items with specific key ordering:
+    1. project (if exists)
+    2. operators_project (if exists)
+    3. cp4d_version (if exists)
+    4. Then by value type:
+       - Scalars (str, int, float, bool, None)
+       - Lists of scalars
+       - Lists of dictionaries
+       - Dictionaries
+    """
+    # Define priority keys and their order
+    priority_keys = ['project', 'operators_project', 'cp4d_version']
+    
+    def get_sort_key(item):
+        key, value = item
+        
+        # Check if key is in priority list
+        if key in priority_keys:
+            # Return negative priority to ensure these come first
+            return (-1000 + priority_keys.index(key), key)
+        
+        # For non-priority keys, sort by value type
+        # Scalars get priority 0
+        if isinstance(value, (str, int, float, bool, type(None))):
+            return (0, key)
+        # Lists get priority 1 or 2 depending on content
+        elif isinstance(value, list):
+            if len(value) == 0:
+                return (1, key)
+            # Check if list contains dictionaries
+            if any(isinstance(v, dict) for v in value):
+                return (2, key)  # List of dicts
+            else:
+                return (1, key)  # List of scalars
+        # Dictionaries get priority 3
+        elif isinstance(value, dict):
+            return (3, key)
+        # Everything else gets priority 4
+        else:
+            return (4, key)
+    
+    return sorted(items, key=get_sort_key)
+
 
 # @app.route('/api/v1/cartridges/<cloudpak>',methods=["GET"])
 # def getCartridges(cloudpak):

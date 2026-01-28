@@ -50,14 +50,26 @@ const Summary = ({
     }
 
     useEffect(() => {
-        console.log('useEffect() in Summary.js')
-        console.log('configuration: ', configuration)
+      const formatConfiguration = async () => {
+        console.log('Configuration: ',configuration)
+        await axios.post('/api/v1/format-configuration', configuration, { headers: { "Content-Type": "application/json" } }).then(res => {
+            console.log('Formatted configuration: ', res)
+            setSummaryInfo(res.data.data)
+            setTempSummaryInfo(res.data.data)
+        }, err => {
+            setSummaryLoading(false)
+            setShowErr(true)
+            console.log(err)
+        });
+      }
+
+      formatConfiguration()
 
         // Convert configuration.data to YAML text if it's an object
-        const configText = yaml.dump(configuration.data);
+        // const configText = yaml.dump(configuration.data);
 
-        setSummaryInfo(configText)
-        setTempSummaryInfo(configText)
+        // setSummaryInfo(configText)
+        // setTempSummaryInfo(configText)
 
         // eslint-disable-next-line
     }, []);
@@ -143,10 +155,10 @@ const Summary = ({
                 {
                     summaryLoading ? <InlineLoading /> :
                         editable ?
-                            <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Configuration (YAML)">
+                            <TextArea onChange={textAreaOnChange} className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={20} value={tempSummaryInfo} invalid={configInvalid} invalidText="Invalid yaml formatting." labelText="Configuration (YAML)">
                             </TextArea>
                             :
-                            <TextArea className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={30} value={tempSummaryInfo} labelText="Configuration (YAML)" readOnly={true}>
+                            <TextArea className="bx--snippet" type="multi" feedback="Copied to clipboard" rows={20} value={tempSummaryInfo} labelText="Configuration (YAML)" readOnly={true}>
                             </TextArea>
                 }
             </div>
