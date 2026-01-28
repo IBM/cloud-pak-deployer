@@ -2,9 +2,9 @@ from typing import Any
 from flask import Flask, send_from_directory,request,make_response,send_file
 import sys, psutil, subprocess, os, getpass
 import json,yaml, re
-from shutil import copyfile
+from shutil import copy2 
 from pathlib import Path
-import glob, zipfile
+import glob, zipfile, tarfile
 from logging.config import dictConfig
 
 # Configure the logging
@@ -160,7 +160,7 @@ def deploy_openshift(deployer_env):
 #
 
 @app.route('/api/v1/download-log',methods=["POST"])
-def downloadLog ():
+def download_log():
     body = json.loads(request.get_data())
     print(body, file=sys.stderr)
 
@@ -168,27 +168,97 @@ def downloadLog ():
         return make_response('Bad Request', 400)
 
     deployerLog=body['deployerLog']
-
     if deployerLog != "deployer-log" and deployerLog != "all-logs":
         return make_response('Bad Request', 400)
 
+    if (running_context == 'local'):
+        download_log_local(deployerLog)
+    else:
+        download_log_openshift(deployerLog)
+
     if deployerLog == "deployer-log":
-        log_path = status_dir + '/log/cloud-pak-deployer.log'
+        log_path = '/tmp/cloud-pak-deployer.log'
         return send_file(log_path, as_attachment=True)
-    
-    if deployerLog == "all-logs":
-        log_zip = '/tmp/logs.zip'
-
-        log_folder_path = status_dir + '/log/'
-        log_zip_file=zipfile.ZipFile(log_zip, 'w')
-        for f in os.listdir(log_folder_path):
-            log_zip_file.write(os.path.join(log_folder_path, f), f, zipfile.ZIP_DEFLATED)
-        log_zip_file.close()
-
+    else:
+        log_zip = '/tmp/cloud-pak-deployer-logs.tar.gz'
         return send_file(log_zip, as_attachment=True)
     
-    return make_response('Bad Request', 400)
-    
+
+def download_log_local(deployerLog):
+    if deployerLog == "deployer-log":
+        copy2(status_dir+'/log/cloud-pak-deployer.log', '/tmp/')
+    else:
+        log_folder_path = status_dir + '/log/'
+        with tarfile.open('/tmp/cloud-pak-deployer-logs.tar.gz', 'w:gz') as tar_file:
+            for f in os.listdir(log_folder_path):
+                tar_file.add(os.path.join(log_folder_path,f))
+            tar_file.close()
+
+def download_log_openshift(deployerLog):
+    oc_get_debug=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-debug','-o=json']
+    app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
+
+    try:
+        process = subprocess.Popen(oc_get_debug,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode == 0:
+            deployer_debug=json.loads(stdout)
+            for dd in deployer_debug['items']:
+                if 'status' in dd and 'phase' in dd['status']:
+                    if dd['status']['phase'] in ['Running']:
+
+                        if deployerLog == "deployer-log":
+                            oc_get_log=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/Data/cpd-status/log/cloud-pak-deployer.log','/tmp/cloud-pak-deployer.log']
+                            app.logger.info('Get cloud-pak-deployer log: {}'.format(oc_get_log))
+
+                            try:
+                                process = subprocess.Popen(oc_get_log,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                universal_newlines=True)
+                                
+                                stdout, stderr = process.communicate()
+
+                            except Exception as e:
+                                app.logger.info('Error while getting /Data/cpd-status/log/cloud-pak-deployer.log from pod {}: {}'.format(dd['metadata']['name'],str(e)))
+                        else:
+                            oc_rsh_tar=['oc','rsh',f'-n={deployer_project}',dd['metadata']['name'],'tar','cvzf','/tmp/cloud-pak-deployer-logs.tar.gz','-C','/Data/cpd-status/log','.']
+                            app.logger.info('tar cloud-pak-deployer logs: {}'.format(oc_rsh_tar))
+
+                            try:
+                                process = subprocess.Popen(oc_rsh_tar,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                universal_newlines=True)
+                                
+                                stdout, stderr = process.communicate()
+                                app.logger.info(stdout)
+
+                            except Exception as e:
+                                app.logger.info('Error while tarring Cloud Pak Deployer logs in pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+
+                            oc_get_log_tar=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/tmp/cloud-pak-deployer-logs.tar.gz','/tmp/cloud-pak-deployer-logs.tar.gz']
+                            app.logger.info('Get cloud-pak-deployer logs: {}'.format(oc_get_log_tar))
+
+                            try:
+                                process = subprocess.Popen(oc_get_log_tar,
+                                                stdout=subprocess.PIPE,
+                                                stderr=subprocess.PIPE,
+                                                universal_newlines=True)
+                                
+                                stdout, stderr = process.communicate()
+
+                            except Exception as e:
+                                app.logger.info('Error while getting Cloud Pak Deployer logs from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+
+    except Exception as e:
+        app.logger.info('Error while getting cloud-pak-deployer-debug pod: {}, not getting getting logs'.format(str(e)))
+
 #
 # OpenShift login
 #
@@ -338,6 +408,8 @@ def get_deployer_status():
     else:
         result=get_deployer_status_openshift()
 
+    app.logger.info(f"Deployer status: {result}")
+
     return result
 
 def get_deployer_status_local():
@@ -387,8 +459,8 @@ def get_deployer_status_openshift():
         result['deployer_active']=False
 
     if (not deployer_starting):
-        oc_get_deployer=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer','-o=json']
-        app.logger.info('Get cloud-pak-deployer pods: {}'.format(oc_get_deployer))
+        oc_get_deployer=['oc','get',f'-n={deployer_project}','job','cloud-pak-deployer','-o=json']
+        app.logger.info('Get cloud-pak-deployer job: {}'.format(oc_get_deployer))
 
         try:
             process = subprocess.Popen(oc_get_deployer,
@@ -399,11 +471,12 @@ def get_deployer_status_openshift():
             stdout, stderr = process.communicate()
             
             if process.returncode == 0:
-                deployer_pods=json.loads(stdout)
-                for dp in deployer_pods['items']:
-                    if 'status' in dp and 'phase' in dp['status']:
-                        if dp['status']['phase'] in ['Pending','Running']:
-                            result['deployer_active']=True
+                deployer_job=json.loads(stdout)
+                if 'status' in deployer_job:
+                    if not 'conditions' in deployer_job['status']:
+                        result['deployer_active']=True
+                    elif deployer_job['status']['conditions'][0]['type'] not in ['Failed', 'Complete']:
+                        result['deployer_active']=True
             
         except Exception as e:
             app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
@@ -696,9 +769,6 @@ def read_configuration_from_openshift() -> dict[str, Any]:
     app.logger.info(config_result)
 
     return config_result
-
-
-
 
 @app.route('/api/v1/configuration',methods=["PUT"])
 def update_configuration():

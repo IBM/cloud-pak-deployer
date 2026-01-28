@@ -23,26 +23,8 @@ const Summary = ({
     const [summaryInfo, setSummaryInfo] = useState("")
     const [editable, setEditable] = useState(false)
 
-    const updateSummaryData = async () => {
-        let body = {
-            "configuration": configuration
-        }
-
-        console.log('body: ', body)
-
-        await axios.put('/api/v1/configuration', body, { headers: { "Content-Type": "application/json" } }).then(res => {
-            setSummaryLoading(false)
-            setSummaryInfo(res.data.config)
-            setTempSummaryInfo(res.data.config)
-        }, err => {
-            setSummaryLoading(false)
-            setShowErr(true)
-            console.log(err)
-        });
-    }
-
     const saveSummaryData = async (body) => {
-        console.log('body: ', body)
+        // console.log('body: ', body)
         configuration.data = body.config
         setConfiguration(configuration)
         setEditable(false)
@@ -50,26 +32,20 @@ const Summary = ({
     }
 
     useEffect(() => {
-      const formatConfiguration = async () => {
-        console.log('Configuration: ',configuration)
-        await axios.post('/api/v1/format-configuration', configuration, { headers: { "Content-Type": "application/json" } }).then(res => {
-            console.log('Formatted configuration: ', res)
-            setSummaryInfo(res.data.data)
-            setTempSummaryInfo(res.data.data)
-        }, err => {
-            setSummaryLoading(false)
-            setShowErr(true)
-            console.log(err)
-        });
-      }
+        const formatConfiguration = async () => {
+            console.log('Configuration: ',configuration)
+            await axios.post('/api/v1/format-configuration', configuration, { headers: { "Content-Type": "application/json" } }).then(res => {
+                // console.log('Formatted configuration: ', res)
+                setSummaryInfo(res.data.data)
+                setTempSummaryInfo(res.data.data)
+            }, err => {
+                setSummaryLoading(false)
+                setShowErr(true)
+                console.log(err)
+            });
+        }
 
-      formatConfiguration()
-
-        // Convert configuration.data to YAML text if it's an object
-        // const configText = yaml.dump(configuration.data);
-
-        // setSummaryInfo(configText)
-        // setTempSummaryInfo(configText)
+        formatConfiguration()
 
         // eslint-disable-next-line
     }, []);

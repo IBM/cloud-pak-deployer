@@ -361,7 +361,7 @@ const Wizard = ({setHeaderTitle,
     const headers = {'Content-Type': 'application/json; application/octet-stream', responseType: 'blob'}
     await axios.post('/api/v1/download-log', body, headers).then(res =>{
       if (deployeyLog === 'all-logs') {
-        fileDownload(res.data, "cloud-pak-deployer-logs.zip")
+        fileDownload(res.data, "cloud-pak-deployer-logs.tar.gz")
       }else {
         fileDownload(res.data, "cloud-pak-deployer.log")
       }       
