@@ -425,7 +425,21 @@ const Wizard = ({ setHeaderTitle,
         console.log(err)
       });
     }
+
+    const checkInitialDeployerStatus = async () => {
+      let deployerStatus = await checkDeployerStatus();
+      if (deployerStatus === 1) {
+        setCheckDeployerStatusErr(false)
+        setCurrentIndex(10)
+        setDeployStart(true)
+        setDeployErr(false)
+        getDeployStatus()
+        refreshStatus()
+      }
+    }
+
     getEnviromentVariables();
+    checkInitialDeployerStatus();
     // eslint-disable-next-line
   }, []);
 
