@@ -53,15 +53,9 @@ Log is as a cluster administrator to be able to run the deployer with the correc
 ## Start the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
-* Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job (From release v3.0.2 onwards).
+* Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job
 
-!!! info
-    The below starts the deployer apply process using the above configuration. Additionally, you can:
-    
-    * Start only the debug job and run the deployer in the debug pod. See [Start deployer debug job](./existing-openshift-console-debug-job.md){target="_blank}
-    * Configure environment variables such as proxy server. See [Configure environment variables for proxy and other settings](./existing-openshift-environment-variables-and-proxy.md){target="_blank}
-
-???+ note "Start the deployer"
+???+ note "Start the deployer wizard"
     ``` { .yaml .copy linenums="1" hl_lines="11" }
     apiVersion: v1
     kind: Pod
