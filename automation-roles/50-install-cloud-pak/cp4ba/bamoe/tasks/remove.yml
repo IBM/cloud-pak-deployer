@@ -1,0 +1,65 @@
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ bamoe_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ bamoe_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - configmaps
+    - secrets
+    - persistentvolumeclaims
+    - services
+    - deployments
+
+- name: Remove {{ item.name }}
+  kubernetes.core.k8s:
+    state: absent
+    src: "{{ bamoe_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Remove bamoe-maven-settings Config Map
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: ConfigMap
+    name: "000-bamoe-maven-settings"
+    namespace: "{{ bamoe_project_name }}"
+    force: false
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Remove Routes
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ bamoe_project_name }}"
+    name: "{{ item }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - bamoe-canvas
+    - bamoe-cors-proxy
+    - bamoe-extended-services
+    - bamoe-management-console
+    - bamoe-maven-repository
+    - bamoe-mcp-server
+
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ bamoe_project_name }}"

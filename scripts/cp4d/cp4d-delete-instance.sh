@@ -1,6 +1,70 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 
+<<<<<<< HEAD
+=======
+command_usage() {
+  echo
+  echo "Usage:"
+  echo "$(basename $0) <INSTANCE NAMESPACE>"
+  echo "$(basename $0) -n <INSTANCE NAMESPACE> [--operator-ns <OPERATOR NAMESPACE>]"
+  echo
+  exit $1
+}
+
+#
+# PARSE
+#
+if [ "$#" -lt 1 ]; then
+    echo "Error: Missing namespace argument."
+    command_usage 2
+elif [ "$#" -eq 1 ];then
+    export INSTANCE_NS=$1
+    export OPERATOR_NS="${INSTANCE_NS}-operators"
+else
+    PARAMS=""
+    while (( "$#" )); do
+    case "$1" in
+    --help|-h)
+        command_usage 0
+        ;;
+    --instance-namespace*|-n*)
+        if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+        export INSTANCE_NS="${1#*=}"
+        shift 1
+        else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+        export INSTANCE_NS=$2
+        shift 2
+        else
+        echo "Error: Missing instance namespace argument."
+        command_usage 2
+        fi
+        fi
+        shift 1
+        ;;
+    --operator-ns*)
+        if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+        export OPERATOR_NS="${1#*=}"
+        shift 1
+        else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+        export OPERATOR_NS=$2
+        shift 2
+        else
+        echo "Error: Missing operator namespace argument."
+        command_usage 2
+        fi
+        fi
+        shift 1
+        ;;
+    *) # preserve remaining arguments
+        PARAMS="$PARAMS $1"
+        shift
+        ;;
+    esac
+    done
+fi
+
+>>>>>>> main
 get_logtime() {
   echo $(date "+%Y-%m-%d %H:%M:%S")
 }
@@ -50,6 +114,7 @@ delete_operator_ns() {
 }
 
 delete_instance_ns() {
+<<<<<<< HEAD
     CP4D_PROJECT=$1
     oc get project ${CP4D_PROJECT} > /dev/null 2>&1
     if [ $? -eq 0 ];then
@@ -59,6 +124,17 @@ delete_instance_ns() {
 
         log "Getting Custom Resources in OpenShift project ${CP4D_PROJECT}..."
         oc get --no-headers -n $CP4D_PROJECT $(oc api-resources --namespaced=true --verbs=list -o name | grep -E 'ibm|caikitruntimestacks' | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
+=======
+    INSTANCE_NS=$1
+    oc get project ${INSTANCE_NS} > /dev/null 2>&1
+    if [ $? -eq 0 ];then
+
+        # Delete instance namespace at the beginning to avoid additional CRs being created
+        oc delete ns ${INSTANCE_NS} --ignore-not-found --wait=false
+
+        log "Getting Custom Resources in OpenShift project ${INSTANCE_NS}..."
+        oc get --no-headers -n $INSTANCE_NS $(oc api-resources --namespaced=true --verbs=list -o name | grep -E 'ibm|caikitruntimestacks' | awk '{printf "%s%s",sep,$0;sep=","}')  --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' > ${temp_dir}/cp4d-resources.out
+>>>>>>> main
 
         # 
         # First the script deletes all CP4D custom resources in the specified project
@@ -74,8 +150,13 @@ delete_instance_ns() {
                 ;;
                 *)
                 log "Deleting $CR $CR_NAME"
+<<<<<<< HEAD
                 oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false --ignore-not-found
                 oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+=======
+                oc delete -n ${INSTANCE_NS} ${CR} ${CR_NAME} --wait=false --ignore-not-found
+                oc patch -n ${INSTANCE_NS} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+>>>>>>> main
                 resource_deleted=true
                 ;;
             esac
@@ -91,8 +172,13 @@ delete_instance_ns() {
             case $CR in
                 Ibmcpd|CommonService|OperandRequest|ResourcePlan)
                 log "Deleting $CR $CR_NAME"
+<<<<<<< HEAD
                 oc delete -n ${CP4D_PROJECT} ${CR} ${CR_NAME} --wait=false --ignore-not-found
                 oc patch -n ${CP4D_PROJECT} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+=======
+                oc delete -n ${INSTANCE_NS} ${CR} ${CR_NAME} --wait=false --ignore-not-found
+                oc patch -n ${INSTANCE_NS} ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+>>>>>>> main
                 resource_deleted=true
                 ;;
                 *)
@@ -101,17 +187,30 @@ delete_instance_ns() {
         done < ${temp_dir}/cp4d-resources.out
 
         log "Delete role binding if Cloud Pak for Data was connected to IAM"
+<<<<<<< HEAD
         oc delete rolebinding -n ${CP4D_PROJECT} admin --ignore-not-found --wait=false
         oc patch -n ${CP4D_PROJECT} rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
         oc delete authentication.operator.ibm.com -n ${CP4D_PROJECT} example-authentication --ignore-not-found --wait=false
         oc patch -n ${CP4D_PROJECT} authentication.operator.ibm.com/example-authentication --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+=======
+        oc delete rolebinding -n ${INSTANCE_NS} admin --ignore-not-found --wait=false
+        oc patch -n ${INSTANCE_NS} rolebinding/admin --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+        oc delete authentication.operator.ibm.com -n ${INSTANCE_NS} example-authentication --ignore-not-found --wait=false
+        oc patch -n ${INSTANCE_NS} authentication.operator.ibm.com/example-authentication --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
+>>>>>>> main
 
         #
         # Now the CP4D project should be empty and can be deleted, this may take a while (5-15 minutes)
         #
+<<<<<<< HEAD
         wait_ns_deleted ${CP4D_PROJECT}
     else
         echo "Project ${CP4D_PROJECT} does not exist, skipping"
+=======
+        wait_ns_deleted ${INSTANCE_NS}
+    else
+        echo "Project ${INSTANCE_NS} does not exist, skipping"
+>>>>>>> main
     fi
 }
 
@@ -277,11 +376,20 @@ delete_cluster_wide_cr_config() {
     echo "Deleting MutatingWebhookConfigurations"
     oc delete MutatingWebhookConfiguration ibm-common-service-webhook-configuration --ignore-not-found
     oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration --ignore-not-found
+<<<<<<< HEAD
     oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration-cpd-operators --ignore-not-found
+=======
+    oc delete MutatingWebhookConfiguration ibm-operandrequest-webhook-configuration-${OPERATOR_NS} --ignore-not-found
+    oc delete MutatingWebhookConfiguration postgresql-operator-mutating-webhook-configuration-${OPERATOR_NS} --ignore-not-found
+>>>>>>> main
 
     echo "Deleting ValidatingWebhookConfiguration"
     oc delete ValidatingWebhookConfiguration ibm-common-service-validating-webhook-cpd-operators --ignore-not-found
     oc delete ValidatingWebhookConfiguration ibm-cs-ns-mapping-webhook-configuration --ignore-not-found
+<<<<<<< HEAD
+=======
+    oc delete ValidatingWebhookConfiguration postgresql-operator-validating-webhook-configuration-${OPERATOR_NS} --ignore-not-found
+>>>>>>> main
 
     echo "Deleting common-service maps"
     oc delete cm -n kube-public common-service-maps --ignore-not-found
@@ -315,6 +423,7 @@ delete_ibm_crds() {
 # MAIN CODE
 #
 
+<<<<<<< HEAD
 CP4D_PROJECT=$1
 if [ -z "${CP4D_PROJECT}" ];then
     echo "Usage: $0 <cp4d-project>"
@@ -324,6 +433,22 @@ fi
 # Ask for final confirmation to delete the CP4D instance
 if [ -z "${CPD_CONFIRM_DELETE}" ];then
     read -p "Are you sure you want to delete CP4D instance ${CP4D_PROJECT} and Cloud Pak Foundational Services (y/N)? " -r
+=======
+# Ask for final confirmation to delete the CP4D instance
+if [ -z "${CPD_CONFIRM_DELETE}" ];then
+    echo "About to delete the following from the cluster:"
+    if oc get project ${INSTANCE_NS} > /dev/null 2>&1;then echo "- Instance namespace: ${INSTANCE_NS}";fi
+    if oc get project ${OPERATOR_NS} > /dev/null 2>&1;then echo "- Operator namespace: ${OPERATOR_NS}";fi
+    if oc get project ibm-app-connect > /dev/null 2>&1;then echo "- Knative events: ibm-app-connect";fi
+    if oc get project ibm-knative-events > /dev/null 2>&1;then echo "- Knative events: ibm-knative-events";fi
+    if oc get project knative-serving > /dev/null 2>&1;then echo "- Knative server: knative-serving";fi
+    if oc get project ibm-licensing > /dev/null 2>&1;then echo "- License manager namespace: ibm-licensing";fi
+    if oc get project ibm-cpd-scheduler > /dev/null 2>&1;then echo "- Scheduler namespace: ibm-cpd-scheduler";fi
+    if oc get project ibm-cert-manager > /dev/null 2>&1;then echo "- Certificate manager: ibm-cert-manager";fi
+    if oc get project cs-control > /dev/null 2>&1;then echo "- Common Services control: cs-control";fi
+    echo "- IBM Custom Resource Definitions"
+    read -p "Are you sure (y/N)? " -r
+>>>>>>> main
     case "${REPLY}" in 
     y|Y)
     ;;
@@ -344,10 +469,17 @@ fi
 temp_dir=$(mktemp -d)
 
 # Delete Cloud Pak for Data instance
+<<<<<<< HEAD
 delete_instance_ns ${CP4D_PROJECT}
 
 # Delete operators in new operators namespace
 delete_operator_ns ${CP4D_PROJECT}-operators
+=======
+delete_instance_ns ${INSTANCE_NS}
+
+# Delete operators in new operators namespace
+delete_operator_ns ${OPERATOR_NS}
+>>>>>>> main
 
 # If cluster-wide resources must be destroyed, do so
 if ${CPD_DESTROY_CLUSTER_WIDE};then

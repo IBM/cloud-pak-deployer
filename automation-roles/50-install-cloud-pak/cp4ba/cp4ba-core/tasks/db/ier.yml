@@ -12,7 +12,15 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+<<<<<<< HEAD
     command: mkdir -p /bitnami/postgresql/tablespaces/fpos_tbs
+=======
+    command: >
+      bash -c "
+        mkdir -p /pgsqldata/fpos_tbs;
+        chown postgres:postgres /pgsqldata/fpos_tbs;
+      "
+>>>>>>> main
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -27,7 +35,11 @@
         CREATE USER fpos WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for fpos
+<<<<<<< HEAD
         CREATE TABLESPACE fpos_tbs OWNER fpos LOCATION '/bitnami/postgresql/tablespaces/fpos_tbs';
+=======
+        CREATE TABLESPACE fpos_tbs OWNER fpos LOCATION '/pgsqldata/fpos_tbs';
+>>>>>>> main
 
         -- create database fpos
         CREATE DATABASE fpos OWNER fpos TEMPLATE template0 ENCODING UTF8 TABLESPACE fpos_tbs;
@@ -40,7 +52,15 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+<<<<<<< HEAD
     command: mkdir -p /bitnami/postgresql/tablespaces/ros_tbs
+=======
+    command: >
+      bash -c "
+        mkdir -p /pgsqldata/ros_tbs;
+        chown postgres:postgres /pgsqldata/ros_tbs;
+      "
+>>>>>>> main
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -55,7 +75,11 @@
         CREATE USER ros WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for ros
+<<<<<<< HEAD
         CREATE TABLESPACE ros_tbs OWNER ros LOCATION '/bitnami/postgresql/tablespaces/ros_tbs';
+=======
+        CREATE TABLESPACE ros_tbs OWNER ros LOCATION '/pgsqldata/ros_tbs';
+>>>>>>> main
 
         -- create database ros
         CREATE DATABASE ros OWNER ros TEMPLATE template0 ENCODING UTF8 TABLESPACE ros_tbs;

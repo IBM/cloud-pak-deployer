@@ -2,6 +2,7 @@ generic_directory: "{{ status_dir }}/{{_current_cp4ba_cluster.project}}"
 main_project_name: "{{ _current_cp4ba_cluster.project | default('cp4ba)')}}"
 collateral_project_name: "{{ _current_cp4ba_cluster.collateral_project | default('cp4ba-collateral')}}"
 
+<<<<<<< HEAD
 # TODO move to variables when ext share works
     # ## Do NOT enable now. Set to true if you want to use FNCM External Share with Google ID.
     ## You then need to provide also the following parameters (GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET).
@@ -25,6 +26,22 @@ lc_admin_users: "{{ ldap_configuration.lc_admin_users | default([lc_principal_ad
 lc_general_groups: "{{ ldap_configuration.lc_general_groups | default(['cpusers', 'cpusers1']) }}"
 lc_selected_ldap_type: "{{ ldap_configuration.lc_selected_ldap_type | default('Custom') }}"
 lc_ldap_server: "{{ ldap_configuration.lc_ldap_server | default('openldap.'+openldap_project_name+'.svc.cluster.local') }}"
+=======
+# main platform admin user
+principal_admin_user: "{{ _current_cp4ba_cluster.principal_admin_user | default('cpmanager')}}"
+
+# CPFS admin user
+cpfs_admin_user: "{{ _current_cp4ba_cluster.cpfs_admin_user | default('cpadmin')}}"
+
+lc_principal_admin_user: "{{ ldap_configuration.lc_principal_admin_user | default(principal_admin_user) }}"
+lc_principal_admin_password: "{{ ldap_configuration.lc_principal_admin_password | default(universal_password) }}"
+lc_principal_admin_group: "{{ ldap_configuration.lc_principal_admin_group | default('cpmanagers') }}"
+lc_admin_groups: "{{ ldap_configuration.lc_admin_groups | default(['cpmanagers']) }}"
+lc_admin_users: "{{ ldap_configuration.lc_admin_users | default([lc_principal_admin_user]) }}"
+lc_general_groups: "{{ ldap_configuration.lc_general_groups | default(['cpusers', 'cpusers1']) }}"
+lc_selected_ldap_type: "{{ ldap_configuration.lc_selected_ldap_type | default('Custom') }}"
+lc_ldap_server: "{{ ldap_configuration.lc_ldap_server | default('openldap.' + openldap_project_name + '.svc.cluster.local') }}"
+>>>>>>> main
 lc_bind_secret: "{{ ldap_configuration.lc_bind_secret | default('ldap-bind-secret') }}"
 lc_ldap_base_dn: "{{ ldap_configuration.lc_ldap_base_dn | default('dc=cp,dc=internal') }}"
 lc_ldap_dc: "{{ ldap_configuration.lc_ldap_dc | default('cp') }}"
@@ -43,10 +60,17 @@ lc_ldap_group_id_attribute: "{{ ldap_configuration.lc_ldap_group_id_attribute | 
 lc_ldap_group_name_attribute: "{{ ldap_configuration.lc_ldap_group_name_attribute | default('*:cn') }}"
 lc_ldap_group_display_name_attr: "{{ ldap_configuration.lc_ldap_group_display_name_attr | default('cn') }}"
 lc_ldap_group_membership_search_filter: "{{ ldap_configuration.lc_ldap_group_membership_search_filter
+<<<<<<< HEAD
     | default('(|(&(objectclass='+lc_ldap_group_object_class+')(member={0}))(&(objectclass=groupofuniquenames)(uniquemember={0})))') }}"
 lc_ldap_group_member_id_map: "{{ ldap_configuration.lc_ldap_group_member_id_map | default(lc_ldap_group_object_class + ':member') }}"
 
 lc_bind_admin_user: "{{ ldap_configuration.lc_bind_admin_user | default('cn=admin,'+ lc_ldap_base_dn) }}"
+=======
+    | default('(|(&(objectclass=' + lc_ldap_group_object_class + ')(member={0}))(&(objectclass=groupofuniquenames)(uniquemember={0})))') }}"
+lc_ldap_group_member_id_map: "{{ ldap_configuration.lc_ldap_group_member_id_map | default(lc_ldap_group_object_class + ':member') }}"
+
+lc_bind_admin_user: "{{ ldap_configuration.lc_bind_admin_user | default('cn=admin,' + lc_ldap_base_dn) }}"
+>>>>>>> main
 lc_bind_admin_password: "{{ ldap_configuration.lc_bind_admin_password | default(universal_password) }}"
 
 ca_key_path: "{{ generic_directory }}/global-ca/global-ca.key"
@@ -61,6 +85,10 @@ opensearch_admin_user: opensearch-admin
 opensearch_universal_password: "{{ universal_password }}"
 
 usage_action: "{{ global_action }}"
+<<<<<<< HEAD
+=======
+usage_project_name: "{{ main_project_name }}"
+>>>>>>> main
 
 global_ca_action: "{{ global_action }}"
 
@@ -93,6 +121,11 @@ roundcube_project_name: "{{ collateral_project_name }}"
 roundcube_storage_class_name: "{{ storage_class_name }}"
 roundcube_universal_password: "{{ universal_password }}"
 roundcube_mail_hostname: "{{ mail_hostname }}"
+<<<<<<< HEAD
+=======
+roundcube_postgresql_project: "{{ postgresql_project_name }}"
+roundcube_postgresql_hostname: "{{ postgresql_hostname }}"
+>>>>>>> main
 
 cerebro_action: "{{ global_action }}"
 cerebro_project_name: "{{ collateral_project_name }}"
@@ -117,7 +150,11 @@ phpldapadmin_openldap_hostname: "{{ ldap_hostname }}"
 
 postgresql_action: "{{ global_action }}"
 postgresql_project_name: "{{ collateral_project_name }}"
+<<<<<<< HEAD
 postgresql_storage_class_name: "{{ storage_class_name }}"
+=======
+postgresql_storage_class_name: "{{ block_storage_class_name }}"
+>>>>>>> main
 postgresql_universal_password: "{{ universal_password }}"
 
 cloudbeaver_action: "{{ global_action }}"
@@ -154,7 +191,10 @@ cp4ba_cloudbeaver_universal_password: "{{ cloudbeaver_universal_password }}"
 cp4ba_cr_meta_name: icp4adeploy
 cp4ba_ca_key_path: "{{ ca_key_path }}"
 cp4ba_ca_crt_path: "{{ ca_crt_path }}"
+<<<<<<< HEAD
 cp4ba_external_share_google: "{{ external_share_google }}"
+=======
+>>>>>>> main
 cp4ba_google_client_id: "{{ google_client_id }}"
 cp4ba_google_client_secret: "{{ google_client_secret }}"
 cp4ba_deployment_platform: "{{ deployment_platform }}"
@@ -184,3 +224,9 @@ pm_project_name: "{{ main_project_name }}"
 pm_postgresql_project: "{{ postgresql_project_name }}"
 pm_postgresql_hostname: "{{ postgresql_hostname }}"
 pm_postgresql_password: "{{ postgresql_universal_password }}"
+<<<<<<< HEAD
+=======
+
+bamoe_action: "{{ global_action }}"
+bamoe_project_name: "{{ main_project_name }}"
+>>>>>>> main

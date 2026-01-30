@@ -16,7 +16,10 @@
     - persistentvolumeclaims
     - rolebindings
     - services
+<<<<<<< HEAD
     - deployments-db
+=======
+>>>>>>> main
     - deployments
 
 - name: Remove {{ item.name }}
@@ -28,7 +31,10 @@
     wait_timeout: "{{ item.wait_timeout }}"
   with_items:
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
+<<<<<<< HEAD
     - {name: deployments-db, wait_sleep: 15, wait_timeout: 600}
+=======
+>>>>>>> main
     - {name: services, wait_sleep: 15, wait_timeout: 15}
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: persistentvolumeclaims, wait_sleep: 15, wait_timeout: 300}
@@ -47,6 +53,29 @@
     wait_sleep: 15
     wait_timeout: 120
 
+<<<<<<< HEAD
+=======
+- name: Remove PostgreSQL DBs
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-postgresql-db
+  vars:
+    common_postgresql_db_name: "{{ item }}"
+    common_postgresql_project: "{{ roundcube_postgresql_project }}"
+  with_items:
+    - roundcube
+
+- name: Remove PostgreSQL users
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-postgresql-user
+  vars:
+    common_postgresql_user: "{{ item }}"
+    common_postgresql_project: "{{ roundcube_postgresql_project }}"
+  with_items:
+    - roundcube
+
+>>>>>>> main
 - name: Remove Empty Project
   ansible.builtin.include_role:
     name: common

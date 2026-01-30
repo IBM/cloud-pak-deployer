@@ -4,7 +4,10 @@
 # $1: Status directory
 
 status_dir=$1
+<<<<<<< HEAD
 interval=$2
+=======
+>>>>>>> main
 
 exit_code=0
 
@@ -24,8 +27,12 @@ log_state() {
 mkdir -p ${status_dir}/state
 temp_file=$(mktemp)
 
+<<<<<<< HEAD
 record_state() {
 
+=======
+while true;do
+>>>>>>> main
   rm -f ${temp_file}
 
   completion_perc=0
@@ -88,6 +95,7 @@ record_state() {
   cp -f ${temp_file} ${status_dir}/state/deployer-state.out
   chmod 777 ${status_dir}/state/deployer-state.out
 
+<<<<<<< HEAD
 }
 
 #
@@ -103,4 +111,8 @@ else
   done
 fi
 
+=======
+  sleep 10
+done
+>>>>>>> main
 exit 0

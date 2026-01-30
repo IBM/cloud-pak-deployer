@@ -11,7 +11,15 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+<<<<<<< HEAD
     command: mkdir -p /bitnami/postgresql/tablespaces/adsdesignerdb_tbs
+=======
+    command: >
+      bash -c "
+        mkdir -p /pgsqldata/adsdesignerdb_tbs;
+        chown postgres:postgres /pgsqldata/adsdesignerdb_tbs;
+      "
+>>>>>>> main
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -28,7 +36,11 @@
         CREATE USER adsdesigner WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- please modify location follow your requirement
+<<<<<<< HEAD
         CREATE TABLESPACE adsdesignerdb_tbs OWNER adsdesigner LOCATION '/bitnami/postgresql/tablespaces/adsdesignerdb_tbs';
+=======
+        CREATE TABLESPACE adsdesignerdb_tbs OWNER adsdesigner LOCATION '/pgsqldata/adsdesignerdb_tbs';
+>>>>>>> main
         GRANT CREATE ON TABLESPACE adsdesignerdb_tbs TO adsdesigner;
 
         -- create database adsdesignerdb
@@ -50,7 +62,15 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+<<<<<<< HEAD
     command: mkdir -p /bitnami/postgresql/tablespaces/adsruntimedb_tbs
+=======
+    command: >
+      bash -c "
+        mkdir -p /pgsqldata/adsruntimedb_tbs;
+        chown postgres:postgres /pgsqldata/adsruntimedb_tbs;
+      "
+>>>>>>> main
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -67,7 +87,11 @@
         CREATE USER adsruntime WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- please modify location follow your requirement
+<<<<<<< HEAD
         CREATE TABLESPACE adsruntimedb_tbs OWNER adsruntime LOCATION '/bitnami/postgresql/tablespaces/adsruntimedb_tbs';
+=======
+        CREATE TABLESPACE adsruntimedb_tbs OWNER adsruntime LOCATION '/pgsqldata/adsruntimedb_tbs';
+>>>>>>> main
         GRANT CREATE ON TABLESPACE adsruntimedb_tbs TO adsruntime;
 
         -- create database adsruntimedb

@@ -620,6 +620,11 @@ cp4ba:
         optional_components:
           baw_authoring: true # Workflow Authoring (BAW) - always keep true if workflow pattern is chosen. BAW Runtime is not implemented.
           kafka: true # Will install a kafka cluster and enable kafka service for workflow authoring.
+<<<<<<< HEAD
+=======
+          workflow_assistant: true # Will enable Authoring assistant for workflow authoring.
+          workplace_assistant: true # Will enable Workplace assistant.
+>>>>>>> main
         gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai
           apiKey: watsonx_ai_api_key
           mlUrl: https://us-south.ml.cloud.ibm.com
@@ -754,7 +759,10 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.cmis          | Set to `true` to enable CMIS | Yes | true, false |
 | optional_components.css          | Set to `true` to enable Content Search Services | Yes | true, false |
+<<<<<<< HEAD
 | optional_components.es          | Set to `true` to enable External Share. Currently not functional. | Yes | true, false |
+=======
+>>>>>>> main
 | optional_components.tm          | Set to `true` to enable Task Manager | Yes | true, false |
 | optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
@@ -797,11 +805,21 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components                         | Sub object for definition of optional components for pattern. | Yes  | Object - specific to each pattern |
 | optional_components.baw_authoring          | Set to `true` to enable Workflow Authoring. Currently always `true`. | Yes | true |
 | optional_components.kafka          | Set to `true` to enable kafka service for workflow authoring. | Yes | true, false |
+<<<<<<< HEAD
 | gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai | false  | Object |
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
 | gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.defaultFoundationModel          | Set to desired ID of foundation model | false | Your real value, (default) meta-llama/llama-3-3-70b-instruct |
+=======
+| optional_components.workflow_assistant          | Set to `true` to enable Authoring assistant for workflow authoring. | Yes | true, false |
+| optional_components.workplace_assistant          | Set to `true` to enable Workplace assistant. | Yes | true, false |
+| gen_ai          |  Sub object for definition of GenAI connection. For Gen AI Service Flow, Authoring Assistant and Workplace Assistant | false  | Object |
+| gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model (Only for Gen AI Service flow) | false | Your real value, (default) meta-llama/llama-3-3-70b-instruct |
+>>>>>>> main
 
 ### Process Mining properties
 
@@ -823,6 +841,18 @@ Placed in `rpa` key on the project level.
 | enabled                         | Set to `true` to enable `rpa`. | Yes  | true, false |
 | cr_custom          | Additional customization for Process Mining. Contents will be merged into RPA CR yaml file. Arrays are overwritten. | No | Object |
 
+<<<<<<< HEAD
+=======
+### Business Automation Manager Open Editions properties
+
+Used to configure Business Automation Manager Open Editions.  
+Placed in `bamoe` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `bamoe`. | Yes  | true, false |
+
+>>>>>>> main
 ### Other properties
 
 Used to configure extra UIs.  

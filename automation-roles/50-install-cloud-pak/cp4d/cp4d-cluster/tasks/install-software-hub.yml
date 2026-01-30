@@ -1,4 +1,5 @@
 ---
+<<<<<<< HEAD
 - name: Delete installation options file
   file:
     path: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
@@ -26,6 +27,22 @@
   vars:
     _p_activity_description: "Installation options file for setup-instance command"
     _p_activity_yaml: "{{ status_dir }}/cp4d/{{ current_cp4d_cluster.project }}-install-options.yml"
+=======
+- set_fact:
+    _cpd_platform_installation_options:
+      installation_options:
+        cloudpakfordata: true
+        iamIntegration: "{{ current_cp4d_cluster.use_fs_iam | default(False) | bool }}"
+
+- include_role:
+    name: cp4d-installation-options
+  vars:
+    _p_cp4d_project: "{{ current_cp4d_cluster.project }}"
+    _p_current_cp4d_cartridge: {}
+    _p_cartridge_name: 'cpd_platform'
+    _p_section: 'custom_spec'
+    _p_installation_options: "{{ _cpd_platform_installation_options }}"
+>>>>>>> main
 
 - block:
   - name: Generate setup-instance command for project {{ current_cp4d_cluster.project }} to install Software Hub
@@ -39,5 +56,10 @@
       _p_command: "{{ _setup_instance_command }}"
       _p_command_log_file: "{{ status_dir }}/log/{{ current_cp4d_cluster.project }}-install-software-hub.log"
       _p_command_environment:
+<<<<<<< HEAD
         OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"  
+=======
+        OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"
+      _p_cpd_cli_manage: True
+>>>>>>> main
   when: _install_control_plane

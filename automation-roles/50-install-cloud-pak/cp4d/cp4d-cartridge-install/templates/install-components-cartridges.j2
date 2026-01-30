@@ -5,6 +5,7 @@ install-components \
     --upgrade={{ _upgrade_cp4d | default(False) | string | lower }} \
     --operator_ns={{ _p_current_cp4d_cluster.operators_project }} \
     --instance_ns={{ _p_current_cp4d_cluster.project }} \
+<<<<<<< HEAD
     --param-file={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml \
     --components={{ _apply_cr_cartridges_list }} \
 {%- if _storage_type == "pwx" -%}
@@ -12,3 +13,15 @@ install-components \
 {%- else -%}
     --file_storage_class={{ ocp_storage_class_file }} --block_storage_class={{ ocp_storage_class_block }}
 {%- endif -%}
+=======
+{% if _installation_options_set %}
+    --param-file={{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-install-options.yml \
+{% endif %}
+{% if _storage_type == "pwx" %}
+    --storage_vendor=portworx \
+{% else %}
+    --file_storage_class={{ ocp_storage_class_file }} \
+    --block_storage_class={{ ocp_storage_class_block }} \
+{% endif %}
+    --components={{ _p_apply_cartridges_list }}
+>>>>>>> main

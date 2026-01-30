@@ -14,7 +14,15 @@
   kubernetes.core.k8s_exec:
     namespace: "{{ cp4ba_postgresql_project }}"
     pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+<<<<<<< HEAD
     command: mkdir -p /bitnami/postgresql/tablespaces/icndb_tbs
+=======
+    command: >
+      bash -c "
+        mkdir -p /pgsqldata/icndb_tbs;
+        chown postgres:postgres /pgsqldata/icndb_tbs;
+      "
+>>>>>>> main
   register: command_status
   failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
 
@@ -29,7 +37,11 @@
         CREATE USER icndb WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
 
         -- create tablespace for icndb
+<<<<<<< HEAD
         CREATE TABLESPACE icndb_tbs OWNER icndb LOCATION '/bitnami/postgresql/tablespaces/icndb_tbs';
+=======
+        CREATE TABLESPACE icndb_tbs OWNER icndb LOCATION '/pgsqldata/icndb_tbs';
+>>>>>>> main
         GRANT CREATE ON TABLESPACE icndb_tbs TO icndb;
 
         -- create database icndb

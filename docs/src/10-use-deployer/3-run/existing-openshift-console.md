@@ -153,8 +153,11 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
           # - cognos-analytics
           # - data-product-hub
           # - datastage
+<<<<<<< HEAD
           # - data-integration-unstructured-data
           # - data-lineage
+=======
+>>>>>>> main
           # - ikc-premium
           # - ikc-standard
           # - openpages
@@ -172,9 +175,14 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
           # - watsonx-gov-rc
           # - watsonx-orchestrate
           cp4d_production_license: True
+<<<<<<< HEAD
           accept_licenses: True
           db2u_limited_privileges: False
           use_fs_iam: True
+=======
+          accept_licenses: False
+          db2u_limited_privileges: False
+>>>>>>> main
           operators_project: cpd-operators
           ibm_cert_manager: False
           install_day0_patch: True
@@ -203,6 +211,25 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             description: Analytics Engine Powered by Apache Spark 
             size: small 
             state: removed
+<<<<<<< HEAD
+=======
+            installation_options:
+              sparkAdvEnabled: true
+              jobAutoDeleteEnabled: true
+              kernelCullTime: 30
+              imagePullParallelism: "40"
+              imagePullCompletions: "20"
+              kernelCleanupSchedule: "*/30 * * * *"
+              jobCleanupSchedule: "*/30 * * * *"
+              skipSelinuxRelabeling: false
+              mountCustomizationsFromCchome: false
+              maxDriverCpuCores: 5
+              maxExecutorCpuCores: 5
+              maxDriveMemory: "50g"
+              maxExecutorMemory: "50g"
+              maxNumWorkers: 50
+              localDirScaleFactor: 10
+>>>>>>> main
 
           - name: bigsql
             description: Db2 Big SQL
@@ -339,9 +366,17 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
 
           - name: match360
             description: IBM Match 360
+<<<<<<< HEAD
             size: small
             wkc_enabled: true
             state: removed
+=======
+            state: removed
+            installation_options:
+              scaleConfig: x-small
+              onboard_timeout: 300
+              ccs_http_timeout: 2000
+>>>>>>> main
 
           - name: mongodb
             description: MongoDB for Cloud Pak for Data
@@ -364,9 +399,16 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
 
           - name: replication
             description: Data Replication
+<<<<<<< HEAD
             license: IDRC
             size: small
             state: removed
+=======
+            size: small
+            state: removed
+            installation_options:
+              replication_license_type: IDRC    
+>>>>>>> main
 
           - name: rstudio
             description: RStudio Server with R 3.6
@@ -385,12 +427,23 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             description: Synthetic Data Generator
             state: removed
 
+<<<<<<< HEAD
+=======
+          - name: udp
+            description: Data Integration for Unstructured Data
+            state: removed
+
+>>>>>>> main
           - name: voice-gateway
             description: Voice Gateway
             replicas: 1
             state: removed
 
+<<<<<<< HEAD
           # In case watsonx Orchestrate is installed, no instances must be created for Watson Assistant
+=======
+          # In case watsonx Orchestrate is installed, Watson Assistant should not be explicitly set to installed
+>>>>>>> main
           - name: watson-assistant
             description: Watson Assistant
             size: small
@@ -400,6 +453,16 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             # instances:
             # - name: wa-instance
             #   description: "Watson Assistant instance"
+<<<<<<< HEAD
+=======
+            installation_options:
+              size: Production
+              bigpv: false
+              analytics: true
+              watsonxAiType: embedded
+              syomModels: []
+              ootbModels: []
+>>>>>>> main
 
           - name: watson-discovery
             description: Watson Discovery
@@ -409,6 +472,11 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             instances:
             - name: wd-instance
               description: "Watson Discovery instance"
+<<<<<<< HEAD
+=======
+            installation_options:
+              discovery_deployment_type: Production
+>>>>>>> main
 
           - name: watson-openscale
             description: Watson OpenScale
@@ -422,18 +490,51 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             # noobaa_account_secret: noobaa-admin
             # noobaa_cert_secret: noobaa-s3-serving-cert
             state: removed
+<<<<<<< HEAD
+=======
+            installation_options:
+              tags:
+                sttRuntime: true
+                sttAsync: false
+                sttCustomization: false
+                ttsRuntime: true
+                ttsCustomization: false
+              scaleConfig:
+                stt:
+                  size: xsmall
+                tts:
+                  size: xsmall
+              sttModels:
+              - enUsBroadbandModel
+              - enUsNarrowbandModel
+              - enUsShortFormNarrowbandModel
+              - enUsTelephony
+              - enUsMultimedia
+              ttsVoices:
+              - enUSAllisonV3Voice
+              - enUSLisaV3Voice
+              - enUSMichaelV3Voice
+>>>>>>> main
 
           - name: watsonx_ai
             description: watsonx.ai
             state: removed
             installation_options:
               tuning_disabled: true
+<<<<<<< HEAD
               lite_install: false
+=======
+              liteInstall: false
+>>>>>>> main
             models:
             - model_id: allam-1-13b-instruct
               state: removed
               # model_install_parameters can be used for sharding and node pinning according to
+<<<<<<< HEAD
               # instructions at https://www.ibm.com/docs/en/software-hub/5.1.x?topic=setup-adding-foundation-models
+=======
+              # instructions at https://www.ibm.com/docs/en/software-hub/5.3.x?topic=setup-adding-foundation-models
+>>>>>>> main
               #model_install_parameters:
               #  shards: 2
               #  nodeSelector:
@@ -442,6 +543,7 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
               state: removed
             - model_id: codestral-2501
               state: removed
+<<<<<<< HEAD
             - model_id: codestral-22b
               state: removed
             - model_id: elyza-japanese-llama-2-7b-instruct
@@ -451,11 +553,35 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             - model_id: google-flan-t5-xxl
               state: removed
             - model_id: google-flan-ul2
+=======
+            - model_id: codestral-2508
+              state: removed
+            - model_id: codestral-22b
+              state: removed
+            - model_id: devstral-medium-2507
+              state: removed
+            - model_id: google-flan-t5-xl
+              state: removed
+            - model_id: gpt-oss-20b
+              state: removed
+            - model_id: gpt-oss-120b
+              state: removed
+            - model_id: granite-4-h-micro
+              state: removed
+            - model_id: granite-4-h-tiny
+              state: removed
+            - model_id: granite-4-h-small
+>>>>>>> main
               state: removed
             - model_id: ibm-granite-13b-instruct-v2
               state: removed
             - model_id: granite-3-2-8b-instruct
               state: removed
+<<<<<<< HEAD
+=======
+            - model_id: granite-3-3-8b-instruct
+              state: removed
+>>>>>>> main
             - model_id: granite-3-2b-instruct
               state: removed
             - model_id: granite-3-8b-instruct
@@ -464,6 +590,11 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
               state: removed
             - model_id: granite-guardian-3-8b
               state: removed
+<<<<<<< HEAD
+=======
+            - model_id: granite-guardian-3-2-5b
+              state: removed
+>>>>>>> main
             - model_id: granite-3b-code-instruct
               state: removed
             - model_id: granite-8b-code-instruct
@@ -476,10 +607,38 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
               state: removed
             - model_id: granite-34b-code-instruct
               state: removed
+<<<<<<< HEAD
+=======
+            - model_id: granite-docling-258M
+              state: removed
+            - model_id: granite-vision-3-2-2b
+              state: removed
+            - model_id: granite-vision-3-3-2b
+              state: removed
+            - model_id: ibm-defense-3-3-8b-instruct
+              state: removed
+            - model_id: ibm-defense-4-0-micro
+              state: removed
+>>>>>>> main
             - model_id: core42-jais-13b-chat
               state: removed
             - model_id: llama-3-2-1b-instruct
               state: removed
+<<<<<<< HEAD
+=======
+            - model_id: llama-4-maverick-17b-128e-instruct-fp8
+              state: removed
+            - model_id: llama-4-maverick-17b-128e-instruct-int4
+              state: removed
+            - model_id: llama-4-scout-17b-16e-instruct
+              state: removed
+            - model_id: llama-4-scout-17b-16e-instruct-int4
+              state: removed
+            - model_id: llama-3-3-70b-instruct
+              state: removed
+            - model_id: llama-3-2-1b-instruct
+              state: removed
+>>>>>>> main
             - model_id: llama-3-2-3b-instruct
               state: removed
             - model_id: llama-3-2-11b-vision-instruct
@@ -488,6 +647,7 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
               state: removed
             - model_id: llama-guard-3-11b-vision
               state: removed
+<<<<<<< HEAD
             - model_id: llama-3-405b-instruct
               state: removed
             - model_id: meta-llama-llama-2-13b-chat
@@ -507,23 +667,51 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             - model_id: pixtral-large-instruct
               state: removed
             - model_id: pixtral-12b
+=======
+            - model_id: llama-3-1-8b-instruct
+              state: removed
+            - model_id: llama-3-1-70b-instruct
+              state: removed
+            - model_id: ministral-8b-instruct
+              state: removed
+            - model_id: mistral-small-3-2-24b-instruct-2506
+              state: removed
+            - model_id: mistral-small-3-1-24b-instruct-2503
+              state: removed
+            - model_id: mistral-medium-2505
+              state: removed
+            - model_id: mistral-medium-2508
+              state: removed
+            - model_id: mistral-large-instruct-2411
+              state: removed
+            - model_id: pixtral-large-instruct
+              state: removed
+            - model_id: voxtral-small-2507
+>>>>>>> main
               state: removed
             # Embedding models
             - model_id: all-minilm-l6-v2
               state: removed
             - model_id: all-minilm-l12-v2
               state: removed
+<<<<<<< HEAD
             - model_id: all-minilm-l12-v2
               state: removed
             - model_id: granite-embedding-107m-multilingual
               state: removed
+=======
+>>>>>>> main
             - model_id: granite-embedding-107m-multilingual
               state: removed
             - model_id: granite-embedding-278m-multilingual
               state: removed
+<<<<<<< HEAD
             - model_id: ms-marco-minilm-l-12-v2
               state: removed
             - model_id: ms-marco-minilm-l-12-v2
+=======
+            - model_id: granite-embedding-english-reranker-r2
+>>>>>>> main
               state: removed
             - model_id: multilingual-e5-large
               state: removed
@@ -531,10 +719,21 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
               state: removed
             - model_id: ibm-slate-125m-english-rtrvr
               state: removed
+<<<<<<< HEAD
+=======
+            - model_id: ms-marco-minilm-l-12-v2
+              state: removed
+>>>>>>> main
 
           - name: watsonx_data
             description: watsonx.data
             state: removed
+<<<<<<< HEAD
+=======
+            installation_options:
+              enable_lite_milvus: false
+              scaleConfig: small    
+>>>>>>> main
 
           - name: watsonx_dataintegration
             description: watsonx.data integration
@@ -568,7 +767,11 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             state: removed
             installation_options:
               wxd_premium_enable_models_on: gpu
+<<<<<<< HEAD
               license_type: premium
+=======
+              licenseType: premium
+>>>>>>> main
 
           - name: watsonx_governance
             description: watsonx.governance
@@ -581,6 +784,7 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
 
           - name: watsonx_orchestrate
             description: watsonx.orchestrate
+<<<<<<< HEAD
             installation_options:
               # watson_orchestrate_install_mode: lite
               watson_orchestrate_watsonx_ai_type: true
@@ -605,19 +809,60 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
 
           # For the IBM Knowledge Catalog, you can specify 3 editions: wkx, ikc_premium, or ikc_standard
           # Choose the correct IBM Knowledge Catalog edition below
+=======
+            state: removed
+            instances:
+            - name: wxo-instance
+              description: "watsonx Orchestrate instance"
+            installation_options:
+              installMode: "agentic"  
+              watsonxAI:
+                watsonxaiifm: true
+                syomModels: []
+                ootbModels: []
+
+          - name: wca
+            description: watsonx Code Assistant
+            installation_options:
+              similarity_feature:
+                enabled: false
+              rag_enabled:
+                enabled: true
+            state: removed
+
+          - name: wca-ansible
+            description: watsonx Code Assistant for Red Hat Ansible Lightspeed
+            state: removed
+
+          - name: wca-z
+            description: watsonx Code Assistant for Z
+            state: removed
+
+          - name: wca-z-ce
+            description: watsonx Code Assistant for Z Code Explanation
+            state: removed
+
+>>>>>>> main
           - name: wkc
             description: IBM Knowledge Catalog
             size: small
             state: removed
             installation_options:
+<<<<<<< HEAD
               enableKnowledgeGraph: True
               enableDataQuality: True
+=======
+              enableKnowledgeGraph: False
+              enableDataQuality: False
+              useFDB: False
+>>>>>>> main
 
           - name: ikc_premium
             description: IBM Knowledge Catalog - Premium edition
             size: small
             state: removed
             installation_options:
+<<<<<<< HEAD
               enableKnowledgeGraph: True
               enableDataQuality: True
               enableSemanticEnrichment: False
@@ -625,17 +870,42 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
               enableModelsOn: cpu
               useFDB: False
 
+=======
+              enableDataQuality: False
+              enableKnowledgeGraph: False
+              useFDB: False
+              enableAISearch: False
+              enableSemanticAutomation: False
+              enableSemanticEnrichment: True
+              enableSemanticEmbedding: False
+              enableTextToSql: False
+              enableModelsOn: 'cpu'
+              customModelTextToSQL: granite-3-3-8b-instruct
+              
+>>>>>>> main
           - name: ikc_standard
             description: IBM Knowledge Catalog - Standard edition
             size: small
             state: removed
             installation_options:
+<<<<<<< HEAD
               enableKnowledgeGraph: True
               enableDataQuality: True
               enableSemanticEnrichment: False
               enableAISearch: False
               enableModelsOn: cpu
               useFDB: False
+=======
+              enableKnowledgeGraph: False
+              useFDB: False
+              enableAISearch: False
+              enableSemanticAutomation: False
+              enableSemanticEnrichment: True
+              enableSemanticEmbedding: False
+              enableTextToSql: False
+              enableModelsOn: 'cpu'
+              customModelTextToSQL: granite-3-3-8b-instruct
+>>>>>>> main
 
           - name: wml
             description: Watson Machine Learning
@@ -653,6 +923,7 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             state: removed
 
           - name: ws-pipelines
+<<<<<<< HEAD
             description: Watson Studio Pipelines
             state: removed
 
@@ -663,6 +934,22 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
             - ibm-cpd-ws-runtime-241-pygpu
             - ibm-cpd-ws-runtime-241-r
             state: removed 
+=======
+            description: Orchestrateion Pipelines
+            state: removed
+            installation_options:
+              rbsimage: rbs-ext
+
+          - name: ws-runtimes
+            description: Watson Studio Runtimes
+            state: removed 
+            installation_options:
+              kinds:
+              - ibm-cpd-ws-runtime-241-pygpu
+              - ibm-cpd-ws-runtime-251-pygpu
+              - ibm-cpd-ws-runtime-241-r
+              - ibm-cpd-ws-runtime-251-r
+>>>>>>> main
 
         #
         # Cartridges where extra work is needed (will not install automatically)
@@ -671,7 +958,10 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
           - name: productmaster
             description: Product Master
             size: small  
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
             state: removed
     ```
 

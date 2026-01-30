@@ -22,6 +22,7 @@
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'ban/cr.yaml.j2') | from_yaml, recursive=true) }}"
 
+<<<<<<< HEAD
 # - name: Add BAN Google IDP configuration to CR
 #   ansible.builtin.set_fact:
 #     cr: "{{ cr | combine(ban_insert, recursive=true) }}"
@@ -33,6 +34,8 @@
 #             jvm_customize_options: DELIM=;-Dcom.filenet.authentication.ExShareGID.AuthTokenOrder=oidc,oauth,ltpa
 #   when: cp4ba_external_share_google and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
+=======
+>>>>>>> main
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-studio
 - name: Add BAS component
   ansible.builtin.set_fact:
@@ -128,11 +131,14 @@
     components: "{{ components + ['css'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
+<<<<<<< HEAD
 # - name: Add FNCM components
 #   ansible.builtin.set_fact:
 #     components: "{{ components + ['es'] }}"
 #   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
+=======
+>>>>>>> main
 - name: Add FNCM components
   ansible.builtin.set_fact:
     components: "{{ components + ['tm'] }}"
@@ -158,11 +164,14 @@
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-css.yaml.j2') | from_yaml, recursive=true) }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css
 
+<<<<<<< HEAD
 # - name: Add FNCM to CR
 #   ansible.builtin.set_fact:
 #     cr: "{{ cr | combine(lookup('template', 'fncm/cr-es.yaml.j2') | from_yaml, recursive=true) }}"
 #   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
+=======
+>>>>>>> main
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-tm.yaml.j2') | from_yaml, recursive=true) }}"
@@ -199,6 +208,7 @@
             verify_configuration:
               vc_icn_verification: "{{ cr_bck.spec.verify_configuration.vc_icn_verification + cr.spec.verify_configuration.vc_icn_verification }}"
 
+<<<<<<< HEAD
 
 # - name: Google and IDP for External Share
 #   block:
@@ -219,6 +229,8 @@
 
 #   when: cp4ba_external_share_google and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es
 
+=======
+>>>>>>> main
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=resource-configuring-business-automation-application
 - name: Add AAE pattern
   ansible.builtin.set_fact:
@@ -350,6 +362,19 @@
     components: "{{ components + ['kafka'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka
 
+<<<<<<< HEAD
+=======
+- name: Add BAWAUT workflow_assistant component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['workflow_assistant'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workflow_assistant
+
+- name: Add BAWAUT workplace_assistant component
+  ansible.builtin.set_fact:
+    components: "{{ components + ['workplace_assistant'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workplace_assistant
+
+>>>>>>> main
 - name: Add BAWAUT to CR
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
   block:
@@ -575,8 +600,11 @@
         _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name + '-cmis-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-graphql-deploy', '') }}"
+<<<<<<< HEAD
       # - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
       #   _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.es | ternary(cp4ba_cr_meta_name+'-es-deploy','') }}"
+=======
+>>>>>>> main
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
         _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name + '-tm-deploy', '') }}"
       - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-gitgateway-deploy', '') }}"
@@ -612,6 +640,26 @@
     common_delay: 120
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
 
+<<<<<<< HEAD
+=======
+- name: Wait for Deployment Workflow Agent to be Available
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: "{{ item }}"
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 30
+    common_delay: 120
+  with_items:
+    - "{{ cp4ba_cr_meta_name }}-workflow-server-agent"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workflow_assistant or
+    _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workplace_assistant
+
+>>>>>>> main
 - name: StatefulSets wait_list - document_processing
   ansible.builtin.set_fact:
     wait_list:
@@ -730,6 +778,7 @@
     common_delay: 120
   with_items: "{{ wait_list | select | list }}"
 
+<<<<<<< HEAD
 # PFS now part of BAS
 # - name: Wait for {{ cp4ba_cr_meta_name }}-pfs StatefulSet to be Available
 #   ansible.builtin.include_role:
@@ -742,6 +791,8 @@
 #     common_delay: 120
 #   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
+=======
+>>>>>>> main
 - name: Deployments wait_list - decision_ads
   ansible.builtin.set_fact:
     wait_list:

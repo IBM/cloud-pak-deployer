@@ -1,6 +1,25 @@
 ---
+<<<<<<< HEAD
 - include_tasks: record-deployer-state-background.yml
   when: _p_state_interval | default(0) != 0
 
 - include_tasks: record-deployer-state.yml
   when: _p_state_interval | default(0) == 0
+=======
+- name: Make sure old deployer-state.out does not exist
+  file:
+    path: "{{ status_dir }}/log/deployer-state.out"
+    state: absent
+
+- name: Starting background task to record deployer state in {{ status_dir }}/log
+  shell: |
+    {{ role_path }}/files/record-deployer-state.sh \
+      {{ status_dir }} 
+  async: 86400
+  poll: 0
+  register: _record_deployer_state
+
+- name: Show details of background task to record deployer state
+  debug:
+    var: _record_deployer_state
+>>>>>>> main

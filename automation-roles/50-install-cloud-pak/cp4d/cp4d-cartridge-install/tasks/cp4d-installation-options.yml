@@ -1,5 +1,6 @@
 ---
 - set_fact:
+<<<<<<< HEAD
     _template_file: installation-options-custom-spec.j2
     
 - set_fact:
@@ -15,3 +16,26 @@
   vars:
     _installation_options: "{{ _current_cp4d_cartridge.installation_options }}"
   when: (_current_cp4d_cartridge.installation_options | default({})) != {}
+=======
+    _installation_options_section: ''
+
+- set_fact:
+    _installation_options_section: 'custom_spec'
+  when: 
+  - _p_cp4d_version < '5.3.0'
+  - not (_current_cp4d_cartridge.installation_options_root | default(False))
+
+- set_fact:
+    _installation_options_section: "{{ _current_cp4d_cartridge.installation_options_section | default('non_olm') }}"
+  when: _p_cp4d_version >= '5.3.0'
+
+- include_role:
+    name: cp4d-installation-options
+  vars:
+    _p_cp4d_project: "{{ _p_current_cp4d_cluster.project }}"
+    _p_current_cp4d_cartridge: "{{ _current_cp4d_cartridge }}"
+    _p_cartridge_name: "{{ _current_cp4d_cartridge.olm_utils_name }}"
+    _p_section: "{{ _installation_options_section }}"
+    _p_installation_options: "{{ _current_cp4d_cartridge.installation_options }}"
+  when: ( _current_cp4d_cartridge.installation_options | default({})) != {}
+>>>>>>> main

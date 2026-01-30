@@ -167,7 +167,10 @@
     wait_timeout: 15
 
 # Based on validate successful deployment by following https://www.ibm.com/docs/en/cloud-paks/1.0?topic=platform-how-validate-successful-installation
+<<<<<<< HEAD
 # TODO waiting only for UIReady as Ready status is currently broken
+=======
+>>>>>>> main
 - name: Wait for ProcessMining to be UIReady
   ansible.builtin.include_role:
     name: common
@@ -181,7 +184,10 @@
     common_retries: 30
     common_delay: 120
 
+<<<<<<< HEAD
 # TODO waiting only for pods ready as Ready status is currently broken START
+=======
+>>>>>>> main
 - name: Query for IPM pods and wait for them
   kubernetes.core.k8s_info:
     api_version: v1
@@ -193,7 +199,10 @@
   until: pods.resources | json_query('[?status.containerStatuses[0].ready == `true`].metadata.name') | length >= 10
   retries: 30
   delay: 30
+<<<<<<< HEAD
 # TODO waiting only for pods ready as Ready status is currently broken END
+=======
+>>>>>>> main
 
 - name: Wait for PM Zen Extension
   ansible.builtin.include_role:
@@ -246,6 +255,11 @@
     status_code:
       - 200
   register: users_response
+<<<<<<< HEAD
+=======
+  retries: 10
+  delay: 60
+>>>>>>> main
 
 - name: Get admin user
   ansible.builtin.set_fact:
@@ -343,7 +357,11 @@
         status_code:
           - 200
 
+<<<<<<< HEAD
     - name: Get all groups
+=======
+    - name: Get all groups TaskMiningAdmins
+>>>>>>> main
       ansible.builtin.uri:
         url: "https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/-1"
         method: GET
@@ -353,13 +371,21 @@
         return_content: true
         status_code:
           - 200
+<<<<<<< HEAD
       register: groups_response
+=======
+      register: groups_response_tmadmins
+>>>>>>> main
       retries: 10
       delay: 60
 
     - name: Get TaskMiningAdmins group
       ansible.builtin.set_fact:
+<<<<<<< HEAD
         tm_admins_group: "{{ groups_response.json | json_query(condition_query) }}"
+=======
+        tm_admins_group: "{{ groups_response_tmadmins.json | json_query(condition_query) }}"
+>>>>>>> main
       vars:
         condition_query: "data.groups[?name == 'TaskMiningAdmins']"
 

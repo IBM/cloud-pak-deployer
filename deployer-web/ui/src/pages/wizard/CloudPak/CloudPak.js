@@ -1,12 +1,20 @@
+<<<<<<< HEAD
 import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput,RadioButton,RadioButtonGroup,CodeSnippet} from '@carbon/react';
+=======
+import { Checkbox,Loading,InlineNotification,PasswordInput,Accordion,AccordionItem,TextInput} from 'carbon-components-react';
+>>>>>>> main
 import { useState, useEffect } from 'react';
 import axios from "axios";
 import './CloudPak.scss'
 
+<<<<<<< HEAD
 const CloudPak = ({
                   setCloudPlatform,
                   selection,
                   CPDCartridgesData, 
+=======
+const CloudPak = ({CPDCartridgesData, 
+>>>>>>> main
                   setCPDCartridgesData, 
                   CPICartridgesData, 
                   setCPICartridgesData, 
@@ -14,6 +22,7 @@ const CloudPak = ({
                   setEntitlementKey, 
                   setWizardError,
                   configuration,
+<<<<<<< HEAD
                   setConfiguration,
                   adminPassword,
                   setAdminPassword,
@@ -30,11 +39,30 @@ const CloudPak = ({
     
     const [openShiftConnection, setOpenShiftConnection] = useState({})
 
+=======
+                  locked,
+                  cp4dLicense,
+                  cp4iLicense,
+                  cp4dVersion,
+                  cp4iVersion,
+                  setCp4dLicense,
+                  setCp4iLicense,
+                  setCp4dVersion,
+                  setCp4iVersion,
+                  CP4DPlatformCheckBox,
+                  CP4IPlatformCheckBox,
+                  setCP4DPlatformCheckBox,
+                  setCP4IPlatformCheckBox,
+                  adminPassword,
+                  setAdminPassword,
+                }) => {
+>>>>>>> main
     const [loadingCPD, setLoadingCPD] = useState(false)
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadingCPI, setLoadingCPI] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
 
+<<<<<<< HEAD
     const [cp4dLicense, setCp4dLicense] = useState(false)
     const [cp4iLicense, setCp4iLicense] = useState(false)
     const [cp4dVersion, setCp4dVersion] = useState('')
@@ -142,14 +170,109 @@ const CloudPak = ({
       }
       
       if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) && entitlementKey !== '' ) {
+=======
+    const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
+    const [cp4iVersionInvalid,  setCp4iVersionInvalid] = useState(false)
+
+    useEffect(()=>{
+      const fetchCloudPakData =async () => {        
+        await axios.get('/api/v1/cartridges/cp4d').then(res =>{   
+            setLoadingCPD(false)  
+            if (res.data.cp4d[0].cartridges) {
+              setCPDCartridgesData(res.data.cp4d[0].cartridges) 
+            }             
+            if (res.data.cp4d[0].accept_licenses) {
+              setCp4dLicense(res.data.cp4d[0].accept_licenses)
+            }
+            if (res.data.cp4d[0].cp4d_version) {
+              setCp4dVersion(res.data.cp4d[0].cp4d_version)
+            }                    
+        }, err => {
+            setLoadingCPD(false)
+            setLoadCPDErr(true)          
+            console.log(err)
+        });                
+      }
+      
+      const fetchCloudPakIntegration =async () => {        
+        await axios.get('/api/v1/cartridges/cp4i').then(res =>{  
+            setLoadingCPI(false)   
+            if (res.data.cp4i[0].instances) {  
+              setCPICartridgesData(res.data.cp4i[0].instances) 
+            }     
+            if (res.data.cp4i[0].accept_licenses) {
+              setCp4iLicense(res.data.cp4i[0].accept_licenses)
+            }
+            if (res.data.cp4i[0].cp4i_version) {
+              setCp4iVersion(res.data.cp4i[0].cp4i_version)
+            }   
+            // updateCPIParentCheckBox(res.data)                        
+        }, err => {
+            setLoadingCPI(false)
+            setLoadCPIErr(true)            
+            console.log(err)
+        });         
+      }  
+
+      if (locked) {  
+        if(configuration.data.cp4d[0].cp4d_version) {
+          setCp4dVersion(configuration.data.cp4d[0].cp4d_version)
+        }
+        if(configuration.data.cp4d[0].accept_licenses) {
+          setCp4dLicense(configuration.data.cp4d[0].accept_licenses)
+        }
+        if(configuration.data.cp4d[0].cartridges) {
+          setCPDCartridgesData(configuration.data.cp4d[0].cartridges)
+        } else {
+          setCPDCartridgesData([])
+        }
+
+        if(configuration.data.cp4i[0].cp4i_version) {
+          setCp4iVersion(configuration.data.cp4i[0].cp4i_version)
+        }
+        if(configuration.data.cp4i[0].accept_licenses) {
+          setCp4iLicense(configuration.data.cp4i[0].accept_licenses)
+        }
+        if(configuration.data.cp4i[0].instances) {
+          setCPICartridgesData(configuration.data.cp4i[0].instances)
+        } else {
+          setCPICartridgesData([])
+        }    
+        setWizardError(false)
+      } else {
+        if (CPDCartridgesData.length === 0) {
+            //CP4D 
+            setLoadingCPD(true)     
+            fetchCloudPakData() 
+        }
+        if (CPICartridgesData.length === 0) {
+            //CP4I
+            setLoadingCPI(true)
+            fetchCloudPakIntegration() 
+        }
+      }  
+      // eslint-disable-next-line
+    },[])
+
+    useEffect(() => {
+      updateCP4DPlatformCheckBox(CPDCartridgesData)
+      updateCP4IPlatformCheckBox(CPICartridgesData)  
+     
+      if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) ) {
+>>>>>>> main
         setWizardError(false)
       }
       else {
         setWizardError(true)
       }
+<<<<<<< HEAD
 
       // eslint-disable-next-line
     }, [CPDCartridgesData, CPICartridgesData, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
+=======
+      // eslint-disable-next-line
+    }, [CPDCartridgesData, CPICartridgesData, entitlementKey, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense, CP4DPlatformCheckBox, CP4IPlatformCheckBox])
+>>>>>>> main
 
     const errorProps = () => ({
       kind: 'error',
@@ -159,6 +282,23 @@ const CloudPak = ({
       hideCloseButton: false,
     });      
     
+<<<<<<< HEAD
+=======
+    const updateCP4DPlatformCheckBox = (data) => {
+      let selectedItem = data.filter(item => item.state === "installed")  
+      if (selectedItem.length > 0) {
+        setCP4DPlatformCheckBox(true)
+      }
+    }
+
+    const updateCP4IPlatformCheckBox = (data) => {
+      let selectedItem = data.filter(item => item.state === "installed")  
+      if (selectedItem.length > 0) {
+        setCP4IPlatformCheckBox(true)
+      }
+    }
+
+>>>>>>> main
     const changeCPDChildCheckBox = (e) => {
       setCPDCartridgesData((data)=>{
         const newCPDCartridgesData = data.map((item)=>{
@@ -189,6 +329,7 @@ const CloudPak = ({
       })                
     }
 
+<<<<<<< HEAD
     const EnvIdOnChange = (e) => {
       switch (e.target.id) {
         case "131":
@@ -218,6 +359,13 @@ const CloudPak = ({
     }
 
     const adminPaswordOnChange = (e) => {
+=======
+    const entitlementKeyOnChange = (e) => {
+      setEntitlementKey(e.target.value);    
+    }
+
+    const adminPaswordOnChnage = (e) => {
+>>>>>>> main
       setAdminPassword(e.target.value)
     }
 
@@ -243,6 +391,7 @@ const CloudPak = ({
         setCp4dVersionInvalid(false)
       }
       setWizardError(false)     
+<<<<<<< HEAD
     } 
 
     const errorConfigurationProps = () => ({
@@ -275,10 +424,31 @@ const CloudPak = ({
           {...errorConfigurationProps()}        
             /> } 
           { (loadingConfiguration && !loadConfigurationErr) && <Loading /> }  
+=======
+    }  
+
+    const [cp4dExpand, setcp4dExpand] = useState(false)
+    const [cp4iExpand, setcp4iExpand] = useState(false)
+
+    useEffect(() => {  
+      if (locked) {
+        let cp4dItem = configuration.data.cp4d[0].cartridges.filter(item => item.state === "installed") 
+        setcp4dExpand( cp4dItem.length > 0 )
+        let cp4IItem = configuration.data.cp4i[0].instances.filter(item => item.state === "installed") 
+        setcp4iExpand( cp4IItem.length > 0 )
+      } 
+      // eslint-disable-next-line
+    }, [])
+
+    return (
+        <>  
+          { (loadingCPD ||loadingCPI) && <Loading /> }  
+>>>>>>> main
           { (loadCPDErr ||loadCPIErr) && <InlineNotification className="cpd-error"
               {...errorProps()}        
             /> 
           }
+<<<<<<< HEAD
 
           <div className="cloud-pak">
 
@@ -304,11 +474,26 @@ const CloudPak = ({
             <div>
               <div className="cloud-pak-items">Admin Password</div>
               <PasswordInput onChange={adminPaswordOnChange} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
+=======
+          <div className="cloud-pak">   
+
+            <div className='cpd-container'> 
+            {/* Entitlement */}
+              <div>
+              <div className="cloud-pak-items">Entitlement key</div>
+              <PasswordInput onChange={entitlementKeyOnChange} placeholder="Entitlement key" id="301" labelText="" value={entitlementKey} />
+            </div> 
+
+            <div>
+              <div className="cloud-pak-items">Admin Password</div>
+              <PasswordInput onChange={adminPaswordOnChnage} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
+>>>>>>> main
             </div> 
 
             {/* CP4D */}
             <div>
               <div className="cloud-pak-items">IBM Cloud Pak</div>
+<<<<<<< HEAD
               
               {/* Radio buttons for Cloud Pak selection */}
               <div className="cloud-pak-radio-group">
@@ -338,6 +523,13 @@ const CloudPak = ({
                 
                 <Accordion>
                   <AccordionItem title="IBM Software Hub" open={cp4dExpand}>
+=======
+              {/* CP4D */}
+              <div>
+                
+                <Accordion>                
+                  <AccordionItem title="IBM Cloud Pak for Data" open={cp4dExpand}>                
+>>>>>>> main
                     
                     <div className="cpd-version">
                       <div className="item">Version:</div>
@@ -353,6 +545,10 @@ const CloudPak = ({
                       <div className="item">Cartridges:</div>
                     </div>
 
+<<<<<<< HEAD
+=======
+                    <Checkbox onClick={()=>(setCP4DPlatformCheckBox((CP4DPlatformCheckBox)=>(!CP4DPlatformCheckBox)))} labelText="IBM Cloud Pak for Data Platform" id="cp4d-platform" key="cp4d-platform" checked={CP4DPlatformCheckBox} />
+>>>>>>> main
                     { CPDCartridgesData.map((item)=>{
                       if (item.state) {
                         return (
@@ -363,12 +559,19 @@ const CloudPak = ({
                     }) } 
                   
                   </AccordionItem>
+<<<<<<< HEAD
                 </Accordion>
               </div>
               )}
 
             {/* CP4I */}
             {selectedCloudPak === 'cp4i' && (
+=======
+                </Accordion> 
+              </div>
+
+            {/* CP4I */}          
+>>>>>>> main
             <div>
                 <Accordion>                
                   <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
@@ -386,6 +589,11 @@ const CloudPak = ({
                       <div className="item">Cartridges:</div>
                     </div>
 
+<<<<<<< HEAD
+=======
+                    <Checkbox onClick={()=>(setCP4IPlatformCheckBox((CP4IPlatformCheckBox)=>(!CP4IPlatformCheckBox)))} labelText="IBM Cloud Pak for Integration Platform" id="cp4i-platform" key="cp4i-platform" checked={CP4IPlatformCheckBox} />
+
+>>>>>>> main
                     { CPICartridgesData.map((item)=>{
                       if (item.state) {
                         return (
@@ -396,6 +604,7 @@ const CloudPak = ({
                     }) } 
                     
                   </AccordionItem>
+<<<<<<< HEAD
                 </Accordion>
               </div>
             )}
@@ -403,6 +612,13 @@ const CloudPak = ({
             </div>
             </div> 
 
+=======
+                </Accordion> 
+              </div>
+
+            </div>
+            </div> 
+>>>>>>> main
           </div>   
      
         </>
