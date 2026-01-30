@@ -77,12 +77,8 @@ fi
 oc delete pods --field-selector=status.phase==Succeeded -l app=cloud-pak-deployer-start
 
 # Determine image
-# TODO: Change :test to :latest
 IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
-if [ $? ];then
-  IMAGE="quay.io/cloud-pak-deployer/cloud-pak-deployer:latest"
-fi
-echo $IMAGE
+echo "Image used: ${IMAGE}"
 
 if [ "$CPD_DEBUG" ]; then
   # Check if the cloud-pak-deployer-config configmap exists
