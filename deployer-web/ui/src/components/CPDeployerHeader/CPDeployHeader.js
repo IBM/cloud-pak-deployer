@@ -3,7 +3,7 @@ import {
   Header,
   HeaderName,  
   HeaderGlobalBar,
-} from 'carbon-components-react';
+} from '@carbon/react';
 
 const CPDeployerHeader = ({headerTitle}) => {
 
