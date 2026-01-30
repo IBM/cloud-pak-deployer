@@ -2,15 +2,6 @@
 help:
 	@grep "^# help\:" Makefile | grep -v grep | sed 's/\# help\: //' | sed 's/\# help\://'
 
-# help: MAINTAIN
-
-# help: install-npm                    - perform initial installation of nvm and npm
-.PHONY: install-npm
-install-npm:
-	@curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.2/install.sh | bash; \
-	. ${HOME}/.nvm/nvm.sh; \
-	nvm install --lts
-
 # help: clean                          - clean all files
 .PHONY: clean
 clean:
@@ -24,13 +15,32 @@ clean:
 # help: install                        - Install the node packages
 .PHONY: install
 install:
-	@pushd ui && rm -rf ./node_modules && npm install && popd
+	@pushd ui 1>/dev/null&& \
+	rm -rf ./node_modules && \
+	npm install && \
+	popd 1>/dev/null
 
-# help: build                          - build the production UI
+# help: test-web-ui                    - Run the web interface locally in test mode
+.PHONY: test-web-ui
+test-web-ui:
+	@pushd ui 1>/dev/null; \
+	npm start \
+	popd 1>/dev/null
+
+# help: test-web-server                - Run the web server locally in test mode
+.PHONY: test-web-server
+test-web-server:
+	uv venv --allow-existing; \
+	uv pip install -r requirements.txt; \
+	uv run webapp.py
+
+# help: build                          - Build the production UI
 .PHONY: build
 build:
-	@pushd ui && npm run build && popd && cp -r ui/build ./ww
-
+	@pushd ui 1>/dev/null && \
+	npm run build && \
+	popd 1>/dev/null && \
+	cp -r ui/build ./ww
 
 # Keep these lines at the end of the file to retain output formatting.
 # help:
