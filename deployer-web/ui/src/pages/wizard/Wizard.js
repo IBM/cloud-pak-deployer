@@ -229,11 +229,12 @@ const Wizard = ({ setHeaderTitle,
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "adminPassword": adminPassword,
     }
-    setCurrentIndex(10)
+    
     await axios.post('/api/v1/deploy', body).then(res => {
       setLoadingDeployStatus(false)
       setDeployStart(true)
       setDeployErr(false)
+      setCurrentIndex(10)
       getDeployStatus()
       refreshStatus()
 
@@ -259,11 +260,11 @@ const Wizard = ({ setHeaderTitle,
         "registryPassword": registryPassword,
       }
     }
-    setCurrentIndex(10)
     await axios.post('/api/v1/mirror', body).then(res => {
       setLoadingDeployStatus(false)
       setDeployStart(true)
       setDeployErr(false)
+      setCurrentIndex(10)
       getDeployStatus()
       refreshStatus()
 
@@ -311,8 +312,6 @@ const Wizard = ({ setHeaderTitle,
     saveConfiguration()
 
     if (saveConfig === true) {
-      setCurrentIndex(10)
-      setDeployStart(true)
       setLoadingDeployStatus(true)
 
       if (selection === "Configure+Deploy") {
