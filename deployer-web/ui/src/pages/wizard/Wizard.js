@@ -574,104 +574,110 @@ const Wizard = ({ setHeaderTitle,
   const DeployStats = () => {
     return (
       <>
-        <div>
-          <div className="deploy-status">Deployer Status:</div>
+        <div className="deploy-stats-container">
+          <div className="deploy-stats-left">
+            <div className="deploy-status">Deployer Status:</div>
 
-          {!deployerStatus && <div className="deploy-key" >
-            <div>Completion state:</div>
-            <div className="deploy-value">{deployerCompletionState}</div>
-          </div>}
+            {!deployerStatus && <div className="deploy-key" >
+              <div>Completion state:</div>
+              <div className="deploy-value">{deployerCompletionState}</div>
+            </div>}
 
-          <div className="deploy-key" >
-            <div>State:</div>
-            <div className="deploy-value">{deployerStatus ? 'ACTIVE' : 'INACTIVE'}</div>
-          </div>
-
-          {deployerStage && <div className="deploy-key" >
-            <div>Current Stage:</div>
-            <div className="deploy-value">{deployerStage}</div>
-          </div>}
-
-          {deployerLastStep && <div className="deploy-key" >
-            <div>Current Task:</div>
-            <div className="deploy-value">{deployerLastStep}</div>
-          </div>}
-
-          {deployerCurrentImage && <div className="deploy-key" >
-            <div>Current Image:</div>
-            <div className="deploy-value">{deployerCurrentImage}</div>
-          </div>}
-
-          {deployerImageNumber && <div className="deploy-key" >
-            <div>Mirror Images Number:</div>
-            <div className="deploy-value">{deployerImageNumber}</div>
-          </div>}
-
-
-          <div className="deploy-key">
-            <div>Deployer Log:</div>
-            <div className="deploy-value">
-              <RadioButtonGroup
-                //orientation="vertical"
-                onChange={(value) => { setdeployeyLog(value) }}
-                legendText=""
-                name="log-options-group"
-                defaultSelected={deployeyLog}>
-                <RadioButton
-                  labelText="Deployer log"
-                  value="deployer-log"
-                  id="log-radio-1"
-                />
-                <RadioButton
-                  labelText="All logs"
-                  value="all-logs"
-                  id="log-radio-2"
-                />
-              </RadioButtonGroup>
-            </div>
-
-          </div>
-          <div className="deploy-key" >
-            <Button onClick={downloadLog}>Download logs</Button>
-          </div>
-
-          {deployerContext === 'openshift' && (
             <div className="deploy-key" >
-              <Button
-                kind="danger"
-                onClick={deleteDeployerJob}
-                disabled={deletingJob}
-              >
-                {deletingJob ? 'Deleting...' : 'Delete Deployer Job'}
-              </Button>
+              <div>State:</div>
+              <div className="deploy-value">{deployerStatus ? 'ACTIVE' : 'INACTIVE'}</div>
             </div>
-          )}
 
-          {deleteJobSuccess && (
-            <InlineNotification
-              kind="success"
-              title="Success"
-              subtitle="Deployer job deleted successfully"
-              onCloseButtonClick={() => setDeleteJobSuccess(false)}
-            />
-          )}
+            {deployerStage && <div className="deploy-key" >
+              <div>Current Stage:</div>
+              <div className="deploy-value">{deployerStage}</div>
+            </div>}
 
-          {deleteJobError && (
-            <InlineNotification
-              kind="error"
-              title="Error"
-              subtitle={deleteJobError}
-              onCloseButtonClick={() => setDeleteJobError('')}
-            />
-          )}
+            {deployerLastStep && <div className="deploy-key" >
+              <div>Current Task:</div>
+              <div className="deploy-value">{deployerLastStep}</div>
+            </div>}
 
-          <div className="deploy-item">Deployer Progress:
-            <ProgressBar
-              label=""
-              helperText=""
-              value={deployerPercentageCompleted}
-            />
+            {deployerCurrentImage && <div className="deploy-key" >
+              <div>Current Image:</div>
+              <div className="deploy-value">{deployerCurrentImage}</div>
+            </div>}
+
+            {deployerImageNumber && <div className="deploy-key" >
+              <div>Mirror Images Number:</div>
+              <div className="deploy-value">{deployerImageNumber}</div>
+            </div>}
+
+
+            <div className="deploy-key">
+              <div>Deployer Log:</div>
+              <div className="deploy-value">
+                <RadioButtonGroup
+                  //orientation="vertical"
+                  onChange={(value) => { setdeployeyLog(value) }}
+                  legendText=""
+                  name="log-options-group"
+                  defaultSelected={deployeyLog}>
+                  <RadioButton
+                    labelText="Deployer log"
+                    value="deployer-log"
+                    id="log-radio-1"
+                  />
+                  <RadioButton
+                    labelText="All logs"
+                    value="all-logs"
+                    id="log-radio-2"
+                  />
+                </RadioButtonGroup>
+              </div>
+
+            </div>
+            <div className="deploy-key" >
+              <Button onClick={downloadLog}>Download logs</Button>
+            </div>
+
+            <div className="deploy-item">Deployer Progress:
+              <ProgressBar
+                label=""
+                helperText=""
+                value={deployerPercentageCompleted}
+              />
+            </div>
           </div>
+
+          <div className="deploy-stats-right">
+            {deployerContext === 'openshift' && (
+              <div className="deploy-stop-button-container">
+                <Button
+                  kind="danger"
+                  onClick={deleteDeployerJob}
+                  disabled={deletingJob}
+                >
+                  {deletingJob ? 'Deleting...' : 'Stop Deployer job'}
+                </Button>
+              </div>
+            )}
+
+            {deleteJobSuccess && (
+              <InlineNotification
+                kind="success"
+                title="Success"
+                subtitle="Deployer job deleted successfully"
+                onCloseButtonClick={() => setDeleteJobSuccess(false)}
+              />
+            )}
+
+            {deleteJobError && (
+              <InlineNotification
+                kind="error"
+                title="Error"
+                subtitle={deleteJobError}
+                onCloseButtonClick={() => setDeleteJobError('')}
+              />
+            )}
+          </div>
+        </div>
+        <div>
           {deployState.length > 0 &&
             <div className="deploy-item">Status of services:
               <div className="deploy-item__state">
