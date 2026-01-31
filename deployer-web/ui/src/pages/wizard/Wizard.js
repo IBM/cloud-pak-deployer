@@ -75,6 +75,9 @@ const Wizard = ({ setHeaderTitle,
   const [deployerContext, setDeployerContext] = useState('local')
 
   const [saveConfig, setSaveConfig] = useState(false)
+  const [deletingJob, setDeletingJob] = useState(false)
+  const [deleteJobSuccess, setDeleteJobSuccess] = useState(false)
+  const [deleteJobError, setDeleteJobError] = useState('')
 
   //For Private Registry  
   const [registryHostname, setRegistryHostname] = useState('')
@@ -366,6 +369,45 @@ const Wizard = ({ setHeaderTitle,
     }, 5000))
   }
 
+  const deleteDeployerJob = async () => {
+    if (deployerContext !== 'openshift') {
+      setDeleteJobError('Delete operation is only available for OpenShift deployments')
+      return
+    }
+
+    if (!window.confirm('Are you sure you want to delete the cloud-pak-deployer job? This will stop the current deployment.')) {
+      return
+    }
+
+    setDeletingJob(true)
+    setDeleteJobError('')
+    setDeleteJobSuccess(false)
+
+    try {
+      await axios.delete('/api/v1/delete-deployer-job').then(res => {
+        setDeletingJob(false)
+        setDeleteJobSuccess(true)
+        setDeleteJobError('')
+        // Refresh the status after deletion
+        setTimeout(() => {
+          getDeployStatus()
+          setDeleteJobSuccess(false)
+        }, 2000)
+      }, err => {
+        setDeletingJob(false)
+        setDeleteJobSuccess(false)
+        const errorMsg = err.response?.data?.message || 'Failed to delete deployer job'
+        setDeleteJobError(errorMsg)
+        console.log(err)
+      })
+    } catch (error) {
+      setDeletingJob(false)
+      setDeleteJobSuccess(false)
+      setDeleteJobError('An error occurred while deleting the job')
+      console.log(error)
+    }
+  }
+
   const downloadLog = async () => {
     const body = { "deployerLog": deployeyLog }
     const headers = { 'Content-Type': 'application/json; application/octet-stream', responseType: 'blob' }
@@ -592,6 +634,36 @@ const Wizard = ({ setHeaderTitle,
           <div className="deploy-key" >
             <Button onClick={downloadLog}>Download logs</Button>
           </div>
+
+          {deployerContext === 'openshift' && (
+            <div className="deploy-key" >
+              <Button
+                kind="danger"
+                onClick={deleteDeployerJob}
+                disabled={deletingJob}
+              >
+                {deletingJob ? 'Deleting...' : 'Delete Deployer Job'}
+              </Button>
+            </div>
+          )}
+
+          {deleteJobSuccess && (
+            <InlineNotification
+              kind="success"
+              title="Success"
+              subtitle="Deployer job deleted successfully"
+              onCloseButtonClick={() => setDeleteJobSuccess(false)}
+            />
+          )}
+
+          {deleteJobError && (
+            <InlineNotification
+              kind="error"
+              title="Error"
+              subtitle={deleteJobError}
+              onCloseButtonClick={() => setDeleteJobError('')}
+            />
+          )}
 
           <div className="deploy-item">Deployer Progress:
             <ProgressBar
