@@ -384,7 +384,7 @@ const Wizard = ({ setHeaderTitle,
   useEffect(() => {
     const getEnviromentVariables = async () => {
       setLoadingEnviromentVariables(true)
-      await axios.get('/api/v1/environment-variable').then(res => {
+      await axios.get('/api/v1/environment-variable').then(async res => {
         console.log(res)
         setLoadingEnviromentVariables(false)
         if (res.data.CPD_WIZARD_MODE === "existing-ocp") {
@@ -417,6 +417,18 @@ const Wizard = ({ setHeaderTitle,
 
         if (res.data.CPD_CONTEXT) {
           setDeployerContext(res.data.CPD_CONTEXT)
+          // Skip selection pane if context is openshift
+          if (res.data.CPD_CONTEXT === "openshift" && !res.data.CPD_WIZARD_MODE) {
+            // Check if OpenShift is already connected
+            let ocConnected = await checkOpenShiftConnected();
+            if (ocConnected === 1) {
+              // Skip to Config page (step 2) if already connected
+              setCurrentIndex(2)
+            } else {
+              // Go to Infrastructure page (step 1) if not connected
+              setCurrentIndex(1)
+            }
+          }
         }
 
       }, err => {
