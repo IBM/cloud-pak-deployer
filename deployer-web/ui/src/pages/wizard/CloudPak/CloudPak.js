@@ -137,11 +137,13 @@ const CloudPak = ({
       }
 
       if (configuration && configuration.data && 'cp4d' in configuration.data) {
+        configuration.data.cp4d[0].cp4d_version=cp4dVersion
         configuration.data.cp4d[0].accept_licenses=cp4dLicense
         setConfiguration(configuration)
       }
 
       if (configuration && configuration.data && 'cp4i' in configuration.data) {
+        configuration.data.cp4i[0].cp4i_version=cp4iVersion
         configuration.data.cp4i[0].accept_licenses=cp4iLicense
         setConfiguration(configuration)
       }
@@ -154,7 +156,7 @@ const CloudPak = ({
       }
 
       // eslint-disable-next-line
-    }, [CPDCartridgesData, CPICartridgesData, envId, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
+    }, [CPDCartridgesData, CPICartridgesData, envId, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dVersion, cp4dLicense, cp4iVersion, cp4iLicense])
 
     const errorProps = () => ({
       kind: 'error',
