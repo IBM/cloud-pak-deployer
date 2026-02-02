@@ -122,6 +122,11 @@ const CloudPak = ({
       }
 
       if (configuration && configuration.data && configuration.data.global_config) {
+        configuration.data.global_config.env_id = envId
+        setConfiguration(configuration)
+      }
+
+      if (configuration && configuration.data && configuration.data.global_config) {
         configuration.data.global_config.universal_password = adminPassword
         setConfiguration(configuration)
       }
@@ -149,7 +154,7 @@ const CloudPak = ({
       }
 
       // eslint-disable-next-line
-    }, [CPDCartridgesData, CPICartridgesData, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
+    }, [CPDCartridgesData, CPICartridgesData, envId, entitlementKey, adminPassword, selectedCloudPak, loadCPDErr, loadCPIErr, cp4dLicense, cp4iLicense])
 
     const errorProps = () => ({
       kind: 'error',
