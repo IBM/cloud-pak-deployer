@@ -413,41 +413,6 @@ def get_deployer_status():
 
     return result
 
-@app.route('/api/v1/delete-deployer-job',methods=["DELETE"])
-def delete_deployer_job():
-    result = {'success': False, 'message': ''}
-    
-    if running_context == 'local':
-        result['message'] = 'Delete operation is only available for OpenShift deployments'
-        return result, 400
-    
-    try:
-        # Delete the cloud-pak-deployer job
-        delete_job_command = ['oc', 'delete', f'-n={deployer_project}', 'job', 'cloud-pak-deployer', '--ignore-not-found=true']
-        app.logger.info('Delete job command: {}'.format(delete_job_command))
-        
-        process = subprocess.Popen(delete_job_command,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        universal_newlines=True)
-        
-        stdout, stderr = process.communicate()
-        
-        if process.returncode != 0:
-            app.logger.error(f"Error deleting job: {stderr}")
-            result['message'] = f"Error deleting job: {stderr}"
-            return result, 500
-        
-        result['success'] = True
-        result['message'] = 'Cloud Pak Deployer job and related pods deleted successfully'
-        app.logger.info('Successfully deleted cloud-pak-deployer job and pods')
-        return result, 200
-        
-    except Exception as e:
-        app.logger.error(f"Exception while deleting deployer job: {str(e)}")
-        result['message'] = f"Exception: {str(e)}"
-        return result, 500
-
 def get_deployer_status_local():
     result = {}
     # Check if the env apply process is active
@@ -513,6 +478,12 @@ def get_deployer_status_openshift():
                         result['deployer_active']=True
                     elif deployer_job['status']['conditions'][0]['type'] not in ['Failed', 'Complete']:
                         result['deployer_active']=True
+                    elif deployer_job['status']['conditions'][0]['type'] == 'Failed':
+                        result['deployer_active']=False
+                        result['completion_state']='Failed'
+                    elif deployer_job['status']['conditions'][0]['type'] == 'Complete':
+                        result['deployer_active']=False
+                        result['completion_state']='Successful'
             
         except Exception as e:
             app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
@@ -592,6 +563,46 @@ def get_deployer_status_details(deploy_state_log_path, result):
         app.logger.warning('Internal server error: {}'.format(e))
 
     return result
+
+#
+# Delete deployer job
+#
+
+@app.route('/api/v1/delete-deployer-job',methods=["DELETE"])
+def delete_deployer_job():
+    result = {'success': False, 'message': ''}
+    
+    if running_context == 'local':
+        result['message'] = 'Delete operation is only available for OpenShift deployments'
+        return result, 400
+    
+    try:
+        # Delete the cloud-pak-deployer job
+        delete_job_command = ['oc', 'delete', f'-n={deployer_project}', 'job', 'cloud-pak-deployer', '--ignore-not-found=true']
+        app.logger.info('Delete job command: {}'.format(delete_job_command))
+        
+        process = subprocess.Popen(delete_job_command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+        
+        stdout, stderr = process.communicate()
+        
+        if process.returncode != 0:
+            app.logger.error(f"Error deleting job: {stderr}")
+            result['message'] = f"Error deleting job: {stderr}"
+            return result, 500
+        
+        result['success'] = True
+        result['message'] = 'Cloud Pak Deployer job and related pods deleted successfully'
+        app.logger.info('Successfully deleted cloud-pak-deployer job and pods')
+        return result, 200
+        
+    except Exception as e:
+        app.logger.error(f"Exception while deleting deployer job: {str(e)}")
+        result['message'] = f"Exception: {str(e)}"
+        return result, 500
+
 
 #
 # Deployer configuration
