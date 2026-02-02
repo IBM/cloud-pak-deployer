@@ -85,7 +85,12 @@ Log is as a cluster administrator to be able to run the deployer with the correc
     ```
 
 ## Open the wizard
-Now you can access the deployer wizard using the route created in the `cloud-pak-deployer` project.
+
+Once the start pod finishes, you can access the deployer wizard using the route created in the `cloud-pak-deployer` project.
+
+!!! info 
+    It may take a few minutes (5-10 minutes) until the route is created by the `deployer-start` pod and then an additional few minutes before the wizard has been started. If you don't see the route immediately, or if the deployer wizard page does not show up, please be patient.
+
 * Open the OpenShift console
 * Go to Networking --> Routes
 * Click the Cloud Pak Deployer `wizard` route

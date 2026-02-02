@@ -75,6 +75,9 @@ const Wizard = ({ setHeaderTitle,
   const [deployerContext, setDeployerContext] = useState('local')
 
   const [saveConfig, setSaveConfig] = useState(false)
+  const [deletingJob, setDeletingJob] = useState(false)
+  const [deleteJobSuccess, setDeleteJobSuccess] = useState(false)
+  const [deleteJobError, setDeleteJobError] = useState('')
 
   //For Private Registry  
   const [registryHostname, setRegistryHostname] = useState('')
@@ -229,11 +232,12 @@ const Wizard = ({ setHeaderTitle,
       "oc_login_command": OCPSettings.ocLoginCmd.trim(),
       "adminPassword": adminPassword,
     }
-    setCurrentIndex(10)
+    
     await axios.post('/api/v1/deploy', body).then(res => {
       setLoadingDeployStatus(false)
       setDeployStart(true)
       setDeployErr(false)
+      setCurrentIndex(10)
       getDeployStatus()
       refreshStatus()
 
@@ -259,11 +263,11 @@ const Wizard = ({ setHeaderTitle,
         "registryPassword": registryPassword,
       }
     }
-    setCurrentIndex(10)
     await axios.post('/api/v1/mirror', body).then(res => {
       setLoadingDeployStatus(false)
       setDeployStart(true)
       setDeployErr(false)
+      setCurrentIndex(10)
       getDeployStatus()
       refreshStatus()
 
@@ -311,8 +315,6 @@ const Wizard = ({ setHeaderTitle,
     saveConfiguration()
 
     if (saveConfig === true) {
-      setCurrentIndex(10)
-      setDeployStart(true)
       setLoadingDeployStatus(true)
 
       if (selection === "Configure+Deploy") {
@@ -367,6 +369,45 @@ const Wizard = ({ setHeaderTitle,
     }, 5000))
   }
 
+  const deleteDeployerJob = async () => {
+    if (deployerContext !== 'openshift') {
+      setDeleteJobError('Delete operation is only available for OpenShift deployments')
+      return
+    }
+
+    if (!window.confirm('Are you sure you want to delete the cloud-pak-deployer job? This will stop the current deployment.')) {
+      return
+    }
+
+    setDeletingJob(true)
+    setDeleteJobError('')
+    setDeleteJobSuccess(false)
+
+    try {
+      await axios.delete('/api/v1/delete-deployer-job').then(res => {
+        setDeletingJob(false)
+        setDeleteJobSuccess(true)
+        setDeleteJobError('')
+        // Refresh the status after deletion
+        setTimeout(() => {
+          getDeployStatus()
+          setDeleteJobSuccess(false)
+        }, 2000)
+      }, err => {
+        setDeletingJob(false)
+        setDeleteJobSuccess(false)
+        const errorMsg = err.response?.data?.message || 'Failed to delete deployer job'
+        setDeleteJobError(errorMsg)
+        console.log(err)
+      })
+    } catch (error) {
+      setDeletingJob(false)
+      setDeleteJobSuccess(false)
+      setDeleteJobError('An error occurred while deleting the job')
+      console.log(error)
+    }
+  }
+
   const downloadLog = async () => {
     const body = { "deployerLog": deployeyLog }
     const headers = { 'Content-Type': 'application/json; application/octet-stream', responseType: 'blob' }
@@ -384,7 +425,7 @@ const Wizard = ({ setHeaderTitle,
   useEffect(() => {
     const getEnviromentVariables = async () => {
       setLoadingEnviromentVariables(true)
-      await axios.get('/api/v1/environment-variable').then(res => {
+      await axios.get('/api/v1/environment-variable').then(async res => {
         console.log(res)
         setLoadingEnviromentVariables(false)
         if (res.data.CPD_WIZARD_MODE === "existing-ocp") {
@@ -417,6 +458,18 @@ const Wizard = ({ setHeaderTitle,
 
         if (res.data.CPD_CONTEXT) {
           setDeployerContext(res.data.CPD_CONTEXT)
+          // Skip selection pane if context is openshift
+          if (res.data.CPD_CONTEXT === "openshift" && !res.data.CPD_WIZARD_MODE) {
+            // Check if OpenShift is already connected
+            let ocConnected = await checkOpenShiftConnected();
+            if (ocConnected === 1) {
+              // Skip to Config page (step 2) if already connected
+              setCurrentIndex(2)
+            } else {
+              // Go to Infrastructure page (step 1) if not connected
+              setCurrentIndex(1)
+            }
+          }
         }
 
       }, err => {
@@ -521,74 +574,110 @@ const Wizard = ({ setHeaderTitle,
   const DeployStats = () => {
     return (
       <>
-        <div>
-          <div className="deploy-status">Deployer Status:</div>
+        <div className="deploy-stats-container">
+          <div className="deploy-stats-left">
+            <div className="deploy-status">Deployer Status:</div>
 
-          {!deployerStatus && <div className="deploy-key" >
-            <div>Completion state:</div>
-            <div className="deploy-value">{deployerCompletionState}</div>
-          </div>}
+            {!deployerStatus && <div className="deploy-key" >
+              <div>Completion state:</div>
+              <div className="deploy-value">{deployerCompletionState}</div>
+            </div>}
 
-          <div className="deploy-key" >
-            <div>State:</div>
-            <div className="deploy-value">{deployerStatus ? 'ACTIVE' : 'INACTIVE'}</div>
-          </div>
-
-          {deployerStage && <div className="deploy-key" >
-            <div>Current Stage:</div>
-            <div className="deploy-value">{deployerStage}</div>
-          </div>}
-
-          {deployerLastStep && <div className="deploy-key" >
-            <div>Current Task:</div>
-            <div className="deploy-value">{deployerLastStep}</div>
-          </div>}
-
-          {deployerCurrentImage && <div className="deploy-key" >
-            <div>Current Image:</div>
-            <div className="deploy-value">{deployerCurrentImage}</div>
-          </div>}
-
-          {deployerImageNumber && <div className="deploy-key" >
-            <div>Mirror Images Number:</div>
-            <div className="deploy-value">{deployerImageNumber}</div>
-          </div>}
-
-
-          <div className="deploy-key">
-            <div>Deployer Log:</div>
-            <div className="deploy-value">
-              <RadioButtonGroup
-                //orientation="vertical"
-                onChange={(value) => { setdeployeyLog(value) }}
-                legendText=""
-                name="log-options-group"
-                defaultSelected={deployeyLog}>
-                <RadioButton
-                  labelText="Deployer log"
-                  value="deployer-log"
-                  id="log-radio-1"
-                />
-                <RadioButton
-                  labelText="All logs"
-                  value="all-logs"
-                  id="log-radio-2"
-                />
-              </RadioButtonGroup>
+            <div className="deploy-key" >
+              <div>State:</div>
+              <div className="deploy-value">{deployerStatus ? 'ACTIVE' : 'INACTIVE'}</div>
             </div>
 
-          </div>
-          <div className="deploy-key" >
-            <Button onClick={downloadLog}>Download logs</Button>
+            {deployerStage && <div className="deploy-key" >
+              <div>Current Stage:</div>
+              <div className="deploy-value">{deployerStage}</div>
+            </div>}
+
+            {deployerLastStep && <div className="deploy-key" >
+              <div>Current Task:</div>
+              <div className="deploy-value">{deployerLastStep}</div>
+            </div>}
+
+            {deployerCurrentImage && <div className="deploy-key" >
+              <div>Current Image:</div>
+              <div className="deploy-value">{deployerCurrentImage}</div>
+            </div>}
+
+            {deployerImageNumber && <div className="deploy-key" >
+              <div>Mirror Images Number:</div>
+              <div className="deploy-value">{deployerImageNumber}</div>
+            </div>}
+
+
+            <div className="deploy-key">
+              <div>Deployer Log:</div>
+              <div className="deploy-value">
+                <RadioButtonGroup
+                  //orientation="vertical"
+                  onChange={(value) => { setdeployeyLog(value) }}
+                  legendText=""
+                  name="log-options-group"
+                  defaultSelected={deployeyLog}>
+                  <RadioButton
+                    labelText="Deployer log"
+                    value="deployer-log"
+                    id="log-radio-1"
+                  />
+                  <RadioButton
+                    labelText="All logs"
+                    value="all-logs"
+                    id="log-radio-2"
+                  />
+                </RadioButtonGroup>
+              </div>
+
+            </div>
+            <div className="deploy-key" >
+              <Button onClick={downloadLog}>Download logs</Button>
+            </div>
+
+            <div className="deploy-item">Deployer Progress:
+              <ProgressBar
+                label=""
+                helperText=""
+                value={deployerPercentageCompleted}
+              />
+            </div>
           </div>
 
-          <div className="deploy-item">Deployer Progress:
-            <ProgressBar
-              label=""
-              helperText=""
-              value={deployerPercentageCompleted}
-            />
+          <div className="deploy-stats-right">
+            {deployerContext === 'openshift' && (
+              <div className="deploy-stop-button-container">
+                <Button
+                  kind="danger"
+                  onClick={deleteDeployerJob}
+                  disabled={deletingJob}
+                >
+                  {deletingJob ? 'Deleting...' : 'Stop Deployer job'}
+                </Button>
+              </div>
+            )}
+
+            {deleteJobSuccess && (
+              <InlineNotification
+                kind="success"
+                title="Success"
+                subtitle="Deployer job deleted successfully"
+                onCloseButtonClick={() => setDeleteJobSuccess(false)}
+              />
+            )}
+
+            {deleteJobError && (
+              <InlineNotification
+                kind="error"
+                title="Error"
+                subtitle={deleteJobError}
+                onCloseButtonClick={() => setDeleteJobError('')}
+              />
+            )}
           </div>
+        </div>
+        <div>
           {deployState.length > 0 &&
             <div className="deploy-item">Status of services:
               <div className="deploy-item__state">
