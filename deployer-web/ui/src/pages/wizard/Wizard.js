@@ -282,7 +282,7 @@ const Wizard = ({ setHeaderTitle,
   const saveConfiguration = async () => {
     setLoadingDeployStatus(true)
     let body = {}
-    let result = {}
+    let result = false
 
     try {
 
@@ -295,26 +295,31 @@ const Wizard = ({ setHeaderTitle,
       await axios.put('/api/v1/configuration', body, { headers: { "Content-Type": "application/json" } }).then(res => {
         setLoadingDeployStatus(false)
         setSaveConfig(true)
+        result = true
 
       }, err => {
         setLoadingDeployStatus(false)
         setShowErr(true)
         console.log(err)
+        result = false
       });
 
     } catch (error) {
       setLoadingDeployStatus(false)
       setConfigInvalid(true)
       console.error(error)
+      result = false
     }
+    
+    return result
   }
 
 
   const startDeploy = async () => {
 
-    saveConfiguration()
+    const saveSuccess = await saveConfiguration()
 
-    if (saveConfig === true) {
+    if (saveSuccess) {
       setLoadingDeployStatus(true)
 
       if (selection === "Configure+Deploy") {
