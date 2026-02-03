@@ -40,9 +40,6 @@ deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-depl
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
 
-Path( status_dir+'/log' ).mkdir( parents=True, exist_ok=True )
-Path( config_dir+'/config' ).mkdir( parents=True, exist_ok=True )
-
 #
 # Root
 #
@@ -1039,13 +1036,4 @@ log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
 if __name__ == '__main__':
-    print("""
-IBM Cloud Pak Deployer Wizard is started.
-Please access the below URL for the web console:
-******************************************************************************
-Summary
- * Web console HTTPS URL:
-   http://0.0.0.0:8080  
-******************************************************************************
-    """)
     app.run(host='0.0.0.0', port=32080, debug=True)    
