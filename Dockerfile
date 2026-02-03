@@ -27,7 +27,7 @@ RUN export PYVER=$(python -c "import sys;print('{}.{}'.format(sys.version_info[0
     python3 -m ensurepip && \
     yum install -y yum-utils && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
-    yum install -y tar sudo unzip wget httpd-tools git hostname bind-utils iproute procps-ng which && \
+    yum install -y tar sudo unzip wget httpd-tools git hostname bind-utils iproute npm procps-ng which && \
     # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
     yum install -y gcc python${PYVER}-devel && \
     pip3 install --no-cache-dir jmespath pyyaml argparse python-benedict pyvmomi psutil && \
