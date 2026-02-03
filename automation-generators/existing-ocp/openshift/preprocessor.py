@@ -5,7 +5,7 @@ from packaging import version
 # ---
 # openshift:
 # - name: {{ env_id }}
-#   ocp_version: 4.8
+#   ocp_version: detect
 #   cloud_native_toolkit: False
 #   openshift_storage:
 #   - storage_name: nfs-storage
@@ -29,8 +29,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         ge = g.getExpandedAttributes()
 
         # Validate OpenShift version
-        if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
-            g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
+        if ge['ocp_version'] != 'detect':
+            if version.parse(str(ge['ocp_version'])) < version.parse("4.6"):
+                g.appendError(msg='ocp_version must be 4.6 or higher. If the OpenShift version is 4.10, specify ocp_version: "4.10"')
 
         # Validate cloud_native_toolkit attribute
         if 'cloud_native_toolkit' in ge:

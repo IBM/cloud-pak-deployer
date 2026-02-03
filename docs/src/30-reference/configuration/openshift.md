@@ -16,7 +16,7 @@ For OpenShift, there are 5 flavours:
 - [OpenShift on Microsoft Azure - self-managed](#openshift-on-microsoft-azure---self-managed)
 - [OpenShift on vSphere](#openshift-on-vsphere)
 
-Every OpenShift cluster definition of a few mandatory properties that control which version of OpenShift is installed, the number and flavour of control plane and compute nodes and the underlying infrastructure, dependent on the cloud platform on which it is provisioned. Storage is a mandatory element for every `openshift` definition. For a list of supported storage types per cloud platform, refer to [Supported storage types](#supported-storage-types).
+Every OpenShift cluster definition of a few mandatory properties that control which version of OpenShift is installed (except for Existing OpenShift), the number and flavour of control plane and compute nodes and the underlying infrastructure, dependent on the cloud platform on which it is provisioned. Storage is a mandatory element for every `openshift` definition. For a list of supported storage types per cloud platform, refer to [Supported storage types](#supported-storage-types).
 
 Additionally, one can configure [Upstream DNS Servers](./dns.md) and [OpenShift logging](logging-auditing.md).
 
@@ -29,7 +29,7 @@ When using the Cloud Pak Deployer on an existing OpenShift cluster, the scripts 
 ```
 openshift:
 - name: sample
-  ocp_version: 4.8
+  ocp_version: detect
   cluster_name: sample
   domain_name: example.com
   cloud_native_toolkit: False
@@ -64,7 +64,7 @@ openshift:
 | Property             | Description                                                                                                     | Mandatory | Allowed values        |
 |----------------------|-----------------------------------------------------------------------------------------------------------------|-----------|-----------------------|
 | name                 | Name of the OpenShift cluster                                                                                   | Yes       |                       |
-| ocp_version          | OpenShift version of the cluster, used to download the client.  If you want to install `4.10`, specify `"4.10"` | Yes       | >= 4.6                |
+| ocp_version          | OpenShift version of the cluster. For existing OpenShift you can use `detect`                       | Yes       | >= 4.6                |
 | cluster_name         | Name of the cluster (part of the FQDN)                                                                          | Yes       |                       |
 | domain_name          | Domain name of the cluster (part of the FQDN)                                                                   | Yes       |                       |
 | cloud_native_toolkit | Must the Cloud Native Toolkit (OpenShift GitOps) be installed?                                                  | No        | True, False (default) |

@@ -14,7 +14,7 @@ global_config:
 
 openshift:
 - name: cpd-demo
-  ocp_version: "4.10"
+  ocp_version: detect
   cluster_name: cpd-demo
   domain_name: example.com
   openshift_storage:
