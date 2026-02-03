@@ -60,7 +60,9 @@ RUN cd /opt/ansible && \
 # BUG with building wheel 
 #RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 RUN pip3 install --no-cache-dir "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && \
-    pip3 install --no-cache-dir -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+    pip3 install --no-cache-dir -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1 && \
+    cd /cloud-pak-deployer/deployer-web && \
+    make install && make build && make clean
 
 # cli utilities
 RUN wget -q -O /tmp/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \
