@@ -16,7 +16,7 @@ data:
 
     openshift:
     - name: "{{ env_id }}"
-      ocp_version: "4.16"
+      ocp_version: detect
       cluster_name: "{{ env_id }}"
       domain_name: example.com
       mcg:
