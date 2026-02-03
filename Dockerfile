@@ -27,7 +27,7 @@ RUN export PYVER=$(python -c "import sys;print('{}.{}'.format(sys.version_info[0
     python3 -m ensurepip && \
     yum install -y yum-utils && \
     yum install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm && \
-    yum install -y tar sudo unzip wget httpd-tools git hostname bind-utils iproute npm procps-ng which && \
+    yum install -y tar sudo unzip wget httpd-tools git hostname bind-utils iproute procps-ng which && \
     # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
     yum install -y gcc python${PYVER}-devel && \
     pip3 install --no-cache-dir jmespath pyyaml argparse python-benedict pyvmomi psutil && \
@@ -60,9 +60,7 @@ RUN cd /opt/ansible && \
 # BUG with building wheel 
 #RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 RUN pip3 install --no-cache-dir "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && \
-    pip3 install --no-cache-dir -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1 && \
-    cd /cloud-pak-deployer/deployer-web && \
-    make install && make build && make clean
+    pip3 install --no-cache-dir -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
 # cli utilities
 RUN wget -q -O /tmp/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \
