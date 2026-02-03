@@ -4,15 +4,16 @@ ARCH=$(uname -m)
 if [ "${ARCH}" == "amd64" ];then
   ARCH="x86_64"
 fi
+DEPLOYER_DIR=$(dirname ${SCRIPT_DIR})
+WEBUI_DIR=${DEPLOYER_DIR}/deployer-web
 
 echo "-------------------------------------------------------------------------------"
 echo "Starting the Web UI in the container"
 echo "-------------------------------------------------------------------------------"
 
-export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\$ ';
-export PATH=$PATH:/cloud-pak-deployer
+export PATH=$PATH:${DEPLOYER_DIR}
 
-cd /cloud-pak-deployer/deployer-web
+cd ${WEBUI_DIR}
 
 # If CONFIG_DIR was not set, set it to the default
 if [ "${CONFIG_DIR}" == "" ];then
@@ -28,24 +29,33 @@ if [ "${STATUS_DIR}" == "" ];then
     mkdir -p $STATUS_DIR
 fi
 
-echo "Check if OpenShift client is already in ${STATUS_DIR}/downloads folder..."
-oc_tar=`ls -1 ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-* 2>/dev/null | tail -1`
-if [ "$oc_tar" == "" ];then
-    echo "Downloading OpenShift client..."
-    mkdir -p ${STATUS_DIR}/downloads
-    curl -s -L -o ${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-stable https://mirror.openshift.com/pub/openshift-v4/${ARCH}/clients/ocp/stable/openshift-client-linux-${ARCH}.tar.gz
-    oc_tar=${STATUS_DIR}/downloads/openshift-client-linux.tar.gz-stable
-fi
-
-echo "Unpacking OpenShift client from ${oc_tar}..."
-tar xzf ${oc_tar} -C /usr/local/bin/
-
 # Clear the state directory
 mkdir -p ${STATUS_DIR}/state
 rm -rf ${STATUS_DIR}/state/*
 
-echo "Starting Deployer web UI and backend service..."
-nginx
+echo "Starting NGINX backend service..."
+
+if [[ "${ARCH}" == "x86_64" ]]; then
+    nginx -s stop
+elif [[ "${ARCH}" == "arm64" ]]; then
+    nginx -s stop -p ${WEBUI_DIR} -c ${WEBUI_DIR}/nginx-mac.conf
+else
+    echo "Unsupported architecture: ${ARCH}"
+    exit 1
+fi
+
+sleep 2
+
+if [[ "${ARCH}" == "x86_64" ]]; then
+    nginx
+elif [[ "${ARCH}" == "arm64" ]]; then
+    nginx -p ${WEBUI_DIR} -c ${WEBUI_DIR}/nginx-mac.conf
+else
+    echo "Unsupported architecture: ${ARCH}"
+    exit 1
+fi
+
+echo "Starting Web UI"
 python3 webapp.py
 
 exit 0
