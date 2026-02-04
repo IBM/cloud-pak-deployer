@@ -312,5 +312,3 @@ const DeployerStatus = () => {
 };
 
 export default DeployerStatus;
-
-// Made with Bob

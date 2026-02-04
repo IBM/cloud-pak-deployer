@@ -56,6 +56,7 @@ else
 fi
 
 echo "Starting Web UI"
+echo "Logging level (CPD_WIZARD_LOG_LEVEL): ${CPD_WIZARD_LOG_LEVEL}"
 python3 webapp.py
 
 exit 0

@@ -233,7 +233,6 @@ const Wizard = ({ setHeaderTitle,
 
   const saveConfiguration = async () => {
     setLoadingDeployStatus(true)
-    let body = {}
     let result = false
 
     try {
@@ -423,6 +422,7 @@ const Wizard = ({ setHeaderTitle,
               <div className='wizard-container__page-header-subtitle'>for IBM Cloud Pak</div>
             </div>
             <div>
+              <Button className="wizard-container__page-header-button" onClick={() => navigate('/status')}>View Status</Button>
               <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
               {currentIndex === 3 ?
                 <Button className="wizard-container__page-header-button" onClick={saveConfiguration}>Save</Button>
@@ -438,9 +438,6 @@ const Wizard = ({ setHeaderTitle,
           </div>
           {loadingDeployStatus && <Loading />}
           <DeployerProgressIndicator />
-          {saveConfig && <InlineNotification className="deploy-success"
-            {...successSaveConfigProps()}
-          />}
           {currentIndex === 0 ? <Selection
             setSelection={setSelection}
             setCpdWizardMode={setCpdWizardMode}
@@ -518,6 +515,8 @@ const Wizard = ({ setHeaderTitle,
             setConfigInvalid={setConfigInvalid}
             showErr={showErr}
             setShowErr={setShowErr}
+            saveConfig={saveConfig}
+            setSaveConfig={setSaveConfig}
           >
           </Summary> : null}
         </div>

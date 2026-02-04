@@ -16,7 +16,9 @@ const Summary = ({
     configInvalid,
     setConfigInvalid,
     showErr,
-    setShowErr
+    setShowErr,
+    saveConfig,
+    setSaveConfig
 }) => {
 
 
@@ -56,6 +58,15 @@ const Summary = ({
         role: 'error',
         title: 'Failed to save configuration in the server.',
         hideCloseButton: false,
+    });
+
+    const successSaveConfigProps = () => ({
+        kind: 'success',
+        lowContrast: true,
+        role: 'success',
+        title: 'The configuration file is saved successfully!',
+        hideCloseButton: false,
+        onCloseButtonClick: () => setSaveConfig(false),
     });
 
     const clickEditBtn = () => {
@@ -98,6 +109,11 @@ const Summary = ({
             {showErr &&
                 <InlineNotification className="summary-error"
                     {...errorProps()}
+                />
+            }
+            {saveConfig &&
+                <InlineNotification className="summary-success"
+                    {...successSaveConfigProps()}
                 />
             }
 

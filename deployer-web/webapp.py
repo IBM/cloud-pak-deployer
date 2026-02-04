@@ -24,7 +24,7 @@ dictConfig(
                 "formatter": "default",
             }
         },
-        "root": {"level": "DEBUG", "handlers": ["console"]},
+        "root": {"level": str(os.getenv('CPD_WIZARD_LOG_LEVEL', default='INFO')), "handlers": ["console"]},
     }
 )
 
@@ -36,6 +36,7 @@ cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dy
 ocp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 running_context=str(os.getenv('CPD_CONTEXT', default='local'))
 app.logger.info('Deployer context: {}'.format(running_context))
+app.logger.info('Logging level (CPD_WIZARD_LOG_LEVEL): {}'.format(str(os.getenv('CPD_WIZARD_LOG_LEVEL', default='INFO'))))
 deployer_project = str(os.getenv('CPD_DEPLOYER_PROJECT', default='cloud-pak-deployer'))
 config_dir=str(os.getenv('CONFIG_DIR'))
 status_dir=str(os.getenv('STATUS_DIR'))
@@ -107,7 +108,7 @@ def deploy_local(deployer_env):
     if 'adminPassword' in deployer_env and deployer_env['adminPassword']!='':
         deploy_command+=['-e=cp4d_admin_password={}'.format(deployer_env['adminPassword'])]
     deploy_command+=['-v']
-    app.logger.info('deploy command: {}'.format(deploy_command))
+    app.logger.debug('Deploy command: {}'.format(deploy_command))
 
     process = subprocess.Popen(deploy_command, 
                     universal_newlines=True,
@@ -118,7 +119,7 @@ def deploy_local(deployer_env):
 def deploy_openshift(deployer_env):
 
     create_secret_command=['oc','create',f'-n={deployer_project}','secret','generic','cloud-pak-entitlement-key']
-    app.logger.info('Create secret command: {}'.format(create_secret_command))
+    app.logger.debug('Create secret command: {}'.format(create_secret_command))
 
     process = subprocess.Popen(create_secret_command,
                     stdout=subprocess.PIPE,
@@ -129,10 +130,10 @@ def deploy_openshift(deployer_env):
     
     # Update the config map
     if process.returncode != 0:
-        app.logger.info(f"Error creating secret: {stderr}, ignoring")
+        app.logger.debug(f"Error creating secret: {stderr}, ignoring")
 
     update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=cp-entitlement-key={deployer_env['CP_ENTITLEMENT_KEY']}']
-    app.logger.info('Set data for secret command: {}'.format(update_secret_command))
+    app.logger.debug('Set data for secret command: {}'.format(update_secret_command))
 
     process = subprocess.Popen(update_secret_command,
                     stdout=subprocess.PIPE,
@@ -142,10 +143,10 @@ def deploy_openshift(deployer_env):
     stdout, stderr = process.communicate()
     
     if process.returncode != 0:
-        app.logger.info(f"Error creating secret: {stderr}")        
+        app.logger.error(f"Error updating secret: {stderr}")        
 
     deploy_command=['oc','create','-f',f'{deployer_dir}/scripts/deployer/assets/cloud-pak-deployer-start.yaml']
-    app.logger.info('deploy command: {}'.format(deploy_command))
+    app.logger.debug('deploy command: {}'.format(deploy_command))
 
     process = subprocess.Popen(deploy_command, 
                     universal_newlines=True,
@@ -194,7 +195,7 @@ def download_log_local(deployerLog):
 
 def download_log_openshift(deployerLog):
     oc_get_debug=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-debug','-o=json']
-    app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
+    app.logger.debug('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
 
     try:
         process = subprocess.Popen(oc_get_debug,
@@ -212,7 +213,7 @@ def download_log_openshift(deployerLog):
 
                         if deployerLog == "deployer-log":
                             oc_get_log=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/Data/cpd-status/log/cloud-pak-deployer.log','/tmp/cloud-pak-deployer.log']
-                            app.logger.info('Get cloud-pak-deployer log: {}'.format(oc_get_log))
+                            app.logger.debug('Get cloud-pak-deployer log: {}'.format(oc_get_log))
 
                             try:
                                 process = subprocess.Popen(oc_get_log,
@@ -223,10 +224,10 @@ def download_log_openshift(deployerLog):
                                 stdout, stderr = process.communicate()
 
                             except Exception as e:
-                                app.logger.info('Error while getting /Data/cpd-status/log/cloud-pak-deployer.log from pod {}: {}'.format(dd['metadata']['name'],str(e)))
+                                app.logger.error('Error while getting /Data/cpd-status/log/cloud-pak-deployer.log from pod {}: {}'.format(dd['metadata']['name'],str(e)))
                         else:
                             oc_rsh_tar=['oc','rsh',f'-n={deployer_project}',dd['metadata']['name'],'tar','cvzf','/tmp/cloud-pak-deployer-logs.tar.gz','-C','/Data/cpd-status/log','.']
-                            app.logger.info('tar cloud-pak-deployer logs: {}'.format(oc_rsh_tar))
+                            app.logger.debug('tar cloud-pak-deployer logs: {}'.format(oc_rsh_tar))
 
                             try:
                                 process = subprocess.Popen(oc_rsh_tar,
@@ -235,13 +236,12 @@ def download_log_openshift(deployerLog):
                                                 universal_newlines=True)
                                 
                                 stdout, stderr = process.communicate()
-                                app.logger.info(stdout)
 
                             except Exception as e:
-                                app.logger.info('Error while tarring Cloud Pak Deployer logs in pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                                app.logger.error('Error while tarring Cloud Pak Deployer logs in pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
 
                             oc_get_log_tar=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/tmp/cloud-pak-deployer-logs.tar.gz','/tmp/cloud-pak-deployer-logs.tar.gz']
-                            app.logger.info('Get cloud-pak-deployer logs: {}'.format(oc_get_log_tar))
+                            app.logger.debug('Get cloud-pak-deployer logs: {}'.format(oc_get_log_tar))
 
                             try:
                                 process = subprocess.Popen(oc_get_log_tar,
@@ -252,10 +252,10 @@ def download_log_openshift(deployerLog):
                                 stdout, stderr = process.communicate()
 
                             except Exception as e:
-                                app.logger.info('Error while getting Cloud Pak Deployer logs from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                                app.logger.debug('Error while getting Cloud Pak Deployer logs from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
 
     except Exception as e:
-        app.logger.info('Error while getting cloud-pak-deployer-debug pod: {}, not getting getting logs'.format(str(e)))
+        app.logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting getting logs'.format(str(e)))
 
 #
 # OpenShift login
@@ -273,8 +273,6 @@ def oc_login():
     oc_login_command=body['oc_login_command']
     oc_login_command = oc_login_command.strip()
 
-    app.logger.info(body)
-
     pattern = r'oc(\s+)login(\s)(.*)'    
     isOcLoginCmd = re.match(pattern, oc_login_command)    
 
@@ -287,8 +285,7 @@ def oc_login():
         else:
             errors = str(errorlog,  'utf-8').split("\n")  
             result={"code": proc.returncode,"error": errors[-2]}
-            app.logger.info(result)
-            app.logger.info(errors)
+            app.logger.error('Login error: {}'.format(errors))
 
         return json.dumps(result)
     else:
@@ -309,7 +306,7 @@ def oc_check_connection():
         "error": ""
     }
     
-    app.logger.info("Checking OpenShift connection status")
+    app.logger.debug("Checking OpenShift connection status")
     
     # Step 1: Check if user is logged in with 'oc whoami'
     try:
@@ -324,11 +321,11 @@ def oc_check_connection():
         
         if proc.returncode == 0:
             result["user"] = str(stdout, 'utf-8').strip()
-            app.logger.info(f"Connected as user: {result['user']}")
+            app.logger.debug(f"Connected as user: {result['user']}")
         else:
             error_msg = str(stderr, 'utf-8').strip()
             result["error"] = "Not logged in to OpenShift cluster"
-            app.logger.info(f"Not connected: {error_msg}")
+            app.logger.error(f"Not connected: {error_msg}")
             return json.dumps(result)
             
     except Exception as e:
@@ -349,7 +346,7 @@ def oc_check_connection():
         
         if proc.returncode == 0:
             result["server"] = str(stdout, 'utf-8').strip()
-            app.logger.info(f"Server URL: {result['server']}")
+            app.logger.debug(f"Server URL: {result['server']}")
         else:
             app.logger.warning("Could not retrieve server URL")
             
@@ -378,7 +375,7 @@ def oc_check_connection():
             if 'serverVersion' in version_data and 'gitVersion' in version_data['serverVersion']:
                 result["kubernetes_version"] = version_data['serverVersion']['gitVersion']
             
-            app.logger.info(f"Cluster version: {result['cluster_version']}, Kubernetes version: {result['kubernetes_version']}")
+            app.logger.debug(f"Cluster version: {result['cluster_version']}, Kubernetes version: {result['kubernetes_version']}")
         else:
             app.logger.warning("Could not retrieve version information")
             
@@ -389,7 +386,7 @@ def oc_check_connection():
     
     # If we got this far, we're connected
     result["connected"] = True
-    app.logger.info("OpenShift connection check completed successfully")
+    app.logger.debug("OpenShift connection check completed successfully")
     
     return json.dumps(result)
 
@@ -406,7 +403,7 @@ def get_deployer_status():
     else:
         result=get_deployer_status_openshift()
 
-    app.logger.info(f"Deployer status: {result}")
+    app.logger.debug(f"Deployer status: {result}")
 
     return result
 
@@ -417,7 +414,7 @@ def get_deployer_status_local():
     for proc in psutil.process_iter():
         if (proc.username() == getpass.getuser()):
             try:
-                # app.logger.info(proc.cmdline())
+                # app.logger.debug(proc.cmdline())
                 if 'cp-deploy.sh' in proc.cmdline() and \
                     'env' in proc.cmdline() and ('apply' in proc.cmdline() or 'download' in proc.cmdline()):
                     result['deployer_active']=True
@@ -434,7 +431,7 @@ def get_deployer_status_openshift():
     result['deployer_active']=False
 
     oc_get_deployer_start=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-start','-o=json']
-    app.logger.info('Get cloud-pak-deployer-start pods: {}'.format(oc_get_deployer_start))
+    app.logger.debug('Get cloud-pak-deployer-start pods: {}'.format(oc_get_deployer_start))
 
     try:
         process = subprocess.Popen(oc_get_deployer_start,
@@ -453,12 +450,12 @@ def get_deployer_status_openshift():
                         deployer_starting=True
         
     except Exception as e:
-        app.logger.info('Error while getting cloud-pak-deployer-start pods: {}, assuming deployer is not started'.format(str(e)))
+        app.logger.error('Error while getting cloud-pak-deployer-start pods: {}, assuming deployer is not started'.format(str(e)))
         result['deployer_active']=False
 
     if (not deployer_starting):
         oc_get_deployer=['oc','get',f'-n={deployer_project}','job','cloud-pak-deployer','-o=json']
-        app.logger.info('Get cloud-pak-deployer job: {}'.format(oc_get_deployer))
+        app.logger.debug('Get cloud-pak-deployer job: {}'.format(oc_get_deployer))
 
         try:
             process = subprocess.Popen(oc_get_deployer,
@@ -483,11 +480,11 @@ def get_deployer_status_openshift():
                         result['completion_state']='Successful'
             
         except Exception as e:
-            app.logger.info('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
+            app.logger.error('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
             result['deployer_active']=False
 
         oc_get_debug=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-debug','-o=json']
-        app.logger.info('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
+        app.logger.debug('Get cloud-pak-deployer debug pods: {}'.format(oc_get_debug))
 
         try:
             process = subprocess.Popen(oc_get_debug,
@@ -504,7 +501,7 @@ def get_deployer_status_openshift():
                         if dd['status']['phase'] in ['Running']:
 
                             oc_get_state=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
-                            app.logger.info('Get cloud-pak-deployer state: {}'.format(oc_get_state))
+                            app.logger.debug('Get cloud-pak-deployer state: {}'.format(oc_get_state))
 
                             try:
                                 process = subprocess.Popen(oc_get_state,
@@ -519,15 +516,15 @@ def get_deployer_status_openshift():
                                     result=get_deployer_status_details(deploy_state_log_path, result)
                                 
                             except Exception as e:
-                                app.logger.info('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                                app.logger.error('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
 
         except Exception as e:
-            app.logger.info('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
+            app.logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
 
     return(result)
 
 def get_deployer_status_details(deploy_state_log_path, result):
-    app.logger.info('Retrieving state from {}'.format(deploy_state_log_path))
+    app.logger.debug('Retrieving state from {}'.format(deploy_state_log_path))
     try:
         with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
             temp={}
@@ -576,7 +573,7 @@ def delete_deployer_job():
     try:
         # Delete the cloud-pak-deployer job
         delete_job_command = ['oc', 'delete', f'-n={deployer_project}', 'job', 'cloud-pak-deployer', '--ignore-not-found=true']
-        app.logger.info('Delete job command: {}'.format(delete_job_command))
+        app.logger.debug('Delete job command: {}'.format(delete_job_command))
         
         process = subprocess.Popen(delete_job_command,
                         stdout=subprocess.PIPE,
@@ -592,7 +589,7 @@ def delete_deployer_job():
         
         result['success'] = True
         result['message'] = 'Cloud Pak Deployer job and related pods deleted successfully'
-        app.logger.info('Successfully deleted cloud-pak-deployer job and pods')
+        app.logger.debug('Successfully deleted cloud-pak-deployer job and pods')
         return result, 200
         
     except Exception as e:
@@ -615,8 +612,6 @@ def read_configuration():
         "metadata":{},
     }
 
-    app.logger.info(running_context)
-    app.logger.info(config_dir)
     read_result={}
     if (running_context == 'local'):
         read_result = read_configuration_from_file()
@@ -627,19 +622,19 @@ def read_configuration():
     if (read_result['code'] == 0):
         config_result['metadata']=read_result['metadata']
         if (read_result['metadata']['existing_config']):
-            app.logger.info(config_result['content'])
+            app.logger.debug(config_result['content'])
             temp=yaml.load(read_result['content'], Loader=yaml.FullLoader)
 
             if 'global_config' in temp:
                 config_result['data']['global_config']=temp['global_config']
             else:
-                app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                app.logger.debug("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
                 config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
 
             if 'openshift' in temp:
                 config_result['data']['openshift']=temp['openshift']
             else:
-                app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+                app.logger.debug("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
                 config_result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
 
             if 'cp4d' in temp:
@@ -649,9 +644,9 @@ def read_configuration():
                 config_result['data']['cp4i']=temp['cp4i']
                 config_result['metadata']['selectedCloudPak'] = 'cp4i'
             else:
-                app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+                app.logger.debug("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
                 config_result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
-                app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+                app.logger.debug("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
                 config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
                 config_result['metadata']['selectedCloudPak'] = 'software-hub'
 
@@ -661,20 +656,20 @@ def read_configuration():
 
             config_result['code'] = 0
             config_result['message'] = "Successfully converted input to configuration."
-            app.logger.info('Result of reading configuration: {}'.format(json.dumps(config_result,indent=2)))
+            app.logger.debug('Result of reading configuration: {}'.format(json.dumps(config_result,indent=2)))
         else:
-            app.logger.info("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+            app.logger.debug("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
             config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
-            app.logger.info("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
+            app.logger.debug("Loading base openshift data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
             config_result['data']['openshift']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['openshift']
-            app.logger.info("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
+            app.logger.debug("Loading base cp4d data from {}".format(cp_base_config_path+'/cp4d-latest.yaml'))
             config_result['data']['cp4d']=loadYamlFile(cp_base_config_path+'/cp4d-latest.yaml')['cp4d']
-            app.logger.info("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
+            app.logger.debug("Loading base cp4i data from {}".format(cp_base_config_path+'/cp4i-latest.yaml'))
             config_result['data']['cp4i']=loadYamlFile(cp_base_config_path+'/cp4i-latest.yaml')['cp4i']
             config_result['metadata']['selectedCloudPak'] = 'software-hub' 
             config_result['code'] = 0
             config_result['message'] = "Successfully created new configuration."
-            app.logger.info('Result of creating configuration: {}'.format(json.dumps(config_result,indent=2)))
+            app.logger.debug('Result of creating configuration: {}'.format(json.dumps(config_result,indent=2)))
 
     return config_result
 
@@ -703,11 +698,9 @@ def read_configuration_from_file() -> dict[str, Any]:
         generated_config_yaml_path = found_config_files[0]
         existing_config=True
 
-    app.logger.info(file_result)
-
     file_result['metadata']['existing_config'] = existing_config 
 
-    app.logger.info('Config file that will be used is {}'.format(generated_config_yaml_path))
+    app.logger.debug('Config file that will be used is {}'.format(generated_config_yaml_path))
     file_result['metadata']['config_file_path'] = generated_config_yaml_path
     if (existing_config):
         try:
@@ -718,7 +711,7 @@ def read_configuration_from_file() -> dict[str, Any]:
             file_result['code'] = 0
             file_result['content'] = content
             file_result['message'] = "Successfully retrieved configuration from file {}".format(generated_config_yaml_path)
-            app.logger.info("Successfully retrieved configuration from file {}".format(generated_config_yaml_path))
+            app.logger.debug("Successfully retrieved configuration from file {}".format(generated_config_yaml_path))
         except FileNotFoundError:
             file_result['code'] = 404
             file_result['message'] = "Configuration File is not found."
@@ -751,7 +744,7 @@ def read_configuration_from_openshift() -> dict[str, Any]:
     # Get configuration from the cloud-pak-deployer-config configmap
     cm_command=['oc']
     cm_command += ['extract',f'-n={deployer_project}','configmap/cloud-pak-deployer-config','--keys=cpd-config.yaml','--to=-']
-    app.logger.info('Retrieving config map command: {}'.format(cm_command))
+    app.logger.debug('Retrieving config map command: {}'.format(cm_command))
 
     try:
         process = subprocess.Popen(cm_command,
@@ -770,22 +763,22 @@ def read_configuration_from_openshift() -> dict[str, Any]:
             config_result['content']=""
             config_result['message'] = "Config map not retrieved, assuming non-existing config"
         
-        app.logger.info(f"Successfully executed oc extract command. Output length: {len(stdout)}")
+        app.logger.debug(f"Successfully executed oc extract command. Output length: {len(stdout)}")
         
     except subprocess.SubprocessError as e:
-        app.logger.info('Subprocess error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
+        app.logger.debug('Subprocess error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
         config_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
         config_result['metadata']['existing_config'] = False
         config_result['content']=""
     except Exception as e:
-        app.logger.info('Error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
+        app.logger.debug('Error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
         config_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
         config_result['metadata']['existing_config'] = False
         config_result['content']=""
 
     entitlement_command=['oc']
     entitlement_command += ['extract',f'-n={deployer_project}','secret/cloud-pak-entitlement-key','--keys=cp-entitlement-key','--to=-']
-    app.logger.info('Retrieving secret command: {}'.format(entitlement_command))
+    app.logger.debug('Retrieving secret command: {}'.format(entitlement_command))
 
     try:
         process = subprocess.Popen(entitlement_command,
@@ -805,12 +798,12 @@ def read_configuration_from_openshift() -> dict[str, Any]:
             config_result['message'] = "Secret not retrieved, assuming entitlement key not set"
         
     except Exception as e:
-        app.logger.info('Error while retrieving secret: {}, assuming non-existing entitlement key'.format(str(e)))
+        app.logger.debug('Error while retrieving secret: {}, assuming non-existing entitlement key'.format(str(e)))
         config_result['metadata']['cp_entitlement_key']=""
     
     config_result['code'] = 0
 
-    app.logger.info(config_result)
+    app.logger.debug(config_result)
 
     return config_result
 
@@ -820,10 +813,8 @@ def update_configuration():
     body = json.loads(request.get_data())
 
     full_configuration=body['configuration']
-    app.logger.info("Full configuration: {}".format(json.dumps(full_configuration, indent=4)))
+    app.logger.debug("Full configuration: {}".format(json.dumps(full_configuration, indent=4)))
 
-    app.logger.info(running_context)
-    app.logger.info(config_dir)
     read_result={}
     if (running_context == 'local'):
         result=update_configuration_file(full_configuration)
@@ -862,7 +853,7 @@ def update_configuration_openshift(full_configuration):
 
     # First try to create config map, in case it doesn't exist yet
     create_cm_command=['oc','create',f'-n={deployer_project}','configmap','cloud-pak-deployer-config']
-    app.logger.info('Create config map command: {}'.format(create_cm_command))
+    app.logger.debug('Create config map command: {}'.format(create_cm_command))
 
     process = subprocess.Popen(create_cm_command,
                     stdout=subprocess.PIPE,
@@ -873,10 +864,10 @@ def update_configuration_openshift(full_configuration):
     
     # Update the config map
     if process.returncode != 0:
-        app.logger.info(f"Error creating config map: {stderr}, ignoring")
+        app.logger.debug(f"Error creating config map: {stderr}, ignoring")
 
     update_cm_command=['oc','set','data',f'-n={deployer_project}','configmap/cloud-pak-deployer-config','--from-file=cpd-config.yaml=/tmp/cpd-config.yaml']
-    app.logger.info('Set data for config map command: {}'.format(update_cm_command))
+    app.logger.debug('Set data for config map command: {}'.format(update_cm_command))
 
     process = subprocess.Popen(update_cm_command,
                     stdout=subprocess.PIPE,
@@ -886,7 +877,7 @@ def update_configuration_openshift(full_configuration):
     stdout, stderr = process.communicate()
     
     if process.returncode != 0:
-        app.logger.info(f"Error creating updating map: {stderr}")        
+        app.logger.debug(f"Error creating updating map: {stderr}")        
 
     return result
 
