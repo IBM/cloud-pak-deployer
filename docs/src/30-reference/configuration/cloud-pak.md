@@ -464,7 +464,7 @@ ElasticSearch, Logstash and Kibana stack.
     agent_key: 'NONE'
 
     instana_admin_user: "admin@instana.local"
-    #instana_admin_pass: 'P4ssw0rd!'
+    #instana_admin_pass: 'CHANGEME'
     
     install_agent: true
 
@@ -510,10 +510,10 @@ ElasticSearch, Logstash and Kibana stack.
   - name: cp4waiops-turbonomic-demo-content
     kind: TurbonomicDemoContent
     install: true
-    #turbo_admin_password: P4ssw0rd!
+    #turbo_admin_password: CHANGEME
     create_user: false
     demo_user: demo
-    #turbo_demo_password: P4ssw0rd!
+    #turbo_demo_password: CHANGEME
 ```
 
 | Property            | Description                    | Mandatory            | Allowed values |
