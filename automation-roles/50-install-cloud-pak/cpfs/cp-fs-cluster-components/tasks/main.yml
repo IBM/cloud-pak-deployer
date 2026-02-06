@@ -57,7 +57,7 @@
     name: openshift-cert-manager
   when: not _ibm_cert_manager
 
-- name: Get IBMLicensing
+- name: Get IBM License server
   kubernetes.core.k8s_info:
     api_version: operator.ibm.com/v1alpha1
     kind: ibmlicensings
@@ -85,6 +85,14 @@
       _p_command_description: Apply cluster components for OpenShift cluster {{ _p_openshift_cluster_name }}
       _p_command: "{{ _apply_cluster_components_command }}"
       _p_command_log_file: "{{ status_dir }}/log/{{ _p_openshift_cluster_name }}-apply-cluster-components.log"
+
+  - name: Wait until IBMLicensing CR is present
+    shell: |
+      oc get ibmlicensing instance
+    register: _ibm_licensing_cr
+    retries: 60
+    delay: 10
+    until: _ibm_licensing_cr.rc == 0
 
   - name: Generate command to set threads per core
     set_fact:
