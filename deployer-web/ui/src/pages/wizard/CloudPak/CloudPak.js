@@ -290,7 +290,8 @@ const CloudPak = ({
 
           <div className="cloud-pak">
 
-            <div className='cpd-container'>
+            {/* Left side - OpenShift, Environment, Entitlement, Password */}
+            <div className='cpd-container-left'>
 
             {openShiftConnection.server && deployerContext !== 'openshift' &&
               <div>
@@ -312,10 +313,12 @@ const CloudPak = ({
             <div>
               <div className="cloud-pak-items">Admin Password</div>
               <PasswordInput onChange={adminPaswordOnChange} placeholder="Admin Password" id="302" labelText="IBM Cloud Pak Platform will generate a password for admin user if not specified." value={adminPassword} />
-            </div> 
+            </div>
 
-            {/* CP4D */}
-            <div>
+            </div>
+
+            {/* Right side - Cloud Pak selection and accordion */}
+            <div className='cpd-container-right'>
               <div className="cloud-pak-items">IBM Cloud Pak</div>
               
               {/* Radio buttons for Cloud Pak selection */}
@@ -342,7 +345,7 @@ const CloudPak = ({
 
               {/* CP4D */}
               {selectedCloudPak === 'software-hub' && (
-              <div>
+              <div className="accordion-scroll-container">
                 
                 <Accordion>
                   <AccordionItem title="IBM Software Hub" open={cp4dExpand}>
@@ -364,11 +367,11 @@ const CloudPak = ({
                     { CPDCartridgesData.map((item)=>{
                       if (item.state) {
                         return (
-                          <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />                
-                        )  
+                          <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />
+                        )
                       }
-                      return null        
-                    }) } 
+                      return null
+                    }) }
                   
                   </AccordionItem>
                 </Accordion>
@@ -377,8 +380,8 @@ const CloudPak = ({
 
             {/* CP4I */}
             {selectedCloudPak === 'cp4i' && (
-            <div>
-                <Accordion>                
+            <div className="accordion-scroll-container">
+                <Accordion>
                   <AccordionItem title="IBM Cloud Pak for Integration" open={cp4iExpand}>
                     <div className="cpd-version">
                       <div className="item">Version:</div>
@@ -397,11 +400,11 @@ const CloudPak = ({
                     { CPICartridgesData.map((item)=>{
                       if (item.state) {
                         return (
-                          <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />                
-                        )  
+                          <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />
+                        )
                       }
-                      return null        
-                    }) } 
+                      return null
+                    }) }
                     
                   </AccordionItem>
                 </Accordion>
@@ -409,9 +412,8 @@ const CloudPak = ({
             )}
 
             </div>
-            </div> 
 
-          </div>   
+          </div>
      
         </>
     )
