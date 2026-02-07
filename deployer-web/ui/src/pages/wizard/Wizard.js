@@ -46,6 +46,10 @@ const Wizard = ({ setHeaderTitle,
   const [CPICartridgesData, setCPICartridgesData] = useState([])
   const [entitlementKey, setEntitlementKey] = useState('')
   const [adminPassword, setAdminPassword] = useState('')
+  const [cp4dLicense, setCp4dLicense] = useState(false)
+  const [cp4iLicense, setCp4iLicense] = useState(false)
+  const [cp4dVersion, setCp4dVersion] = useState('')
+  const [cp4iVersion, setCp4iVersion] = useState('')
 
   //summary
   const [summaryLoading, setSummaryLoading] = useState(false)
@@ -482,6 +486,14 @@ const Wizard = ({ setHeaderTitle,
             adminPassword={adminPassword}
             setAdminPassword={setAdminPassword}
             deployerContext={deployerContext}
+            cp4dLicense={cp4dLicense}
+            setCp4dLicense={setCp4dLicense}
+            cp4dVersion={cp4dVersion}
+            setCp4dVersion={setCp4dVersion}
+            cp4iLicense={cp4iLicense}
+            setCp4iLicense={setCp4iLicense}
+            cp4iVersion={cp4iVersion}
+            setCp4iVersion={setCp4iVersion}
           >
           </CloudPak> : null}
 

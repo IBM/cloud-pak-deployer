@@ -20,6 +20,15 @@ const CloudPak = ({
                   envId,
                   setEnvId,
                   deployerContext,
+                  cp4dVersion,
+                  setCp4dVersion,
+                  cp4dLicense,
+                  setCp4dLicense,
+                  cp4iVersion,
+                  setCp4iVersion,
+                  cp4iLicense,
+                  setCp4iLicense,
+
                 }) => {
 
     
@@ -33,11 +42,6 @@ const CloudPak = ({
 
     const [loadCPDErr, setLoadCPDErr] = useState(false)
     const [loadCPIErr, setLoadCPIErr] = useState(false)
-
-    const [cp4dLicense, setCp4dLicense] = useState(false)
-    const [cp4iLicense, setCp4iLicense] = useState(false)
-    const [cp4dVersion, setCp4dVersion] = useState('')
-    const [cp4iVersion, setCp4iVersion] = useState('')
 
     const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
     const [cp4dVersionInvalid,  setCp4dVersionInvalid] = useState(false)
