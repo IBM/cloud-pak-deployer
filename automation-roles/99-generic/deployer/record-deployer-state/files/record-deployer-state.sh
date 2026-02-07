@@ -54,33 +54,48 @@ while true;do
     fi
   fi
 
+  cp4d_url=$(grep 'CP4D URL:' $STATUS_DIR/log/cloud-pak-deployer.log | tail -1 | awk -F'CP4D URL: ' '{print $2}')
+  cp4d_user=$(grep 'CP4D User:' $STATUS_DIR/log/cloud-pak-deployer.log | tail -1 | awk -F'CP4D User: ' '{print $2}')
+  cp4d_password=$(grep CP4D $STATUS_DIR/log/cloud-pak-deployer.log | grep password: | awk '{print $NF}')
+  if [[ ! -z ${cp4d_url} ]];then
+    log_state "cp4d_url" "${cp4d_url}"
+  fi
+  if [[ ! -z ${cp4d_user} ]];then
+    log_state "cp4d_user" "${cp4d_user}"
+  fi
+  if [[ ! -z ${cp4d_password} ]];then
+    log_state "cp4d_password" "${cp4d_password}"
+  fi
+
   cp4d_state_file=$(ls ${status_dir}/state/cp4d-*-cr-state.out 2>/dev/null | head -n 1)
   if [[ ! -z ${cp4d_state_file} ]];then
     cat ${cp4d_state_file} >> ${temp_file}
   fi
 
   # Log completion state of mirroring images
-  mirror_number_images=0
-  mirror_image_number=0
-  mirror_number_images_msg=$(cat ${status_dir}/log/cloud-pak-mirror-images.log | grep -E '\[STATE\] Total image count' | tail -1)
-  mirror_current_image_msg=$(cat ${status_dir}/log/cloud-pak-mirror-images.log | grep -E '\[STATE\] Current image' | tail -1)
-  mirror_image_number_msg=$(cat ${status_dir}/log/cloud-pak-mirror-images.log | grep -E '\[STATE\] Image number' | tail -1)
-  if [[ $mirror_number_images_msg =~ ([0-9]+) ]];then
-    mirror_number_images=${BASH_REMATCH[1]}
-    log_state "mirror_number_images" ${mirror_number_images}
+  if [ -f ${status_dir}/log/cloud-pak-mirror-images.log ];then
+    mirror_number_images=0
+    mirror_image_number=0
+    mirror_number_images_msg=$(cat ${status_dir}/log/cloud-pak-mirror-images.log | grep -E '\[STATE\] Total image count' | tail -1)
+    mirror_current_image_msg=$(cat ${status_dir}/log/cloud-pak-mirror-images.log | grep -E '\[STATE\] Current image' | tail -1)
+    mirror_image_number_msg=$(cat ${status_dir}/log/cloud-pak-mirror-images.log | grep -E '\[STATE\] Image number' | tail -1)
+    if [[ $mirror_number_images_msg =~ ([0-9]+) ]];then
+      mirror_number_images=${BASH_REMATCH[1]}
+      log_state "mirror_number_images" ${mirror_number_images}
+    fi
+    if [[ $mirror_image_number_msg =~ ([0-9]+) ]];then
+      mirror_image_number=${BASH_REMATCH[1]}
+      log_state "mirror_image_number" ${mirror_image_number}
+    fi
+    if [[ ! -z ${mirror_current_image_msg} ]];then
+      mirror_current_image=$(echo ${mirror_current_image_msg} | cut -d: -f2-)
+      log_state "mirror_current_image" ${mirror_current_image}
+    fi
+    if [ ${mirror_number_images} -ne 0 ];then
+      completion_perc=$(( mirror_image_number  * 100 / mirror_number_images ))
+    fi
   fi
-  if [[ $mirror_image_number_msg =~ ([0-9]+) ]];then
-    mirror_image_number=${BASH_REMATCH[1]}
-    log_state "mirror_image_number" ${mirror_image_number}
-  fi
-  if [[ ! -z ${mirror_current_image_msg} ]];then
-    mirror_current_image=$(echo ${mirror_current_image_msg} | cut -d: -f2-)
-    log_state "mirror_current_image" ${mirror_current_image}
-  fi
-  if [ ${mirror_number_images} -ne 0 ];then
-    completion_perc=$(( mirror_image_number  * 100 / mirror_number_images ))
-  fi
-
+  
   log_state "percentage_completed" ${completion_perc}
 
   cp -f ${temp_file} ${status_dir}/state/deployer-state.out
