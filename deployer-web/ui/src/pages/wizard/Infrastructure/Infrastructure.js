@@ -1,5 +1,4 @@
-import axios from "axios";
-import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "@carbon/react";
+import { InlineNotification, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "@carbon/react";
 import { useEffect, useState, useRef } from "react";
 import './Infrastructure.scss'
 
@@ -29,11 +28,6 @@ const Infrastructure = ({cloudPlatform,
                          portable,
                          setPortable
                          }) => {
-
-    const [loadingConfiguration, setLoadingConfiguration] = useState(false)
-
-    //Existing OCP
-    const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
 
     const [isRegistryHostnameInvalid, setRegistryHostnameInvalid] = useState(false)
     const [isRegistryNSInvalid, setRegistryNSInvalid] = useState(false)
@@ -91,11 +85,8 @@ const Infrastructure = ({cloudPlatform,
         case "131":
           setEnvId(e.target.value);
           if (e.target.value === '') {
-            setOCPEnvIdInvalid(true)
             setWizardError(true)
             return
-          } else {
-            setOCPEnvIdInvalid(false)
           }     
           break;
         default:

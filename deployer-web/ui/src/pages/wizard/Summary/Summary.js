@@ -1,5 +1,5 @@
 import axios from "axios";
-import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet, Button, TextArea } from "@carbon/react";
+import { InlineLoading, InlineNotification, CodeSnippet, Button, TextArea } from "@carbon/react";
 import { useEffect, useState } from "react";
 import './Summary.scss'
 import yaml from 'js-yaml';

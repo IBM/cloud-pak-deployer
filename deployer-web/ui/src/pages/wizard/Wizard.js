@@ -45,8 +45,6 @@ const Wizard = ({ setHeaderTitle,
   const [CPDCartridgesData, setCPDCartridgesData] = useState([])
   const [CPICartridgesData, setCPICartridgesData] = useState([])
   const [entitlementKey, setEntitlementKey] = useState('')
-  const [CP4DPlatformCheckBox, setCP4DPlatformCheckBox] = useState(false)
-  const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
   const [adminPassword, setAdminPassword] = useState('')
 
   //summary
@@ -123,14 +121,6 @@ const Wizard = ({ setHeaderTitle,
     if (currentIndex <= 3)
       setCurrentIndex(currentIndex + 1)
   }
-
-  const successSaveConfigProps = () => ({
-    kind: 'success',
-    lowContrast: true,
-    role: 'success',
-    title: 'The configuration file is saved successfully!',
-    hideCloseButton: false,
-  });
 
   const checkDeployerStatus = async () => {
     let result = 0;
@@ -504,8 +494,6 @@ const Wizard = ({ setHeaderTitle,
             setConfiguration={setConfiguration}
             configuration={configuration}
             envId={envId}
-            CP4DPlatformCheckBox={CP4DPlatformCheckBox}
-            CP4IPlatformCheckBox={CP4IPlatformCheckBox}
             summaryLoading={summaryLoading}
             setSummaryLoading={setSummaryLoading}
             configDir={configDir}
