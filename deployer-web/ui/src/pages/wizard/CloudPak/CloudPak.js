@@ -6,12 +6,12 @@ import './CloudPak.scss'
 const CloudPak = ({
                   setCloudPlatform,
                   selection,
-                  CPDCartridgesData, 
-                  setCPDCartridgesData, 
-                  CPICartridgesData, 
-                  setCPICartridgesData, 
-                  entitlementKey, 
-                  setEntitlementKey, 
+                  CPDCartridgesData,
+                  setCPDCartridgesData,
+                  CPICartridgesData,
+                  setCPICartridgesData,
+                  entitlementKey,
+                  setEntitlementKey,
                   setWizardError,
                   configuration,
                   setConfiguration,
@@ -19,6 +19,7 @@ const CloudPak = ({
                   setAdminPassword,
                   envId,
                   setEnvId,
+                  deployerContext,
                 }) => {
 
     
@@ -291,7 +292,7 @@ const CloudPak = ({
 
             <div className='cpd-container'>
 
-            {openShiftConnection.server &&
+            {openShiftConnection.server && deployerContext !== 'openshift' &&
               <div>
                 <div className="cloud-pak-items">OpenShift server</div>
                 <CodeSnippet type="single">{openShiftConnection.server}</CodeSnippet>

@@ -491,6 +491,7 @@ const Wizard = ({ setHeaderTitle,
             setEnvId={setEnvId}
             adminPassword={adminPassword}
             setAdminPassword={setAdminPassword}
+            deployerContext={deployerContext}
           >
           </CloudPak> : null}
 
@@ -517,6 +518,7 @@ const Wizard = ({ setHeaderTitle,
             setShowErr={setShowErr}
             saveConfig={saveConfig}
             setSaveConfig={setSaveConfig}
+            deployerContext={deployerContext}
           >
           </Summary> : null}
         </div>

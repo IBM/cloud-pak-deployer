@@ -18,7 +18,8 @@ const Summary = ({
     showErr,
     setShowErr,
     saveConfig,
-    setSaveConfig
+    setSaveConfig,
+    deployerContext
 }) => {
 
 
@@ -117,13 +118,13 @@ const Summary = ({
                 />
             }
 
-            {configDir &&
+            {configDir && deployerContext !== 'openshift' &&
                 <div className="directory">
                     <div className="item">Configuration Directory:</div>
                     <CodeSnippet type="single">{configDir}</CodeSnippet>
                 </div>
             }
-            {statusDir &&
+            {statusDir && deployerContext !== 'openshift' &&
                 <div className="directory">
                     <div className="item">Status Directory:</div>
                     <CodeSnippet type="single">{statusDir}</CodeSnippet>
