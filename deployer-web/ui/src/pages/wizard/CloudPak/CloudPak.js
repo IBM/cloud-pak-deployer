@@ -364,14 +364,16 @@ const CloudPak = ({
                       <div className="item">Cartridges:</div>
                     </div>
 
-                    { CPDCartridgesData.map((item)=>{
-                      if (item.state) {
-                        return (
-                          <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />
-                        )
-                      }
-                      return null
-                    }) }
+                    <div className="cartridges-scroll-container">
+                      { CPDCartridgesData.map((item)=>{
+                        if (item.state) {
+                          return (
+                            <Checkbox onClick={changeCPDChildCheckBox} labelText={item.description ||item.name} id={item.name} key={item.name} checked={item.state === "installed"} />
+                          )
+                        }
+                        return null
+                      }) }
+                    </div>
                   
                   </AccordionItem>
                 </Accordion>
@@ -397,14 +399,16 @@ const CloudPak = ({
                       <div className="item">Cartridges:</div>
                     </div>
 
-                    { CPICartridgesData.map((item)=>{
-                      if (item.state) {
-                        return (
-                          <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />
-                        )
-                      }
-                      return null
-                    }) }
+                    <div className="cartridges-scroll-container">
+                      { CPICartridgesData.map((item)=>{
+                        if (item.state) {
+                          return (
+                            <Checkbox onClick={changeCPIChildCheckBox} labelText={item.description ||item.type} id={item.type} key={item.type} checked={item.state === "installed"} />
+                          )
+                        }
+                        return null
+                      }) }
+                    </div>
                     
                   </AccordionItem>
                 </Accordion>
