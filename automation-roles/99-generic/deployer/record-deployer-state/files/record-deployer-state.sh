@@ -54,17 +54,20 @@ while true;do
     fi
   fi
 
-  cp4d_url=$(grep 'CP4D URL:' $STATUS_DIR/log/cloud-pak-deployer.log | tail -1 | awk -F'CP4D URL: ' '{print $2}')
-  cp4d_user=$(grep 'CP4D User:' $STATUS_DIR/log/cloud-pak-deployer.log | tail -1 | awk -F'CP4D User: ' '{print $2}')
-  cp4d_password=$(grep CP4D $STATUS_DIR/log/cloud-pak-deployer.log | grep password: | awk '{print $NF}')
-  if [[ ! -z ${cp4d_url} ]];then
-    log_state "cp4d_url" "${cp4d_url}"
-  fi
-  if [[ ! -z ${cp4d_user} ]];then
-    log_state "cp4d_user" "${cp4d_user}"
-  fi
-  if [[ ! -z ${cp4d_password} ]];then
-    log_state "cp4d_password" "${cp4d_password}"
+  # Obtain the Software Hub URL, user and password
+  if [ -f ${status_dir}/cloud-paks/cloud-pak-deployer-info.txt ];then
+    cp4d_url=$(grep 'CP4D URL:' $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | tail -1 | awk -F'CP4D URL: ' '{print $2}')
+    cp4d_user=$(grep 'CP4D User:' $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | tail -1 | awk -F'CP4D User: ' '{print $2}')
+    cp4d_password=$(grep CP4D $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | grep password: | awk '{print $NF}')
+    if [[ ! -z ${cp4d_url} ]];then
+      log_state "cp4d_url" "${cp4d_url}"
+    fi
+    if [[ ! -z ${cp4d_user} ]];then
+      log_state "cp4d_user" "${cp4d_user}"
+    fi
+    if [[ ! -z ${cp4d_password} ]];then
+      log_state "cp4d_password" "${cp4d_password}"
+    fi
   fi
 
   cp4d_state_file=$(ls ${status_dir}/state/cp4d-*-cr-state.out 2>/dev/null | head -n 1)
@@ -95,7 +98,7 @@ while true;do
       completion_perc=$(( mirror_image_number  * 100 / mirror_number_images ))
     fi
   fi
-  
+
   log_state "percentage_completed" ${completion_perc}
 
   cp -f ${temp_file} ${status_dir}/state/deployer-state.out
