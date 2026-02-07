@@ -23,7 +23,7 @@ install:
 # help: test-web-ui                    - Run the web interface locally in test mode
 .PHONY: test-web-ui
 test-web-ui:
-	@pushd ui 1>/dev/null; \
+	pushd ui 1>/dev/null; \
 	npm start \
 	popd 1>/dev/null
 
@@ -37,10 +37,14 @@ test-web-server:
 # help: build                          - Build the production UI
 .PHONY: build
 build:
-	@pushd ui 1>/dev/null && \
-	npm run build && \
-	popd 1>/dev/null && \
-	cp -r ui/build ./ww
+	make clean; \
+	make install; \
+	pushd ui 1>/dev/null; \
+	npm run build; \
+	popd 1>/dev/null; \
+	rm -rf ./ww; \
+	cp -r ui/build ./ww; \
+	echo "Build complete"
 
 # Keep these lines at the end of the file to retain output formatting.
 # help:
