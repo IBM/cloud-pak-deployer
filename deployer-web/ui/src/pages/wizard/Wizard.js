@@ -1,5 +1,5 @@
 import React from 'react';
-import Infrastructure from './Infrastructure/Infrastructure';
+import OpenShiftLogin from './OpenShiftLogin/OpenShiftLogin';
 import Selection from './Selection/Selection';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
@@ -31,7 +31,7 @@ const Wizard = ({ setHeaderTitle,
   const [selection, setSelection] = useState('Configure+Deploy')
   const [cpdWizardMode, setCpdWizardMode] = useState('')
 
-  //Infrastructure
+  //OpenShift Login
   const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
   const [configuration, setConfiguration] = useState({})
   const [envId, setEnvId] = useState("")
@@ -316,7 +316,7 @@ const Wizard = ({ setHeaderTitle,
               // Skip to Config page (step 2) if already connected
               setCurrentIndex(2)
             } else {
-              // Go to Infrastructure page (step 1) if not connected
+              // Go to OpenShift Login page (step 1) if not connected
               setCurrentIndex(1)
             }
           }
@@ -435,7 +435,7 @@ const Wizard = ({ setHeaderTitle,
           >
           </Selection> : null}
 
-          {currentIndex === 1 ? <Infrastructure
+          {currentIndex === 1 ? <OpenShiftLogin
             cloudPlatform={cloudPlatform}
             setCloudPlatform={setCloudPlatform}
             selection={selection}
@@ -462,7 +462,7 @@ const Wizard = ({ setHeaderTitle,
             portable={portable}
             setPortable={setPortable}
           >
-          </Infrastructure> : null}
+          </OpenShiftLogin> : null}
 
           {currentIndex === 2 ? <CloudPak
             cloudPlatform={cloudPlatform}
