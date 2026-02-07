@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DeployerStatus.scss';
 import { ProgressBar, Button, InlineNotification, RadioButtonGroup, RadioButton, Table, TableHead, TableRow, TableBody, TableCell, TableHeader } from '@carbon/react';
+import { View, ViewOff } from '@carbon/icons-react';
 import axios from 'axios';
 import fileDownload from 'js-file-download';
 
@@ -19,6 +20,10 @@ const DeployerStatus = () => {
   const [deletingJob, setDeletingJob] = useState(false);
   const [deleteJobSuccess, setDeleteJobSuccess] = useState(false);
   const [deleteJobError, setDeleteJobError] = useState('');
+  const [cp4dUrl, setCp4dUrl] = useState('');
+  const [cp4dUser, setCp4dUser] = useState('');
+  const [cp4dPassword, setCp4dPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const getDeployStatus = async () => {
     await axios.get('/api/v1/deployer-status').then(res => {
@@ -50,6 +55,21 @@ const DeployerStatus = () => {
       }
       if (res.data.mirror_number_images) {
         setDeployerImageNumber(res.data.mirror_number_images);
+      }
+      if (res.data.cp4d_url) {
+        setCp4dUrl(res.data.cp4d_url);
+      } else {
+        setCp4dUrl("");
+      }
+      if (res.data.cp4d_user) {
+        setCp4dUser(res.data.cp4d_user);
+      } else {
+        setCp4dUser("");
+      }
+      if (res.data.cp4d_password) {
+        setCp4dPassword(res.data.cp4d_password);
+      } else {
+        setCp4dPassword("");
       }
     }, err => {
       console.log(err);
@@ -240,7 +260,7 @@ const DeployerStatus = () => {
           </div>
 
           <div className="deploy-stats-right">
-            {deployerContext === 'openshift' && (
+            {deployerContext === 'openshift' && deployerStatus && (
               <div className="deploy-stop-button-container">
                 <Button
                   kind="danger"
@@ -269,6 +289,36 @@ const DeployerStatus = () => {
                 onCloseButtonClick={() => setDeleteJobError('')}
               />
             )}
+
+            {cp4dUrl && <div className="deploy-key">
+              <div>Cloud Pak for Data URL:</div>
+              <div className="deploy-value">
+                <a href={cp4dUrl} target="_blank" rel="noopener noreferrer">{cp4dUrl}</a>
+              </div>
+            </div>}
+
+            {cp4dUser && <div className="deploy-key">
+              <div>Cloud Pak for Data User:</div>
+              <div className="deploy-value">{cp4dUser}</div>
+            </div>}
+
+            {cp4dPassword && <div className="deploy-key">
+              <div>Cloud Pak for Data Password:</div>
+              <div className="deploy-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontFamily: showPassword ? 'inherit' : 'monospace' }}>
+                  {showPassword ? cp4dPassword : '••••••••••••'}
+                </span>
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  hasIconOnly
+                  renderIcon={showPassword ? ViewOff : View}
+                  iconDescription={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ minHeight: '32px' }}
+                />
+              </div>
+            </div>}
           </div>
         </div>
 

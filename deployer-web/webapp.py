@@ -547,6 +547,13 @@ def get_deployer_status_details(deploy_state_log_path, result):
                 result['mirror_number_images']=temp['mirror_number_images']
             if 'service_state' in temp:
                 result['service_state']=temp['service_state']
+            if 'cp4d_url' in temp:
+                result['cp4d_url']=temp['cp4d_url']
+            if 'cp4d_user' in temp:
+                result['cp4d_user']=temp['cp4d_user']
+            if 'cp4d_password' in temp:
+                result['cp4d_password']=temp['cp4d_password']
+
     except FileNotFoundError:
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
     except PermissionError:
