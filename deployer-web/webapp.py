@@ -530,6 +530,7 @@ def get_deployer_status_details(deploy_state_log_path, result):
             temp={}
             content = f.read().replace('\\','')
             f.close()
+            app.logger.debug('Content of state file: {}'.format(content))
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
