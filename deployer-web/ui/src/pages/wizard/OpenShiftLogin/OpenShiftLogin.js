@@ -1,9 +1,8 @@
-import axios from "axios";
-import { InlineNotification, Loading, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "@carbon/react";
+import { InlineNotification, RadioButton, RadioButtonGroup, TextInput, PasswordInput,Checkbox  } from "@carbon/react";
 import { useEffect, useState, useRef } from "react";
-import './Infrastructure.scss'
+import './OpenShiftLogin.scss'
 
-const Infrastructure = ({cloudPlatform, 
+const OpenShiftLogin = ({cloudPlatform,
                          OCPSettings,
                          setOCPSettings,
                          setCloudPlatform, 
@@ -29,11 +28,6 @@ const Infrastructure = ({cloudPlatform,
                          portable,
                          setPortable
                          }) => {
-
-    const [loadingConfiguration, setLoadingConfiguration] = useState(false)
-
-    //Existing OCP
-    const [isOCPEnvIdInvalid, setOCPEnvIdInvalid] = useState(false)
 
     const [isRegistryHostnameInvalid, setRegistryHostnameInvalid] = useState(false)
     const [isRegistryNSInvalid, setRegistryNSInvalid] = useState(false)
@@ -91,11 +85,8 @@ const Infrastructure = ({cloudPlatform,
         case "131":
           setEnvId(e.target.value);
           if (e.target.value === '') {
-            setOCPEnvIdInvalid(true)
             setWizardError(true)
             return
-          } else {
-            setOCPEnvIdInvalid(false)
           }     
           break;
         default:
@@ -192,7 +183,7 @@ const Infrastructure = ({cloudPlatform,
       
       {cpdWizardMode!=="existing-ocp" && selection!=="Configure+Download" &&
       <>
-      <div className="infra-title">OpenShift login</div>      
+      <div className="openshift-login-title">OpenShift login</div>
       <RadioButtonGroup orientation="vertical"
          name="radio-button-group"          
          onChange={(value)=>{setCloudPlatform(value)}}
@@ -204,54 +195,54 @@ const Infrastructure = ({cloudPlatform,
       
         { selection!=="Configure+Download" &&
         <div>
-          {cloudPlatform === 'existing-ocp' ? 
+          {cloudPlatform === 'existing-ocp' ?
             <>
-              <div className="infra-container">
+              <div className="openshift-login-container">
                 </div>
                 <div>
-                  <div className="infra-items">oc login command</div>
+                  <div className="openshift-login-items">oc login command</div>
                   <TextInput ref={ocLoginInputRef} onChange={OCPSettingsOnChange}  placeholder="oc login command" id="130" labelText="" value={OCPSettings.ocLoginCmd} invalidText="Invalid oc login command."  invalid={isOcLoginCmdInvalid}/>
                 </div>
             </> : null}
         </div> }
 
-        { selection==="Configure+Download" &&     
+        { selection==="Configure+Download" &&
           <>
-            <div className="infra-container">
+            <div className="openshift-login-container">
                 <div>
-                  <div className="infra-items-1">
-                    <legend>Registry Option </legend>                    
-                    <Checkbox labelText="Portable" onChange={(value)=>{setPortable(value)}} id="portable-registry" key="portable-registry" checked={portable}/> 
-                    <div className="infra-items-1-tips">Note: If this checkbox is checked, the private registry host name and the user and password are optional.</div>
+                  <div className="openshift-login-items-1">
+                    <legend>Registry Option </legend>
+                    <Checkbox labelText="Portable" onChange={(value)=>{setPortable(value)}} id="portable-registry" key="portable-registry" checked={portable}/>
+                    <div className="openshift-login-items-1-tips">Note: If this checkbox is checked, the private registry host name and the user and password are optional.</div>
                     
                   </div>
                 </div>
 
                 <div>
-                  <div className="infra-items-1">Registry Host Name</div>
+                  <div className="openshift-login-items-1">Registry Host Name</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Host Name" id="190" labelText="" value={registryHostname} invalidText="Registry Host Name can not be empty."  invalid={isRegistryHostnameInvalid} />
                 </div>
                 <div>
-                  <div className="infra-items-1">Registry Port</div>
+                  <div className="openshift-login-items-1">Registry Port</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Port" id="191" labelText="If not specified, the default port 443 will be used." value={registryPort} />
                 </div>
                 <div>
-                  <div className="infra-items-1">Registry Namespace</div>
+                  <div className="openshift-login-items-1">Registry Namespace</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry Namespace" id="192" labelText="" value={registryNS} invalidText="Registry Namespace can not be empty." invalid={isRegistryNSInvalid}/>
                 </div>
                 <div>
-                  <div className="infra-items-1">Registry User</div>
+                  <div className="openshift-login-items-1">Registry User</div>
                   <TextInput onChange={RegistryOnChange} placeholder="Registry User" id="193" labelText="" value={registryUser} invalidText="Registry User can not be empty." invalid={isRegistryUserInvalid}/>
                 </div>
                 <div>
-                  <div className="infra-items-1">Registry Password</div>
+                  <div className="openshift-login-items-1">Registry Password</div>
                   <PasswordInput onChange={RegistryOnChange} placeholder="Registry Password" id="194" labelText="" value={registryPassword} invalidText="Registry Password can not be empty." invalid={isregistryPasswordInvalid}/>
                 </div>
-            </div>            
+            </div>
           </>  }
 
       </>
     );
   };
 
-export default Infrastructure;
+export default OpenShiftLogin;

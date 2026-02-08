@@ -119,6 +119,7 @@ if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${CPD_TEST_CARTRIDGES}" == "" ];then CPD_TEST_CARTRIDGES=false;fi
 if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
 if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=false;fi
+if [ "${CPD_WIZARD_LOG_LEVEL}" == "" ];then CPD_WIZARD_LOG_LEVEL=INFO;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
 # but run the Ansible automation directly.
@@ -1135,6 +1136,7 @@ if ! $INSIDE_CONTAINER;then
   if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "command" ]];then
     run_cmd+=" -ti --entrypoint /cloud-pak-deployer/docker-scripts/env-command.sh"
   elif [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "wizard" ]];then
+    run_cmd+=" -e CPD_WIZARD_LOG_LEVEL=${CPD_WIZARD_LOG_LEVEL}"
     run_cmd+=" --entrypoint /cloud-pak-deployer/docker-scripts/container-webui.sh"
     run_cmd+=" -p 8080:8080"
   else

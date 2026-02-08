@@ -1,5 +1,5 @@
 import React from 'react';
-import Infrastructure from './Infrastructure/Infrastructure';
+import OpenShiftLogin from './OpenShiftLogin/OpenShiftLogin';
 import Selection from './Selection/Selection';
 import './Wizard.scss'
 import { useState, useEffect } from 'react';
@@ -31,7 +31,7 @@ const Wizard = ({ setHeaderTitle,
   const [selection, setSelection] = useState('Configure+Deploy')
   const [cpdWizardMode, setCpdWizardMode] = useState('')
 
-  //Infrastructure
+  //OpenShift Login
   const [cloudPlatform, setCloudPlatform] = useState("existing-ocp")
   const [configuration, setConfiguration] = useState({})
   const [envId, setEnvId] = useState("")
@@ -45,9 +45,11 @@ const Wizard = ({ setHeaderTitle,
   const [CPDCartridgesData, setCPDCartridgesData] = useState([])
   const [CPICartridgesData, setCPICartridgesData] = useState([])
   const [entitlementKey, setEntitlementKey] = useState('')
-  const [CP4DPlatformCheckBox, setCP4DPlatformCheckBox] = useState(false)
-  const [CP4IPlatformCheckBox, setCP4IPlatformCheckBox] = useState(false)
   const [adminPassword, setAdminPassword] = useState('')
+  const [cp4dLicense, setCp4dLicense] = useState(false)
+  const [cp4iLicense, setCp4iLicense] = useState(false)
+  const [cp4dVersion, setCp4dVersion] = useState('')
+  const [cp4iVersion, setCp4iVersion] = useState('')
 
   //summary
   const [summaryLoading, setSummaryLoading] = useState(false)
@@ -123,14 +125,6 @@ const Wizard = ({ setHeaderTitle,
     if (currentIndex <= 3)
       setCurrentIndex(currentIndex + 1)
   }
-
-  const successSaveConfigProps = () => ({
-    kind: 'success',
-    lowContrast: true,
-    role: 'success',
-    title: 'The configuration file is saved successfully!',
-    hideCloseButton: false,
-  });
 
   const checkDeployerStatus = async () => {
     let result = 0;
@@ -233,7 +227,6 @@ const Wizard = ({ setHeaderTitle,
 
   const saveConfiguration = async () => {
     setLoadingDeployStatus(true)
-    let body = {}
     let result = false
 
     try {
@@ -327,7 +320,7 @@ const Wizard = ({ setHeaderTitle,
               // Skip to Config page (step 2) if already connected
               setCurrentIndex(2)
             } else {
-              // Go to Infrastructure page (step 1) if not connected
+              // Go to OpenShift Login page (step 1) if not connected
               setCurrentIndex(1)
             }
           }
@@ -423,6 +416,7 @@ const Wizard = ({ setHeaderTitle,
               <div className='wizard-container__page-header-subtitle'>for IBM Cloud Pak</div>
             </div>
             <div>
+              <Button className="wizard-container__page-header-button" onClick={() => navigate('/status')}>View Status</Button>
               <Button className="wizard-container__page-header-button" onClick={clickPrevious} disabled={currentIndex === 0}>Previous</Button>
               {currentIndex === 3 ?
                 <Button className="wizard-container__page-header-button" onClick={saveConfiguration}>Save</Button>
@@ -438,9 +432,6 @@ const Wizard = ({ setHeaderTitle,
           </div>
           {loadingDeployStatus && <Loading />}
           <DeployerProgressIndicator />
-          {saveConfig && <InlineNotification className="deploy-success"
-            {...successSaveConfigProps()}
-          />}
           {currentIndex === 0 ? <Selection
             setSelection={setSelection}
             setCpdWizardMode={setCpdWizardMode}
@@ -448,7 +439,7 @@ const Wizard = ({ setHeaderTitle,
           >
           </Selection> : null}
 
-          {currentIndex === 1 ? <Infrastructure
+          {currentIndex === 1 ? <OpenShiftLogin
             cloudPlatform={cloudPlatform}
             setCloudPlatform={setCloudPlatform}
             selection={selection}
@@ -475,7 +466,7 @@ const Wizard = ({ setHeaderTitle,
             portable={portable}
             setPortable={setPortable}
           >
-          </Infrastructure> : null}
+          </OpenShiftLogin> : null}
 
           {currentIndex === 2 ? <CloudPak
             cloudPlatform={cloudPlatform}
@@ -494,6 +485,15 @@ const Wizard = ({ setHeaderTitle,
             setEnvId={setEnvId}
             adminPassword={adminPassword}
             setAdminPassword={setAdminPassword}
+            deployerContext={deployerContext}
+            cp4dLicense={cp4dLicense}
+            setCp4dLicense={setCp4dLicense}
+            cp4dVersion={cp4dVersion}
+            setCp4dVersion={setCp4dVersion}
+            cp4iLicense={cp4iLicense}
+            setCp4iLicense={setCp4iLicense}
+            cp4iVersion={cp4iVersion}
+            setCp4iVersion={setCp4iVersion}
           >
           </CloudPak> : null}
 
@@ -506,8 +506,6 @@ const Wizard = ({ setHeaderTitle,
             setConfiguration={setConfiguration}
             configuration={configuration}
             envId={envId}
-            CP4DPlatformCheckBox={CP4DPlatformCheckBox}
-            CP4IPlatformCheckBox={CP4IPlatformCheckBox}
             summaryLoading={summaryLoading}
             setSummaryLoading={setSummaryLoading}
             configDir={configDir}
@@ -518,6 +516,9 @@ const Wizard = ({ setHeaderTitle,
             setConfigInvalid={setConfigInvalid}
             showErr={showErr}
             setShowErr={setShowErr}
+            saveConfig={saveConfig}
+            setSaveConfig={setSaveConfig}
+            deployerContext={deployerContext}
           >
           </Summary> : null}
         </div>

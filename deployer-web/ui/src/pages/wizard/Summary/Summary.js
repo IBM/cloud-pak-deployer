@@ -1,5 +1,5 @@
 import axios from "axios";
-import { InlineLoading, InlineNotification, Tabs, Tab, CodeSnippet, Button, TextArea } from "@carbon/react";
+import { InlineLoading, InlineNotification, CodeSnippet, Button, TextArea } from "@carbon/react";
 import { useEffect, useState } from "react";
 import './Summary.scss'
 import yaml from 'js-yaml';
@@ -16,7 +16,10 @@ const Summary = ({
     configInvalid,
     setConfigInvalid,
     showErr,
-    setShowErr
+    setShowErr,
+    saveConfig,
+    setSaveConfig,
+    deployerContext
 }) => {
 
 
@@ -56,6 +59,15 @@ const Summary = ({
         role: 'error',
         title: 'Failed to save configuration in the server.',
         hideCloseButton: false,
+    });
+
+    const successSaveConfigProps = () => ({
+        kind: 'success',
+        lowContrast: true,
+        role: 'success',
+        title: 'The configuration file is saved successfully!',
+        hideCloseButton: false,
+        onCloseButtonClick: () => setSaveConfig(false),
     });
 
     const clickEditBtn = () => {
@@ -100,14 +112,19 @@ const Summary = ({
                     {...errorProps()}
                 />
             }
+            {saveConfig &&
+                <InlineNotification className="summary-success"
+                    {...successSaveConfigProps()}
+                />
+            }
 
-            {configDir &&
+            {configDir && deployerContext !== 'openshift' &&
                 <div className="directory">
                     <div className="item">Configuration Directory:</div>
                     <CodeSnippet type="single">{configDir}</CodeSnippet>
                 </div>
             }
-            {statusDir &&
+            {statusDir && deployerContext !== 'openshift' &&
                 <div className="directory">
                     <div className="item">Status Directory:</div>
                     <CodeSnippet type="single">{statusDir}</CodeSnippet>
