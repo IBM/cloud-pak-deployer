@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './DeployerStatus.scss';
 import { ProgressBar, Button, InlineNotification, RadioButtonGroup, RadioButton, Table, TableHead, TableRow, TableBody, TableCell, TableHeader } from '@carbon/react';
-import { View, ViewOff } from '@carbon/icons-react';
+import { View, ViewOff, Copy } from '@carbon/icons-react';
 import axios from 'axios';
 import fileDownload from 'js-file-download';
 
@@ -24,6 +24,7 @@ const DeployerStatus = () => {
   const [cp4dUser, setCp4dUser] = useState('');
   const [cp4dPassword, setCp4dPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [copiedField, setCopiedField] = useState('');
 
   const getDeployStatus = async () => {
     await axios.get('/api/v1/deployer-status').then(res => {
@@ -117,6 +118,16 @@ const DeployerStatus = () => {
       setDeleteJobSuccess(false);
       setDeleteJobError('An error occurred while deleting the job');
       console.log(error);
+    }
+  };
+
+  const copyToClipboard = async (text, fieldName) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(''), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -260,6 +271,107 @@ const DeployerStatus = () => {
           </div>
 
           <div className="deploy-stats-right">
+            {!deployerStatus && cp4dUrl && <div className="deploy-key" style={{ alignItems: 'center' }}>
+              <div>Software Hub URL:</div>
+              <div className="deploy-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <a href={cp4dUrl} target="_blank" rel="noopener noreferrer">{cp4dUrl}</a>
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  hasIconOnly
+                  renderIcon={Copy}
+                  iconDescription={copiedField === 'url' ? 'Copied!' : 'Copy URL'}
+                  onClick={() => copyToClipboard(cp4dUrl, 'url')}
+                  style={{ minHeight: '32px' }}
+                />
+              </div>
+            </div>}
+
+            {cp4dUser && <div className="deploy-key" style={{ alignItems: 'center' }}>
+              <div>Software Hub admin user:</div>
+              <div className="deploy-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>{cp4dUser}</span>
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  hasIconOnly
+                  renderIcon={Copy}
+                  iconDescription={copiedField === 'user' ? 'Copied!' : 'Copy user'}
+                  onClick={() => copyToClipboard(cp4dUser, 'user')}
+                  style={{ minHeight: '32px' }}
+                />
+              </div>
+            </div>}
+
+            {cp4dPassword && <div className="deploy-key" style={{ alignItems: 'center' }}>
+              <div>Software Hub password:</div>
+              <div className="deploy-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontFamily: showPassword ? 'inherit' : 'monospace' }}>
+                  {showPassword ? cp4dPassword : '••••••••••••'}
+                </span>
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  hasIconOnly
+                  renderIcon={showPassword ? ViewOff : View}
+                  iconDescription={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ minHeight: '32px' }}
+                />
+                <Button
+                  kind="ghost"
+                  size="sm"
+                  hasIconOnly
+                  renderIcon={Copy}
+                  iconDescription={copiedField === 'password' ? 'Copied!' : 'Copy password'}
+                  onClick={() => copyToClipboard(cp4dPassword, 'password')}
+                  style={{ minHeight: '32px' }}
+                />
+              </div>
+            </div>}
+
+            {deployState.length > 0 && (
+              <div style={{ marginTop: '2rem', width: '100%', alignSelf: 'flex-start' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '1rem', fontSize: '1rem' }}>Status of services:</div>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                  width: '100%',
+                  maxHeight: deployState.length > 10 ? '500px' : 'none',
+                  overflowY: deployState.length > 10 ? 'auto' : 'visible',
+                  paddingRight: deployState.length > 10 ? '0.5rem' : '0'
+                }}>
+                  {tables.map((table, index) => (
+                    <div key={index} style={{ width: '600px', maxWidth: '100%' }}>
+                      <Table size="sm" useZebraStyles={false}>
+                        <TableHead>
+                          <TableRow>
+                            {headers.map((header) => (
+                              <TableHeader id={header.key} key={header}>
+                                {header}
+                              </TableHeader>
+                            ))}
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {table.map((row) => (
+                            <TableRow key={row.id}>
+                              {Object.keys(row)
+                                .filter((key) => key !== 'id')
+                                .map((key) => {
+                                  return <TableCell key={key}>{row[key]}</TableCell>;
+                                })}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {deployerContext === 'openshift' && deployerStatus && (
               <div className="deploy-stop-button-container">
                 <Button
@@ -289,72 +401,7 @@ const DeployerStatus = () => {
                 onCloseButtonClick={() => setDeleteJobError('')}
               />
             )}
-
-            {cp4dUrl && <div className="deploy-key">
-              <div>Cloud Pak for Data URL:</div>
-              <div className="deploy-value">
-                <a href={cp4dUrl} target="_blank" rel="noopener noreferrer">{cp4dUrl}</a>
-              </div>
-            </div>}
-
-            {cp4dUser && <div className="deploy-key">
-              <div>Cloud Pak for Data User:</div>
-              <div className="deploy-value">{cp4dUser}</div>
-            </div>}
-
-            {cp4dPassword && <div className="deploy-key">
-              <div>Cloud Pak for Data Password:</div>
-              <div className="deploy-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontFamily: showPassword ? 'inherit' : 'monospace' }}>
-                  {showPassword ? cp4dPassword : '••••••••••••'}
-                </span>
-                <Button
-                  kind="ghost"
-                  size="sm"
-                  hasIconOnly
-                  renderIcon={showPassword ? ViewOff : View}
-                  iconDescription={showPassword ? 'Hide password' : 'Show password'}
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ minHeight: '32px' }}
-                />
-              </div>
-            </div>}
           </div>
-        </div>
-
-        <div>
-          {deployState.length > 0 &&
-            <div className="deploy-item">Status of services:
-              <div className="deploy-item__state">
-                {tables.map((table, index) => (
-                  <div className="deploy-item__state-table" key={index}>
-                    <Table size="md" useZebraStyles={false}>
-                      <TableHead>
-                        <TableRow>
-                          {headers.map((header) => (
-                            <TableHeader id={header.key} key={header}>
-                              {header}
-                            </TableHeader>
-                          ))}
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {table.map((row) => (
-                          <TableRow key={row.id}>
-                            {Object.keys(row)
-                              .filter((key) => key !== 'id')
-                              .map((key) => {
-                                return <TableCell key={key}>{row[key]}</TableCell>;
-                              })}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ))}
-              </div>
-            </div>
-          }
         </div>
       </div>
     </div>
