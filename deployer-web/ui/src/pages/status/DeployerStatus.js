@@ -199,7 +199,40 @@ const DeployerStatus = () => {
             <h2>Deployer Status</h2>
             <div className='wizard-container__page-header-subtitle'>IBM Cloud Pak Deployment</div>
           </div>
+          <div>
+            {deployerContext === 'openshift' && deployerStatus && (
+              <Button
+                className="wizard-container__page-header-button"
+                kind="danger"
+                onClick={deleteDeployerJob}
+                disabled={deletingJob}
+                style={{ width: '12rem', whiteSpace: 'nowrap' }}
+              >
+                {deletingJob ? 'Deleting...' : 'Stop Deployer job'}
+              </Button>
+            )}
+          </div>
         </div>
+
+        {deleteJobSuccess && (
+          <InlineNotification
+            kind="success"
+            title="Success"
+            subtitle="Deployer job deleted successfully"
+            onCloseButtonClick={() => setDeleteJobSuccess(false)}
+            style={{ marginTop: '1rem' }}
+          />
+        )}
+
+        {deleteJobError && (
+          <InlineNotification
+            kind="error"
+            title="Error"
+            subtitle={deleteJobError}
+            onCloseButtonClick={() => setDeleteJobError('')}
+            style={{ marginTop: '1rem' }}
+          />
+        )}
 
         <div className="deploy-stats-container">
           <div className="deploy-stats-left">
@@ -370,36 +403,6 @@ const DeployerStatus = () => {
                   ))}
                 </div>
               </div>
-            )}
-
-            {deployerContext === 'openshift' && deployerStatus && (
-              <div className="deploy-stop-button-container">
-                <Button
-                  kind="danger"
-                  onClick={deleteDeployerJob}
-                  disabled={deletingJob}
-                >
-                  {deletingJob ? 'Deleting...' : 'Stop Deployer job'}
-                </Button>
-              </div>
-            )}
-
-            {deleteJobSuccess && (
-              <InlineNotification
-                kind="success"
-                title="Success"
-                subtitle="Deployer job deleted successfully"
-                onCloseButtonClick={() => setDeleteJobSuccess(false)}
-              />
-            )}
-
-            {deleteJobError && (
-              <InlineNotification
-                kind="error"
-                title="Error"
-                subtitle={deleteJobError}
-                onCloseButtonClick={() => setDeleteJobError('')}
-              />
             )}
           </div>
         </div>
