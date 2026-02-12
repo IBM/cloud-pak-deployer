@@ -17,7 +17,7 @@ log() {
 }
 
 log_state() {
-  printf "%s: %s\n" "${1}" "${2}" | tee -a ${temp_file}
+  yq eval ".${1} = ${2}" -i ${temp_file}
 }
 
 mkdir -p ${status_dir}/state
@@ -25,6 +25,7 @@ temp_file=$(mktemp)
 
 while true;do
   rm -f ${temp_file}
+  touch ${temp_file}
 
   completion_perc=0
 
@@ -60,19 +61,20 @@ while true;do
     cp4d_user=$(grep 'CP4D User:' $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | tail -1 | awk -F'CP4D User: ' '{print $2}')
     cp4d_password=$(grep CP4D $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | grep password: | awk '{print $NF}')
     if [[ ! -z ${cp4d_url} ]];then
-      log_state "cp4d_url" "${cp4d_url}"
+      log_state "cp4d_url" "\"${cp4d_url}\""
     fi
     if [[ ! -z ${cp4d_user} ]];then
-      log_state "cp4d_user" "${cp4d_user}"
+      log_state "cp4d_user" "\"${cp4d_user}\""
     fi
     if [[ ! -z ${cp4d_password} ]];then
-      log_state "cp4d_password" "${cp4d_password}"
+      log_state "cp4d_password" "\"${cp4d_password}\""
     fi
   fi
 
   cp4d_state_file=$(ls ${status_dir}/state/cp4d-*-cr-state.out 2>/dev/null | head -n 1)
   if [[ ! -z ${cp4d_state_file} ]];then
-    cat ${cp4d_state_file} >> ${temp_file}
+    yq eval-all '. as $item ireduce ({}; . * $item)' ${temp_file} ${cp4d_state_file} > ${temp_file}.merged
+    mv ${temp_file}.merged ${temp_file}
   fi
 
   # Log completion state of mirroring images
