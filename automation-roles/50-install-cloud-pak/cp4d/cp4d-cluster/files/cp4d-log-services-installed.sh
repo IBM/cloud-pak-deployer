@@ -46,7 +46,8 @@ while true;do
   log "----------"
 
   # Also write state into temp file
-  state_logged+false
+  state_logged=false
+  rm -f ${temp_file}
   log_state "service_state" ""
   for c in $(echo $cartridges | jq -r '.[].name');do
     # Check state of cartridge

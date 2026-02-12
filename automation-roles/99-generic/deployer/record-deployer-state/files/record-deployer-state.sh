@@ -17,7 +17,7 @@ log() {
 }
 
 log_state() {
-  printf "%s: %s\n" "${1}" "${2}" | tee -a ${temp_file}
+  yq eval ".${1} = ${2}" -i ${temp_file}
 }
 
 mkdir -p ${status_dir}/state
@@ -72,7 +72,8 @@ while true;do
 
   cp4d_state_file=$(ls ${status_dir}/state/cp4d-*-cr-state.out 2>/dev/null | head -n 1)
   if [[ ! -z ${cp4d_state_file} ]];then
-    cat ${cp4d_state_file} >> ${temp_file}
+    yq eval-all '. as $item ireduce ({}; . * $item)' ${temp_file} ${cp4d_state_file} > ${temp_file}.merged
+    mv ${temp_file}.merged ${temp_file}
   fi
 
   # Log completion state of mirroring images
