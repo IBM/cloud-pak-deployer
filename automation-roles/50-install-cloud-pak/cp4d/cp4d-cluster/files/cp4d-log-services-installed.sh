@@ -23,13 +23,10 @@ log() {
   printf "[${LOG_TIME}] ${1}\n" | tee -a ${status_dir}/log/$project-cartridges-state.log
 }
 
-log_state() {
-  printf "%s: %s\n" "${1}" "${2}" | tee -a ${temp_file}
-}
-
 mkdir -p ${status_dir}/state
 chmod 777 ${status_dir}/state
 temp_file=$(mktemp)
+temp_json_file=$(mktemp)
 
 log "----------"
 # Check if the connection to the OpenShift cluster is still valid
@@ -45,54 +42,50 @@ while true;do
   log "Checking installation completion of cartridges"
   log "----------"
 
+  log "Running get-cr-status"
+  get-cr-status --cpd_instance_ns=${project}
+  cat /tmp/work/status.csv | yq -p csv -o json > ${temp_json_file}
+
   # Also write state into temp file
   state_logged=false
   rm -f ${temp_file}
-  log_state "service_state" ""
-  for c in $(echo $cartridges | jq -r '.[].name');do
+  touch ${temp_file}
+
+  for c in $(echo $cartridges | jq -r '.[].olm_utils_name');do
     # Check state of cartridge
-    cartridge_state=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .state')
+    cartridge_state=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .state')
     if [[ "$cartridge_state" == "removed" ]];then
       continue
     fi
 
-    cartridge_internal=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_internal // false')
+    cartridge_internal=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .cr_internal // false')
     if [[ "$cartridge_internal" == "true" ]];then
       continue
     fi  
     
-    cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .Component_name')
-    cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_cr')
-    cr_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_name')
-    cr_status_attribute=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_attribute')
-    cr_status_completed=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.name == $cn ) | .cr_status_completed')
+    cr_cartridge_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .Component_name')
+    cr_cr=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .cr_cr')
+    cr_name=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .cr_name')
+    cr_status_attribute=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .cr_status_attribute')
+    cr_status_completed=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .cr_status_completed')
+    cr_version=$(echo $cartridges | jq -r --arg cn "$c" '.[] | select(.olm_utils_name == $cn ) | .CR_Version')
+    cr_status=$(jq -r --arg cn "$c" '.[] | select(.Components == $cn) | .Status' ${temp_json_file})
+    cr_progress=$(jq -r --arg cn "$c" '.[] | select(.Components == $cn) | .Progress' ${temp_json_file})
 
     # Skip undefined cartridges
     if [[ "$cr_cr" == "null" ]] || [[ "$cr_cr" == "" ]];then
       continue
     fi
 
-    # Skip cartridges with undefined status attribute
-    if [[ "$cr_status_attribute" == "null" ]] || [[ "$cr_status_attribute" == "" ]];then
-      continue
-    fi
-
     state_logged=true
 
-    # Skip cartridge that don't have a CR yet
-    oc get --namespace $project $cr_cr $cr_name
-    if [ $? -ne 0 ];then
-      cr_status="To be installed"
-    else
-      # Check if status is completed
-      cr_status=$(oc get --namespace $project $cr_cr $cr_name -o jsonpath="{.status.$cr_status_attribute}")
-    fi
-    
     log "Info: Status of $cr_cr object $cr_name is $cr_status"
 
-    # Log the state in the temp file
-    log_state "- service" "${cr_cartridge_name}"
-    log_state "  state" "${cr_status}"
+    if [[ -z ${cr_status} ]];then cr_status="To be installed";fi
+
+    # Merge the service state with the other services
+    yq -i '.service_state += [{"service":"'$c'","state":"'$cr_status'","progress":"'$cr_progress'","version":"'$cr_version'"}]' ${temp_file}
+
   done
 
   # If the state of any cartridge was logged, recorded into the cr-state.out file

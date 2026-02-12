@@ -25,6 +25,7 @@ temp_file=$(mktemp)
 
 while true;do
   rm -f ${temp_file}
+  touch ${temp_file}
 
   completion_perc=0
 
@@ -60,13 +61,13 @@ while true;do
     cp4d_user=$(grep 'CP4D User:' $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | tail -1 | awk -F'CP4D User: ' '{print $2}')
     cp4d_password=$(grep CP4D $STATUS_DIR/cloud-paks/cloud-pak-deployer-info.txt | grep password: | awk '{print $NF}')
     if [[ ! -z ${cp4d_url} ]];then
-      log_state "cp4d_url" "${cp4d_url}"
+      log_state "cp4d_url" "\"${cp4d_url}\""
     fi
     if [[ ! -z ${cp4d_user} ]];then
-      log_state "cp4d_user" "${cp4d_user}"
+      log_state "cp4d_user" "\"${cp4d_user}\""
     fi
     if [[ ! -z ${cp4d_password} ]];then
-      log_state "cp4d_password" "${cp4d_password}"
+      log_state "cp4d_password" "\"${cp4d_password}\""
     fi
   fi
 
