@@ -57,6 +57,7 @@ const DeployerStatus = () => {
       if (res.data.mirror_number_images) {
         setDeployerImageNumber(res.data.mirror_number_images);
       }
+      console.log(res.data);
       if (res.data.cp4d_url) {
         setCp4dUrl(res.data.cp4d_url);
       } else {
@@ -188,7 +189,7 @@ const DeployerStatus = () => {
     return res;
   };
 
-  const headers = ['Service', 'State'];
+  const headers = ['Service', 'Version', 'State', 'Progress'];
   const tables = oneDimensionArray2twoDimensionArray(deployState);
 
   return (
@@ -304,7 +305,7 @@ const DeployerStatus = () => {
           </div>
 
           <div className="deploy-stats-right">
-            {!deployerStatus && cp4dUrl && <div className="deploy-key" style={{ alignItems: 'center' }}>
+            {cp4dUrl && <div className="deploy-key" style={{ alignItems: 'center' }}>
               <div>Software Hub URL:</div>
               <div className="deploy-value" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <a href={cp4dUrl} target="_blank" rel="noopener noreferrer">{cp4dUrl}</a>
@@ -377,7 +378,7 @@ const DeployerStatus = () => {
                 }}>
                   {tables.map((table, index) => (
                     <div key={index} style={{ width: '600px', maxWidth: '100%' }}>
-                      <Table size="sm" useZebraStyles={false}>
+                      <Table size="sm" useZebraStyles={true}>
                         <TableHead>
                           <TableRow>
                             {headers.map((header) => (
@@ -388,13 +389,12 @@ const DeployerStatus = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {table.map((row) => (
-                            <TableRow key={row.id}>
-                              {Object.keys(row)
-                                .filter((key) => key !== 'id')
-                                .map((key) => {
-                                  return <TableCell key={key}>{row[key]}</TableCell>;
-                                })}
+                          {table.map((row, rowIndex) => (
+                            <TableRow key={`${row.service}-${rowIndex}`}>
+                              {headers.map((header) => {
+                                const key = header.toLowerCase();
+                                return <TableCell key={`${row.service}-${key}`}>{row[key]}</TableCell>;
+                              })}
                             </TableRow>
                           ))}
                         </TableBody>

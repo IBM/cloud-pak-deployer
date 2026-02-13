@@ -55,6 +55,11 @@ Log is as a cluster administrator to be able to run the deployer with the correc
 * Click the "+" sign at the top of the page
 * Paste the following block into the window. You can update the image on line 11 and the same value will be used for image for the Deployer Job
 
+!!! info
+    The below starts the deployer wizard using the standard configuration. Additionally, you can:
+    
+    * Configure environment variables such as proxy server or the wizard logging level. See [Configure environment variables for proxy and other settings](./existing-openshift-environment-variables-and-proxy.md){target="_blank}
+
 ???+ note "Start the deployer wizard"
     ``` { .yaml .copy linenums="1" hl_lines="11" }
     apiVersion: v1
