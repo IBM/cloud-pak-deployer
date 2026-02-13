@@ -8,7 +8,7 @@ Some environments may have a need for special settings when running the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Update the environment variables and/or add new ones
-???+ note "Set the entitlement key"
+???+ note "Set proxy variables"
     ``` { .yaml .copy }
     ---
     apiVersion: v1
@@ -30,7 +30,7 @@ Some environments may have a need for special settings when running the deployer
 * Go to the OpenShift console
 * Click the "+" sign at the top of the page
 * Update the environment variables and/or add new ones
-???+ note "Set the entitlement key"
+???+ note "Run deployer with dry-run"
     ``` { .yaml .copy }
     ---
     apiVersion: v1
@@ -40,6 +40,25 @@ Some environments may have a need for special settings when running the deployer
       namespace: cloud-pak-deployer
     data:
       CPD_DRY_RUN: true
+    ```
+
+For a full list of environment variables, open the debug pod and run `/cloud-pak-deployer/cp-deploy.sh --help`.
+
+## Create environment variable to set log level for the deployer wizard
+
+* Go to the OpenShift console
+* Click the "+" sign at the top of the page
+* Update the environment variables and/or add new ones
+???+ note "Set log level for deployer wizard"
+    ``` { .yaml .copy }
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: cloud-pak-deployer-env
+      namespace: cloud-pak-deployer
+    data:
+      CPD_WIZARD_LOG_LEVEL: DEBUG
     ```
 
 For a full list of environment variables, open the debug pod and run `/cloud-pak-deployer/cp-deploy.sh --help`.
