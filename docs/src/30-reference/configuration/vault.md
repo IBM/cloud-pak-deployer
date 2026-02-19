@@ -7,11 +7,14 @@ Configuration of the vault is done through a `vault` object in the configuration
 
 The following Vault implementations can be used to store and retrieve secrets:
 - File Vault (no encryption)
+- Ansible Vault (encrypted with password)
 - IBM Cloud Secrets Manager
 - Hashicorp Vault (token authentication)
 - Hashicorp Vault (certificate authentication)
 
 The **File Vault** is the default vault and also the simplest. It does not require a password and all secrets are stored in base-64 encoding in a properties file under the `<status_directory>/vault` directory. The name of the vault file is the `environment_name` you specified in the global configuration, inventory file or at the command line.
+
+The **Ansible Vault** provides encryption for secrets using Ansible's built-in vault functionality. Secrets are stored in encrypted files under the `<status_directory>/vault` directory, protected by a password file. This provides a good balance between security and ease of use without requiring external services.
 
 All of the other vault options require some secret manager (IBM Cloud service or Hashicorp Vault) to be available and you need to specify a password or provide a certificate.
 
@@ -26,13 +29,30 @@ vault:
 
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| vault_type | Chosen implementation of the vault                                 | Yes       | file-vault, ibmcloud-vault, hashicorp-vault |
+| vault_type | Chosen implementation of the vault                                 | Yes       | file-vault, ansible-vault, ibmcloud-vault, hashicorp-vault |
 
 ### Properties for `file-vault`
 
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | vault_authentication_type | Authentication method for the file vault            | No        | none          |
+
+### Properties for `ansible-vault`
+
+| Property | Description                                                          | Mandatory | Allowed values |
+| -------- | -------------------------------------------------------------------- | --------- | -------------- |
+| vault_authentication_type | Authentication method for ansible vault              | Yes       | password-file |
+| vault_password_file | Path to the file containing the ansible-vault password | Yes       |           |
+
+Sample Ansible Vault config:
+```
+vault:
+  vault_type: ansible-vault
+  vault_authentication_type: password-file
+  vault_password_file: /path/to/vault-password-file
+```
+
+**Note:** The password file should contain only the password (no newline at the end is recommended). You can create it using: `echo -n "your-secure-password" > /path/to/vault-password-file`
 
 ### Properties for `ibmcloud-vault`
 
