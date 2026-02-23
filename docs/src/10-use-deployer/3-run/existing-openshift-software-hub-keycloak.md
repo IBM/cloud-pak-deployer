@@ -44,43 +44,45 @@ data:
         state: present
       - name: kc-cp4d-monitors
         state: present
-
-    zen_role:
-    - name: cp4d-monitoring-role
-      description: Cloud Pak for Data monitoring role
-      state: installed
-      permissions:
-      - monitor_platform
-
-    zen_access_control:
-    - project: cpd
-      openshift_cluster_name: "{{ env_id }}"
-      keycloak_name: ibm-keycloak
-      user_groups:
-      - name: cp4d-admins
-        description: Cloud Pak for Data Administrators
-        roles:
-        - Administrator
-        keycloak_groups:
-        - kc-cp4d-admins
-      - name: cp4d-data-engineers
-        description: Cloud Pak for Data Data Engineers
-        roles:
-        - User
-        keycloak_groups:
-        - kc-cp4d-data-engineers
-      - name: cp4d-data-scientists
-        description: Cloud Pak for Data Data Scientists
-        roles:
-        - User
-        keycloak_groups:
-        - kc-cp4d-data-scientists
-      - name: cp4d-monitors
-        description: Cloud Pak for Data Monitoring
-        roles:
-        - cp4d-monitoring-role
-        keycloak_groups:
-        - kc-cp4d-monitors
+      users:
+      - username: ttoussaint
+        firstName: Tara
+        lastName: Toussaint
+        email: ttoussaint@cp.internal
+        state: present
+        groups:
+        - name: kc-cp4d-admins
+      - username: rramones
+        firstName: Rosa
+        lastName: Ramones
+        email: rramones@cp.internal
+        state: present
+        groups:
+        - name: kc-cp4d-data-engineers
+      - username: ssharpe
+        firstName: Shelly
+        lastName: Sharpe
+        email: ssharpe@cp.internal
+        state: present
+        groups:
+        - name: kc-cp4d-data-engineers
+        - name: kc-cp4d-data-scientists    
+      - username: pprimo
+        firstName: Paco
+        lastName: Primo
+        email: pprimo@cp.internal
+        state: present
+        groups:
+        - name: kc-cp4d-data-scientists
+        - name: kc-cp4d-monitors    
+      - username: rroller
+        firstName: Rico
+        lastName: Roller
+        email: rroller@cp.internal
+        # password: specific_password_for_the_user
+        state: present
+        groups:
+        - name: kc-cp4d-data-scientists    
 
     cp4d:
     - project: cpd
@@ -424,6 +426,43 @@ data:
       - name: watsonx_data
         description: watsonx.data
         state: removed
+        installation_options:
+          enable_lite_milvus: false
+          scaleConfig: small    
+
+      - name: watsonx_dataintegration
+        description: watsonx.data integration
+        state: removed
+        installation_options:
+          enableBatchBulkETL: true
+          enableRealtimeStreaming: true
+          enableDataObservability: true
+          enableUnstructuredDataIntegration: true
+          enableReplication: true
+
+      - name: watsonx_dataintelligence
+        description: watsonx.data intelligence
+        state: removed
+        installation_options:
+          enableAISearch: false
+          enableContentLinkingForTextToSql: false
+          enableDataGovernanceCatalog: true
+          enableDataLineage: true
+          enableDataProduct: true
+          enableDataQuality: false
+          enableGenerativeAICapabilities: true
+          enableKnowledgeGraph: true
+          enableModelsOn: cpu
+          enableSemanticEmbedding: false
+          enableSemanticEnrichment: true
+          enableTextToSql: false
+
+      - name: watsonx_data_premium
+        description: watsonx.data Premium
+        state: removed
+        installation_options:
+          wxd_premium_enable_models_on: gpu
+          licenseType: premium
 
       - name: watsonx_governance
         description: watsonx.governance
