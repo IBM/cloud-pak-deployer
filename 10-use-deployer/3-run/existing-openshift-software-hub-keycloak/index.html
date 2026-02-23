@@ -1,0 +1,746 @@
+<!doctype html><html lang=en class=no-js> <head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="Automated deployer of OpenShift cluster and IBM Cloud Paks"><meta name=author content=Author><link href=https://ibm.github.io/cloud-pak-deployer/10-use-deployer/3-run/existing-openshift-software-hub-keycloak/ rel=canonical><link rel=icon href=../../../assets/images/favicon.png><meta name=generator content="mkdocs-1.6.1, mkdocs-material-9.7.2"><title>Existing openshift software hub keycloak - Cloud Pak Deployer</title><link rel=stylesheet href=../../../assets/stylesheets/main.484c7ddc.min.css><link rel=preconnect href=https://fonts.gstatic.com crossorigin><link rel=stylesheet href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback"><style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style><link rel=stylesheet href=../../../css/extra.css><script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script></head> <body dir=ltr> <input class=md-toggle data-md-toggle=drawer type=checkbox id=__drawer autocomplete=off> <input class=md-toggle data-md-toggle=search type=checkbox id=__search autocomplete=off> <label class=md-overlay for=__drawer></label> <div data-md-component=skip> </div> <div data-md-component=announce> </div> <header class="md-header md-header--shadow" data-md-component=header> <nav class="md-header__inner md-grid" aria-label=Header> <a href=../../.. title="Cloud Pak Deployer" class="md-header__button md-logo" aria-label="Cloud Pak Deployer" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> <label class="md-header__button md-icon" for=__drawer> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg> </label> <div class=md-header__title data-md-component=header-title> <div class=md-header__ellipsis> <div class=md-header__topic> <span class=md-ellipsis> Cloud Pak Deployer </span> </div> <div class=md-header__topic data-md-component=header-topic> <span class=md-ellipsis> Existing openshift software hub keycloak </span> </div> </div> </div> <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script> <label class="md-header__button md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> </label> <div class=md-search data-md-component=search role=dialog> <label class=md-search__overlay for=__search></label> <div class=md-search__inner role=search> <form class=md-search__form name=search> <input type=text class=md-search__input name=query aria-label=Search placeholder=Search autocapitalize=off autocorrect=off autocomplete=off spellcheck=false data-md-component=search-query required> <label class="md-search__icon md-icon" for=__search> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg> </label> <nav class=md-search__options aria-label=Search> <button type=reset class="md-search__icon md-icon" title=Clear aria-label=Clear tabindex=-1> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> </button> </nav> </form> <div class=md-search__output> <div class=md-search__scrollwrap tabindex=0 data-md-scrollfix> <div class=md-search-result data-md-component=search-result> <div class=md-search-result__meta> Initializing search </div> <ol class=md-search-result__list role=presentation></ol> </div> </div> </div> </div> </div> <div class=md-header__source> <a href=https://github.com/IBM/cloud-pak-deployer title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg> </div> <div class=md-source__repository> Cloud Pak Deployer </div> </a> </div> </nav> </header> <div class=md-container data-md-component=container> <main class=md-main data-md-component=main> <div class="md-main__inner md-grid"> <div class="md-sidebar md-sidebar--primary" data-md-component=sidebar data-md-type=navigation> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--primary" aria-label=Navigation data-md-level=0> <label class=md-nav__title for=__drawer> <a href=../../.. title="Cloud Pak Deployer" class="md-nav__button md-logo" aria-label="Cloud Pak Deployer" data-md-component=logo> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg> </a> Cloud Pak Deployer </label> <div class=md-nav__source> <a href=https://github.com/IBM/cloud-pak-deployer title="Go to repository" class=md-source data-md-component=source> <div class="md-source__icon md-icon"> <svg xmlns=http://www.w3.org/2000/svg viewbox="0 0 448 512"><!-- Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg> </div> <div class=md-source__repository> Cloud Pak Deployer </div> </a> </div> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../.. class=md-nav__link> <span class=md-ellipsis> Home </span> </a> </li> <li class=md-nav__item> <a href=../../../01-introduction/current-state-and-support/ class=md-nav__link> <span class=md-ellipsis> Current state </span> </a> </li> <li class=md-nav__item> <a href=../../../05-install/install/ class=md-nav__link> <span class=md-ellipsis> Installing Cloud Pak Deployer </span> </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_4> <label class=md-nav__link for=__nav_4 id=__nav_4_label tabindex=0> <span class=md-ellipsis> Using Cloud Pak Deployer </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_4_label aria-expanded=false> <label class=md-nav__title for=__nav_4> <span class="md-nav__icon md-icon"></span> Using Cloud Pak Deployer </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../1-overview/overview/ class=md-nav__link> <span class=md-ellipsis> Overview </span> </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_4_2> <label class=md-nav__link for=__nav_4_2 id=__nav_4_2_label tabindex=0> <span class=md-ellipsis> Run </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=2 aria-labelledby=__nav_4_2_label aria-expanded=false> <label class=md-nav__title for=__nav_4_2> <span class="md-nav__icon md-icon"></span> Run </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../run/ class=md-nav__link> <span class=md-ellipsis> Running Cloud Pak Deployer </span> </a> </li> <li class=md-nav__item> <a href=../existing-openshift/ class=md-nav__link> <span class=md-ellipsis> Existing OpenShift </span> </a> </li> <li class=md-nav__item> <a href=../existing-openshift-console/ class=md-nav__link> <span class=md-ellipsis> Existing OpenShift using Console </span> </a> </li> <li class=md-nav__item> <a href=../existing-openshift-wizard/ class=md-nav__link> <span class=md-ellipsis> Existing OpenShift using Deployer Wizard </span> </a> </li> <li class=md-nav__item> <a href=../ibm-cloud/ class=md-nav__link> <span class=md-ellipsis> IBM Cloud </span> </a> </li> <li class=md-nav__item> <a href=../ibm-fusion/ class=md-nav__link> <span class=md-ellipsis> IBM Fusion </span> </a> </li> <li class=md-nav__item> <a href=../aws-rosa/ class=md-nav__link> <span class=md-ellipsis> AWS ROSA </span> </a> </li> <li class=md-nav__item> <a href=../aws-self-managed/ class=md-nav__link> <span class=md-ellipsis> AWS Self-managed </span> </a> </li> <li class=md-nav__item> <a href=../azure-aro/ class=md-nav__link> <span class=md-ellipsis> Azure ARO </span> </a> </li> <li class=md-nav__item> <a href=../azure-self-managed/ class=md-nav__link> <span class=md-ellipsis> Azure Self-managed </span> </a> </li> <li class=md-nav__item> <a href=../vsphere/ class=md-nav__link> <span class=md-ellipsis> vSphere </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_4_3> <label class=md-nav__link for=__nav_4_3 id=__nav_4_3_label tabindex=0> <span class=md-ellipsis> Post-run </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=2 aria-labelledby=__nav_4_3_label aria-expanded=false> <label class=md-nav__title for=__nav_4_3> <span class="md-nav__icon md-icon"></span> Post-run </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../5-post-run/post-run/ class=md-nav__link> <span class=md-ellipsis> Post-run changes </span> </a> </li> <li class=md-nav__item> <a href=../../7-command/command/ class=md-nav__link> <span class=md-ellipsis> Running commands </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_4_4> <label class=md-nav__link for=__nav_4_4 id=__nav_4_4_label tabindex=0> <span class=md-ellipsis> Destroy </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=2 aria-labelledby=__nav_4_4_label aria-expanded=false> <label class=md-nav__title for=__nav_4_4> <span class="md-nav__icon md-icon"></span> Destroy </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../9-destroy/destroy/ class=md-nav__link> <span class=md-ellipsis> Destroy cluster </span> </a> </li> </ul> </nav> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5> <label class=md-nav__link for=__nav_5 id=__nav_5_label tabindex=0> <span class=md-ellipsis> Reference </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_5_label aria-expanded=false> <label class=md-nav__title for=__nav_5> <span class="md-nav__icon md-icon"></span> Reference </label> <ul class=md-nav__list data-md-scrollfix> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5_1> <label class=md-nav__link for=__nav_5_1 id=__nav_5_1_label tabindex=0> <span class=md-ellipsis> Configuration </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=2 aria-labelledby=__nav_5_1_label aria-expanded=false> <label class=md-nav__title for=__nav_5_1> <span class="md-nav__icon md-icon"></span> Configuration </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/topologies/ class=md-nav__link> <span class=md-ellipsis> Topologies </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cpd-objects/ class=md-nav__link> <span class=md-ellipsis> Objects overview </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cpd-global-config/ class=md-nav__link> <span class=md-ellipsis> Global config </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/vault/ class=md-nav__link> <span class=md-ellipsis> Vault </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/infrastructure/ class=md-nav__link> <span class=md-ellipsis> Infrastructure </span> </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5_1_6> <label class=md-nav__link for=__nav_5_1_6 id=__nav_5_1_6_label tabindex=0> <span class=md-ellipsis> OpenShift </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=3 aria-labelledby=__nav_5_1_6_label aria-expanded=false> <label class=md-nav__title for=__nav_5_1_6> <span class="md-nav__icon md-icon"></span> OpenShift </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/openshift/ class=md-nav__link> <span class=md-ellipsis> OpenShift </span> </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5_1_6_2> <label class=md-nav__link for=__nav_5_1_6_2 id=__nav_5_1_6_2_label tabindex=0> <span class=md-ellipsis> Identity and Access Management </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=4 aria-labelledby=__nav_5_1_6_2_label aria-expanded=false> <label class=md-nav__title for=__nav_5_1_6_2> <span class="md-nav__icon md-icon"></span> Identity and Access Management </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/redhat-sso/ class=md-nav__link> <span class=md-ellipsis> Red Hat SSO </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/ldap/ class=md-nav__link> <span class=md-ellipsis> LDAP </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/demo-openldap/ class=md-nav__link> <span class=md-ellipsis> Demo OpenLDAP </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/ibm-storage/ class=md-nav__link> <span class=md-ellipsis> IBM Storage </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> <span class=md-ellipsis> Monitoring </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/logging-auditing/ class=md-nav__link> <span class=md-ellipsis> Logging and auditing </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/dns/ class=md-nav__link> <span class=md-ellipsis> DNS </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cloud-pak/ class=md-nav__link> <span class=md-ellipsis> Cloud Paks </span> </a> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5_1_8> <label class=md-nav__link for=__nav_5_1_8 id=__nav_5_1_8_label tabindex=0> <span class=md-ellipsis> Cloud Pak for Data </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=3 aria-labelledby=__nav_5_1_8_label aria-expanded=false> <label class=md-nav__title for=__nav_5_1_8> <span class="md-nav__icon md-icon"></span> Cloud Pak for Data </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-cartridges/ class=md-nav__link> <span class=md-ellipsis> Cartridges </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-instances/ class=md-nav__link> <span class=md-ellipsis> Instances </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-connections/ class=md-nav__link> <span class=md-ellipsis> Platform connections </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-access-control/ class=md-nav__link> <span class=md-ellipsis> Access Control </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4d-assets/ class=md-nav__link> <span class=md-ellipsis> Assets </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/monitoring/ class=md-nav__link> <span class=md-ellipsis> Monitoring </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/logging-auditing/ class=md-nav__link> <span class=md-ellipsis> Logging and auditing </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/cp4ba/ class=md-nav__link> <span class=md-ellipsis> Cloud Pak for Business Automation </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/configuration/private-registry/ class=md-nav__link> <span class=md-ellipsis> Private registries </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_5_2> <label class=md-nav__link for=__nav_5_2 id=__nav_5_2_label tabindex=0> <span class=md-ellipsis> Process </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=2 aria-labelledby=__nav_5_2_label aria-expanded=false> <label class=md-nav__title for=__nav_5_2> <span class="md-nav__icon md-icon"></span> Process </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../30-reference/process/overview/ class=md-nav__link> <span class=md-ellipsis> Overview </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/validate/ class=md-nav__link> <span class=md-ellipsis> Validate </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/prepare/ class=md-nav__link> <span class=md-ellipsis> Prepare </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/provision-infra/ class=md-nav__link> <span class=md-ellipsis> Provision infra </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/configure-infra/ class=md-nav__link> <span class=md-ellipsis> Configure infra </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/install-cloud-pak/ class=md-nav__link> <span class=md-ellipsis> Install Cloud Paks </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/configure-cloud-pak/ class=md-nav__link> <span class=md-ellipsis> Configure Cloud Paks </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/deploy-assets/ class=md-nav__link> <span class=md-ellipsis> Deploy assets </span> </a> </li> <li class=md-nav__item> <a href=../../../30-reference/process/smoke-tests/ class=md-nav__link> <span class=md-ellipsis> Smoke tests </span> </a> </li> </ul> </nav> </li> <li class=md-nav__item> <a href=../../../30-reference/timings/ class=md-nav__link> <span class=md-ellipsis> Timings </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_6> <label class=md-nav__link for=__nav_6 id=__nav_6_label tabindex=0> <span class=md-ellipsis> Troubleshooting </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_6_label aria-expanded=false> <label class=md-nav__title for=__nav_6> <span class="md-nav__icon md-icon"></span> Troubleshooting </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../40-troubleshooting/cp4d-uninstall/ class=md-nav__link> <span class=md-ellipsis> Cloud Pak for Data uninstall </span> </a> </li> <li class=md-nav__item> <a href=../../../40-troubleshooting/ibm-cloud-access-nfs-server/ class=md-nav__link> <span class=md-ellipsis> Access NFS server on IBM Cloud </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_7> <label class=md-nav__link for=__nav_7 id=__nav_7_label tabindex=0> <span class=md-ellipsis> Advanced </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_7_label aria-expanded=false> <label class=md-nav__title for=__nav_7> <span class="md-nav__icon md-icon"></span> Advanced </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../50-advanced/build-image-and-run-deployer-on-openshift/ class=md-nav__link> <span class=md-ellipsis> Build image and run deployer on OpenShift </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/private-registry-and-air-gapped/ class=md-nav__link> <span class=md-ellipsis> Private registry and air-gapped </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/alternative-repo-reg/ class=md-nav__link> <span class=md-ellipsis> Using alternative CASE repositories and registries </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/advanced-configuration/ class=md-nav__link> <span class=md-ellipsis> Advanced configuration </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/locations-to-whitelist/ class=md-nav__link> <span class=md-ellipsis> Locations to whitelist </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/apply-node-settings-non-mco/ class=md-nav__link> <span class=md-ellipsis> Apply node settings to non-MCO clusters </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/cp4d-pre-release/ class=md-nav__link> <span class=md-ellipsis> Installing pre-releases of Cloud Pak for DAta </span> </a> </li> <li class=md-nav__item> <a href=../../../50-advanced/gitops/ class=md-nav__link> <span class=md-ellipsis> GitOps </span> </a> </li> </ul> </nav> </li> <li class="md-nav__item md-nav__item--nested"> <input class="md-nav__toggle md-toggle " type=checkbox id=__nav_8> <label class=md-nav__link for=__nav_8 id=__nav_8_label tabindex=0> <span class=md-ellipsis> Development </span> <span class="md-nav__icon md-icon"></span> </label> <nav class=md-nav data-md-level=1 aria-labelledby=__nav_8_label aria-expanded=false> <label class=md-nav__title for=__nav_8> <span class="md-nav__icon md-icon"></span> Development </label> <ul class=md-nav__list data-md-scrollfix> <li class=md-nav__item> <a href=../../../80-development/deployer-development-setup/ class=md-nav__link> <span class=md-ellipsis> Deployer development setup </span> </a> </li> <li class=md-nav__item> <a href=../../../80-development/doc-development-setup/ class=md-nav__link> <span class=md-ellipsis> Deployer documentation development setup </span> </a> </li> <li class=md-nav__item> <a href=../../../80-development/doc-guidelines/ class=md-nav__link> <span class=md-ellipsis> Deployer documentation guidelines </span> </a> </li> </ul> </nav> </li> </ul> </nav> </div> </div> </div> <div class="md-sidebar md-sidebar--secondary" data-md-component=sidebar data-md-type=toc> <div class=md-sidebar__scrollwrap> <div class=md-sidebar__inner> <nav class="md-nav md-nav--secondary" aria-label="Table of contents"> </nav> </div> </div> </div> <div class=md-content data-md-component=content> <article class="md-content__inner md-typeset"> <h1>Existing openshift software hub keycloak</h1> <div class="copy highlight"><pre><span></span><code><span class=nn>---</span>
+<span class=nt>apiVersion</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">v1</span>
+<span class=nt>kind</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">ConfigMap</span>
+<span class=nt>metadata</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>name</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer-config</span>
+<span class=w>  </span><span class=nt>namespace</span><span class=p>:</span><span class=w> </span><span class="l l-Scalar l-Scalar-Plain">cloud-pak-deployer</span>
+<span class=nt>data</span><span class=p>:</span>
+<span class=w>  </span><span class=nt>cpd-config.yaml</span><span class=p>:</span><span class=w> </span><span class="p p-Indicator">|</span>
+<span class=w>    </span><span class=no>global_config:</span>
+<span class=w>      </span><span class=no>environment_name: sample</span>
+<span class=w>      </span><span class=no>cloud_platform: existing-ocp</span>
+<span class=w>      </span><span class=no>env_id: pluto-01</span>
+<span class=w>      </span><span class=no>confirm_destroy: False</span>
+<span class=w>      </span><span class=no>optimize_deploy: True</span>
+<span class=w>    </span>
+<span class=w>    </span><span class=no>openshift:</span>
+<span class=w>    </span><span class=no>- name: &quot;{{ env_id }}&quot;</span>
+<span class=w>      </span><span class=no>ocp_version: detect</span>
+<span class=w>      </span><span class=no>cluster_name: &quot;{{ env_id }}&quot;</span>
+<span class=w>      </span><span class=no>domain_name: example.com</span>
+<span class=w>      </span><span class=no>mcg:</span>
+<span class=w>        </span><span class=no>install: True</span>
+<span class=w>        </span><span class=no>storage_type: storage-class</span>
+<span class=w>        </span><span class=no>storage_class: managed-nfs-storage</span>
+<span class=w>      </span><span class=no>gpu:</span>
+<span class=w>        </span><span class=no>install: auto</span>
+<span class=w>      </span><span class=no>openshift_ai:</span>
+<span class=w>        </span><span class=no>install: auto</span>
+<span class=w>        </span><span class=no>channel: auto</span>
+<span class=w>      </span><span class=no>openshift_storage:</span>
+<span class=w>      </span><span class=no>- storage_name: auto-storage</span>
+<span class=w>        </span><span class=no>storage_type: auto</span>
+
+
+<span class=w>    </span><span class=no>openshift_redhat_sso:</span>
+<span class=w>    </span><span class=no>- openshift_cluster_name: &quot;{{ env_id }}&quot;</span>
+<span class=w>      </span><span class=no>keycloak_name: ibm-keycloak</span>
+<span class=w>      </span><span class=no>groups:</span>
+<span class=w>      </span><span class=no>- name: kc-cp4d-admins</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>      </span><span class=no>- name: kc-cp4d-data-engineers</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>      </span><span class=no>- name: kc-cp4d-data-scientists</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>      </span><span class=no>- name: kc-cp4d-monitors</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>      </span><span class=no>users:</span>
+<span class=w>      </span><span class=no>- username: ttoussaint</span>
+<span class=w>        </span><span class=no>firstName: Tara</span>
+<span class=w>        </span><span class=no>lastName: Toussaint</span>
+<span class=w>        </span><span class=no>email: ttoussaint@cp.internal</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>        </span><span class=no>groups:</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-admins</span>
+<span class=w>      </span><span class=no>- username: rramones</span>
+<span class=w>        </span><span class=no>firstName: Rosa</span>
+<span class=w>        </span><span class=no>lastName: Ramones</span>
+<span class=w>        </span><span class=no>email: rramones@cp.internal</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>        </span><span class=no>groups:</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-data-engineers</span>
+<span class=w>      </span><span class=no>- username: ssharpe</span>
+<span class=w>        </span><span class=no>firstName: Shelly</span>
+<span class=w>        </span><span class=no>lastName: Sharpe</span>
+<span class=w>        </span><span class=no>email: ssharpe@cp.internal</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>        </span><span class=no>groups:</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-data-engineers</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-data-scientists    </span>
+<span class=w>      </span><span class=no>- username: pprimo</span>
+<span class=w>        </span><span class=no>firstName: Paco</span>
+<span class=w>        </span><span class=no>lastName: Primo</span>
+<span class=w>        </span><span class=no>email: pprimo@cp.internal</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>        </span><span class=no>groups:</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-data-scientists</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-monitors    </span>
+<span class=w>      </span><span class=no>- username: rroller</span>
+<span class=w>        </span><span class=no>firstName: Rico</span>
+<span class=w>        </span><span class=no>lastName: Roller</span>
+<span class=w>        </span><span class=no>email: rroller@cp.internal</span>
+<span class=w>        </span><span class=no># password: specific_password_for_the_user</span>
+<span class=w>        </span><span class=no>state: present</span>
+<span class=w>        </span><span class=no>groups:</span>
+<span class=w>        </span><span class=no>- name: kc-cp4d-data-scientists    </span>
+<span class=w>    </span>
+<span class=w>    </span><span class=no>zen_role:</span>
+<span class=w>    </span><span class=no>- name: cp4d-monitoring-role</span>
+<span class=w>      </span><span class=no>description: Cloud Pak for Data monitoring role</span>
+<span class=w>      </span><span class=no>state: installed</span>
+<span class=w>      </span><span class=no>permissions:</span>
+<span class=w>      </span><span class=no>- monitor_platform</span>
+<span class=w>    </span>
+<span class=w>    </span><span class=no>zen_access_control:</span>
+<span class=w>    </span><span class=no>- project: cpd</span>
+<span class=w>      </span><span class=no>openshift_cluster_name: &quot;{{ env_id }}&quot;</span>
+<span class=w>      </span><span class=no>keycloak_name: ibm-keycloak</span>
+<span class=w>      </span><span class=no>user_groups:</span>
+<span class=w>      </span><span class=no>- name: cp4d-admins</span>
+<span class=w>        </span><span class=no>description: Cloud Pak for Data Administrators</span>
+<span class=w>        </span><span class=no>roles:</span>
+<span class=w>        </span><span class=no>- Administrator</span>
+<span class=w>        </span><span class=no>keycloak_groups:</span>
+<span class=w>        </span><span class=no>- kc-cp4d-admins</span>
+<span class=w>      </span><span class=no>- name: cp4d-data-engineers</span>
+<span class=w>        </span><span class=no>description: Cloud Pak for Data Data Engineers</span>
+<span class=w>        </span><span class=no>roles:</span>
+<span class=w>        </span><span class=no>- User</span>
+<span class=w>        </span><span class=no>keycloak_groups:</span>
+<span class=w>        </span><span class=no>- kc-cp4d-data-engineers</span>
+<span class=w>      </span><span class=no>- name: cp4d-data-scientists</span>
+<span class=w>        </span><span class=no>description: Cloud Pak for Data Data Scientists</span>
+<span class=w>        </span><span class=no>roles:</span>
+<span class=w>        </span><span class=no>- User</span>
+<span class=w>        </span><span class=no>keycloak_groups:</span>
+<span class=w>        </span><span class=no>- kc-cp4d-data-scientists</span>
+<span class=w>      </span><span class=no>- name: cp4d-monitors</span>
+<span class=w>        </span><span class=no>description: Cloud Pak for Data Monitoring</span>
+<span class=w>        </span><span class=no>roles:</span>
+<span class=w>        </span><span class=no>- cp4d-monitoring-role</span>
+<span class=w>        </span><span class=no>keycloak_groups:</span>
+<span class=w>        </span><span class=no>- kc-cp4d-monitors</span>
+
+<span class=w>    </span><span class=no>cp4d:</span>
+<span class=w>    </span><span class=no>- project: cpd</span>
+<span class=w>      </span><span class=no>openshift_cluster_name: &quot;{{ env_id }}&quot;</span>
+<span class=w>      </span><span class=no>cp4d_version: latest</span>
+<span class=w>      </span><span class=no>cp4d_entitlement: </span>
+<span class=w>      </span><span class=no>- cpd-enterprise</span>
+<span class=w>      </span><span class=no># - cpd-standard</span>
+<span class=w>      </span><span class=no># - cognos-analytics</span>
+<span class=w>      </span><span class=no># - data-product-hub</span>
+<span class=w>      </span><span class=no># - datastage</span>
+<span class=w>      </span><span class=no># - data-integration-unstructured-data</span>
+<span class=w>      </span><span class=no># - data-lineage</span>
+<span class=w>      </span><span class=no># - ikc-premium</span>
+<span class=w>      </span><span class=no># - ikc-standard</span>
+<span class=w>      </span><span class=no># - openpages</span>
+<span class=w>      </span><span class=no># - planning-analytics</span>
+<span class=w>      </span><span class=no># - product-master</span>
+<span class=w>      </span><span class=no># - speech-to-text</span>
+<span class=w>      </span><span class=no># - text-to-speech</span>
+<span class=w>      </span><span class=no># - watson-assistant</span>
+<span class=w>      </span><span class=no># - watson-discovery</span>
+<span class=w>      </span><span class=no># - watsonx-ai</span>
+<span class=w>      </span><span class=no># - watsonx-code-assistant-ansible</span>
+<span class=w>      </span><span class=no># - watsonx-code-assistant-z</span>
+<span class=w>      </span><span class=no># - watsonx-data</span>
+<span class=w>      </span><span class=no># - watsonx-gov-mm</span>
+<span class=w>      </span><span class=no># - watsonx-gov-rc</span>
+<span class=w>      </span><span class=no># - watsonx-orchestrate</span>
+<span class=w>      </span><span class=no>cp4d_production_license: True</span>
+<span class=w>      </span><span class=no>accept_licenses: True</span>
+<span class=w>      </span><span class=no>db2u_limited_privileges: False</span>
+<span class=w>      </span><span class=no>use_fs_iam: True</span>
+<span class=w>      </span><span class=no>operators_project: cpd-operators</span>
+<span class=w>      </span><span class=no>ibm_cert_manager: False</span>
+<span class=w>      </span><span class=no>state: installed</span>
+<span class=w>      </span><span class=no>cartridges:</span>
+<span class=w>      </span><span class=no>- name: cp-foundation</span>
+<span class=w>        </span><span class=no>scale: level_1</span>
+<span class=w>        </span><span class=no>license_service:</span>
+<span class=w>          </span><span class=no>threads_per_core: 2</span>
+<span class=w>    </span><span class=no>  </span>
+<span class=w>      </span><span class=no>- name: lite</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: scheduler </span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span><span class=no>    </span>
+<span class=w>    </span><span class=no>#</span>
+<span class=w>    </span><span class=no># All tested cartridges. To install, change the &quot;state&quot; property to &quot;installed&quot;. To uninstall, change the state</span>
+<span class=w>    </span><span class=no># to &quot;removed&quot; or comment out the entire cartridge. Make sure that the &quot;-&quot; and properties are aligned with the lite</span>
+<span class=w>    </span><span class=no># cartridge; the &quot;-&quot; is at position 3 and the property starts at position 5.</span>
+<span class=w>    </span><span class=no>#</span>
+<span class=w>    </span><span class=no># If a cartridge has dependencies and you want to install it, you must ensure that the dependent cartridge is also</span>
+<span class=w>    </span><span class=no># installed.</span>
+<span class=w>    </span><span class=no>#</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: analyticsengine </span>
+<span class=w>        </span><span class=no>description: Analytics Engine Powered by Apache Spark </span>
+<span class=w>        </span><span class=no>size: small </span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>sparkAdvEnabled: true</span>
+<span class=w>          </span><span class=no>jobAutoDeleteEnabled: true</span>
+<span class=w>          </span><span class=no>kernelCullTime: 30</span>
+<span class=w>          </span><span class=no>imagePullParallelism: &quot;40&quot;</span>
+<span class=w>          </span><span class=no>imagePullCompletions: &quot;20&quot;</span>
+<span class=w>          </span><span class=no>kernelCleanupSchedule: &quot;*/30 * * * *&quot;</span>
+<span class=w>          </span><span class=no>jobCleanupSchedule: &quot;*/30 * * * *&quot;</span>
+<span class=w>          </span><span class=no>skipSelinuxRelabeling: false</span>
+<span class=w>          </span><span class=no>mountCustomizationsFromCchome: false</span>
+<span class=w>          </span><span class=no>maxDriverCpuCores: 5</span>
+<span class=w>          </span><span class=no>maxExecutorCpuCores: 5</span>
+<span class=w>          </span><span class=no>maxDriveMemory: &quot;50g&quot;</span>
+<span class=w>          </span><span class=no>maxExecutorMemory: &quot;50g&quot;</span>
+<span class=w>          </span><span class=no>maxNumWorkers: 50</span>
+<span class=w>          </span><span class=no>localDirScaleFactor: 10</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: bigsql</span>
+<span class=w>        </span><span class=no>description: Db2 Big SQL</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: ca</span>
+<span class=w>        </span><span class=no>description: Cognos Analytics</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: ca-instance</span>
+<span class=w>          </span><span class=no>metastore_ref: ca-metastore</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dashboard</span>
+<span class=w>        </span><span class=no>description: Cognos Dashboards</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: datagate</span>
+<span class=w>        </span><span class=no>description: Db2 Data Gate</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: datalineage</span>
+<span class=w>        </span><span class=no>description: IBM MANTA Data Lineage</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dataproduct</span>
+<span class=w>        </span><span class=no>description: Data Product Hub</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span><span class=no>    </span>
+<span class=w>      </span><span class=no>- name: datastage-ent</span>
+<span class=w>        </span><span class=no>description: DataStage Enterprise</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: datastage-ent-plus</span>
+<span class=w>        </span><span class=no>description: DataStage Enterprise Plus</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no># instances:</span>
+<span class=w>        </span><span class=no>#   - name: ds-instance</span>
+<span class=w>        </span><span class=no>#     # Optional settings</span>
+<span class=w>        </span><span class=no>#     description: &quot;datastage ds-instance&quot;</span>
+<span class=w>        </span><span class=no>#     size: medium</span>
+<span class=w>        </span><span class=no>#     storage_class: efs-nfs-client</span>
+<span class=w>        </span><span class=no>#     storage_size_gb: 60</span>
+<span class=w>        </span><span class=no>#     # Custom Scale options</span>
+<span class=w>        </span><span class=no>#     scale_px_runtime:</span>
+<span class=w>        </span><span class=no>#       replicas: 2</span>
+<span class=w>        </span><span class=no>#       cpu_request: 500m</span>
+<span class=w>        </span><span class=no>#       cpu_limit: 2</span>
+<span class=w>        </span><span class=no>#       memory_request: 2Gi</span>
+<span class=w>        </span><span class=no>#       memory_limit: 4Gi</span>
+<span class=w>        </span><span class=no>#     scale_px_compute:</span>
+<span class=w>        </span><span class=no>#       replicas: 2</span>
+<span class=w>        </span><span class=no>#       cpu_request: 1</span>
+<span class=w>        </span><span class=no>#       cpu_limit: 3</span>
+<span class=w>        </span><span class=no>#       memory_request: 4Gi</span>
+<span class=w>        </span><span class=no>#       memory_limit: 12Gi    </span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: db2</span>
+<span class=w>        </span><span class=no>description: Db2 OLTP</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: ca-metastore</span>
+<span class=w>          </span><span class=no>metadata_size_gb: 20</span>
+<span class=w>          </span><span class=no>data_size_gb: 20</span>
+<span class=w>          </span><span class=no>backup_size_gb: 20  </span>
+<span class=w>          </span><span class=no>transactionlog_size_gb: 20</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: db2wh</span>
+<span class=w>        </span><span class=no>description: Db2 Warehouse</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dmc</span>
+<span class=w>        </span><span class=no>description: Db2 Data Management Console</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: data-management-console</span>
+<span class=w>          </span><span class=no>description: Data Management Console</span>
+<span class=w>          </span><span class=no>size: medium</span>
+<span class=w>          </span><span class=no>storage_size_gb: 50</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dods</span>
+<span class=w>        </span><span class=no>description: Decision Optimization</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dp</span>
+<span class=w>        </span><span class=no>description: Data Privacy</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dpra</span>
+<span class=w>        </span><span class=no>description: Data Privacy Risk Assessment</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: dv</span>
+<span class=w>        </span><span class=no>description: Data Virtualization</span>
+<span class=w>        </span><span class=no>size: small </span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: data-virtualization</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no># Please note that for EDB Postgress, a secret edb-postgres-license-key must be created in the vault</span>
+<span class=w>      </span><span class=no># before deploying</span>
+<span class=w>      </span><span class=no>- name: edb_cp4d</span>
+<span class=w>        </span><span class=no>description: EDB Postgres</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: instance1</span>
+<span class=w>          </span><span class=no>version: &quot;15.4&quot;</span>
+<span class=w>          </span><span class=no>#type: Standard</span>
+<span class=w>          </span><span class=no>#members: 1</span>
+<span class=w>          </span><span class=no>#size_gb: 50</span>
+<span class=w>          </span><span class=no>#resource_request_cpu: 1</span>
+<span class=w>          </span><span class=no>#resource_request_memory: 4Gi</span>
+<span class=w>          </span><span class=no>#resource_limit_cpu: 1</span>
+<span class=w>          </span><span class=no>#resource_limit_memory: 4Gi</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: factsheet</span>
+<span class=w>        </span><span class=no>description: AI Factsheets</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: hee</span>
+<span class=w>        </span><span class=no>description: Execution Engine for Apache Hadoop</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: mantaflow</span>
+<span class=w>        </span><span class=no>description: MANTA Automated Lineage</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: match360</span>
+<span class=w>        </span><span class=no>description: IBM Match 360</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>wkc_enabled: true</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: mongodb</span>
+<span class=w>        </span><span class=no>description: MongoDB for Cloud Pak for Data</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span><span class=no>    </span>
+<span class=w>      </span><span class=no>- name: openpages</span>
+<span class=w>        </span><span class=no>description: OpenPages</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: planning-analytics</span>
+<span class=w>        </span><span class=no>description: Planning Analytics</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: pa-instance</span>
+<span class=w>          </span><span class=no>size: small</span>
+<span class=w>          </span><span class=no>mysql_size_gb: 20</span>
+<span class=w>          </span><span class=no>couchdb_size_gb: 20</span>
+<span class=w>          </span><span class=no>mongo_size_gb: 20</span>
+<span class=w>          </span><span class=no>redis_size_gb: 20</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: replication</span>
+<span class=w>        </span><span class=no>description: Data Replication</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>replication_license_type: IDRC    </span>
+<span class=w>    </span><span class=no>      </span>
+<span class=w>      </span><span class=no>- name: rstudio</span>
+<span class=w>        </span><span class=no>description: RStudio Server with R 3.6</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: spss</span>
+<span class=w>        </span><span class=no>description: SPSS Modeler</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: streamsets</span>
+<span class=w>        </span><span class=no>description: IBM StreamSets</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: syntheticdata</span>
+<span class=w>        </span><span class=no>description: Synthetic Data Generator</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: voice-gateway</span>
+<span class=w>        </span><span class=no>description: Voice Gateway</span>
+<span class=w>        </span><span class=no>replicas: 1</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no># In case watsonx Orchestrate is installed, Watson Assistant should not be explicitly set to installed</span>
+<span class=w>      </span><span class=no>- name: watson-assistant</span>
+<span class=w>        </span><span class=no>description: Watson Assistant</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no># noobaa_account_secret: noobaa-admin</span>
+<span class=w>        </span><span class=no># noobaa_cert_secret: noobaa-s3-serving-cert</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no># instances:</span>
+<span class=w>        </span><span class=no># - name: wa-instance</span>
+<span class=w>        </span><span class=no>#   description: &quot;Watson Assistant instance&quot;</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>size: Production</span>
+<span class=w>          </span><span class=no>bigpv: false</span>
+<span class=w>          </span><span class=no>analytics: true</span>
+<span class=w>          </span><span class=no>watsonxAiType: embedded</span>
+<span class=w>          </span><span class=no>syomModels: []</span>
+<span class=w>          </span><span class=no>ootbModels: []</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watson-discovery</span>
+<span class=w>        </span><span class=no>description: Watson Discovery</span>
+<span class=w>        </span><span class=no># noobaa_account_secret: noobaa-admin</span>
+<span class=w>        </span><span class=no># noobaa_cert_secret: noobaa-s3-serving-cert</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: wd-instance</span>
+<span class=w>          </span><span class=no>description: &quot;Watson Discovery instance&quot;</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>discovery_deployment_type: Production</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watson-openscale</span>
+<span class=w>        </span><span class=no>description: Watson OpenScale</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watson-speech</span>
+<span class=w>        </span><span class=no>description: Watson Speech (STT and TTS)</span>
+<span class=w>        </span><span class=no>stt_size: xsmall</span>
+<span class=w>        </span><span class=no>tts_size: xsmall</span>
+<span class=w>        </span><span class=no># noobaa_account_secret: noobaa-admin</span>
+<span class=w>        </span><span class=no># noobaa_cert_secret: noobaa-s3-serving-cert</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>tags:</span>
+<span class=w>            </span><span class=no>sttRuntime: true</span>
+<span class=w>            </span><span class=no>sttAsync: false</span>
+<span class=w>            </span><span class=no>sttCustomization: false</span>
+<span class=w>            </span><span class=no>ttsRuntime: true</span>
+<span class=w>            </span><span class=no>ttsCustomization: false</span>
+<span class=w>          </span><span class=no>scaleConfig:</span>
+<span class=w>            </span><span class=no>stt:</span>
+<span class=w>              </span><span class=no>size: xsmall</span>
+<span class=w>            </span><span class=no>tts:</span>
+<span class=w>              </span><span class=no>size: xsmall</span>
+<span class=w>          </span><span class=no>sttModels:</span>
+<span class=w>          </span><span class=no>- enUsBroadbandModel</span>
+<span class=w>          </span><span class=no>- enUsNarrowbandModel</span>
+<span class=w>          </span><span class=no>- enUsShortFormNarrowbandModel</span>
+<span class=w>          </span><span class=no>- enUsTelephony</span>
+<span class=w>          </span><span class=no>- enUsMultimedia</span>
+<span class=w>          </span><span class=no>ttsVoices:</span>
+<span class=w>          </span><span class=no>- enUSAllisonV3Voice</span>
+<span class=w>          </span><span class=no>- enUSLisaV3Voice</span>
+<span class=w>          </span><span class=no>- enUSMichaelV3Voice</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_ai</span>
+<span class=w>        </span><span class=no>description: watsonx.ai</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>tuning_disabled: true</span>
+<span class=w>          </span><span class=no>liteInstall: false</span>
+<span class=w>        </span><span class=no>models:</span>
+<span class=w>        </span><span class=no>- model_id: allam-1-13b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>          </span><span class=no># model_install_parameters can be used for sharding and node pinning according to</span>
+<span class=w>          </span><span class=no># instructions at https://www.ibm.com/docs/en/software-hub/5.3.x?topic=setup-adding-foundation-models</span>
+<span class=w>          </span><span class=no>#model_install_parameters:</span>
+<span class=w>          </span><span class=no>#  shards: 2</span>
+<span class=w>          </span><span class=no>#  nodeSelector:</span>
+<span class=w>          </span><span class=no>#    kubernetes.io/hostname: hostname</span>
+<span class=w>        </span><span class=no>- model_id: codellama-codellama-34b-instruct-hf</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: codestral-2501</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: codestral-2508</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: codestral-22b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: devstral-medium-2507</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: google-flan-t5-xl</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: gpt-oss-20b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: gpt-oss-120b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-4-h-micro</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-4-h-tiny</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-4-h-small</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-granite-13b-instruct-v2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-3-2-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-3-3-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-3-2b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-3-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-guardian-3-2b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-guardian-3-8b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-guardian-3-2-5b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-3b-code-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-8b-code-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-20b-code-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-20b-code-base-schema-linking</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-20b-code-base-sql-gen</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-34b-code-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-docling-258M</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-vision-3-2-2b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-vision-3-3-2b</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-defense-3-3-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-defense-4-0-micro</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: core42-jais-13b-chat</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-2-1b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-4-maverick-17b-128e-instruct-fp8</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-4-maverick-17b-128e-instruct-int4</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-4-scout-17b-16e-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-4-scout-17b-16e-instruct-int4</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-3-70b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-2-1b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-2-3b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-2-11b-vision-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-2-90b-vision-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-guard-3-11b-vision</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-1-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: llama-3-1-70b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ministral-8b-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mistral-small-3-2-24b-instruct-2506</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mistral-small-3-1-24b-instruct-2503</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mistral-medium-2505</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mistral-medium-2508</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: mistral-large-instruct-2411</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: pixtral-large-instruct</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: voxtral-small-2507</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no># Embedding models</span>
+<span class=w>        </span><span class=no>- model_id: all-minilm-l6-v2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: all-minilm-l12-v2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-embedding-107m-multilingual</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-embedding-278m-multilingual</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: granite-embedding-english-reranker-r2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: multilingual-e5-large</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-slate-30m-english-rtrvr</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ibm-slate-125m-english-rtrvr</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>- model_id: ms-marco-minilm-l-12-v2</span>
+<span class=w>          </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_data</span>
+<span class=w>        </span><span class=no>description: watsonx.data</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_dataintegration</span>
+<span class=w>        </span><span class=no>description: watsonx.data integration</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableBatchBulkETL: true</span>
+<span class=w>          </span><span class=no>enableRealtimeStreaming: true</span>
+<span class=w>          </span><span class=no>enableDataObservability: true</span>
+<span class=w>          </span><span class=no>enableUnstructuredDataIntegration: true</span>
+<span class=w>          </span><span class=no>enableReplication: true</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_dataintelligence</span>
+<span class=w>        </span><span class=no>description: watsonx.data intelligence</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableAISearch: false</span>
+<span class=w>          </span><span class=no>enableContentLinkingForTextToSql: false</span>
+<span class=w>          </span><span class=no>enableDataGovernanceCatalog: true</span>
+<span class=w>          </span><span class=no>enableDataLineage: true</span>
+<span class=w>          </span><span class=no>enableDataProduct: true</span>
+<span class=w>          </span><span class=no>enableDataQuality: false</span>
+<span class=w>          </span><span class=no>enableGenerativeAICapabilities: true</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: true</span>
+<span class=w>          </span><span class=no>enableModelsOn: cpu</span>
+<span class=w>          </span><span class=no>enableSemanticEmbedding: false</span>
+<span class=w>          </span><span class=no>enableSemanticEnrichment: true</span>
+<span class=w>          </span><span class=no>enableTextToSql: false</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_data_premium</span>
+<span class=w>        </span><span class=no>description: watsonx.data Premium</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_governance</span>
+<span class=w>        </span><span class=no>description: watsonx.governance</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>installType: all</span>
+<span class=w>          </span><span class=no>enableFactsheet: true</span>
+<span class=w>          </span><span class=no>enableOpenpages: true</span>
+<span class=w>          </span><span class=no>enableOpenscale: true</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: watsonx_orchestrate</span>
+<span class=w>        </span><span class=no>description: watsonx.orchestrate</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>instances:</span>
+<span class=w>        </span><span class=no>- name: wxo-instance</span>
+<span class=w>          </span><span class=no>description: &quot;watsonx Orchestrate instance&quot;</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>installMode: &quot;agentic&quot;  </span>
+<span class=w>          </span><span class=no>watsonxAI:</span>
+<span class=w>            </span><span class=no>watsonxaiifm: true</span>
+<span class=w>            </span><span class=no>syomModels: []</span>
+<span class=w>            </span><span class=no>ootbModels: []</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: wca</span>
+<span class=w>        </span><span class=no>description: watsonx Code Assistant</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>similarity_feature:</span>
+<span class=w>            </span><span class=no>enabled: false</span>
+<span class=w>          </span><span class=no>rag_enabled: true</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: wca-ansible</span>
+<span class=w>        </span><span class=no>description: watsonx Code Assistant for Red Hat Ansible Lightspeed</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: wca-z</span>
+<span class=w>        </span><span class=no>description: watsonx Code Assistant for Z</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: wca-z-ce</span>
+<span class=w>        </span><span class=no>description: watsonx Code Assistant for Z Code Explanation</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no># For the IBM Knowledge Catalog, you can specify 3 editions: wkx, ikc_premium, or ikc_standard</span>
+<span class=w>      </span><span class=no># Choose the correct IBM Knowledge Catalog edition below</span>
+<span class=w>      </span><span class=no>- name: wkc</span>
+<span class=w>        </span><span class=no>description: IBM Knowledge Catalog</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: True</span>
+<span class=w>          </span><span class=no>enableDataQuality: True</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: ikc_premium</span>
+<span class=w>        </span><span class=no>description: IBM Knowledge Catalog - Premium edition</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableDataQuality: False</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: False</span>
+<span class=w>          </span><span class=no>useFDB: False</span>
+<span class=w>          </span><span class=no>enableAISearch: False</span>
+<span class=w>          </span><span class=no>enableSemanticAutomation: False</span>
+<span class=w>          </span><span class=no>enableSemanticEnrichment: True</span>
+<span class=w>          </span><span class=no>enableSemanticEmbedding: False</span>
+<span class=w>          </span><span class=no>enableTextToSql: False</span>
+<span class=w>          </span><span class=no>enableModelsOn: &#39;cpu&#39;</span>
+<span class=w>          </span><span class=no>customModelTextToSQL: granite-3-3-8b-instruct</span>
+<span class=w>    </span><span class=no>      </span>
+<span class=w>      </span><span class=no>- name: ikc_standard</span>
+<span class=w>        </span><span class=no>description: IBM Knowledge Catalog - Standard edition</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>enableKnowledgeGraph: False</span>
+<span class=w>          </span><span class=no>useFDB: False</span>
+<span class=w>          </span><span class=no>enableAISearch: False</span>
+<span class=w>          </span><span class=no>enableSemanticAutomation: False</span>
+<span class=w>          </span><span class=no>enableSemanticEnrichment: True</span>
+<span class=w>          </span><span class=no>enableSemanticEmbedding: False</span>
+<span class=w>          </span><span class=no>enableTextToSql: False</span>
+<span class=w>          </span><span class=no>enableModelsOn: &#39;cpu&#39;</span>
+<span class=w>          </span><span class=no>customModelTextToSQL: granite-3-3-8b-instruct</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: wml</span>
+<span class=w>        </span><span class=no>description: Watson Machine Learning</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: wml-accelerator</span>
+<span class=w>        </span><span class=no>description: Watson Machine Learning Accelerator</span>
+<span class=w>        </span><span class=no>replicas: 1</span>
+<span class=w>        </span><span class=no>size: small</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: ws</span>
+<span class=w>        </span><span class=no>description: Watson Studio</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: ws-pipelines</span>
+<span class=w>        </span><span class=no>description: Watson Studio Pipelines</span>
+<span class=w>        </span><span class=no>state: removed</span>
+<span class=w>    </span>
+<span class=w>      </span><span class=no>- name: ws-runtimes</span>
+<span class=w>        </span><span class=no>description: Watson Studio Runtimes</span>
+<span class=w>        </span><span class=no>state: removed </span>
+<span class=w>        </span><span class=no>installation_options:</span>
+<span class=w>          </span><span class=no>kinds:</span>
+<span class=w>          </span><span class=no>- ibm-cpd-ws-runtime-241-pygpu</span>
+<span class=w>          </span><span class=no>- ibm-cpd-ws-runtime-251-pygpu</span>
+<span class=w>          </span><span class=no>- ibm-cpd-ws-runtime-241-r</span>
+<span class=w>          </span><span class=no>- ibm-cpd-ws-runtime-251-r</span>
+<span class=w>    </span>
+<span class=w>    </span><span class=no>#</span>
+<span class=w>    </span><span class=no># Cartridges where extra work is needed (will not install automatically)</span>
+<span class=w>    </span><span class=no># </span>
+<span class=w>      </span><span class=no># Product Master requires set up of the Db2 instance secret before install</span>
+<span class=w>      </span><span class=no>- name: productmaster</span>
+<span class=w>        </span><span class=no>description: Product Master</span>
+<span class=w>        </span><span class=no>size: small  </span>
+<span class=w>    </span>
+<span class=w>        </span><span class=no>state: removed</span>
+</code></pre></div> </article> </div> <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script> </div> </main> <footer class=md-footer> <div class="md-footer-meta md-typeset"> <div class="md-footer-meta__inner md-grid"> <div class=md-copyright> Made with <a href=https://squidfunk.github.io/mkdocs-material/ target=_blank rel=noopener> Material for MkDocs </a> </div> </div> </div> </footer> </div> <div class=md-dialog data-md-component=dialog> <div class="md-dialog__inner md-typeset"></div> </div> <script id=__config type=application/json>{"annotate": null, "base": "../../..", "features": [], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script> <script src=../../../assets/javascripts/bundle.79ae519e.min.js></script> <script src=../../../js/open_in_new_tab.js></script> </body> </html>
