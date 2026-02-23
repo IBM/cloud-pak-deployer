@@ -44,7 +44,7 @@ git-scrub:
 # help: serve                          - serve project html documentation
 .PHONY: serve
 serve:
-	@/bin/bash -c "source $(VENV_DIR)/bin/activate && mkdocs serve -t material"
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && mkdocs serve --livereload -t material"
 
 # help: build                          - serve project html documentation
 .PHONY: build

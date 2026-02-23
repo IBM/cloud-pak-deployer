@@ -1,3 +1,7 @@
 #!/bin/bash
 
-podman build -t cpd-doc .
+pushd ..
+
+podman build -t cpd-doc -f docs/Dockerfile .
+
+popd

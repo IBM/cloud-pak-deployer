@@ -1,0 +1,39 @@
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      creationTimestamp: null
+      name: cloud-pak-deployer
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: cloud-pak-deployer-sa
+      namespace: cloud-pak-deployer
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: system:openshift:scc:privileged
+      namespace: cloud-pak-deployer
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:openshift:scc:privileged
+    subjects:
+    - kind: ServiceAccount
+      name: cloud-pak-deployer-sa
+      namespace: cloud-pak-deployer
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: cloud-pak-deployer-cluster-admin
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-admin
+    subjects:
+    - kind: ServiceAccount
+      name: cloud-pak-deployer-sa
+      namespace: cloud-pak-deployer
