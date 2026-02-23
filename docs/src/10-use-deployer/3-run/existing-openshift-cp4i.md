@@ -9,7 +9,5 @@ data:
   cpd-config.yaml: |
     {% include '../../../../sample-configurations/sample-dynamic/config-samples/ocp-existing-ocp-auto.yaml' %}
 
-    {% include '../../../../sample-configurations/sample-dynamic/config-samples/cp4d-redhat-sso.yaml' %}
-
-    {% include '../../../../sample-configurations/sample-dynamic/config-samples/cp4d-latest.yaml' %}
+    {% include '../../../../sample-configurations/sample-dynamic/config-samples/cp4i-latest.yaml' %}
 ```

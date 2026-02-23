@@ -11,7 +11,7 @@ venv:
 	@test -d "$(VENVS_DIR)" || mkdir -p "$(VENVS_DIR)"
 	@rm -Rf "$(VENV_DIR)"
 	@python3 -m venv "$(VENV_DIR)"
-	@/bin/bash -c "source $(VENV_DIR)/bin/activate && pip3 install --upgrade pip setuptools wheel && pip3 install -r requirements.txt &&  pip install sphinx_rtd_theme "
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && pip3 install --upgrade pip && pip3 install -r requirements.txt"
 	@echo -e "Enter virtual environment using:\n. $(VENV_DIR)/bin/activate\n"
 
 
@@ -44,7 +44,7 @@ git-scrub:
 # help: serve                          - serve project html documentation
 .PHONY: serve
 serve:
-	@/bin/bash -c "source $(VENV_DIR)/bin/activate && mkdocs serve -t material"
+	@/bin/bash -c "source $(VENV_DIR)/bin/activate && mkdocs serve --livereload -t material"
 
 # help: build                          - serve project html documentation
 .PHONY: build
