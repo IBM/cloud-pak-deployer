@@ -466,16 +466,14 @@ def get_deployer_status_openshift():
             stdout, stderr = process.communicate()
             
             if process.returncode == 0:
+                result['deployer_active']=True
                 deployer_job=json.loads(stdout)
-                if 'status' in deployer_job:
-                    if not 'conditions' in deployer_job['status']:
-                        result['deployer_active']=True
-                    elif deployer_job['status']['conditions'][0]['type'] not in ['Failed', 'Complete']:
-                        result['deployer_active']=True
-                    elif deployer_job['status']['conditions'][0]['type'] == 'Failed':
+                conditions = deployer_job.get('status', {}).get('conditions', [])
+                for condition in conditions:
+                    if condition.get('type','')=='Failed':
                         result['deployer_active']=False
                         result['completion_state']='Failed'
-                    elif deployer_job['status']['conditions'][0]['type'] == 'Complete':
+                    elif condition.get('type','')=='Complete':
                         result['deployer_active']=False
                         result['completion_state']='Successful'
             
@@ -497,26 +495,24 @@ def get_deployer_status_openshift():
             if process.returncode == 0:
                 deployer_debug=json.loads(stdout)
                 for dd in deployer_debug['items']:
-                    if 'status' in dd and 'phase' in dd['status']:
-                        if dd['status']['phase'] in ['Running']:
+                    if dd.get('status',{}).get('phase','') in ['Running']:
+                        oc_get_state=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
+                        app.logger.debug('Get cloud-pak-deployer state: {}'.format(oc_get_state))
 
-                            oc_get_state=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/Data/cpd-status/state/deployer-state.out','/tmp/deployer-state.out']
-                            app.logger.debug('Get cloud-pak-deployer state: {}'.format(oc_get_state))
+                        try:
+                            process = subprocess.Popen(oc_get_state,
+                                            stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE,
+                                            universal_newlines=True)
+                            
+                            stdout, stderr = process.communicate()
 
-                            try:
-                                process = subprocess.Popen(oc_get_state,
-                                                stdout=subprocess.PIPE,
-                                                stderr=subprocess.PIPE,
-                                                universal_newlines=True)
-                                
-                                stdout, stderr = process.communicate()
-
-                                if process.returncode == 0:
-                                    deploy_state_log_path = '/tmp/deployer-state.out'
-                                    result=get_deployer_status_details(deploy_state_log_path, result)
-                                
-                            except Exception as e:
-                                app.logger.error('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                            if process.returncode == 0:
+                                deploy_state_log_path = '/tmp/deployer-state.out'
+                                result=get_deployer_status_details(deploy_state_log_path, result)
+                            
+                        except Exception as e:
+                            app.logger.error('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
 
         except Exception as e:
             app.logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
@@ -534,26 +530,15 @@ def get_deployer_status_details(deploy_state_log_path, result):
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
-            if 'deployer_stage' in temp:
-                result['deployer_stage']=temp['deployer_stage']
-            if 'last_step' in temp:
-                result['last_step']=temp['last_step']
-            if 'percentage_completed' in temp:
-                result['percentage_completed']=temp['percentage_completed']
-            if 'completion_state' in temp:
-                result['completion_state']=temp['completion_state']
-            if 'mirror_current_image' in temp:
-                result['mirror_current_image']=temp['mirror_current_image']
-            if 'mirror_number_images' in temp:
-                result['mirror_number_images']=temp['mirror_number_images']
-            if 'service_state' in temp:
-                result['service_state']=temp['service_state']
-            if 'cp4d_url' in temp:
-                result['cp4d_url']=temp['cp4d_url']
-            if 'cp4d_user' in temp:
-                result['cp4d_user']=temp['cp4d_user']
-            if 'cp4d_password' in temp:
-                result['cp4d_password']=temp['cp4d_password']
+            
+            fields = [
+                'deployer_stage', 'last_step', 'percentage_completed',
+                'completion_state', 'mirror_current_image', 'mirror_number_images',
+                'service_state', 'cp4d_url', 'cp4d_user', 'cp4d_password'
+            ]
+            for field in fields:
+                if field in temp:
+                    result[field] = temp[field]
 
     except FileNotFoundError:
         app.logger.warning('Error while reading file {}'.format(deploy_state_log_path))
