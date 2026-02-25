@@ -1,0 +1,106 @@
+---
+# Dynamically fetch images using cpd-cli list-images command
+# cpd-cli is installed by the deployer in earlier phases
+
+- name: Initialize images list
+  set_fact:
+    _images_to_validate: []
+
+# CP4D Image Fetching using cpd-cli
+- block:
+  - name: Get CP4D version from configuration
+    set_fact:
+      _cp4d_version: "{{ all_config.cp4d[0].cp4d_version | default('5.0.0') }}"
+    when: 
+      - all_config.cp4d is defined
+      - all_config.cp4d | length > 0
+
+  - name: Get CP4D cartridges to validate
+    set_fact:
+      _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | unique }}"
+    when: all_config.cp4d is defined
+
+  - name: Build component list for cpd-cli
+    set_fact:
+      _cpd_components: "cpfs,cpd_platform{% if _cp4d_cartridges is defined and _cp4d_cartridges | length > 0 %},{{ _cp4d_cartridges | join(',') }}{% endif %}"
+
+  - name: Display cpd-cli command that will be executed
+    debug:
+      msg: |
+        Fetching images using: cpd-cli manage list-images
+        Release: {{ _cp4d_version }}
+        Components: {{ _cpd_components }}
+        Sample size: {{ _entitlement_validation_sample_size | int }} images per component
+
+  - name: Fetch images using cpd-cli list-images
+    shell: |
+      cpd-cli manage list-images \
+        --release={{ _cp4d_version }} \
+        --components={{ _cpd_components }} \
+        --inspect_source_registry=true 2>&1 | \
+        grep -E "cp\.icr\.io|icr\.io" | \
+        awk '{print $1}' | \
+        sort -u | \
+        head -n {{ (_entitlement_validation_sample_size | int) * ((_cp4d_cartridges | default([]) | length) + 2) }}
+    register: _cpd_cli_images
+    failed_when: false
+    changed_when: false
+    environment:
+      IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
+
+  - name: Check if cpd-cli returned images
+    debug:
+      msg: "cpd-cli returned {{ _cpd_cli_images.stdout_lines | length }} images"
+
+  - name: Parse cpd-cli output into image list
+    set_fact:
+      _images_to_validate: >-
+        {{ _cpd_cli_images.stdout_lines | 
+           map('regex_replace', '^(.*)$', '{"component": "cpd_dynamic", "image": "\1"}') | 
+           map('from_json') | 
+           list }}
+    when:
+      - _cpd_cli_images.rc == 0
+      - _cpd_cli_images.stdout_lines | length > 0
+
+  when: _cp4d_requested | bool
+
+# CP4I Image Fetching (placeholder for future cpd-cli support)
+- block:
+  - name: Add note about CP4I validation
+    debug:
+      msg: "CP4I validation with cpd-cli is not yet implemented"
+
+  when: _cp4i_requested | bool
+
+# CP4BA Image Fetching (placeholder for future cpd-cli support)
+- block:
+  - name: Add note about CP4BA validation
+    debug:
+      msg: "CP4BA validation with cpd-cli is not yet implemented"
+
+  when: _cp4ba_requested | bool
+
+# CP4WAIOps Image Fetching (placeholder for future cpd-cli support)
+- block:
+  - name: Add note about CP4WAIOps validation
+    debug:
+      msg: "CP4WAIOps validation with cpd-cli is not yet implemented"
+
+  when: _cp4waiops_requested | bool
+
+- name: Ensure at least one image is selected for validation
+  fail:
+    msg: |
+      No images found for validation. This could be because:
+      1. cpd-cli list-images command failed
+      2. No Cloud Pak components are configured for deployment
+      
+      To skip validation, set: entitlement_validation.enabled: false
+  when: _images_to_validate | length == 0
+
+- name: Display selected images for validation
+  debug:
+    msg: "Selected {{ _images_to_validate | length }} images for validation using cpd-cli"
+
+# Made with Bob

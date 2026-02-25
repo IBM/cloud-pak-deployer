@@ -1,0 +1,40 @@
+---
+# Validate access to representative images using smart sampling
+
+- name: Determine which Cloud Paks are being deployed
+  set_fact:
+    _cp4d_requested: "{{ (all_config.cp4d | default([])) | length > 0 }}"
+    _cp4i_requested: "{{ (all_config.cp4i | default([])) | length > 0 }}"
+    _cp4ba_requested: "{{ (all_config.cp4ba | default([])) | length > 0 }}"
+    _cp4waiops_requested: "{{ (all_config.cp4waiops | default([])) | length > 0 }}"
+
+- name: Build list of images to validate based on requested Cloud Paks
+  include_tasks: get-sample-images.yml
+
+- name: Display validation plan
+  debug:
+    msg: |
+      Validating entitlement key access to {{ _images_to_validate | length }} representative images
+      (Smart sampling: {{ _entitlement_validation_sample_size }} images per component)
+      This should take approximately {{ (_images_to_validate | length * 2) }} seconds
+
+- name: Validate access to each representative image
+  shell: |
+    skopeo inspect --creds cp:{{ ibm_cp_entitlement_key }} \
+      docker://{{ item.image }} 2>&1
+  register: _image_validation_result
+  failed_when: false
+  loop: "{{ _images_to_validate }}"
+  loop_control:
+    label: "{{ item.component }}: {{ item.image }}"
+  no_log: true
+
+- name: Collect failed validations
+  set_fact:
+    _failed_images: >-
+      {{ _image_validation_result.results 
+         | selectattr('rc', 'ne', 0) 
+         | list }}
+
+- name: Report validation results
+  include_tasks: report-validation-results.yml

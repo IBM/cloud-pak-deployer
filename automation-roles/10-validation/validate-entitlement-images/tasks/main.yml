@@ -1,0 +1,34 @@
+---
+# Validate entitlement key has access to required images before deployment
+# This implements GitHub issue #1085 - Online Entitlement Validation
+
+- name: Check if entitlement validation is enabled
+  set_fact:
+    _entitlement_validation_enabled: "{{ all_config.global_config.entitlement_validation.enabled | default(true) }}"
+    _entitlement_validation_fail_on_error: "{{ all_config.global_config.entitlement_validation.fail_on_error | default(true) }}"
+    _entitlement_validation_sample_size: "{{ all_config.global_config.entitlement_validation.sample_size | default(3) }}"
+
+- name: Skip validation if disabled
+  debug:
+    msg: "Entitlement image validation is disabled. Skipping..."
+  when: not (_entitlement_validation_enabled | bool)
+
+- block:
+  - name: Get IBM entitlement key from vault
+    include_role:
+      name: vault-get-secret
+    vars:
+      secret_name: "ibm_cp_entitlement_key"
+      secret_group: "{{ environment_name }}"
+      _p_secret_variable: ibm_cp_entitlement_key
+
+  - name: Skip validation if no entitlement key found
+    debug:
+      msg: "No entitlement key found in vault. Skipping image validation..."
+    when: ibm_cp_entitlement_key == ""
+
+  - name: Validate entitlement key access to images
+    include_tasks: validate-images.yml
+    when: ibm_cp_entitlement_key != ""
+
+  when: _entitlement_validation_enabled | bool

@@ -1,0 +1,69 @@
+---
+# Report validation results and fail if unauthorized images found
+
+- name: Display validation summary
+  debug:
+    msg: |
+      ========================================
+      Entitlement Image Validation Results
+      ========================================
+      Total images checked: {{ _images_to_validate | length }}
+      Successful validations: {{ (_images_to_validate | length) - (_failed_images | length) }}
+      Failed validations: {{ _failed_images | length }}
+      ========================================
+
+- name: Show successful validation message
+  debug:
+    msg: "✓ All {{ _images_to_validate | length }} representative images are accessible with the provided entitlement key"
+  when: _failed_images | length == 0
+
+- name: Build detailed error message for failed images
+  set_fact:
+    _error_details: |
+      
+      ========================================
+      ERROR: Entitlement Key Authorization Failed
+      ========================================
+      
+      The entitlement key does not grant access to the following image(s):
+      
+      {% for failed in _failed_images %}
+      Component: {{ failed.item.component }}
+      Image: {{ failed.item.image }}
+      Error: {{ failed.stderr | regex_replace('\n', ' ') | truncate(200) }}
+      
+      {% endfor %}
+      
+      RESOLUTION STEPS:
+      1. Verify your entitlement key is valid and not expired
+      2. Ensure the entitlement key includes permissions for:
+      {% for failed in _failed_images %}
+         - {{ failed.item.component }}
+      {% endfor %}
+      3. Check your entitlement at: https://myibm.ibm.com/products-services/containerlibrary
+      4. If needed, request additional entitlements from your IBM representative
+      
+      For more information, see: https://www.ibm.com/docs/en/cloud-paks
+      ========================================
+  when: _failed_images | length > 0
+
+- name: Display detailed error information
+  debug:
+    msg: "{{ _error_details }}"
+  when: _failed_images | length > 0
+
+- name: Fail deployment if unauthorized images found and fail_on_error is true
+  fail:
+    msg: "{{ _error_details }}"
+  when:
+    - _failed_images | length > 0
+    - _entitlement_validation_fail_on_error | bool
+
+- name: Warn about failed validations if fail_on_error is false
+  debug:
+    msg: |
+      WARNING: Image validation failed but continuing because fail_on_error is set to false.
+      Deployment may fail later during image pull operations.
+  when:
+    - _failed_images | length > 0
+    - not (_entitlement_validation_fail_on_error | bool)

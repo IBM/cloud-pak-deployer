@@ -68,6 +68,13 @@
     include_role:
       name: validate-variables
 
+  - name: Validate entitlement key access to images
+    include_role:
+      name: validate-entitlement-images
+    when:
+      - cloud_platform == 'existing-ocp' or cloud_platform == 'ibm-cloud' or cloud_platform == 'vsphere' or cloud_platform == 'aws' or cloud_platform == 'azure'
+      - not (cpd_airgap | default(false) | bool)
+
   - name: Lint configuration
     include_role:
       name: lint-config
