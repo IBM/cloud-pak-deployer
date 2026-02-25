@@ -80,6 +80,7 @@
   loop: "{{ all_config.zen_role | default([]) }}"
   loop_control:
     loop_var: _zen_role 
+  when: not cpd_dry_run
 
 # Cloud Pak for Data User Groups Configuration
 - name: Configure Cloud Pak for Data access control for project {{ current_cp4d_cluster.project }}
@@ -88,6 +89,7 @@
   loop: "{{ all_config.zen_access_control | default([]) }}"
   loop_control:
     loop_var: _zen_access_control 
+  when: not cpd_dry_run
 
 # In case roles were set to state: removed, loop through the roles again to delete them
 - name: Delete obsolete Cloud Pak for Data custom roles for project {{ current_cp4d_cluster.project }}
@@ -96,6 +98,7 @@
   loop: "{{ all_config.zen_role | default([]) }}"
   loop_control:
     loop_var: _zen_role 
+  when: not cpd_dry_run
 
 # First provision DB2 OLTP instance(s) and wait for it to cpmplete
 - name: Provision or remove Db2 OLTP instances
