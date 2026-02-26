@@ -97,6 +97,8 @@
     - (_ibm_licensing.resources[0].status.state | default('')) == 'ACTIVE'
     retries: 180
     delay: 10
+    when:
+    - not cpd_dry_run
 
   - name: Wait until IBMLicensing CR is present
     shell: |
@@ -105,6 +107,8 @@
     retries: 60
     delay: 10
     until: _ibm_licensing_cr.rc == 0
+    when:
+    - not cpd_dry_run
 
   - name: Generate command to set threads per core
     set_fact:
