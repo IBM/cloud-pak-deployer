@@ -193,6 +193,13 @@
           | selectattr('separate_install','defined')
           | selectattr('separate_install','==',True) }}
 
+- set_fact:
+    _apply_cr_cartridges_separate_list: >-
+      {{  _apply_cr_cartridges_separate 
+        | map(attribute='olm_utils_name')
+        | list
+        | join(',')}}
+
 - debug:
     var: _cartridges_to_install
 
@@ -200,7 +207,16 @@
     var: _apply_cartridges_list
 
 - debug:
+    var: _apply_cr_cartridges
+
+- debug:
+    var: _apply_cr_cartridges_list
+
+- debug:
     var: _apply_cr_cartridges_separate
+
+- debug:
+    var: _apply_cr_cartridges_separate_list
 
 - set_fact:
     _upgrade_cp4d: False
