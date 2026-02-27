@@ -72,14 +72,11 @@ ENV USER_UID=1001
 # Store the base image manifests
 ARG CPD_OLM_UTILS_V3_IMAGE
 ARG CPD_OLM_UTILS_V4_IMAGE
-ARG TARGETOS
-ARG TARGETARCH
-ARG TARGETVARIANT
 RUN mkdir -p /cloud-pak-deployer/.version-info && \
     echo -n ${CPD_OLM_UTILS_V3_IMAGE} > /cloud-pak-deployer/.version-info/olm-utils-v3-image.txt && \
-    skopeo inspect --override-os ${TARGETOS} --override-arch ${TARGETARCH} --override-variant ${TARGETVARIANT} --raw docker://${CPD_OLM_UTILS_V3_IMAGE} > /cloud-pak-deployer/.version-info/olm-utils-v3-manifest.json && \
+    skopeo inspect --raw docker://${CPD_OLM_UTILS_V3_IMAGE} > /cloud-pak-deployer/.version-info/olm-utils-v3-manifest.json && \
     echo -n ${CPD_OLM_UTILS_V4_IMAGE} > /cloud-pak-deployer/.version-info/olm-utils-v4-image.txt && \
-    skopeo inspect --override-os ${TARGETOS} --override-arch ${TARGETARCH} --override-variant ${TARGETVARIANT} --raw docker://${CPD_OLM_UTILS_V4_IMAGE} > /cloud-pak-deployer/.version-info/olm-utils-v4-manifest.json
+    skopeo inspect --raw docker://${CPD_OLM_UTILS_V4_IMAGE} > /cloud-pak-deployer/.version-info/olm-utils-v4-manifest.json
 
 RUN chown -R ${USER_ID}:0 /Data && \
     chown -R ${USER_ID}:0 /cloud-pak-deployer && \
