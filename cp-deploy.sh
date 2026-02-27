@@ -707,11 +707,6 @@ if ! $INSIDE_CONTAINER;then
     chmod +x ${SCRIPT_DIR}/.version-info/version-info.sh
     # Show version info
     cat ${SCRIPT_DIR}/.version-info/version-info.sh
-    # Store the base image manifests
-    echo -n ${CPD_OLM_UTILS_V3_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v3-image.txt
-    ${CPD_CONTAINER_ENGINE} manifest inspect ${CPD_OLM_UTILS_V3_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v3-manifest.json
-    echo -n ${CPD_OLM_UTILS_V4_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v4-image.txt
-    ${CPD_CONTAINER_ENGINE} manifest inspect ${CPD_OLM_UTILS_V4_IMAGE} > ${SCRIPT_DIR}/.version-info/olm-utils-v4-manifest.json
     # Build the image
     if [ "${IMAGE_ARCH}" == "amd64" ]; then
       DOCKERFILE=Dockerfile
