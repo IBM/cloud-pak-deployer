@@ -27,6 +27,9 @@ cd ${SCRIPT_DIR}/..
 # Retrieve version info
 source ./.version-info/version-info.sh
 
+# Set environment variables
+source ./scripts/deployer/set-env-var.sh
+
 # Show login info
 show_deployer_info() {
   if [[ "$SUBCOMMAND" == "environment" && "${ACTION}" == "apply" ]];then
@@ -100,6 +103,7 @@ env|environment)
   run_cmd+=" --extra-vars cpd_accept_licenses=${CPD_ACCEPT_LICENSES}"
   run_cmd+=" --extra-vars ARCH=${ARCH}"
   run_cmd+=" --extra-vars IMAGE_ARCH=${IMAGE_ARCH}"
+  run_cmd+=" --extra-vars OLM_UTILS_IMAGE=${OLM_UTILS_IMAGE}"
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
