@@ -31,17 +31,27 @@
   when: not (_check_images_enabled | bool)
 
 - block:
-  - name: Get IBM entitlement key from vault
+  - name: Check if CP_ENTITLEMENT_KEY environment variable is set
+    set_fact:
+      _cp_entitlement_key_env: "{{ lookup('ansible.builtin.env', 'CP_ENTITLEMENT_KEY') }}"
+
+  - name: Get IBM entitlement key from vault if not provided via environment
     include_role:
       name: vault-get-secret
     vars:
       secret_name: "ibm_cp_entitlement_key"
       secret_group: "{{ environment_name }}"
       _p_secret_variable: ibm_cp_entitlement_key
+    when: _cp_entitlement_key_env == ""
+
+  - name: Use entitlement key from environment variable if provided
+    set_fact:
+      ibm_cp_entitlement_key: "{{ _cp_entitlement_key_env }}"
+    when: _cp_entitlement_key_env != ""
 
   - name: Skip validation if no entitlement key found
     debug:
-      msg: "No entitlement key found in vault. Skipping image validation..."
+      msg: "No entitlement key found. Skipping image validation..."
     when: ibm_cp_entitlement_key == ""
 
   - name: Validate entitlement key access to images
