@@ -136,7 +136,9 @@ Contains prerequisites for the whole platform.
 - OpenLDAP - Directory solution for users and groups definition.
   - Always installed.
 - MSSQL server - Database storage for RPA server. 
-  - nstalled if RPA is enbled.
+  - Installed if RPA is enabled.
+- OpenSearch - Vector database storage for IBM Content Assistant. 
+  - Installed if ICA is enabled.
 
 ## Environments used for installation 💻
 

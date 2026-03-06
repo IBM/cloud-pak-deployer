@@ -1,0 +1,124 @@
+kind: StatefulSet
+apiVersion: apps/v1
+metadata:
+  name: opensearch
+  namespace: "{{ opensearch_project_name }}"
+  labels:
+    app: opensearch
+spec:
+  serviceName: opensearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      serviceAccountName: opensearch
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: opensearch
+          image: "{{ opensearch_image }}"
+          resources:
+            requests:
+              cpu: 500m
+              memory: 2Gi
+            limits:
+              cpu: 2000m
+              memory: 4Gi
+          startupProbe:
+            tcpSocket:
+              port: 9200
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 30
+          readinessProbe:
+            tcpSocket:
+              port: 9200
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: 9200
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 30
+          env:
+            - name: cluster.name
+              value: opensearch-cluster
+            - name: node.name
+              value: opensearch-node1
+            - name: discovery.type
+              value: single-node
+            - name: bootstrap.memory_lock
+              value: "true"
+            - name: OPENSEARCH_JAVA_OPTS
+              value: "-Xms1g -Xmx1g"
+            - name: DISABLE_INSTALL_DEMO_CONFIG
+              value: "true"
+            - name: DISABLE_SECURITY_PLUGIN
+              value: "false"
+            - name: plugins.security.ssl.http.enabled
+              value: "false"
+            - name: plugins.security.ssl.transport.enabled
+              value: "true"
+            - name: plugins.security.ssl.transport.pemcert_filepath
+              value: /usr/share/opensearch/config/certs/tls.crt
+            - name: plugins.security.ssl.transport.pemkey_filepath
+              value: /usr/share/opensearch/config/certs/tls.key
+            - name: plugins.security.ssl.transport.pemtrustedcas_filepath
+              value: /usr/share/opensearch/config/certs/ca.crt
+            - name: plugins.security.allow_unsafe_democertificates
+              value: "false"
+            - name: plugins.security.allow_default_init_securityindex
+              value: "true"
+            - name: plugins.security.authcz.admin_dn
+              value: "CN=opensearch,OU=client,O=client,L=test,C=de"
+            - name: plugins.security.nodes_dn
+              value: "CN=opensearch,OU=client,O=client,L=test,C=de"
+            - name: plugins.security.audit.type
+              value: internal_opensearch
+            - name: plugins.security.enable_snapshot_restore_privilege
+              value: "true"
+            - name: plugins.security.check_snapshot_restore_write_privileges
+              value: "true"
+            - name: plugins.security.restapi.roles_enabled
+              value: '["all_access", "security_rest_api_access"]'
+            - name: OPENSEARCH_INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opensearch-admin-user
+                  key: opensearch-admin
+          ports:
+            - name: http
+              containerPort: 9200
+              protocol: TCP
+            - name: transport
+              containerPort: 9300
+              protocol: TCP
+          volumeMounts:
+            - name: opensearch-data
+              mountPath: /usr/share/opensearch/data
+            - name: opensearch-certs
+              mountPath: /usr/share/opensearch/config/certs
+              readOnly: true
+          securityContext:
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+            runAsUser: 1000
+      volumes:
+        - name: opensearch-data
+          persistentVolumeClaim:
+            claimName: opensearch-data
+        - name: opensearch-certs
+          secret:
+            secretName: opensearch-tls
