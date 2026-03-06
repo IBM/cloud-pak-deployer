@@ -49,17 +49,26 @@
       cpd-cli manage list-images \
         --release={{ _cp4d_version }} \
         --components={{ _cpd_components }} \
-        --inspect_source_registry=true 2>&1 | \
-        grep -E "cp\.icr\.io|icr\.io" | \
-        awk '{print $1}' | \
-        sort -u{% if _check_images_sample_size != 'all' %} | \
-        head -n {{ (_check_images_sample_size | int) * ((_cp4d_cartridges | default([]) | length) + 2) }}{% endif %}
-
-    register: _cpd_cli_images
+        --inspect_source_registry=true 2>&1
+    register: _cpd_cli_result
     failed_when: false
     changed_when: false
     environment:
       IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
+
+  - name: Read images from cpd-cli output CSV file
+    shell: |
+      if [ -f "{{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv" ]; then
+        cat "{{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv" | \
+        grep -E "cp\.icr\.io|icr\.io" | \
+        awk -F',' '{print $1}' | \
+        sort -u{% if _check_images_sample_size != 'all' %} | \
+        head -n {{ (_check_images_sample_size | int) * ((_cp4d_cartridges | default([]) | length) + 2) }}{% endif %}
+
+      fi
+    register: _cpd_cli_images
+    failed_when: false
+    changed_when: false
 
   - name: Display cpd-cli command result
     debug:
