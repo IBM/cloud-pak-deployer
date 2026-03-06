@@ -95,6 +95,23 @@ check_images:
   sample_size: 5
 ```
 
+### Command-Line Override
+
+You can override the configuration settings using the `--check-images` command-line option:
+
+```bash
+# Enable validation (overrides YAML config)
+./cp-deploy.sh env apply --check-images
+
+# Disable validation (overrides YAML config)
+./cp-deploy.sh env apply --check-images=false
+
+# Check all images (overrides sample_size in YAML config)
+./cp-deploy.sh env apply --check-images=all
+```
+
+**Note:** The command-line option takes precedence over YAML configuration settings.
+
 ## How It Works
 
 ### Validation Process

@@ -558,7 +558,20 @@ while (( "$#" )); do
     fi
     export CHECK_ONLY=true
     shift 1
-    ;;  
+    ;;
+  --check-images*)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --check-images is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ];then
+      export CPD_CHECK_IMAGES="${1#*=}"
+      shift 1
+    else
+      export CPD_CHECK_IMAGES=true
+      shift 1
+    fi
+    ;;
   --dry-run)
     if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" ]];then
       echo "Error: --dry-run is only valid for environment subcommand with apply/destroy."

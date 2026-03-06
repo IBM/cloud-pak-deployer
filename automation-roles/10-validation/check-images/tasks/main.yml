@@ -1,17 +1,23 @@
 ---
-# Validate entitlement key has access to required images before deployment
-# This implements GitHub issue #1085 - Online Entitlement Validation
+# Validate IBM entitlement key has access to required images before deployment
+# This implements GitHub issue #1085 - Image Access Validation
 
-- name: Check if entitlement validation is enabled
+- name: Check if image validation is enabled
   set_fact:
-    _entitlement_validation_enabled: "{{ all_config.global_config.check_images.enabled | default(true) }}"
-    _entitlement_validation_fail_on_error: "{{ all_config.global_config.check_images.fail_on_error | default(true) }}"
-    _entitlement_validation_sample_size: "{{ all_config.global_config.check_images.sample_size | default(3) }}"
+    _check_images_enabled: "{{ all_config.global_config.check_images.enabled | default(true) }}"
+    _check_images_fail_on_error: "{{ all_config.global_config.check_images.fail_on_error | default(true) }}"
+    _check_images_sample_size: "{{ all_config.global_config.check_images.sample_size | default(3) }}"
+
+- name: Override settings from command line if CPD_CHECK_IMAGES is set
+  set_fact:
+    _check_images_enabled: "{{ false if lookup('env', 'CPD_CHECK_IMAGES') == 'false' else true }}"
+    _check_images_sample_size: "{{ lookup('env', 'CPD_CHECK_IMAGES') if lookup('env', 'CPD_CHECK_IMAGES') == 'all' else _check_images_sample_size }}"
+  when: lookup('env', 'CPD_CHECK_IMAGES') != ''
 
 - name: Skip validation if disabled
   debug:
-    msg: "Entitlement image validation is disabled. Skipping..."
-  when: not (_entitlement_validation_enabled | bool)
+    msg: "Image validation is disabled. Skipping..."
+  when: not (_check_images_enabled | bool)
 
 - block:
   - name: Get IBM entitlement key from vault
@@ -31,4 +37,4 @@
     include_tasks: validate-images.yml
     when: ibm_cp_entitlement_key != ""
 
-  when: _entitlement_validation_enabled | bool
+  when: _check_images_enabled | bool

@@ -5,7 +5,7 @@
   debug:
     msg: |
       ========================================
-      Entitlement Image Validation Results
+      Image Access Validation Results
       ========================================
       Total images checked: {{ _images_to_validate | length }}
       Successful validations: {{ (_images_to_validate | length) - (_failed_images | length) }}
@@ -22,7 +22,7 @@
     _error_details: |
       
       ========================================
-      ERROR: Entitlement Key Authorization Failed
+      ERROR: Image Access Authorization Failed
       ========================================
       
       The entitlement key does not grant access to the following image(s):
@@ -57,7 +57,7 @@
     msg: "{{ _error_details }}"
   when:
     - _failed_images | length > 0
-    - _entitlement_validation_fail_on_error | bool
+    - _check_images_fail_on_error | bool
 
 - name: Warn about failed validations if fail_on_error is false
   debug:
@@ -66,4 +66,4 @@
       Deployment may fail later during image pull operations.
   when:
     - _failed_images | length > 0
-    - not (_entitlement_validation_fail_on_error | bool)
+    - not (_check_images_fail_on_error | bool)
