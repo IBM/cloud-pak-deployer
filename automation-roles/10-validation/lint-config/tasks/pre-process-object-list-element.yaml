@@ -13,13 +13,15 @@
         -k {{ _all_config_item.key }} \
         -p {{ _generator_dir }}/{{ _all_config_item.key }} \
         -i {{ object_element_index }} \
-        -s preprocessor.py \
-        -a {{ object_element | to_yaml | b64encode }} \
-        -f {{ all_config | to_yaml | b64encode }} \
-        -v {{ vault_var|default("{}") | to_yaml | b64encode }}
+        -s preprocessor.py
     args:
       chdir: "{{ role_path }}/scripts"
-    register: preprocess_result 
+    environment:
+      GENERATOR_ATTRIBUTES: "{{ object_element | to_yaml | b64encode }}"
+      GENERATOR_FULL_CONFIG: "{{ all_config | to_yaml | b64encode }}"
+      GENERATOR_VARIABLES: "{{ vault_var|default('{}') | to_yaml | b64encode }}"
+    register: preprocess_result
+    no_log: true
 
 # The output of the script should look like:
 # {
