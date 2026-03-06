@@ -14,17 +14,35 @@ parser.add_argument('--index', '-i', help="index of the element inside the gener
 parser.add_argument('--vars', '-v', help="module variables", type= str, required=False)
 args = parser.parse_args()
 
-# Support both command-line arguments and environment variables to avoid "Argument list too long" errors
-attributes_b64 = os.environ.get('GENERATOR_ATTRIBUTES') or args.attributes
-full_config_b64 = os.environ.get('GENERATOR_FULL_CONFIG') or args.full
-variables_b64 = os.environ.get('GENERATOR_VARIABLES') or args.vars
+# Support multiple methods to avoid "Argument list too long" errors:
+# 1. File paths via environment variables (preferred for large configs)
+# 2. Base64 content via environment variables
+# 3. Base64 content via command-line arguments (legacy)
+
+attributes_file = os.environ.get('GENERATOR_ATTRIBUTES_FILE')
+full_config_file = os.environ.get('GENERATOR_FULL_CONFIG_FILE')
+variables_file = os.environ.get('GENERATOR_VARIABLES_FILE')
+
+if attributes_file and full_config_file and variables_file:
+    # Read from file paths
+    with open(attributes_file, 'r') as f:
+        attributes_b64 = f.read()
+    with open(full_config_file, 'r') as f:
+        full_config_b64 = f.read()
+    with open(variables_file, 'r') as f:
+        variables_b64 = f.read()
+else:
+    # Fallback to environment variables or command-line arguments
+    attributes_b64 = os.environ.get('GENERATOR_ATTRIBUTES') or args.attributes
+    full_config_b64 = os.environ.get('GENERATOR_FULL_CONFIG') or args.full
+    variables_b64 = os.environ.get('GENERATOR_VARIABLES') or args.vars
 
 if not attributes_b64:
-    raise ValueError("Generator attributes must be provided via -a argument or GENERATOR_ATTRIBUTES environment variable")
+    raise ValueError("Generator attributes must be provided via GENERATOR_ATTRIBUTES_FILE, GENERATOR_ATTRIBUTES environment variable, or -a argument")
 if not full_config_b64:
-    raise ValueError("Full configuration must be provided via -f argument or GENERATOR_FULL_CONFIG environment variable")
+    raise ValueError("Full configuration must be provided via GENERATOR_FULL_CONFIG_FILE, GENERATOR_FULL_CONFIG environment variable, or -f argument")
 if not variables_b64:
-    raise ValueError("Module variables must be provided via -v argument or GENERATOR_VARIABLES environment variable")
+    raise ValueError("Module variables must be provided via GENERATOR_VARIABLES_FILE, GENERATOR_VARIABLES environment variable, or -v argument")
 
 generatorAttributes = yaml.load(base64.b64decode(attributes_b64), Loader=yaml.FullLoader)
 generatorFullConfig = yaml.load(base64.b64decode(full_config_b64), Loader=yaml.FullLoader)
