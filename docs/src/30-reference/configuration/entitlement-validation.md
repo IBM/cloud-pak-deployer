@@ -45,7 +45,7 @@ global_config:
   environment_name: my-environment
   cloud_platform: existing-ocp
   
-  entitlement_validation:
+  check_images:
     # Enable or disable validation (default: true)
     enabled: true
     
@@ -54,6 +54,7 @@ global_config:
     fail_on_error: true
     
     # Number of sample images per component (default: 3)
+    # Set to 'all' to check all images (slower but most thorough)
     # Higher = more thorough but slower
     sample_size: 3
 ```
@@ -63,23 +64,32 @@ global_config:
 #### Disable Validation (Air-gapped Environments)
 
 ```yaml
-entitlement_validation:
+check_images:
   enabled: false
 ```
 
 #### Warn Only (Don't Fail Deployment)
 
 ```yaml
-entitlement_validation:
+check_images:
   enabled: true
   fail_on_error: false
   sample_size: 2
 ```
 
-#### Maximum Validation Coverage
+#### Check All Images (Maximum Coverage)
 
 ```yaml
-entitlement_validation:
+check_images:
+  enabled: true
+  fail_on_error: true
+  sample_size: all
+```
+
+#### Custom Sample Size
+
+```yaml
+check_images:
   enabled: true
   fail_on_error: true
   sample_size: 5
@@ -192,7 +202,7 @@ Validation is automatically skipped in these scenarios:
 
 - **Air-gapped deployments**: When `cpd_airgap: true`
 - **No entitlement key**: When `ibm_cp_entitlement_key` is not found in vault
-- **Explicitly disabled**: When `entitlement_validation.enabled: false`
+- **Explicitly disabled**: When `check_images.enabled: false`
 - **cpd-cli not available**: When `cpd-cli` is not installed or not in PATH
 
 ## Troubleshooting
@@ -203,14 +213,22 @@ If you see "cpd-cli is NOT available" message:
 1. Install cpd-cli from: https://www.ibm.com/docs/en/software-hub/5.1.x?topic=manage-list-images
 2. Ensure cpd-cli is in your PATH
 3. Verify installation: `cpd-cli version`
-4. Alternatively, disable validation: `entitlement_validation.enabled: false`
+4. Alternatively, disable validation: `check_images.enabled: false`
 
 ### Validation Takes Too Long
 
 Reduce the sample size:
 ```yaml
-entitlement_validation:
+check_images:
   sample_size: 2
+```
+
+### Need Complete Validation
+
+Check all images instead of sampling:
+```yaml
+check_images:
+  sample_size: all
 ```
 
 ### cpd-cli Command Fails

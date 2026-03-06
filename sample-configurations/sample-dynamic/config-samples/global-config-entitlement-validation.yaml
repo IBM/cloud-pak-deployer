@@ -7,8 +7,8 @@ global_config:
   environment_name: sample
   cloud_platform: existing-ocp
   
-  # Entitlement validation configuration
-  entitlement_validation:
+  # Image checking configuration
+  check_images:
     # Enable or disable pre-flight entitlement validation
     # When enabled, validates access to representative images before deployment
     # Default: true
@@ -21,6 +21,7 @@ global_config:
     
     # Number of sample images to validate per component (smart sampling)
     # Higher values = more thorough validation but longer validation time
+    # Set to 'all' to check all images (slower but most thorough)
     # Recommended: 2-3 images per component (reduces time from 10+ min to <1 min)
     # Default: 3
     sample_size: 3
@@ -31,11 +32,17 @@ global_config:
     #   - "cp.icr.io/cp/cpd/specific-image@sha256:..."
 
 # Example: Disable validation for air-gapped environments
-# entitlement_validation:
+# check_images:
 #   enabled: false
 
 # Example: Warn only, don't fail deployment
-# entitlement_validation:
+# check_images:
 #   enabled: true
 #   fail_on_error: false
 #   sample_size: 2
+
+# Example: Check all images (most thorough)
+# check_images:
+#   enabled: true
+#   fail_on_error: true
+#   sample_size: all

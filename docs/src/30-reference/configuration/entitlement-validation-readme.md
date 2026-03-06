@@ -12,16 +12,16 @@ Validates that your IBM entitlement key has access to required container images 
 **Custom Configuration:**
 ```yaml
 global_config:
-  entitlement_validation:
+  check_images:
     enabled: true          # Enable/disable validation
     fail_on_error: true    # Fail deployment on errors
-    sample_size: 3         # Images to check per component
+    sample_size: 3         # Images to check per component (or 'all')
 ```
 
 **Disable for Air-gapped:**
 ```yaml
 global_config:
-  entitlement_validation:
+  check_images:
     enabled: false
 ```
 
@@ -97,7 +97,7 @@ cpd-cli manage list-images \
 
 Then samples the output based on `sample_size` configuration:
 - **Default**: ~3 images per component
-- **Configurable**: Adjust via `entitlement_validation.sample_size`
+- **Configurable**: Adjust via `check_images.sample_size` (numeric or 'all')
 - **Automatic**: Total images = sample_size × (components + 2)
 
 ### Requirements
@@ -169,7 +169,7 @@ The validation automatically uses:
 3. **Disabled validation:**
    ```yaml
    # In config
-   entitlement_validation:
+   check_images:
      enabled: false
    ```
    ```bash

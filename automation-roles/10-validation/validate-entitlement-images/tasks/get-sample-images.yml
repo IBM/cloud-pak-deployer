@@ -40,8 +40,9 @@
         --inspect_source_registry=true 2>&1 | \
         grep -E "cp\.icr\.io|icr\.io" | \
         awk '{print $1}' | \
-        sort -u | \
-        head -n {{ (_entitlement_validation_sample_size | int) * ((_cp4d_cartridges | default([]) | length) + 2) }}
+        sort -u{% if _entitlement_validation_sample_size != 'all' %} | \
+        head -n {{ (_entitlement_validation_sample_size | int) * ((_cp4d_cartridges | default([]) | length) + 2) }}{% endif %}
+
     register: _cpd_cli_images
     failed_when: false
     changed_when: false
@@ -96,7 +97,7 @@
       1. cpd-cli list-images command failed
       2. No Cloud Pak components are configured for deployment
       
-      To skip validation, set: entitlement_validation.enabled: false
+      To skip validation, set: check_images.enabled: false
   when: _images_to_validate | length == 0
 
 - name: Display selected images for validation
