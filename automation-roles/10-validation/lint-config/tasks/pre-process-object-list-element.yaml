@@ -43,13 +43,15 @@
         -k {{ _all_config_item.key }} \
         -p {{ _generator_dir }}/{{ _all_config_item.key }} \
         -i {{ object_element_index }} \
-        -s preprocessor.py \
-        -a $(cat {{ temp_file_attributes.path }}) \
-        -f $(cat {{ temp_file_full_config.path }}) \
-        -v $(cat {{ temp_file_variables.path }})
+        -s preprocessor.py
     args:
       chdir: "{{ role_path }}/scripts"
+    environment:
+      GENERATOR_ATTRIBUTES: "{{ lookup('file', temp_file_attributes.path) }}"
+      GENERATOR_FULL_CONFIG: "{{ lookup('file', temp_file_full_config.path) }}"
+      GENERATOR_VARIABLES: "{{ lookup('file', temp_file_variables.path) }}"
     register: preprocess_result
+    no_log: true
 
   - name: Clean up temporary files
     file:
