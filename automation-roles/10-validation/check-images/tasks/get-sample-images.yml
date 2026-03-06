@@ -44,12 +44,28 @@
         Components: {{ _cpd_components }}
         Sample size: {{ _check_images_sample_size | int }} images per component
 
-  - name: Fetch images using cpd-cli list-images and parse output
+  - name: Fetch raw cpd-cli output (for debugging)
     shell: |
       cpd-cli manage list-images \
         --release={{ _cp4d_version }} \
         --components={{ _cpd_components }} \
-        --inspect_source_registry=true 2>&1 | \
+        --inspect_source_registry=true 2>&1
+    register: _cpd_cli_raw_output
+    failed_when: false
+    changed_when: false
+    environment:
+      IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
+
+  - name: Display raw cpd-cli output (first 50 lines)
+    debug:
+      msg: |
+        cpd-cli exit code: {{ _cpd_cli_raw_output.rc }}
+        Raw output (first 50 lines):
+        {{ _cpd_cli_raw_output.stdout_lines[:50] | join('\n') }}
+
+  - name: Parse cpd-cli output to extract images
+    shell: |
+      echo "{{ _cpd_cli_raw_output.stdout }}" | \
       grep -E "cp\.icr\.io|icr\.io" | \
       awk '{print $1}' | \
       sort -u{% if _check_images_sample_size != 'all' %} | \
@@ -58,13 +74,11 @@
     register: _cpd_cli_images
     failed_when: false
     changed_when: false
-    environment:
-      IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
 
-  - name: Display cpd-cli result
+  - name: Display parsed images result
     debug:
       msg: |
-        cpd-cli exit code: {{ _cpd_cli_images.rc }}
+        Parse exit code: {{ _cpd_cli_images.rc }}
         Number of images found: {{ _cpd_cli_images.stdout_lines | length }}
         {% if _cpd_cli_images.stdout_lines | length > 0 %}
         First 3 images: {{ _cpd_cli_images.stdout_lines[:3] }}
