@@ -1,28 +1,75 @@
 ---
-# Fetch images dynamically using skopeo (no podman/docker needed)
+# Fetch images dynamically using cpd-cli manage list-images
 
 - name: Initialize images list
   set_fact:
     _images_to_validate: []
 
-# CP4D Image Fetching using skopeo to discover real images
+# CP4D Image Fetching using cpd-cli to discover real images
 - block:
+  - name: Check if cpd-cli is available
+    shell: which cpd-cli
+    register: _cpd_cli_check
+    failed_when: false
+    changed_when: false
+
+  - name: Get CP4D version from first instance
+    set_fact:
+      _cp4d_version: "{{ all_config.cp4d[0].cp4d_version | default('5.0.0') }}"
+    when: all_config.cp4d is defined and all_config.cp4d | length > 0
+
   - name: Get CP4D cartridges with state=installed only
     set_fact:
       _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | selectattr('state', 'equalto', 'installed') | map(attribute='name') | list }}"
     when: all_config.cp4d is defined
 
-  - name: Get sample images for validation from each cartridge
+  - name: Build component list for cpd-cli
+    set_fact:
+      _cpd_components: "cpfs,cpd_platform,{{ _cp4d_cartridges | join(',') }}"
+    when: _cp4d_cartridges is defined and _cp4d_cartridges | length > 0
+
+  - name: Get images from cpd-cli
+    shell: |
+      cpd-cli manage list-images \
+        --release={{ _cp4d_version }} \
+        --components={{ _cpd_components }} \
+        --inspect_source_registry=true 2>&1 | \
+        grep -E "^cp\.icr\.io" | head -n {{ _check_images_sample_size | default(3) | int * (_cp4d_cartridges | length + 2) }}
+    environment:
+      IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
+    register: _cpd_cli_images
+    failed_when: false
+    changed_when: false
+    when:
+      - _cpd_cli_check.rc == 0
+      - _cp4d_cartridges is defined
+      - _cp4d_cartridges | length > 0
+
+  - name: Parse cpd-cli output into image list
     set_fact:
       _images_to_validate: >-
         {{ _images_to_validate + [
           {
-            'component': item,
-            'image': 'cp.icr.io/cp/cpd/' + item + ':latest'
+            'component': item.split('/')[3].split(':')[0] if ':' in item else item.split('/')[3].split('@')[0],
+            'image': item
           }
         ] }}
-    loop: "{{ _cp4d_cartridges }}"
-    when: _cp4d_cartridges is defined and _cp4d_cartridges | length > 0
+    loop: "{{ _cpd_cli_images.stdout_lines | default([]) }}"
+    when:
+      - _cpd_cli_images is defined
+      - _cpd_cli_images.rc == 0
+      - _cpd_cli_images.stdout_lines is defined
+
+  - name: Display cpd-cli availability status
+    debug:
+      msg: |
+        {% if _cpd_cli_check.rc == 0 %}
+        ✓ cpd-cli is available - using dynamic image discovery
+        {% else %}
+        ✗ cpd-cli is NOT available - validation will be skipped
+        To enable validation, install cpd-cli from:
+        https://www.ibm.com/docs/en/software-hub/5.1.x?topic=manage-list-images
+        {% endif %}
 
   when: _cp4d_requested | bool
 
@@ -54,18 +101,38 @@
   debug:
     msg: "Images to validate: {{ _images_to_validate | length }} images found"
 
+- name: Check if cpd-cli was available and produced results
+  set_fact:
+    _cpd_cli_available: "{{ _cpd_cli_check is defined and _cpd_cli_check.rc == 0 }}"
+
+- name: Warn if cpd-cli is not available
+  debug:
+    msg: |
+      WARNING: cpd-cli is not available - image validation will be skipped.
+      
+      To enable validation, install cpd-cli from:
+      https://www.ibm.com/docs/en/software-hub/5.1.x?topic=manage-list-images
+      
+      Alternatively, disable this check by setting:
+      check_images:
+        enabled: false
+  when: not (_cpd_cli_available | bool)
+
 - name: Ensure at least one image is selected for validation
   fail:
     msg: |
       No images found for validation. This could be because:
-      1. The entitlement key does not have access to the required registries
-      2. No Cloud Pak components are configured for deployment
-      3. Network connectivity issues
+      1. cpd-cli failed to retrieve images (check network connectivity)
+      2. The entitlement key does not have access to the required registries
+      3. No Cloud Pak components are configured for deployment
       
       To skip validation, set: check_images.enabled: false
-  when: _images_to_validate | length == 0
+  when:
+    - _images_to_validate | length == 0
+    - _cpd_cli_available | bool
 
 - name: Display selected images for validation
   debug:
     msg: "Selected {{ _images_to_validate | length }} images for validation using cpd-cli"
+  when: _images_to_validate | length > 0
 

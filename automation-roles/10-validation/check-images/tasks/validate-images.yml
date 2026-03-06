@@ -11,32 +11,40 @@
 - name: Build list of images to validate based on requested Cloud Paks
   include_tasks: get-sample-images.yml
 
-- name: Display validation plan
+- name: Skip validation if no images found
   debug:
-    msg: |
-      Validating entitlement key access to {{ _images_to_validate | length }} representative images
-      (Smart sampling: {{ _check_images_sample_size }} images per component)
-      This should take approximately {{ (_images_to_validate | length * 2) }} seconds
+    msg: "No images to validate - skipping validation"
+  when: _images_to_validate | length == 0
 
-- name: Validate access to each representative image
-  shell: |
-    skopeo inspect --creds cp:${ENTITLEMENT_KEY} \
-      docker://{{ item.image }} 2>&1
-  environment:
-    ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
-  register: _image_validation_result
-  failed_when: false
-  loop: "{{ _images_to_validate }}"
-  loop_control:
-    label: "{{ item.component }}: {{ item.image }}"
-  no_log: true
+- block:
+  - name: Display validation plan
+    debug:
+      msg: |
+        Validating entitlement key access to {{ _images_to_validate | length }} representative images
+        (Smart sampling: {{ _check_images_sample_size }} images per component)
+        This should take approximately {{ (_images_to_validate | length * 2) }} seconds
 
-- name: Collect failed validations
-  set_fact:
-    _failed_images: >-
-      {{ _image_validation_result.results 
-         | selectattr('rc', 'ne', 0) 
-         | list }}
+  - name: Validate access to each representative image
+    shell: |
+      skopeo inspect --creds cp:${ENTITLEMENT_KEY} \
+        docker://{{ item.image }} 2>&1
+    environment:
+      ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
+    register: _image_validation_result
+    failed_when: false
+    loop: "{{ _images_to_validate }}"
+    loop_control:
+      label: "{{ item.component }}: {{ item.image }}"
+    no_log: true
 
-- name: Report validation results
-  include_tasks: report-validation-results.yml
+  - name: Collect failed validations
+    set_fact:
+      _failed_images: >-
+        {{ _image_validation_result.results
+           | selectattr('rc', 'ne', 0)
+           | list }}
+
+  - name: Report validation results
+    include_tasks: report-validation-results.yml
+
+  when: _images_to_validate | length > 0
