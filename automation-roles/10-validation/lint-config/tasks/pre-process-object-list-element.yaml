@@ -7,20 +7,64 @@
 
 - name: If a preprocessor script was found, run it via pre_execution_processing.py
   block:
+  - name: Create temporary file for attributes
+    tempfile:
+      state: file
+      suffix: ".b64"
+    register: temp_file_attributes
+
+  - name: Create temporary file for full config
+    tempfile:
+      state: file
+      suffix: ".b64"
+    register: temp_file_full_config
+
+  - name: Create temporary file for variables
+    tempfile:
+      state: file
+      suffix: ".b64"
+    register: temp_file_variables
+
+  - name: Write attributes to temporary file
+    copy:
+      content: "{{ object_element | to_yaml | b64encode }}"
+      dest: "{{ temp_file_attributes.path }}"
+    no_log: true
+
+  - name: Write full config to temporary file
+    copy:
+      content: "{{ all_config | to_yaml | b64encode }}"
+      dest: "{{ temp_file_full_config.path }}"
+    no_log: true
+
+  - name: Write variables to temporary file
+    copy:
+      content: "{{ vault_var|default('{}') | to_yaml | b64encode }}"
+      dest: "{{ temp_file_variables.path }}"
+    no_log: true
+
   - name: Run the linter and pre-processor script for object {{ _all_config_item.key }}
     shell: |
       python3 pre-execution-processor.py \
         -k {{ _all_config_item.key }} \
         -p {{ _generator_dir }}/{{ _all_config_item.key }} \
         -i {{ object_element_index }} \
-        -s preprocessor.py
+        -s preprocessor.py \
+        -a $(cat {{ temp_file_attributes.path }}) \
+        -f $(cat {{ temp_file_full_config.path }}) \
+        -v $(cat {{ temp_file_variables.path }})
     args:
       chdir: "{{ role_path }}/scripts"
-    environment:
-      GENERATOR_ATTRIBUTES: "{{ object_element | to_yaml | b64encode }}"
-      GENERATOR_FULL_CONFIG: "{{ all_config | to_yaml | b64encode }}"
-      GENERATOR_VARIABLES: "{{ vault_var|default('{}') | to_yaml | b64encode }}"
     register: preprocess_result
+
+  - name: Clean up temporary files
+    file:
+      path: "{{ item }}"
+      state: absent
+    loop:
+      - "{{ temp_file_attributes.path }}"
+      - "{{ temp_file_full_config.path }}"
+      - "{{ temp_file_variables.path }}"
 
 # The output of the script should look like:
 # {
