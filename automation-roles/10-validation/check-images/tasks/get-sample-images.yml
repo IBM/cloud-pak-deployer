@@ -14,12 +14,10 @@
 
   - name: Discover available images for each cartridge using skopeo
     shell: |
-      # Use authenticated registry cp.icr.io instead of public icr.io/cpopen
-      # Try to get a sample image from the cartridge's operator catalog
       skopeo list-tags --creds cp:${ENTITLEMENT_KEY} \
         docker://cp.icr.io/cp/cpd/ibm-cpd-{{ item }}-operator-catalog 2>&1 | \
         jq -r '.Tags[]' 2>/dev/null | head -n {{ _check_images_sample_size | int }} | \
-        sed "s|^|cp.icr.io/cp/cpd/ibm-cpd-{{ item }}-operator-catalog:|" || echo ""
+        sed 's|^|cp.icr.io/cp/cpd/ibm-cpd-{{ item }}-operator-catalog:|' || echo ""
     environment:
       ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
     register: _discovered_images
