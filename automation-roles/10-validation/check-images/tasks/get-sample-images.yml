@@ -28,16 +28,15 @@
       _cpd_components: "cpfs,cpd_platform,{{ _cp4d_cartridges | join(',') }}"
     when: _cp4d_cartridges is defined and _cp4d_cartridges | length > 0
 
-  - name: Get images from cpd-cli
+  - name: Get raw output from cpd-cli (for debugging)
     shell: |
       cpd-cli manage list-images \
         --release={{ _cp4d_version }} \
         --components={{ _cpd_components }} \
-        --inspect_source_registry=true 2>&1 | \
-        grep -E "^cp\.icr\.io" | head -n {{ _check_images_sample_size | default(3) | int * (_cp4d_cartridges | length + 2) }}
+        --inspect_source_registry=true 2>&1
     environment:
       IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
-    register: _cpd_cli_images
+    register: _cpd_cli_raw_output
     failed_when: false
     changed_when: false
     when:
@@ -45,20 +44,32 @@
       - _cp4d_cartridges is defined
       - _cp4d_cartridges | length > 0
 
-  - name: Debug cpd-cli execution
+  - name: Debug raw cpd-cli output
     debug:
       msg: |
-        cpd-cli execution details:
-        - Return code: {{ _cpd_cli_images.rc | default('N/A') }}
-        - Components: {{ _cpd_components | default('N/A') }}
-        - Version: {{ _cp4d_version | default('N/A') }}
-        - Images found: {{ _cpd_cli_images.stdout_lines | default([]) | length }}
-        {% if _cpd_cli_images.stderr is defined and _cpd_cli_images.stderr != '' %}
-        - Error output: {{ _cpd_cli_images.stderr }}
-        {% endif %}
+        cpd-cli raw output (first 50 lines):
+        {{ _cpd_cli_raw_output.stdout_lines[:50] | default(['No output']) | join('\n') }}
+        
+        Stderr:
+        {{ _cpd_cli_raw_output.stderr | default('No errors') }}
+        
+        Return code: {{ _cpd_cli_raw_output.rc | default('N/A') }}
     when:
-      - _cpd_cli_images is defined
+      - _cpd_cli_raw_output is defined
       - _cpd_cli_check.rc == 0
+
+  - name: Extract images from cpd-cli output
+    shell: |
+      echo "{{ _cpd_cli_raw_output.stdout }}" | \
+        grep -E "^cp\.icr\.io" | \
+        head -n {{ _check_images_sample_size | default(3) | int * (_cp4d_cartridges | length + 2) }}
+    register: _cpd_cli_images
+    failed_when: false
+    changed_when: false
+    when:
+      - _cpd_cli_raw_output is defined
+      - _cpd_cli_raw_output.rc == 0
+      - _cpd_cli_raw_output.stdout is defined
 
   - name: Parse cpd-cli output into image list
     set_fact:
