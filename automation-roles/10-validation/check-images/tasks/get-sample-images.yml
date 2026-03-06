@@ -20,11 +20,13 @@
     shell: |
       # Try common image name patterns for the cartridge
       for pattern in "ibm-cpd-{{ item }}" "ibm-{{ item }}" "{{ item }}"; do
-        skopeo list-tags --creds cp:{{ ibm_cp_entitlement_key }} \
+        skopeo list-tags --creds cp:${ENTITLEMENT_KEY} \
           docker://icr.io/cpopen/${pattern}-operator-catalog 2>/dev/null | \
           jq -r '.Tags[]' | head -n {{ _check_images_sample_size | int }} | \
           sed "s|^|icr.io/cpopen/${pattern}-operator-catalog:|" && break
       done || echo ""
+    environment:
+      ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
     register: _discovered_images
     loop: "{{ _cp4d_cartridges }}"
     failed_when: false

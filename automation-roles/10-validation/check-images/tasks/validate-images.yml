@@ -20,8 +20,10 @@
 
 - name: Validate access to each representative image
   shell: |
-    skopeo inspect --creds cp:{{ ibm_cp_entitlement_key }} \
+    skopeo inspect --creds cp:${ENTITLEMENT_KEY} \
       docker://{{ item.image }} 2>&1
+  environment:
+    ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
   register: _image_validation_result
   failed_when: false
   loop: "{{ _images_to_validate }}"
