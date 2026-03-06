@@ -17,7 +17,7 @@
     _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
   vars:
     query: >-
-      [?starts_with(name,'cpd-cli-linux-EE')].browser_download_url
+      [?starts_with(name,'cpd-cli-linux-') && ends_with(name,'.tar.gz')].browser_download_url
   when:
     - _cpd_cli_arch == "amd64"
     - not _cpd_cli_tar_exists.stat.exists
@@ -26,7 +26,7 @@
     _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
   vars:
     query: >-
-      [?starts_with(name,'cpd-cli-{{ _cpd_cli_arch }}-EE')].browser_download_url
+      [?starts_with(name,'cpd-cli-{{ _cpd_cli_arch }}-') && ends_with(name,'.tar.gz')].browser_download_url
   when:
     - _cpd_cli_arch != "amd64"
     - not _cpd_cli_tar_exists.stat.exists
