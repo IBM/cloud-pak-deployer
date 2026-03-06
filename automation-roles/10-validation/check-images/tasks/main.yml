@@ -11,7 +11,18 @@
 - name: Override settings from command line if CPD_CHECK_IMAGES is set
   set_fact:
     _check_images_enabled: "{{ false if lookup('env', 'CPD_CHECK_IMAGES') == 'false' else true }}"
-    _check_images_sample_size: "{{ lookup('env', 'CPD_CHECK_IMAGES') if lookup('env', 'CPD_CHECK_IMAGES') == 'all' else _check_images_sample_size }}"
+    _check_images_sample_size: >-
+      {% if lookup('env', 'CPD_CHECK_IMAGES') == 'false' %}
+      {{ _check_images_sample_size }}
+      {% elif lookup('env', 'CPD_CHECK_IMAGES') == 'true' %}
+      {{ _check_images_sample_size }}
+      {% elif lookup('env', 'CPD_CHECK_IMAGES') == 'all' %}
+      all
+      {% elif lookup('env', 'CPD_CHECK_IMAGES') | regex_search('^\d+$') %}
+      {{ lookup('env', 'CPD_CHECK_IMAGES') }}
+      {% else %}
+      {{ _check_images_sample_size }}
+      {% endif %}
   when: lookup('env', 'CPD_CHECK_IMAGES') != ''
 
 - name: Skip validation if disabled

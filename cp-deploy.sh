@@ -49,6 +49,7 @@ command_usage() {
   echo "  --skip-cp-install             Skip installation of the Cloud Pak and finish after configuring the OpenShift cluster (\$SKIP_CP_INSTALL)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
   echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation"
+  echo "  --check-images[=N|all|false]  Enable image access validation. N=sample size (default: 3), 'all'=check all images, 'false'=disable (\$CPD_CHECK_IMAGES)"
   echo "  --dry-run                     Only log the steps that will be performed, do not make any changes to the OpenShift cluster"
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"

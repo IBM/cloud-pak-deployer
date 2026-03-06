@@ -100,7 +100,7 @@ check_images:
 You can override the configuration settings using the `--check-images` command-line option:
 
 ```bash
-# Enable validation (overrides YAML config)
+# Enable validation with default sample size (3 images per component)
 ./cp-deploy.sh env apply --check-images
 
 # Disable validation (overrides YAML config)
@@ -108,6 +108,9 @@ You can override the configuration settings using the `--check-images` command-l
 
 # Check all images (overrides sample_size in YAML config)
 ./cp-deploy.sh env apply --check-images=all
+
+# Check specific number of images per component (e.g., 5)
+./cp-deploy.sh env apply --check-images=5
 ```
 
 **Note:** The command-line option takes precedence over YAML configuration settings.
