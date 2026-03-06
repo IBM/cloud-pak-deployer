@@ -30,7 +30,7 @@ global_config:
 ### Files Created
 
 ```
-automation-roles/10-validation/validate-check-images/
+automation-roles/10-validation/check-images/
 ├── tasks/
 │   ├── main.yml                          # Entry point
 │   ├── validate-images.yml               # Validation orchestration
@@ -62,7 +62,7 @@ The validation role is called in [`playbooks/playbook-env-apply-10-validate.yml`
 
 - name: Validate entitlement key access to images
   include_role:
-    name: validate-check-images
+    name: check-images
   when: 
     - cloud_platform in ['existing-ocp', 'ibm-cloud', 'vsphere', 'aws', 'azure']
     - not (cpd_airgap | default(false) | bool)
