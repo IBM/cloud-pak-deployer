@@ -12,36 +12,17 @@
       _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | selectattr('state', 'equalto', 'installed') | map(attribute='name') | list }}"
     when: all_config.cp4d is defined
 
-  - name: Discover available images for each cartridge using skopeo
-    shell: |
-      skopeo list-tags --creds cp:${ENTITLEMENT_KEY} \
-        docker://cp.icr.io/cp/cpd/ibm-cpd-{{ item }}-operator-catalog 2>&1 | \
-        jq -r '.Tags[]' 2>/dev/null | head -n {{ _check_images_sample_size | int }} | \
-        sed 's|^|cp.icr.io/cp/cpd/ibm-cpd-{{ item }}-operator-catalog:|' || echo ""
-    environment:
-      ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
-    register: _discovered_images
-    loop: "{{ _cp4d_cartridges }}"
-    failed_when: false
-    changed_when: false
-    no_log: true
-    when: _cp4d_cartridges is defined and _cp4d_cartridges | length > 0
-
-  - name: Build images list from discovered images
+  - name: Get sample images for validation from each cartridge
     set_fact:
       _images_to_validate: >-
-        {{ _images_to_validate +
-           (item.stdout_lines |
-            map('regex_replace', '^(.*)$', '{"component": "' + item.item + '", "image": "\1"}') |
-            map('from_json') |
-            list) }}
-    loop: "{{ _discovered_images.results | default([]) }}"
-    loop_control:
-      label: "{{ item.item }}"
-    when:
-      - item.stdout_lines is defined
-      - item.stdout_lines | length > 0
-    no_log: true
+        {{ _images_to_validate + [
+          {
+            'component': item,
+            'image': 'cp.icr.io/cp/cpd/' + item + ':latest'
+          }
+        ] }}
+    loop: "{{ _cp4d_cartridges }}"
+    when: _cp4d_cartridges is defined and _cp4d_cartridges | length > 0
 
   when: _cp4d_requested | bool
 
