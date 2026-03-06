@@ -6,72 +6,82 @@
     _images_to_validate: []
 
 # CP4D Image Fetching using cpd-cli to discover real images
-- block:
-  - name: Check if cpd-cli is available
-    shell: which cpd-cli
-    register: _cpd_cli_check
-    failed_when: false
-    changed_when: false
+- name: Write CP4D validation debug info to file
+  copy:
+    content: |
+      CP4D Validation Status:
+      - _cp4d_requested: {{ _cp4d_requested | default('UNDEFINED') }}
+      - all_config.cp4d defined: {{ all_config.cp4d is defined }}
+      - all_config.cp4d length: {{ (all_config.cp4d | default([])) | length }}
+    dest: "{{ status_dir }}/log/check-images-debug.log"
+  failed_when: false
 
+- name: Debug CP4D requested status
+  debug:
+    msg: "_cp4d_requested = {{ _cp4d_requested | default('UNDEFINED') }}"
+
+- block:
   - name: Get CP4D version from first instance
     set_fact:
       _cp4d_version: "{{ all_config.cp4d[0].cp4d_version | default('5.0.0') }}"
     when: all_config.cp4d is defined and all_config.cp4d | length > 0
+
+  - name: Set deployer directory for cp4d-switch-olm-utils role
+    set_fact:
+      _deployer_dir: "{{ playbook_dir | dirname }}"
+
+  - name: Switch to the correct olm-utils version to access CASE files
+    include_role:
+      name: cp4d-switch-olm-utils
+    vars:
+      _p_cp4d_version: "{{ _cp4d_version }}"
+
+  - name: Include CP4D installation variables for cartridge mapping
+    include_vars: "{{ playbook_dir | dirname }}/automation-roles/50-install-cloud-pak/cp4d/cp4d-variables/vars/vars-cp4d-installation.yml"
 
   - name: Get CP4D cartridges with state=installed only
     set_fact:
       _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | selectattr('state', 'equalto', 'installed') | map(attribute='name') | list }}"
     when: all_config.cp4d is defined
 
-  - name: Build component list for cpd-cli
+  - name: Map cartridge names to olm_utils names
     set_fact:
-      _cpd_components: "cpfs,cpd_platform,{{ _cp4d_cartridges | join(',') }}"
-    when: _cp4d_cartridges is defined and _cp4d_cartridges | length > 0
-
-  - name: Get raw output from cpd-cli (for debugging)
-    shell: |
-      cpd-cli manage list-images \
-        --release={{ _cp4d_version }} \
-        --components={{ _cpd_components }} \
-        --inspect_source_registry=true 2>&1
-    environment:
-      IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
-    register: _cpd_cli_raw_output
-    failed_when: false
-    changed_when: false
+      _cp4d_olm_cartridges: "{{ _cp4d_olm_cartridges | default([]) + [item.olm_utils_name] }}"
+    loop: "{{ cartridge_cr }}"
     when:
-      - _cpd_cli_check.rc == 0
       - _cp4d_cartridges is defined
-      - _cp4d_cartridges | length > 0
+      - item.name in _cp4d_cartridges
+      - item.olm_utils_name is defined
+      - not (item.cr_internal | default(False))
 
-  - name: Debug raw cpd-cli output
-    debug:
-      msg: |
-        cpd-cli raw output (first 50 lines):
-        {{ _cpd_cli_raw_output.stdout_lines[:50] | default(['No output']) | join('\n') }}
-        
-        Stderr:
-        {{ _cpd_cli_raw_output.stderr | default('No errors') }}
-        
-        Return code: {{ _cpd_cli_raw_output.rc | default('N/A') }}
-    when:
-      - _cpd_cli_raw_output is defined
-      - _cpd_cli_check.rc == 0
+  - name: Build component list for cpd-cli (only valid olm_utils components)
+    set_fact:
+      _cpd_components: "cpfs,cpd_platform,{{ _cp4d_olm_cartridges | join(',') }}"
+    when: _cp4d_olm_cartridges is defined and _cp4d_olm_cartridges | length > 0
 
-  - name: Extract images from cpd-cli output
+  - name: Find CASE image CSV files for installed cartridges
+    find:
+      paths: "{{ _deployer_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/.ibm-pak/data/cases"
+      patterns: "*-images.csv"
+      recurse: yes
+    register: _case_image_files
+    failed_when: false
+
+  - name: Extract entitled images from CASE CSV files (cp.icr.io only)
     shell: |
-      echo "{{ _cpd_cli_raw_output.stdout }}" | \
-        grep -E "^cp\.icr\.io" | \
-        head -n {{ _check_images_sample_size | default(3) | int * (_cp4d_cartridges | length + 2) }}
-    register: _cpd_cli_images
+      if [ {{ _case_image_files.matched | default(0) }} -gt 0 ]; then
+        for csv_file in {{ _case_image_files.files | map(attribute='path') | join(' ') }}; do
+          tail -n +2 "$csv_file" | awk -F',' '{print $1 "/" $2 ":" $3}' | grep "^cp\.icr\.io"
+        done | sort -u | head -n {{ _check_images_sample_size | default(3) | int * (_cp4d_cartridges | default([]) | length) }}
+      fi
+    register: _case_images
     failed_when: false
     changed_when: false
     when:
-      - _cpd_cli_raw_output is defined
-      - _cpd_cli_raw_output.rc == 0
-      - _cpd_cli_raw_output.stdout is defined
+      - _case_image_files is defined
+      - _case_image_files.matched | default(0) > 0
 
-  - name: Parse cpd-cli output into image list
+  - name: Parse CASE output into image list
     set_fact:
       _images_to_validate: >-
         {{ _images_to_validate + [
@@ -80,22 +90,11 @@
             'image': item
           }
         ] }}
-    loop: "{{ _cpd_cli_images.stdout_lines | default([]) }}"
+    loop: "{{ _case_images.stdout_lines | default([]) }}"
     when:
-      - _cpd_cli_images is defined
-      - _cpd_cli_images.rc == 0
-      - _cpd_cli_images.stdout_lines is defined
-
-  - name: Display cpd-cli availability status
-    debug:
-      msg: |
-        {% if _cpd_cli_check.rc == 0 %}
-        ✓ cpd-cli is available - using dynamic image discovery
-        {% else %}
-        ✗ cpd-cli is NOT available - validation will be skipped
-        To enable validation, install cpd-cli from:
-        https://www.ibm.com/docs/en/software-hub/5.1.x?topic=manage-list-images
-        {% endif %}
+      - _case_images is defined
+      - _case_images.rc == 0
+      - _case_images.stdout_lines is defined
 
   when: _cp4d_requested | bool
 

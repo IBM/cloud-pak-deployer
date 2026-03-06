@@ -4,31 +4,16 @@
 
 The Cloud Pak Deployer includes a pre-flight validation feature that verifies your IBM entitlement key has access to all required container images **before** deployment begins. This prevents deployment failures that would otherwise occur hours into the installation process.
 
-**Reference:** [GitHub Issue #1085](https://github.com/IBM/cloud-pak-deployer/issues/1085)
-
-## Problem Statement
-
-Previously, the deployer only validated entitlement key credentials through a login test (e.g., `skopeo login cp.icr.io`). However, successful login does not guarantee that the entitlement key has permission to pull specific images required for deployment.
-
-Common scenario:
-```bash
-podman login cp.icr.io → Login Succeeded ✓
-podman pull cp.icr.io/cp/cpd/<image>@sha256:<digest> → denied: You are not authorized ✗
-```
-
-This resulted in deployments failing hours later during Software Hub or component installation.
-
-## Solution
-
-The deployer now performs **smart sampling validation** during the validation phase (playbook 10), checking access to representative images for each Cloud Pak component before any installation begins.
 
 ### Key Features
 
 - **Early Detection**: Catches authorization issues before deployment starts
-- **Smart Sampling**: Validates 2-3 representative images per component instead of all images
-- **Fast Performance**: Reduces validation time from 10+ minutes to under 1 minute
+- **Smart Sampling**: Validates 3 representative images per cartridge (configurable)
+- **Fast Performance**: Validation completes in under 1 minute
+- **Direct CASE File Reading**: Uses Ansible playbooks to read image lists directly from CASE CSV files
+- **No cpd-cli Required**: Works without requiring cpd-cli container runtime
 - **Clear Error Messages**: Provides actionable feedback with specific image names and resolution steps
-- **Configurable**: Can be enabled/disabled or configured to warn instead of fail
+- **Configurable**: Can be enabled/disabled or adjusted for speed vs. thoroughness
 
 ## Configuration
 
@@ -137,19 +122,6 @@ cpd-cli manage list-images \
   --inspect_source_registry=true
 ```
 
-**Benefits of this approach:**
-- **Always Up-to-Date**: Gets current images directly from IBM, no hardcoded templates
-- **Version-Aware**: Automatically uses correct images for your CP4D version
-- **Component-Specific**: Only checks images for components you're actually deploying
-- **Future-Proof**: Automatically includes new images as Cloud Paks evolve
-
-**Requirements:**
-- `cpd-cli` must be installed and available in PATH
-- Internet connection to IBM Container Registry
-- Valid IBM entitlement key
-
-For cpd-cli installation, see: [IBM Documentation - List Images](https://www.ibm.com/docs/en/software-hub/5.1.x?topic=manage-list-images)
-
 ### Smart Sampling Strategy
 
 Instead of checking all images (which can take 10+ minutes), the validator samples images based on the `sample_size` configuration:
@@ -223,17 +195,15 @@ Validation is automatically skipped in these scenarios:
 - **Air-gapped deployments**: When `cpd_airgap: true`
 - **No entitlement key**: When `ibm_cp_entitlement_key` is not found in vault
 - **Explicitly disabled**: When `check_images.enabled: false`
-- **cpd-cli not available**: When `cpd-cli` is not installed or not in PATH
 
 ## Troubleshooting
 
-### cpd-cli Not Available
+### No Images Found for Validation
 
-If you see "cpd-cli is NOT available" message:
-1. Install cpd-cli from: https://www.ibm.com/docs/en/software-hub/5.1.x?topic=manage-list-images
-2. Ensure cpd-cli is in your PATH
-3. Verify installation: `cpd-cli version`
-4. Alternatively, disable validation: `check_images.enabled: false`
+If validation reports no images found:
+1. Ensure cartridges have `state: installed` in your configuration
+2. Check that CASE files exist in `cpd-cli-workspace/olm-utils-workspace/work/offline/{version}/.ibm-pak/data/cases/`
+3. Verify the CP4D version is correctly specified
 
 ### Validation Takes Too Long
 
@@ -251,22 +221,6 @@ check_images:
   sample_size: all
 ```
 
-### cpd-cli Command Fails
-
-If `cpd-cli manage list-images` fails:
-1. Check your internet connection
-2. Verify IBM_ENTITLEMENT_KEY is set correctly
-3. Ensure you're using a compatible cpd-cli version
-4. Check cpd-cli logs for detailed error messages
-
-### False Positives
-
-If validation fails but you believe your entitlement is correct:
-1. Verify the entitlement key at https://myibm.ibm.com/products-services/containerlibrary
-2. Check for typos in the vault secret
-3. Ensure the key hasn't expired
-4. Temporarily set `fail_on_error: false` to continue deployment
-
 ### Network Issues
 
 If validation fails due to network connectivity:
@@ -281,18 +235,3 @@ If validation fails due to network connectivity:
 | No validation | 0s | 0% (fails during install) |
 | Full validation (all images) | 10-15 min | 100% |
 | **Smart sampling (default)** | **30-60s** | **~80%** |
-
-## Best Practices
-
-1. **Keep validation enabled** for online deployments
-2. **Use default sample_size (3)** for balanced speed and coverage
-3. **Check entitlements early** before starting long deployments
-4. **Update entitlement keys** before they expire
-5. **Disable only for air-gapped** environments
-
-## Related Documentation
-
-- [Vault Configuration](vault.md)
-- [Global Configuration](global-config.md)
-- [IBM Container Library](https://myibm.ibm.com/products-services/containerlibrary)
-- [GitHub Issue #1085](https://github.com/IBM/cloud-pak-deployer/issues/1085)
