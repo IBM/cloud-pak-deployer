@@ -23,9 +23,9 @@
       - all_config.cp4d is defined
       - all_config.cp4d | length > 0
 
-  - name: Get CP4D cartridges to validate
+  - name: Get CP4D cartridges to validate (exclude removed and invalid components)
     set_fact:
-      _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | map(attribute='name') | unique | list }}"
+      _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | rejectattr('state', 'defined') | map(attribute='name') | list + (all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | rejectattr('state', 'equalto', 'removed') | map(attribute='name') | list) | reject('in', ['lite', 'cp-foundation', 'scheduler']) | unique | list }}"
     when: all_config.cp4d is defined
 
   - name: Build component list for cpd-cli
