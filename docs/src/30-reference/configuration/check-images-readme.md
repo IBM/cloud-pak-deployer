@@ -30,7 +30,7 @@ global_config:
 ### Files Created
 
 ```
-automation-roles/10-validation/validate-entitlement-images/
+automation-roles/10-validation/validate-check-images/
 ├── tasks/
 │   ├── main.yml                          # Entry point
 │   ├── validate-images.yml               # Validation orchestration
@@ -43,10 +43,10 @@ playbooks/
 └── playbook-env-apply-10-validate.yml    # Integration point (modified)
 
 sample-configurations/sample-dynamic/config-samples/
-└── global-config-entitlement-validation.yaml  # Configuration example
+└── global-config-check-images.yaml       # Configuration example
 
 docs/src/30-reference/configuration/
-└── entitlement-validation.md             # User documentation
+└── check-images.md                       # User documentation
 ```
 
 **Note**: The previous template-based approach (`cp4d-cartridge-samples.j2`) has been replaced with dynamic image discovery using `cpd-cli manage list-images`.
@@ -62,7 +62,7 @@ The validation role is called in [`playbooks/playbook-env-apply-10-validate.yml`
 
 - name: Validate entitlement key access to images
   include_role:
-    name: validate-entitlement-images
+    name: validate-check-images
   when: 
     - cloud_platform in ['existing-ocp', 'ibm-cloud', 'vsphere', 'aws', 'azure']
     - not (cpd_airgap | default(false) | bool)
@@ -181,7 +181,7 @@ The validation automatically uses:
 
 **Success:**
 ```
-TASK [validate-entitlement-images : Display validation summary]
+TASK [validate-check-images : Display validation summary]
 ok: [localhost] => {
     "msg": "✓ All 12 representative images are accessible"
 }
@@ -189,7 +189,7 @@ ok: [localhost] => {
 
 **Failure:**
 ```
-TASK [validate-entitlement-images : Fail deployment if unauthorized images found]
+TASK [validate-check-images : Fail deployment if unauthorized images found]
 fatal: [localhost]: FAILED! => {
     "msg": "ERROR: Entitlement key does not grant access to:\n- watsonx_ai: cp.icr.io/cp/cpd/watsonx-ai-operator@sha256:..."
 }
@@ -229,6 +229,6 @@ Potential improvements for future versions:
 ## References
 
 - [GitHub Issue #1085](https://github.com/IBM/cloud-pak-deployer/issues/1085)
-- [User Documentation](entitlement-validation.md)
-- [Configuration Example](../../../sample-configurations/sample-dynamic/config-samples/global-config-entitlement-validation.yaml)
+- [User Documentation](check-images.md)
+- [Configuration Example](../../../sample-configurations/sample-dynamic/config-samples/global-config-check-images.yaml)
 - [IBM Container Library](https://myibm.ibm.com/products-services/containerlibrary)
