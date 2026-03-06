@@ -23,9 +23,9 @@
       - all_config.cp4d is defined
       - all_config.cp4d | length > 0
 
-  - name: Get CP4D cartridges to validate (exclude removed and invalid components)
+  - name: Get CP4D cartridges with state=installed only
     set_fact:
-      _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | rejectattr('state', 'defined') | map(attribute='name') | list + (all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | rejectattr('state', 'equalto', 'removed') | map(attribute='name') | list) | reject('in', ['lite', 'cp-foundation', 'scheduler', 'cpfs', 'ibm-cert-manager', 'ibm-licensing', 'ibm_events_operator', 'ibm_swhcc']) | unique | list }}"
+      _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | selectattr('state', 'equalto', 'installed') | map(attribute='name') | list }}"
     when: all_config.cp4d is defined
 
   - name: Build component list for cpd-cli (only valid cartridges, no cpfs/cpd_platform)
@@ -56,25 +56,48 @@
     environment:
       IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
 
+  - name: Check if CSV file exists
+    stat:
+      path: "{{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv"
+    register: _csv_file_stat
+
+  - name: Debug - CSV file status
+    debug:
+      msg: |
+        CSV file path: {{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv
+        File exists: {{ _csv_file_stat.stat.exists }}
+        {% if _csv_file_stat.stat.exists %}
+        File size: {{ _csv_file_stat.stat.size }} bytes
+        {% endif %}
+
   - name: Read images from cpd-cli output CSV file
     shell: |
-      if [ -f "{{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv" ]; then
-        cat "{{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv" | \
+      CSV_FILE="{{ status_dir }}/cpd-cli-workspace/olm-utils-workspace/work/offline/{{ _cp4d_version }}/list_images.csv"
+      if [ -f "$CSV_FILE" ]; then
+        echo "Reading CSV file: $CSV_FILE" >&2
+        cat "$CSV_FILE" | \
         grep -E "cp\.icr\.io|icr\.io" | \
         awk -F',' '{print $1}' | \
         sort -u{% if _check_images_sample_size != 'all' %} | \
         head -n {{ (_check_images_sample_size | int) * ((_cp4d_cartridges | default([]) | length) + 2) }}{% endif %}
 
+      else
+        echo "CSV file not found: $CSV_FILE" >&2
+        exit 1
       fi
     register: _cpd_cli_images
-    failed_when: false
+    failed_when: _cpd_cli_images.rc != 0
     changed_when: false
+    when: _csv_file_stat.stat.exists
 
-  - name: Display cpd-cli command result
+  - name: Display CSV read result
     debug:
       msg: |
-        cpd-cli exit code: {{ _cpd_cli_images.rc }}
-        Number of images found: {{ _cpd_cli_images.stdout_lines | length }}
+        CSV read exit code: {{ _cpd_cli_images.rc | default('N/A') }}
+        Number of images found: {{ _cpd_cli_images.stdout_lines | default([]) | length }}
+        {% if _cpd_cli_images.stdout_lines | default([]) | length > 0 %}
+        First 3 images: {{ _cpd_cli_images.stdout_lines[:3] }}
+        {% endif %}
         {% if _cpd_cli_images.rc != 0 %}
         Error output: {{ _cpd_cli_images.stderr | default('No stderr') }}
         {% endif %}
