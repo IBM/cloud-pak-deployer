@@ -4,34 +4,61 @@
     path: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz"
   register: _cpd_cli_tar_exists
 
-- name: Get current version number of cpd-cli
+- name: Check if cpd-cli version file exists
+  stat:
+    path: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.version"
+  register: _cpd_cli_version_file_exists
+
+- name: Read existing cpd-cli version if file exists
+  slurp:
+    src: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.version"
+  register: _cpd_cli_existing_version_content
+  when: _cpd_cli_version_file_exists.stat.exists
+
+- name: Set existing cpd-cli version
+  set_fact:
+    _cpd_cli_existing_version: "{{ _cpd_cli_existing_version_content.content | b64decode | trim }}"
+  when: _cpd_cli_version_file_exists.stat.exists
+
+- name: Get current version number of cpd-cli from GitHub
   uri:
     url: "{{ _v_cpd_cli_releases }}"
     return_content: yes
     method: GET
     status_code: 200
   register: _cpd_cli_releases
-  when: not _cpd_cli_tar_exists.stat.exists
+
+- name: Extract latest cpd-cli version from GitHub release
+  set_fact:
+    _cpd_cli_latest_version: "{{ _cpd_cli_releases.json.tag_name }}"
+
+- name: Determine if cpd-cli download is needed
+  set_fact:
+    _cpd_cli_download_needed: "{{ not _cpd_cli_tar_exists.stat.exists or not _cpd_cli_version_file_exists.stat.exists or (_cpd_cli_existing_version | default('')) != _cpd_cli_latest_version }}"
+
+- name: Show cpd-cli download decision
+  debug:
+    msg: "cpd-cli download needed: {{ _cpd_cli_download_needed }}, existing version: {{ _cpd_cli_existing_version | default('none') }}, latest version: {{ _cpd_cli_latest_version }}"
 
 - set_fact:
     _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
   vars:
     query: >-
-      [?starts_with(name,'cpd-cli-linux-') && ends_with(name,'.tar.gz')].browser_download_url
+      [?starts_with(name,'cpd-cli-linux-EE-') && ends_with(name,'.tar.gz')].browser_download_url
   when:
     - _cpd_cli_arch == "amd64"
-    - not _cpd_cli_tar_exists.stat.exists
+    - _cpd_cli_download_needed | bool
 
 - set_fact:
     _cpd_cli_download_url: "{{ _cpd_cli_releases.json.assets | json_query(query) | first }}"
   vars:
     query: >-
-      [?starts_with(name,'cpd-cli-{{ _cpd_cli_arch }}-') && ends_with(name,'.tar.gz')].browser_download_url
+      [?starts_with(name,'cpd-cli-{{ _cpd_cli_arch }}-EE-') && ends_with(name,'.tar.gz')].browser_download_url
   when:
     - _cpd_cli_arch != "amd64"
-    - not _cpd_cli_tar_exists.stat.exists
+    - _cpd_cli_download_needed | bool
 
-- name: Download latest cpd-cli release
+- name: Download cpd-cli release version {{ _cpd_cli_latest_version }}
   get_url:
     url: "{{ _cpd_cli_download_url }}"
     dest: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.tar.gz"
@@ -42,9 +69,16 @@
   until: _download_result is succeeded
   retries: 5
   delay: 30
-  when: not _cpd_cli_tar_exists.stat.exists
+  when: _cpd_cli_download_needed | bool
 
-- name: Skip download if cpd-cli already exists
+- name: Save cpd-cli version to file
+  copy:
+    content: "{{ _cpd_cli_latest_version }}"
+    dest: "{{ status_dir }}/downloads/cpd-cli-linux-{{ _cpd_cli_arch }}.version"
+    mode: 0644
+  when: _cpd_cli_download_needed | bool
+
+- name: Skip download if cpd-cli is up to date
   debug:
-    msg: "cpd-cli tar.gz already exists, skipping download"
-  when: _cpd_cli_tar_exists.stat.exists
+    msg: "cpd-cli version {{ _cpd_cli_existing_version | default('unknown') }} is up to date, skipping download"
+  when: not (_cpd_cli_download_needed | bool)
