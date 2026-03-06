@@ -12,10 +12,6 @@
       _cp4d_cartridges: "{{ all_config.cp4d | map(attribute='cartridges') | flatten | selectattr('state', 'defined') | selectattr('state', 'equalto', 'installed') | map(attribute='name') | list }}"
     when: all_config.cp4d is defined
 
-  - name: Debug - Show extracted cartridge names
-    debug:
-      msg: "Cartridge names to validate: {{ _cp4d_cartridges }}"
-
   - name: Discover available images for each cartridge using skopeo
     shell: |
       # Try common image name patterns for the cartridge
@@ -43,9 +39,12 @@
             map('from_json') |
             list) }}
     loop: "{{ _discovered_images.results | default([]) }}"
+    loop_control:
+      label: "{{ item.item }}"
     when:
       - item.stdout_lines is defined
       - item.stdout_lines | length > 0
+    no_log: true
 
   when: _cp4d_requested | bool
 
