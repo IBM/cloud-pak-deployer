@@ -1,4 +1,4 @@
-# Entitlement Image Validation
+# Image Access Validation (check_images)
 
 ## Overview
 
@@ -34,7 +34,7 @@ The deployer now performs **smart sampling validation** during the validation ph
 
 ### Default Behavior
 
-By default, entitlement validation is **enabled** and will **fail the deployment** if unauthorized images are detected.
+By default, image access validation is **enabled** and will **fail the deployment** if unauthorized images are detected.
 
 ### Configuration Options
 
@@ -166,7 +166,7 @@ This approach reduces validation time by **70-80%** while still catching entitle
 
 ```
 ========================================
-Entitlement Image Validation Results
+Image Access Validation Results
 ========================================
 Total images checked: 12
 Successful validations: 12
@@ -180,7 +180,7 @@ Failed validations: 0
 
 ```
 ========================================
-ERROR: Entitlement Key Authorization Failed
+ERROR: Image Access Authorization Failed
 ========================================
 
 The entitlement key does not grant access to the following image(s):
@@ -212,7 +212,7 @@ Validation runs during **Phase 10 - Validate**, immediately after variable valid
 **Playbook execution order:**
 1. Load configuration
 2. Validate variables
-3. **→ Validate entitlement images** ← New step
+3. **→ Validate image access** ← New step
 4. Lint configuration
 5. Continue with deployment...
 
