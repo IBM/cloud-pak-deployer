@@ -45,6 +45,21 @@
       - _cp4d_cartridges is defined
       - _cp4d_cartridges | length > 0
 
+  - name: Debug cpd-cli execution
+    debug:
+      msg: |
+        cpd-cli execution details:
+        - Return code: {{ _cpd_cli_images.rc | default('N/A') }}
+        - Components: {{ _cpd_components | default('N/A') }}
+        - Version: {{ _cp4d_version | default('N/A') }}
+        - Images found: {{ _cpd_cli_images.stdout_lines | default([]) | length }}
+        {% if _cpd_cli_images.stderr is defined and _cpd_cli_images.stderr != '' %}
+        - Error output: {{ _cpd_cli_images.stderr }}
+        {% endif %}
+    when:
+      - _cpd_cli_images is defined
+      - _cpd_cli_check.rc == 0
+
   - name: Parse cpd-cli output into image list
     set_fact:
       _images_to_validate: >-
@@ -97,15 +112,15 @@
 
   when: _cp4waiops_requested | bool
 
-- name: Debug images to validate
-  debug:
-    msg: "Images to validate: {{ _images_to_validate | length }} images found"
-
-- name: Check if cpd-cli was available and produced results
+- name: Check if cpd-cli was available
   set_fact:
     _cpd_cli_available: "{{ _cpd_cli_check is defined and _cpd_cli_check.rc == 0 }}"
 
-- name: Warn if cpd-cli is not available
+- name: Debug images to validate
+  debug:
+    msg: "Images to validate: {{ _images_to_validate | length }} images found (cpd-cli available: {{ _cpd_cli_available }})"
+
+- name: Warn if cpd-cli is not available and skip validation
   debug:
     msg: |
       WARNING: cpd-cli is not available - image validation will be skipped.
@@ -118,18 +133,19 @@
         enabled: false
   when: not (_cpd_cli_available | bool)
 
-- name: Ensure at least one image is selected for validation
+- name: Ensure at least one image is selected for validation when cpd-cli is available
   fail:
     msg: |
       No images found for validation. This could be because:
-      1. cpd-cli failed to retrieve images (check network connectivity)
+      1. cpd-cli failed to retrieve images (check network connectivity or cpd-cli output)
       2. The entitlement key does not have access to the required registries
       3. No Cloud Pak components are configured for deployment
+      4. cpd-cli command failed - check the output above for errors
       
       To skip validation, set: check_images.enabled: false
   when:
-    - _images_to_validate | length == 0
     - _cpd_cli_available | bool
+    - _images_to_validate | length == 0
 
 - name: Display selected images for validation
   debug:
