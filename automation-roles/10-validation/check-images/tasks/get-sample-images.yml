@@ -71,12 +71,17 @@
 
   when: _cp4waiops_requested | bool
 
+- name: Debug images to validate
+  debug:
+    msg: "Images to validate: {{ _images_to_validate | length }} images found"
+
 - name: Ensure at least one image is selected for validation
   fail:
     msg: |
       No images found for validation. This could be because:
-      1. cpd-cli list-images command failed
+      1. The entitlement key does not have access to the required registries
       2. No Cloud Pak components are configured for deployment
+      3. Network connectivity issues
       
       To skip validation, set: check_images.enabled: false
   when: _images_to_validate | length == 0
