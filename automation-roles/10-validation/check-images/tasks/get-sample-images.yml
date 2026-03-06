@@ -49,6 +49,15 @@
     environment:
       IBM_ENTITLEMENT_KEY: "{{ ibm_cp_entitlement_key }}"
 
+  - name: Display cpd-cli command result
+    debug:
+      msg: |
+        cpd-cli exit code: {{ _cpd_cli_images.rc }}
+        Number of images found: {{ _cpd_cli_images.stdout_lines | length }}
+        {% if _cpd_cli_images.rc != 0 %}
+        Error output: {{ _cpd_cli_images.stderr | default('No stderr') }}
+        {% endif %}
+
   - name: Check if cpd-cli returned images
     debug:
       msg: "cpd-cli returned {{ _cpd_cli_images.stdout_lines | length }} images"
