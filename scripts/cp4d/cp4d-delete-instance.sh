@@ -5,7 +5,11 @@ command_usage() {
   echo
   echo "Usage:"
   echo "$(basename $0) <INSTANCE NAMESPACE>"
-  echo "$(basename $0) -n <INSTANCE NAMESPACE> [--operator-ns <OPERATOR NAMESPACE>]"
+  echo "$(basename $0) -n <INSTANCE NAMESPACE> [--operator-ns <OPERATOR NAMESPACE>] [--force-finalizer] [--timeout <SECONDS>]"
+  echo
+  echo "Options:"
+  echo "  --force-finalizer    Force removal of finalizers using OpenShift REST API for stuck namespaces"
+  echo "  --timeout <SECONDS>  Timeout in seconds for namespace deletion (default: 900)"
   echo
   exit $1
 }
@@ -54,6 +58,24 @@ else
         fi
         shift 1
         ;;
+    --force-finalizer)
+        export FORCE_FINALIZER=true
+        shift 1
+        ;;
+    --timeout*)
+        if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+        export NAMESPACE_DELETE_TIMEOUT="${1#*=}"
+        shift 1
+        else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+        export NAMESPACE_DELETE_TIMEOUT=$2
+        shift 2
+        else
+        echo "Error: Missing timeout value."
+        command_usage 2
+        fi
+        fi
+        shift 1
+        ;;
     *) # preserve remaining arguments
         PARAMS="$PARAMS $1"
         shift
@@ -73,11 +95,155 @@ log() {
 
 wait_ns_deleted() {
     NS=$1
-    log "Waiting for deletion of namespace ${NS} ..."
+    TIMEOUT=${NAMESPACE_DELETE_TIMEOUT:-900}
+    ELAPSED=0
+    RETRY_COUNT=0
+    MAX_RETRIES=3
+    log "Waiting for deletion of namespace ${NS} (timeout: ${TIMEOUT}s)..."
+    
     while $(oc get ns ${NS} > /dev/null 2>&1);do
-        sleep 1
+        sleep 5
+        ELAPSED=$((ELAPSED + 5))
+        
+        if [ $ELAPSED -ge $TIMEOUT ]; then
+            log "WARNING: Timeout reached waiting for namespace ${NS} deletion after ${TIMEOUT}s"
+            log "Namespace ${NS} may still be in Terminating state"
+            
+            # Run diagnostics
+            diagnose_namespace_stuck ${NS}
+            
+            if [ "${FORCE_FINALIZER}" = "true" ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                log "Attempting forced cleanup (attempt ${RETRY_COUNT}/${MAX_RETRIES})..."
+                force_remove_finalizers ${NS}
+                
+                # Reset timeout for retry
+                ELAPSED=0
+                TIMEOUT=300  # Shorter timeout for retries
+                log "Waiting additional ${TIMEOUT}s after forced cleanup..."
+                continue
+            else
+                log "ERROR: Failed to delete namespace ${NS} after ${MAX_RETRIES} retry attempts"
+                return 1
+            fi
+        fi
+        
+        # Log progress every 60 seconds
+        if [ $((ELAPSED % 60)) -eq 0 ] && [ $ELAPSED -gt 0 ]; then
+            log "Still waiting for ${NS} deletion... (${ELAPSED}s elapsed)"
+        fi
     done
-    log "Project ${NS} deleted"
+    log "Project ${NS} deleted successfully"
+    return 0
+}
+
+force_remove_finalizers() {
+    NS=$1
+    if [ "${FORCE_FINALIZER}" = "true" ]; then
+        log "Force removing finalizers for ${NS} namespace"
+        
+        # First, try to remove finalizers from blocking resources
+        force_remove_resource_finalizers ${NS}
+        
+        # Then remove namespace finalizers
+        if oc get ns ${NS} -o json > ${temp_dir}/${NS}-finalizer.json 2>/dev/null; then
+            sed -i '/"kubernetes"/d' ${temp_dir}/${NS}-finalizer.json
+            OC_SERVER_URL="${OC_SERVER_URL:-$(oc whoami --show-server)}"
+            OC_TOKEN="${OC_TOKEN:-$(oc whoami -t)}"
+            curl --silent --insecure -H "Content-Type: application/json" \
+                -H "Authorization: Bearer ${OC_TOKEN}" \
+                -X PUT --data-binary @"${temp_dir}/${NS}-finalizer.json" \
+                "${OC_SERVER_URL}/api/v1/namespaces/${NS}/finalize" > /dev/null 2>&1
+            rm -f "${temp_dir}/${NS}-finalizer.json"
+            log "Namespace finalizers removed for ${NS}"
+        fi
+    fi
+}
+
+force_remove_resource_finalizers() {
+    NS=$1
+    log "Checking for resources with finalizers in namespace ${NS}..."
+    
+    # Remove finalizers from PVCs (often block namespace deletion)
+    if oc get pvc -n ${NS} --no-headers 2>/dev/null | grep -q .; then
+        log "Removing finalizers from PVCs in ${NS}..."
+        for pvc in $(oc get pvc -n ${NS} --no-headers 2>/dev/null | awk '{print $1}'); do
+            oc patch pvc/${pvc} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
+        done
+    fi
+    
+    # Remove finalizers from PVs associated with the namespace
+    if oc get pv --no-headers 2>/dev/null | grep ${NS} | grep -q .; then
+        log "Removing finalizers from PVs associated with ${NS}..."
+        for pv in $(oc get pv --no-headers 2>/dev/null | grep ${NS} | awk '{print $1}'); do
+            oc patch pv/${pv} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
+        done
+    fi
+    
+    # Remove finalizers from Pods stuck in Terminating
+    if oc get pods -n ${NS} --field-selector=status.phase=Terminating --no-headers 2>/dev/null | grep -q .; then
+        log "Force deleting Terminating pods in ${NS}..."
+        for pod in $(oc get pods -n ${NS} --field-selector=status.phase=Terminating --no-headers 2>/dev/null | awk '{print $1}'); do
+            oc delete pod/${pod} -n ${NS} --grace-period=0 --force 2>/dev/null
+        done
+    fi
+    
+    # Remove finalizers from Services
+    if oc get svc -n ${NS} --no-headers 2>/dev/null | grep -q .; then
+        log "Removing finalizers from Services in ${NS}..."
+        for svc in $(oc get svc -n ${NS} --no-headers 2>/dev/null | awk '{print $1}'); do
+            oc patch svc/${svc} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
+        done
+    fi
+    
+    # Remove finalizers from ConfigMaps with finalizers
+    if oc get cm -n ${NS} --no-headers 2>/dev/null | grep -q .; then
+        for cm in $(oc get cm -n ${NS} -o json 2>/dev/null | jq -r '.items[] | select(.metadata.finalizers != null) | .metadata.name'); do
+            if [ ! -z "$cm" ]; then
+                log "Removing finalizers from ConfigMap ${cm} in ${NS}..."
+                oc patch cm/${cm} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
+            fi
+        done
+    fi
+    
+    # Remove finalizers from Secrets with finalizers
+    if oc get secret -n ${NS} --no-headers 2>/dev/null | grep -q .; then
+        for secret in $(oc get secret -n ${NS} -o json 2>/dev/null | jq -r '.items[] | select(.metadata.finalizers != null) | .metadata.name'); do
+            if [ ! -z "$secret" ]; then
+                log "Removing finalizers from Secret ${secret} in ${NS}..."
+                oc patch secret/${secret} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
+            fi
+        done
+    fi
+}
+
+diagnose_namespace_stuck() {
+    NS=$1
+    log "=== Diagnostic information for stuck namespace ${NS} ==="
+    
+    # Check for resources still in the namespace
+    log "Resources still present in namespace:"
+    oc api-resources --verbs=list --namespaced -o name 2>/dev/null | \
+        xargs -I {} sh -c "oc get {} -n ${NS} --ignore-not-found --no-headers 2>/dev/null | head -5" | \
+        grep -v "^$" || log "No resources found"
+    
+    # Check namespace status
+    log "Namespace status:"
+    oc get ns ${NS} -o json 2>/dev/null | jq -r '.status' || log "Cannot get namespace status"
+    
+    # Check for finalizers on namespace
+    log "Namespace finalizers:"
+    oc get ns ${NS} -o json 2>/dev/null | jq -r '.metadata.finalizers[]' || log "No finalizers found"
+    
+    # Check for stuck pods
+    log "Pods in Terminating state:"
+    oc get pods -n ${NS} --field-selector=status.phase=Terminating 2>/dev/null || log "No terminating pods"
+    
+    # Check for PVCs
+    log "PersistentVolumeClaims:"
+    oc get pvc -n ${NS} 2>/dev/null || log "No PVCs found"
+    
+    log "=== End diagnostic information ==="
 }
 
 delete_operator_ns() {
@@ -104,6 +270,7 @@ delete_operator_ns() {
                 oc patch -n ${CP4D_OPERATORS} operandrequest/${opreq} --type=merge -p '{"metadata": {"finalizers":null}}' 2> /dev/null
             done
         done
+        force_remove_finalizers ${CP4D_OPERATORS}
         wait_ns_deleted ${CP4D_OPERATORS}
     else
         echo "Project ${CP4D_OPERATORS} does not exist, skipping"
@@ -170,6 +337,7 @@ delete_instance_ns() {
         #
         # Now the CP4D project should be empty and can be deleted, this may take a while (5-15 minutes)
         #
+        force_remove_finalizers ${INSTANCE_NS}
         wait_ns_deleted ${INSTANCE_NS}
     else
         echo "Project ${INSTANCE_NS} does not exist, skipping"
@@ -214,6 +382,7 @@ delete_knative() {
 
         log "Deleting ${KNATIVE_EVENTING} project"
         oc delete ns ${KNATIVE_EVENTING} --ignore-not-found --wait=false
+        force_remove_finalizers ${KNATIVE_EVENTING}
         wait_ns_deleted ${KNATIVE_EVENTING}
     else
         echo "Project ${KNATIVE_EVENTING} does not exist, skipping"
@@ -226,6 +395,7 @@ delete_knative() {
 
         log "Deleting ${KNATIVE_SERVING} project"
         oc delete ns ${KNATIVE_SERVING} --ignore-not-found --wait=false
+        force_remove_finalizers ${KNATIVE_SERVING}
         wait_ns_deleted ${KNATIVE_SERVING}
     else
         echo "Project ${KNATIVE_SERVING} does not exist, skipping"
@@ -240,6 +410,7 @@ delete_app_connect() {
 
         log "Deleting ${APP_CONNECT} project"
         oc delete ns ${APP_CONNECT} --ignore-not-found --wait=false
+        force_remove_finalizers ${APP_CONNECT}
         wait_ns_deleted ${APP_CONNECT}
     else
         echo "Project ${APP_CONNECT} does not exist, skipping"
@@ -257,19 +428,7 @@ delete_ibm_scheduler() {
 
         log "Deleting ${PROJECT_SCHEDULING_SERVICE} project"
         oc delete ns ${PROJECT_SCHEDULING_SERVICE} --ignore-not-found --wait=false
-        
-        # Force remove finalizers if namespace is stuck in Terminating state
-        if oc get ns ${PROJECT_SCHEDULING_SERVICE} -o json > ${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json 2>/dev/null; then
-            sed -i '/"kubernetes"/d' ${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json
-            OC_SERVER_URL="${OC_SERVER_URL:-$(oc whoami --show-server)}"
-            OC_TOKEN="${OC_TOKEN:-$(oc whoami -t)}"
-            curl --silent --insecure -H "Content-Type: application/json" \
-                -H "Authorization: Bearer ${OC_TOKEN}" \
-                -X PUT --data-binary @"${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json" \
-                "${OC_SERVER_URL}/api/v1/namespaces/${PROJECT_SCHEDULING_SERVICE}/finalize" > /dev/null 2>&1
-            rm -f "${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json"
-        fi
-        
+        force_remove_finalizers ${PROJECT_SCHEDULING_SERVICE}
         wait_ns_deleted ${PROJECT_SCHEDULING_SERVICE}
     else
         echo "Project ${PROJECT_SCHEDULING_SERVICE} does not exist, skipping"
@@ -289,8 +448,7 @@ delete_ibm_license_server() {
 
             log "Deleting ${IBM_LICENSING} project"
             oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
-            wait_ns_deleted ${IBM_LICENSING}
-            oc delete ns ${IBM_LICENSING} --ignore-not-found --wait=false
+            force_remove_finalizers ${IBM_LICENSING}
             wait_ns_deleted ${IBM_LICENSING}
         else
             echo "Project ${IBM_LICENSING} does not exist, skipping"
@@ -316,8 +474,7 @@ delete_ibm_certificate_manager() {
 
             log "Deleting ${IBM_CERT_MANAGER} project"
             oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
-            wait_ns_deleted ${IBM_CERT_MANAGER}
-            oc delete ns ${IBM_CERT_MANAGER} --ignore-not-found --wait=false
+            force_remove_finalizers ${IBM_CERT_MANAGER}
             wait_ns_deleted ${IBM_CERT_MANAGER}
         else
             echo "Project ${IBM_CERT_MANAGER} does not exist, skipping"
@@ -336,8 +493,7 @@ delete_common_services_control() {
 
         log "Deleting ${IBM_CS_CONTROL} project"
         oc delete ns ${IBM_CS_CONTROL} --ignore-not-found --wait=false
-        wait_ns_deleted ${IBM_CS_CONTROL}
-        oc delete ns ${IBM_CS_CONTROL} --ignore-not-found --wait=false
+        force_remove_finalizers ${IBM_CS_CONTROL}
         wait_ns_deleted ${IBM_CS_CONTROL}
     else
         echo "Project ${IBM_CS_CONTROL} does not exist, skipping"
