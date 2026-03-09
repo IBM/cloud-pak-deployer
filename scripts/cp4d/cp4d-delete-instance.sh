@@ -5,11 +5,12 @@ command_usage() {
   echo
   echo "Usage:"
   echo "$(basename $0) <INSTANCE NAMESPACE>"
-  echo "$(basename $0) -n <INSTANCE NAMESPACE> [--operator-ns <OPERATOR NAMESPACE>] [--force-finalizer] [--timeout <SECONDS>]"
+  echo "$(basename $0) -n <INSTANCE NAMESPACE> [--operator-ns <OPERATOR NAMESPACE>] [--force-finalizer] [--timeout <SECONDS>] [--parallel]"
   echo
   echo "Options:"
   echo "  --force-finalizer    Force removal of finalizers using OpenShift REST API for stuck namespaces"
   echo "  --timeout <SECONDS>  Timeout in seconds for namespace deletion (default: 900)"
+  echo "  --parallel           Delete multiple namespaces in parallel for faster execution"
   echo
   exit $1
 }
@@ -74,6 +75,10 @@ else
         command_usage 2
         fi
         fi
+        shift 1
+        ;;
+    --parallel)
+        export PARALLEL_DELETE=true
         shift 1
         ;;
     *) # preserve remaining arguments
@@ -163,6 +168,85 @@ wait_ns_deleted() {
     done
     log_success "Project ${NS} deleted successfully"
     return 0
+}
+
+# Start namespace deletion in background (non-blocking)
+start_ns_deletion() {
+    NS=$1
+    log_info "Starting deletion of namespace ${NS} in background..."
+    oc delete ns ${NS} --ignore-not-found --wait=false 2>&1 | sed "s/^/[${NS}] /" &
+}
+
+# Wait for multiple namespaces to be deleted in parallel
+wait_multiple_ns_deleted() {
+    local namespaces=("$@")
+    local timeout=${NAMESPACE_DELETE_TIMEOUT:-900}
+    local start_time=$(date +%s)
+    local all_deleted=false
+    
+    log_info "Waiting for ${#namespaces[@]} namespaces to be deleted in parallel..."
+    
+    while [ "$all_deleted" = false ]; do
+        all_deleted=true
+        local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+        
+        # Check if timeout reached
+        if [ $elapsed -ge $timeout ]; then
+            log_warning "Timeout reached after ${timeout}s"
+            break
+        fi
+        
+        # Check each namespace
+        for ns in "${namespaces[@]}"; do
+            if oc get ns ${ns} > /dev/null 2>&1; then
+                all_deleted=false
+            fi
+        done
+        
+        if [ "$all_deleted" = false ]; then
+            sleep 5
+            # Log progress every 60 seconds
+            if [ $((elapsed % 60)) -eq 0 ] && [ $elapsed -gt 0 ]; then
+                local remaining=()
+                for ns in "${namespaces[@]}"; do
+                    if oc get ns ${ns} > /dev/null 2>&1; then
+                        remaining+=("$ns")
+                    fi
+                done
+                log_info "Still waiting for ${#remaining[@]} namespace(s): ${remaining[*]} (${elapsed}s elapsed)"
+            fi
+        fi
+    done
+    
+    # Check final status and apply force cleanup if needed
+    local failed_ns=()
+    for ns in "${namespaces[@]}"; do
+        if oc get ns ${ns} > /dev/null 2>&1; then
+            failed_ns+=("$ns")
+            log_warning "Namespace ${ns} still exists after timeout"
+            if [ "${FORCE_FINALIZER}" = "true" ]; then
+                log_info "Applying forced cleanup to ${ns}..."
+                force_remove_finalizers ${ns}
+            fi
+        else
+            log_success "Namespace ${ns} deleted successfully"
+        fi
+    done
+    
+    # If there are failed namespaces and force finalizer is enabled, wait a bit more
+    if [ ${#failed_ns[@]} -gt 0 ] && [ "${FORCE_FINALIZER}" = "true" ]; then
+        log_info "Waiting additional 120s for forced cleanup to complete..."
+        sleep 120
+        
+        for ns in "${failed_ns[@]}"; do
+            if oc get ns ${ns} > /dev/null 2>&1; then
+                log_error "Namespace ${ns} still exists after forced cleanup"
+            else
+                log_success "Namespace ${ns} deleted after forced cleanup"
+            fi
+        done
+    fi
 }
 
 force_remove_finalizers() {
@@ -606,37 +690,135 @@ fi
 # Create temporary directory
 temp_dir=$(mktemp -d)
 
-# Delete Cloud Pak for Data instance
-delete_instance_ns ${INSTANCE_NS}
-
-# Delete operators in new operators namespace
-delete_operator_ns ${OPERATOR_NS}
-
-# If cluster-wide resources must be destroyed, do so
-if ${CPD_DESTROY_CLUSTER_WIDE};then
-    # Delete KNative operator and project
-    delete_knative
-
-    # Delete App Connect
-    delete_app_connect
-
-    # Delete IBM Scheduler
-    delete_ibm_scheduler
-
-    # Delete IBM License Server
-    delete_ibm_license_server
-
-    # Delete certifiate manager
-    delete_ibm_certificate_manager
-
-    # Delete old version of certifiate manager and license manager
-    delete_common_services_control
-
-    # Delete cluster-wide CRs and config
-    delete_cluster_wide_cr_config
-
-    # Delete IBM CRDs
-    delete_ibm_crds
+if [ "${PARALLEL_DELETE}" = "true" ]; then
+    log_info "Using parallel deletion mode for faster execution"
+    
+    # Delete Cloud Pak for Data instance (must be first)
+    delete_instance_ns ${INSTANCE_NS}
+    
+    # Delete operators in new operators namespace (must be second)
+    delete_operator_ns ${OPERATOR_NS}
+    
+    # If cluster-wide resources must be destroyed, do so in parallel
+    if ${CPD_DESTROY_CLUSTER_WIDE};then
+        log_info "Starting parallel deletion of cluster-wide namespaces..."
+        
+        # Collect namespaces to delete in parallel
+        parallel_namespaces=()
+        
+        # Check and prepare knative namespaces
+        if oc get project ibm-knative-events > /dev/null 2>&1; then
+            delete_operator_ns ibm-knative-events
+        fi
+        
+        if oc get project knative-eventing > /dev/null 2>&1; then
+            # Clean up resources first
+            oc get --no-headers -n knative-eventing $(oc api-resources --namespaced=true --verbs=list -o name | grep ibm | awk '{printf "%s%s",sep,$0;sep=","}') --ignore-not-found -o=custom-columns=KIND:.kind,NAME:.metadata.name --sort-by='kind' 2>/dev/null | while read -r line; do
+                read -r CR CR_NAME <<< "${line}"
+                oc delete -n knative-eventing ${CR} ${CR_NAME} --wait=false --ignore-not-found 2>/dev/null
+                oc patch -n knative-eventing ${CR}/${CR_NAME} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
+            done
+            start_ns_deletion knative-eventing
+            parallel_namespaces+=("knative-eventing")
+        fi
+        
+        if oc get project knative-serving > /dev/null 2>&1; then
+            start_ns_deletion knative-serving
+            parallel_namespaces+=("knative-serving")
+        fi
+        
+        # App Connect
+        if oc get project ibm-app-connect > /dev/null 2>&1; then
+            start_ns_deletion ibm-app-connect
+            parallel_namespaces+=("ibm-app-connect")
+        fi
+        
+        # Scheduler
+        PROJECT_SCHEDULING_SERVICE=${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler}
+        if oc get project ${PROJECT_SCHEDULING_SERVICE} > /dev/null 2>&1; then
+            oc delete Scheduling -n ${PROJECT_SCHEDULING_SERVICE} --all --ignore-not-found 2>/dev/null
+            oc delete subscriptions.operators.coreos.com -n ${PROJECT_SCHEDULING_SERVICE} --all --ignore-not-found 2>/dev/null
+            oc delete clusterserviceversions.operators.coreos.com -n ${PROJECT_SCHEDULING_SERVICE} --all --ignore-not-found 2>/dev/null
+            start_ns_deletion ${PROJECT_SCHEDULING_SERVICE}
+            parallel_namespaces+=("${PROJECT_SCHEDULING_SERVICE}")
+        fi
+        
+        # License Server (if not shared)
+        check_shared_resources ibmlicensingdefinition.operator.ibm.com ibm-licensing DELETE_LICENSING
+        if [ "${DELETE_LICENSING}" -eq 1 ] && oc get project ibm-licensing > /dev/null 2>&1; then
+            oc delete ibmlicensing --all --ignore-not-found 2>/dev/null
+            oc delete subscriptions.operators.coreos.com -n ibm-licensing --all --ignore-not-found 2>/dev/null
+            oc delete clusterserviceversions.operators.coreos.com -n ibm-licensing --all --ignore-not-found 2>/dev/null
+            start_ns_deletion ibm-licensing
+            parallel_namespaces+=("ibm-licensing")
+        fi
+        
+        # Certificate Manager (if not shared)
+        check_shared_resources certificaterequests.cert-manager.io ibm-cert-manager DELETE_CERT_MANAGER
+        if [ "${DELETE_CERT_MANAGER}" -eq 1 ] && oc get project ibm-cert-manager > /dev/null 2>&1; then
+            oc delete lease -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
+            oc delete endpointslice -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
+            oc delete endpoints -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
+            oc delete subscriptions.operators.coreos.com -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
+            oc delete clusterserviceversions.operators.coreos.com -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
+            start_ns_deletion ibm-cert-manager
+            parallel_namespaces+=("ibm-cert-manager")
+        fi
+        
+        # Common Services Control
+        if oc get project cs-control > /dev/null 2>&1; then
+            oc delete nss -n cs-control --all --ignore-not-found 2>/dev/null
+            start_ns_deletion cs-control
+            parallel_namespaces+=("cs-control")
+        fi
+        
+        # Wait for all parallel deletions to complete
+        if [ ${#parallel_namespaces[@]} -gt 0 ]; then
+            wait_multiple_ns_deleted "${parallel_namespaces[@]}"
+        fi
+        
+        # Delete cluster-wide CRs and config
+        delete_cluster_wide_cr_config
+        
+        # Delete IBM CRDs
+        delete_ibm_crds
+    fi
+else
+    # Sequential deletion (original behavior)
+    log_info "Using sequential deletion mode"
+    
+    # Delete Cloud Pak for Data instance
+    delete_instance_ns ${INSTANCE_NS}
+    
+    # Delete operators in new operators namespace
+    delete_operator_ns ${OPERATOR_NS}
+    
+    # If cluster-wide resources must be destroyed, do so
+    if ${CPD_DESTROY_CLUSTER_WIDE};then
+        # Delete KNative operator and project
+        delete_knative
+        
+        # Delete App Connect
+        delete_app_connect
+        
+        # Delete IBM Scheduler
+        delete_ibm_scheduler
+        
+        # Delete IBM License Server
+        delete_ibm_license_server
+        
+        # Delete certifiate manager
+        delete_ibm_certificate_manager
+        
+        # Delete old version of certifiate manager and license manager
+        delete_common_services_control
+        
+        # Delete cluster-wide CRs and config
+        delete_cluster_wide_cr_config
+        
+        # Delete IBM CRDs
+        delete_ibm_crds
+    fi
 fi
 
 exit 0
