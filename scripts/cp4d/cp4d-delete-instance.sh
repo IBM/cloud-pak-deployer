@@ -247,21 +247,21 @@ delete_app_connect() {
 }
 
 delete_ibm_scheduler() {
-    IBM_SCHEDULING=ibm-scheduling
-    oc get project ${IBM_SCHEDULING} > /dev/null 2>&1
+    PROJECT_SCHEDULING_SERVICE=${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler}
+    oc get project ${PROJECT_SCHEDULING_SERVICE} > /dev/null 2>&1
     if [ $? -eq 0 ];then
-        log "Deleting everything in the ${IBM_SCHEDULING} project"
-        oc delete Scheduling  -n ${IBM_SCHEDULING} --all --ignore-not-found
-        oc delete subscriptions.operators.coreos.com -n ${IBM_SCHEDULING} --all --ignore-not-found
-        oc delete clusterserviceversions.operators.coreos.com -n ${IBM_SCHEDULING} --all --ignore-not-found
+        log "Deleting everything in the ${PROJECT_SCHEDULING_SERVICE} project"
+        oc delete Scheduling  -n ${PROJECT_SCHEDULING_SERVICE} --all --ignore-not-found
+        oc delete subscriptions.operators.coreos.com -n ${PROJECT_SCHEDULING_SERVICE} --all --ignore-not-found
+        oc delete clusterserviceversions.operators.coreos.com -n ${PROJECT_SCHEDULING_SERVICE} --all --ignore-not-found
 
-        log "Deleting ${IBM_SCHEDULING} project"
-        oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
-        wait_ns_deleted ${IBM_SCHEDULING}
-        oc delete ns ${IBM_SCHEDULING} --ignore-not-found --wait=false
-        wait_ns_deleted ${IBM_SCHEDULING}
+        log "Deleting ${PROJECT_SCHEDULING_SERVICE} project"
+        oc delete ns ${PROJECT_SCHEDULING_SERVICE} --ignore-not-found --wait=false
+        wait_ns_deleted ${PROJECT_SCHEDULING_SERVICE}
+        oc delete ns ${PROJECT_SCHEDULING_SERVICE} --ignore-not-found --wait=false
+        wait_ns_deleted ${PROJECT_SCHEDULING_SERVICE}
     else
-        echo "Project ${IBM_SCHEDULING} does not exist, skipping"
+        echo "Project ${PROJECT_SCHEDULING_SERVICE} does not exist, skipping"
     fi
 }
 
@@ -387,7 +387,7 @@ if [ -z "${CPD_CONFIRM_DELETE}" ];then
     if oc get project ibm-knative-events > /dev/null 2>&1;then echo "- Knative events: ibm-knative-events";fi
     if oc get project knative-serving > /dev/null 2>&1;then echo "- Knative server: knative-serving";fi
     if oc get project ibm-licensing > /dev/null 2>&1;then echo "- License manager namespace: ibm-licensing";fi
-    if oc get project ibm-cpd-scheduler > /dev/null 2>&1;then echo "- Scheduler namespace: ibm-cpd-scheduler";fi
+    if oc get project ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler} > /dev/null 2>&1;then echo "- Scheduler namespace: ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler}";fi
     if oc get project ibm-cert-manager > /dev/null 2>&1;then echo "- Certificate manager: ibm-cert-manager";fi
     if oc get project cs-control > /dev/null 2>&1;then echo "- Common Services control: cs-control";fi
     echo "- IBM Custom Resource Definitions"
