@@ -1,0 +1,67 @@
+apiVersion: cas.ibm.com/v1
+kind: CASCluster
+metadata:
+  name: casdeploy
+  namespace: "{{ ica_project_name }}"
+  labels:
+    app.kubernetes.io/instance: ibm-cas
+    app.kubernetes.io/managed-by: ibm-cas
+    app.kubernetes.io/name: ibm-cas
+    release: 1.0.0
+spec:
+  ## The version of the IBM Content Assistant operator that is being used.
+  appVersion: 1.0.0
+
+  ## MUST exist, used to accept ibm license; valid value only can be "true"
+  license:
+    accept: true
+
+  ##################################################################
+  ## Shared configuration for all IBM Content Assistant components #
+  ##################################################################
+  shared_configuration:
+    ## Choose the licensing model for the IBM Content Assistant components.
+    ## Valid values are:
+    ## "fncm" for IBM FileNet Content Manager,
+    ## "cp4ba" for IBM Cloud Pak for Business Automation.
+    sc_cas_license_type: "cp4ba"
+
+    ## All IBM Content Assistant components must use/share the image_pull_secrets to pull images.
+    image_pull_secrets:
+    - ibm-entitlement-key
+
+    ## All IBM Content Assistant components must use/share the same docker image repository.  For example, if IBM Entitlement Registry is used, then
+    ## it should be "cp.icr.io".  Otherwise, it will be a private registry.
+    sc_image_repository: cp.icr.io
+
+    ## All IBM Content Assistant components must use/share the root_ca_secret in order for integration
+    root_ca_secret: cas-root-ca
+
+    ## Optional: You can specify a profile size for IBM Content Assistant - valid values are small,medium,large - default is small.
+    sc_deployment_profile_size: small
+
+    ## The platform to be deployed specified by the user.  Possible values are: OCP and other.
+    sc_deployment_platform: "OCP"
+
+    ## If the root certificate authority (CA) key of the external service is not signed by the operator root CA key, provide the TLS certificate of
+    ## the external service to the component's truststore.
+    trusted_certificate_list: []
+
+    ## Provide the storage class name for the file storage provisioner.
+    ## Operator will use the provided storage classes to provision required PVC volumes.
+    storage_configuration:
+      sc_slow_file_storage_classname: "{{ ica_storage_class_name }}"
+  vector_database:
+    # The type of Vector Database to be used. Currently, only "opensearch" is supported.
+    vector_database_type: "opensearch"
+    # The secret name that contains the Vector Database credentials.
+    vector_database_secret_name: vector-database-secret
+    # Vector Database URL which should include host and port. Example https://<VectorDatabaseURL>:9200
+    vector_database_url: "http://{{ ica_opensearch_hostname }}:9200"
+    # Vector Database ssl_enabled parameter is used to support database connection over SSL
+    vector_database_ssl_enabled: false
+    # Secret that contains the Vector Database certificate. Secret should be created with the key tls.crt
+    vector_database_certificate: vector-database-certificate-secret
+    # Vector Database Authentication type. 2 possible types -  Basic Authentication ( BASICAUTH ) or OIDC
+    vector_database_auth_type: BASICAUTH
+    ## Vector Database token endpoint required only if OIDC has been selected as the vector database authentication method
