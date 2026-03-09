@@ -257,8 +257,19 @@ delete_ibm_scheduler() {
 
         log "Deleting ${PROJECT_SCHEDULING_SERVICE} project"
         oc delete ns ${PROJECT_SCHEDULING_SERVICE} --ignore-not-found --wait=false
-        wait_ns_deleted ${PROJECT_SCHEDULING_SERVICE}
-        oc delete ns ${PROJECT_SCHEDULING_SERVICE} --ignore-not-found --wait=false
+        
+        # Force remove finalizers if namespace is stuck in Terminating state
+        if oc get ns ${PROJECT_SCHEDULING_SERVICE} -o json > ${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json 2>/dev/null; then
+            sed -i '/"kubernetes"/d' ${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json
+            OC_SERVER_URL="${OC_SERVER_URL:-$(oc whoami --show-server)}"
+            OC_TOKEN="${OC_TOKEN:-$(oc whoami -t)}"
+            curl --silent --insecure -H "Content-Type: application/json" \
+                -H "Authorization: Bearer ${OC_TOKEN}" \
+                -X PUT --data-binary @"${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json" \
+                "${OC_SERVER_URL}/api/v1/namespaces/${PROJECT_SCHEDULING_SERVICE}/finalize" > /dev/null 2>&1
+            rm -f "${temp_dir}/${PROJECT_SCHEDULING_SERVICE}-finalizer.json"
+        fi
+        
         wait_ns_deleted ${PROJECT_SCHEDULING_SERVICE}
     else
         echo "Project ${PROJECT_SCHEDULING_SERVICE} does not exist, skipping"
