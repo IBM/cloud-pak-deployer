@@ -84,6 +84,14 @@ else
     done
 fi
 
+# Color codes for output
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[1;33m'
+COLOR_BLUE='\033[0;34m'
+COLOR_CYAN='\033[0;36m'
+COLOR_RESET='\033[0m'
+
 get_logtime() {
   echo $(date "+%Y-%m-%d %H:%M:%S")
 }
@@ -91,6 +99,26 @@ get_logtime() {
 log() {
   LOG_TIME=$(get_logtime)
   printf "[${LOG_TIME}] ${1}\n"
+}
+
+log_success() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_GREEN}✓ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+log_error() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_RED}✗ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+log_warning() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_YELLOW}⚠ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+log_info() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_CYAN}ℹ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
 }
 
 wait_ns_deleted() {
@@ -106,15 +134,15 @@ wait_ns_deleted() {
         ELAPSED=$((ELAPSED + 5))
         
         if [ $ELAPSED -ge $TIMEOUT ]; then
-            log "WARNING: Timeout reached waiting for namespace ${NS} deletion after ${TIMEOUT}s"
-            log "Namespace ${NS} may still be in Terminating state"
+            log_warning "Timeout reached waiting for namespace ${NS} deletion after ${TIMEOUT}s"
+            log_warning "Namespace ${NS} may still be in Terminating state"
             
             # Run diagnostics
             diagnose_namespace_stuck ${NS}
             
             if [ "${FORCE_FINALIZER}" = "true" ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
                 RETRY_COUNT=$((RETRY_COUNT + 1))
-                log "Attempting forced cleanup (attempt ${RETRY_COUNT}/${MAX_RETRIES})..."
+                log_info "Attempting forced cleanup (attempt ${RETRY_COUNT}/${MAX_RETRIES})..."
                 force_remove_finalizers ${NS}
                 
                 # Reset timeout for retry
@@ -123,7 +151,7 @@ wait_ns_deleted() {
                 log "Waiting additional ${TIMEOUT}s after forced cleanup..."
                 continue
             else
-                log "ERROR: Failed to delete namespace ${NS} after ${MAX_RETRIES} retry attempts"
+                log_error "Failed to delete namespace ${NS} after ${MAX_RETRIES} retry attempts"
                 return 1
             fi
         fi
@@ -133,14 +161,14 @@ wait_ns_deleted() {
             log "Still waiting for ${NS} deletion... (${ELAPSED}s elapsed)"
         fi
     done
-    log "Project ${NS} deleted successfully"
+    log_success "Project ${NS} deleted successfully"
     return 0
 }
 
 force_remove_finalizers() {
     NS=$1
     if [ "${FORCE_FINALIZER}" = "true" ]; then
-        log "Force removing finalizers for ${NS} namespace"
+        log_info "Force removing finalizers for ${NS} namespace"
         
         # First, try to remove finalizers from blocking resources
         force_remove_resource_finalizers ${NS}
@@ -155,18 +183,18 @@ force_remove_finalizers() {
                 -X PUT --data-binary @"${temp_dir}/${NS}-finalizer.json" \
                 "${OC_SERVER_URL}/api/v1/namespaces/${NS}/finalize" > /dev/null 2>&1
             rm -f "${temp_dir}/${NS}-finalizer.json"
-            log "Namespace finalizers removed for ${NS}"
+            log_success "Namespace finalizers removed for ${NS}"
         fi
     fi
 }
 
 force_remove_resource_finalizers() {
     NS=$1
-    log "Checking for resources with finalizers in namespace ${NS}..."
+    log_info "Checking for resources with finalizers in namespace ${NS}..."
     
     # Remove finalizers from PVCs (often block namespace deletion)
     if oc get pvc -n ${NS} --no-headers 2>/dev/null | grep -q .; then
-        log "Removing finalizers from PVCs in ${NS}..."
+        log_info "Removing finalizers from PVCs in ${NS}..."
         for pvc in $(oc get pvc -n ${NS} --no-headers 2>/dev/null | awk '{print $1}'); do
             oc patch pvc/${pvc} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
         done
@@ -174,7 +202,7 @@ force_remove_resource_finalizers() {
     
     # Remove finalizers from PVs associated with the namespace
     if oc get pv --no-headers 2>/dev/null | grep ${NS} | grep -q .; then
-        log "Removing finalizers from PVs associated with ${NS}..."
+        log_info "Removing finalizers from PVs associated with ${NS}..."
         for pv in $(oc get pv --no-headers 2>/dev/null | grep ${NS} | awk '{print $1}'); do
             oc patch pv/${pv} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
         done
@@ -182,7 +210,7 @@ force_remove_resource_finalizers() {
     
     # Remove finalizers from Pods stuck in Terminating
     if oc get pods -n ${NS} --field-selector=status.phase=Terminating --no-headers 2>/dev/null | grep -q .; then
-        log "Force deleting Terminating pods in ${NS}..."
+        log_warning "Force deleting Terminating pods in ${NS}..."
         for pod in $(oc get pods -n ${NS} --field-selector=status.phase=Terminating --no-headers 2>/dev/null | awk '{print $1}'); do
             oc delete pod/${pod} -n ${NS} --grace-period=0 --force 2>/dev/null
         done
@@ -190,7 +218,7 @@ force_remove_resource_finalizers() {
     
     # Remove finalizers from Services
     if oc get svc -n ${NS} --no-headers 2>/dev/null | grep -q .; then
-        log "Removing finalizers from Services in ${NS}..."
+        log_info "Removing finalizers from Services in ${NS}..."
         for svc in $(oc get svc -n ${NS} --no-headers 2>/dev/null | awk '{print $1}'); do
             oc patch svc/${svc} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
         done
@@ -200,7 +228,7 @@ force_remove_resource_finalizers() {
     if oc get cm -n ${NS} --no-headers 2>/dev/null | grep -q .; then
         for cm in $(oc get cm -n ${NS} -o json 2>/dev/null | jq -r '.items[] | select(.metadata.finalizers != null) | .metadata.name'); do
             if [ ! -z "$cm" ]; then
-                log "Removing finalizers from ConfigMap ${cm} in ${NS}..."
+                log_info "Removing finalizers from ConfigMap ${cm} in ${NS}..."
                 oc patch cm/${cm} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
             fi
         done
@@ -210,7 +238,7 @@ force_remove_resource_finalizers() {
     if oc get secret -n ${NS} --no-headers 2>/dev/null | grep -q .; then
         for secret in $(oc get secret -n ${NS} -o json 2>/dev/null | jq -r '.items[] | select(.metadata.finalizers != null) | .metadata.name'); do
             if [ ! -z "$secret" ]; then
-                log "Removing finalizers from Secret ${secret} in ${NS}..."
+                log_info "Removing finalizers from Secret ${secret} in ${NS}..."
                 oc patch secret/${secret} -n ${NS} --type=merge -p '{"metadata": {"finalizers":null}}' 2>/dev/null
             fi
         done
@@ -219,31 +247,31 @@ force_remove_resource_finalizers() {
 
 diagnose_namespace_stuck() {
     NS=$1
-    log "=== Diagnostic information for stuck namespace ${NS} ==="
+    log_warning "=== Diagnostic information for stuck namespace ${NS} ==="
     
     # Check for resources still in the namespace
-    log "Resources still present in namespace:"
+    log_info "Resources still present in namespace:"
     oc api-resources --verbs=list --namespaced -o name 2>/dev/null | \
         xargs -I {} sh -c "oc get {} -n ${NS} --ignore-not-found --no-headers 2>/dev/null | head -5" | \
         grep -v "^$" || log "No resources found"
     
     # Check namespace status
-    log "Namespace status:"
+    log_info "Namespace status:"
     oc get ns ${NS} -o json 2>/dev/null | jq -r '.status' || log "Cannot get namespace status"
     
     # Check for finalizers on namespace
-    log "Namespace finalizers:"
+    log_info "Namespace finalizers:"
     oc get ns ${NS} -o json 2>/dev/null | jq -r '.metadata.finalizers[]' || log "No finalizers found"
     
     # Check for stuck pods
-    log "Pods in Terminating state:"
+    log_info "Pods in Terminating state:"
     oc get pods -n ${NS} --field-selector=status.phase=Terminating 2>/dev/null || log "No terminating pods"
     
     # Check for PVCs
-    log "PersistentVolumeClaims:"
+    log_info "PersistentVolumeClaims:"
     oc get pvc -n ${NS} 2>/dev/null || log "No PVCs found"
     
-    log "=== End diagnostic information ==="
+    log_warning "=== End diagnostic information ==="
 }
 
 delete_operator_ns() {
