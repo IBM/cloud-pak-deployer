@@ -8,6 +8,12 @@
   ansible.builtin.set_fact:
     apps_endpoint_domain: mock
 
+- name: Mock variables
+  ansible.builtin.set_fact:
+    _opensearch_tls_key: mock
+    _opensearch_tls_crt: mock
+    _opensearch_ca_crt: mock
+
 - name: Prepare yaml file for {{ item }}
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
@@ -19,6 +25,7 @@
     - rolebindings
     - pvcs
     - statefulsets
+    - configmaps
     - services
 
 - name: Remove {{ item.name }}
@@ -34,6 +41,7 @@
     - {name: pvcs, wait_sleep: 15, wait_timeout: 300}
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: serviceaccounts, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
     - {name: secrets, wait_sleep: 15, wait_timeout: 15}
 
 - name: Remove Route
