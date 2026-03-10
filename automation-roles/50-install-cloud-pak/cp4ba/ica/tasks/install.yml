@@ -1,3 +1,93 @@
+- name: Create role - ibm-genai-index-manager
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-index-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      cluster_permissions:
+        - "cluster:monitor/main"
+      index_permissions:
+        - index_patterns:
+            - "ibm-genai-*"
+          allowed_actions:
+            - "create_index"
+            - "manage"
+    status_code: [200, 201]
+
+- name: Create role - ibm-genai-document-manager
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-document-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      cluster_permissions: []
+      index_permissions:
+        - index_patterns:
+            - "ibm-genai-*"
+          allowed_actions:
+            - "index"
+            - "delete"
+            - "read"
+            - "write"
+    status_code: [200, 201]
+
+- name: Create genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/internalusers/genai-service-user"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      password: "{{ ica_opensearch_password }}"
+      backend_roles: []
+      attributes: {}
+      description: "Service account for IBM Content Assistant GenAI Connector"
+    status_code: [200, 201]
+  register: create_user_result
+
+- name: Map ibm-genai-index-manager role to genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-index-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      backend_roles: []
+      hosts: []
+      users:
+        - "genai-service-user"
+    status_code: [200, 201]
+
+- name: Map ibm-genai-document-manager role to genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-document-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      backend_roles: []
+      hosts: []
+      users:
+        - "genai-service-user"
+    status_code: [200, 201]
+
 - name: Prepare yaml file for CatalogSource
   ansible.builtin.template:
     src: catalogsource.yaml.j2
@@ -139,4 +229,5 @@
 
       - ICA Status page: https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
 
+      - ICA OpenSearch user: genai-service-user / {{ ica_opensearch_password }}
       "
