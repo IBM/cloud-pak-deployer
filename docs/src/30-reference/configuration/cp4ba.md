@@ -185,6 +185,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 - IPM - Prescriptive mining permissions assigned to admin user.
+- ICA - OS1 and CONTENT object stores added needed AddOns 5.7.0 Gen AI Extensions and 5.6.0 Persistent Text Extract Extensions.
 
 ## Usage & operations 📇
 
