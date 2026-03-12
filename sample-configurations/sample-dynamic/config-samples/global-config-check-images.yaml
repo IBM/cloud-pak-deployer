@@ -1,0 +1,53 @@
+---
+# Global configuration for entitlement image validation
+# This feature validates that your entitlement key has access to required images
+# before deployment begins, preventing failures during installation.
+#
+# The validation reads CASE CSV files directly using Ansible playbooks,
+# extracting cp.icr.io images and validating them with skopeo.
+# No cpd-cli container runtime required.
+
+global_config:
+  environment_name: sample
+  cloud_platform: existing-ocp
+  
+  # Image checking configuration
+  check_images:
+    # Enable or disable pre-flight entitlement validation
+    # When enabled, validates access to representative images before deployment
+    # Default: true
+    enabled: true
+    
+    # Whether to fail deployment if unauthorized images are found
+    # Set to false to only warn about validation failures
+    # Default: true
+    fail_on_error: true
+    
+    # Number of images to validate per cartridge
+    # Formula: sample_size × number_of_cartridges
+    # Example: 4 cartridges × 3 images = 12 images validated
+    # Higher values = more thorough but slower validation
+    # Default: 3
+    sample_size: 3
+
+# Example: Disable validation for air-gapped environments
+# check_images:
+#   enabled: false
+
+# Example: Warn only, don't fail deployment
+# check_images:
+#   enabled: true
+#   fail_on_error: false
+#   sample_size: 2
+
+# Example: More thorough validation (5 images per cartridge)
+# check_images:
+#   enabled: true
+#   fail_on_error: true
+#   sample_size: 5
+
+# Example: Quick validation (1 image per cartridge)
+# check_images:
+#   enabled: true
+#   fail_on_error: true
+#   sample_size: 1

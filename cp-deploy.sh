@@ -33,30 +33,43 @@ command_usage() {
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
-  echo "  --status-dir,-l <dir>         Local directory to store logs and other provisioning files \$HOME/cpd-status if not specified (\$STATUS_DIR)"
-  echo "  --config-dir,-c <dir>         Directory to read the configuration from. \$HOME/cpd-config if not specified (\$CONFIG_DIR)"
-  echo "  --config-git-repo, -g <url>   URL of the git repository (ending with .git) to clone. Will use --config-dir if not specified (\$CPD_CONFIG_GIT_REPO)"
-  echo "  --config-git-ref              Reference (branch, tag, commit ID) of the git repo. Will use default branch if not specified (\$CPD_CONFIG_GIT_REF)"
-  echo "  --config-git-context          Context (directory) within the git repo. Will use the root if not specified (\$CPD_CONFIG_GIT_CONTEXT)"
-  echo "  --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
-  echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
-  echo "  --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
-  echo "  --vault-cert-ca-file          File with CA of login certificate (\$VAULT_CERT_CA_FILE)"
-  echo "  --vault-cert-key-file         File with login certificate key (\$VAULT_CERT_KEYFILE)"
-  echo "  --vault-cert-cert-file        File with login certificate (\$VAULT_CERT_CERT_FILE)"
-  echo "  --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
-  echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
-  echo "  --skip-cp-install             Skip installation of the Cloud Pak and finish after configuring the OpenShift cluster (\$SKIP_CP_INSTALL)"
-  echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
-  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation"
-  echo "  --dry-run                     Only log the steps that will be performed, do not make any changes to the OpenShift cluster"
-  echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
-  echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
-  echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
-  echo "  --clean-up                    Remove the container after the run is completed. Remove old images after build. (\$CPD_CLEANUP)"
-  echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
-  echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
-  echo "  --no-color                    Disable ANSI color codes in the output (\$CPD_NO_COLOR)"
+  echo
+  echo "  Configuration and directories:"
+  echo "    --status-dir,-l <dir>         Local directory to store logs and other provisioning files \$HOME/cpd-status if not specified (\$STATUS_DIR)"
+  echo "    --config-dir,-c <dir>         Directory to read the configuration from. \$HOME/cpd-config if not specified (\$CONFIG_DIR)"
+  echo "    --config-git-repo, -g <url>   URL of the git repository (ending with .git) to clone. Will use --config-dir if not specified (\$CPD_CONFIG_GIT_REPO)"
+  echo "    --config-git-ref              Reference (branch, tag, commit ID) of the git repo. Will use default branch if not specified (\$CPD_CONFIG_GIT_REF)"
+  echo "    --config-git-context          Context (directory) within the git repo. Will use the root if not specified (\$CPD_CONFIG_GIT_CONTEXT)"
+  echo
+  echo "  Authentication and security:"
+  echo "    --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
+  echo "    --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
+  echo "    --vault-password              Password or token to login to the vault (\$VAULT_PASSWORD)"
+  echo "    --vault-cert-ca-file          File with CA of login certificate (\$VAULT_CERT_CA_FILE)"
+  echo "    --vault-cert-key-file         File with login certificate key (\$VAULT_CERT_KEYFILE)"
+  echo "    --vault-cert-cert-file        File with login certificate (\$VAULT_CERT_CERT_FILE)"
+  echo
+  echo "  Deployment control:"
+  echo "    --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
+  echo "    --skip-cp-install             Skip installation of the Cloud Pak and finish after configuring the OpenShift cluster (\$SKIP_CP_INSTALL)"
+  echo "    --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
+  echo "    --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation"
+  echo "    --check-images[=N|all|false]  Enable image access validation. N=sample size (default: 3), 'all'=check all images, 'false'=disable (\$CPD_CHECK_IMAGES)"
+  echo "    --dry-run                     Only log the steps that will be performed, do not make any changes to the OpenShift cluster"
+  echo
+  echo "  Air-gapped and image management:"
+  echo "    --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
+  echo "    --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
+  echo "    --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
+  echo
+  echo "  Output and debugging:"
+  echo "    -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
+  echo "    -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
+  echo "    --no-color                    Disable ANSI color codes in the output (\$CPD_NO_COLOR)"
+  echo
+  echo "  Other options:"
+  echo "    --extra-vars,-e <key=value>   Extra environment variable for the deployer. You can specify multiple --extra-vars"
+  echo "    --clean-up                    Remove the container after the run is completed. Remove old images after build. (\$CPD_CLEANUP)"
   echo
   echo "Cloud Pak Deployer development options:"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
@@ -558,7 +571,20 @@ while (( "$#" )); do
     fi
     export CHECK_ONLY=true
     shift 1
-    ;;  
+    ;;
+  --check-images*)
+    if [[ "${SUBCOMMAND}" != "environment" ]];then
+      echo "Error: --check-images is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ];then
+      export CPD_CHECK_IMAGES="${1#*=}"
+      shift 1
+    else
+      export CPD_CHECK_IMAGES=true
+      shift 1
+    fi
+    ;;
   --dry-run)
     if [[ "${ACTION}" != "apply" && "${ACTION}" != "destroy" ]];then
       echo "Error: --dry-run is only valid for environment subcommand with apply/destroy."

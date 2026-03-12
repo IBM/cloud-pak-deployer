@@ -1,0 +1,62 @@
+---
+# Validate IBM entitlement key has access to required images before deployment
+# This implements GitHub issue #1085 - Image Access Validation
+
+- name: Check if image validation is enabled
+  set_fact:
+    _check_images_enabled: "{{ all_config.global_config.check_images.enabled | default(false) }}"
+    _check_images_fail_on_error: "{{ all_config.global_config.check_images.fail_on_error | default(true) }}"
+    _check_images_sample_size: "{{ all_config.global_config.check_images.sample_size | default(3) }}"
+
+- name: Override settings from command line if CPD_CHECK_IMAGES is set
+  set_fact:
+    _check_images_enabled: "{{ false if lookup('env', 'CPD_CHECK_IMAGES') == 'false' else true }}"
+    _check_images_fail_on_error: "{{ false if lookup('env', 'CPD_CHECK_IMAGES') == 'false' else true }}"
+    _check_images_sample_size: >-
+      {% if lookup('env', 'CPD_CHECK_IMAGES') == 'false' %}
+      {{ _check_images_sample_size }}
+      {% elif lookup('env', 'CPD_CHECK_IMAGES') == 'true' %}
+      {{ _check_images_sample_size }}
+      {% elif lookup('env', 'CPD_CHECK_IMAGES') == 'all' %}
+      all
+      {% elif lookup('env', 'CPD_CHECK_IMAGES') | regex_search('^\d+$') %}
+      {{ lookup('env', 'CPD_CHECK_IMAGES') }}
+      {% else %}
+      {{ _check_images_sample_size }}
+      {% endif %}
+  when: lookup('env', 'CPD_CHECK_IMAGES') != ''
+
+- name: Skip validation if disabled
+  debug:
+    msg: "Image validation is disabled. Skipping..."
+  when: not (_check_images_enabled | bool)
+
+- block:
+  - name: Check if CP_ENTITLEMENT_KEY environment variable is set
+    set_fact:
+      _cp_entitlement_key_env: "{{ lookup('ansible.builtin.env', 'CP_ENTITLEMENT_KEY') }}"
+
+  - name: Get IBM entitlement key from vault if not provided via environment
+    include_role:
+      name: vault-get-secret
+    vars:
+      secret_name: "ibm_cp_entitlement_key"
+      secret_group: "{{ environment_name }}"
+      _p_secret_variable: ibm_cp_entitlement_key
+    when: _cp_entitlement_key_env == ""
+
+  - name: Use entitlement key from environment variable if provided
+    set_fact:
+      ibm_cp_entitlement_key: "{{ _cp_entitlement_key_env }}"
+    when: _cp_entitlement_key_env != ""
+
+  - name: Skip validation if no entitlement key found
+    debug:
+      msg: "No entitlement key found. Skipping image validation..."
+    when: ibm_cp_entitlement_key == ""
+
+  - name: Validate entitlement key access to images
+    include_tasks: validate-images.yml
+    when: ibm_cp_entitlement_key != ""
+
+  when: _check_images_enabled | bool

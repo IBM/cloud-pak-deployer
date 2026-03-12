@@ -7,6 +7,7 @@ To make it easier to navigate the different object types, they have been groups 
 ### Configuration
 * [Global configuration](cpd-global-config.md)
 * [Vault configuration](vault.md)
+* [Image validation (check-images)](check-images.md)
 
 ### Infrastructure
 

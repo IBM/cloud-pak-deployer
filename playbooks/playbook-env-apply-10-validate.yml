@@ -68,6 +68,23 @@
     include_role:
       name: validate-variables
 
+  - name: Download cpd-cli for image validation
+    include_role:
+      name: cpd-cli-download
+    when:
+      - cloud_platform == 'existing-ocp' or cloud_platform == 'ibm-cloud' or cloud_platform == 'vsphere' or cloud_platform == 'aws' or cloud_platform == 'azure'
+      - not (cpd_airgap | default(false) | bool)
+      - (all_config.cp4d | default([])) | length > 0
+
+  - name: Validate entitlement key access to images
+    include_role:
+      name: check-images
+    when:
+      - cloud_platform == 'existing-ocp' or cloud_platform == 'ibm-cloud' or cloud_platform == 'vsphere' or cloud_platform == 'aws' or cloud_platform == 'azure'
+      - not (cpd_airgap | default(false) | bool)
+      - (all_config.cp4d | default([])) | length > 0
+      - lookup('ansible.builtin.env', 'CPD_CHECK_IMAGES') | default('false') | string != 'false'
+
   - name: Lint configuration
     include_role:
       name: lint-config
