@@ -1,4 +1,20 @@
 ---
+# ==============================================================================
+# Cloud Pak Deployer - Phase 10: Validation
+# ==============================================================================
+# This playbook is the FIRST phase of the deployment process.
+# It validates all configurations before proceeding with actual deployment.
+#
+# Purpose:
+#   - Validate configuration files syntax and structure
+#   - Load and merge all configuration sources
+#   - Verify all required variables are present
+#   - Generate SSH keys for infrastructure provisioning
+#   - Check vault secrets and credentials
+#
+# This playbook does NOT install or modify anything - it only validates.
+# ==============================================================================
+
 - name: 10 - Validate
   hosts: localhost
   connection: local
@@ -6,12 +22,19 @@
   gather_facts: False
 
   vars:
+    # Suppress verbose Ansible callback messages for cleaner output
     ansible_callback_diy_runner_on_skipped_msg: ""
     ansible_callback_diy_runner_on_ok_msg: ""
     ansible_callback_diy_playbook_on_include_msg: ""
 
   tasks:
 
+  # ----------------------------------------------------------------------------
+  # Pre-Validation Hook
+  # ----------------------------------------------------------------------------
+  # Check if a custom pre-validation hook exists and execute it if present.
+  # This allows users to add custom validation logic before the standard checks.
+  # ----------------------------------------------------------------------------
   - stat:
       path: "{{ config_dir }}/assets/deployer-hook-pre-10-validation.yml"
     register: _hook_pre_file
@@ -19,20 +42,45 @@
   - include_tasks: "{{ config_dir }}/assets/deployer-hook-pre-10-validation.yml"
     when: _hook_pre_file.stat.exists
   
+  # ----------------------------------------------------------------------------
+  # Record Deployer State
+  # ----------------------------------------------------------------------------
+  # Record that we're in phase 10 (Validation) for tracking and logging purposes.
+  # This helps with debugging and understanding where the deployment process is.
+  # ----------------------------------------------------------------------------
   - name: Record deployer state
     include_role:
       name: record-deployer-state
     vars:
-      _p_state_interval: 10
+      _p_state_interval: 10  # Phase 10 = Validation
 
+  # ----------------------------------------------------------------------------
+  # Load Global Configuration
+  # ----------------------------------------------------------------------------
+  # Load the global configuration file that contains environment-wide settings
+  # such as cloud platform, region, resource naming conventions, etc.
+  # ----------------------------------------------------------------------------
   - name: Load global config
     include_role:
       name: load-global-config
 
+  # ----------------------------------------------------------------------------
+  # Load Vault Configuration
+  # ----------------------------------------------------------------------------
+  # Load vault configuration to access secrets and credentials.
+  # The vault stores sensitive information like API keys, passwords, etc.
+  # ----------------------------------------------------------------------------
   - name: Load vault config
     include_role:
       name: load-vault-config
 
+  # ----------------------------------------------------------------------------
+  # Set Secret Group
+  # ----------------------------------------------------------------------------
+  # Determine which secret group to use for this deployment.
+  # If secret_group_param is provided, use it; otherwise default to environment_name.
+  # Secret groups organize related secrets together (e.g., dev, test, prod).
+  # ----------------------------------------------------------------------------
   - set_fact:
       secret_group: "{{ secret_group_param }}"
 
@@ -40,12 +88,30 @@
       secret_group: "{{ environment_name }}"
     when: secret_group_param | default("") == ""
 
+  # ----------------------------------------------------------------------------
+  # Merge Configuration
+  # ----------------------------------------------------------------------------
+  # Merge all configuration sources into a unified configuration object.
+  # This combines:
+  #   - Global config
+  #   - Environment-specific config
+  #   - Cloud platform config
+  #   - Cloud Pak config
+  # Result is stored in 'all_config' variable for use in subsequent phases.
+  # ----------------------------------------------------------------------------
   - name: Merge configuration
     include_role:
       name: merge-config
     vars:
       path_to_config_dir: "{{ config_dir }}"
 
+  # ----------------------------------------------------------------------------
+  # Set Vault Secrets (Optional)
+  # ----------------------------------------------------------------------------
+  # If VAULT_SECRETS environment variable is set, store those secrets in vault.
+  # This allows passing secrets via environment variables for CI/CD pipelines.
+  # Format: VAULT_SECRETS='{"key1":"value1","key2":"value2"}'
+  # ----------------------------------------------------------------------------
   - set_fact:
       _vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
 
@@ -56,6 +122,16 @@
       _p_vault_secrets: "{{ _vault_secrets }}"
     when: _vault_secrets != ""
 
+  # ----------------------------------------------------------------------------
+  # Generate SSH Key Pairs
+  # ----------------------------------------------------------------------------
+  # Generate SSH key pairs for infrastructure provisioning.
+  # Required for:
+  #   - vSphere: SSH access to VMs
+  #   - AWS: SSH access to EC2 instances
+  # One key pair is generated per OpenShift cluster defined in configuration.
+  # Keys are stored in vault for secure access during provisioning.
+  # ----------------------------------------------------------------------------
   - name: Generate SSH key pair
     include_role:
       name: ssh-keygen
@@ -64,12 +140,46 @@
       loop_var: _current_openshift_cluster
     when: cloud_platform == 'vsphere' or cloud_platform == 'aws'
 
+  # ----------------------------------------------------------------------------
+  # Validate Variables
+  # ----------------------------------------------------------------------------
+  # Validate all configuration variables:
+  #   - Check required variables are present
+  #   - Verify variable types and formats
+  #   - Validate value ranges and constraints
+  #   - Check for conflicting settings
+  # If validation fails, deployment stops here with clear error messages.
+  # ----------------------------------------------------------------------------
   - name: Validate variables
     include_role:
       name: validate-variables
 
+  # ----------------------------------------------------------------------------
+  # Lint Configuration
+  # ----------------------------------------------------------------------------
+  # Perform configuration linting to check:
+  #   - YAML syntax correctness
+  #   - Configuration structure compliance
+  #   - Cross-reference validation (e.g., referenced objects exist)
+  #   - Best practices adherence
+  # Uses automation generators to validate against expected schemas.
+  # ----------------------------------------------------------------------------
   - name: Lint configuration
     include_role:
       name: lint-config
     vars:
       path_to_generators_dir: "{{ generators_dir | default([(playbook_dir | dirname),'/automation-generators'] | join) }}"
+
+# ==============================================================================
+# End of Validation Phase
+# ==============================================================================
+# If this playbook completes successfully, the configuration is valid and
+# deployment can proceed to the next phases:
+#   - Phase 20: Prepare
+#   - Phase 30: Provision Infrastructure
+#   - Phase 40: Configure Infrastructure
+#   - Phase 50: Install Cloud Pak
+#   - Phase 60: Configure Cloud Pak
+#   - Phase 70: Deploy Assets
+#   - Phase 80: Smoke Tests
+# ==============================================================================
