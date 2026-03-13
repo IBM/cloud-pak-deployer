@@ -7,72 +7,42 @@ command_usage() {
 Cloud Pak for Data Instance Deletion Script
 ============================================
 
-This script deletes a Cloud Pak for Data instance and all related resources from an OpenShift cluster.
-
 USAGE:
-  $(basename $0)                                    # Auto-discover and delete (with confirmation)
-  $(basename $0) --dry-run                          # Show what would be deleted (safe test mode)
-  $(basename $0) <INSTANCE_NAMESPACE>               # Delete specific instance
-  $(basename $0) -n <NS> [OPTIONS]                  # Delete with options
+  $(basename $0)                    # Auto-discover and delete (recommended)
+  $(basename $0) --dry-run          # Test mode - show what would be deleted
+  $(basename $0) <NAMESPACE>        # Delete specific instance
+  $(basename $0) -n <NS> [OPTIONS]  # Delete with options
 
-MODES:
-  Auto-Discovery Mode (Recommended):
-    $(basename $0)
-    - Automatically discovers CP4D namespaces by finding ZenService resources
-    - Shows detailed summary of what will be deleted
-    - Asks for confirmation before proceeding
-    - Safe: requires explicit 'y' to proceed
-
-  Dry-Run Mode (Testing):
-    $(basename $0) --dry-run
-    - Discovers and displays all CP4D namespaces and resources
-    - Does NOT delete anything
-    - Perfect for testing discovery or understanding your installation
-
-  Manual Mode (Traditional):
-    $(basename $0) cpd
-    $(basename $0) -n cpd --operator-ns cpd-operators
-    - Specify namespaces explicitly
-    - Useful when auto-discovery fails or for specific configurations
-
-OPTIONS:
-  -n, --instance-namespace <NS>   Instance namespace (e.g., cpd, zen)
-  --operator-ns <NS>              Operator namespace (default: <instance>-operators)
-  --auto-discover                 Force auto-discovery mode
-  --dry-run                       Show what would be deleted without deleting
-  --parallel                      Delete multiple namespaces in parallel (faster)
-  --force-finalizer               Force removal of stuck finalizers via API
-  --timeout <SECONDS>             Namespace deletion timeout (default: 900)
-  -h, --help                      Show this help message
-
-WHAT GETS DELETED:
-  • Instance namespace (e.g., cpd) - Contains ZenService and cartridges
-  • Operator namespace (e.g., cpd-operators) - Contains operators and CSVs
-  • Supporting services: scheduler, licensing, cert-manager
-  • Knative services: eventing, serving, app-connect
-  • Cluster-wide: IBM CRDs, webhooks, common-service maps
+COMMON OPTIONS:
+  --dry-run              Show what would be deleted (safe, no changes)
+  --parallel             Faster deletion using parallel processing
+  --force-finalizer      Force cleanup of stuck resources
+  --timeout <SECONDS>    Deletion timeout (default: 900)
+  -h, --help            Show this help
 
 EXAMPLES:
-  # Test what would be deleted (safe)
+  # Safe test - see what would be deleted
   $(basename $0) --dry-run
 
-  # Delete with auto-discovery (recommended)
+  # Delete with auto-discovery (asks for confirmation)
   $(basename $0)
 
   # Delete specific instance
-  $(basename $0) -n my-cpd-instance
+  $(basename $0) cpd
 
-  # Fast parallel deletion with forced cleanup
+  # Fast deletion with cleanup
   $(basename $0) --parallel --force-finalizer
 
-  # Automated deletion (CI/CD - skips confirmations)
-  export CPD_CONFIRM_DELETE=true
-  $(basename $0)
+WHAT GETS DELETED:
+  • CP4D instance and operator namespaces
+  • Supporting services (scheduler, licensing, cert-manager)
+  • Knative services (if present)
+  • IBM CRDs and webhooks
 
-ENVIRONMENT VARIABLES:
-  CPD_CONFIRM_DELETE          Set to 'true' to skip confirmation prompts
-  CPD_DESTROY_CLUSTER_WIDE    Set to 'false' to keep cluster-wide resources
-  PROJECT_SCHEDULING_SERVICE  Override scheduler namespace (default: cpd-scheduler)
+NOTES:
+  ⚠  This operation is IRREVERSIBLE
+  ✓  Always test with --dry-run first
+  ✓  Requires cluster-admin permissions
 
 EOF
   exit $1
