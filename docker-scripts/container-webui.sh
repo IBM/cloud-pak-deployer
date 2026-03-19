@@ -55,8 +55,8 @@ else
     exit 1
 fi
 
-echo "Starting Web UI"
+echo "Starting Web UI with uvicorn"
 echo "Logging level (CPD_WIZARD_LOG_LEVEL): ${CPD_WIZARD_LOG_LEVEL}"
-python3 webapp.py
+uvicorn webapp:app --host 0.0.0.0 --port 32080
 
 exit 0
