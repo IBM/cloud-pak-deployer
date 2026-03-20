@@ -147,6 +147,7 @@
 - name: Generate ICA admin private key
   community.crypto.openssl_privatekey:
     path: "{{ ica_output_directory }}/ica_admin.key"
+    passphrase: "{{ ica_universal_password }}"
 
 - name: Load ICA admin key data
   ansible.builtin.slurp:
@@ -227,7 +228,13 @@
 
       ## Endpoints
 
-      - ICA Status page: https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
+      - ICA base url (also used for CLI access): https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
 
       - ICA OpenSearch user: genai-service-user / {{ ica_opensearch_password }}
+
+      ## CLI access (CLI has to be downloaded from IBM)
+
+      - ibmca config url https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
+
+      - ibmca login -u genai-service-user # password is: {{ ica_universal_password }}
       "
