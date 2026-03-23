@@ -1,0 +1,43 @@
+---
+- name: Get db2u instance {{ _db2_instance.name }}
+  kubernetes.core.k8s_info:
+    kind: Db2uInstance
+    name: "db2oltp-{{ _db2_instance_id }}"
+    api_version: db2u.databases.ibm.com/v1
+    namespace: "{{ current_cp4d_cluster.project }}"
+  register: _db2u_instance
+
+- set_fact:
+    _log_arch_method: "OFF"
+  when: not (_db2_instance.enable_transaction_log | bool)
+
+- set_fact:
+    _log_arch_method: "OFF"
+  when: not (_db2_instance.enable_transaction_log | bool)
+
+- set_fact:
+    _log_arch_method: "DISK:/mnt/logs/archive/"
+  when: _db2_instance.enable_transaction_log | bool
+
+- set_fact:
+    _db2u_instance_spec: "{{ _db2u_instance.resources[0].spec }}"
+
+- set_fact:
+    _updated_databases: []
+
+- set_fact:
+    _updated_databases: "{{ _updated_databases + [item | combine({'dbConfig': {'LOGARCHMETH1': _log_arch_method}}) if item.name == 'BLUDB' else item] }}"
+  loop: "{{ _db2u_instance_spec.environment.databases }}"
+
+- set_fact:
+    _db2u_instance_spec: "{{ _db2u_instance_spec | combine({'environment': {'databases': _updated_databases}}, recursive=True) }}"
+
+- name: Patch db2u instance {{ _db2_instance.name }} with updated spec
+  kubernetes.core.k8s:
+    state: patched
+    kind: Db2uInstance
+    name: "db2oltp-{{ _db2_instance_id }}"
+    api_version: db2u.databases.ibm.com/v1
+    namespace: "{{ current_cp4d_cluster.project }}"
+    definition:
+      spec: "{{ _db2u_instance_spec }}"
