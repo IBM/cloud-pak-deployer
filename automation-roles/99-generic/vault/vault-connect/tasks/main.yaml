@@ -49,7 +49,20 @@
     - name: No login to file fault needed
       debug:
         msg: File vault directory is {{ status_dir }}/vault
-  when: "vault_type == 'file-vault'"  
+  when: "vault_type == 'file-vault'"
+
+- name: Login to Ansible vault
+  block:
+
+    - name: Validate mandatory variables are defined
+      assert:
+        that:
+          - vault_type is defined
+          - vault_authentication_type is defined
+
+    - include_tasks: connect-ansible-vault.yml
+      when: vault_authentication_type == 'password-file'
+  when: "vault_type == 'ansible-vault'"
 
 - set_fact:
     vault_login_success: "true"

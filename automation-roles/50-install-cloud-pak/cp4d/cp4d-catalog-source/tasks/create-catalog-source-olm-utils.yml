@@ -1,13 +1,18 @@
 ---
-- name: Delete work directory
+- name: Ensure that OLM utils work directory exists
   file:
     path: /tmp/work
+    state: directory
+
+- name: Delete offline directory
+  file:
+    path: /tmp/work/offline
     state: absent
 
-- name: If air-gapped, copy case files from {{ status_dir }}/work to /tmp/work
+- name: If air-gapped, copy case files from {{ status_dir }}/work/offline to /tmp/work/offline
   copy:
-    src: "{{ status_dir }}/work"
-    dest: /tmp/
+    src: "{{ status_dir }}/work/offline"
+    dest: /tmp/work/
     remote_src: True
   when: (cpd_airgap | default(False) | bool)
 
@@ -23,12 +28,11 @@
     _p_command_description: Create catalog sources for {{ _p_catsrc_scope }}
     _p_command: "{{ _apply_olm_command }}"
     _p_command_log_file: "{{ status_dir }}/log/apply-olm-create-catsrc-{{ _p_catsrc_scope }}.log"
-    _p_cpd_cli_manage: True
 
-- name: If not air-gapped, copy case files from /tmp/work to {{ status_dir }}/work
+- name: If not air-gapped, copy case files from /tmp/work/offline to {{ status_dir }}/work/offline
   copy:
-    src: /tmp/work
-    dest: "{{ status_dir }}"
+    src: /tmp/work/offline
+    dest: "{{ status_dir }}/work/"
     remote_src: True
   when: 
   - not (cpd_airgap | default(False) | bool)

@@ -23,7 +23,7 @@ PARAMS=""
 while (( "$#" )); do
   case "$1" in
   --debug-only)
-    export DEBUG_ONLY=true
+    export CPD_DEBUG_ONLY=true
     shift 1
     ;;
   --wizard)
@@ -80,7 +80,7 @@ oc delete pods --field-selector=status.phase==Succeeded -l app=cloud-pak-deploye
 IMAGE=$(oc get pod ${HOSTNAME} -o=jsonpath='{.spec.containers[0].image}')
 echo "Image used: ${IMAGE}"
 
-if [ "$CPD_DEBUG" ]; then
+if [ "$CPD_DEBUG_ONLY" ]; then
   # Check if the cloud-pak-deployer-config configmap exists
   if ! check_configmap_exists "cloud-pak-deployer-config"; then
       echo "ConfigMap cloud-pak-deployer-config not found in the current project. Please create before starting deployer. Exiting."

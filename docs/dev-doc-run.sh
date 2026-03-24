@@ -9,5 +9,5 @@ if hash getenforce 2>/dev/null; then
 fi
 
 podman rm -f cpd-doc 2>/dev/null
-PROCESS=$(podman run --name cpd-doc -d -p 8000:8000 -v $PWD:/docs${SELINUX_OPTION} cpd-doc:latest)
+PROCESS=$(podman run --name cpd-doc -d -p 8000:8000 -v $PWD:/cloud-pak-deployer-docs/docs${SELINUX_OPTION} cpd-doc:latest)
 podman logs -f ${PROCESS}

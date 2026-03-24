@@ -1,4 +1,7 @@
 ---
+- debug:
+    var: _p_installation_options
+
 - set_fact:
     _installation_options_set: True
 
@@ -23,17 +26,11 @@
     _cartridge_name: "{{ _p_current_cp4d_cartridge.installation_options_header | default(_p_cartridge_name) }}"
   when: _p_cp4d_version >= '5.3.0'
 
-- set_fact:
-    _template_file: 'installation-options-root.j2'
+- include_tasks: installation-options-root.yml
   when: (_p_section | default('')) == ''
 
-- set_fact:
-    _template_file: 'installation-options-non-root.j2'
+- include_tasks: installation-options-section.yml
   when: (_p_section | default('')) != ''
-
-- name: Generate new installation options
-  set_fact:
-    _added_installation_options: "{{ lookup('template',_template_file) | from_yaml }}"
 
 - name: Merge new installation options with existing ones
   set_fact:

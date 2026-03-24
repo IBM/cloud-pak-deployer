@@ -8,18 +8,17 @@
 
 - block:
   - name: Wait until Keycloak {{ _keycloak_name }} is ready
-    shell: |
-      oc get keycloaks.keycloak.org -n {{ _keycloak_name }} {{ _keycloak_name }} \
-        -o jsonpath='{.status.ready}'
-    register: _keycloak_status
+    kubernetes.core.k8s_info:
+      api_version: keycloak.org/v1alpha1
+      kind: keycloaks
+      name: "{{ _keycloak_name }}"
+      namespace: "{{ _keycloak_name }}"
+    register: _keycloak
+    until: 
+    - _keycloak.resources | default([]) | length > 0
+    - (_keycloak.resources[0].status.ready | default('') | lower) == 'true'
     retries: 30
     delay: 30
-    until: (_keycloak_status.stdout | lower) == "true"
-    vars:
-      ansible_callback_diy_runner_retry_msg: >-
-        {%- set result = ansible_callback_diy.result.output -%}
-        {%- set retries_left = result.retries - result.attempts -%}
-        Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
 
   - name: Get Keycloak information
     include_role:
@@ -32,4 +31,11 @@
     loop: "{{ _current_openshift_redhat_sso.groups | default([]) }}"
     loop_control:
       loop_var: _current_keycloak_group
+
+  - name: Create Keycloak users
+    include_tasks: create-keycloak-user.yml
+    loop: "{{ _current_openshift_redhat_sso.users | default([]) }}"
+    loop_control:
+      loop_var: _current_keycloak_user
+
   when: not cpd_dry_run

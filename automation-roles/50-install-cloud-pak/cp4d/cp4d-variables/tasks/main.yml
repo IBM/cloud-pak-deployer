@@ -129,17 +129,19 @@
 - set_fact:
     _apply_cartridges: "{{ _cartridges_to_install }}"
 
-- debug:
-    var: _apply_cartridges
+- set_fact:
+    _apply_cartridges_list: >-
+      {{  _apply_cartridges 
+        | map(attribute='olm_utils_name')
+        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
 
 # Optimize cartridges if --optimize-deploy was specified
 - include_tasks: optimize-cartridges.yml
   when: 
   - _cpd_optimize_deploy
   - cpd_action=='apply'
-
-- debug:
-    var: _apply_cartridges
 
 # Detect if Watson Studio Pipelines is part of this deployment so we can guard against Tekton conflicts
 - set_fact:
@@ -191,14 +193,30 @@
           | selectattr('separate_install','defined')
           | selectattr('separate_install','==',True) }}
 
+- set_fact:
+    _apply_cr_cartridges_separate_list: >-
+      {{  _apply_cr_cartridges_separate 
+        | map(attribute='olm_utils_name')
+        | list
+        | join(',')}}
+
 - debug:
     var: _cartridges_to_install
 
 - debug:
-    var: _apply_cartridges
+    var: _apply_cartridges_list
+
+- debug:
+    var: _apply_cr_cartridges
+
+- debug:
+    var: _apply_cr_cartridges_list
 
 - debug:
     var: _apply_cr_cartridges_separate
+
+- debug:
+    var: _apply_cr_cartridges_separate_list
 
 - set_fact:
     _upgrade_cp4d: False

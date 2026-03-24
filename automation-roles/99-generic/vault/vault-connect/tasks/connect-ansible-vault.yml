@@ -1,0 +1,28 @@
+---
+- name: Validate mandatory variables for Ansible Vault
+  assert:
+    that:
+      - vault_password_file is defined
+      - vault_password_file != ''
+    fail_msg: "vault_password_file must be defined for ansible-vault type"
+
+- name: Check if Ansible Vault password file exists
+  stat:
+    path: "{{ vault_password_file }}"
+  register: vault_password_file_stat
+
+- name: Fail if Ansible Vault password file does not exist
+  fail:
+    msg: "Ansible Vault password file {{ vault_password_file }} does not exist"
+  when: not vault_password_file_stat.stat.exists
+
+- name: Validate Ansible Vault password file is readable
+  assert:
+    that:
+      - vault_password_file_stat.stat.readable
+    fail_msg: "Ansible Vault password file {{ vault_password_file }} is not readable"
+
+- name: Successfully connected to Ansible Vault
+  debug:
+    msg: "Successfully validated Ansible Vault password file: {{ vault_password_file }}"
+

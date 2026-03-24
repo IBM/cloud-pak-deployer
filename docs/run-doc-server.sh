@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /docs
+cd /cloud-pak-deployer-docs/docs
 
 echo "Cleaning up old artifacts..."
 make clean

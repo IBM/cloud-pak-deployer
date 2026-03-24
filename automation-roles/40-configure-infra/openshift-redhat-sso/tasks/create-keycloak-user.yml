@@ -1,0 +1,55 @@
+---
+- set_fact:
+    _keycloak_user_password: ''
+
+- name: Get stored password for keycloak user {{ _current_keycloak_user.username }}
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _keycloak_name }}-{{ _current_keycloak_user.username }}"
+    secret_group: "{{ environment_name }}"
+
+- set_fact:
+    _keycloak_user_password: "{{ secret_value }}"
+  when: secret_value == ''  
+
+- set_fact:
+    _keycloak_user_password: "{{ _current_keycloak_user.password | default(global_config.universal_password) | default('') }}"
+  when: _keycloak_user_password == ''
+
+- block:
+  - include_role:
+      name: generate-password
+  - set_fact:
+      _keycloak_user_password: "{{ _p_generated_password }}"
+  when: _keycloak_user_password == ''
+
+- name: Store password for keycloak user {{ _current_keycloak_user.username }}
+  include_role:
+    name: vault-set-secret
+  vars:
+    secret_name: "{{ _keycloak_name }}-{{ _current_keycloak_user.username }}"
+    secret_description: "Password for Keycloak user {{ _current_keycloak_user.username }}"
+    secret_payload: "{{ _keycloak_user_password }}"
+    secret_group: "{{ environment_name }}"
+
+- name: Create {{ _current_keycloak_user.username }} user
+  community.general.keycloak_user:
+    username: "{{ _current_keycloak_user.username }}"
+    state: "{{ _current_keycloak_user.state | default('present') }}"
+    firstName: "{{ _current_keycloak_user.firstName | default('') }}"
+    lastName: "{{ _current_keycloak_user.lastName | default('') }}"
+    email: "{{ _current_keycloak_user.email | default('') }}"
+    emailVerified: True
+    enabled: True
+    credentials:
+    - type: password
+      temporary: False
+      value: "{{ _keycloak_user_password }}"
+    groups: "{{ _current_keycloak_user.groups | default([]) }}"
+    auth_keycloak_url: "{{ _keycloak_auth_url }}"
+    validate_certs: False
+    auth_realm: master
+    auth_username: "{{ _keycloak_admin_user }}"
+    auth_password: "{{ _keycloak_admin_password }}"
+    force: True

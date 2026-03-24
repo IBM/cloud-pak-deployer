@@ -1,23 +1,28 @@
 ---
-- name: Get Keycloak information for Keycloak {{ _current_redhat_sso.keycloak_name }}
+- name: Get Keycloak information for Keycloak {{ _current_openshift_redhat_sso.keycloak_name }}
   include_role:
     name: get-keycloak-info
   vars:
-    _p_keycloak_name: "{{ _current_redhat_sso.keycloak_name }}"
+    _p_keycloak_name: "{{ _current_openshift_redhat_sso.keycloak_name }}"
 
 - name: Make sure that directory {{ status_dir }}/cloud-paks exists
   file:
     path: "{{ status_dir }}/cloud-paks"
     state: directory
 
+- set_fact:
+    _keycloak_users_passwords: []
+
+- include_tasks: get-keycloak-user-password.yml
+  loop: "{{ _current_openshift_redhat_sso.users | default([]) }}"
+  loop_control:
+    loop_var: _current_keycloak_user
+
 - name: Write Red Hat SSO Keycloak info to {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
   blockinfile:
     path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
     create: True
     insertafter: EOF
-    marker: ""
-    block: |
-      --- Keycloak instance {{ _current_redhat_sso.keycloak_name }} ---
-      Keycloak URL: {{ _keycloak_url }}
-      Keycloak User: {{ _keycloak_admin_user }}
-      Keycloak {{ _keycloak_admin_user }} password: {{ _keycloak_admin_password }}
+    marker: "--- Keycloak instance {{ _current_openshift_redhat_sso.keycloak_name }} ---"
+    block: |2
+      {{ lookup('template','keycloak-info.j2') }}
