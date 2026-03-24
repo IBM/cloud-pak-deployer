@@ -1,0 +1,145 @@
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ opensearch_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ opensearch_project_name }}"
+    common_output_directory: "{{ opensearch_output_directory }}"
+
+- name: Get OCP Apps Endpoint
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Generate OpenSearch private key
+  community.crypto.openssl_privatekey:
+    path: "{{ opensearch_output_directory }}/opensearch.key"
+
+- name: Generate OpenSearch Certificate Signing Request
+  community.crypto.openssl_csr:
+    path: "{{ opensearch_output_directory }}/opensearch.csr"
+    privatekey_path: "{{ opensearch_output_directory }}/opensearch.key"
+    subject: "CN=opensearch"
+    subject_alt_name: "DNS:opensearch"
+
+- name: Check that the {{ opensearch_ca_key_path }} exists
+  ansible.builtin.stat:
+    path: "{{ opensearch_ca_key_path }}"
+  register: opensearch_ca_key_file
+
+- name: Check that the {{ opensearch_ca_crt_path }} exists
+  ansible.builtin.stat:
+    path: "{{ opensearch_ca_crt_path }}"
+  register: opensearch_ca_crt_file
+
+- name: Ensure we have CA certificates
+  ansible.builtin.include_role:
+    name: global_ca
+  when: not opensearch_ca_key_file.stat.exists or not opensearch_ca_crt_file.stat.exists
+
+- name: Generate OpenSearch certificate signed by global CA
+  community.crypto.x509_certificate:
+    path: "{{ opensearch_output_directory }}/opensearch.crt"
+    privatekey_path: "{{ opensearch_output_directory }}/opensearch.key"
+    csr_path: "{{ opensearch_output_directory }}/opensearch.csr"
+    provider: ownca
+    ownca_path: "{{ ca_crt_path }}"
+    ownca_privatekey_path: "{{ opensearch_ca_key_path }}"
+    ownca_not_after: "+36500d"
+
+- name: Load TLS key data
+  ansible.builtin.slurp:
+    src: '{{ opensearch_output_directory }}/opensearch.key'
+  register: opensearch_slurped_key_data
+
+- name: Decode key data and store as fact
+  ansible.builtin.set_fact:
+    _opensearch_tls_key: "{{ opensearch_slurped_key_data.content }}"
+
+- name: Load TLS crt data
+  ansible.builtin.slurp:
+    src: '{{ opensearch_output_directory }}/opensearch.crt'
+  register: opensearch_slurped_crt_data
+
+- name: Decode crt data and store as fact
+  ansible.builtin.set_fact:
+    _opensearch_tls_crt: "{{ opensearch_slurped_crt_data.content }}"
+
+- name: Load CA crt data
+  ansible.builtin.slurp:
+    src: '{{ ca_crt_path }}'
+  register: opensearch_slurped_ca_data
+
+- name: Decode CA data and store as fact
+  ansible.builtin.set_fact:
+    _opensearch_ca_crt: "{{ opensearch_slurped_ca_data.content }}"
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ opensearch_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - secrets
+    - configmaps
+    - serviceaccounts
+    - rolebindings
+    - pvcs
+    - statefulsets
+    - services
+
+- name: Add {{ item.name }}
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ opensearch_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: serviceaccounts, wait_sleep: 15, wait_timeout: 15}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: pvcs, wait_sleep: 15, wait_timeout: 300}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+
+- name: Create Edge Route
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-edge-route
+  vars:
+    common_namespace_name: "{{ opensearch_project_name }}"
+    common_route_name: opensearch
+    common_service_name: opensearch
+    common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
+    common_output_directory: "{{ opensearch_output_directory }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: Pre-requisites-OpenSearch
+    usage_entry_value:
+      "# OpenSearch
+
+      As search and analytics engine for the platform.
+
+      ## Endpoints
+
+      - Main 9200 port: https://opensearch-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}
+
+      ## Credentials
+
+      - admin / {{ opensearch_universal_password }}
+
+      "

@@ -1,0 +1,240 @@
+- name: Create role - ibm-genai-index-manager
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-index-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      cluster_permissions:
+        - "cluster:monitor/main"
+      index_permissions:
+        - index_patterns:
+            - "ibm-genai-*"
+          allowed_actions:
+            - "create_index"
+            - "manage"
+    status_code: [200, 201]
+
+- name: Create role - ibm-genai-document-manager
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-document-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      cluster_permissions: []
+      index_permissions:
+        - index_patterns:
+            - "ibm-genai-*"
+          allowed_actions:
+            - "index"
+            - "delete"
+            - "read"
+            - "write"
+    status_code: [200, 201]
+
+- name: Create genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/internalusers/genai-service-user"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      password: "{{ ica_opensearch_password }}"
+      backend_roles: []
+      attributes: {}
+      description: "Service account for IBM Content Assistant GenAI Connector"
+    status_code: [200, 201]
+  register: create_user_result
+
+- name: Map ibm-genai-index-manager role to genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-index-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      backend_roles: []
+      hosts: []
+      users:
+        - "genai-service-user"
+    status_code: [200, 201]
+
+- name: Map ibm-genai-document-manager role to genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-document-manager"
+    method: PUT
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    body:
+      backend_roles: []
+      hosts: []
+      users:
+        - "genai-service-user"
+    status_code: [200, 201]
+
+- name: Prepare yaml file for CatalogSource
+  ansible.builtin.template:
+    src: catalogsource.yaml.j2
+    dest: "{{ ica_output_directory }}/catalogsource.yaml"
+    mode: u+rwx
+
+- name: Add CatalogSource
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ ica_output_directory }}/catalogsource.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for CatalogSource
+  kubernetes.core.k8s_info:
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: "{{ ica_project_name }}"
+  register: catalogsource
+  retries: 40
+  delay: 5
+  until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
+  with_items:
+    - ibm-content-assistant-operator-catalog
+
+- name: Prepare yaml file for the Operator Subscription
+  ansible.builtin.template:
+    src: subscription.yaml.j2
+    dest: "{{ ica_output_directory }}/subscription.yaml"
+    mode: u+rwx
+
+- name: Add the Operator Subscription
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ ica_output_directory }}/subscription.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait Operator ibm-content-assistant-operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-operator
+  vars:
+    common_namespace_name: "{{ ica_project_name }}"
+    common_label_selector_stub: ibm-content-assistant-operator
+
+- name: Wait for ICA CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: casclusters.cas.ibm.com
+
+- name: Generate ICA admin private key
+  community.crypto.openssl_privatekey:
+    path: "{{ ica_output_directory }}/ica_admin.key"
+    passphrase: "{{ ica_universal_password }}"
+
+- name: Load ICA admin key data
+  ansible.builtin.slurp:
+    src: '{{ ica_output_directory }}/ica_admin.key'
+  register: ica_slurped_admin_key_data
+
+- name: Decode admin key data and store as fact
+  ansible.builtin.set_fact:
+    _ica_admin_key: "{{ ica_slurped_admin_key_data.content }}"
+
+- name: Prepare yaml file for Secrets
+  ansible.builtin.template:
+    src: secrets.yaml.j2
+    dest: "{{ ica_output_directory }}/secrets.yaml"
+    mode: u+rwx
+
+- name: Add Secrets
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ ica_output_directory }}/secrets.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Prepare yaml file for ICA CR
+  ansible.builtin.template:
+    src: "ica.yaml.j2"
+    dest: "{{ ica_output_directory }}/ica.yaml"
+    mode: u+rwx
+
+- name: Add ICA instance
+  kubernetes.core.k8s:
+    state: present
+    force: true
+    apply: true
+    src: "{{ ica_output_directory }}/ica.yaml"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 15
+
+- name: Wait for ICA to be Ready
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: cas.ibm.com/v1
+    common_resource_kind: CASCluster
+    common_resource_name: casdeploy
+    common_resource_namespace: "{{ ica_project_name }}"
+    common_condition_name: PostDeployCompleted
+    common_retries: 30
+    common_delay: 120
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ ica_output_namespace }}"
+    common_output_directory: "{{ ica_output_directory }}"
+    common_project_output_name: "ica-output-project.yaml"
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: IBM-Content-Assistant
+    usage_entry_value:
+      "# IBM Content Assistant Client Managed Software (ICA)
+
+      ## Endpoints
+
+      - ICA base url (also used for CLI access): https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
+
+      - ICA OpenSearch user: genai-service-user / {{ ica_opensearch_password }}
+
+      ## CLI access (CLI has to be downloaded from IBM)
+
+      - ibmca config url https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
+
+      - ibmca login -u genai-service-user # password is: {{ ica_universal_password }}
+      "

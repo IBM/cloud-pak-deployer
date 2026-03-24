@@ -1,0 +1,22 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    ica_output_directory: "{{ ica_base_dir }}/{{ ica_dir_name }}"
+
+- name: Remove ICA directory for generated files
+  ansible.builtin.file:
+    path: "{{ ica_output_directory }}"
+    state: absent
+
+- name: Create ICA directory for generated files
+  ansible.builtin.file:
+    path: "{{ ica_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Install ICA
+  ansible.builtin.include_tasks: install.yml
+  when: "ica_action == 'install'"
+
+- name: Remove ICA
+  ansible.builtin.include_tasks: remove.yml
+  when: "ica_action == 'remove'"

@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opensearch
+  namespace: "{{ opensearch_project_name }}"
+spec:
+  serviceName: opensearch
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opensearch
+  template:
+    metadata:
+      labels:
+        app: opensearch
+    spec:
+      serviceAccountName: opensearch
+      initContainers:
+      - name: fix-permissions
+        image: "{{ opensearch_image }}"
+        command:
+        - sh
+        - -c
+        - |
+          chown -R 1000:1000 /usr/share/opensearch/data
+          chmod -R 755 /usr/share/opensearch/data
+        volumeMounts:
+        - name: opensearch-data
+          mountPath: /usr/share/opensearch/data
+        securityContext:
+          runAsUser: 0
+      - name: generate-internal-users
+        image: "{{ opensearch_image }}"
+        command:
+        - sh
+        - -c
+        - |
+          # Read plaintext password from secret
+          PASSWORD=$(cat /tmp/password/password)
+          
+          # Generate bcrypt hash using OpenSearch's hash.sh tool
+          cd /usr/share/opensearch/plugins/opensearch-security/tools
+          HASH=$(./hash.sh -p "$PASSWORD" | tail -1)
+          
+          # Create internal_users.yml with the hash
+          cat > /security-config/internal_users.yml <<EOF
+          ---
+          _meta:
+            type: "internalusers"
+            config_version: 2
+          
+          admin:
+            hash: "$HASH"
+            reserved: true
+            backend_roles:
+            - "admin"
+            description: "Admin user"
+          EOF
+          
+          echo "Generated internal_users.yml with hashed password: $HASH"
+          chmod 644 /security-config/internal_users.yml
+        volumeMounts:
+        - name: password-secret
+          mountPath: /tmp/password
+          readOnly: true
+        - name: security-config
+          mountPath: /security-config
+        securityContext:
+          runAsNonRoot: false
+      containers:
+      - name: opensearch
+        image: "{{ opensearch_image }}"
+        env:
+        - name: OPENSEARCH_JAVA_OPTS
+          value: "-Xms512m -Xmx512m"
+        - name: DISABLE_INSTALL_DEMO_CONFIG
+          value: "true"
+        ports:
+        - containerPort: 9200
+          name: http
+          protocol: TCP
+        - containerPort: 9300
+          name: transport
+          protocol: TCP
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: opensearch-data
+          mountPath: /usr/share/opensearch/data
+        - name: opensearch-config
+          mountPath: /usr/share/opensearch/config/opensearch.yml
+          subPath: opensearch.yml
+        - name: opensearch-certs
+          mountPath: /usr/share/opensearch/config/certs
+        - name: security-config
+          mountPath: /usr/share/opensearch/config/opensearch-security/internal_users.yml
+          subPath: internal_users.yml
+        securityContext:
+          runAsNonRoot: false
+        readinessProbe:
+          tcpSocket:
+            port: 9200
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        livenessProbe:
+          tcpSocket:
+            port: 9200
+          initialDelaySeconds: 90
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: opensearch-config
+        configMap:
+          name: opensearch-config
+      - name: opensearch-certs
+        secret:
+          secretName: opensearch-certs
+      - name: password-secret
+        secret:
+          secretName: opensearch-admin-password
+      - name: security-config
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: opensearch-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: ocs-external-storagecluster-ceph-rbd
+      resources:
+        requests:
+          storage: 10Gi

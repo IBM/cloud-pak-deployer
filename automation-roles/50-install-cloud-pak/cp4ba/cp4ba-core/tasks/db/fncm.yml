@@ -94,3 +94,47 @@
         REVOKE CONNECT ON DATABASE contentdb FROM PUBLIC;
       EOF"
   register: command_status
+
+# Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=manager-preparing-databases
+# Based on https://www.ibm.com/docs/en/filenet-p8-platform/latest?topic=vtpiicd-creating-postgresql-database-table-spaces-content-platform-engine-object-store
+- name: OS1DB DB prepare tablespace
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        mkdir -p /pgsqldata/os1db_tbs;
+        chown postgres:postgres /pgsqldata/os1db_tbs;
+      "
+  register: command_status
+  failed_when: command_status.rc != 0 and command_status.stderr is not search('.*File exists.*')
+
+- name: OS1DB DB
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_postgresql_project }}"
+    pod: "{{ postgresql_pod.resources[0].metadata.name }}"
+    command: >
+      bash -c "
+        psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432 <<-EOF
+        -- create user os1db
+        CREATE USER os1db WITH PASSWORD '{{ cp4ba_postgresql_universal_password }}';
+
+        -- create tablespace for os1db
+        CREATE TABLESPACE os1db_tbs OWNER os1db LOCATION '/pgsqldata/os1db_tbs';
+        GRANT CREATE ON TABLESPACE os1db_tbs TO os1db;
+
+        -- create database os1db
+        CREATE DATABASE os1db OWNER os1db TABLESPACE os1db_tbs TEMPLATE template0 ENCODING UTF8;
+
+        -- Connect to your database and create schema
+        \c os1db;
+        CREATE SCHEMA IF NOT EXISTS os1db AUTHORIZATION os1db;
+        GRANT ALL ON SCHEMA os1db TO os1db;
+
+        -- create a schema for os1db and set the default
+        -- connect to the respective database before executing the below commands
+        SET ROLE os1db;
+        ALTER DATABASE os1db SET search_path TO os1db;
+        REVOKE CONNECT ON DATABASE os1db FROM PUBLIC;
+      EOF"
+  register: command_status
