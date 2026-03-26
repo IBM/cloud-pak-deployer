@@ -20,7 +20,7 @@ COMMON OPTIONS:
   --dry-run              Show what would be deleted (safe, no changes)
   --sequential           Use sequential deletion (slower, default is parallel)
   --force-finalizer      Force cleanup of stuck resources
-  --timeout <SECONDS>    Deletion timeout (default: 900)
+  --timeout <SECONDS>    Deletion timeout (default: 60)
   -h, --help            Show this help
 
 ENVIRONMENT VARIABLES (optional):
@@ -269,7 +269,7 @@ discover_supporting_services
 
 wait_ns_deleted() {
     NS=$1
-    TIMEOUT=${NAMESPACE_DELETE_TIMEOUT:-900}
+    TIMEOUT=${NAMESPACE_DELETE_TIMEOUT:-60}
     ELAPSED=0
     RETRY_COUNT=0
     MAX_RETRIES=3
@@ -321,7 +321,7 @@ start_ns_deletion() {
 # Wait for multiple namespaces to be deleted in parallel
 wait_multiple_ns_deleted() {
     local namespaces=("$@")
-    local timeout=${NAMESPACE_DELETE_TIMEOUT:-900}
+    local timeout=${NAMESPACE_DELETE_TIMEOUT:-60}
     local start_time=$(date +%s)
     local all_deleted=false
     
