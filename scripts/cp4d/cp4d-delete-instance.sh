@@ -154,6 +154,12 @@ elif [ "$#" -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ] && [ "$1" != "--
     # Single argument that's not a flag - treat as instance namespace
     export INSTANCE_NS=$1
 else
+    # Check if first argument is a namespace (doesn't start with -)
+    if [ -n "$1" ] && [ "${1:0:1}" != "-" ]; then
+        export INSTANCE_NS=$1
+        shift 1
+    fi
+    
     PARAMS=""
     while (( "$#" )); do
     case "$1" in
@@ -891,7 +897,7 @@ if [ "${DRY_RUN}" = "true" ]; then
     echo "  - ValidatingWebhookConfigurations (IBM)"
     echo "  - IBM Custom Resource Definitions"
     
-    local ibm_crds=$(oc get crd --no-headers 2>/dev/null | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl' | wc -l)
+    ibm_crds=$(oc get crd --no-headers 2>/dev/null | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl' | wc -l)
     echo "  - Total IBM CRDs: ${ibm_crds}"
     
     echo
