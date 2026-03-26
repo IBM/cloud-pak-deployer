@@ -110,25 +110,23 @@ discover_supporting_services() {
     if [ -z "${PROJECT_SCHEDULING_SERVICE}" ]; then
         local scheduler_ns=$(oc get scheduling --all-namespaces --no-headers 2>/dev/null | head -1 | awk '{print $1}')
         if [ -n "$scheduler_ns" ]; then
-            # Verify it's IBM scheduler, not Red Hat
+            # Verify it's IBM scheduler
             if [[ "$scheduler_ns" =~ ^(cpd-scheduler|ibm-scheduler|.*-cpd-scheduler)$ ]]; then
                 log_success "Discovered IBM scheduler namespace: ${scheduler_ns}"
                 export PROJECT_SCHEDULING_SERVICE="${scheduler_ns}"
-            else
-                log_info "Found scheduler in ${scheduler_ns} but it appears to be Red Hat managed - skipping"
             fi
         else
             log_info "No IBM scheduler namespace found"
         fi
     fi
     
-    # Discover cert-manager namespace if not provided - ONLY IBM cert-manager
+    # Discover cert-manager namespace if not provided
     if [ -z "${PROJECT_CERT_MANAGER}" ]; then
         if oc get project ibm-cert-manager > /dev/null 2>&1; then
             export PROJECT_CERT_MANAGER="ibm-cert-manager"
             log_success "Discovered IBM cert-manager namespace: ibm-cert-manager"
         else
-            log_info "No IBM cert-manager namespace found (Red Hat cert-manager is protected)"
+            log_info "No IBM cert-manager namespace found"
         fi
     fi
     
