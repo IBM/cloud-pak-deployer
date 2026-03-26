@@ -2,26 +2,232 @@
 SCRIPT_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )
 
 command_usage() {
-  echo
-  echo "Usage:"
-  echo "$(basename $0) <INSTANCE NAMESPACE>"
-  echo "$(basename $0) -n <INSTANCE NAMESPACE> [--operator-ns <OPERATOR NAMESPACE>] [--force-finalizer] [--timeout <SECONDS>] [--parallel]"
-  echo
-  echo "Options:"
-  echo "  --force-finalizer    Force removal of finalizers using OpenShift REST API for stuck namespaces"
-  echo "  --timeout <SECONDS>  Timeout in seconds for namespace deletion (default: 900)"
-  echo "  --parallel           Delete multiple namespaces in parallel for faster execution"
-  echo
+  cat << EOF
+
+Cloud Pak for Data Instance Deletion Script
+============================================
+
+This script deletes a Cloud Pak for Data instance and all related resources from an OpenShift cluster.
+
+USAGE:
+  $(basename $0)                                    # Auto-discover and delete (with confirmation)
+  $(basename $0) --dry-run                          # Show what would be deleted (safe test mode)
+  $(basename $0) <INSTANCE_NAMESPACE>               # Delete specific instance
+  $(basename $0) -n <NS> [OPTIONS]                  # Delete with options
+
+MODES:
+  Auto-Discovery Mode (Recommended):
+    $(basename $0)
+    - Automatically discovers CP4D namespaces by finding ZenService resources
+    - Shows detailed summary of what will be deleted
+    - Asks for confirmation before proceeding
+    - Safe: requires explicit 'y' to proceed
+
+  Dry-Run Mode (Testing):
+    $(basename $0) --dry-run
+    - Discovers and displays all CP4D namespaces and resources
+    - Does NOT delete anything
+    - Perfect for testing discovery or understanding your installation
+
+  Manual Mode (Traditional):
+    $(basename $0) cpd
+    $(basename $0) -n cpd --operator-ns cpd-operators
+    - Specify namespaces explicitly
+    - Useful when auto-discovery fails or for specific configurations
+
+OPTIONS:
+  -n, --instance-namespace <NS>   Instance namespace (e.g., cpd, zen)
+  --operator-ns <NS>              Operator namespace (default: <instance>-operators)
+  --auto-discover                 Force auto-discovery mode
+  --dry-run                       Show what would be deleted without deleting
+  --parallel                      Delete multiple namespaces in parallel (faster)
+  --force-finalizer               Force removal of stuck finalizers via API
+  --timeout <SECONDS>             Namespace deletion timeout (default: 900)
+  -h, --help                      Show this help message
+
+WHAT GETS DELETED:
+  • Instance namespace (e.g., cpd) - Contains ZenService and cartridges
+  • Operator namespace (e.g., cpd-operators) - Contains operators and CSVs
+  • Supporting services: scheduler, licensing, cert-manager
+  • Knative services: eventing, serving, app-connect
+  • Cluster-wide: IBM CRDs, webhooks, common-service maps
+
+EXAMPLES:
+  # Test what would be deleted (safe)
+  $(basename $0) --dry-run
+
+  # Delete with auto-discovery (recommended)
+  $(basename $0)
+
+  # Delete specific instance
+  $(basename $0) -n my-cpd-instance
+
+  # Fast parallel deletion with forced cleanup
+  $(basename $0) --parallel --force-finalizer
+
+  # Automated deletion (CI/CD - skips confirmations)
+  export CPD_CONFIRM_DELETE=true
+  $(basename $0)
+
+ENVIRONMENT VARIABLES:
+  CPD_CONFIRM_DELETE          Set to 'true' to skip confirmation prompts
+  CPD_DESTROY_CLUSTER_WIDE    Set to 'false' to keep cluster-wide resources
+  PROJECT_SCHEDULING_SERVICE  Override scheduler namespace (default: cpd-scheduler)
+
+EOF
   exit $1
+}
+
+# Color codes for output
+COLOR_RED='\033[0;31m'
+COLOR_GREEN='\033[0;32m'
+COLOR_YELLOW='\033[1;33m'
+COLOR_BLUE='\033[0;34m'
+COLOR_CYAN='\033[0;36m'
+COLOR_RESET='\033[0m'
+
+get_logtime() {
+  echo $(date "+%Y-%m-%d %H:%M:%S")
+}
+
+log() {
+  LOG_TIME=$(get_logtime)
+  printf "[${LOG_TIME}] ${1}\n"
+}
+
+log_success() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_GREEN}✓ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+log_error() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_RED}✗ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+log_warning() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_YELLOW}⚠ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+log_info() {
+  LOG_TIME=$(get_logtime)
+  printf "${COLOR_CYAN}ℹ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
+}
+
+#
+# AUTO-DISCOVERY FUNCTIONS
+#
+discover_cp4d_namespaces() {
+    log_info "Auto-discovering Cloud Pak for Data namespaces..."
+    
+    # Discover instance namespace by looking for ZenService CR
+    local discovered_instance_ns=$(oc get zenservice --all-namespaces --no-headers 2>/dev/null | head -1 | awk '{print $1}')
+    
+    if [ -z "$discovered_instance_ns" ]; then
+        log_warning "Could not auto-discover instance namespace (no ZenService found)"
+        return 1
+    fi
+    
+    log_success "Discovered instance namespace: ${discovered_instance_ns}"
+    export INSTANCE_NS="${discovered_instance_ns}"
+    
+    # Try to discover operator namespace
+    # Common patterns: <instance>-operators, cpd-operators, ibm-cpd-operators
+    local possible_operator_ns=(
+        "${INSTANCE_NS}-operators"
+        "cpd-operators"
+        "ibm-cpd-operators"
+        "${INSTANCE_NS}-operator"
+    )
+    
+    for ns in "${possible_operator_ns[@]}"; do
+        if oc get project "${ns}" > /dev/null 2>&1; then
+            # Verify it has CP4D operators
+            if oc get csv -n "${ns}" --no-headers 2>/dev/null | grep -q "ibm-cpd-platform-operator\|ibm-common-service-operator"; then
+                log_success "Discovered operator namespace: ${ns}"
+                export OPERATOR_NS="${ns}"
+                break
+            fi
+        fi
+    done
+    
+    if [ -z "$OPERATOR_NS" ]; then
+        log_warning "Could not auto-discover operator namespace, using default: ${INSTANCE_NS}-operators"
+        export OPERATOR_NS="${INSTANCE_NS}-operators"
+    fi
+    
+    # Discover scheduler namespace
+    local scheduler_ns=$(oc get scheduling --all-namespaces --no-headers 2>/dev/null | head -1 | awk '{print $1}')
+    if [ -n "$scheduler_ns" ]; then
+        log_success "Discovered scheduler namespace: ${scheduler_ns}"
+        export PROJECT_SCHEDULING_SERVICE="${scheduler_ns}"
+    else
+        # Try to find namespace containing "scheduler" but exclude OpenShift system namespaces
+        scheduler_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -i "scheduler" | grep -v "^openshift-" | grep -i "cpd\|ibm" | head -1)
+        if [ -n "$scheduler_ns" ]; then
+            log_success "Discovered scheduler namespace by pattern: ${scheduler_ns}"
+            export PROJECT_SCHEDULING_SERVICE="${scheduler_ns}"
+        else
+            log_info "No CP4D scheduler namespace found (scheduler not installed or using default OpenShift scheduler)"
+        fi
+    fi
+    
+    # Discover cert-manager namespace - try exact names first, then pattern matching
+    if oc get project cert-manager > /dev/null 2>&1; then
+        export PROJECT_CERT_MANAGER="cert-manager"
+        log_success "Discovered cert-manager namespace: cert-manager"
+    elif oc get project ibm-cert-manager > /dev/null 2>&1; then
+        export PROJECT_CERT_MANAGER="ibm-cert-manager"
+        log_success "Discovered cert-manager namespace: ibm-cert-manager"
+    else
+        # Try pattern matching: look for namespaces containing both "cert" and "manager" or just "cert" with "ibm"
+        local cert_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -i "cert" | grep -iE "manager|ibm" | head -1)
+        if [ -n "$cert_ns" ]; then
+            export PROJECT_CERT_MANAGER="${cert_ns}"
+            log_success "Discovered cert-manager namespace by pattern: ${cert_ns}"
+        fi
+    fi
+    
+    # Discover licensing namespace - try exact name first, then pattern matching
+    if oc get project ibm-licensing > /dev/null 2>&1; then
+        export PROJECT_LICENSE_SERVICE="ibm-licensing"
+        log_success "Discovered licensing namespace: ibm-licensing"
+    else
+        # Try pattern matching: look for namespaces containing "licensing" or "license" with "ibm"
+        local license_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -iE "licens" | grep -i "ibm" | head -1)
+        if [ -z "$license_ns" ]; then
+            # Try just "licensing" or "license" without ibm requirement
+            license_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -iE "licens" | head -1)
+        fi
+        if [ -n "$license_ns" ]; then
+            export PROJECT_LICENSE_SERVICE="${license_ns}"
+            log_success "Discovered licensing namespace by pattern: ${license_ns}"
+        fi
+    fi
+    
+    return 0
+}
+
+display_discovered_namespaces() {
+    echo
+    echo "=== Discovered Cloud Pak for Data Configuration ==="
+    echo "Instance namespace:   ${INSTANCE_NS:-<not found>}"
+    echo "Operator namespace:   ${OPERATOR_NS:-<not found>}"
+    echo "Scheduler namespace:  ${PROJECT_SCHEDULING_SERVICE:-<not found>}"
+    echo "Cert-manager:         ${PROJECT_CERT_MANAGER:-<not found>}"
+    echo "Licensing:            ${PROJECT_LICENSE_SERVICE:-<not found>}"
+    echo "=================================================="
+    echo
 }
 
 #
 # PARSE
 #
-if [ "$#" -lt 1 ]; then
-    echo "Error: Missing namespace argument."
-    command_usage 2
-elif [ "$#" -eq 1 ];then
+if [ "$#" -eq 0 ]; then
+    # No arguments provided, try auto-discovery
+    export AUTO_DISCOVER=true
+elif [ "$#" -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ];then
     export INSTANCE_NS=$1
     export OPERATOR_NS="${INSTANCE_NS}-operators"
 else
@@ -81,6 +287,14 @@ else
         export PARALLEL_DELETE=true
         shift 1
         ;;
+    --auto-discover)
+        export AUTO_DISCOVER=true
+        shift 1
+        ;;
+    --dry-run)
+        export DRY_RUN=true
+        shift 1
+        ;;
     *) # preserve remaining arguments
         PARAMS="$PARAMS $1"
         shift
@@ -89,42 +303,44 @@ else
     done
 fi
 
-# Color codes for output
-COLOR_RED='\033[0;31m'
-COLOR_GREEN='\033[0;32m'
-COLOR_YELLOW='\033[1;33m'
-COLOR_BLUE='\033[0;34m'
-COLOR_CYAN='\033[0;36m'
-COLOR_RESET='\033[0m'
+# Auto-discover namespaces if requested or if no instance namespace provided
+if [ "${AUTO_DISCOVER}" = "true" ] || [ -z "${INSTANCE_NS}" ]; then
+    if [ "${AUTO_DISCOVER}" = "true" ]; then
+        log_info "Auto-discovery mode enabled"
+    else
+        log_info "No instance namespace provided, attempting auto-discovery..."
+    fi
+    
+    if discover_cp4d_namespaces; then
+        display_discovered_namespaces
+        # Note: Final confirmation will be asked before deletion with full summary
+    else
+        log_error "Auto-discovery failed - no Cloud Pak for Data instance found in the cluster"
+        echo
+        echo "Possible reasons:"
+        echo "  1. No CP4D instance is installed (no ZenService found)"
+        echo "  2. You don't have permissions to view resources across namespaces"
+        echo "  3. The CP4D instance is in a non-standard configuration"
+        echo
+        echo "Solutions:"
+        echo "  • If you know the instance namespace, specify it manually:"
+        echo "    $(basename $0) -n <instance-namespace>"
+        echo
+        echo "  • To see all available namespaces:"
+        echo "    oc get projects"
+        echo
+        echo "  • To check for ZenService resources:"
+        echo "    oc get zenservice --all-namespaces"
+        echo
+        exit 1
+    fi
+fi
 
-get_logtime() {
-  echo $(date "+%Y-%m-%d %H:%M:%S")
-}
-
-log() {
-  LOG_TIME=$(get_logtime)
-  printf "[${LOG_TIME}] ${1}\n"
-}
-
-log_success() {
-  LOG_TIME=$(get_logtime)
-  printf "${COLOR_GREEN}✓ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
-}
-
-log_error() {
-  LOG_TIME=$(get_logtime)
-  printf "${COLOR_RED}✗ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
-}
-
-log_warning() {
-  LOG_TIME=$(get_logtime)
-  printf "${COLOR_YELLOW}⚠ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
-}
-
-log_info() {
-  LOG_TIME=$(get_logtime)
-  printf "${COLOR_CYAN}ℹ [${LOG_TIME}] ${1}${COLOR_RESET}\n"
-}
+# Ensure OPERATOR_NS is set if INSTANCE_NS is set
+if [ -n "${INSTANCE_NS}" ] && [ -z "${OPERATOR_NS}" ]; then
+    export OPERATOR_NS="${INSTANCE_NS}-operators"
+    log_info "Operator namespace not specified, using default: ${OPERATOR_NS}"
+fi
 
 wait_ns_deleted() {
     NS=$1
@@ -657,25 +873,187 @@ delete_ibm_crds() {
 # MAIN CODE
 #
 
+# DRY RUN MODE - Just show what would be deleted and exit
+if [ "${DRY_RUN}" = "true" ]; then
+    log_info "=== DRY RUN MODE - Discovery Only ==="
+    echo
+    echo "The following namespaces and resources would be deleted:"
+    echo
+    if oc get project ${INSTANCE_NS} > /dev/null 2>&1;then
+        echo "✓ Instance namespace: ${INSTANCE_NS}"
+        echo "  Resources: $(oc get zenservice -n ${INSTANCE_NS} --no-headers 2>/dev/null | wc -l) ZenService(s)"
+    else
+        echo "✗ Instance namespace: ${INSTANCE_NS} (not found)"
+    fi
+    
+    if oc get project ${OPERATOR_NS} > /dev/null 2>&1;then
+        echo "✓ Operator namespace: ${OPERATOR_NS}"
+        echo "  Operators: $(oc get csv -n ${OPERATOR_NS} --no-headers 2>/dev/null | wc -l) CSV(s)"
+    else
+        echo "✗ Operator namespace: ${OPERATOR_NS} (not found)"
+    fi
+    
+    if oc get project ibm-app-connect > /dev/null 2>&1;then
+        echo "✓ App Connect namespace: ibm-app-connect"
+    fi
+    
+    if oc get project ibm-knative-events > /dev/null 2>&1;then
+        echo "✓ Knative events namespace: ibm-knative-events"
+    fi
+    
+    if oc get project knative-eventing > /dev/null 2>&1;then
+        echo "✓ Knative eventing namespace: knative-eventing"
+    fi
+    
+    if oc get project knative-serving > /dev/null 2>&1;then
+        echo "✓ Knative serving namespace: knative-serving"
+    fi
+    
+    if oc get project ibm-licensing > /dev/null 2>&1;then
+        echo "✓ License manager namespace: ibm-licensing"
+    fi
+    
+    if oc get project ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler} > /dev/null 2>&1;then
+        echo "✓ Scheduler namespace: ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler}"
+    fi
+    
+    if oc get project ibm-cert-manager > /dev/null 2>&1;then
+        echo "✓ Certificate manager namespace: ibm-cert-manager"
+    fi
+    
+    if oc get project cert-manager > /dev/null 2>&1;then
+        echo "✓ Certificate manager namespace: cert-manager"
+    fi
+    
+    if oc get project cs-control > /dev/null 2>&1;then
+        echo "✓ Common Services control namespace: cs-control"
+    fi
+    
+    echo
+    echo "Cluster-wide resources:"
+    echo "  - MutatingWebhookConfigurations (IBM)"
+    echo "  - ValidatingWebhookConfigurations (IBM)"
+    echo "  - IBM Custom Resource Definitions"
+    
+    local ibm_crds=$(oc get crd --no-headers 2>/dev/null | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl' | wc -l)
+    echo "  - Total IBM CRDs: ${ibm_crds}"
+    
+    echo
+    log_success "DRY RUN complete - no resources were deleted"
+    echo
+    echo "To actually delete these resources, run without --dry-run flag"
+    exit 0
+fi
+
 # Ask for final confirmation to delete the CP4D instance
 if [ -z "${CPD_CONFIRM_DELETE}" ];then
-    echo "About to delete the following from the cluster:"
-    if oc get project ${INSTANCE_NS} > /dev/null 2>&1;then echo "- Instance namespace: ${INSTANCE_NS}";fi
-    if oc get project ${OPERATOR_NS} > /dev/null 2>&1;then echo "- Operator namespace: ${OPERATOR_NS}";fi
-    if oc get project ibm-app-connect > /dev/null 2>&1;then echo "- Knative events: ibm-app-connect";fi
-    if oc get project ibm-knative-events > /dev/null 2>&1;then echo "- Knative events: ibm-knative-events";fi
-    if oc get project knative-serving > /dev/null 2>&1;then echo "- Knative server: knative-serving";fi
-    if oc get project ibm-licensing > /dev/null 2>&1;then echo "- License manager namespace: ibm-licensing";fi
-    if oc get project ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler} > /dev/null 2>&1;then echo "- Scheduler namespace: ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler}";fi
-    if oc get project ibm-cert-manager > /dev/null 2>&1;then echo "- Certificate manager: ibm-cert-manager";fi
-    if oc get project cs-control > /dev/null 2>&1;then echo "- Common Services control: cs-control";fi
-    echo "- IBM Custom Resource Definitions"
-    read -p "Are you sure (y/N)? " -r
-    case "${REPLY}" in 
+    echo
+    echo "=========================================="
+    echo "  CLOUD PAK FOR DATA DELETION SUMMARY"
+    echo "=========================================="
+    echo
+    echo "The following namespaces will be DELETED:"
+    echo
+    
+    # Core CP4D namespaces
+    echo "📦 CORE CP4D NAMESPACES:"
+    if oc get project ${INSTANCE_NS} > /dev/null 2>&1;then
+        zenservices=$(oc get zenservice -n ${INSTANCE_NS} --no-headers 2>/dev/null | wc -l)
+        echo "  ✓ ${INSTANCE_NS} (Instance - ${zenservices} ZenService(s))"
+    else
+        echo "  ✗ ${INSTANCE_NS} (not found)"
+    fi
+    
+    if oc get project ${OPERATOR_NS} > /dev/null 2>&1;then
+        csvs=$(oc get csv -n ${OPERATOR_NS} --no-headers 2>/dev/null | wc -l)
+        echo "  ✓ ${OPERATOR_NS} (Operators - ${csvs} CSV(s))"
+    else
+        echo "  ✗ ${OPERATOR_NS} (not found)"
+    fi
+    
+    # Supporting services
+    echo
+    echo "🔧 SUPPORTING SERVICES:"
+    found_services=false
+    
+    if oc get project ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler} > /dev/null 2>&1;then
+        echo "  ✓ ${PROJECT_SCHEDULING_SERVICE:-cpd-scheduler} (Scheduler)"
+        found_services=true
+    fi
+    
+    if oc get project ibm-licensing > /dev/null 2>&1;then
+        echo "  ✓ ibm-licensing (License Manager)"
+        found_services=true
+    fi
+    
+    if oc get project ibm-cert-manager > /dev/null 2>&1;then
+        echo "  ✓ ibm-cert-manager (Certificate Manager)"
+        found_services=true
+    elif oc get project cert-manager > /dev/null 2>&1;then
+        echo "  ✓ cert-manager (Certificate Manager)"
+        found_services=true
+    fi
+    
+    if oc get project cs-control > /dev/null 2>&1;then
+        echo "  ✓ cs-control (Common Services Control)"
+        found_services=true
+    fi
+    
+    if [ "$found_services" = false ]; then
+        echo "  (none found)"
+    fi
+    
+    # Knative services
+    echo
+    echo "🌐 KNATIVE SERVICES:"
+    found_knative=false
+    
+    if oc get project ibm-app-connect > /dev/null 2>&1;then
+        echo "  ✓ ibm-app-connect"
+        found_knative=true
+    fi
+    
+    if oc get project ibm-knative-events > /dev/null 2>&1;then
+        echo "  ✓ ibm-knative-events"
+        found_knative=true
+    fi
+    
+    if oc get project knative-eventing > /dev/null 2>&1;then
+        echo "  ✓ knative-eventing"
+        found_knative=true
+    fi
+    
+    if oc get project knative-serving > /dev/null 2>&1;then
+        echo "  ✓ knative-serving"
+        found_knative=true
+    fi
+    
+    if [ "$found_knative" = false ]; then
+        echo "  (none found)"
+    fi
+    
+    # Cluster-wide resources
+    echo
+    echo "🌍 CLUSTER-WIDE RESOURCES:"
+    ibm_crds=$(oc get crd --no-headers 2>/dev/null | awk '{print $1}' | grep -E '\.ibm|mantaflows\.adl' | wc -l)
+    echo "  ✓ IBM Custom Resource Definitions (${ibm_crds} CRDs)"
+    echo "  ✓ MutatingWebhookConfigurations (IBM)"
+    echo "  ✓ ValidatingWebhookConfigurations (IBM)"
+    
+    echo
+    echo "=========================================="
+    echo
+    log_warning "This operation is IRREVERSIBLE!"
+    echo
+    read -p "Are you absolutely sure you want to DELETE all these resources? (y/N): " -r
+    case "${REPLY}" in
     y|Y)
+        log_success "Deletion confirmed. Proceeding..."
+        echo
     ;;
     * )
-    exit 99
+        log_info "Deletion cancelled by user"
+        exit 99
     ;;
     esac
 fi
