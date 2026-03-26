@@ -227,7 +227,8 @@ display_discovered_namespaces() {
 if [ "$#" -eq 0 ]; then
     # No arguments provided, try auto-discovery
     export AUTO_DISCOVER=true
-elif [ "$#" -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ];then
+elif [ "$#" -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ] && [ "$1" != "--dry-run" ] && [ "$1" != "--auto-discover" ] && [ "$1" != "--parallel" ];then
+    # Single argument that's not a flag - treat as instance namespace
     export INSTANCE_NS=$1
     export OPERATOR_NS="${INSTANCE_NS}-operators"
 else
