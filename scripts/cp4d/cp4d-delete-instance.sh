@@ -8,34 +8,48 @@ Cloud Pak for Data Instance Deletion Script
 ============================================
 
 USAGE:
-  $(basename $0)                    # Auto-discover and delete (recommended)
-  $(basename $0) --dry-run          # Test mode - show what would be deleted
-  $(basename $0) <NAMESPACE>        # Delete specific instance
+  $(basename $0) <NAMESPACE>        # Delete specific instance (REQUIRED)
   $(basename $0) -n <NS> [OPTIONS]  # Delete with options
 
+REQUIRED:
+  <NAMESPACE> or -n <NAMESPACE>  CP4D instance namespace (e.g., cpd, zen)
+
 COMMON OPTIONS:
+  --operator-ns <NS>     Operator namespace (default: <instance>-operators)
+  --scheduler-ns <NS>    Scheduler namespace (if different from auto-detected)
   --dry-run              Show what would be deleted (safe, no changes)
-  --parallel             Faster deletion using parallel processing
+  --sequential           Use sequential deletion (slower, default is parallel)
   --force-finalizer      Force cleanup of stuck resources
   --timeout <SECONDS>    Deletion timeout (default: 900)
   -h, --help            Show this help
 
+ENVIRONMENT VARIABLES (optional):
+  PROJECT_CERT_MANAGER        Certificate manager namespace
+  PROJECT_LICENSE_SERVICE     License service namespace
+  PROJECT_SCHEDULING_SERVICE  Scheduler namespace
+
 EXAMPLES:
   # Safe test - see what would be deleted
-  $(basename $0) --dry-run
+  $(basename $0) cpd --dry-run
 
-  # Delete with auto-discovery (asks for confirmation)
-  $(basename $0)
-
-  # Delete specific instance
+  # Delete instance with default operator namespace (cpd-operators)
   $(basename $0) cpd
 
-  # Fast deletion with cleanup
-  $(basename $0) --parallel --force-finalizer
+  # Delete with custom operator namespace
+  $(basename $0) cpd --operator-ns my-operators
+
+  # Sequential deletion (slower but more controlled)
+  $(basename $0) cpd --sequential
+
+  # Fast deletion with forced cleanup
+  $(basename $0) cpd --force-finalizer
 
 WHAT GETS DELETED:
-  • CP4D instance and operator namespaces
-  • Supporting services (scheduler, licensing, cert-manager)
+  • CP4D instance namespace (specified)
+  • Operator namespace (default: <instance>-operators)
+  • IBM scheduler namespace (if found)
+  • IBM licensing namespace (if not shared with other instances)
+  • IBM cert-manager namespace (if not shared with other instances)
   • Knative services (if present)
   • IBM CRDs and webhooks
 
@@ -43,6 +57,7 @@ NOTES:
   ⚠  This operation is IRREVERSIBLE
   ✓  Always test with --dry-run first
   ✓  Requires cluster-admin permissions
+  ✓  Instance namespace MUST be specified explicitly
 
 EOF
   exit $1
@@ -86,121 +101,58 @@ log_info() {
 }
 
 #
-# AUTO-DISCOVERY FUNCTIONS
+# DISCOVERY FUNCTIONS FOR SUPPORTING SERVICES
 #
-discover_cp4d_namespaces() {
-    log_info "Auto-discovering Cloud Pak for Data namespaces..."
+discover_supporting_services() {
+    log_info "Discovering supporting services..."
     
-    # Discover instance namespace by looking for ZenService CR
-    local discovered_instance_ns=$(oc get zenservice --all-namespaces --no-headers 2>/dev/null | head -1 | awk '{print $1}')
-    
-    if [ -z "$discovered_instance_ns" ]; then
-        log_warning "Could not auto-discover instance namespace (no ZenService found)"
-        return 1
-    fi
-    
-    log_success "Discovered instance namespace: ${discovered_instance_ns}"
-    export INSTANCE_NS="${discovered_instance_ns}"
-    
-    # Try to discover operator namespace
-    # Common patterns: <instance>-operators, cpd-operators, ibm-cpd-operators
-    local possible_operator_ns=(
-        "${INSTANCE_NS}-operators"
-        "cpd-operators"
-        "ibm-cpd-operators"
-        "${INSTANCE_NS}-operator"
-    )
-    
-    for ns in "${possible_operator_ns[@]}"; do
-        if oc get project "${ns}" > /dev/null 2>&1; then
-            # Verify it has CP4D operators
-            if oc get csv -n "${ns}" --no-headers 2>/dev/null | grep -q "ibm-cpd-platform-operator\|ibm-common-service-operator"; then
-                log_success "Discovered operator namespace: ${ns}"
-                export OPERATOR_NS="${ns}"
-                break
-            fi
-        fi
-    done
-    
-    if [ -z "$OPERATOR_NS" ]; then
-        log_warning "Could not auto-discover operator namespace, using default: ${INSTANCE_NS}-operators"
-        export OPERATOR_NS="${INSTANCE_NS}-operators"
-    fi
-    
-    # Discover scheduler namespace
-    local scheduler_ns=$(oc get scheduling --all-namespaces --no-headers 2>/dev/null | head -1 | awk '{print $1}')
-    if [ -n "$scheduler_ns" ]; then
-        log_success "Discovered scheduler namespace: ${scheduler_ns}"
-        export PROJECT_SCHEDULING_SERVICE="${scheduler_ns}"
-    else
-        # Try to find namespace containing "scheduler" but exclude OpenShift system namespaces
-        scheduler_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -i "scheduler" | grep -v "^openshift-" | grep -i "cpd\|ibm" | head -1)
+    # Discover scheduler namespace if not provided
+    if [ -z "${PROJECT_SCHEDULING_SERVICE}" ]; then
+        local scheduler_ns=$(oc get scheduling --all-namespaces --no-headers 2>/dev/null | head -1 | awk '{print $1}')
         if [ -n "$scheduler_ns" ]; then
-            log_success "Discovered scheduler namespace by pattern: ${scheduler_ns}"
-            export PROJECT_SCHEDULING_SERVICE="${scheduler_ns}"
+            # Verify it's IBM scheduler, not Red Hat
+            if [[ "$scheduler_ns" =~ ^(cpd-scheduler|ibm-scheduler|.*-cpd-scheduler)$ ]]; then
+                log_success "Discovered IBM scheduler namespace: ${scheduler_ns}"
+                export PROJECT_SCHEDULING_SERVICE="${scheduler_ns}"
+            else
+                log_info "Found scheduler in ${scheduler_ns} but it appears to be Red Hat managed - skipping"
+            fi
         else
-            log_info "No CP4D scheduler namespace found (scheduler not installed or using default OpenShift scheduler)"
+            log_info "No IBM scheduler namespace found"
         fi
     fi
     
-    # Discover cert-manager namespace - try exact names first, then pattern matching
-    if oc get project cert-manager > /dev/null 2>&1; then
-        export PROJECT_CERT_MANAGER="cert-manager"
-        log_success "Discovered cert-manager namespace: cert-manager"
-    elif oc get project ibm-cert-manager > /dev/null 2>&1; then
-        export PROJECT_CERT_MANAGER="ibm-cert-manager"
-        log_success "Discovered cert-manager namespace: ibm-cert-manager"
-    else
-        # Try pattern matching: look for namespaces containing both "cert" and "manager" or just "cert" with "ibm"
-        local cert_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -i "cert" | grep -iE "manager|ibm" | head -1)
-        if [ -n "$cert_ns" ]; then
-            export PROJECT_CERT_MANAGER="${cert_ns}"
-            log_success "Discovered cert-manager namespace by pattern: ${cert_ns}"
+    # Discover cert-manager namespace if not provided - ONLY IBM cert-manager
+    if [ -z "${PROJECT_CERT_MANAGER}" ]; then
+        if oc get project ibm-cert-manager > /dev/null 2>&1; then
+            export PROJECT_CERT_MANAGER="ibm-cert-manager"
+            log_success "Discovered IBM cert-manager namespace: ibm-cert-manager"
+        else
+            log_info "No IBM cert-manager namespace found (Red Hat cert-manager is protected)"
         fi
     fi
     
-    # Discover licensing namespace - try exact name first, then pattern matching
-    if oc get project ibm-licensing > /dev/null 2>&1; then
-        export PROJECT_LICENSE_SERVICE="ibm-licensing"
-        log_success "Discovered licensing namespace: ibm-licensing"
-    else
-        # Try pattern matching: look for namespaces containing "licensing" or "license" with "ibm"
-        local license_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -iE "licens" | grep -i "ibm" | head -1)
-        if [ -z "$license_ns" ]; then
-            # Try just "licensing" or "license" without ibm requirement
-            license_ns=$(oc get projects --no-headers 2>/dev/null | awk '{print $1}' | grep -iE "licens" | head -1)
-        fi
-        if [ -n "$license_ns" ]; then
-            export PROJECT_LICENSE_SERVICE="${license_ns}"
-            log_success "Discovered licensing namespace by pattern: ${license_ns}"
+    # Discover licensing namespace if not provided
+    if [ -z "${PROJECT_LICENSE_SERVICE}" ]; then
+        if oc get project ibm-licensing > /dev/null 2>&1; then
+            export PROJECT_LICENSE_SERVICE="ibm-licensing"
+            log_success "Discovered IBM licensing namespace: ibm-licensing"
+        else
+            log_info "No IBM licensing namespace found"
         fi
     fi
-    
-    return 0
-}
-
-display_discovered_namespaces() {
-    echo
-    echo "=== Discovered Cloud Pak for Data Configuration ==="
-    echo "Instance namespace:   ${INSTANCE_NS:-<not found>}"
-    echo "Operator namespace:   ${OPERATOR_NS:-<not found>}"
-    echo "Scheduler namespace:  ${PROJECT_SCHEDULING_SERVICE:-<not found>}"
-    echo "Cert-manager:         ${PROJECT_CERT_MANAGER:-<not found>}"
-    echo "Licensing:            ${PROJECT_LICENSE_SERVICE:-<not found>}"
-    echo "=================================================="
-    echo
 }
 
 #
-# PARSE
+# PARSE ARGUMENTS
 #
 if [ "$#" -eq 0 ]; then
-    # No arguments provided, try auto-discovery
-    export AUTO_DISCOVER=true
-elif [ "$#" -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ] && [ "$1" != "--dry-run" ] && [ "$1" != "--auto-discover" ] && [ "$1" != "--parallel" ];then
+    log_error "Instance namespace is required"
+    echo
+    command_usage 1
+elif [ "$#" -eq 1 ] && [ "$1" != "--help" ] && [ "$1" != "-h" ] && [ "$1" != "--dry-run" ] && [ "$1" != "--sequential" ];then
     # Single argument that's not a flag - treat as instance namespace
     export INSTANCE_NS=$1
-    export OPERATOR_NS="${INSTANCE_NS}-operators"
 else
     PARAMS=""
     while (( "$#" )); do
@@ -224,17 +176,27 @@ else
         ;;
     --operator-ns*)
         if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
-        export OPERATOR_NS="${1#*=}"
-        shift 1
-        else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
-        export OPERATOR_NS=$2
-        shift 2
+            export OPERATOR_NS="${1#*=}"
+            shift 1
+        elif [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+            export OPERATOR_NS=$2
+            shift 2
         else
-        echo "Error: Missing operator namespace argument."
-        command_usage 2
+            echo "Error: Missing operator namespace argument."
+            command_usage 2
         fi
+        ;;
+    --scheduler-ns*)
+        if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+            export PROJECT_SCHEDULING_SERVICE="${1#*=}"
+            shift 1
+        elif [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+            export PROJECT_SCHEDULING_SERVICE=$2
+            shift 2
+        else
+            echo "Error: Missing scheduler namespace argument."
+            command_usage 2
         fi
-        shift 1
         ;;
     --force-finalizer)
         export FORCE_FINALIZER=true
@@ -254,12 +216,8 @@ else
         fi
         shift 1
         ;;
-    --parallel)
-        export PARALLEL_DELETE=true
-        shift 1
-        ;;
-    --auto-discover)
-        export AUTO_DISCOVER=true
+    --sequential)
+        export SEQUENTIAL_DELETE=true
         shift 1
         ;;
     --dry-run)
@@ -274,44 +232,36 @@ else
     done
 fi
 
-# Auto-discover namespaces if requested or if no instance namespace provided
-if [ "${AUTO_DISCOVER}" = "true" ] || [ -z "${INSTANCE_NS}" ]; then
-    if [ "${AUTO_DISCOVER}" = "true" ]; then
-        log_info "Auto-discovery mode enabled"
-    else
-        log_info "No instance namespace provided, attempting auto-discovery..."
-    fi
-    
-    if discover_cp4d_namespaces; then
-        display_discovered_namespaces
-        # Note: Final confirmation will be asked before deletion with full summary
-    else
-        log_error "Auto-discovery failed - no Cloud Pak for Data instance found in the cluster"
-        echo
-        echo "Possible reasons:"
-        echo "  1. No CP4D instance is installed (no ZenService found)"
-        echo "  2. You don't have permissions to view resources across namespaces"
-        echo "  3. The CP4D instance is in a non-standard configuration"
-        echo
-        echo "Solutions:"
-        echo "  • If you know the instance namespace, specify it manually:"
-        echo "    $(basename $0) -n <instance-namespace>"
-        echo
-        echo "  • To see all available namespaces:"
-        echo "    oc get projects"
-        echo
-        echo "  • To check for ZenService resources:"
-        echo "    oc get zenservice --all-namespaces"
-        echo
-        exit 1
-    fi
+# Validate that instance namespace is provided and not empty
+if [ -z "${INSTANCE_NS}" ]; then
+    log_error "Instance namespace is required but not provided"
+    echo
+    echo "Please specify the CP4D instance namespace:"
+    echo "  $(basename $0) <instance-namespace>"
+    echo
+    echo "Example:"
+    echo "  $(basename $0) cpd"
+    echo
+    echo "To find your CP4D instance namespace, run:"
+    echo "  oc get zenservice --all-namespaces"
+    echo
+    exit 1
 fi
 
-# Ensure OPERATOR_NS is set if INSTANCE_NS is set
-if [ -n "${INSTANCE_NS}" ] && [ -z "${OPERATOR_NS}" ]; then
+# Validate namespace is not empty string
+if [ "${INSTANCE_NS}" = "" ]; then
+    log_error "Instance namespace cannot be an empty string"
+    exit 1
+fi
+
+# Set operator namespace if not specified
+if [ -z "${OPERATOR_NS}" ]; then
     export OPERATOR_NS="${INSTANCE_NS}-operators"
     log_info "Operator namespace not specified, using default: ${OPERATOR_NS}"
 fi
+
+# Discover supporting services (scheduler, cert-manager, licensing)
+discover_supporting_services
 
 wait_ns_deleted() {
     NS=$1
@@ -444,16 +394,10 @@ force_remove_finalizers() {
         # First, try to remove finalizers from blocking resources
         force_remove_resource_finalizers ${NS}
         
-        # Then remove namespace finalizers
-        if oc get ns ${NS} -o json > ${temp_dir}/${NS}-finalizer.json 2>/dev/null; then
-            sed -i '/"kubernetes"/d' ${temp_dir}/${NS}-finalizer.json
-            OC_SERVER_URL="${OC_SERVER_URL:-$(oc whoami --show-server)}"
-            OC_TOKEN="${OC_TOKEN:-$(oc whoami -t)}"
-            curl --silent --insecure -H "Content-Type: application/json" \
-                -H "Authorization: Bearer ${OC_TOKEN}" \
-                -X PUT --data-binary @"${temp_dir}/${NS}-finalizer.json" \
-                "${OC_SERVER_URL}/api/v1/namespaces/${NS}/finalize" > /dev/null 2>&1
-            rm -f "${temp_dir}/${NS}-finalizer.json"
+        # Then remove namespace finalizers using oc patch
+        if oc get ns ${NS} > /dev/null 2>&1; then
+            log_info "Removing finalizers from namespace ${NS}..."
+            oc patch ns ${NS} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
             log_success "Namespace finalizers removed for ${NS}"
         fi
     fi
@@ -547,8 +491,18 @@ diagnose_namespace_stuck() {
 
 delete_operator_ns() {
     CP4D_OPERATORS=$1
-    oc get project ${CP4D_OPERATORS} > /dev/null 2>&1
-    if [ $? -eq 0 ];then
+    
+    # Check if namespace exists
+    local ns_exists=false
+    if oc get project ${CP4D_OPERATORS} > /dev/null 2>&1; then
+        ns_exists=true
+        log "Operator namespace ${CP4D_OPERATORS} exists, proceeding with deletion"
+    else
+        log_warning "Operator namespace ${CP4D_OPERATORS} does not exist (may have been deleted or is orphaned)"
+        log_info "Will attempt to clean up any remaining operator resources"
+    fi
+
+    if [ "$ns_exists" = "true" ]; then
         log "Deleting everything in the ${CP4D_OPERATORS} project"
         oc delete CommonService  -n ${CP4D_OPERATORS} common-service --ignore-not-found
         oc delete subscriptions.operators.coreos.com -n ${CP4D_OPERATORS} -l operators.coreos.com/ibm-common-service-operator.${CP4D_OPERATORS} --ignore-not-found
@@ -572,15 +526,29 @@ delete_operator_ns() {
         force_remove_finalizers ${CP4D_OPERATORS}
         wait_ns_deleted ${CP4D_OPERATORS}
     else
-        echo "Project ${CP4D_OPERATORS} does not exist, skipping"
+        log_info "Skipping operator namespace-specific cleanup (namespace does not exist)"
     fi
+    
+    # Clean up any orphaned operator resources (CSVs, subscriptions, etc.)
+    log_info "Cleaning up any cluster-wide operator resources for ${CP4D_OPERATORS}"
+    oc delete csv -A -l "operators.coreos.com/ibm-cpd-platform-operator.${CP4D_OPERATORS}" --ignore-not-found 2>/dev/null || true
+    oc delete subscription -A -l "operators.coreos.com/ibm-cpd-platform-operator.${CP4D_OPERATORS}" --ignore-not-found 2>/dev/null || true
 }
 
 delete_instance_ns() {
     INSTANCE_NS=$1
-    oc get project ${INSTANCE_NS} > /dev/null 2>&1
-    if [ $? -eq 0 ];then
+    
+    # Check if namespace exists
+    local ns_exists=false
+    if oc get project ${INSTANCE_NS} > /dev/null 2>&1; then
+        ns_exists=true
+        log "Instance namespace ${INSTANCE_NS} exists, proceeding with deletion"
+    else
+        log_warning "Instance namespace ${INSTANCE_NS} does not exist (may have been deleted or is orphaned)"
+        log_info "Will attempt to clean up any remaining cluster-wide resources"
+    fi
 
+    if [ "$ns_exists" = "true" ]; then
         # Delete instance namespace at the beginning to avoid additional CRs being created
         oc delete ns ${INSTANCE_NS} --ignore-not-found --wait=false
 
@@ -639,8 +607,11 @@ delete_instance_ns() {
         force_remove_finalizers ${INSTANCE_NS}
         wait_ns_deleted ${INSTANCE_NS}
     else
-        echo "Project ${INSTANCE_NS} does not exist, skipping"
+        log_info "Skipping namespace-specific cleanup (namespace does not exist)"
     fi
+    
+    # Always attempt to clean up cluster-wide resources related to this instance
+    log_info "Cleaning up any cluster-wide resources for instance ${INSTANCE_NS}"
 }
 
 #When running cp4d-delete-instance.sh, the script always deletes the Certificate Manager and the License Manager.
@@ -758,9 +729,23 @@ delete_ibm_license_server() {
 }
 
 delete_ibm_certificate_manager() {
+    # Only delete IBM cert-manager, never Red Hat cert-manager
+    IBM_CERT_MANAGER=${PROJECT_CERT_MANAGER:-ibm-cert-manager}
+    
+    # Protect Red Hat cert-manager namespace
+    if [ "${IBM_CERT_MANAGER}" = "cert-manager" ]; then
+        log_warning "Skipping Red Hat cert-manager namespace (protected)"
+        return 0
+    fi
+    
+    # Only proceed if it's IBM cert-manager
+    if [ "${IBM_CERT_MANAGER}" != "ibm-cert-manager" ]; then
+        log_info "Certificate manager namespace '${IBM_CERT_MANAGER}' is not IBM-managed, skipping"
+        return 0
+    fi
+    
     check_shared_resources certificaterequests.cert-manager.io ibm-cert-manager DELETE_CERT_MANAGER
     if [ "${DELETE_CERT_MANAGER}" -eq 1 ]; then
-        IBM_CERT_MANAGER=ibm-cert-manager
         oc get project ${IBM_CERT_MANAGER} > /dev/null 2>&1
         if [ $? -eq 0 ]; then
             log "Deleting everything in the ${IBM_CERT_MANAGER} project"
@@ -776,10 +761,10 @@ delete_ibm_certificate_manager() {
             force_remove_finalizers ${IBM_CERT_MANAGER}
             wait_ns_deleted ${IBM_CERT_MANAGER}
         else
-            echo "Project ${IBM_CERT_MANAGER} does not exist, skipping"
+            log_info "Project ${IBM_CERT_MANAGER} does not exist, skipping"
         fi
     else
-        echo "Keeping ${IBM_CERT_MANAGER} namespace due to shared resources"
+        log_info "Keeping ${IBM_CERT_MANAGER} namespace due to shared resources"
     fi
 }
 
@@ -1039,8 +1024,9 @@ fi
 # Create temporary directory
 temp_dir=$(mktemp -d)
 
-if [ "${PARALLEL_DELETE}" = "true" ]; then
-    log_info "Using parallel deletion mode for faster execution"
+# Parallel deletion is now the default (faster), use --sequential to disable
+if [ "${SEQUENTIAL_DELETE}" != "true" ]; then
+    log_info "Using parallel deletion mode for faster execution (use --sequential for sequential mode)"
     
     # Delete Cloud Pak for Data instance (must be first)
     delete_instance_ns ${INSTANCE_NS}
