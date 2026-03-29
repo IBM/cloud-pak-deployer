@@ -1,0 +1,111 @@
+- name: Get ICA CRD
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: casclusters.cas.ibm.com
+  register: ica_crd
+  retries: 10
+  delay: 1
+
+- name: Delete ICA instance
+  kubernetes.core.k8s:
+    state: absent
+    api_version: cas.ibm.com/v1
+    kind: CASCluster
+    name: casdeploy
+    namespace: "{{ ica_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  when: ica_crd.resources | length != 0
+
+- name: Delete Secrets
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Secret
+    name: "{{ item }}"
+    namespace: "{{ ica_project_name }}"
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+  with_items:
+    - ibm-content-assistant-secret
+    - vector-database-secret
+    - ibm-content-assistant-admin-key-secret
+
+- name: Remove Operators
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-operator
+  vars:
+    common_namespace_name: "{{ ica_project_name }}"
+    common_label_selector_stub: "{{ item }}"
+  with_items:
+    - ibm-content-assistant-operator
+
+- name: Remove Catalog Sources
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1alpha1
+    kind: CatalogSource
+    name: "{{ item }}"
+    namespace: openshift-marketplace
+    wait: true
+  with_items:
+    - ibm-content-assistant-operator-catalog
+
+- name: Remove ibm-genai-document-manager role to genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-document-manager"
+    method: DELETE
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    status_code: [200, 404]
+
+- name: Remove ibm-genai-index-manager role to genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-index-manager"
+    method: DELETE
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    status_code: [200, 404]
+
+- name: Remove genai-service-user
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/internalusers/genai-service-user"
+    method: DELETE
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+  register: create_user_result
+
+- name: Remove role - ibm-genai-document-manager
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-document-manager"
+    method: DELETE
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    status_code: [200, 404]
+
+- name: Remove role - ibm-genai-index-manager
+  ansible.builtin.uri:
+    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-index-manager"
+    method: DELETE
+    user: "admin"
+    password: "{{ ica_opensearch_password }}"
+    force_basic_auth: true
+    validate_certs: false
+    body_format: json
+    status_code: [200, 404]

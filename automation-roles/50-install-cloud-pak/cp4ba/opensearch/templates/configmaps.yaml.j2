@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opensearch-config
+  namespace: "{{ opensearch_project_name }}"
+data:
+  opensearch.yml: |
+    cluster.name: opensearch-cluster
+    node.name: opensearch-node-0
+    network.host: 0.0.0.0
+    discovery.type: single-node
+    
+    # Security settings
+    plugins.security.ssl.transport.pemcert_filepath: certs/tls.crt
+    plugins.security.ssl.transport.pemkey_filepath: certs/tls.key
+    plugins.security.ssl.transport.pemtrustedcas_filepath: certs/ca.crt
+    plugins.security.ssl.transport.enforce_hostname_verification: false
+    
+    plugins.security.ssl.http.enabled: false
+    plugins.security.ssl.http.pemcert_filepath: certs/tls.crt
+    plugins.security.ssl.http.pemkey_filepath: certs/tls.key
+    plugins.security.ssl.http.pemtrustedcas_filepath: certs/ca.crt
+    
+    plugins.security.allow_unsafe_democertificates: false
+    plugins.security.allow_default_init_securityindex: true
+    plugins.security.authcz.admin_dn:
+      - "CN=opensearch,OU=client,O=client,L=test,C=cz"
+    
+    plugins.security.audit.type: internal_opensearch
+    plugins.security.enable_snapshot_restore_privilege: true
+    plugins.security.check_snapshot_restore_write_privileges: true
+    plugins.security.restapi.roles_enabled: ["all_access", "security_rest_api_access"]
+    
+    # Disable demo mode
+    plugins.security.disabled: false

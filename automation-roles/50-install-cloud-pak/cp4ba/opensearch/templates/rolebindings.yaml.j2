@@ -1,0 +1,15 @@
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: opensearch-anyuid
+  namespace: "{{ opensearch_project_name }}"
+  labels:
+    app: opensearch
+subjects:
+  - kind: ServiceAccount
+    name: opensearch
+    namespace: "{{ opensearch_project_name }}"
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: 'system:openshift:scc:anyuid'

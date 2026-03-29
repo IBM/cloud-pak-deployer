@@ -1,0 +1,16 @@
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    opensearch_output_directory: "{{ opensearch_base_dir }}/{{ opensearch_dir_name }}"
+
+- name: Remove opensearch directory for generated files
+  ansible.builtin.file:
+    path: "{{ opensearch_output_directory }}"
+    state: absent
+
+- name: Install opensearch
+  ansible.builtin.include_tasks: install.yml
+  when: "opensearch_action == 'install'"
+
+- name: Remove opensearch
+  ansible.builtin.include_tasks: remove.yml
+  when: "opensearch_action == 'remove'"

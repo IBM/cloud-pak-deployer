@@ -136,7 +136,9 @@ Contains prerequisites for the whole platform.
 - OpenLDAP - Directory solution for users and groups definition.
   - Always installed.
 - MSSQL server - Database storage for RPA server. 
-  - nstalled if RPA is enbled.
+  - Installed if RPA is enabled.
+- OpenSearch - Vector database storage for IBM Content Assistant. 
+  - Installed if ICA is enabled.
 
 ## Environments used for installation 💻
 
@@ -183,6 +185,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 - IPM - Prescriptive mining permissions assigned to admin user.
+- ICA - OS1 and CONTENT object stores added needed AddOns 5.7.0 Gen AI Extensions and 5.6.0 Persistent Text Extract Extensions.
 
 ## Usage & operations 📇
 

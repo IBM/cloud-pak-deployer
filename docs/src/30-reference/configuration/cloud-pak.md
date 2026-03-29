@@ -835,6 +835,18 @@ Placed in `bamoe` key on the project level.
 |---------------------|--------------------------------|----------------------|----------------|
 | enabled                         | Set to `true` to enable `bamoe`. | Yes  | true, false |
 
+### IBM Content Assistant properties
+
+Used to configure IBM Content Assistant.  
+Placed in `ica` key on the project level.
+
+| Property            | Description                    | Mandatory            | Allowed values |
+|---------------------|--------------------------------|----------------------|----------------|
+| enabled                         | Set to `true` to enable `ica`. | Yes  | true, false |
+| gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cacms/1.0.x?topic=software-configuring-service-id-your-watsonxai-account | false  | Object |
+| gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.spaceId          | Set to real value of your Watsonx.AI platform | false | Your real value |
+
 ### Other properties
 
 Used to configure extra UIs.  

@@ -18,12 +18,22 @@ spec:
         database_servername: "{{ cp4ba_postgresql_hostname }}"
         database_name: contentdb
         database_port: "5432"
+      - dc_database_type: postgresql
+        dc_os_label: os1
+        dc_common_os_datasource_name: FNOS1DS
+        dc_common_os_xa_datasource_name: FNOS1DSXA
+        database_servername: "{{ cp4ba_postgresql_hostname }}"
+        database_name: os1db
+        database_port: "5432"
   ecm_configuration:
     cpe:
       datavolume:
         existing_pvc_for_cpe_filestore:
           name: cpe-filestore
           size: 100Gi
+      cpe_production_setting:
+        # TODO temporary fix for indexing, last seen 2026-03-11 and should be fixed in future CPE ifix
+        jvm_customize_options: -Dcom.filenet.cbr.applyPreprocessorPropertyFilter=false
   initialize_configuration:
     ic_domain_creation:
       domain_name: P8DOMAIN
@@ -47,38 +57,89 @@ spec:
           oc_cpe_obj_store_addons_list:
             - "{CE460ADD-0000-0000-0000-000000000004}" # 5.2.1 Base Application Extensions (default)
             - "{CE460ADD-0000-0000-0000-000000000001}" # 5.2.1 Base Content Engine Extensions (default)
-            - "{CE460ADD-0000-0000-0000-000000000003}" # (default)
-            - "{CE511ADD-0000-0000-0000-000000000006}" # (default)
-            - "{CE460ADD-0000-0000-0000-000000000008}" # (default)
-            - "{CE460ADD-0000-0000-0000-000000000007}" # (default)
-            - "{CE460ADD-0000-0000-0000-000000000009}" # (default)
-            - "{CE460ADD-0000-0000-0000-00000000000A}" # (default)
-            - "{CE460ADD-0000-0000-0000-00000000000B}" # (default)
-            - "{CE460ADD-0000-0000-0000-00000000000D}" # (default)
-            - "{CE511ADD-0000-0000-0000-00000000000F}" # (default)
+            - "{CE460ADD-0000-0000-0000-000000000003}" # 5.2.1 Process Engine Extensions
+            - "{CE511ADD-0000-0000-0000-000000000006}" # 5.2.1 Stored Search Extensions
+            - "{CE460ADD-0000-0000-0000-000000000008}" # 5.2.1 Workplace Access Roles Extensions
+            - "{CE460ADD-0000-0000-0000-000000000007}" # 5.2.1 Workplace Base Extensions
+            - "{CE460ADD-0000-0000-0000-000000000009}" # 5.2.1 Workplace E-mail Extensions
+            - "{CE460ADD-0000-0000-0000-00000000000A}" # 5.2.1 Workplace Forms Extensions
+            - "{CE460ADD-0000-0000-0000-00000000000B}" # 5.2.1 Workplace Templates Extensions
+            - "{CE460ADD-0000-0000-0000-00000000000D}" # 5.2.1 Workplace XT Extensions
+            - "{CE511ADD-0000-0000-0000-00000000000F}" # 5.2.1 Thumbnail Extensions
             - "{CE511ADD-0000-0000-0000-000000000010}" # 5.2.1 Teamspace Extensions
             - "{CE511ADD-0000-0000-0000-000000000015}" # 5.2.1 Custom Role Extensions
             - "{CE521ADD-0000-0000-0000-000000000016}" # 5.2.1 Social Collaboration Role Extensions
             - "{CE552ADD-0000-0000-0000-00000000001C}" # 5.5.2 Core Collaboration Extensions
             - "{CE551ADD-0000-0000-0000-000000000011}" # 5.5.1 Social Collaboration Base Extensions
             - "{CE554ADD-0000-0000-0000-000000000021}" # 5.5.4 Event-Driven External Service Invocation Extensions
+{% if _current_cp4ba_cluster.ica.enabled %}
+            - "{CE570ADD-0000-0000-0000-000000000023}" # 5.7.0 Gen AI Extensions
+            - "{CE560ADD-0000-0000-0000-000000000022}" # 5.6.0 Persistent Text Extract Extensions
+{% endif %}
           oc_cpe_obj_store_enable_workflow: true
           oc_cpe_obj_store_workflow_region_name: content_region_name
           oc_cpe_obj_store_workflow_data_tbl_space: contentdb_tbs
           oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
           oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
           oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_content
+        - oc_cpe_obj_store_display_name: OS1
+          oc_cpe_obj_store_symb_name: OS1
+          oc_cpe_obj_store_conn:
+            name: OS1_dbconnection
+            dc_os_datasource_name: FNOS1DS
+            dc_os_xa_datasource_name: FNOS1DSXA
+          oc_cpe_obj_store_admin_user_groups: [{% for item in lc_admin_groups %}'{{ item }}'{{ "," if not loop.last else "" }}{% endfor %}]
+{% if _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai %}
+          oc_cpe_obj_store_enable_content_event_emitter: true
+{% endif %}
+          oc_cpe_obj_store_addons_list:
+            - "{CE460ADD-0000-0000-0000-000000000004}" # 5.2.1 Base Application Extensions (default)
+            - "{CE460ADD-0000-0000-0000-000000000001}" # 5.2.1 Base Content Engine Extensions (default)
+            - "{CE460ADD-0000-0000-0000-000000000003}" # 5.2.1 Process Engine Extensions
+            - "{CE511ADD-0000-0000-0000-000000000006}" # 5.2.1 Stored Search Extensions
+            - "{CE460ADD-0000-0000-0000-000000000008}" # 5.2.1 Workplace Access Roles Extensions
+            - "{CE460ADD-0000-0000-0000-000000000007}" # 5.2.1 Workplace Base Extensions
+            - "{CE460ADD-0000-0000-0000-000000000009}" # 5.2.1 Workplace E-mail Extensions
+            - "{CE460ADD-0000-0000-0000-00000000000A}" # 5.2.1 Workplace Forms Extensions
+            - "{CE460ADD-0000-0000-0000-00000000000B}" # 5.2.1 Workplace Templates Extensions
+            - "{CE460ADD-0000-0000-0000-00000000000D}" # 5.2.1 Workplace XT Extensions
+            - "{CE511ADD-0000-0000-0000-00000000000F}" # 5.2.1 Thumbnail Extensions
+            - "{CE511ADD-0000-0000-0000-000000000010}" # 5.2.1 Teamspace Extensions
+            - "{CE511ADD-0000-0000-0000-000000000015}" # 5.2.1 Custom Role Extensions
+            - "{CE521ADD-0000-0000-0000-000000000016}" # 5.2.1 Social Collaboration Role Extensions
+            - "{CE552ADD-0000-0000-0000-00000000001C}" # 5.5.2 Core Collaboration Extensions
+            - "{CE551ADD-0000-0000-0000-000000000011}" # 5.5.1 Social Collaboration Base Extensions
+            - "{CE554ADD-0000-0000-0000-000000000021}" # 5.5.4 Event-Driven External Service Invocation Extensions
+{% if _current_cp4ba_cluster.ica.enabled %}
+            - "{CE570ADD-0000-0000-0000-000000000023}" # 5.7.0 Gen AI Extensions
+            - "{CE560ADD-0000-0000-0000-000000000022}" # 5.6.0 Persistent Text Extract Extensions
+{% endif %}
+          oc_cpe_obj_store_enable_workflow: true
+          oc_cpe_obj_store_workflow_region_name: os1_region_name
+          oc_cpe_obj_store_workflow_data_tbl_space: os1db_tbs
+          oc_cpe_obj_store_workflow_admin_group: "{{ lc_principal_admin_group }}"
+          oc_cpe_obj_store_workflow_config_group: "{{ lc_principal_admin_group }}"
+          oc_cpe_obj_store_workflow_pe_conn_point_name: pe_conn_os1
     ic_icn_init_info:
       icn_repos:
         - add_repo_id: CONTENT
           add_repo_os_sym_name: CONTENT
           add_repo_os_dis_name: CONTENT
+        - add_repo_id: OS1
+          add_repo_os_sym_name: OS1
+          add_repo_os_dis_name: OS1
       icn_desktop:
         - add_desktop_id: CONTENT
           add_desktop_name: CONTENT
           add_desktop_description: CONTENT
           add_desktop_repo_id: CONTENT
+        - add_desktop_id: OS1
+          add_desktop_name: OS1
+          add_desktop_description: OS1
+          add_desktop_repo_id: OS1
   verify_configuration:
     vc_icn_verification:
       - vc_icn_repository: CONTENT
-        vc_icn_desktop_id: CONTENT          
+        vc_icn_desktop_id: CONTENT
+      - vc_icn_repository: OS1
+        vc_icn_desktop_id: OS1

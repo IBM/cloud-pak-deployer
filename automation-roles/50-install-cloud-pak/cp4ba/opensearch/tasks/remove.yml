@@ -1,0 +1,63 @@
+- name: Create directory for generated files
+  ansible.builtin.file:
+    path: "{{ opensearch_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Mock variables
+  ansible.builtin.set_fact:
+    apps_endpoint_domain: mock
+
+- name: Mock variables
+  ansible.builtin.set_fact:
+    _opensearch_tls_key: mock
+    _opensearch_tls_crt: mock
+    _opensearch_ca_crt: mock
+
+- name: Prepare yaml file for {{ item }}
+  ansible.builtin.template:
+    src: "{{ item }}.yaml.j2"
+    dest: "{{ opensearch_output_directory }}/{{ item }}.yaml"
+    mode: u+rwx
+  with_items:
+    - secrets
+    - serviceaccounts
+    - rolebindings
+    - pvcs
+    - statefulsets
+    - configmaps
+    - services
+
+- name: Remove {{ item.name }}
+  kubernetes.core.k8s:
+    state: absent
+    src: "{{ opensearch_output_directory }}/{{ item.name }}.yaml"
+    wait: true
+    wait_sleep: "{{ item.wait_sleep }}"
+    wait_timeout: "{{ item.wait_timeout }}"
+  with_items:
+    - {name: services, wait_sleep: 15, wait_timeout: 15}
+    - {name: statefulsets, wait_sleep: 15, wait_timeout: 600}
+    - {name: pvcs, wait_sleep: 15, wait_timeout: 300}
+    - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
+    - {name: serviceaccounts, wait_sleep: 15, wait_timeout: 15}
+    - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
+
+- name: Remove Route
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ opensearch_project_name }}"
+    name: opensearch
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Empty Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: remove-empty-project
+  vars:
+    common_project_name: "{{ opensearch_project_name }}"

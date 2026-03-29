@@ -64,8 +64,8 @@ const CloudPak = ({
           if (res.data.data.global_config.universal_password) {
             setAdminPassword(res.data.data.global_config.universal_password)
           }
-          if (res.data.metadata.cp_entitlement_key) {
-            setEntitlementKey(res.data.metadata.cp_entitlement_key)
+          if (res.data.metadata.entitlementKey) {
+            setEntitlementKey(res.data.metadata.entitlementKey)
           }
           setExistingConfig(res.data.metadata.existing_config)
 
@@ -139,20 +139,37 @@ const CloudPak = ({
         setConfiguration(configuration)
       }
 
-      if (configuration && configuration.data && 'cp4d' in configuration.data) {
+      if (configuration && configuration.data && 'cp4d' in configuration.data && configuration.data.cp4d.length > 0) {
         configuration.data.cp4d[0].cp4d_version=cp4dVersion
         configuration.data.cp4d[0].accept_licenses=cp4dLicense
         setConfiguration(configuration)
       }
 
-      if (configuration && configuration.data && 'cp4i' in configuration.data) {
+      if (configuration && configuration.data && 'cp4i' in configuration.data && configuration.data.cp4i.length > 0) {
+        console.log('configuration.data:', configuration.data)
+
         configuration.data.cp4i[0].cp4i_version=cp4iVersion
         configuration.data.cp4i[0].accept_licenses=cp4iLicense
         setConfiguration(configuration)
       }
       
-      if ((loadCPDErr === false && loadCPIErr === false) && (cp4dLicense || cp4iLicense) && entitlementKey !== '' ) {
-        setWizardError(false)
+      // Allow configuration without Cloud Paks - only require entitlement key if a Cloud Pak is selected
+      if (loadCPDErr === false && loadCPIErr === false) {
+        // If cp4d is selected, require cp4d license and entitlement key
+        if (selectedCloudPak === 'software-hub' && cp4dLicense && entitlementKey !== '') {
+          setWizardError(false)
+        }
+        // If cp4i is selected, require cp4i license and entitlement key
+        else if (selectedCloudPak === 'cp4i' && cp4iLicense && entitlementKey !== '') {
+          setWizardError(false)
+        }
+        // If neither is selected (or no license accepted), allow configuration without Cloud Paks
+        else if (!cp4dLicense && !cp4iLicense) {
+          setWizardError(false)
+        }
+        else {
+          setWizardError(true)
+        }
       }
       else {
         setWizardError(true)
@@ -217,14 +234,15 @@ const CloudPak = ({
 
     const entitlementKeyOnChange = (e) => {
       setEntitlementKey(e.target.value);
-      if (e.target.value === '') {
+      // Only require entitlement key if a Cloud Pak license is accepted
+      if (e.target.value === '' && (cp4dLicense || cp4iLicense)) {
         setEntitlementKeyInvalid(true)
         setWizardError(true)
         return
       } else {
         setEntitlementKeyInvalid(false)
       }
-      setWizardError(false)
+      // Don't automatically set wizard error to false here - let the useEffect handle it
     }
 
     const adminPaswordOnChange = (e) => {
