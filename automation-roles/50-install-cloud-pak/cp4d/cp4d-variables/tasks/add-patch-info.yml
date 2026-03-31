@@ -1,0 +1,14 @@
+---
+- ansible.builtin.include_vars:
+    file: "{{ status_dir }}/work/offline/patch/patch-{{ _p_cp4d_version }}.yaml"
+
+- set_fact:
+    _patched_cartridges_to_install: []
+
+- set_fact:
+    _patched_cartridges_to_install: "{{ _patched_cartridges_to_install + [item | combine(patch_components_meta[item.Component_name] | default({}), {'Patch_CR_Version': patch_components_meta[item.Component_name].cr_version | default(item.CR_Version)}) ] }}"
+  loop: "{{ _cartridges_to_install }}"
+  when: item.Component_name in patch_components_meta
+
+- set_fact:
+    _cartridges_to_install: "{{ _patched_cartridges_to_install }}"
