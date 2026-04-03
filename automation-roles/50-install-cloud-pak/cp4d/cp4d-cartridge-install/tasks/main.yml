@@ -43,11 +43,22 @@
   - _apply_cr_cartridges_list != ''
   - _p_cp4d_version < '5.3.0'
 
-- include_tasks: cp4d-install-cartridges-install-components.yml
+- name: Install cartridges that do not require upgrade
+  include_tasks: cp4d-install-cartridges-install-components.yml
   vars:
-    _p_apply_cartridges_list: "{{ _apply_cr_cartridges_list }}"
+    _p_apply_cartridges_list: "{{ _apply_cr_cartridges_no_upgrade_list }}"
+    _p_cp4d_upgrade: False
   when: 
-  - _apply_cr_cartridges_list != ''
+  - _apply_cr_cartridges_no_upgrade_list != ''
+  - _p_cp4d_version >= '5.3.0'
+
+- name: Install cartridges that DO require upgrade
+  include_tasks: cp4d-install-cartridges-install-components.yml
+  vars:
+    _p_apply_cartridges_list: "{{ _apply_cr_cartridges_upgrade_list }}"
+    _p_cp4d_upgrade: True
+  when: 
+  - _apply_cr_cartridges_upgrade_list != ''
   - _p_cp4d_version >= '5.3.0'
 
 - name: Install separate cartridges

@@ -49,6 +49,12 @@
   vars:
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
 
+- name: Obtain control plane
+  set_fact:
+    _cpd_control_plane: "{{ _cartridges_to_install | json_query(jmes_query) | first }}"
+  vars:
+    jmes_query: "[?olm_utils_name=='cpd_platform']"
+
 - include_tasks: install-control-plane-olm-utils.yml
   when: _p_cp4d_version < "5.1.0"
 

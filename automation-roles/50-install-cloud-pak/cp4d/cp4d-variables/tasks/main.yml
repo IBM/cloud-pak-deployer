@@ -125,6 +125,8 @@
             map(attribute='olm_utils_name') | 
             join(',')}}
 
+- include_tasks: check-cp4d-upgrades.yml
+
 # Check if control plane must be installed
 - include_tasks: optimize-control-plane.yml
   when: cpd_action=='apply'
@@ -180,13 +182,41 @@
     _apply_cr_cartridges: >-
       {{  _apply_cartridges | 
             selectattr('separate_install','undefined') |
-            union(_apply_cartridges | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+            union(_apply_cartridges | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) |
+            rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}
 
 - set_fact:
     _apply_cr_cartridges_list: >-
       {{  _apply_cr_cartridges 
         | map(attribute='olm_utils_name')
-        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges_no_upgrade: >-
+      {{  _apply_cr_cartridges
+          | selectattr('upgrade_cartridge','defined')
+          | selectattr('upgrade_cartridge','==',False) |
+          rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}
+
+- set_fact:
+    _apply_cr_cartridges_no_upgrade_list: >-
+      {{  _apply_cr_cartridges_no_upgrade 
+        | map(attribute='olm_utils_name')
+        | list
+        | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges_upgrade: >-
+      {{  _apply_cr_cartridges
+          | selectattr('upgrade_cartridge','defined')
+          | selectattr('upgrade_cartridge','==',True) |
+          rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}
+
+- set_fact:
+    _apply_cr_cartridges_upgrade_list: >-
+      {{  _apply_cr_cartridges_upgrade 
+        | map(attribute='olm_utils_name')
         | list
         | join(',')}}
 
@@ -207,6 +237,9 @@
     var: _cartridges_to_install
 
 - debug:
+    var: _apply_cartridges
+
+- debug:
     var: _apply_cartridges_list
 
 - debug:
@@ -216,12 +249,22 @@
     var: _apply_cr_cartridges_list
 
 - debug:
+    var: _apply_cr_cartridges_no_upgrade
+
+- debug:
+    var: _apply_cr_cartridges_no_upgrade_list
+
+- debug:
+    var: _apply_cr_cartridges_upgrade
+
+- debug:
+    var: _apply_cr_cartridges_upgrade_list
+
+- debug:
     var: _apply_cr_cartridges_separate
 
 - debug:
     var: _apply_cr_cartridges_separate_list
-
-- include_tasks: check-cp4d-upgrades.yml
 
 # check if any of the cartridges have a db2u dependency
 - include_tasks: check-db2u-dependency.yml
