@@ -1031,12 +1031,12 @@ temp_dir=$(mktemp -d)
 # Parallel deletion is now the default (faster), use --sequential to disable
 if [ "${SEQUENTIAL_DELETE}" != "true" ]; then
     log_info "Using parallel deletion mode for faster execution (use --sequential for sequential mode)"
+
+    # Delete Cloud Pak for Data instance
+    start_ns_deletion ${INSTANCE_NS}
     
-    # Delete Cloud Pak for Data instance (must be first)
-    delete_instance_ns ${INSTANCE_NS}
-    
-    # Delete operators in new operators namespace (must be second)
-    delete_operator_ns ${OPERATOR_NS}
+    # Delete operators in new operators namespace
+    start_ns_deletion ${OPERATOR_NS}
     
     # If cluster-wide resources must be destroyed, do so in parallel
     if ${CPD_DESTROY_CLUSTER_WIDE};then
@@ -1110,6 +1110,12 @@ if [ "${SEQUENTIAL_DELETE}" != "true" ]; then
             start_ns_deletion cs-control
             parallel_namespaces+=("cs-control")
         fi
+
+        # Delete Cloud Pak for Data instance
+        delete_instance_ns ${INSTANCE_NS}
+        
+        # Delete operators in new operators namespace
+        delete_operator_ns ${OPERATOR_NS}
         
         # Wait for all parallel deletions to complete
         if [ ${#parallel_namespaces[@]} -gt 0 ]; then
