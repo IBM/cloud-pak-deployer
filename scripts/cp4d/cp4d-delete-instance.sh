@@ -1082,28 +1082,6 @@ if [ "${SEQUENTIAL_DELETE}" != "true" ]; then
             parallel_namespaces+=("${PROJECT_SCHEDULING_SERVICE}")
         fi
         
-        # License Server (if not shared)
-        check_shared_resources ibmlicensingdefinition.operator.ibm.com ibm-licensing DELETE_LICENSING
-        if [ "${DELETE_LICENSING}" -eq 1 ] && oc get project ibm-licensing > /dev/null 2>&1; then
-            oc delete ibmlicensing --all --ignore-not-found 2>/dev/null
-            oc delete subscriptions.operators.coreos.com -n ibm-licensing --all --ignore-not-found 2>/dev/null
-            oc delete clusterserviceversions.operators.coreos.com -n ibm-licensing --all --ignore-not-found 2>/dev/null
-            start_ns_deletion ibm-licensing
-            parallel_namespaces+=("ibm-licensing")
-        fi
-        
-        # Certificate Manager (if not shared)
-        check_shared_resources certificaterequests.cert-manager.io ibm-cert-manager DELETE_CERT_MANAGER
-        if [ "${DELETE_CERT_MANAGER}" -eq 1 ] && oc get project ibm-cert-manager > /dev/null 2>&1; then
-            oc delete lease -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
-            oc delete endpointslice -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
-            oc delete endpoints -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
-            oc delete subscriptions.operators.coreos.com -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
-            oc delete clusterserviceversions.operators.coreos.com -n ibm-cert-manager --all --ignore-not-found 2>/dev/null
-            start_ns_deletion ibm-cert-manager
-            parallel_namespaces+=("ibm-cert-manager")
-        fi
-        
         # Common Services Control
         if oc get project cs-control > /dev/null 2>&1; then
             oc delete nss -n cs-control --all --ignore-not-found 2>/dev/null
@@ -1121,6 +1099,12 @@ if [ "${SEQUENTIAL_DELETE}" != "true" ]; then
         if [ ${#parallel_namespaces[@]} -gt 0 ]; then
             wait_multiple_ns_deleted "${parallel_namespaces[@]}"
         fi
+
+        # Delete IBM License Server
+        delete_ibm_license_server
+        
+        # Delete certifiate manager
+        delete_ibm_certificate_manager
         
         # Delete cluster-wide CRs and config
         delete_cluster_wide_cr_config
