@@ -1,27 +1,31 @@
 ---
 - set_fact:
+    _current_cartridge_upgrade: False
+
+- set_fact:
     _get_current_cr_version: {}
 
 - name: Retrieve current {{ _current_cartridge_details.CR_Kind }} in OpenShift project {{ _p_current_cp4d_cluster.project }}
-  shell: |
-    oc get {{ _current_cartridge_details.CR_Kind }} \
-      -n {{ _p_current_cp4d_cluster.project }} \
-      {{ _current_cartridge_details.CR_Name }} \
-      -o jsonpath='{.spec.version}'
-  failed_when: False
-  register: _get_current_cr_version
+  kubernetes.core.k8s_info:
+    kind: "{{ _current_cartridge_details.CR_Kind }}"
+    name: "{{ _current_cartridge_details.CR_Name }}"
+    namespace: "{{ _p_current_cp4d_cluster.project }}"
+  register: _get_current_cr
   when:
   - (_current_cartridge_details.CR_Kind | default('')) != ''
+  - (_current_cartridge_details.CR_Kind | default('')) != '--'
   - (_current_cartridge_details.CR_Name | default('')) != ''
 
-- name: Determine if CP4D must be upgraded based on cartridge {{ _current_cartridge_details.CR_Kind }}
+- name: Determine if cartridge {{ _current_cartridge_details.CR_Kind }} must be upgraded
   set_fact:
-    _upgrade_cp4d: True
+    _current_cartridge_upgrade: True
   when:
-  - (_get_current_cr_version.rc | default(0)) == 0
-  - (_get_current_cr_version.stdout | default('')) != ''
-  - (_get_current_cr_version.stdout | default('')) < _current_cartridge_details.CR_Version
+  - (_get_current_cr.resources | default([])) != []
+  - (_get_current_cr.resources[0].spec.version | default('')) != (_current_cartridge_details.Patch_CR_Version | default(_current_cartridge_details.CR_Version))
 
 - set_fact:
-    _installed_ibmcpd_version: "{{ (_get_current_cr_version.stdout | default('')) }}"
-  when: _current_cartridge_details.CR_Kind == 'Ibmcpd'
+    _cartridges_with_upgrade_info: "{{ _cartridges_with_upgrade_info + [_current_cartridge_details | combine({'upgrade_cartridge': _current_cartridge_upgrade}) ] }}"
+
+- set_fact:
+    _upgrade_cp4d: True
+  when: _current_cartridge_upgrade

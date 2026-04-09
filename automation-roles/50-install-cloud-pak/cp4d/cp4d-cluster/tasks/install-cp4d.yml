@@ -40,6 +40,9 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
   when: not (cpd_airgap | bool)
 
+- include_tasks: apply-cluster-scoped-resources.yml
+  when: _p_cp4d_version >= "5.3.0"
+
 - name: Prepare OpenShift project {{ current_cp4d_cluster.project }} for Cloud Pak for Data
   include_tasks: openshift-prepare-project.yml
 
@@ -48,6 +51,12 @@
     name: cp4d-scheduling-service
   vars:
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+
+- name: Obtain control plane
+  set_fact:
+    _cpd_control_plane: "{{ _cartridges_to_install | json_query(jmes_query) | first }}"
+  vars:
+    jmes_query: "[?olm_utils_name=='cpd_platform']"
 
 - include_tasks: install-control-plane-olm-utils.yml
   when: _p_cp4d_version < "5.1.0"

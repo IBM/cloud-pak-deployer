@@ -1,0 +1,22 @@
+---
+- set_fact:
+    _upgrade_cp4d: False
+
+- set_fact:
+    _cartridges_with_upgrade_info: []
+
+- name: Determine if CP4D must be upgraded
+  include_tasks: check-cp4d-upgrade.yml
+  loop_control:
+    loop_var: _current_cartridge_details
+  when: 
+  - (_current_cartridge_details.CR_Kind | default('')) != ''
+  - (_current_cartridge_details.CR_Kind | default('')) != '--'
+  loop: "{{ _cartridges_to_install }}"
+
+- set_fact:
+    _cartridges_to_install: "{{ _cartridges_with_upgrade_info }}"
+
+- name: Show if upgrade of CP4D in project {{ _p_current_cp4d_cluster.project }} must be done
+  debug:
+    var: _upgrade_cp4d

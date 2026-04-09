@@ -116,11 +116,16 @@
             selectattr('state','undefined') | 
             union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
 
+- include_tasks: add-patch-info.yml
+  when: (status_dir + '/work/offline/patch/patch-' + _p_cp4d_version + '.yaml') is exists
+
 - set_fact:
     _cartridges_to_install_list: >-
       {{  _cartridges_to_install | 
             map(attribute='olm_utils_name') | 
             join(',')}}
+
+- include_tasks: check-cp4d-upgrades.yml
 
 # Check if control plane must be installed
 - include_tasks: optimize-control-plane.yml
@@ -177,13 +182,41 @@
     _apply_cr_cartridges: >-
       {{  _apply_cartridges | 
             selectattr('separate_install','undefined') |
-            union(_apply_cartridges | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) }}
+            union(_apply_cartridges | selectattr('separate_install','defined') | selectattr('separate_install','!=',True)) |
+            rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}
 
 - set_fact:
     _apply_cr_cartridges_list: >-
       {{  _apply_cr_cartridges 
         | map(attribute='olm_utils_name')
-        | difference(_v_cp4d_control_plane_cartridges)
+        | list
+        | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges_no_upgrade: >-
+      {{  _apply_cr_cartridges
+          | selectattr('upgrade_cartridge','defined')
+          | selectattr('upgrade_cartridge','==',False) |
+          rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}
+
+- set_fact:
+    _apply_cr_cartridges_no_upgrade_list: >-
+      {{  _apply_cr_cartridges_no_upgrade 
+        | map(attribute='olm_utils_name')
+        | list
+        | join(',')}}
+
+- set_fact:
+    _apply_cr_cartridges_upgrade: >-
+      {{  _apply_cr_cartridges
+          | selectattr('upgrade_cartridge','defined')
+          | selectattr('upgrade_cartridge','==',True) |
+          rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}
+
+- set_fact:
+    _apply_cr_cartridges_upgrade_list: >-
+      {{  _apply_cr_cartridges_upgrade 
+        | map(attribute='olm_utils_name')
         | list
         | join(',')}}
 
@@ -204,6 +237,9 @@
     var: _cartridges_to_install
 
 - debug:
+    var: _apply_cartridges
+
+- debug:
     var: _apply_cartridges_list
 
 - debug:
@@ -213,42 +249,22 @@
     var: _apply_cr_cartridges_list
 
 - debug:
+    var: _apply_cr_cartridges_no_upgrade
+
+- debug:
+    var: _apply_cr_cartridges_no_upgrade_list
+
+- debug:
+    var: _apply_cr_cartridges_upgrade
+
+- debug:
+    var: _apply_cr_cartridges_upgrade_list
+
+- debug:
     var: _apply_cr_cartridges_separate
 
 - debug:
     var: _apply_cr_cartridges_separate_list
-
-- set_fact:
-    _upgrade_cp4d: False
-
-- name: Determine if CP4D must be upgraded
-  include_tasks: check-cp4d-upgrade.yml
-  loop_control:
-    loop_var: _current_cartridge_details
-  when: 
-  - (_current_cartridge_details.CR_Kind | default('')) != ''
-  - (_current_cartridge_details.CR_Kind | default('')) != '--'
-  loop: "{{ _cartridges_to_install }}"
-
-- name: Show if upgrade of CP4D in project {{ _p_current_cp4d_cluster.project }} must be done
-  debug:
-    var: _upgrade_cp4d
-
-- block:
-
-  - name: Generate migrate-private-topology scripts
-    include_role:
-      name: cp4d-migrate-private-topology
-    vars:
-      _p_preview: True
-      
-  - name: Fail if trying to upgrade to {{ _p_cp4d_version }} from a release that is lower than 4.6.5
-    fail:
-      msg: "Cloud Pak Deployer does not support upgrading CP4D from any release earlier than 4.6.5. The currently installed release of CP4D is {{ _installed_ibmcpd_version }}. If you want to upgrade, please first upgrade to CP4D 4.6.5 or 4.6.6 and then upgrade to CP4D {{ _p_cp4d_version }}"
-  when:
-    - _upgrade_cp4d
-    - _installed_ibmcpd_version < "4.6.5"
-    - not allow_cp4d_upgrade | default(False) | bool
 
 # check if any of the cartridges have a db2u dependency
 - include_tasks: check-db2u-dependency.yml
