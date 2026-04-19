@@ -65,7 +65,7 @@ vault:
 
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| vault_authentication_type | Authentication method for the file vault            | No        | api-key, certificate   |
+| vault_authentication_type | Authentication method for the file vault (api-key=token) | Yes       | api-key, certificate   |
 | vault_url | URL for the Hashicorp vault, this is typically https://hostname:8200 | Yes       |           |
 | vault_api_key | When authentication type is api-key, the field to authenticate with | Yes       |           |
 | vault_secret_path | Default secret path to store and retrieve secrets into/from | Yes       |           |

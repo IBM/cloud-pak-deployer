@@ -39,7 +39,9 @@ RUN export PYVER=$(python -c "import sys;print('{}.{}'.format(sys.version_info[0
     yum install -y nginx && \
     yum clean all
 
-RUN ansible-galaxy collection install community.crypto kubernetes.core
+RUN setcap -r /usr/bin/vault
+
+RUN ansible-galaxy collection install community.crypto community.hashi_vault kubernetes.core
 
 VOLUME ["/Data"]
 
