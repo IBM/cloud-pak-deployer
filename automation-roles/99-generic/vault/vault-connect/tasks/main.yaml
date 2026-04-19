@@ -10,22 +10,13 @@
 
 - name: Login to Hashicorp vault
   block:
-
     - name: Validate mandatory variables are defined
       assert:
         that:
           - vault_type is defined
           - vault_authentication_type is defined
-
-    - include_tasks: connect-hashicorp-vault-api-key.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-      when: vault_authentication_type == 'api-key'
-
-    - include_tasks: connect-hashicorp-vault-certificate.yml
-      vars:
-        hashicorp_vault_address: "{{ vault_url }}"
-      when: vault_authentication_type == 'certificate'      
+    - debug:
+        msg: "Hashicorp Vault URL: {{ vault_url }}"
   when: "vault_type == 'hashicorp-vault'"
 
 - name: Login to IBMCloud vault

@@ -30,17 +30,13 @@ RUN export PYVER=$(python -c "import sys;print('{}.{}'.format(sys.version_info[0
     yum install -y tar sudo unzip wget httpd-tools git hostname bind-utils iproute procps-ng which && \
     # Need gcc anf py-devel to recompile python dependencies on ppc64le (during pip install).
     yum install -y gcc python${PYVER}-devel && \
-    pip3 install --no-cache-dir jmespath pyyaml argparse python-benedict pyvmomi psutil && \
+    pip3 install --no-cache-dir hvac jmespath pyyaml argparse python-benedict pyvmomi psutil && \
     sed -i 's|#!/usr/bin/python.*|#!/usr/bin/python3.9|g' /usr/bin/yum-config-manager && \
     if [[ "$(pip list | grep kubernetes | awk '{print $2}')" == "34.1.0" ]] && \
         $(sed '173!d' /usr/local/lib/python3.12/site-packages/kubernetes/client/configuration.py | grep -q no_proxy);then \
         sed -i -e '173d' /usr/local/lib/python3.12/site-packages/kubernetes/client/configuration.py;fi && \
-    yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo && \
-    yum install -y vault && \
     yum install -y nginx && \
     yum clean all
-
-RUN setcap -r /usr/bin/vault
 
 RUN ansible-galaxy collection install community.crypto community.hashi_vault kubernetes.core
 
