@@ -58,17 +58,17 @@ vault:
 
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| vault_authentication_type | Authentication method for the file vault            | No        | api-key          |
+| vault_authentication_type | Authentication method for the IBM Cloud vault       | No        | api-key          |
 | vault_url | URL for the IBM Cloud secrets manager instance                      | Yes       |           |
 
 ### Properties for `hashicorp-vault`
 
-| Property | Description                                                          | Mandatory | Allowed values |
-| -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| vault_authentication_type | Authentication method for the file vault (api-key=token) | Yes       | api-key, certificate   |
+| Property | Description                                                           | Mandatory | Allowed values |
+| -------- | --------------------------------------------------------------------- | --------- | -------------- |
+| vault_authentication_type | Authentication method for the Hashicorp vault        | Yes       | token, certificate   |
 | vault_url | URL for the Hashicorp vault, this is typically https://hostname:8200 | Yes       |           |
-| vault_api_key | When authentication type is api-key, the field to authenticate with | Yes       |           |
-| vault_secret_path | Default secret path to store and retrieve secrets into/from | Yes       |           |
-| vault_secret_field | Default field to store or retrieve secrets | Yes       | |
-| vault_secret_path_append_group | Determines whether or not the secrete group will be appended to the path | Yes       | True (default), False |
-| vault_secret_base64 | Depicts if secrets are stored in base64 format for Hashicorp Vault | Yes       | True (default), False |
+| vault_api_key | When authentication type is api-key, the field to authenticate with | Yes    |           |
+| vault_secret_path | Default secret path to store and retrieve secrets into/from  | Yes       |           |
+| vault_secret_field | Field to store or retrieve vault secrets                    | Yes       |           |
+| vault_secret_path_append_group | Determines whether or not the secrete group will be appended to the path | Yes | True (default), False |
+| vault_secret_base64 | Depicts if secrets are stored in base64 format for Hashicorp Vault | No  | True (default), False |
