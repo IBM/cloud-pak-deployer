@@ -2,14 +2,34 @@
 - include_role:
     name: cp4d-variables
 
+- set_fact:
+    _from_oci: True
+    
+- set_fact:
+    _from_oci: False
+  when: _cp_alt_repo_used | default(False)
+
 # Get preview of case-download to ensure the patch files are downloaded when --dry-run was selected
 - block:
   - set_fact:
       _case_download_command: "{{ lookup('template', 'case-download.j2') }}"
     vars:
       _p_preview: True
-
   - name: Run preview of download case files to obtain patch files
+    shell: |
+      {{ _case_download_command }}
+    failed_when: False
+    environment:
+      OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"
+
+  rescue:
+
+  - set_fact:
+      _from_oci: False
+
+  - set_fact:
+      _case_download_command: "{{ lookup('template', 'case-download.j2') }}"
+  - name: Run preview of download case files to obtain patch files after failure from OCI download
     shell: |
       {{ _case_download_command }}
     failed_when: False
@@ -17,19 +37,38 @@
       OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"
   when: cpd_dry_run | bool
     
-- name: Generate case-download command to download case files
-  set_fact:
-    _case_download_command: "{{ lookup('template', 'case-download.j2') }}" 
+- block:
+  - name: Generate case-download command to download case files
+    set_fact:
+      _case_download_command: "{{ lookup('template', 'case-download.j2') }}" 
 
-- include_role:
-    name: run-command
-  vars:
-    _p_command_description: Download case files
-    _p_command: "{{ _case_download_command }}"
-    _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-case-download.log"
-    _p_command_environment:
-      OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"
-    _p_cpd_cli_manage: True
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Download case files
+      _p_command: "{{ _case_download_command }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-case-download.log"
+      _p_command_environment:
+        OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"
+      _p_cpd_cli_manage: True
+
+  rescue:
+  - set_fact:
+      _from_oci: False
+
+  - name: Generate case-download command to download case files from GitHub after failure from OCI download
+    set_fact:
+      _case_download_command: "{{ lookup('template', 'case-download.j2') }}"
+
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Download case files from GitHub
+      _p_command: "{{ _case_download_command }}"
+      _p_command_log_file: "{{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-case-download.log"
+      _p_command_environment:
+        OLM_UTILS_IMAGE: "{{ _olm_utils_image_full }}"
+      _p_cpd_cli_manage: True
 
 - name: Remove {{ status_dir }}/work/offline to remove any previous CASE files
   ansible.builtin.file:
