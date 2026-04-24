@@ -3,7 +3,7 @@
 Contains CP4BA version 25.0.1.  
 Contains IPM version 2.1.1.  
 Contains RPA version 30.0.2.  
-Contains BAMOE version 9.3.1.  
+Contains BAMOE version 9.4.0.  
 Contains ICA version 1.0.2 IF001.  
 
 - [Disclaimer ✋](#disclaimer-)
