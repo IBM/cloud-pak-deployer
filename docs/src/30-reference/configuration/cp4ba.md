@@ -1,6 +1,6 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 25.0.1.  
+Contains CP4BA version 25.0.1 IF001.  
 Contains IPM version 2.1.1.  
 Contains RPA version 30.0.2.  
 Contains BAMOE version 9.4.1.  
