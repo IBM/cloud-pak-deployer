@@ -1,9 +1,10 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 25.0.1.  
-Contains IPM version 2.1.0.  
-Contains RPA version 30.0.1.  
-Contains BAMOE version 9.3.1.  
+Contains CP4BA version 25.0.1 IF001.  
+Contains IPM version 2.1.1.  
+Contains RPA version 30.0.2.  
+Contains BAMOE version 9.4.1.  
+Contains ICA version 1.0.2 IF001.  
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -39,6 +40,7 @@ Deployment of other parts is also based on respective official documentations.
 - IBM Process Mining https://www.ibm.com/docs/en/process-mining/
 - IBM Business Automation Manager Open Editions https://www.ibm.com/docs/en/ibamoe
 - IBM Cloud Pak Foundational Services (CPFS) https://www.ibm.com/docs/en/cloud-paks/foundational-services
+- IBM Content Assistant Client Managed Software (ICA) https://www.ibm.com/docs/en/cacms/
 
 ## Benefits 🚀
 
