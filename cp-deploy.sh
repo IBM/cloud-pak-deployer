@@ -41,6 +41,7 @@ command_usage() {
   echo "  --accept-all-licenses         Accept all Cloud Pak licenses (\$CPD_ACCEPT_LICENSES)"
   echo "  --ibm-cloud-api-key <apikey>  API key to authenticate to the IBM Cloud (\$IBM_CLOUD_API_KEY)"
   echo "  --vault-password <password>   Password (Ansible) or token (Hashicorp Vault) to login to the vault (\$VAULT_PASSWORD)"
+  echo "  --vault-url <url>             URL for HashiCorp Vault (\$VAULT_URL)"
   echo "  --vault-cert-ca-file <file>   File with CA of login certificate (\$VAULT_CERT_CA_FILE)"
   echo "  --vault-cert-key-file <file>  File with login certificate key (\$VAULT_CERT_KEYFILE)"
   echo "  --vault-cert-cert-file <file> File with login certificate (\$VAULT_CERT_CERT_FILE)"
@@ -48,8 +49,8 @@ command_usage() {
   echo "  --skip-infra                  Skip infrastructure provisioning and configuration (\$CPD_SKIP_INFRA)"
   echo "  --skip-cp-install             Skip installation of the Cloud Pak and finish after configuring the OpenShift cluster (\$SKIP_CP_INSTALL)"
   echo "  --cp-config-only              Skip all infrastructure provisioning and cloud pak deployment tasks and only run the Cloud Pak configuration tasks"
-  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation"
-  echo "  --dry-run                     Only log the steps that will be performed, do not make any changes to the OpenShift cluster"
+  echo "  --check-only                  Skip all provisioning and deployment tasks. Only run the validation and generation (\$CHECK_ONLY)"
+  echo "  --dry-run                     Only log the steps that will be performed, do not make any changes to the OpenShift cluster (\$CPD_DRY_RUN)"
   echo "  --air-gapped                  Only for environment subcommand; if specified the deployer is considered to run in an air-gapped environment (\$CPD_AIRGAP)"
   echo "  --skip-mirror-images          Pertains to env apply and env download. When specified, the mirroring of images to the private registry is skipped (\$CPD_SKIP_MIRROR)"
   echo "  --skip-portable-registry      Pertains to env download. When specified, no portable registry is used to transport the images (\$CPD_SKIP_PORTABLE_REGISTRY)"
@@ -448,6 +449,19 @@ while (( "$#" )); do
       shift 2
     else
       echo "Error: Missing argument for --vault-password parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --vault-utl*)
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
+      export VAULT_URL="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      export VAULT_URL=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --vault-url parameter."
       command_usage 2
     fi
     fi
@@ -1049,6 +1063,10 @@ if ! $INSIDE_CONTAINER;then
       run_cmd+=" -v ${arrVaultSecretValue[$i]:1}:${arrVaultSecretValue[$i]:1}${SELINUX_OPTION}"
     fi
   done
+
+  if [ ! -z $VAULT_URL ];then
+    run_cmd+=" -e VAULT_URL=${VAULT_URL}"
+  fi
 
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" -e VAULT_PASSWORD=${VAULT_PASSWORD}"

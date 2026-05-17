@@ -5,7 +5,7 @@
     - name: Validate mandatory variables are defined for Hashicorp Vault
       assert:
         that:
-          - vault_secret_path is defined
+          - vault.vault_secret_path is defined
           - secret_group is defined
 
     - set_fact:
@@ -16,41 +16,41 @@
       when: _secret_name is search("/")
 
     - set_fact:
-        _hashicorp_secret_name_path: "{{ vault_secret_path }}/metadata/{{ secret_group}}"
+        _hashicorp_secret_name_path: "{{ vault.vault_secret_path }}/metadata/{{ secret_group}}"
       when: 
-      - (vault_secret_path_append_group | default(True) | bool)
+      - (vault.vault_secret_path_append_group | default(True) | bool)
       - not _secret_name is search("/")
 
     - set_fact:
-        _hashicorp_secret_name_path: "{{ vault_secret_path }}/metadata"
+        _hashicorp_secret_name_path: "{{ vault.vault_secret_path }}/metadata"
       when: 
-      - not (vault_secret_path_append_group | default(True) | bool)
+      - not (vault.vault_secret_path_append_group | default(True) | bool)
       - not _secret_name is search("/")
 
     - name: List secrets in Hashicorp vault (API Key), path {{ _hashicorp_secret_name_path }}
       include_tasks: list-secrets-hashicorp-token.yml
       vars:
-        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_address: "{{ VAULT_URL | default(vault.vault_url) }}"
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-      when: vault_authentication_type == 'token'
+      when: vault.vault_authentication_type == 'token'
 
     - name: List secrets in Hashicorp vault (Certificate), path {{ _hashicorp_secret_name_path }}
       include_tasks: list-secrets-hashicorp-certificate.yml
       vars:
-        hashicorp_vault_address: "{{ vault_url }}"
+        hashicorp_vault_address: "{{ VAULT_URL | default(vault.vault_url) }}"
         hashicorp_secret_name_path: "{{ _hashicorp_secret_name_path }}"
-      when: vault_authentication_type == 'certificate'      
-  when: "vault_type == 'hashicorp-vault'"
+      when: vault.vault_authentication_type == 'certificate'      
+  when: vault.vault_type == 'hashicorp-vault'
 
 - name: List secrets from Vault IBM Cloud
   include_tasks: list-secrets-ibmcloud.yml
   vars:
-    ibmcloud_vault_address: "{{ vault_url }}"
-  when: "vault_type == 'ibmcloud-vault'"
+    ibmcloud_vault_address: "{{ vault.vault_url }}"
+  when: vault.vault_type == 'ibmcloud-vault'
 
 - name: List secrets from Vault file
   include_tasks: list-secrets-file.yml
-  when: "vault_type == 'file-vault'"
+  when: vault.vault_type == 'file-vault'
 
 - name: Secrets in group {{ secret_group }}
   debug:
