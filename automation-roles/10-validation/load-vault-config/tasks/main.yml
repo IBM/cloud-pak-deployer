@@ -1,17 +1,19 @@
 ---
-# - name: Load yaml files for vault configuration
-#   include_vars:
-#     dir: "{{ config_dir }}/config"
-#     files_matching: '.*\.yaml$'
-
-- name: Read vault config
-  include_tasks: read-vault-config.yml
-  when: vault | default({}) != {}
+- set_fact:
+    vault: "{{ _vault_default }}"
+  when: vault | default({}) == {}
 
 - set_fact:
-    vault_type: "file-vault"
-  when: vault_type is not defined
+    vault: "{{ vault | combine({'vault_authentication_type':'none'}) }}"
+  when: vault.vault_authentication_type is not defined
 
-- set_fact:
-    vault_authentication_type: "none"
-  when: vault_authentication_type is not defined
+- fail:
+    msg: "For hashicorp-vault, either vault_url must be specified in the vault configuration, or VAULT_URL environment variable must be set"
+  when:
+  - vault.vault_type == 'hashicorp-vault'
+  - (VAULT_URL | default(vault.vault_url) | default(''))== ''
+
+- include_tasks: hashicorp-exchange-token.yml
+  when:
+  - vault.vault_type == 'hashicorp-vault'
+  - vault.vault_exchange_token | default(False) | bool

@@ -1,0 +1,12 @@
+---
+- name: Exchange Hashicorp Vault token
+  community.hashi_vault.vault_token_create:
+    url: "{{ VAULT_URL | default(vault.vault_url) }}"
+    auth_method: token
+    token: '{{ VAULT_PASSWORD }}'
+    ttl: 24h
+    orphan: True
+  register: _hashicorp_vault_token_create
+
+- set_fact:
+    _hashicorp_ephemeral_token: "{{ _hashicorp_vault_token_create.login.auth.client_token }}"

@@ -105,6 +105,9 @@ env|environment)
   run_cmd+=" --extra-vars IMAGE_ARCH=${IMAGE_ARCH}"
   run_cmd+=" --extra-vars OLM_UTILS_IMAGE=${OLM_UTILS_IMAGE}"
 
+  if [ ! -z $VAULT_URL ];then
+    run_cmd+=" --extra-vars VAULT_URL=${VAULT_URL}"
+  fi
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
   fi
@@ -184,6 +187,9 @@ vault)
   run_cmd+=" --extra-vars status_dir=${STATUS_DIR}"
   run_cmd+=" --extra-vars ibmcloud_api_key=${IBM_CLOUD_API_KEY}"
   run_cmd+=" --extra-vars secret_group_param=${VAULT_GROUP}"
+  if [ ! -z $VAULT_URL ];then
+    run_cmd+=" --extra-vars VAULT_URL=${VAULT_URL}"
+  fi
   if [ ! -z $VAULT_PASSWORD ];then
     run_cmd+=" --extra-vars VAULT_PASSWORD=${VAULT_PASSWORD}"
   fi

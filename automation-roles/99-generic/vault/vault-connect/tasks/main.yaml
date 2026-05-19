@@ -1,23 +1,23 @@
 ---
 
 - name: Validate vault_type is supported
-  fail: msg="Vault type {{ vault_type }} only support values {{ supported_vault_types }} "
-  when: "vault_type not in supported_vault_types"
+  fail: msg="Vault type {{ vault.vault_type }} only support values {{ supported_vault_types }} "
+  when: vault.vault_type not in supported_vault_types
 
 - name: Validate vault_authentication_type is supported
-  fail: msg="Vault Authentication type (vault_authentication_type) only support values {{ supported_vault_authentication_types }} "
-  when: "vault_authentication_type not in supported_vault_authentication_types"
+  fail: msg="Vault Authentication type (vault_authentication_type) only supports values {{ supported_vault_authentication_types }} "
+  when: vault.vault_authentication_type not in supported_vault_authentication_types
 
 - name: Login to Hashicorp vault
   block:
     - name: Validate mandatory variables are defined
       assert:
         that:
-          - vault_type is defined
-          - vault_authentication_type is defined
+          - vault.vault_type is defined
+          - vault.vault_authentication_type is defined
     - debug:
-        msg: "Hashicorp Vault URL: {{ vault_url }}"
-  when: "vault_type == 'hashicorp-vault'"
+        msg: "Hashicorp Vault URL: {{ VAULT_URL | default(vault.vault_url) }}"
+  when: vault.vault_type == 'hashicorp-vault'
 
 - name: Login to IBMCloud vault
   block:
@@ -25,22 +25,22 @@
     - name: Validate mandatory variables are defined
       assert:
         that:
-          - vault_type is defined
-          - vault_authentication_type is defined
+          - vault.vault_type is defined
+          - vault.vault_authentication_type is defined
 
     - include_tasks: connect-ibmcloud.yml
       vars:
-        ibmcloud_vault_address: "{{ vault_url }}"
+        ibmcloud_vault_address: "{{ vault.vault_url }}"
         ibmcloud_api_key: "{{ vault_api_key }}"
         ibmcloud_vault_group: "{{ vault_secret_group }}"
-  when: "vault_type == 'ibmcloud-vault'"  
+  when: vault.vault_type == 'ibmcloud-vault'
 
 - name: Login to file vault
   block:
     - name: No login to file fault needed
       debug:
         msg: File vault directory is {{ status_dir }}/vault
-  when: "vault_type == 'file-vault'"
+  when: vault.vault_type == 'file-vault'
 
 - name: Login to Ansible vault
   block:
@@ -48,12 +48,12 @@
     - name: Validate mandatory variables are defined
       assert:
         that:
-          - vault_type is defined
-          - vault_authentication_type is defined
+          - vault.vault_type is defined
+          - vault.vault_authentication_type is defined
 
     - include_tasks: connect-ansible-vault.yml
-      when: vault_authentication_type == 'password-file'
-  when: "vault_type == 'ansible-vault'"
+      when: vault.vault_authentication_type == 'password-file'
+  when: vault.vault_type == 'ansible-vault'
 
 - set_fact:
     vault_login_success: "true"

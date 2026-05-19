@@ -22,7 +22,6 @@ Sample Vault config:
 ```
 vault:
   vault_type: file-vault
-  vault_authentication_type: none
 ```
 
 ### Properties for all vault implementations
@@ -33,9 +32,7 @@ vault:
 
 ### Properties for `file-vault`
 
-| Property | Description                                                          | Mandatory | Allowed values |
-| -------- | -------------------------------------------------------------------- | --------- | -------------- |
-| vault_authentication_type | Authentication method for the file vault            | No        | none          |
+None.
 
 ### Properties for `ansible-vault`
 
@@ -66,9 +63,42 @@ vault:
 | Property | Description                                                           | Mandatory | Allowed values |
 | -------- | --------------------------------------------------------------------- | --------- | -------------- |
 | vault_authentication_type | Authentication method for the Hashicorp vault        | Yes       | token, certificate   |
-| vault_url | URL for the Hashicorp vault, this is typically https://hostname:8200 | Yes       |           |
-| vault_api_key | When authentication type is api-key, the field to authenticate with | Yes    |           |
+| vault_url | URL for the Hashicorp vault, this is typically https://hostname:8200 | No, if not specified value is taken from VAULT_URL environment variable |           |
 | vault_secret_path | Default secret path to store and retrieve secrets into/from  | Yes       |           |
 | vault_secret_field | Field to store or retrieve vault secrets                    | Yes       |           |
 | vault_secret_path_append_group | Determines whether or not the secrete group will be appended to the path | Yes | True (default), False |
-| vault_secret_base64 | Depicts if secrets are stored in base64 format for Hashicorp Vault | No  | True (default), False |
+| vault_exchange_token | Depicts if the VAULT_PASSWORD passed to deployer is exchanged with another token | No  | False (default), True |
+
+##### Set up HashiCorp Vault for short-lived token creation
+
+To create the short-lived token, make sure there is a policy that can write to the secret path and to the token creation path. The `sample` path from the below example is taken from the `global_config.environment_id` property.
+
+```
+cat << EOF > /tmp/sample-policy.hcl
+# Secrets access (KV Version 2)
+path "secret/data/sample/*" {
+  capabilities = ["create", "read", "update", "delete"]
+}
+
+# Metadata access for listing secrets (KV Version 2)
+path "secret/metadata/sample/*" {
+  capabilities = ["list", "read"]
+}
+
+# Allows this token to create child tokens attached to this same policy
+path "auth/token/create" {
+  capabilities = ["create", "update","sudo"]
+}
+EOF
+
+vault policy write deployer-sample-policy /tmp/sample-policy.hcl
+```
+
+#### Create short-lived token
+
+```
+export VAULT_PASSWORD=$(vault token create -policy="deployer-sample-policy" -ttl="10m" -field=token)
+echo ${VAULT_PASSWORD}
+```
+
+Then you can start Cloud Pak Deployer.
