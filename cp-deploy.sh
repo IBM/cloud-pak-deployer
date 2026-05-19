@@ -57,7 +57,7 @@ command_usage() {
   echo "  --clean-up                    Remove the container after the run is completed. Remove old images after build. (\$CPD_CLEANUP)"
   echo "  -v                            Show standard ansible output (\$ANSIBLE_STANDARD_OUTPUT)"
   echo "  -vv, -vvv, -vvvv, ...         Show verbose ansible output, verbose option used is (number of v)-1 (\$ANSIBLE_VERBOSE)"
-  echo "  --no-color                    Disable ANSI color codes in the output (\$CPD_NO_COLOR)"
+  echo "  --color                       Enable ANSI color codes in the output (\$CPD_NO_COLOR)"
   echo
   echo "Cloud Pak Deployer development options:"
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
@@ -119,7 +119,7 @@ if [ "${CPD_CLEANUP}" == "" ];then CPD_CLEANUP=false;fi
 if [ "${CPD_DEVELOP}" == "" ];then CPD_DEVELOP=false;fi
 if [ "${CPD_TEST_CARTRIDGES}" == "" ];then CPD_TEST_CARTRIDGES=false;fi
 if [ "${CPD_ACCEPT_LICENSES}" == "" ];then CPD_ACCEPT_LICENSES=false;fi
-if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=false;fi
+if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=true;fi
 if [ "${CPD_WIZARD_LOG_LEVEL}" == "" ];then CPD_WIZARD_LOG_LEVEL=INFO;fi
 
 # Check if the command is running inside a container. This means that the command should not start docker or podman
@@ -513,8 +513,8 @@ while (( "$#" )); do
     export CPD_SKIP_INFRA=true
     shift 1
     ;;
-  --no-color)
-    export CPD_NO_COLOR=true
+  --color)
+    export CPD_NO_COLOR=false
     shift 1
     ;;
   --skip-cp-install)

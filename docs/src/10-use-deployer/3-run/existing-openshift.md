@@ -217,6 +217,10 @@ cp-deploy.sh env apply --accept-all-licenses
 
 You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
 
+!!! info "Log output format"
+    By default, the deployer generates clean log files without ANSI color codes, making them easier to read and parse with external tools. If you prefer colored terminal output, you can enable it by adding the `--color` flag to the command.
+
+
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
 When running the command, the container will start as a daemon and the command will tail-follow the logs. You can press Ctrl-C at any time to interrupt the logging but the container will continue to run in the background.
