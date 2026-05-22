@@ -1,4 +1,14 @@
 ---
+- ansible.builtin.stat:
+    path: "/tmp/work/registries.conf"
+  register: _registries_conf
+
+- name: Create /tmp/work/registries.conf file
+  ansible.builtin.copy:
+    content: "{{ lookup('template','registries_conf.j2') }}"
+    dest: /tmp/work/registries.conf
+    mode: u+rw
+
 - include_tasks: apply-global-pull-secret-entitled.yml
   when: (_p_registry_url | default('')) == ''
 

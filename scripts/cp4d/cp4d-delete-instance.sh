@@ -19,7 +19,6 @@ COMMON OPTIONS:
   --scheduler-ns <NS>    Scheduler namespace (if different from auto-detected)
   --dry-run              Show what would be deleted (safe, no changes)
   --sequential           Use sequential deletion (slower, default is parallel)
-  --force-finalizer      Force cleanup of stuck resources
   --timeout <SECONDS>    Deletion timeout (default: 60)
   -h, --help            Show this help
 
@@ -40,9 +39,6 @@ EXAMPLES:
 
   # Sequential deletion (slower but more controlled)
   $(basename $0) cpd --sequential
-
-  # Fast deletion with forced cleanup
-  $(basename $0) cpd --force-finalizer
 
 WHAT GETS DELETED:
   • CP4D instance namespace (specified)
@@ -202,10 +198,6 @@ else
             command_usage 2
         fi
         ;;
-    --force-finalizer)
-        export FORCE_FINALIZER=true
-        shift 1
-        ;;
     --timeout*)
         if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ] && [ "${1#*=:0:1}" != "-" ];then
         export NAMESPACE_DELETE_TIMEOUT="${1#*=}"
@@ -272,7 +264,7 @@ wait_ns_deleted() {
     TIMEOUT=${NAMESPACE_DELETE_TIMEOUT:-60}
     ELAPSED=0
     RETRY_COUNT=0
-    MAX_RETRIES=3
+    MAX_RETRIES=10
     log "Waiting for deletion of namespace ${NS} (timeout: ${TIMEOUT}s)..."
     
     while $(oc get ns ${NS} > /dev/null 2>&1);do
@@ -286,14 +278,13 @@ wait_ns_deleted() {
             # Run diagnostics
             diagnose_namespace_stuck ${NS}
             
-            if [ "${FORCE_FINALIZER}" = "true" ] && [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
+            if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
                 RETRY_COUNT=$((RETRY_COUNT + 1))
                 log_info "Attempting forced cleanup (attempt ${RETRY_COUNT}/${MAX_RETRIES})..."
                 force_remove_finalizers ${NS}
                 
                 # Reset timeout for retry
                 ELAPSED=0
-                TIMEOUT=300  # Shorter timeout for retries
                 log "Waiting additional ${TIMEOUT}s after forced cleanup..."
                 continue
             else
@@ -366,17 +357,15 @@ wait_multiple_ns_deleted() {
         if oc get ns ${ns} > /dev/null 2>&1; then
             failed_ns+=("$ns")
             log_warning "Namespace ${ns} still exists after timeout"
-            if [ "${FORCE_FINALIZER}" = "true" ]; then
-                log_info "Applying forced cleanup to ${ns}..."
-                force_remove_finalizers ${ns}
-            fi
+            log_info "Applying forced cleanup to ${ns}..."
+            force_remove_finalizers ${ns}
         else
             log_success "Namespace ${ns} deleted successfully"
         fi
     done
     
-    # If there are failed namespaces and force finalizer is enabled, wait a bit more
-    if [ ${#failed_ns[@]} -gt 0 ] && [ "${FORCE_FINALIZER}" = "true" ]; then
+    # If there are failed namespaces, wait a bit more
+    if [ ${#failed_ns[@]} -gt 0 ]; then
         log_info "Waiting additional 120s for forced cleanup to complete..."
         sleep 120
         
@@ -392,18 +381,16 @@ wait_multiple_ns_deleted() {
 
 force_remove_finalizers() {
     NS=$1
-    if [ "${FORCE_FINALIZER}" = "true" ]; then
-        log_info "Force removing finalizers for ${NS} namespace"
-        
-        # First, try to remove finalizers from blocking resources
-        force_remove_resource_finalizers ${NS}
-        
-        # Then remove namespace finalizers using oc patch
-        if oc get ns ${NS} > /dev/null 2>&1; then
-            log_info "Removing finalizers from namespace ${NS}..."
-            oc patch ns ${NS} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
-            log_success "Namespace finalizers removed for ${NS}"
-        fi
+    log_info "Force removing finalizers for ${NS} namespace"
+    
+    # First, try to remove finalizers from blocking resources
+    force_remove_resource_finalizers ${NS}
+    
+    # Then remove namespace finalizers using oc patch
+    if oc get ns ${NS} > /dev/null 2>&1; then
+        log_info "Removing finalizers from namespace ${NS}..."
+        oc patch ns ${NS} --type=merge -p '{"metadata":{"finalizers":null}}' 2>/dev/null || true
+        log_success "Namespace finalizers removed for ${NS}"
     fi
 }
 
