@@ -45,13 +45,13 @@
 - debug:
     var: _azure_config
 
-- name: Generate MachineSet file {{status_dir}}/openshift/azure-aro-ocs-machineset.yaml
+- name: Generate MachineSet file {{ status_dir }}/openshift/azure-aro-ocs-machineset.yaml
   template:
     src: "azure-aro-ocs-machineset.j2"
-    dest: "{{status_dir}}/openshift/azure-aro-ocs-machineset.yaml"
+    dest: "{{ status_dir }}/openshift/azure-aro-ocs-machineset.yaml"
 
 - name: Create or update machine set
-  shell: oc apply -f {{status_dir}}/openshift/azure-aro-ocs-machineset.yaml
+  shell: oc apply -f {{ status_dir }}/openshift/azure-aro-ocs-machineset.yaml
 
 - name: Wait for machine sets
   include_tasks: wait-for-machine-set.yml
@@ -86,15 +86,15 @@
   failed_when: False
   register: _ocs_cluster_exists
 
-- name: Generate ODF StorageCluster file {{status_dir}}/openshift/ocs-storagecluster.yaml
+- name: Generate ODF StorageCluster file {{ status_dir }}/openshift/ocs-storagecluster.yaml
   template:
     src: "ocs-storagecluster.j2"
-    dest: "{{status_dir}}/openshift/ocs-storagecluster.yaml"
+    dest: "{{ status_dir }}/openshift/ocs-storagecluster.yaml"
   when: _ocs_cluster_exists.rc != 0
 
 - name: Create ODF StorageCluster
   shell: |
-    oc apply -f {{status_dir}}/openshift/ocs-storagecluster.yaml
+    oc apply -f {{ status_dir }}/openshift/ocs-storagecluster.yaml
   when: _ocs_cluster_exists.rc != 0
 
 - name: Wait until ODF StorageCluster has status Ready
