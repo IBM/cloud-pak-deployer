@@ -166,13 +166,9 @@ env|environment)
   ;;
 
 vault)
-  ANSIBLE_CONFIG_FILE=$PWD/ansible-vault.cfg
-  if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
-    ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
-  fi
-
   export ANSIBLE_CONFIG=${ANSIBLE_CONFIG_FILE}
   export ANSIBLE_REMOTE_TEMP=${STATUS_DIR}/tmp
+  rm -f ${ANSIBLE_REMOTE_TEMP}/cpd-vault-*.out
   run_cmd="ansible-playbook"
   if [ -d "${CONFIG_DIR}/inventory" ]; then
     run_cmd+=" -i ${CONFIG_DIR}/inventory"
@@ -210,8 +206,19 @@ vault)
     done
   fi
   echo "$run_cmd" >> /tmp/deployer_run_cmd.log
+
+  if $ANSIBLE_STANDARD_OUTPUT || [ "$ANSIBLE_VERBOSE" != "" ];then
+    ANSIBLE_CONFIG_FILE=$PWD/ansible.cfg
+  else
+    run_cmd+=" > ${STATUS_DIR}/log/cpd-vault-log.out 2>&1"
+  fi
+
   # echo $run_cmd
   eval $run_cmd
+
+  # Show output for vault commands
+  if [ -f ${ANSIBLE_REMOTE_TEMP}/cpd-vault-*.out ];then cat ${ANSIBLE_REMOTE_TEMP}/cpd-vault-*.out;fi
+
   ;;
 
 version)

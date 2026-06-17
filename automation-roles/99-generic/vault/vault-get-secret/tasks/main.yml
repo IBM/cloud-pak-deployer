@@ -5,12 +5,15 @@
       - _p_vault_secrets is defined or secret_name is defined
       - secret_group is defined
 
+- debug:
+    var: _p_vault_secrets
+
 - name: Get secrets
   include_tasks: get-secrets.yml
   vars:
-    secret_name: "{{ item.key }}"
-    _p_secret_value: "{{ item.value }}"
-  with_dict: "{{ _p_vault_secrets }}"
+    secret_name: "{{ (item | dict2items | first).key }}"
+    _p_secret_value: "{{ (item | dict2items | first).value }}"
+  loop: "{{ _p_vault_secrets | from_json }}"
   when: _p_vault_secrets is defined
 
 - include_tasks: get-secret.yml
