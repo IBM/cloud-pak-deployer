@@ -13,13 +13,12 @@
     generator_validation_error_message: |
       Validation errors:
 
-- name: filter the vault variables from ansible variables
+- name: Filter the vault variables from ansible variables
   set_fact:
-    vault_var: "{{ vault_var|default({}) | combine({var_item.key : var_item.value}) }}"
-  loop: "{{ vars | dict2items}}"
+    vault_var: "{{ vault_var | default({}) | combine({var_item: lookup('vars', var_item)}) }}"
+  loop: "{{ lookup('varnames', '^_').split(',') | select() | list }}"
   loop_control:
     loop_var: var_item
-  when: var_item.key | regex_search ('^(_*)')    # the variable name is start with _
 
 - name: Lint and pre-process all object types
   include_tasks: pre-process-object-type.yaml
