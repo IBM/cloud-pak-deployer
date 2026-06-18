@@ -36,14 +36,14 @@
     oc get machineset -n openshift-machine-api -o jsonpath='{range .items[0]}{.spec.template.spec.providerSpec.value.template}{end}'
   register: _get_machineset_template_name
 
-- name: Generate MachineSet file {{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
+- name: Generate MachineSet file {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
   template:
     src: vsphere-ocs-machineset.j2
-    dest: "{{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml"
+    dest: "{{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml"
 
 - name: Create or update machine set
   shell:
-    oc apply -f {{status_dir}}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
+    oc apply -f {{ status_dir }}/openshift/{{ current_openshift_cluster.name }}-{{ current_openshift_storage.storage_name }}.yaml
 
 - name: Get number of storage nodes in machine set
   shell: |
@@ -90,7 +90,7 @@
 
 - name: Create temporary file for the StorageCluster
   tempfile:
-    path: "{{status_dir}}/openshift"
+    path: "{{ status_dir }}/openshift"
     state: file
   register: _ocs_cluster_tempfile
   when: _ocs_cluster_exists.rc != 0

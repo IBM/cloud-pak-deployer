@@ -27,9 +27,9 @@
 
   # ---------- CREATE INSTANCE ----------------------------
 
-  - name: "Check if the {{instance_properties.type}} {{instance_properties.name}} already exists"
+  - name: "Check if the {{ instance_properties.type }} {{ instance_properties.name }} already exists"
     shell: |
-      oc get {{_inst_type_def.kind}} {{instance_properties.name}} -n {{current_cp4i_cluster.project}} | grep -i '^{{instance_properties.name}}' | wc -l
+      oc get {{ _inst_type_def.kind }} {{ instance_properties.name }} -n {{ current_cp4i_cluster.project }} | grep -i '^{{ instance_properties.name }}' | wc -l
     register: instance_exists  
 
   - name: "Create instance if it does not already exist"
@@ -47,20 +47,20 @@
 
     - name: "Prepare yaml file for creating instance"
       template:
-        src: "{{instance_template}}.j2"
-        dest: "{{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+        src: "{{ instance_template }}.j2"
+        dest: "{{ status_dir }}/cp4i/{{ instance_properties.type }}-{{ instance_properties.name }}.yml"
 
-    - name: "Create instance from {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml"
+    - name: "Create instance from {{ status_dir }}/cp4i/{{ instance_properties.type }}-{{ instance_properties.name }}.yml"
       shell: |
-        oc apply -f {{ status_dir }}/cp4i/{{instance_properties.type}}-{{instance_properties.name}}.yml
+        oc apply -f {{ status_dir }}/cp4i/{{ instance_properties.type }}-{{ instance_properties.name }}.yml
 
     when: "instance_exists.stdout | trim == '0'"
 
   # ---------- WAITING FOR PLATFORM NAVIGATOR TO BECOME READY -------
   
-  - name: "Waiting for the {{_inst_type_def.kind}} to become ready"
+  - name: "Waiting for the {{ _inst_type_def.kind }} to become ready"
     shell: |
-      oc get {{_inst_type_def.kind}} -n {{current_cp4i_cluster.project}} {{instance_properties.name}} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
+      oc get {{ _inst_type_def.kind }} -n {{ current_cp4i_cluster.project }} {{ instance_properties.name }} -o json | jq -r '.status.conditions[] | select(.type=="Ready").status'
     register: instance_status
     retries: 300
     delay: 30

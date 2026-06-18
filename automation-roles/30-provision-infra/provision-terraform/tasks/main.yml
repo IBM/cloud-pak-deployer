@@ -11,10 +11,10 @@
 - name: Provision IBM Cloud VPC Infrastructure
   block:
 
-  - name: "Copy variables to Terraform directory {{status_dir}}/terraform"
+  - name: "Copy variables to Terraform directory {{ status_dir }}/terraform"
     template:
       src: 'variables.auto.tfvars.j2'
-      dest: '{{status_dir}}/terraform/variables.auto.tfvars'
+      dest: '{{ status_dir }}/terraform/variables.auto.tfvars'
 
   - name: Retrieve Terraform tfstate from the vault
     include_role: 
@@ -29,18 +29,18 @@
       dest: "{{ status_dir }}/terraform/terraform.tfstate"
     when: "secret_value | trim | length > 0"
 
-  - name: "Run terraform init in Terraform directory {{status_dir}}/terraform"
+  - name: "Run terraform init in Terraform directory {{ status_dir }}/terraform"
     shell: 
-      chdir: '{{status_dir}}/terraform'
+      chdir: '{{ status_dir }}/terraform'
       cmd: 'terraform init'
 
-  - name: "Run terraform plan in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/plan.log"
+  - name: "Run terraform plan in Terraform directory {{ status_dir }}/terraform, check {{ status_dir }}/terraform/plan.log"
     shell: |
       set -o pipefail
       terraform plan -no-color -detailed-exitcode 2>&1 \
-        | tee {{status_dir}}/terraform/plan.log
+        | tee {{ status_dir }}/terraform/plan.log
     args:
-      chdir: "{{status_dir}}/terraform"
+      chdir: "{{ status_dir }}/terraform"
     register: _terraform_plan_result
     failed_when: "_terraform_plan_result.rc == 1"
 
@@ -76,13 +76,13 @@
       - _number_to_destroy != '0'
       - _confirm_destroy | bool != True
 
-  - name: "Run terraform apply in Terraform directory {{status_dir}}/terraform, check {{status_dir}}/terraform/apply.log"
+  - name: "Run terraform apply in Terraform directory {{ status_dir }}/terraform, check {{ status_dir }}/terraform/apply.log"
     shell: |
       set -o pipefail
       terraform apply -auto-approve -no-color 2>&1 \
-        | tee {{status_dir}}/terraform/apply.log
+        | tee {{ status_dir }}/terraform/apply.log
     args:
-      chdir: "{{status_dir}}/terraform"
+      chdir: "{{ status_dir }}/terraform"
     environment:
       TF_LOG: "info"
       TF_LOG_PATH: "{{ status_dir }}/terraform/tf_apply.log"

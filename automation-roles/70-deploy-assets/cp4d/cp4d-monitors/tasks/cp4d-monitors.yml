@@ -37,9 +37,9 @@
         dest: "{{ _cloud_pak_service_monitor_dir.path }}/source-repo-secret-default.yaml"           
 
     - set_fact:
-        _default_monitor_source_secret: "{{ _monitors.name}}-default-repo-auth"
+        _default_monitor_source_secret: "{{ _monitors.name }}-default-repo-auth"
 
-    - name: Create secret {{ _monitors.name}}-default-repo-auth
+    - name: Create secret {{ _monitors.name }}-default-repo-auth
       shell: |
         oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/source-repo-secret-default.yaml
 
@@ -91,20 +91,20 @@
         src: docker-cr-secret-default.j2
         dest: "{{ _cloud_pak_service_monitor_dir.path }}/docker-cr-secret-default.yaml"        
 
-    - name: Create secret {{ _monitors.name}}-default-cr-auth
+    - name: Create secret {{ _monitors.name }}-default-cr-auth
       shell: |
         oc apply -f {{ _cloud_pak_service_monitor_dir.path }}/docker-cr-secret-default.yaml
 
     - set_fact:
-        _default_monitor_target_cr_secret: "{{ _monitors.name}}-default-cr-auth"
+        _default_monitor_target_cr_secret: "{{ _monitors.name }}-default-cr-auth"
 
-    - name: Add the secret {{ _monitors.name}}-default-cr-auth for pull by the sa zen-editor-sa
-      shell: "oc -n {{ current_cp4d_cluster.project }} secrets link --for=pull zen-editor-sa {{ _monitors.name}}-default-cr-auth"
+    - name: Add the secret {{ _monitors.name }}-default-cr-auth for pull by the sa zen-editor-sa
+      shell: "oc -n {{ current_cp4d_cluster.project }} secrets link --for=pull zen-editor-sa {{ _monitors.name }}-default-cr-auth"
 
 
 - name: "Patch cronjob watchdog-alert-monitoring-cronjob to run every 2 minutes"
   shell: |
-    oc patch -n {{ current_cp4d_cluster.project }} cronjob/watchdog-alert-monitoring-cronjob -p '{"spec":{"schedule":"*/2 * * * *"}}'
+    oc patch -n {{ current_cp4d_cluster.project }} cronjob/watchdog-alert-monitoring-cronjob -p '{"spec":{"schedule":"*/2 * * * *" }}'
 
 - name: "Loop through each monitors entry"
   include_tasks: cp4d-monitor.yml
@@ -114,5 +114,5 @@
 
 - name: "Patch cronjob watchdog-alert-monitoring-cronjob back to run every 10 minutes"
   shell: |
-    oc patch -n {{ current_cp4d_cluster.project }} cronjob/watchdog-alert-monitoring-cronjob -p '{"spec":{"schedule":"*/10 * * * *"}}'
+    oc patch -n {{ current_cp4d_cluster.project }} cronjob/watchdog-alert-monitoring-cronjob -p '{"spec":{"schedule":"*/10 * * * *" }}'
 

@@ -8,8 +8,8 @@
 - name: Delete secret
   include_tasks: delete-secret.yml
   vars:
-    secret_name: "{{ item.key }}"
-  with_dict: "{{ _p_vault_secrets }}"
+    secret_name: "{{ (item | dict2items | first).key }}"
+  loop: "{{ _p_vault_secrets | from_json }}"
   when: _p_vault_secrets is defined
 
 - include_tasks: delete-secret.yml

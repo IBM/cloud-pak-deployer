@@ -19,12 +19,12 @@
 - name: Add API address and oauth-openshift to /etc/hosts
   shell:
     grep -q "^{{ _openshift_config.api_vip }}" /etc/hosts || \
-      echo "{{ _openshift_config.api_vip }} api.{{ _openshift_config.name }}.{{_openshift_config.domain_name }}" >> /etc/hosts
+      echo "{{ _openshift_config.api_vip }} api.{{ _openshift_config.name }}.{{ _openshift_config.domain_name }}" >> /etc/hosts
 
 - name: Add ingress address and oauth-openshift to /etc/hosts
   shell:
     grep -q "^{{ _openshift_config.ingress_vip }}" /etc/hosts || \
-      echo "{{ _openshift_config.ingress_vip }} oauth-openshift.apps.{{ _openshift_config.name }}.{{_openshift_config.domain_name }}" >> /etc/hosts
+      echo "{{ _openshift_config.ingress_vip }} oauth-openshift.apps.{{ _openshift_config.name }}.{{ _openshift_config.domain_name }}" >> /etc/hosts
 
 - name: Login to OpenShift cluster
   shell: |
@@ -39,7 +39,7 @@
 
 - name: Show OpenShift login result
   debug:
-    msg: "{{_oc_login_result }}"
+    msg: "{{ _oc_login_result }}"
 
 - fail:
     msg: "OpenShift login to cluster {{ _p_openshift_cluster_name }} failed, details: {{ _oc_login_result }}"
