@@ -232,15 +232,15 @@
       https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?\
       topic=access-using-zen-api-key-authentication with REST Authorization header with ZenApiKey type
 
-      ## MCP Server configuration for watsonx Orchestrate
+      ## MCP Servers configuration for watsonx Orchestrate
 
       Based on https://github.com/DecisionsDev/ibm-odm-decision-mcp-server
 
-      orchestrate connections add --app-id odm-mcp-server-connection
+      orchestrate connections add --app-id ibm-odm-decision-mcp-serverconnection
 
-      orchestrate connections configure --app-id odm-mcp-server-connection --environment draft --type team --kind key_value
+      orchestrate connections configure --app-id ibm-odm-decision-mcp-serverconnection --environment draft --type team --kind key_value
 
-      orchestrate connections set-credentials --app-id odm-mcp-server-connection \\
+      orchestrate connections set-credentials --app-id ibm-odm-decision-mcp-serverconnection \\
 
         --environment draft \\
 
@@ -252,14 +252,35 @@
 
       orchestrate toolkits add --kind mcp \\
 
-        --name odm-mcp-server \\
+        --name ibm-odm-decision-mcp-server \\
 
-        --description \"odm-mcp-server\" \\
+        --description \"ibm-odm-decision-mcp-server\" \\
 
         --command \"uvx --from git+https://github.com/DecisionsDev/ibm-odm-decision-mcp-server.git ibm-odm-decision-mcp-server\" \\
 
         --tools \"*\" \\
 
-        --app-id odm-mcp-server-connection
+        --app-id ibm-odm-decision-mcp-serverconnection
 
+      ## MCP Servers configuration for Bob
+
+      Based on https://github.com/DecisionsDev/ibm-odm-decision-mcp-server
+
+      {
+        \"mcpServers\": {
+          \"ibm-odm-decision-mcp-server\": {
+            \"command\": \"uvx\",
+            \"args\": [
+              \"--from\",
+              \"git+https://github.com/DecisionsDev/ibm-odm-decision-mcp-server\",
+              \"start\"
+            ],
+            \"env\": {
+              \"ODM_URL\": \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/odm/res\",
+              \"ODM_USERNAME\": \"cpmanagerservice\",
+              \"ZENAPIKEY\": \"{{ zen_api_key }}\",
+            }
+          }
+        }
+      }
       "

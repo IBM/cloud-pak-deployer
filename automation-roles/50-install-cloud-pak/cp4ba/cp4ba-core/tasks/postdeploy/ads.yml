@@ -209,19 +209,21 @@
         {decisionId}/operations/{operation}/execute (using ZenApiKey Authentication with Zen token \
         (https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=administering-authorizing-http-requests-by-using-zen-api-key))
 
+      - Design MCP Server URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/rest-api/mcp/
+
       ## Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-      ## MCP Server configuration for watsonx Orchestrate
+      ## MCP Servers configuration for watsonx Orchestrate
 
       Based on https://github.com/DecisionsDev/ibm-decision-intelligence-mcp-server/
 
-      orchestrate connections add --app-id ads-mcp-server-connection
+      orchestrate connections add --app-id di-mcp-server-connection
 
-      orchestrate connections configure --app-id ads-mcp-server-connection --environment draft --type team --kind key_value
+      orchestrate connections configure --app-id di-mcp-server-connection --environment draft --type team --kind key_value
 
-      orchestrate connections set-credentials --app-id ads-mcp-server-connection \\
+      orchestrate connections set-credentials --app-id di-mcp-server-connection \\
 
         --environment draft \\
 
@@ -237,14 +239,42 @@
 
       orchestrate toolkits add --kind mcp \\
 
-        --name ads-mcp-server \\
+        --name di-mcp-server \\
 
-        --description \"ads-mcp-server\" \\
+        --description \"di-mcp-server\" \\
 
         --command \"npx -y di-mcp-server\" \\
 
         --tools \"*\" \\
 
-        --app-id ads-mcp-server-connection
+        --app-id di-mcp-server-connection
 
+      ## MCP Servers configuration for Bob
+
+      Based on https://github.com/DecisionsDev/ibm-decision-intelligence-mcp-server/ for runtime MCP 
+      
+      Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/26.0.0?topic=server-configuring-bob-connect-mcpand for design MCP
+
+      {
+        \"mcpServers\": {
+          \"di-mcp-server\": {
+            \"command\": \"npx\",
+            \"args\": [\"-y\", \"di-mcp-server\"],
+            \"env\": {
+              \"URL\": \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/runtime/api/v1 \",
+              \"AUTHENTICATION_MODE\": \"zenapikey\",
+              \"ZEN_USERNAME\": \"cpmanagerservice\",
+              \"ZEN_APIKEY\": \"{{ zen_api_key }}\",
+              \"DEPLOYMENT_SPACES\": \"embedded\"
+            }
+          },
+          \"decision-mcp\": {
+            \"type\": \"streamable-http\",
+            \"url\": \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ads/rest-api/mcp/\",
+            \"headers\": {
+              \"Authorization\": \"ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}\"
+            }
+          }
+        }
+      }
       "

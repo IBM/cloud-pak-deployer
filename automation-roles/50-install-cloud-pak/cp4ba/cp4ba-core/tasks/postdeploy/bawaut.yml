@@ -142,6 +142,14 @@
 
       - Case Builder: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/CaseBuilder
 
+      - Workflow Runtime MCP Server Process URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/process/mcp
+
+      - Workflow Runtime MCP Server Case URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/case/mcp
+
+      - Workflow Runtime MCP Server Token Endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/token
+
+      - Workflow Runtime MCP Server Authorization Endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize
+
 
       ## Credentials
 
@@ -183,9 +191,11 @@
       - Default testing table: 'public.user_db'
 
 
-      ## MCP Server configuration for watsonx Orchestrate
+      ## MCP Servers configuration for watsonx Orchestrate
 
-      Based on https://github.com/ibmbpm/ibm-baw-mcp-server
+      Based on https://github.com/ibmbpm/ibm-baw-mcp-server for original MCP Server
+
+      Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/26.0.0?topic=server-getting-started-workflow-runtime-mcp for Workflow Runtime MCP Server
 
       orchestrate connections add --app-id baw-mcp-server-connection
 
@@ -211,4 +221,73 @@
 
         --app-id baw-mcp-server-connection
 
+
+
+      orchestrate connections add --app-id baw-workflow-runtime-mcp-server-connection
+
+      orchestrate connections configure --app-id baw-workflow-runtime-mcp-server-connection --environment draft --type member --kind oauth_auth_code_flow
+
+      orchestrate connections set-credentials --app-id baw-workflow-runtime-mcp-server-connection \\
+
+        --environment draft \\
+
+        --client-id 'cpmanager-client' \\
+        
+        --client-secret '{{ lc_principal_admin_password }}' \\
+        
+        --auth-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize' \\
+        
+        --token-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/token' \\
+
+        --scope openid
+
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name baw-workflow-runtime-process-mcp-server \\
+
+        --description \"baw-workflow-runtime-mcp-server\" \\
+
+        --url \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/process/mcp\" \\
+
+        --transport \"streamable_http\" \\
+
+        --tools \"*\" \\
+
+        --app-id baw-workflow-runtime-mcp-server-connection
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name baw-workflow-runtime-case-mcp-server \\
+
+        --description \"baw-workflow-runtime-mcp-server\" \\
+
+        --url \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/case/mcp\" \\
+
+        --transport \"streamable_http\" \\
+
+        --tools \"*\" \\
+
+        --app-id baw-workflow-runtime-mcp-server-connection
+
+      ## MCP Servers configuration for Bob
+
+      Based on https://github.com/ibmbpm/ibm-baw-mcp-server
+
+      {
+        \"mcpServers\": {
+          \"baw-mcp-server\": {
+            \"command\": \"uvx\",
+            \"args\": [
+              \"--from\",
+              \"git+https://github.com/ibmbpm/ibm-baw-mcp-server\",
+              \"ibm-baw-mcp-server\"
+            ],
+            \"env\": {
+              \"ENDPOINT\": \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas\",
+              \"API_KEY\": \"ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}\"
+            }
+          }
+        }
+      }
       "
