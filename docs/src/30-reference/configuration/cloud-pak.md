@@ -587,6 +587,7 @@ cp4ba:
           tm: true # Task Manager (FNCM - TM)
           ier: true # IBM Enterprise Records (FNCM - IER)
           icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
+          ccxmo: true # Content Cortex for Microsoft Office (CCXMO)
       application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
         enabled: true
         optional_components:
@@ -759,6 +760,7 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.tm          | Set to `true` to enable Task Manager | Yes | true, false |
 | optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
+| optional_components.ccxmo          | Set to `true` to enable Content Cortex for Microsoft Office | Yes | true, false  |
 
 #### Application pattern properties
 

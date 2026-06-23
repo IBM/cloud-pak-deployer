@@ -127,6 +127,11 @@
     components: "{{ components + ['ier'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['ccxmo'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ccxmo
+
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
     cr: "{{ cr | combine(lookup('template', 'fncm/cr-cpe.yaml.j2') | from_yaml, recursive=true) }}"
