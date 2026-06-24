@@ -68,7 +68,7 @@
     common_output_to_var: "apps_endpoint_domain"
   when: apps_endpoint_domain is not defined
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ akhq_output_directory }}/{{ item }}.yaml"
@@ -79,7 +79,7 @@
     - deployments
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ akhq_output_directory }}/{{ item.name }}.yaml"

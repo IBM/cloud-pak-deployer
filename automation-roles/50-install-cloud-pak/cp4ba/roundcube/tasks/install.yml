@@ -36,7 +36,7 @@
       EOF"
   register: command_status
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ roundcube_output_directory }}/{{ item }}.yaml"
@@ -50,7 +50,7 @@
     - services
     - deployments
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ roundcube_output_directory }}/{{ item.name }}.yaml"

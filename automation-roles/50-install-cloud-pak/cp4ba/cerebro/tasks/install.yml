@@ -26,7 +26,7 @@
   ansible.builtin.set_fact:
     os_password: "{{ os_secret.resources[0].data['opensearch-admin'] | b64decode }}"
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ cerebro_output_directory }}/{{ item }}.yaml"
@@ -38,7 +38,7 @@
     - deployments
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ cerebro_output_directory }}/{{ item.name }}.yaml"

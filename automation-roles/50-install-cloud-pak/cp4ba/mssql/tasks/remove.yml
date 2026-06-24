@@ -4,7 +4,7 @@
     state: directory
     mode: u+rwx
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ mssql_output_directory }}/{{ item }}.yaml"
@@ -16,7 +16,7 @@
     - statefulsets
     - services
 
-- name: Remove {{ item.name }}
+- name: Remove resources
   kubernetes.core.k8s:
     state: absent
     src: "{{ mssql_output_directory }}/{{ item.name }}.yaml"

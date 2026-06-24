@@ -14,7 +14,7 @@
     common_namespace_name: "{{ mssql_project_name }}"
     common_output_directory: "{{ mssql_output_directory }}"
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ mssql_output_directory }}/{{ item }}.yaml"
@@ -26,7 +26,7 @@
     - statefulsets
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ mssql_output_directory }}/{{ item.name }}.yaml"
