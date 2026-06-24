@@ -26,7 +26,7 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-          command: ["/usr/sbin/init_directory_structure.sh"]
+          command: ["/usr/sbinx/init_directory_structure.sh"]
           env:
             - name: GITEA_APP_INI
               value: /data/gitea/conf/app.ini
@@ -38,7 +38,7 @@ spec:
               value: /tmp/gitea
           volumeMounts:
             - name: init
-              mountPath: /usr/sbin
+              mountPath: /usr/sbinx
             - name: temp
               mountPath: /tmp
             - name: data
@@ -56,7 +56,7 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-          command: ["/usr/sbin/config_environment.sh"]
+          command: ["/usr/sbinx/config_environment.sh"]
           env:
             - name: GITEA_APP_INI
               value: /data/gitea/conf/app.ini
@@ -66,9 +66,13 @@ spec:
               value: /data
             - name: GITEA_TEMP
               value: /tmp/gitea
+            - name: TMP_EXISTING_ENVS_FILE
+              value: /tmp/existing-envs
+            - name: ENV_TO_INI_MOUNT_POINT
+              value: /env-to-ini-mounts
           volumeMounts:
             - name: config
-              mountPath: /usr/sbin
+              mountPath: /usr/sbinx
             - name: temp
               mountPath: /tmp
             - name: data
@@ -88,7 +92,7 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
-          command: ["/usr/sbin/configure_gitea.sh"]
+          command: ["/usr/sbinx/configure_gitea.sh"]
           securityContext:
             allowPrivilegeEscalation: false
             privileged: false
@@ -105,16 +109,30 @@ spec:
             - name: HOME
               value: /data/gitea/git
             - name: GITEA_LDAP_BIND_DN_0
-              value: "{{ lc_bind_admin_user }}"
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-ldap-secret
+                  key:  bindDn
             - name: GITEA_LDAP_PASSWORD_0
-              value: "{{ lc_bind_admin_password }}"
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-ldap-secret
+                  key:  bindPassword
             - name: GITEA_ADMIN_USERNAME
-              value: "giteaadmin"
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-admin-secret
+                  key:  username
             - name: GITEA_ADMIN_PASSWORD
-              value: "{{ gitea_universal_password }}"
+              valueFrom:
+                secretKeyRef:
+                  name: gitea-admin-secret
+                  key:  password
+            - name: GITEA_ADMIN_PASSWORD_MODE
+              value: keepUpdated
           volumeMounts:
             - name: init
-              mountPath: /usr/sbin
+              mountPath: /usr/sbinx
             - name: temp
               mountPath: /tmp
             - name: data
