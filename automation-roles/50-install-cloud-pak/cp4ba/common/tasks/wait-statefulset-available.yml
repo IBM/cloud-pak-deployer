@@ -10,9 +10,10 @@
 #     common_retries: retries
 #     common_delay: delay
 
-- name: Wait on api version apps/v1, kind StatefulSet, name {{ common_resource_name + '
-    in namespace ' + common_resource_namespace + ' to be available
-    with ' + common_retries + ' retries with ' + common_delay + ' seconds delay each (total of ' + common_retries * common_delay / 60 + ' minutes)' }}
+- name: Wait on api version apps/v1, kind StatefulSet, name {{ common_resource_name +
+    ' in namespace ' + common_resource_namespace + ' to be available with ' +
+    common_retries | string + ' retries with ' + common_delay | string +
+    ' seconds delay each (total of ' + (common_retries * common_delay / 60) | string + ' minutes)' }}
   kubernetes.core.k8s_info:
     api_version: apps/v1
     kind: StatefulSet
