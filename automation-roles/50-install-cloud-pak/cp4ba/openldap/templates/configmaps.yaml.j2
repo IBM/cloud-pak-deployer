@@ -13,6 +13,26 @@ data:
 kind: ConfigMap
 apiVersion: v1
 metadata:
+  name: openldap-customconfig
+  namespace: "{{ openldap_project_name }}"
+  labels:
+    app: openldap
+data:
+  01-setup-admin.sh: |-
+    #!/bin/bash
+
+    cat << 'EOF' > /tmp/acl.ldif
+    dn: olcDatabase={2}mdb,cn=config
+    changetype: modify
+    add: olcAccess
+    olcAccess: {0}to * by group.exact="cn={{ lc_principal_admin_group }},{{ lc_ldap_group_base_dn }}" manage by * break
+    EOF
+
+    slapmodify -F /opt/bitnami/openldap/etc/slapd.d -b cn=config -l /tmp/acl.ldif
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
   name: openldap-customldif
   namespace: "{{ openldap_project_name }}"
   labels:

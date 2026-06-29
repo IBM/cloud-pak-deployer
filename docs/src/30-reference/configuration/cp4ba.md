@@ -209,7 +209,7 @@ Review and perform post deploy manual steps for IPM as specified in CP4BA Projec
 Referrence to licenses of used tools apart from those from IBM
 
 - phpLDAPadmin
-    - MIT License https://github.com/osixia/docker-phpLDAPadmin/blob/stable/LICENSE (OSI approved https://opensource.org/license/mit)
+    - GNU General Public License v2.0 License https://github.com/leenooks/phpLDAPadmin/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-2.0)
 - Gitea
     - MIT License https://github.com/go-gitea/gitea/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - Nexus
@@ -223,6 +223,8 @@ Referrence to licenses of used tools apart from those from IBM
     - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - OpenSearch Dashboards
     - Apache License 2.0 https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
+- OpenSearch
+    - Apache License 2.0 https://github.com/opensearch-project/OpenSearch/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
 - Mail server
     - MIT License https://github.com/docker-mailserver/docker-mailserver/blob/master/LICENSE (OSI approved https://opensource.org/license/mit)
 - CloudBeaver
@@ -230,7 +232,7 @@ Referrence to licenses of used tools apart from those from IBM
 - PostgreSQL
     - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
 - OpenLDAP
-    - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
-    - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
+    - OpenLDAP itself - The OpenLDAP Public License https://www.openldap.org/software/release/license.html (OSI approved https://opensource.org/license/oldap-2-8)
+    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/openldap#license (OSI Approved https://opensource.org/license/apache-2-0)
 - MSSQL server
     - Uses Developer Edition, description at https://learn.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2022?view=sql-server-ver16#sql-server-editions

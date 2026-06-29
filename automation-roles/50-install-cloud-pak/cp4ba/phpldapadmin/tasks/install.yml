@@ -19,6 +19,7 @@
     mode: u+rwx
   with_items:
     - configmaps
+    - secrets
     - serviceaccounts
     - rolebindings
     - deployments
@@ -33,6 +34,7 @@
     wait_timeout: "{{ item.wait_timeout }}"
   with_items:
     - {name: configmaps, wait_sleep: 15, wait_timeout: 15}
+    - {name: secrets, wait_sleep: 15, wait_timeout: 15}
     - {name: serviceaccounts, wait_sleep: 15, wait_timeout: 15}
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
@@ -74,6 +76,8 @@
 
       ## Credentials
 
-      - {{ lc_bind_admin_user }} / {{ lc_bind_admin_password }}
+      - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
+
+      - Members of {{ lc_principal_admin_group }} group are also given full Manage privilege
 
       "
