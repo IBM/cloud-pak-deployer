@@ -575,9 +575,9 @@ cp4ba:
           ads_designer: true # Designer (ADS)
           ads_runtime: true # Runtime (ADS)
         gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=services-configuring-generative-ai-secret
-          apiKey: watsonx_ai_api_key
           mlUrl: https://us-south.ml.cloud.ibm.com
           projectId: project_id          
+          apiKey: watsonx_ai_api_key
       content: # FileNet Content Manager (FNCM) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__ecm
         enabled: true
         optional_components:
@@ -588,6 +588,12 @@ cp4ba:
           ier: true # IBM Enterprise Records (FNCM - IER)
           icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
           ccxmo: true # Content Cortex for Microsoft Office (CCXMO)
+          ccxai: true # Content Coretex Ai Services
+        gen_ai: # Only watsonx.ai for ccx AI services, configure other post-install
+          mlUrl: https://us-south.ml.cloud.ibm.com
+          projectId: project_id
+          apiKey: watsonx_ai_api_key
+          defaultFoundationModel: openai/gpt-oss-120b
       application: # Business Automation Application (BAA) - https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=deployment-capabilities-production-deployments#concept_c2l_1ks_fnb__baa
         enabled: true
         optional_components:
@@ -624,10 +630,10 @@ cp4ba:
           workflow_assistant: true # Will enable Authoring assistant for workflow authoring.
           workplace_assistant: true # Will enable Workplace assistant.
         gen_ai: # https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=customizing-enabling-generative-ai
-          apiKey: watsonx_ai_api_key
           mlUrl: https://us-south.ml.cloud.ibm.com
           projectId: project_id
-          defaultFoundationModel: meta-llama/llama-3-3-70b-instruct
+          apiKey: watsonx_ai_api_key
+          defaultFoundationModel: openai/gpt-oss-120b
   
   # Section for IBM Process mining
   pm:
@@ -761,6 +767,12 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
 | optional_components.ccxmo          | Set to `true` to enable Content Cortex for Microsoft Office | Yes | true, false  |
+| optional_components.ccxai          | Set to `true` to enable Content Cortex AI Services | Yes | true, false  |
+| ccxai_provider          |  Sub object for definition of LLM provider. Only watsonx.ai, configure other post-install | false  | Object |
+| ccxai_provider.url          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| ccxai_provider.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| ccxai_provider.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| ccxai_provider.model          | Set to desired ID of foundation model | false | Your real value, (default) openai/gpt-oss-120b |
 
 #### Application pattern properties
 
@@ -806,7 +818,7 @@ Placed in `cp4ba.patterns.workflow` key.
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
 | gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
-| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model (Only for Gen AI Service flow) | false | Your real value, (default) meta-llama/llama-3-3-70b-instruct |
+| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model (Only for Gen AI Service flow) | false | Your real value, (default) openai/gpt-oss-120b |
 
 ### Process Mining properties
 

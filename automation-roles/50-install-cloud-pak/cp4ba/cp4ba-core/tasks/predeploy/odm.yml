@@ -10,6 +10,17 @@
     state: present
     src: "{{ cp4ba_output_directory }}/odm-db-secret.yaml"
 
+- name: Prepare yaml file for ODM Keystore Secret
+  ansible.builtin.template:
+    src: odm/odm-keystore-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/odm-keystore-secret.yaml"
+    mode: u+rwx
+
+- name: Add ODM Keystore Secret
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/odm-keystore-secret.yaml"
+
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=access-mapping-odm-roles-iam-groups-users
 - name: Prepare yaml file for ODM web security Secret
   ansible.builtin.template:

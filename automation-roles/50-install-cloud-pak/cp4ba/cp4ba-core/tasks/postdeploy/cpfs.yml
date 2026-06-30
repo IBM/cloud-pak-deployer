@@ -172,6 +172,16 @@
 
           "
 
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
 - name: Create new Client
   ansible.builtin.uri:
     url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/registration"
@@ -179,10 +189,11 @@
     headers:
       Content-Type: application/json
       Authorization: "Bearer {{ iam_token }}"
+    body_format: json
     body:
       {
         "client_name": "cpmanager-client",
-        "client_id": cpmanager-client,
+        "client_id": "cpmanager-client",
         "client_secret": "{{ cp4ba_universal_password }}",
         "redirect_uris": [
           "*"
@@ -204,11 +215,12 @@
       }
     validate_certs: false
     status_code:
-      - 201
+      - 200
       - 400
   register: client_response
-  failed_when: client_response.status != 201 or (client_response.status != 400 and
-    client_response.json.error_description is not search('.*already exists.*'))
+  failed_when: client_response.status != 200 and
+    not (client_response.status == 400 and
+    client_response.json.error_description is search('.*already exists.*'))
 
 - name: Set usage entry for Client
   ansible.builtin.include_role:

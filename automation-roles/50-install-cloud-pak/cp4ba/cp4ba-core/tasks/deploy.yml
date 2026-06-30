@@ -5,6 +5,31 @@
   vars:
     common_output_to_var: "apps_endpoint_domain"
 
+- name: Prepare yaml file for UMS CR
+  ansible.builtin.template:
+    src: ums/ums-cr.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ums-cr.yaml"
+    mode: u+rwx
+
+- name: Add UMS CR
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ums-cr.yaml"
+
+- name: Wait for UMS instance ibmusagemetering Ready phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1
+    kind: IBMUsageMetering
+    name: ibmusagemetering
+    namespace: "{{ cp4ba_project_name }}"
+  register: ums
+  retries: 60
+  delay: 30
+  until: ('Ready' in phase)
+  vars:
+    condition_query: "resources[*].status.phase"
+    phase: "{{ ums | json_query(condition_query) | unique }}"
+
 - name: Load base CR to variable
   ansible.builtin.set_fact:
     cr: "{{ lookup('template', 'cr.yaml.j2') | from_yaml }}"
@@ -305,7 +330,7 @@
 
 - name: Add BAWAUT component
   ansible.builtin.set_fact:
-    components: "{{ components + ['baw_authoring', 'pfs'] }}"
+    components: "{{ components + ['baw_authoring', 'pfs', 'opensearch', 'application_connectors', 'workflow_runtime_mcp_server'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.1?topic=services-kafka
@@ -761,3 +786,30 @@
     common_condition_name: Ready
     common_retries: 60
     common_delay: 120
+
+- name: Deploy CCXAI
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ccxai
+  block:
+    - name: Prepare yaml file for CCX AI CR
+      ansible.builtin.template:
+        src: ccxai/ccxai-cr.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/ccxai-cr.yaml"
+        mode: u+rwx
+
+    - name: Add CCX AI CR
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ cp4ba_output_directory }}/ccxai-cr.yaml"
+
+    - name: Wait for CCX AI Services instance PostDeployCompleted state
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: ccxaiservices.operator.ibm.com/v1
+        common_resource_kind: CCXAIServices
+        common_resource_name: ai-services
+        common_resource_namespace: "{{ cp4ba_project_name }}"
+        common_condition_name: PostDeployCompleted
+        common_retries: 60
+        common_delay: 120

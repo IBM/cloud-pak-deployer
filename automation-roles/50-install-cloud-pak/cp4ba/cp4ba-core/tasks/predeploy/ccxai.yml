@@ -1,0 +1,10 @@
+- name: Prepare yaml file for CCX AI Secret
+  ansible.builtin.template:
+    src: ccxai/ccxai-secret.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ccxai-secret.yaml"
+    mode: u+rwx
+
+- name: Add CCX AI Secret
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ccxai-secret.yaml"
