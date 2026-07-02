@@ -30,6 +30,17 @@
     condition_query: "resources[*].status.phase"
     phase: "{{ ums | json_query(condition_query) | unique }}"
 
+- name: Prepare yaml file for UMS Metrics
+  ansible.builtin.template:
+    src: ums/ums-metrics.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ums-metrics.yaml"
+    mode: u+rwx
+
+- name: Add UMS Metrics
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ums-metrics.yaml"
+
 - name: Load base CR to variable
   ansible.builtin.set_fact:
     cr: "{{ lookup('template', 'cr.yaml.j2') | from_yaml }}"

@@ -196,8 +196,9 @@
         "client_id": "cpmanager-client",
         "client_secret": "{{ cp4ba_universal_password }}",
         "redirect_uris": [
-          "*"
+          "regexp:.*"
         ],
+        allow_regexp_redirects: true,
         "grant_types": [
           "authorization_code",
           "refresh_token"
@@ -216,9 +217,10 @@
     validate_certs: false
     status_code:
       - 200
+      - 201
       - 400
   register: client_response
-  failed_when: client_response.status != 200 and
+  failed_when: client_response.status != 201 and client_response.status != 200 and
     not (client_response.status == 400 and
     client_response.json.error_description is search('.*already exists.*'))
 

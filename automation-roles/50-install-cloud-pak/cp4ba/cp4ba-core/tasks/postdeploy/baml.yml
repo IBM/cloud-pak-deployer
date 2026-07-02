@@ -26,9 +26,9 @@
     common_output_to_var: "zen_token"
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=secrets-creating-custom-bpc-workforce-secret
-- name: Get BPM Systems Federated Response
+- name: Get BPM Systems WLE Response
   ansible.builtin.uri:
-    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/federated/v1/systems"
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/wle/v1/systems"
     method: GET
     headers:
       Authorization: "Bearer {{ zen_token }}"
@@ -36,6 +36,7 @@
     status_code:
       - 200
       - -1
+    return_content: true
   register: bpm_systems_response
   retries: 14
   delay: 30
@@ -48,7 +49,7 @@
     dest: "{{ cp4ba_output_directory }}/workforce-insights-config-secret.yaml"
     mode: u+rwx
   vars:
-    system_type_query: json.federationResult[?systemType=='SYSTEM_TYPE_WLE']
+    system_type_query: json.data.systems[?systemType=='SYSTEM_TYPE_WLE']
     system_id: "{{ bpm_systems_response | json_query(system_type_query) | first | json_query('systemID') }}"
     username: "{{ lc_principal_admin_user }}"
     password: "{{ lc_principal_admin_password }}"

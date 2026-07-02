@@ -96,7 +96,7 @@
     name: usage
     tasks_from: set-entry
   vars:
-    usage_entry_name: CP4BA-FileNet-Content-Manager-FNCM
+    usage_entry_name: CP4BA-FileNet-Content-Manager-FNCM-Content-Cortex-CCX
     usage_entry_value:
       "# FileNet Content Manager (FNCM) (content pattern)
 
@@ -238,6 +238,38 @@
         --tools \"*\" \\
 
         --app-id core-cs-mcp-server-connection
+
+      orchestrate connections add --app-id core-mcp-server-connection
+
+      orchestrate connections configure --app-id core-mcp-server-connection --environment draft --type member --kind oauth_auth_code_flow
+
+      orchestrate connections set-credentials --app-id core-mcp-server-connection \\
+
+        --environment draft \\
+
+        --client-id 'cpmanager-client' \\
+
+        --client-secret '{{ lc_principal_admin_password }}' \\
+
+        --auth-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize' \\
+
+        --token-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ccxai/mcpserver/token' \\
+
+        --scope openid
+
+      orchestrate toolkits add --kind mcp \\
+
+        --name core-mcp-server \\
+
+        --description \"core-mcp-server\" \\
+
+        --url \"https://core-mcp-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/mcp\" \\
+
+        --transport \"streamable_http\" \\
+
+        --tools \"*\" \\
+
+        --app-id core-mcp-server-connection
 
 
       ## MCP Servers configuration for Bob for OS1 object store
