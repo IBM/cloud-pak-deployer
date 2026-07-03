@@ -251,3 +251,30 @@
     common_condition_name: Ready
     common_retries: 60
     common_delay: 120
+
+- name: Deploy CCXAI
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ccxai
+  block:
+    - name: Prepare yaml file for CCX AI CR
+      ansible.builtin.template:
+        src: ccxai/ccxai-cr.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/ccxai-cr.yaml"
+        mode: u+rwx
+
+    - name: Add CCX AI CR
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ cp4ba_output_directory }}/ccxai-cr.yaml"
+
+    - name: Wait for CCX AI Services instance PostDeployCompleted state
+      ansible.builtin.include_role:
+        name: common
+        tasks_from: wait-resource-condition
+      vars:
+        common_api_version: ccxaiservices.operator.ibm.com/v1
+        common_resource_kind: CCXAIServices
+        common_resource_name: ai-services
+        common_resource_namespace: "{{ cp4ba_project_name }}"
+        common_condition_name: PostDeployCompleted
+        common_retries: 60
+        common_delay: 120
