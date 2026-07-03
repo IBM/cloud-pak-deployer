@@ -634,6 +634,7 @@ cp4ba:
           projectId: project_id
           apiKey: watsonx_ai_api_key
           defaultFoundationModel: openai/gpt-oss-120b
+        wxo_service_instance_url: https://api.hostname/instances/tenant_id
   
   # Section for IBM Process mining
   pm:
@@ -819,6 +820,7 @@ Placed in `cp4ba.patterns.workflow` key.
 | gen_ai.mlUrl          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
 | gen_ai.projectId          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.defaultFoundationModel          | Set to desired ID of foundation model (Only for Gen AI Service flow) | false | Your real value, (default) openai/gpt-oss-120b |
+| wxo_service_instance_url          | Set to desired instace URL of you WXO instance | false | Your real value, (default) https://api.hostname/instances/tenant_id |
 
 ### Process Mining properties
 
