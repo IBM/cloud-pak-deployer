@@ -51,6 +51,17 @@
     name: mail
   when: mail_enabled
 
+- name: Install CPFS
+  ansible.builtin.include_role:
+    name: cpfs
+
+- name: Install CP4BA Phase 1
+  ansible.builtin.include_role:
+    name: cp4ba-core
+  vars:
+    install_phase_1: true
+  when: _current_cp4ba_cluster.cp4ba.enabled
+
 - name: Install cloudbeaver
   ansible.builtin.include_role:
     name: cloudbeaver
@@ -65,15 +76,6 @@
   ansible.builtin.include_role:
     name: phpldapadmin
   when: openldap_enabled and _current_cp4ba_cluster.phpldapadmin_enabled
-
-- name: Install CPFS
-  ansible.builtin.include_role:
-    name: cpfs
-
-- name: Install CP4BA
-  ansible.builtin.include_role:
-    name: cp4ba-core
-  when: _current_cp4ba_cluster.cp4ba.enabled
 
 - name: Install Cerebro
   ansible.builtin.include_role:
@@ -122,3 +124,10 @@
   ansible.builtin.include_role:
     name: ica
   when: _current_cp4ba_cluster.ica.enabled
+
+- name: Install CP4BA Phase 2
+  ansible.builtin.include_role:
+    name: cp4ba-core
+  vars:
+    install_phase_2: true
+  when: _current_cp4ba_cluster.cp4ba.enabled
