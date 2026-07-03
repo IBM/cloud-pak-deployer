@@ -4,21 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ opensearch_project_name }}"
-    common_output_directory: "{{ opensearch_output_directory }}"
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Generate OpenSearch private key
   community.crypto.openssl_privatekey:
     path: "{{ opensearch_output_directory }}/opensearch.key"

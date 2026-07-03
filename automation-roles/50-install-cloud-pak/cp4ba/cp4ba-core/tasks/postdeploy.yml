@@ -1,3 +1,13 @@
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
 - name: Manage Operator
   ansible.builtin.include_tasks: postdeploy/operator.yml
 
@@ -9,6 +19,16 @@
 
 - name: Manage Zen
   ansible.builtin.include_tasks: postdeploy/zen.yml
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    common_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
 
 - name: Manage RR
   ansible.builtin.include_tasks: postdeploy/rr.yml
@@ -68,15 +88,6 @@
 - name: Manage BAWAUT
   ansible.builtin.include_tasks: postdeploy/bawaut.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
-
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ cp4ba_output_namespace }}"
-    common_output_directory: "{{ cp4ba_output_directory }}"
-    common_project_output_name: "cp4ba-output-project.yaml"
 
 - name: Prepare post-deploy.md
   ansible.builtin.template:

@@ -204,13 +204,6 @@
     common_retries: 25
     common_delay: 20
 
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Get IAM token
   ansible.builtin.include_role:
     name: common
@@ -595,15 +588,6 @@
     status_code:
       - 200
   register: update_response
-
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ pm_output_namespace }}"
-    common_output_directory: "{{ pm_output_directory }}"
-    common_project_output_name: "pm-output-project.yaml"
 
 - name: Prepare post-deploy.md
   ansible.builtin.template:

@@ -1,9 +1,22 @@
-- name: Get OCP Apps domain
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    projects_output_directory: "{{ generic_directory }}/projects"
+
+- name: Create Project
   ansible.builtin.include_role:
     name: common
-    tasks_from: apps-endpoint
+    tasks_from: create-project
   vars:
-    common_output_to_var: "apps_endpoint_domain"
+    common_namespace_name: "{{ main_project_name }}"
+    common_output_directory: "{{ projects_output_directory }}"
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ collateral_project_name }}"
+    common_output_directory: "{{ projects_output_directory }}"
 
 - name: Generate usage
   ansible.builtin.include_role:

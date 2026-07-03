@@ -4,14 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ phpldapadmin_project_name }}"
-    common_output_directory: "{{ phpldapadmin_output_directory }}"
-
 - name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
@@ -39,14 +31,6 @@
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
 
 - name: Crete Edge Route
   ansible.builtin.include_role:

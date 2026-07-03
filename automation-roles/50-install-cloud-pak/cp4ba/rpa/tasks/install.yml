@@ -7,13 +7,6 @@
   vars:
     common_icr_password: "{{ rpa_icr_password }}"
 
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Prepare yaml file for CatalogSource
   ansible.builtin.template:
     src: catalogsource.yaml.j2
@@ -432,15 +425,6 @@
     status_code:
       - 200
   register: add_team_response
-
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ rpa_output_namespace }}"
-    common_output_directory: "{{ rpa_output_directory }}"
-    common_project_output_name: "rpa-output-project.yaml"
 
 - name: Prepare post-deploy.md
   ansible.builtin.template:
