@@ -2,6 +2,16 @@
   ansible.builtin.set_fact:
     cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}"
 
+- name: Set output directory variable for Phase 1
+  ansible.builtin.set_fact:
+    cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}/phase-1"
+  when: "cp4ba_action == 'install' and (install_phase_1 | default(false))"
+
+- name: Set output directory variable for Phase 2
+  ansible.builtin.set_fact:
+    cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}/phase-2"
+  when: "cp4ba_action == 'install' and (install_phase_2 | default(false))"
+
 - name: Remove CP4BA directory for generated files
   ansible.builtin.file:
     path: "{{ cp4ba_output_directory }}"

@@ -1,13 +1,3 @@
-- name: Get IAM token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: iam-token-user
-  vars:
-    common_cpfs_project: "{{ cp4ba_project_name }}"
-    common_user: "{{ lc_principal_admin_user }}"
-    common_password: "{{ lc_principal_admin_password }}"
-    common_output_to_var: "iam_token"
-
 - name: Manage Operator
   ansible.builtin.include_tasks: postdeploy/operator.yml
 
@@ -19,6 +9,16 @@
 
 - name: Manage Zen
   ansible.builtin.include_tasks: postdeploy/zen.yml
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
 
 - name: Get Zen token
   ansible.builtin.include_role:

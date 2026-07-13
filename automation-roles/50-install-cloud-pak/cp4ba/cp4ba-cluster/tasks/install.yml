@@ -111,9 +111,11 @@
     name: mssql
   when: mssql_enabled
 
-- name: Install RPA
+- name: Install RPA Phase 1
   ansible.builtin.include_role:
     name: rpa
+  vars:
+    rpa_install_phase_1: true
   when: _current_cp4ba_cluster.rpa.enabled
 
 - name: Install BAMOE
@@ -137,3 +139,10 @@
   vars:
     install_phase_2: true
   when: _current_cp4ba_cluster.cp4ba.enabled
+
+- name: Install RPA Phase 2
+  ansible.builtin.include_role:
+    name: rpa
+  vars:
+    rpa_install_phase_2: true
+  when: _current_cp4ba_cluster.rpa.enabled
