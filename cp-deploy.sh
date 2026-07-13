@@ -703,9 +703,9 @@ if ! $INSIDE_CONTAINER;then
     # If images have not been overridden, set the variables here
     if [ -z $CPD_OLM_UTILS_V4_IMAGE ];then
       if [[ "${IMAGE_ARCH}" == "amd64" || "${ARCH}" == "arm64" ]]; then
-        export CPD_OLM_UTILS_V4_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:latest
+        export CPD_OLM_UTILS_V4_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:5.4.0
       else
-        export CPD_OLM_UTILS_V4_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:latest.${IMAGE_ARCH}
+        export CPD_OLM_UTILS_V4_IMAGE=icr.io/cpopen/cpd/olm-utils-v4:5.4.0.${IMAGE_ARCH}
       fi
     else
       echo "Custom olm-utils-v4 image ${CPD_OLM_UTILS_V4_IMAGE} will be used."
