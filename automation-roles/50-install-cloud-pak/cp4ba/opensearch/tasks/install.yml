@@ -108,6 +108,25 @@
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ opensearch_output_directory }}"
 
+- name: Create Unsecured Route
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: route.openshift.io/v1
+      kind: Route
+      metadata:
+        name: opensearch-unsecured
+        namespace: "{{ opensearch_project_name }}"
+      spec:
+        host: "opensearch-unsecured-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}"
+        to:
+          kind: Service
+          name: opensearch
+          weight: 100
+        port:
+          targetPort: http
+        wildcardPolicy: None
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
@@ -122,6 +141,8 @@
       ## Endpoints
 
       - Main 9200 port: https://opensearch-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}
+
+      - Main 9200 port unsecured: https://opensearch-unsecured-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}
 
       ## Credentials
 
