@@ -1,4 +1,5 @@
 ## Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/26.0.0?topic=ccas-configuring-content-cortex-ai-services-support-external-mcp-clients
+
 - name: Prepare yaml file for CCX AI CM
   ansible.builtin.template:
     src: ccxai/ccxai-configmap.yaml.j2
@@ -67,3 +68,89 @@
     common_condition_name: Available
     common_retries: 80
     common_delay: 15
+
+## Based on https://www.ibm.com/docs/en/content-cortex/26.0.0?topic=pcpeccas-egistering-object-store-use-content-cortex-ai-services
+
+- name: Set CCX AI object store list
+  ansible.builtin.set_fact:
+    ccxai_os_list: ["CONTENT", "OS1", "OS2", "OS3"]
+
+- name: Add BAWTOS to CCX AI object store list
+  ansible.builtin.set_fact:
+    ccxai_os_list: "{{ ccxai_os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Create CCX AI metadata tool directory
+  ansible.builtin.file:
+    path: "{{ cp4ba_output_directory }}/ccxaitools"
+    state: directory
+    mode: u+rwx
+
+- name: Unzip CCX AI Services metadata tool
+  ansible.builtin.unarchive:
+    src: "files/ccxai/ICCXAIST.zip"
+    dest: "{{ cp4ba_output_directory }}/ccxaitools"
+    creates: "{{ cp4ba_output_directory }}/ccxaitools/ccx-ai-services-metadata/ccx_ai_metadata.sh"
+
+- name: Create Java pod for CCX AI metadata population
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: ccxaitools
+        namespace: "{{ cp4ba_project_name }}"
+      spec:
+        containers:
+          - name: openjdk-container
+            image: ubi9/openjdk-17-runtime:1.21-1
+            command: ["/bin/sh", "-c", "sleep 3600"]
+    wait: true
+
+- name: Copy ccx-ai-services-metadata folder to Java pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: ccxaitools
+    container: openjdk-container
+    remote_path: /tmp/ccx-ai-services-metadata
+    local_path: "{{ cp4ba_output_directory }}/ccxaitools/ccx-ai-services-metadata"
+    no_preserve: true
+    state: to_pod
+
+- name: Make ccx_ai_metadata.sh executable in Java pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: ccxaitools
+    container: openjdk-container
+    command: chmod +x /tmp/ccx-ai-services-metadata/ccx_ai_metadata.sh
+
+- name: Update ECMPopulation.properties and register object store with CCX AI
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: ccxaitools
+    container: openjdk-container
+    command: >-
+      /bin/sh -c '
+      sed -i
+      -e "s|psi.URI=.*|psi.URI=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/wsi/FNCEWS40MTOM/|"
+      -e "s|psi.UserName=.*|psi.UserName={{ lc_principal_admin_user }}|"
+      -e "s|psi.Password=.*|psi.Password={{ lc_principal_admin_password }}|"
+      -e "s|psi.ObjectStoreName=.*|psi.ObjectStoreName={{ item }}|"
+      -e "s|psi.DomainName=.*|psi.DomainName=P8DOMAIN|"
+      -e "s|pop.ExistingStoragePolicyName=.*|pop.ExistingStoragePolicyName={{ 'Default Database Storage Policy' if item == 'CONTENT' else 'Default ASA Storage Policy' }}|"
+      -e "s|rs.CP.javascriptFile=.*|rs.CP.javascriptFile=/tmp/ccx-ai-services-metadata/data/RsChangePreprocessor.js|"
+      /tmp/ccx-ai-services-metadata/data/ECMPopulation.properties
+      && cd /tmp/ccx-ai-services-metadata
+      && JAVA_HOME=/usr/lib/jvm/java-17-openjdk bash ./ccx_ai_metadata.sh create CE_metadata.xml
+      && JAVA_HOME=/usr/lib/jvm/java-17-openjdk bash ./ccx_ai_metadata.sh insert MessageLoader.xml'
+  register: ccxai_register_result
+  failed_when: ccxai_register_result.rc is defined and ccxai_register_result.rc != 0
+  loop: "{{ ccxai_os_list }}"
+
+- name: Cleanup Java pod after CCX AI metadata population
+  kubernetes.core.k8s:
+    state: absent
+    kind: Pod
+    name: ccxaitools
+    namespace: "{{ cp4ba_project_name }}"
