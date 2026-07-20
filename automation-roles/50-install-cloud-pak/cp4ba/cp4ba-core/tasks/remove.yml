@@ -95,6 +95,28 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
   when: flink_deployments.resources | length != 0
 
+# wait for the ConnectivityPack instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for ConnectivityPack intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: icp4a.ibm.com/v1
+    kind: ConnectivityPack
+    namespace: "{{ cp4ba_project_name }}"
+  register: connpack_deployments
+  retries: 3
+  delay: 30
+  until: connpack_deployments.resources | length == 0
+  ignore_errors: true
+
+- name: Clear ConnectivityPack instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: icp4a.ibm.com/v1
+    common_kind: ConnectivityPack
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: connpack_deployments.resources | length != 0
+
 - name: Remove Catalog Sources
   kubernetes.core.k8s:
     state: absent

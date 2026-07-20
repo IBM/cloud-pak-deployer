@@ -1,0 +1,186 @@
+- name: Configure Gen AI
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          changeObject(
+            repositoryIdentifier: \"{{ item }}\"
+            classIdentifier: \"GenaiConfiguration\"
+            identifier: \"{E062708C-0000-C817-9209-7AA8350812CF}\"
+            properties: [
+              {GenaiAccessCode: \"ClientManaged\"},
+              {GenaiServiceUrl: \"https://content-assistant-svc.{{ ica_project_name }}.svc.cluster.local:9443\"},
+              {GenaiLLMDefaultModel: \"{{ _current_cp4ba_cluster.ica.gen_ai.defaultFoundationModel | default('openai/gpt-oss-120b') }}\"},
+              {GenaiEmbeddingModelName: \"{{ _current_cp4ba_cluster.ica.gen_ai.defaultEmbeddingModel | default('intfloat/multilingual-e5-large') }}\"}
+            ]
+            actions: [{type: UPDATE}]
+          ) {
+            properties(includes: [\"GenaiAccessCode\",\"GenaiServiceUrl\", \"GenaiLLMDefaultModel\", \"GenaiEmbeddingModelName\"]) {
+              alias
+              value
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: gen_ai_graphql_response
+  failed_when: "'errors' in gen_ai_graphql_response.content and 'Cannot change embedding model property' not in gen_ai_graphql_response.content"
+
+- name: Manage subscriptions
+  when: "'Cannot change embedding model property' not in gen_ai_graphql_response.content"
+  block:
+    - name: Get Document Class Description
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "{
+              classDescription (repositoryIdentifier: \"{{ item }}\" identifier: \"Document\") {
+                id
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+
+    - name: Set Document Class Description ID
+      ansible.builtin.set_fact:
+        document_class_id: "{{ graphql_response.json.data.classDescription.id }}"
+
+    - name: Create Vector Index Subscription
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "mutation {
+              changeObject(
+                repositoryIdentifier: \"{{ item }}\"
+                properties: [
+                  {DisplayName: \"Document Vector Index\"},
+                  {IncludeSubclassesRequested: true},
+                  {IsEnabled: true},
+                  {IsSynchronous: true}
+                ]
+                objectProperties: [
+                  {
+                    identifier: \"EventAction\", objectReferenceValue: {
+                      identifier: \"{9F3DD4AF-2186-40DF-8AAE-55B9B65BDDF1}\"
+                    }
+                  },
+                  {
+                    identifier: \"SubscriptionTarget\", objectReferenceValue: {
+                      classIdentifier: \"ClassDefinition\", identifier: \"{{ document_class_id }}\"
+                    }
+                  },
+                  {
+                    identifier: \"SubscribedEvents\", dependentObjectListValue: {
+                      replace: [
+                        {objectProperties: [
+                          {identifier: \"EventClass\", objectReferenceValue: {identifier: \"UpdateEvent\"}}
+                        ]},
+                        {objectProperties: [
+                          {identifier: \"EventClass\", objectReferenceValue: {identifier: \"CheckinEvent\"}}
+                        ]}
+                      ]
+                    }
+                  }
+                ]
+                actions: [{type: CREATE, subCreateAction: {classId: \"ClassSubscription\"}}]
+              ) {
+                className
+                properties(includes: [\"Id\",\"DisplayName\"]) {
+                  alias
+                  value
+                }
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"
+
+    - name: Create Summary Subscription
+      ansible.builtin.uri:
+        url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+        method: POST
+        headers:
+          Content-Type: application/json
+          Authorization: "Bearer {{ zen_token }}"
+        body_format: json
+        body:
+          {
+            query: "mutation {
+              changeObject(
+                repositoryIdentifier: \"{{ item }}\"
+                properties: [
+                  {DisplayName: \"Document Summary\"},
+                  {IncludeSubclassesRequested: true},
+                  {IsEnabled: true},
+                  {IsSynchronous: true}
+                ]
+                objectProperties: [
+                  {
+                    identifier: \"EventAction\", objectReferenceValue: {
+                      identifier: \"{C3A08824-B416-49D7-815A-00715B12E4C2}\"
+                    }
+                  },
+                  {
+                    identifier: \"SubscriptionTarget\", objectReferenceValue: {
+                      classIdentifier: \"ClassDefinition\", identifier: \"{{ document_class_id }}\"
+                    }
+                  },
+                  {
+                    identifier: \"SubscribedEvents\", dependentObjectListValue: {
+                      replace: [
+                        {objectProperties: [
+                          {identifier: \"EventClass\", objectReferenceValue: {identifier: \"UpdateEvent\"}}
+                        ]},
+                        {objectProperties: [
+                          {identifier: \"EventClass\", objectReferenceValue: {identifier: \"CheckinEvent\"}}
+                        ]}
+                      ]
+                    }
+                  }
+                ]
+                actions: [{type: CREATE, subCreateAction: {classId: \"ClassSubscription\"}}]
+              ) {
+                className
+                properties(includes: [\"Id\",\"DisplayName\"]) {
+                  alias
+                  value
+                }
+              }
+            }"
+          }
+        validate_certs: false
+        return_content: true
+        status_code:
+          - 200
+      register: graphql_response
+      failed_when: "'errors' in graphql_response.content"

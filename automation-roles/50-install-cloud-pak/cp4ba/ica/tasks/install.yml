@@ -201,6 +201,66 @@
     common_retries: 30
     common_delay: 120
 
+- name: Copy plugin to status dir
+  ansible.builtin.copy:
+    src: "files/genaiPlugin.jar"
+    dest: "{{ ica_output_directory }}/genaiPlugin.jar"
+    mode: u+rwx
+
+- name: Get ICN pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
+  register: icn_pod
+
+- name: Copy plugin to ICN pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ icn_pod.resources[0].metadata.name }}"
+    remote_path: /opt/ibm/plugins/genaiPlugin.jar
+    local_path: "{{ ica_output_directory }}/genaiPlugin.jar"
+    no_preserve: true
+    state: to_pod
+
+- name: Configure plugin
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/plugins"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "id": "GenAIPlugin",
+        "pluginJar": {
+          "filePath": "/opt/ibm/plugins/genaiPlugin.jar",
+          "validateChecksum": false
+        },
+        "orderIndex": 1,
+        "configuration": "{\"desktopSuggestions\":[]}"
+      }
+    validate_certs: false
+    status_code:
+      - 200
+      - 409
+
+- name: Set CCX AI object store list
+  ansible.builtin.set_fact:
+    ica_os_list: ["CONTENT", "OS1", "OS2"]
+
+- name: Add BAWTOS to CCX AI object store list
+  ansible.builtin.set_fact:
+    ica_os_list: "{{ ica_os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Configure ICA on Object Stores
+  ansible.builtin.include_tasks: configure-os.yml
+  loop: "{{ ica_os_list }}"
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage

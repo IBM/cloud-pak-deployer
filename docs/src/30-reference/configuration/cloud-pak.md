@@ -663,6 +663,21 @@ cp4ba:
           watson-nlp:
             replicas: 1
 
+  # Section for IBM Business Automation Manager Open Editions
+  bamoe:
+    # Set to false if you don't want to install (or remove) BAMOE
+    enabled: true
+
+  # Section for IBM Content Assistant
+  ica:
+    # Set to false if you don't want to install (or remove) ICA
+    enabled: true
+    gen_ai:
+      apiKey: watsonx_ai_api_key
+      spaceId: space_id
+      defaultFoundationModel: openai/gpt-oss-120b
+      defaultEmbeddingModel: intfloat/multilingual-e5-large
+
   # Set to false if you don't want to install (or remove) CloudBeaver (PostgreSQL, DB2, MSSQL UI)
   cloudbeaver_enabled: true
 
@@ -862,6 +877,8 @@ Placed in `ica` key on the project level.
 | gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cacms/1.0.x?topic=software-configuring-service-id-your-watsonxai-account | false  | Object |
 | gen_ai.apiKey          | Set to real value of your Watsonx.AI platform | false | Your real value |
 | gen_ai.spaceId          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.defaultFoundationModel          | Set to desired ID of foundation model | false | Your real value, (default) openai/gpt-oss-120b |
+| gen_ai.defaultEmbeddingModel          | Set to desired ID of embedding model | false | Your real value, (default) intfloat/multilingual-e5-large |
 
 ### Other properties
 

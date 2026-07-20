@@ -98,7 +98,7 @@
     kind: Pod
     namespace: "{{ cp4ba_project_name }}"
     label_selectors:
-      - "app.kubernetes.io=managed-by={{ cp4ba_cr_meta_name }}-cpe-deploy"
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-cpe-deploy"
   register: cpe_pod
 
 - name: Copy ccx-ai-services-metadata folder to CPE pod
@@ -143,3 +143,44 @@
     namespace: "{{ cp4ba_project_name }}"
     pod: "{{ cpe_pod.resources[0].metadata.name }}"
     command: rm -rf /tmp/ccx-ai-services-metadata
+
+- name: Get ICN pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
+  register: icn_pod
+
+- name: Copy plugin to ICN pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ icn_pod.resources[0].metadata.name }}"
+    remote_path: /opt/ibm/plugins/genaiAgentPlugin.jar
+    local_path: "{{ cp4ba_output_directory }}/ccxaitools/genaiAgentPlugin.jar"
+    no_preserve: true
+    state: to_pod
+
+- name: Configure plugin
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/plugins"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "id": "GenAIAgentPlugin",
+        "pluginJar": {
+          "filePath": "/opt/ibm/plugins/genaiAgentPlugin.jar",
+          "validateChecksum": false
+        },
+        "orderIndex": 1,
+        "configuration": "{\"serverUrl\":\"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/reasoningservice/\"}"
+      }
+    validate_certs: false
+    status_code:
+      - 200
+      - 409
