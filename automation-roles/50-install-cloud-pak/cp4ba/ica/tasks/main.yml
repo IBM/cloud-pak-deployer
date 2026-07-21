@@ -2,6 +2,16 @@
   ansible.builtin.set_fact:
     ica_output_directory: "{{ ica_base_dir }}/{{ ica_dir_name }}"
 
+- name: Set output directory variable for Phase 1
+  ansible.builtin.set_fact:
+    ica_output_directory: "{{ ica_base_dir }}/{{ ica_dir_name }}/phase-1"
+  when: "ica_action == 'install' and (ica_install_phase_1 | default(false))"
+
+- name: Set output directory variable for Phase 2
+  ansible.builtin.set_fact:
+    ica_output_directory: "{{ ica_base_dir }}/{{ ica_dir_name }}/phase-2"
+  when: "ica_action == 'install' and (ica_install_phase_2 | default(false))"
+
 - name: Remove ICA directory for generated files
   ansible.builtin.file:
     path: "{{ ica_output_directory }}"
@@ -13,9 +23,13 @@
     state: directory
     mode: u+rwx
 
-- name: Install ICA
-  ansible.builtin.include_tasks: install.yml
-  when: "ica_action == 'install'"
+- name: Install ICA Phase 1
+  ansible.builtin.include_tasks: install-phase-1.yml
+  when: "ica_action == 'install' and (ica_install_phase_1 | default(false))"
+
+- name: Install ICA Phase 2
+  ansible.builtin.include_tasks: install-phase-2.yml
+  when: "ica_action == 'install' and (ica_install_phase_2 | default(false))"
 
 - name: Remove ICA
   ansible.builtin.include_tasks: remove.yml

@@ -128,9 +128,11 @@
     name: opensearch
   when: opensearch_enabled
 
-- name: Install ICA
+- name: Install ICA Phase 1
   ansible.builtin.include_role:
     name: ica
+  vars:
+    ica_install_phase_1: true
   when: _current_cp4ba_cluster.ica.enabled
 
 - name: Install CP4BA Phase 2
@@ -146,3 +148,10 @@
   vars:
     rpa_install_phase_2: true
   when: _current_cp4ba_cluster.rpa.enabled
+
+- name: Install ICA Phase 2
+  ansible.builtin.include_role:
+    name: ica
+  vars:
+    ica_install_phase_2: true
+  when: _current_cp4ba_cluster.ica.enabled
