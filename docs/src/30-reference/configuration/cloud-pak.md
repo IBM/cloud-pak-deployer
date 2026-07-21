@@ -589,7 +589,7 @@ cp4ba:
           icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
           ccxmo: true # Content Cortex for Microsoft Office (CCXMO)
           ccxai: true # Content Coretex Ai Services
-        gen_ai: # Only watsonx.ai for ccx AI services, configure other post-install
+        gen_ai:
           mlUrl: https://us-south.ml.cloud.ibm.com
           projectId: project_id
           apiKey: watsonx_ai_api_key
@@ -784,11 +784,11 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
 | optional_components.ccxmo          | Set to `true` to enable Content Cortex for Microsoft Office | Yes | true, false  |
 | optional_components.ccxai          | Set to `true` to enable Content Cortex AI Services | Yes | true, false  |
-| ccxai_provider          |  Sub object for definition of LLM provider. Only watsonx.ai, configure other post-install | false  | Object |
-| ccxai_provider.url          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
-| ccxai_provider.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
-| ccxai_provider.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value |
-| ccxai_provider.model          | Set to desired ID of foundation model | false | Your real value, (default) openai/gpt-oss-120b |
+| gen_ai          |  Sub object for definition of LLM provider. | false  | Object |
+| gen_ai.url          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| gen_ai.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.model          | Set to desired ID of foundation model | false | Your real value, (default) openai/gpt-oss-120b |
 
 #### Application pattern properties
 

@@ -12,7 +12,7 @@
     os_list: "{{ os_list + ['BAWTOS', 'BAWDOS', 'BAWDOCS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
-- name: Add BAW to OS list
+- name: Add AEOS to OS list
   ansible.builtin.set_fact:
     os_list: "{{ os_list + ['AEOS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and
@@ -63,6 +63,66 @@
   register: graphql_response
   failed_when: "'errors' in graphql_response.content"
   with_items: "{{ os_list }}"
+
+- name: Set PTE object store list
+  ansible.builtin.set_fact:
+    pte_os_list: ["CONTENT", "OS1", "OS2", "OS3"]
+
+- name: Add BAWTOS to PTE object store list
+  ansible.builtin.set_fact:
+    pte_os_list: "{{ ccxai_os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Enable Permanent Text Extration
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          admUpdateClassDefinition(
+            repositoryIdentifier: \"{{ item }}\"
+            identifier: \"Document\"
+            classDefinitionProperties: {
+              objectProperties: [
+                {
+                  identifier: \"TextIndexingPreprocessorDefinitions\"
+                  dependentObjectListValue: {
+                    modify: [
+                      {
+                        insertAction: {}
+                        properties:[
+                          {DisplayName: \"TIPD Persistent Text Extract\"}
+                        ]
+                        objectProperties:[
+                          {
+                            identifier: \"TextIndexingPreprocessorAction\"
+                            objectReferenceValue:{
+                              identifier: \"{B83DD197-BC50-C401-87B5-8C63B9A00000}\"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          )
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content and
+    'A uniqueness requirement has been violated' not in graphql_response.content"
+  with_items: "{{ pte_os_list }}"
 
 - name: Set usage entry
   ansible.builtin.include_role:
