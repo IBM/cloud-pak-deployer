@@ -21,6 +21,16 @@ image_registry:
 - name: cpd453
   registry_host_name: registry.coc.ibm.com
   registry_port: 5000
+  registry_namespace: cpd453
+  registry_insecure: True
+```
+
+or:
+
+``` { .yaml .copy }
+image_registry:
+- name: cpd453
+  registry_url: https://registry.coc.ibm.com:5000/cpd453
   registry_insecure: True
 ```
 
@@ -38,7 +48,7 @@ cp4d:
     The deployer only supports using a private registry for the Cloud Pak images, not for OpenShift itself. Air-gapped installation of OpenShift is currently not in scope for the deployer.
 
 !!! warning
-    The `registry_host_name` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
+    The `registry_host_name` or `registry_url` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
 
 The main 3 directories that are needed for both types of air-gapped installations are:
 

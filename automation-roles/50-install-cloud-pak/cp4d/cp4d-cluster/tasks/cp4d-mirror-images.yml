@@ -9,14 +9,35 @@
       secret_group: "{{ environment_name }}"
       _p_secret_variable: ibm_cp_entitlement_key
 
+  - name: Split registry_url into hostname, port and namespace if URL specified
+    vars:
+      # Strip scheme (http:// or https://) then split on the first /
+      _no_scheme: "{{ current_image_registry.registry_url | regex_replace('^https?://', '') }}"
+      _host_part: "{{ _no_scheme.split('/')[0] }}"
+      _namespace: "{{ _no_scheme.split('/', 1)[1] | default('') }}"
+      _hostname: "{{ _host_part.split(':')[0] }}"
+      _port: "{{ _host_part.split(':')[1] | default('') }}"
+    set_fact:
+      _registry_hostname: "{{ _hostname }}"
+      _registry_port: "{{ _port }}"
+      _registry_namespace: "{{ _namespace }}"
+    when: (current_image_registry.registry_url | default('')) != ''
+
+  - name: Set registry host name, port and namespace if separate attributes were set
+    set_fact:
+      _registry_hostname: "{{ current_image_registry.registry_hostname }}"
+      _registry_port: "{{ current_image_registry.registry_port | default('') }}"
+      _registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+    when: (current_image_registry.registry_url | default('')) == ''
+
   - name: Mirror images for Cloud Pak for Data from entitled to private registry {{ current_cp4d_cluster.image_registry_name }}
     include_role: 
       name: cp4d-mirror-images
     vars:
       _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-      _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
-      _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
-      _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+      _p_target_registry_hostname: "{{ _registry_host_name }}"
+      _p_target_registry_port: "{{ _registry_port }}"
+      _p_target_registry_namespace: "{{ _registry_namespace }}"
       _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
       _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
   when: 
@@ -30,9 +51,9 @@
     _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
     _p_source_registry_hostname: "{{ _v_portable_registry }}"
     _p_source_registry_port: "{{ _v_portable_registry_port }}"
-    _p_target_registry_hostname: "{{ current_image_registry.registry_host_name }}"
-    _p_target_registry_port: "{{ current_image_registry.registry_port | default('') }}"
-    _p_target_registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+    _p_target_registry_hostname: "{{ _registry_host_name }}"
+    _p_target_registry_port: "{{ _registry_port }}"
+    _p_target_registry_namespace: "{{ _registry_namespace }}"
     _p_target_registry_credentials_secret: "image-registry-{{ current_cp4d_cluster.image_registry_name }}"
     _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
   when: cpd_airgap | bool
