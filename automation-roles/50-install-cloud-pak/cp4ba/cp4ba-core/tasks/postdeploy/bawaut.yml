@@ -79,185 +79,126 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: CP4BA-Business-Automation-Workflow-Authoring-BAWAUT
-    usage_entry_value:
-      "# Business Automation Workflow Authoring (BAWAUT)
+    usage_entry_value: |-
+      # Business Automation Workflow Authoring (BAWAUT)
 
       ## Endpoints
 
       - Process Portal: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/ProcessPortal
-
       - Process Admin: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/ProcessAdmin
-
       - Process Inspector: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/ProcessInspector
-
       - OAS REST API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpm/explorer
-
       - OAS REST API Operations: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpm/explorer/?url=/bas/ops/docs
-
       - OAS REST API Case: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpm/explorer/?url=/bas/case/docs
-
       - Original REST API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/bpmrest-ui
-
       - Systems: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/rest/bpm/wle/v1/systems
-
-      - Workplace on App Engine: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=workplace \
-      (If you encounter error stating that you are using self-signed certificates, clear you cookies)
-
+      - Workplace on App Engine: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=workplace
+        - If you encounter error stating that you are using self-signed certificates, clear your cookies
       - Workplace on BAS: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/Workplace
-
       - Case monitor: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=bawmonitor
-
       - Case Client: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=baw
-
       - Case administration: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=bawadmin
-
       - Case REST endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/CaseManager/CASEREST/v2
-
       - Case Builder: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas/CaseBuilder
-
       - Workflow Runtime MCP Server Process URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/process/mcp
-
       - Workflow Runtime MCP Server Case URL: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/case/mcp
-
       - Workflow Runtime MCP Server Token Endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/token
-
       - Workflow Runtime MCP Server Authorization Endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize
-
 
       ## Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-
       ## FNCM Server definition in BAW:
 
-      \ \ - Host name: icp4adeploy-cmis-svc.cp4ba.svc.cluster.local
-
-      \ \ - Port: 9443
-
-      \ \ - Context path: /cmis/openfncmis_wlp/services
-
-      \ \ - Secure server: true
-
-      \ \ - Repository: depends on which you want to connect in internal FNCM (e.g. BAWDOCS or CONTENT)
-
-      \ \ - Credentials as in Credentials section
-
+      - Host name: icp4adeploy-cmis-svc.cp4ba.svc.cluster.local
+      - Port: 9443
+      - Context path: /cmis/openfncmis_wlp/services
+      - Secure server: true
+      - Repository: depends on which you want to connect in internal FNCM (e.g. BAWDOCS or CONTENT)
+      - Credentials as in Credentials section
 
       ## BAW SQL Integration
 
       The BAWAUT Liberty server is configured to connect with the Postgres 'bawexternal' database.
-
       This allows you to perform queries with the 'SQL Integration' Services from 'System Data' Toolkit.
-
       For testing convenience, a default table named 'public.user_db' is created with some data.
-
       Note: You can create your own tables/objects in the bawexternal database.
 
-
       BAWEXTERNAL Informations:
-
       - JNDI DataSourceName: 'jdbc/bawexternal'
-
       - Default testing table: 'public.user_db'
-
 
       ## MCP Servers configuration for watsonx Orchestrate
 
       Based on https://github.com/ibmbpm/ibm-baw-mcp-server for original MCP Server
-
       Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/26.0.0?topic=server-getting-started-workflow-runtime-mcp for Workflow Runtime MCP Server
 
+      ```bash
       orchestrate connections add --app-id baw-mcp-server-connection
 
       orchestrate connections configure --app-id baw-mcp-server-connection --environment draft --type team --kind key_value
 
-      orchestrate connections set-credentials --app-id baw-mcp-server-connection \\
-
-        --environment draft \\
-
-        --entries ENDPOINT=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas \\
-
+      orchestrate connections set-credentials --app-id baw-mcp-server-connection \
+        --environment draft \
+        --entries ENDPOINT=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas \
         --entries API_KEY=ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name baw-mcp-server \\
-
-        --description \"baw-mcp-server\" \\
-
-        --command \"uvx --from git+https://github.com/ibmbpm/ibm-baw-mcp-server ibm-baw-mcp-server\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name baw-mcp-server \
+        --description "baw-mcp-server" \
+        --command "uvx --from git+https://github.com/ibmbpm/ibm-baw-mcp-server ibm-baw-mcp-server" \
+        --tools "*" \
         --app-id baw-mcp-server-connection
-
 
       orchestrate connections add --app-id baw-workflow-runtime-mcp-server-connection
 
       orchestrate connections configure --app-id baw-workflow-runtime-mcp-server-connection --environment draft --type member --kind oauth_auth_code_flow
 
-      orchestrate connections set-credentials --app-id baw-workflow-runtime-mcp-server-connection \\
-
-        --environment draft \\
-
-        --client-id 'cpmanager-client' \\
-
-        --client-secret '{{ lc_principal_admin_password }}' \\
-
-        --auth-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize' \\
-
-        --token-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/token' \\
-
+      orchestrate connections set-credentials --app-id baw-workflow-runtime-mcp-server-connection \
+        --environment draft \
+        --client-id 'cpmanager-client' \
+        --client-secret '{{ lc_principal_admin_password }}' \
+        --auth-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize' \
+        --token-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/token' \
         --scope openid
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name baw-workflow-runtime-process-mcp-server \\
-
-        --description \"baw-workflow-runtime-mcp-server\" \\
-
-        --url \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/process/mcp\" \\
-
-        --transport \"streamable_http\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name baw-workflow-runtime-process-mcp-server \
+        --description "baw-workflow-runtime-mcp-server" \
+        --url "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/process/mcp" \
+        --transport "streamable_http" \
+        --tools "*" \
         --app-id baw-workflow-runtime-mcp-server-connection
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name baw-workflow-runtime-case-mcp-server \\
-
-        --description \"baw-workflow-runtime-mcp-server\" \\
-
-        --url \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/case/mcp\" \\
-
-        --transport \"streamable_http\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name baw-workflow-runtime-case-mcp-server \
+        --description "baw-workflow-runtime-mcp-server" \
+        --url "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/workflow-runtime-mcp-server-ins1/case/mcp" \
+        --transport "streamable_http" \
+        --tools "*" \
         --app-id baw-workflow-runtime-mcp-server-connection
-
+      ```
 
       ## MCP Servers configuration for Bob
 
       Based on https://github.com/ibmbpm/ibm-baw-mcp-server
 
+      ```json
       {
-        \"mcpServers\": {
-          \"baw-mcp-server\": {
-            \"command\": \"uvx\",
-            \"args\": [
-              \"--from\",
-              \"git+https://github.com/ibmbpm/ibm-baw-mcp-server\",
-              \"ibm-baw-mcp-server\"
+        "mcpServers": {
+          "baw-mcp-server": {
+            "command": "uvx",
+            "args": [
+              "--from",
+              "git+https://github.com/ibmbpm/ibm-baw-mcp-server",
+              "ibm-baw-mcp-server"
             ],
-            \"env\": {
-              \"ENDPOINT\": \"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas\",
-              \"API_KEY\": \"ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}\"
+            "env": {
+              "ENDPOINT": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/bas",
+              "API_KEY": "ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}"
             }
           }
         }
       }
-      "
+      ```

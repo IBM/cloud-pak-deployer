@@ -108,7 +108,7 @@
     rpa_tenant_id: "{{ token_response.json.tenants[0].id }}"
 
 # ansible.builtin.uri not working
-- name: Get RPA token
+- name: Get RPA token # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.0/token' \
@@ -119,7 +119,6 @@
     --data-urlencode 'grant_type=password'
   register: rpa_token_response
   changed_when: false
-  # noqa: command-instead-of-module
 
 - name: Set rpa_token
   ansible.builtin.set_fact:
@@ -244,17 +243,14 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: RPA
-    usage_entry_value:
-      "# RPA
+    usage_entry_value: |-
+      # RPA
 
       # Endpoints
 
       - UI: https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/ui
-
       - API: https://cpd-{{ rpa_project_name }}.{{ apps_endpoint_domain }}/rpa/api/v1.2/en/configuration
 
       # Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
-      "

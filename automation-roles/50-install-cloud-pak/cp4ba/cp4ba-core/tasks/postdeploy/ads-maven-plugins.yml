@@ -29,7 +29,7 @@
         dest: "{{ cp4ba_output_directory }}/{{ plugin_file_name }}"
         mode: u+rwx
 
-    - name: Upload plugin to Nexus
+    - name: Upload plugin to Nexus # noqa: command-instead-of-module
       ansible.builtin.command: |
         curl -kX 'POST' \
         'https://nexus-{{ cp4ba_nexus_project }}.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=maven-releases' \
@@ -45,4 +45,3 @@
       register: ads_curl_result
       changed_when: true
       failed_when: ads_curl_result.stdout != "204"
-      # noqa: command-instead-of-module

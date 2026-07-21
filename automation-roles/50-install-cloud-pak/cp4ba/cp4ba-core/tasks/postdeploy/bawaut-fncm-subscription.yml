@@ -106,7 +106,7 @@
         (folder_response.json | json_query('errors[0].extensions.serverErrorMessage')
           is not match('A uniqueness requirement has been violated. The value for property FolderName of class Folder is not unique.'))
 
-    - name: Add Code Module
+    - name: Add Code Module # noqa: command-instead-of-module
       ansible.builtin.command: |
         curl -ks --location 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql' \
         --header 'Authorization: Bearer {{ zen_token }}' \
@@ -137,7 +137,6 @@
       register: curl_output
       failed_when: curl_output.rc != 0 or (curl_output.stdout | from_json | default({}) == {})
       changed_when: false
-      # noqa: command-instead-of-module
 
     - name: Parse JSON response
       ansible.builtin.set_fact:

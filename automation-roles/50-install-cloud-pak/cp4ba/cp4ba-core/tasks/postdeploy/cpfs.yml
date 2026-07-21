@@ -155,22 +155,18 @@
         tasks_from: set-entry
       vars:
         usage_entry_name: CP4BA-CPFS-Business-Teams-Service-BTS
-        usage_entry_value:
-          "# Business Teams Service (BTS)
+        usage_entry_value: |-
+          # Business Teams Service (BTS)
 
           ## Endpoints
 
           - Admin UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/ui
-
           - API Explorer: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/api/explorer
-
           - Teams API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/teamserver/rest
 
           ## Credentials
 
           - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
-          "
 
 - name: Get IAM token
   ansible.builtin.include_role:
@@ -230,16 +226,13 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: CP4BA-CPFS-cpmanager-client
-    usage_entry_value:
-      "# IM Client cpmanager-client
+    usage_entry_value: |-
+      # IM Client cpmanager-client
 
       ## Credentials
 
       - clientid: cpmanager-client
-
       - client secret:  {{ lc_principal_admin_password }}
-
-      "
 
 - name: Set usage entry for Zen
   ansible.builtin.include_role:
@@ -247,8 +240,8 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: CP4BA-CPFS-Platform-UI-Zen-UI
-    usage_entry_value:
-      "# Platform UI
+    usage_entry_value: |-
+      # Platform UI
 
       ## Endpoints
 
@@ -257,8 +250,6 @@
       ## Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
-      "
 
 - name: When OpenSearch is enabled
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
@@ -299,8 +290,8 @@
         tasks_from: set-entry
       vars:
         usage_entry_name: CP4BA-CPFS-OpenSearch
-        usage_entry_value:
-          "# OpenSearch
+        usage_entry_value: |-
+          # OpenSearch
 
           ## Endpoints
 
@@ -309,10 +300,7 @@
           ## Credentials
 
           - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
           - opensearch-admin / {{ os_password }} (default admin user)
-
-          "
 
 - name: When Kafka is enabled
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
@@ -337,8 +325,8 @@
         tasks_from: set-entry
       vars:
         usage_entry_name: CP4BA-CPFS-Kafka
-        usage_entry_value:
-          "# Kafka
+        usage_entry_value: |-
+          # Kafka
 
           ## Endpoints
 
@@ -346,20 +334,25 @@
 
           ## Credentials
 
-          - icp4ba-kafka-auth-0 / {{ kafka_password }} (username: ```oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} \
-          -o jsonpath='{.status.username}'```, password: ```oc get secret -n {{ cp4ba_project_name }} \
-          $(oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} -o jsonpath='{.status.secret}') \
-          -o jsonpath='{.data.password}' | base64 -d```)
-
+          - icp4ba-kafka-auth-0 / {{ kafka_password }}
+            - username:
+              ```bash
+              oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} \
+              -o jsonpath='{.status.username}'
+              ```
+            - password:
+              ```bash
+              oc get secret -n {{ cp4ba_project_name }} \
+              $(oc get kafkauser icp4ba-kafka-auth-0 -n {{ cp4ba_project_name }} -o jsonpath='{.status.secret}') \
+              -o jsonpath='{.data.password}' | base64 -d
+              ```
           - Alternative custom user: {{ lc_principal_admin_user }} / {{ universal_password }}
 
           ## Configuration for Kafka connection
 
           - Security protocol: Sasl Ssl
-
           - Sasl Mechanism: SCRAM-SHA-512
-
-          - Root CA cert (used in *Path to root CA certificates file*): \
-          ```oc get kafka iaf-system -n {{ cp4ba_project_name }} -o jsonpath='{.status.listeners[1].certificates[0]}'```
-
-          "
+          - Root CA cert (used in *Path to root CA certificates file*):
+            ```bash
+            oc get kafka iaf-system -n {{ cp4ba_project_name }} -o jsonpath='{.status.listeners[1].certificates[0]}'
+            ```
