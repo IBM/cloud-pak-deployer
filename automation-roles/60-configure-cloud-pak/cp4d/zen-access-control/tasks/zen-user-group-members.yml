@@ -22,7 +22,6 @@
 - set_fact:
     _idp_groups: "{{ _zen_user_group.keycloak_groups | default([]) }}"
     _ldap_groups: "{{ _zen_user_group.ldap_groups | default([]) }}"
-    _add_group_members_list: []
 
 - set_fact:
     _group_members: "{{ _idp_groups | union(_ldap_groups) }}"
@@ -30,10 +29,6 @@
 - name: Get group members to be added
   set_fact:
     _add_group_members: "{{ _group_members | difference(_existing_zen_group_members) | default([]) }}"
-
-- set_fact:
-    _add_group_members_list: "[ {{ '\"' + _add_group_members | join('\",\"') + '\"' }} ]"
-  when: _add_group_members != []
 
 - name: Add group members to Zen user group {{ _zen_user_group.name }}
   uri:
@@ -44,14 +39,14 @@
       Content-Type: "application/json"
     body_format: json
     body:
-      ldap_groups: "{{ _add_group_members_list }}"
+      ldap_groups: "{{ _add_group_members }}"
     return_content: yes
     validate_certs: no
     status_code:
     - 200
     - 201
   register: _zen_user_group_members
-  when: _add_group_members_list != []
+  when: _add_group_members != []
 
 - debug:
     var: _zen_user_group_members

@@ -20,10 +20,7 @@
     _zen_user_group_roles: "{{ _zen_add_roles }}"
 
 - set_fact:
-    _zen_add_role_ids_list: "{{ _zen_user_group_role_ids_list }}"
-
-- debug:
-    var: _zen_add_role_ids_list
+    _zen_add_role_ids: "{{ _zen_user_group_role_ids }}"
 
 - name: Get roles to be removed
   set_fact:
@@ -35,10 +32,12 @@
     _zen_user_group_roles: "{{ _zen_remove_roles }}"
 
 - set_fact:
-    _zen_remove_role_ids_list: "{{ _zen_user_group_role_ids_list }}"
+    _zen_remove_role_ids: "{{ _zen_user_group_role_ids }}"
 
 - debug:
-    var: _zen_remove_role_ids_list
+    var: _zen_add_role_ids
+- debug:
+    var: _zen_remove_role_ids
 
 - name: Update Zen user group {{ _zen_user_group.name }} with new roles
   uri:
@@ -50,8 +49,8 @@
     body_format: json
     body:
       description: "{{ _zen_user_group.description | default(_zen_user_group.name) }}"
-      add_role_identifiers: "{{ _zen_add_role_ids_list }}"
-      remove_role_identifiers: "{{ _zen_remove_role_ids_list }}"
+      add_role_identifiers: "{{ _zen_add_role_ids }}"
+      remove_role_identifiers: "{{ _zen_remove_role_ids }}"
     return_content: yes
     validate_certs: no
     status_code: 200
