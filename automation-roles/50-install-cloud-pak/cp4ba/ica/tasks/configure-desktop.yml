@@ -1,0 +1,112 @@
+- name: Get Desktop def
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item.desktopId }}"
+    method: GET
+    headers:
+      Accept: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code: 200
+  register: desktop_response
+
+- name: Check if GenAIPlugin is present in desktop enabled plugins
+  ansible.builtin.set_fact:
+    ica_desktop_genai_plugin_present: >-
+      {{ 'GenAIPlugin' in desktop_response.json.desktop.generalConfig.pluginOptions.enabledPluginIds }}
+
+- name: Enable GenAIPlugin in desktop enabled plugins
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item.desktopId }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      generalConfig:
+        pluginOptions:
+          enableAllPlugins: "{{ desktop_response.json.desktop.generalConfig.pluginOptions.enableAllPlugins }}"
+          enabledPluginIds: "{{ desktop_response.json.desktop.generalConfig.pluginOptions.enabledPluginIds + ['GenAIPlugin'] }}"
+    validate_certs: false
+    status_code: 200
+  when: not ica_desktop_genai_plugin_present
+
+- name: Check if genaiRepositorySearch feature is present in desktop
+  ansible.builtin.set_fact:
+    ica_desktop_genai_feature_present: >-
+      {{ (desktop_response.json.desktop.layoutConfig.features
+          | selectattr('id', 'equalto', 'genaiRepositorySearch')
+          | list | length) > 0 }}
+
+- name: Normalize values in desktop response
+  ansible.builtin.set_fact:
+    desktop_response: >-
+      {{ desktop_response | combine({
+           'json': (desktop_response.json | to_json
+                    | replace('"EXPANDED_ON_SELECT"', '"expandedOnSelect"')
+                    | replace('"DETAILS"',   '"details"')
+                    | replace('"MAGAZINE"',  '"magazine"')
+                    | replace('"FILMSTRIP"', '"filmstrip"')
+                    | from_json)
+         }) }}
+  when: not ica_desktop_genai_feature_present
+
+- name: Build updated layoutConfig with genaiRepositorySearch appended
+  ansible.builtin.set_fact:
+    ica_desktop_updated_layout_config: >-
+      {{ desktop_response.json.desktop.layoutConfig | combine({
+           'features': desktop_response.json.desktop.layoutConfig.features + [
+             {
+               'id': 'genaiRepositorySearch',
+               'repositoryIds': item.repositoryIds,
+               'defaultRepositoryId': item.defaultRepositoryId
+             }
+           ]
+         }) }}
+  when: not ica_desktop_genai_feature_present
+
+- name: Update Desktop def
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item.desktopId }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "layoutConfig": "{{ ica_desktop_updated_layout_config }}"
+      }
+    validate_certs: false
+    status_code:
+      - 200
+  when: not ica_desktop_genai_feature_present
+
+- name: Associate menus with desktop
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/\
+      admin/configuration?action=update&configuration=DesktopConfig&id={{ item.desktopId }}&\
+      application=navigator&login_desktop=admin"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body_format: form-urlencoded
+    body:
+      json_post: >-
+        {
+          "ContentListToolbar":"GenAICompareContentListToolbar",
+          "SearchResultsToolbar":"GenAICompareSearchResultsToolbar",
+          "ItemContextMenu":"GenAIItemContextMenu",
+          "FavoriteItemContextMenu":"GenAIFavoriteItemContextMenu"
+        }
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"

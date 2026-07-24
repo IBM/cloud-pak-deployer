@@ -70,7 +70,7 @@
 
 - name: Add BAWTOS to PTE object store list
   ansible.builtin.set_fact:
-    pte_os_list: "{{ ccxai_os_list + ['BAWTOS'] }}"
+    pte_os_list: "{{ pte_os_list + ['BAWTOS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Enable Permanent Text Extration
@@ -112,7 +112,9 @@
                 }
               ]
             }
-          )
+          ){
+            id
+          }
         }"
       }
     validate_certs: false
@@ -123,6 +125,14 @@
   failed_when: "'errors' in graphql_response.content and
     'A uniqueness requirement has been violated' not in graphql_response.content"
   with_items: "{{ pte_os_list }}"
+
+- name: Set Plugin desktops Ids list
+  ansible.builtin.set_fact:
+    plugin_desktops_list: "{{ pte_os_list }}"
+
+- name: Configure plugins on desktops
+  ansible.builtin.include_tasks: fncm-configure-desktop-plugins.yml
+  with_items: "{{ plugin_desktops_list }}"
 
 - name: Set usage entry
   ansible.builtin.include_role:

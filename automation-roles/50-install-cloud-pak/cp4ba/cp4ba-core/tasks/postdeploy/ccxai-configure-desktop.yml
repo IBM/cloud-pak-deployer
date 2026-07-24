@@ -1,0 +1,83 @@
+- name: Get Desktop def
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item.desktopId }}"
+    method: GET
+    headers:
+      Accept: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code: 200
+  register: desktop_response
+
+- name: Check if GenAIAgentPlugin is present in desktop enabled plugins
+  ansible.builtin.set_fact:
+    ccxai_desktop_genai_plugin_present: >-
+      {{ 'GenAIAgentPlugin' in desktop_response.json.desktop.generalConfig.pluginOptions.enabledPluginIds }}
+
+- name: Enable GenAIAgentPlugin in desktop enabled plugins
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item.desktopId }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      generalConfig:
+        pluginOptions:
+          enableAllPlugins: "{{ desktop_response.json.desktop.generalConfig.pluginOptions.enableAllPlugins }}"
+          enabledPluginIds: "{{ desktop_response.json.desktop.generalConfig.pluginOptions.enabledPluginIds + ['GenAIAgentPlugin'] }}"
+    validate_certs: false
+    status_code: 200
+  when: not ccxai_desktop_genai_plugin_present
+
+- name: Check if genaiAgentRepositorySearch feature is present in desktop
+  ansible.builtin.set_fact:
+    ccxai_desktop_genai_feature_present: >-
+      {{ (desktop_response.json.desktop.layoutConfig.features
+          | selectattr('id', 'equalto', 'genaiAgentRepositorySearch')
+          | list | length) > 0 }}
+
+- name: Normalize values in desktop response
+  ansible.builtin.set_fact:
+    desktop_response: >-
+      {{ desktop_response | combine({
+           'json': (desktop_response.json | to_json
+                    | replace('"EXPANDED_ON_SELECT"', '"expandedOnSelect"')
+                    | replace('"DETAILS"',   '"details"')
+                    | replace('"MAGAZINE"',  '"magazine"')
+                    | replace('"FILMSTRIP"', '"filmstrip"')
+                    | from_json)
+         }) }}
+  when: not ccxai_desktop_genai_feature_present
+
+- name: Build updated layoutConfig with genaiAgentRepositorySearch appended
+  ansible.builtin.set_fact:
+    ccxai_desktop_updated_layout_config: >-
+      {{ desktop_response.json.desktop.layoutConfig | combine({
+           'features': desktop_response.json.desktop.layoutConfig.features + [
+             {
+               'id': 'genaiAgentRepositorySearch',
+               'repositoryIds': item.repositoryIds,
+               'defaultRepositoryId': item.defaultRepositoryId
+             }
+           ]
+         }) }}
+  when: not ccxai_desktop_genai_feature_present
+
+- name: Update Desktop def
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item.desktopId }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "layoutConfig": "{{ ccxai_desktop_updated_layout_config }}"
+      }
+    validate_certs: false
+    status_code:
+      - 200
+  when: not ccxai_desktop_genai_feature_present

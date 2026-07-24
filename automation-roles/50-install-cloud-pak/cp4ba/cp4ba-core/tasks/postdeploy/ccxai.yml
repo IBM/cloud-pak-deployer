@@ -184,3 +184,21 @@
     status_code:
       - 200
       - 409
+
+- name: Set CCX AI desktop defs list
+  ansible.builtin.set_fact:
+    ccxai_desktop_def_list: [
+      {desktopId: 'CONTENT', repositoryIds: ['CONTENT'], defaultRepositoryId: 'CONTENT'},
+      {desktopId: 'OS1', repositoryIds: ['OS1'], defaultRepositoryId: 'OS1'},
+      {desktopId: 'OS2', repositoryIds: ['OS2'], defaultRepositoryId: 'OS2'},
+      {desktopId: 'OS3', repositoryIds: ['OS3'], defaultRepositoryId: 'OS3'}
+    ]
+
+- name: Add BAWTOS to CCX AI desktop defs list
+  ansible.builtin.set_fact:
+    ccxai_desktop_def_list: "{{ ccxai_desktop_def_list + [{'desktopId': 'BAWTOS', 'repositoryIds': ['BAWTOS'], 'defaultRepositoryId': 'BAWTOS'}] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Configure CCX AI on Object Stores
+  ansible.builtin.include_tasks: ccxai-configure-desktop.yml
+  with_items: "{{ ccxai_desktop_def_list }}"

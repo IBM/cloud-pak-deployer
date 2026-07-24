@@ -1,0 +1,27 @@
+- name: Get Desktop def
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item }}"
+    method: GET
+    headers:
+      Accept: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    validate_certs: false
+    status_code: 200
+  register: desktop_response
+
+- name: Disable enableAllPlugins on desktop if currently enabled
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/desktops/{{ item }}"
+    method: PUT
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      generalConfig:
+        pluginOptions:
+          enableAllPlugins: false
+          enabledPluginIds: []
+    validate_certs: false
+    status_code: 200
+  when: desktop_response.json.desktop.generalConfig.pluginOptions.enableAllPlugins | bool
