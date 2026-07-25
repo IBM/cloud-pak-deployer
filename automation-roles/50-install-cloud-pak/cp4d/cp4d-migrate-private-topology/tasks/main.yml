@@ -10,6 +10,10 @@
   include_role:
     name: cp-fs-cluster-components
   vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+    _p_license_threads_per_core: "{{ _cp_fs.license_service.threads_per_core | default(1) }}"
+    _p_ibm_cert_manager: "{{ current_cp4d_cluster.ibm_cert_manager | default(false) }}"
     _p_migrate_topology: True
     _p_preview: True
 
@@ -43,7 +47,12 @@
     include_role:
       name: cp-fs-cluster-components
     vars:
-      _p_migrate_topology: True
+      _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+      _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+      _p_license_threads_per_core: "{{ _cp_fs.license_service.threads_per_core | default(1) }}"
+      _p_ibm_cert_manager: "{{ current_cp4d_cluster.ibm_cert_manager | default(false) }}"
+      _p_migrate_topology: False
+      _p_preview: False
 
   - name: Migrate scheduler from {{ foundational_services_project }}. Logs are in {{ status_dir }}/log/{{ current_cp4d_cluster.project }}-migrate-scheduler.log
     shell: |

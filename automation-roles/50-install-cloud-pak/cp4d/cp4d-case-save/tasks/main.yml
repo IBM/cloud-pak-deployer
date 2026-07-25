@@ -9,6 +9,25 @@
     _from_oci: False
   when: _cp_alt_repo_used | default(False)
 
+- name: Delete offline directory
+  file:
+    path: /tmp/work/offline
+    state: absent
+
+- ansible.builtin.stat:
+    path: "{{ status_dir }}/work/offline"
+  register: _status_offline_dir
+
+- debug:
+    var: _from_oci
+
+- name: Copy case files from {{ status_dir }}/work/offline to /tmp/work/offline
+  copy:
+    src: "{{ status_dir }}/work/offline"
+    dest: /tmp/work/
+    remote_src: True
+  when: _status_offline_dir.stat.exists
+
 # Get preview of case-download to ensure the patch files are downloaded when --dry-run was selected
 - block:
   - set_fact:
@@ -24,6 +43,10 @@
 
   rescue:
 
+  - fail:
+      msg: Failure when downloading case files through OCI in air-gapped mode. Cannot revert to GitHub download.
+    when: cpd_airgap | bool
+
   - set_fact:
       _from_oci: False
 
@@ -38,7 +61,7 @@
   when: cpd_dry_run | bool
     
 - block:
-  - name: Generate case-download command to download case files
+  - name: Generate case-download command to download case files using OCI
     set_fact:
       _case_download_command: "{{ lookup('template', 'case-download.j2') }}" 
 
@@ -53,6 +76,11 @@
       _p_cpd_cli_manage: True
 
   rescue:
+
+  - fail:
+      msg: Failure when downloading case files through OCI in air-gapped mode. Cannot revert to GitHub download.
+    when: cpd_airgap | bool
+
   - set_fact:
       _from_oci: False
 
