@@ -2,6 +2,9 @@ case-download \
     --release={{ _p_cp4d_version }} \
 {% if _from_oci | bool -%}
     --from_oci=true \
+{% if ((_p_current_cp4d_cluster.image_registry | default('')) != '') and (cpd_airgap | default(False) | bool) -%}
+    --oci_location={{ _registry_full_path }} \
+{% endif -%}
 {% endif -%}
 {% if _p_cp4d_version >= '5.3.0' -%}
     --operator_ns={{ _p_current_cp4d_cluster.operators_project }} \
