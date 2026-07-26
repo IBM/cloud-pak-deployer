@@ -179,9 +179,7 @@
         include_role:
           name: cp4d-mirror-images
         vars:
-          _p_target_registry_hostname: "{{ _v_portable_registry }}"
-          _p_target_registry_port: "{{ _v_portable_registry_port }}"
-          _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
+          _p_mirror_motion: entitled-to-portable
         loop: "{{ all_config.cp4d | default([]) }}"
         loop_control:
           loop_var: _p_current_cp4d_cluster
@@ -200,36 +198,11 @@
             msg: "No private image registry was found"
           when: _image_registry=={}
 
-        - name: Split registry_url into hostname, port and namespace if URL specified
-          vars:
-            # Strip scheme (http:// or https://) then split on the first /
-            _no_scheme: "{{ _image_registry.registry_url | regex_replace('^https?://', '') }}"
-            _host_part: "{{ _no_scheme.split('/')[0] }}"
-            _namespace: "{{ _no_scheme.split('/', 1)[1] | default('') }}"
-            _hostname: "{{ _host_part.split(':')[0] }}"
-            _port: "{{ _host_part.split(':')[1] | default('') }}"
-          set_fact:
-            _registry_hostname: "{{ _hostname }}"
-            _registry_port: "{{ _port }}"
-            _registry_namespace: "{{ _namespace }}"
-          when: (_image_registry.registry_url | default('')) != ''
-
-        - name: Set registry host name, port and namespace if separate attributes were set
-          set_fact:
-            _registry_hostname: "{{ _image_registry.registry_hostname }}"
-            _registry_port: "{{ _image_registry.registry_port | default('') }}"
-            _registry_namespace: "{{ _image_registry.registry_namespace | default('') }}"
-          when: (_image_registry.registry_url | default('')) == ''          
-
         - name: Mirror images from entitled to private registry
           include_role: 
             name: cp4d-mirror-images
           vars:
-            _p_target_registry_hostname: "{{ _registry_hostname }}"
-            _p_target_registry_port: "{{ _registry_port }}"
-            _p_target_registry_namespace: "{{ _registry_namespace | default('') }}"
-            _p_target_registry_credentials_secret: "image-registry-{{ _image_registry.name }}"
-            _p_processor_arch: "{{ _openshift_processor_arch | default('amd64') }}"
+            _p_mirror_motion: entitled-to-private
           loop: "{{ all_config.cp4d | default([]) }}"
           loop_control:
             loop_var: _p_current_cp4d_cluster

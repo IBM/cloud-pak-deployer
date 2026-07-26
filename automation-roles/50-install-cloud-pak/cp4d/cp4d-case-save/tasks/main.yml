@@ -28,6 +28,42 @@
     remote_src: True
   when: _status_offline_dir.stat.exists
 
+# Determine oci_location for downloading cases
+# - Source registry and not air-gapped --> Entitled registry
+# - Source registry and air-gapped --> Portable registry
+# - Target registry and image_registry_name specified --> Private registry
+# - Target registry and image_registry_name not specified --> Entitled registry
+- set_fact:
+    _oci_location: ''
+
+- set_fact:
+    _oci_location: 'icr.io/cpopen'
+  when:
+  - _from_oci | bool
+  - _p_registry_source_target == 'source'
+  - not cpd_airgap | bool
+
+- set_fact:
+    _oci_location: '127.0.0.1:12443/cpopen'
+  when:
+  - _from_oci | bool
+  - _p_registry_source_target == 'source'
+  - cpd_airgap | bool
+
+- set_fact:
+    _oci_location: 'icr.io/cpopen'
+  when:
+  - _from_oci | bool
+  - _p_registry_source_target == 'target'
+  - _p_current_cp4d_cluster.image_registry_name | default('') == ''
+
+- set_fact:
+    _oci_location: '{{ _registry_full_path }}/cpopen'
+  when:
+  - _from_oci | bool
+  - _p_registry_source_target == 'target'
+  - _p_current_cp4d_cluster.image_registry_name | default('') != ''
+
 # Get preview of case-download to ensure the patch files are downloaded when --dry-run was selected
 - block:
   - set_fact:

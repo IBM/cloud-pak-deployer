@@ -17,17 +17,18 @@
   debug:
     var: _cp_fs
 
-- name: Download case files
-  include_role:
-    name: cp4d-case-save
-  vars:
-    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
-
 # Mirror container images if image registry name has been specified
 - include_tasks: cp4d-mirror-images.yml
   when: 
   - (current_cp4d_cluster.image_registry_name | default("")) != ""
   - not (cpd_skip_mirror | bool)
+
+- name: Download case files
+  include_role:
+    name: cp4d-case-save
+  vars:
+    _p_current_cp4d_cluster: "{{ current_cp4d_cluster }}"
+    _p_registry_source_target: "target"
 
 - name: Activate license service and certificate manager on OpenShift cluster {{ current_cp4d_cluster.openshift_cluster_name }}
   include_role:
