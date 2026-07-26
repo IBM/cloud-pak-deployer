@@ -64,6 +64,12 @@
   - _p_registry_source_target == 'target'
   - _p_current_cp4d_cluster.image_registry_name | default('') != ''
 
+- set_fact:
+    _p_cp4d_patch_id: "{{ _p_current_cp4d_cluster.cp4d_patch_id | default('') }}"
+
+- include_tasks: cp4d-get-latest-patch-id.yml
+  when: _p_cp4d_patch_id == 'latest'
+
 # Get preview of case-download to ensure the patch files are downloaded when --dry-run was selected
 - block:
   - set_fact:
