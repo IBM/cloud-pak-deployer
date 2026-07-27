@@ -79,7 +79,45 @@
       ansible.builtin.set_fact:
         "{{ common_ca_output_to_var }}": "{{ trusted_ca.resources[0].data['ca-bundle.crt'] | b64encode }}"
 
-- name: Use tls.crt as ca.crt
-  ansible.builtin.set_fact:
-    "{{ common_ca_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] }}"
+- name: Look up root CA from system trusted bundle when proxy has no user-defined CA
   when: trusted_ca_name | length == 0
+  block:
+
+    - name: Get root CA subject CN from the top-level cert in the chain
+      ansible.builtin.set_fact:
+        root_ca_subject_cn: >-
+          {{ (certs | last | community.crypto.x509_certificate_info).issuer.commonName | default('') }}
+
+    - name: Get operator-controller trusted CA bundle configmap
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: ConfigMap
+        name: operator-controller-trusted-ca-bundle
+        namespace: openshift-operator-controller
+      register: system_trusted_ca_bundle
+
+    - name: Extract raw ca-bundle.crt text from configmap (empty string when missing)
+      ansible.builtin.set_fact:
+        system_ca_bundle_raw: >-
+          {{ system_trusted_ca_bundle.resources[0].data['ca-bundle.crt'] | default('') }}
+
+    # Each entry is preceded by a comment line "# <CA NAME>" followed by the PEM block.
+    # regex_findall returns a list of [name, pem] pairs.
+    - name: Find PEM block whose comment label matches the root CA CN
+      ansible.builtin.set_fact:
+        matched_ca_pem: >-
+          {{ system_ca_bundle_raw
+             | regex_findall('(?m)^# (.+)\n(-----BEGIN CERTIFICATE-----(?:.|\n)*?-----END CERTIFICATE-----)')
+             | selectattr(0, 'equalto', root_ca_subject_cn)
+             | map(attribute=1)
+             | list | first | default('') }}
+
+    - name: Use matched public CA from system bundle as ca.crt
+      ansible.builtin.set_fact:
+        "{{ common_ca_output_to_var }}": "{{ matched_ca_pem | b64encode }}"
+      when: matched_ca_pem | length > 0
+
+    - name: Fall back to tls.crt as ca.crt when no match found in system bundle
+      ansible.builtin.set_fact:
+        "{{ common_ca_output_to_var }}": "{{ default_secret.resources[0].data['tls.crt'] }}"
+      when: matched_ca_pem | length == 0
