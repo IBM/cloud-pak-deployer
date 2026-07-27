@@ -126,6 +126,11 @@
     'A uniqueness requirement has been violated' not in graphql_response.content"
   with_items: "{{ pte_os_list }}"
 
+- name: Setup Enhanced Permanent Text Extration for object stores
+  ansible.builtin.include_tasks: fncm-enhanced-permanent-text-extration.yml
+  with_items: "{{ pte_os_list }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.gen_ai
+
 - name: Set Plugin desktops Ids list
   ansible.builtin.set_fact:
     plugin_desktops_list: "{{ pte_os_list }}"

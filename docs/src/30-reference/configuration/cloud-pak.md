@@ -588,8 +588,16 @@ cp4ba:
           ier: true # IBM Enterprise Records (FNCM - IER)
           icc4sap: false # IBM Content Collector for SAP (FNCM - ICC4SAP) - Currently not implemented
           ccxmo: true # Content Cortex for Microsoft Office (CCXMO)
-          ccxai: true # Content Coretex Ai Services
+          gen_ai: true # AI features of base CCX
+          ccxai: true # Content Cortex Ai Services
         gen_ai:
+          endpoint: https://us-south.ml.cloud.ibm.com
+          space_id: space_id
+          api_key: watsonx_ai_api_key
+          cos_endpoint: cos_endpoint
+          cos_api_key: cos_api_key
+          cos_connection_id: cos_connection_id          
+        ccxai_gen_ai:
           provider: watsonx
           endpoint: https://us-south.ml.cloud.ibm.com
           api_key: watsonx_ai_api_key
@@ -765,9 +773,9 @@ Placed in `cp4ba.patterns.decisions_ads` key.
 | optional_components.ads_designer          | Set to `true` to enable Designer | Yes | true, false |
 | optional_components.ads_runtime          | Set to `true` to enable Runtime | Yes | true, false |
 | gen_ai          |  Sub object for definition of GenAI connection. More on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.0?topic=services-configuring-generative-ai-secret | false  | Object |
-| gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) watsonx_ai_api_key |
 | gen_ai.endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
-| gen_ai.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) project_id |
 
 #### Content pattern properties
 
@@ -785,14 +793,22 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.ier          | Set to `true` to enable IBM Enterprise Records | Yes | true, false |
 | optional_components.icc4sap          | Set to `true` to enable IBM Content Collector for SAP. Currently not functional. Always false. | Yes | false |
 | optional_components.ccxmo          | Set to `true` to enable Content Cortex for Microsoft Office | Yes | true, false  |
+| optional_components.gen_ai          | Set to `true` to enable Gen AI | Yes | true, false |
 | optional_components.ccxai          | Set to `true` to enable Content Cortex AI Services | Yes | true, false  |
-| gen_ai          |  Sub object for definition of LLM provider. Mandatory if ccxai is set to true | false  | Object |
-| gen_ai.provider          | Set to one fo the options | false | watsonx, azure |
-| gen_ai.endpoint          | Set to real value of your Watsonx.AI platform or Azure | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
-| gen_ai.api_key          | Set to real value of your Watsonx.AI platform or Azure | false | Your real value |
-| gen_ai.model          | Set to desired ID of foundation model of you rpatform | false | Your real value, (default) openai/gpt-oss-120b |
-| gen_ai.watsonx_saas_config          | Sub object for details for watsonx.ai LLM provider. Only rpovide if provider is watsonx | false | Your real value |
-| gen_ai.watsonx_saas_config.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai          |  Sub object for definition of LLM provider. For Enhanced Permanent Text Extration. Mandatory if gen_ai is set to true including sub items | false  | Object |
+| gen_ai.endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| gen_ai.space_id          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) space_id |
+| gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) api_key |
+| gen_ai.cos_endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) cos_endpoint |
+| gen_ai.cos_api_key          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) cos_api_key |
+| gen_ai.cos_connection_id          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) cos_connection_id |
+| ccxai_gen_ai          |  Sub object for definition of LLM provider for CCX AI. Mandatory if ccxai is set to true including sub items | false  | Object |
+| ccxai_gen_ai.provider          | Set to one fo the options | false | watsonx, azure |
+| ccxai_gen_ai.endpoint          | Set to real value of your Watsonx.AI platform or Azure | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| ccxai_gen_ai.api_key          | Set to real value of your Watsonx.AI platform or Azure | false | Your real value |
+| ccxai_gen_ai.model          | Set to desired ID of foundation model of you rpatform | false | Your real value, (default) openai/gpt-oss-120b |
+| ccxai_gen_ai.watsonx_saas_config          | Sub object for details for watsonx.ai LLM provider. Only rpovide if provider is watsonx | false | Your real value |
+| ccxai_gen_ai.watsonx_saas_config.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
 
 #### Application pattern properties
 
@@ -835,9 +851,9 @@ Placed in `cp4ba.patterns.workflow` key.
 | optional_components.workflow_assistant          | Set to `true` to enable Authoring assistant for workflow authoring. | Yes | true, false |
 | optional_components.workplace_assistant          | Set to `true` to enable Workplace assistant. | Yes | true, false |
 | gen_ai          |  Sub object for definition of GenAI connection. For Gen AI Service Flow, Authoring Assistant and Workplace Assistant | false  | Object |
-| gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) watsonx_ai_api_key |
 | gen_ai.endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
-| gen_ai.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value |
+| gen_ai.project_id          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) project_id |
 | gen_ai.model          | Set to desired ID of foundation model (Only for Gen AI Service flow) | false | Your real value, (default) openai/gpt-oss-120b |
 | wxo_service_instance_url          | Set to desired instace URL of you WXO instance | false | Your real value, (default) https://api.hostname/instances/tenant_id |
 

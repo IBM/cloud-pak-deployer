@@ -176,7 +176,8 @@ For your convenience the following post-deployment setup tasks have been automat
 - CCX - Enabled search result highlighting for Simple Search for FNCM (OS1), IER (FPOS, ROS), BAW (BAWTOS, BAWDOS, BAWDOCS), AE (AEOS) and ADP (DEVOS1) objectstores.
 - CCX - Set default storage policy for Document class and its subclasses to FileSystem based ASA instead of DB.
 - CCX - Set OIDC for Ai services
-- CCX - Addd needed AddOns, Configure CCX AI Services and its Plugin
+- CCX - Addd needed AddOns, Configure CCX AI Services, its Plugin and Feature
+- CCX - Enabled Enhanced permanent text extration.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/24.x?topic=events-using-event-handler-filenet-content-manager
@@ -191,7 +192,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 - IPM - Prescriptive mining permissions assigned to admin user.
-- ICA - OS1, OS2, OS3 and CONTENT object stores added needed AddOns 5.7.0 Gen AI Extensions and 5.6.0 Persistent Text Extract Extensions.
+- ICA - Added needed AddOns, Configured connection to AI provider, Plugin and Feature configured on desktop.
 
 ## Usage & operations 📇
 
