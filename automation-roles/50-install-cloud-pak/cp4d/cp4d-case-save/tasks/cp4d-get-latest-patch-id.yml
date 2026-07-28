@@ -1,7 +1,10 @@
 ---
+- set_fact:
+    _p_cp4d_patch_id: 0
+
 - name: List all images for {{ _oci_location }}/patch
   shell: |
-    oc image info '{{ _oci_location }}/patch:{{ _cp4d_version }}*' -o json
+    oc image info "{{ _oci_location }}/patch:{{ _p_cp4d_version }}*" -o json
   register: _oc_image_info
 
 # The oc command returns concatenated JSON objects, not a valid JSON array.
@@ -11,11 +14,18 @@
     _patch_images: >-
       {{ ('[' + _oc_image_info.stdout | replace('}{', '},{') + ']') | from_json }}
 
+- debug:
+    var: _patch_images
+
+# Filter out any images that are not patches
+- set_fact:
+    _patch_images: |
+      {{
+        _patch_images
+        | selectattr('name', 'match', '.*-p.*')
+      }}
+
 # Extract the patch number from each tag (the part after '-p'), treating the
-# base release (no -pN suffix) as 0, then take the maximum integer value.
-#   "5.4.0"    -> 0
-#   "5.4.0-p1" -> 1
-#   "5.4.0-p3" -> 3
 - name: Determine the latest patch number
   set_fact:
     _latest_patch_number: >-
@@ -24,13 +34,14 @@
         | map(attribute='name')
         | map('regex_replace', '^.*:', '')
         | map('regex_replace', '^[^-]+-p', '')
-        | map('regex_replace', '^[^-]+$', '0')
         | map('int')
         | max
       }}
+  when: _patch_images != []
 
 - set_fact:
     _p_cp4d_patch_id: "{{ _latest_patch_number }}"
+  when: _patch_images != []
 
 - name: Show latest patch ID
   debug:

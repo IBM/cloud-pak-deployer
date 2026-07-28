@@ -23,6 +23,9 @@
     path: "{{ status_dir }}/work"
     state: directory
 
+- debug:
+    var: _p_mirror_motion
+
 - include_tasks: start-portable-registry.yml
   when: "'portable' in _p_mirror_motion"
 
@@ -50,7 +53,7 @@
       _p_cpd_cli_manage: True
 
   when:
-  - _p_mirror_motion is match('^entitled')
+  - _p_mirror_motion is match('^entitled.*')
 
 - name: Authenticate to the target private registry if specified
   block:
@@ -86,6 +89,16 @@
           "{{ _target_registry_password }}"
       _p_cpd_cli_manage: True
 
+  - include_role:
+      name: run-command
+    vars:
+      _p_command_description: Log in to the target private registry using skopeo
+      _p_command: |
+        skopeo login {{ _registry_host_port }} \
+          -u "{{ _target_registry_user }}" \
+          -p "{{ _target_registry_password }}" \
+          --tls-verify=false
+
   when: (_p_current_cp4d_cluster.image_registry_name | default('')) != ''
 
 - name: Download case files
@@ -93,6 +106,9 @@
     name: cp4d-case-save
   vars:
     _p_registry_source_target: "source"
+
+- name: Mirror case images to the target registry
+  include_tasks: mirror-case-images.yml
 
 - name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
   template:

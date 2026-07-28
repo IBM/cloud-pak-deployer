@@ -81,6 +81,13 @@
       [?Component_name=='ibm-licensing']
 
 - block:
+  - name: Ensure namespace {{ license_service_project }} exists
+    kubernetes.core.k8s:
+      api_version: v1
+      kind: Namespace
+      name: "{{ license_service_project }}"
+      state: present
+
   - name: Generate apply-cluster-components command
     set_fact:
       _apply_cluster_components_command: "{{ lookup('template', 'apply-cluster-components.j2') }}" 
