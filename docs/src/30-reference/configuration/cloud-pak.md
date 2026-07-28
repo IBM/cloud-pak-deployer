@@ -591,7 +591,7 @@ cp4ba:
           gen_ai: true # AI features of base CCX
           ccxai: true # Content Cortex Ai Services
         gen_ai:
-          endpoint: https://us-south.ml.cloud.ibm.com
+          endpoint: https://us-south.ml.cloud.ibm.com/ml/v1/text/extractions
           space_id: space_id
           api_key: watsonx_ai_api_key
           cos_endpoint: cos_endpoint
@@ -796,10 +796,10 @@ Placed in `cp4ba.patterns.content` key.
 | optional_components.gen_ai          | Set to `true` to enable Gen AI | Yes | true, false |
 | optional_components.ccxai          | Set to `true` to enable Content Cortex AI Services | Yes | true, false  |
 | gen_ai          |  Sub object for definition of LLM provider. For Enhanced Permanent Text Extration. Mandatory if gen_ai is set to true including sub items | false  | Object |
-| gen_ai.endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com |
+| gen_ai.endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) https://us-south.ml.cloud.ibm.com/ml/v1/text/extractions |
 | gen_ai.space_id          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) space_id |
 | gen_ai.api_key          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) api_key |
-| gen_ai.cos_endpoint          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) cos_endpoint |
+| gen_ai.cos_endpoint          | Set to real value of your Watsonx.AI platform, format https://bucket-name.s3.region.cloud-object-storage.appdomain.cloud | false | Your real value, (default) cos_endpoint |
 | gen_ai.cos_api_key          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) cos_api_key |
 | gen_ai.cos_connection_id          | Set to real value of your Watsonx.AI platform | false | Your real value, (default) cos_connection_id |
 | ccxai_gen_ai          |  Sub object for definition of LLM provider for CCX AI. Mandatory if ccxai is set to true including sub items | false  | Object |
