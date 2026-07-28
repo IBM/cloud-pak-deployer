@@ -11,7 +11,7 @@ _v_template_dest_directory: "{{ status_dir }}/cp4i"
 
 instance_types:
 
-- type: platform-navigator
+- type: platform-ui
   package_name: ibm-integration-platform-navigator
   kind: PlatformNavigator
   case_file_name: ibm-integration-platform-navigator
@@ -20,46 +20,6 @@ instance_types:
   source_catalog_case: ibm-integration-platform-navigator-catalog
   default_template: cp4i-platform-navigator
   catalog_source_yaml_name: catalog-sources.yaml 
-
-- type: api-management
-  package_name: ibm-apiconnect
-  kind: APIConnectCluster
-  case_file_name: ibm-apiconnect
-  case_inventory: apiconnectOperatorSetup
-  source_catalog_online: ibm-operator-catalog
-  source_catalog_case: ibm-apiconnect-catalog
-  default_template: api-management-one-node-minimum
-  catalog_source_yaml_name: catalog-sources.yaml
-
-- type: integration-dashboard
-  package_name: ibm-appconnect
-  kind: Dashboard
-  case_file_name: ibm-appconnect
-  case_inventory: ibmAppconnect
-  source_catalog_online: ibm-operator-catalog
-  source_catalog_case: appconnect-operator-catalogsource
-  default_template: integration-dashboard-quickstart
-  catalog_source_yaml_name: catalog-sources.yaml
-
-- type: integration-design
-  package_name: ibm-appconnect
-  kind: DesignerAuthoring
-  case_file_name: ibm-appconnect
-  case_inventory: ibmAppconnect
-  source_catalog_online: ibm-operator-catalog
-  source_catalog_case: appconnect-operator-catalogsource
-  default_template: integration-design-quickstart
-  catalog_source_yaml_name: catalog-sources.yaml
-
-- type: high-speed-transfer-server
-  package_name: aspera-hsts-operator
-  kind: IbmAsperaHsts
-  case_file_name: ibm-aspera-hsts-operator
-  case_inventory: v1_hstsOperatorSetup
-  source_catalog_online: ibm-operator-catalog
-  source_catalog_case: aspera-operators
-  default_template: high-speed-transfer-server-quickstart
-  catalog_source_yaml_name: catalog-sources.yaml
 
 - type: automation-assets
   package_name: ibm-integration-asset-repository
@@ -71,29 +31,58 @@ instance_types:
   default_template: automation-assets-development
   catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
 
-- type: enterprise-gateway
-  package_name: datapower-operator
-  kind: DataPowerService
-  case_file_name: ibm-datapower-operator
-  case_inventory: datapowerOperator
+- type: api-connect
+  package_name: ibm-apiconnect
+  kind: APIConnectCluster
+  case_file_name: ibm-apiconnect
+  case_inventory: apiconnectOperatorSetup
   source_catalog_online: ibm-operator-catalog
-  source_catalog_case: ibm-datapower-operator-catalog
-  default_template: enterprise-gateway-quickstart
-  #catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
+  source_catalog_case: ibm-apiconnect-catalog
+  default_template: api-connect
+  catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
+
+
+- type: end-to-end-monitoring  
+  package_name: ibm-integration-monitoring
+  kind: Monitoring
+  case_file_name: ibm-integration-monitoring
+  case_inventory: integrationMonitoringOperator
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibm-integration-monitoring-catalog
+  default_template: end-to-end-monitoring
+  catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
+
+- type: app-connect-int-dashboard
+  package_name: ibm-appconnect
+  kind: Dashboard
+  case_file_name: ibm-appconnect
+  case_inventory: ibmAppconnect
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: appconnect-operator-catalogsource
+  default_template: app-connect-int-dashboard
   catalog_source_yaml_name: catalog-sources.yaml
 
-- type: event-endpoint-management
-  # NOTE: Not compatible with cp4i 2022.4 and older
-  package_name: ibm-eventendpointmanagement
-  kind: EventEndpointManagement
-  case_file_name: ibm-eventendpointmanagement
-  case_inventory: eemOperatorSetup
+- type: app-connect-int-designer
+  package_name: ibm-appconnect
+  kind: DesignerAuthoring
+  case_file_name: ibm-appconnect
+  case_inventory: ibmAppconnect
   source_catalog_online: ibm-operator-catalog
-  source_catalog_case: ibm-eventendpointmanagement-catalog
-  default_template: event-endpoint-management-one-node-minimum # ??
+  source_catalog_case: appconnect-operator-catalogsource
+  default_template: app-connect-int-designer
+  catalog_source_yaml_name: catalog-sources.yaml
+  
+- type: mq-queue-manager
+  package_name: ibm-mq
+  kind: QueueManager
+  case_file_name: ibm-mq
+  case_inventory: ibmMQOperator
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibmmq-operator-catalogsource
+  default_template: queue-manager
   catalog_source_yaml_name: catalog-sources.yaml
 
-- type: event-streams
+- type: event-streams # deprecated
   package_name: ibm-eventstreams
   kind: EventStreams
   case_file_name: ibm-eventstreams
@@ -102,8 +91,79 @@ instance_types:
   source_catalog_case: ibm-eventstreams
   default_template: event-streams-development
   catalog_source_yaml_name: catalog-sources.yaml
-  
-- type: messaging
+
+- type: event-endpoint-management
+  package_name: ibm-eventendpointmanagement
+  kind: EventEndpointManagement
+  case_file_name: ibm-eventendpointmanagement
+  case_inventory: eemOperatorSetup
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibm-eventendpointmanagement-catalog
+  default_template: event-endpoint-management-one-node-minimum
+  catalog_source_yaml_name: catalog-sources.yaml
+
+- type: datapower-gateway
+  package_name: datapower-operator
+  kind: DataPowerService
+  case_file_name: ibm-datapower-operator
+  case_inventory: datapowerOperator
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibm-datapower-operator-catalog
+  default_template: datapower-gateway
+  catalog_source_yaml_name: catalog-sources.yaml
+
+- type: foundational-services
+  package_name: ibm-common-service-operator
+  case_file_name: ibm-cp-common-services
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: opencloud-operators
+  catalog_source_yaml_name: catalog-sources.yaml
+
+# ------------------------------------------------------------------------------ 
+# --- for backward compatibility (installation of previous versions of cp4i) ---
+# ------------------------------------------------------------------------------ 
+
+- type: platform-navigator # renamed to: platform-ui
+  package_name: ibm-integration-platform-navigator
+  kind: PlatformNavigator
+  case_file_name: ibm-integration-platform-navigator
+  case_inventory: platformNavigatorOperator
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibm-integration-platform-navigator-catalog
+  default_template: cp4i-platform-navigator
+  catalog_source_yaml_name: catalog-sources.yaml 
+
+- type: api-management # renamed to: api-connect
+  package_name: ibm-apiconnect
+  kind: APIConnectCluster
+  case_file_name: ibm-apiconnect
+  case_inventory: apiconnectOperatorSetup
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibm-apiconnect-catalog
+  default_template: api-management-one-node-minimum
+  catalog_source_yaml_name: catalog-sources.yaml
+
+- type: integration-dashboard # renamed to: app-connect-int-dashboard
+  package_name: ibm-appconnect
+  kind: Dashboard
+  case_file_name: ibm-appconnect
+  case_inventory: ibmAppconnect
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: appconnect-operator-catalogsource
+  default_template: integration-dashboard-quickstart
+  catalog_source_yaml_name: catalog-sources.yaml
+
+- type: integration-design # renamed to: app-connect-int-designer
+  package_name: ibm-appconnect
+  kind: DesignerAuthoring
+  case_file_name: ibm-appconnect
+  case_inventory: ibmAppconnect
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: appconnect-operator-catalogsource
+  default_template: integration-design-quickstart
+  catalog_source_yaml_name: catalog-sources.yaml
+
+- type: messaging # renamed to: mq-queue-manager
   package_name: ibm-mq
   kind: QueueManager
   case_file_name: ibm-mq
@@ -113,7 +173,18 @@ instance_types:
   default_template: messaging-quickstart
   catalog_source_yaml_name: catalog-sources.yaml
 
-- type: integration-tracing
+- type: enterprise-gateway # renamed to: datapower-gateway
+  package_name: datapower-operator
+  kind: DataPowerService
+  case_file_name: ibm-datapower-operator
+  case_inventory: datapowerOperator
+  source_catalog_online: ibm-operator-catalog
+  source_catalog_case: ibm-datapower-operator-catalog
+  default_template: enterprise-gateway-quickstart
+  catalog_source_yaml_name: catalog-sources.yaml
+
+
+- type: integration-tracing # removed
   package_name: ibm-integration-operations-dashboard
   kind: OperationsDashboard
   case_file_name: ibm-integration-operations-dashboard
@@ -123,11 +194,13 @@ instance_types:
   default_template: integration-tracing-development
   catalog_source_yaml_name: catalog-sources-linux-amd64.yaml
 
-- type: foundational-services
-  package_name: ibm-common-service-operator
-  case_file_name: ibm-cp-common-services
+- type: high-speed-transfer-server # removed
+  package_name: aspera-hsts-operator
+  kind: IbmAsperaHsts
+  case_file_name: ibm-aspera-hsts-operator
+  case_inventory: v1_hstsOperatorSetup
   source_catalog_online: ibm-operator-catalog
-  source_catalog_case: opencloud-operators
+  source_catalog_case: aspera-operators
+  default_template: high-speed-transfer-server-quickstart
   catalog_source_yaml_name: catalog-sources.yaml
 
-  
