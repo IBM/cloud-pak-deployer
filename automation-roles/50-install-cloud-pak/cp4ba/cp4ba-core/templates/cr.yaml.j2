@@ -28,9 +28,11 @@ spec:
     sc_ingress_enable: false
     sc_deployment_hostname_suffix: "{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}"
     sc_image_repository: cp.icr.io
+    sc_enable_usage_metering: true
+    sc_enable_pdb: false
     sc_iam:
       default_admin_username: "{{ cpfs_admin_user }}"
-    trusted_certificate_list: ['global-ca', 'default-ca']
+    trusted_certificate_list: ['global-ca', 'default-ca'{% if _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.gen_ai %}, 'fncm-trusted-tls'{% endif %}]
     encryption_key_secret: ibm-iaws-shared-key-secret
     storage_configuration:
       sc_slow_file_storage_classname: "{{ cp4ba_storage_class_name }}"

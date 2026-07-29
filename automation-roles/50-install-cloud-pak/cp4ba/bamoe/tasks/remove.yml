@@ -4,7 +4,7 @@
     state: directory
     mode: u+rwx
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ bamoe_output_directory }}/{{ item }}.yaml"
@@ -13,7 +13,7 @@
     - services
     - deployments
 
-- name: Remove {{ item.name }}
+- name: Remove resources
   kubernetes.core.k8s:
     state: absent
     src: "{{ bamoe_output_directory }}/{{ item.name }}.yaml"
@@ -53,10 +53,3 @@
     - bamoe-management-console
     - bamoe-maven-repository
     - bamoe-mcp-server
-
-- name: Remove Empty Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: remove-empty-project
-  vars:
-    common_project_name: "{{ bamoe_project_name }}"

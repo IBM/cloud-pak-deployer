@@ -4,23 +4,7 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ gitea_project_name }}"
-    common_output_directory: "{{ gitea_output_directory }}"
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
-
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ gitea_output_directory }}/{{ item }}.yaml"
@@ -31,7 +15,7 @@
     - deployments
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ gitea_output_directory }}/{{ item.name }}.yaml"
@@ -73,21 +57,17 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Extras-Gitea
-    usage_entry_value:
-      "# Gitea
+    usage_entry_value: |-
+      # Gitea
 
       As Git server provider.
 
       ## Endpoints
 
       - UI: https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}
-
       - OAS: https://gitea-{{ gitea_project_name }}.{{ apps_endpoint_domain }}/api/swagger#/
 
       ## Credentials
 
       - Credentials you should use: {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
       - Initial administrative user credentials: giteaadmin / {{ gitea_universal_password }}
-
-      "

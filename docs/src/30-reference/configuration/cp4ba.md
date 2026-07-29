@@ -1,10 +1,10 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 25.0.1 IF001.  
-Contains IPM version 2.1.1.  
-Contains RPA version 30.0.2.  
-Contains BAMOE version 9.4.1.  
-Contains ICA version 1.0.2 IF001.  
+Contains CP4BA version 26.0.0.  
+Contains IPM version 2.2.0.  
+Contains RPA version 30.0.3.  
+Contains BAMOE version 9.5.0.  
+Contains ICA version 1.0.3.  
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -118,6 +118,8 @@ More info for RPA is available in official docs at https://www.ibm.com/docs/en/r
 
 More info for BAMOE is available in official docs at https://www.ibm.com/docs/en/ibamoe.
 
+More info for ICA is available in official docs at https://www.ibm.com/docs/en/cacms.
+
 Assets are currently not deployed.
 
 ### CPFS (Cloud Pak Foundational Services) section<!-- omit in toc -->
@@ -171,8 +173,11 @@ For your convenience the following post-deployment setup tasks have been automat
 - IER - Task Manager pod has TM_JOB_URL parameter set.
 - IER - Task manager set up with CPE JARs required by IER.
 - Task manager - Enabled in Navigator.
-- FNCM - Enabled search result highlighting for Simple Search for FNCM (OS1), IER (FPOS, ROS), BAW (BAWTOS, BAWDOS, BAWDOCS), AE (AEOS) and ADP (DEVOS1) objectstores.
-- FNCM - Set default storage policy for Document class and its subclasses to FileSystem based ASA instead of DB.
+- CCX - Enabled search result highlighting for Simple Search for FNCM (OS1), IER (FPOS, ROS), BAW (BAWTOS, BAWDOS, BAWDOCS), AE (AEOS) and ADP (DEVOS1) objectstores.
+- CCX - Set default storage policy for Document class and its subclasses to FileSystem based ASA instead of DB.
+- CCX - Set OIDC for Ai services
+- CCX - Addd needed AddOns, Configure CCX AI Services, its Plugin and Feature
+- CCX - Enabled Enhanced permanent text extration.
 - BAW - tw_admins enhanced with LDAP admin groups.
 - BAW - tw_authors enhanced with LDAP user and admin groups.
 - BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/24.x?topic=events-using-event-handler-filenet-content-manager
@@ -187,7 +192,7 @@ For your convenience the following post-deployment setup tasks have been automat
 - IPM - Task mining related permissions added to admin user.
 - IPM - Task mining admin user enabled for TM agent usage.
 - IPM - Prescriptive mining permissions assigned to admin user.
-- ICA - OS1 and CONTENT object stores added needed AddOns 5.7.0 Gen AI Extensions and 5.6.0 Persistent Text Extract Extensions.
+- ICA - Added needed AddOns, Configured connection to AI provider, Plugin and Feature configured on desktop.
 
 ## Usage & operations 📇
 
@@ -209,7 +214,7 @@ Review and perform post deploy manual steps for IPM as specified in CP4BA Projec
 Referrence to licenses of used tools apart from those from IBM
 
 - phpLDAPadmin
-    - MIT License https://github.com/osixia/docker-phpLDAPadmin/blob/stable/LICENSE (OSI approved https://opensource.org/license/mit)
+    - GNU General Public License v2.0 License https://github.com/leenooks/phpLDAPadmin/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-2.0)
 - Gitea
     - MIT License https://github.com/go-gitea/gitea/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - Nexus
@@ -223,6 +228,8 @@ Referrence to licenses of used tools apart from those from IBM
     - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - OpenSearch Dashboards
     - Apache License 2.0 https://github.com/opensearch-project/OpenSearch-Dashboards/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
+- OpenSearch
+    - Apache License 2.0 https://github.com/opensearch-project/OpenSearch/blob/main/LICENSE.txt (OSI Approved https://opensource.org/license/apache-2-0)
 - Mail server
     - MIT License https://github.com/docker-mailserver/docker-mailserver/blob/master/LICENSE (OSI approved https://opensource.org/license/mit)
 - CloudBeaver
@@ -230,7 +237,7 @@ Referrence to licenses of used tools apart from those from IBM
 - PostgreSQL
     - The PostgreSQL License https://www.postgresql.org/about/licence/ (OSI approved https://opensource.org/license/postgresql)
 - OpenLDAP
-    - OpenLDAP itself - OpenLDAP Public License https://git.openldap.org/openldap/openldap/-/blob/master/LICENSE?ref_type=heads (OSI approved https://opensource.org/license/oldap-2-8)
-    - Bitnami package - https://github.com/bitnami/containers/tree/main/bitnami/openldap#license
+    - OpenLDAP itself - The OpenLDAP Public License https://www.openldap.org/software/release/license.html (OSI approved https://opensource.org/license/oldap-2-8)
+    - Bitnami package - Apache License 2.0 https://github.com/bitnami/containers/tree/main/bitnami/openldap#license (OSI Approved https://opensource.org/license/apache-2-0)
 - MSSQL server
     - Uses Developer Edition, description at https://learn.microsoft.com/en-us/sql/sql-server/editions-and-components-of-sql-server-2022?view=sql-server-ver16#sql-server-editions

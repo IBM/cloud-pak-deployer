@@ -14,7 +14,7 @@
     _opensearch_tls_crt: mock
     _opensearch_ca_crt: mock
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ opensearch_output_directory }}/{{ item }}.yaml"
@@ -28,7 +28,7 @@
     - configmaps
     - services
 
-- name: Remove {{ item.name }}
+- name: Remove resources
   kubernetes.core.k8s:
     state: absent
     src: "{{ opensearch_output_directory }}/{{ item.name }}.yaml"
@@ -51,6 +51,17 @@
     kind: Route
     namespace: "{{ opensearch_project_name }}"
     name: opensearch
+    wait: true
+    wait_sleep: 15
+    wait_timeout: 120
+
+- name: Remove Route
+  kubernetes.core.k8s:
+    state: absent
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ opensearch_project_name }}"
+    name: opensearch-unsecured
     wait: true
     wait_sleep: 15
     wait_timeout: 120

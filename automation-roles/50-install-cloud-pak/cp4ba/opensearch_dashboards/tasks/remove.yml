@@ -9,7 +9,7 @@
     apps_endpoint_domain: mock
     os_password: mock
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ opensearch_dashboards_output_directory }}/{{ item }}.yaml"
@@ -20,7 +20,7 @@
     - deployments
     - services
 
-- name: Remove {{ item.name }}
+- name: Remove resources
   kubernetes.core.k8s:
     state: absent
     src: "{{ opensearch_dashboards_output_directory }}/{{ item.name }}.yaml"

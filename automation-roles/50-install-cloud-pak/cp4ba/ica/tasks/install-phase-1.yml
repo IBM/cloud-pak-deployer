@@ -1,6 +1,6 @@
 - name: Create role - ibm-genai-index-manager
   ansible.builtin.uri:
-    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-index-manager"
+    url: "http://opensearch-unsecured-{{ ica_opensearch_project }}.{{ apps_endpoint_domain }}/_plugins/_security/api/roles/ibm-genai-index-manager"
     method: PUT
     user: "admin"
     password: "{{ ica_opensearch_password }}"
@@ -20,7 +20,7 @@
 
 - name: Create role - ibm-genai-document-manager
   ansible.builtin.uri:
-    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/roles/ibm-genai-document-manager"
+    url: "http://opensearch-unsecured-{{ ica_opensearch_project }}.{{ apps_endpoint_domain }}/_plugins/_security/api/roles/ibm-genai-document-manager"
     method: PUT
     user: "admin"
     password: "{{ ica_opensearch_password }}"
@@ -41,7 +41,7 @@
 
 - name: Create genai-service-user
   ansible.builtin.uri:
-    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/internalusers/genai-service-user"
+    url: "http://opensearch-unsecured-{{ ica_opensearch_project }}.{{ apps_endpoint_domain }}/_plugins/_security/api/internalusers/genai-service-user"
     method: PUT
     user: "admin"
     password: "{{ ica_opensearch_password }}"
@@ -58,7 +58,7 @@
 
 - name: Map ibm-genai-index-manager role to genai-service-user
   ansible.builtin.uri:
-    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-index-manager"
+    url: "http://opensearch-unsecured-{{ ica_opensearch_project }}.{{ apps_endpoint_domain }}/_plugins/_security/api/rolesmapping/ibm-genai-index-manager"
     method: PUT
     user: "admin"
     password: "{{ ica_opensearch_password }}"
@@ -74,7 +74,7 @@
 
 - name: Map ibm-genai-document-manager role to genai-service-user
   ansible.builtin.uri:
-    url: "http://{{ ica_opensearch_hostname }}:9200/_plugins/_security/api/rolesmapping/ibm-genai-document-manager"
+    url: "http://opensearch-unsecured-{{ ica_opensearch_project }}.{{ apps_endpoint_domain }}/_plugins/_security/api/rolesmapping/ibm-genai-document-manager"
     method: PUT
     user: "admin"
     password: "{{ ica_opensearch_password }}"
@@ -197,44 +197,6 @@
     common_resource_kind: CASCluster
     common_resource_name: casdeploy
     common_resource_namespace: "{{ ica_project_name }}"
-    common_condition_name: PostDeployCompleted
+    common_condition_name: DeployCompleted # does not update last seen 2026-07-16 PostDeployCompleted
     common_retries: 30
     common_delay: 120
-
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ ica_output_namespace }}"
-    common_output_directory: "{{ ica_output_directory }}"
-    common_project_output_name: "ica-output-project.yaml"
-
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
-- name: Set usage entry
-  ansible.builtin.include_role:
-    name: usage
-    tasks_from: set-entry
-  vars:
-    usage_entry_name: IBM-Content-Assistant
-    usage_entry_value:
-      "# IBM Content Assistant Client Managed Software (ICA)
-
-      ## Endpoints
-
-      - ICA base url (also used for CLI access): https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
-
-      - ICA OpenSearch user: genai-service-user / {{ ica_opensearch_password }}
-
-      ## CLI access (CLI has to be downloaded from IBM)
-
-      - ibmca config url https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
-
-      - ibmca login -u genai-service-user # password is: {{ ica_universal_password }}
-      "

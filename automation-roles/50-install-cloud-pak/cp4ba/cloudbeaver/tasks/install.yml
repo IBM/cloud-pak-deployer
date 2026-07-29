@@ -8,15 +8,7 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ cloudbeaver_project_name }}"
-    common_output_directory: "{{ cloudbeaver_output_directory }}"
-
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ cloudbeaver_output_directory }}/{{ item }}.yaml"
@@ -29,7 +21,7 @@
     - deployments
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ cloudbeaver_output_directory }}/{{ item.name }}.yaml"
@@ -43,14 +35,6 @@
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
 
 - name: Crete Edge Route
   ansible.builtin.include_role:
@@ -66,13 +50,6 @@
 - name: Hash universal password MD5
   ansible.builtin.set_fact:
     cb_universal_password_md5: "{{ cloudbeaver_universal_password | md5 | upper }}"
-
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
 
 - name: Login to cloudbeaver
   ansible.builtin.uri:
@@ -175,8 +152,8 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Extras-CloudBeaver
-    usage_entry_value:
-      "# CloudBeaver
+    usage_entry_value: |-
+      # CloudBeaver
 
       As DB UI for PostgreSQL, MSSQL
 
@@ -187,5 +164,3 @@
       ## Credentials
 
       - UI: {{ lc_principal_admin_user }} / {{ cloudbeaver_universal_password }}
-
-      "

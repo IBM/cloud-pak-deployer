@@ -1,9 +1,28 @@
-- name: Get OCP Apps domain
+- name: Set output directory variable
+  ansible.builtin.set_fact:
+    projects_output_directory: "{{ generic_directory }}/projects"
+
+- name: Create Projects directory for generated files
+  ansible.builtin.file:
+    path: "{{ projects_output_directory }}"
+    state: directory
+    mode: u+rwx
+
+- name: Create Project
   ansible.builtin.include_role:
     name: common
-    tasks_from: apps-endpoint
+    tasks_from: create-project
   vars:
-    common_output_to_var: "apps_endpoint_domain"
+    common_namespace_name: "{{ main_project_name }}"
+    common_output_directory: "{{ projects_output_directory }}"
+
+- name: Create Project
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: create-project
+  vars:
+    common_namespace_name: "{{ collateral_project_name }}"
+    common_output_directory: "{{ projects_output_directory }}"
 
 - name: Generate usage
   ansible.builtin.include_role:
@@ -38,6 +57,17 @@
     name: mail
   when: mail_enabled
 
+- name: Install CPFS
+  ansible.builtin.include_role:
+    name: cpfs
+
+- name: Install CP4BA Phase 1
+  ansible.builtin.include_role:
+    name: cp4ba-core
+  vars:
+    install_phase_1: true
+  when: _current_cp4ba_cluster.cp4ba.enabled
+
 - name: Install cloudbeaver
   ansible.builtin.include_role:
     name: cloudbeaver
@@ -52,15 +82,6 @@
   ansible.builtin.include_role:
     name: phpldapadmin
   when: openldap_enabled and _current_cp4ba_cluster.phpldapadmin_enabled
-
-- name: Install CPFS
-  ansible.builtin.include_role:
-    name: cpfs
-
-- name: Install CP4BA
-  ansible.builtin.include_role:
-    name: cp4ba-core
-  when: _current_cp4ba_cluster.cp4ba.enabled
 
 - name: Install Cerebro
   ansible.builtin.include_role:
@@ -90,9 +111,11 @@
     name: mssql
   when: mssql_enabled
 
-- name: Install RPA
+- name: Install RPA Phase 1
   ansible.builtin.include_role:
     name: rpa
+  vars:
+    rpa_install_phase_1: true
   when: _current_cp4ba_cluster.rpa.enabled
 
 - name: Install BAMOE
@@ -105,7 +128,30 @@
     name: opensearch
   when: opensearch_enabled
 
-- name: Install ICA
+- name: Install ICA Phase 1
   ansible.builtin.include_role:
     name: ica
+  vars:
+    ica_install_phase_1: true
+  when: _current_cp4ba_cluster.ica.enabled
+
+- name: Install CP4BA Phase 2
+  ansible.builtin.include_role:
+    name: cp4ba-core
+  vars:
+    install_phase_2: true
+  when: _current_cp4ba_cluster.cp4ba.enabled
+
+- name: Install RPA Phase 2
+  ansible.builtin.include_role:
+    name: rpa
+  vars:
+    rpa_install_phase_2: true
+  when: _current_cp4ba_cluster.rpa.enabled
+
+- name: Install ICA Phase 2
+  ansible.builtin.include_role:
+    name: ica
+  vars:
+    ica_install_phase_2: true
   when: _current_cp4ba_cluster.ica.enabled

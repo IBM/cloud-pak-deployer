@@ -72,8 +72,7 @@
   until: ('READY' in catalogsource | json_query('resources[*].status.connectionState.lastObservedState') | unique)
   with_items:
     - ibm-automation-processminings
-    - ibm-cloud-databases-redis-operator-catalog
-    - ibm-db2uoperator-catalog
+    - ibm-redis-cp-operator-catalog
 
 - name: Prepare yaml file for the Operator Subscription
   ansible.builtin.template:
@@ -205,13 +204,6 @@
     common_retries: 25
     common_delay: 20
 
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Get IAM token
   ansible.builtin.include_role:
     name: common
@@ -282,7 +274,7 @@
 
 # Overwrites the current members of Analysts Users group
 # ansible.builtin.uri not working
-- name: Add admin to Analysts Users group
+- name: Add admin to Analysts Users group # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ analysts_users_group_id }}' \
@@ -306,7 +298,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add Analysts Users group Prescriptive permission
+- name: Add Analysts Users group Prescriptive permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -368,7 +360,7 @@
 
 # Overwrites the current members of TM admin group
 # ansible.builtin.uri not working
-- name: Add admin to tm admins group
+- name: Add admin to tm admins group # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ tm_admins_group_id }}' \
@@ -391,7 +383,7 @@
 
 # Overwrites the current members of TutorialAdmin group
 # ansible.builtin.uri not working
-- name: Add admin to TutorialAdmin group
+- name: Add admin to TutorialAdmin group # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/groups/{{ tutorial_admin_group_id }}' \
@@ -415,7 +407,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add tm admins group Classification permission
+- name: Add tm admins group Classification permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -440,7 +432,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add tm admins group Decrypt permission
+- name: Add tm admins group Decrypt permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -465,7 +457,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add tm admins group Monitoring list permission
+- name: Add tm admins group Monitoring list permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -490,7 +482,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add tm admins group Obfuscation permission
+- name: Add tm admins group Obfuscation permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -515,7 +507,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add tm admins group Project permission
+- name: Add tm admins group Project permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -541,7 +533,7 @@
   register: perms_response
 
 # ansible.builtin.uri not working
-- name: Add tm admins group RPA Script permission
+- name: Add tm admins group RPA Script permission # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://cpd-{{ pm_project_name }}.{{ apps_endpoint_domain }}/processmining/user-management/api/authorizations/' \
@@ -587,15 +579,6 @@
       - 200
   register: update_response
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ pm_output_namespace }}"
-    common_output_directory: "{{ pm_output_directory }}"
-    common_project_output_name: "pm-output-project.yaml"
-
 - name: Prepare post-deploy.md
   ansible.builtin.template:
     src: postdeploy.md.j2
@@ -621,19 +604,15 @@
     name: usage
     tasks_from: set-entry
   vars:
-    usage_entry_name: Process-Mining
-    usage_entry_value:
-      "# Process Mining
+    usage_entry_name: Process-Mining # yamllint disable rule:line-length
+    usage_entry_value: |-
+      # Process Mining
 
       ## Endpoints
 
       - Process Mining UI & API base: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining
-
-      - Process Mining User Profile (to determine user API key) \
-        https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile
-
+      - Process Mining User Profile (to determine user API key) https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/processmining/api/account/profile
       - Task Mining UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/taskmining
-
       - Process Mining non Zen Route: https://processmining-pm-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/
 
       ## Credentials
@@ -644,23 +623,14 @@
 
       If you want to investigate the actual ansible code that is running in the operator,\
       you can get it from running operator pod from /opt/ansible/roles directory.
-
       ```bash
-
       mkdir pm-ansible-roles
-
       oc rsync -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} --no-headers |\
       grep processmining-operator-controller-manager | awk '{print $1}'`:/opt/ansible/roles pm-ansible-roles
-
       ```
 
       To get logs for Operator.
-
       ```bash
-
       oc get pods -n {{ cp4ba_project_name }} -o name | grep processmining-operator-controller |\
       xargs oc logs -n {{ cp4ba_project_name }} > process-mining-operator.log
-
       ```
-
-      "

@@ -6,15 +6,7 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ mssql_project_name }}"
-    common_output_directory: "{{ mssql_output_directory }}"
-
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ mssql_output_directory }}/{{ item }}.yaml"
@@ -26,7 +18,7 @@
     - statefulsets
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ mssql_output_directory }}/{{ item.name }}.yaml"
@@ -46,8 +38,8 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Pre-requisites-MSSQL
-    usage_entry_value:
-      "# MSSQL
+    usage_entry_value: |-
+      # MSSQL
 
       As DB server for RPA.
 
@@ -62,9 +54,5 @@
       ## CLI in container
 
       ```bash
-
       /opt/mssql-tools18/bin/sqlcmd -No -S 127.0.0.1 -U sa -P {{ mssql_universal_password }}
-
       ```
-
-      "

@@ -1,4 +1,4 @@
-- name: Check that the {{ cp4ba_ca_crt_path }} exists
+- name: Check that the path exists {{ cp4ba_ca_crt_path }}
   ansible.builtin.stat:
     path: "{{ cp4ba_ca_crt_path }}"
   register: cp4ba_ca_crt_file
@@ -89,7 +89,18 @@
         dest: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
         mode: u+rwx
 
-    - name: Add LDAP SSL Certificate Secret to the {{ cp4ba_project_name }} namespace
+    - name: Add LDAP SSL Certificate Secret to the namespace {{ cp4ba_project_name }}
       kubernetes.core.k8s:
         state: present
         src: "{{ cp4ba_output_directory }}/ldap-ssl-secret.yaml"
+
+- name: Prepare yaml file for common-config ConfigMap
+  ansible.builtin.template:
+    src: shared/ibm-cp4ba-common-config.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ibm-cp4ba-common-config.yaml"
+    mode: u+rwx
+
+- name: Add common-config ConfigMap
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ibm-cp4ba-common-config.yaml"

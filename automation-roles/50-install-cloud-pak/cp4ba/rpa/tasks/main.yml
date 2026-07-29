@@ -2,6 +2,16 @@
   ansible.builtin.set_fact:
     rpa_output_directory: "{{ rpa_base_dir }}/{{ rpa_dir_name }}"
 
+- name: Set output directory variable for Phase 1
+  ansible.builtin.set_fact:
+    rpa_output_directory: "{{ rpa_base_dir }}/{{ rpa_dir_name }}/phase-1"
+  when: "rpa_action == 'install' and (rpa_install_phase_1 | default(false))"
+
+- name: Set output directory variable for Phase 2
+  ansible.builtin.set_fact:
+    rpa_output_directory: "{{ rpa_base_dir }}/{{ rpa_dir_name }}/phase-2"
+  when: "rpa_action == 'install' and (rpa_install_phase_2 | default(false))"
+
 - name: Remove RPA directory for generated files
   ansible.builtin.file:
     path: "{{ rpa_output_directory }}"
@@ -13,9 +23,13 @@
     state: directory
     mode: u+rwx
 
-- name: Install RPA
-  ansible.builtin.include_tasks: install.yml
-  when: "rpa_action == 'install'"
+- name: Install RPA Phase 1
+  ansible.builtin.include_tasks: install-phase-1.yml
+  when: "rpa_action == 'install' and (rpa_install_phase_1 | default(false))"
+
+- name: Install RPA Phase 2
+  ansible.builtin.include_tasks: install-phase-2.yml
+  when: "rpa_action == 'install' and (rpa_install_phase_2 | default(false))"
 
 - name: Remove RPA
   ansible.builtin.include_tasks: remove.yml

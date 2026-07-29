@@ -1,0 +1,91 @@
+# Based on https://www.ibm.com/docs/en/cloud-paks/foundational-services/4.x_cd?topic=reporter-configuring-connection-by-using-openshift-console
+- name: Fetch the secret from ibm-lsr
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: ibm-license-service-reporter-token
+    namespace: ibm-lsr
+  register: reporter_token
+
+- name: Copy the secret to the cp4ba
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: v1
+      kind: Secret
+      metadata:
+        namespace: "{{ cp4ba_project_name }}"
+        name: "{{ reporter_token.resources[0].metadata.name }}"
+      type: "{{ reporter_token.resources[0].type }}"
+      data: "{{ reporter_token.resources[0].data }}"
+
+- name: Fetch the secret from ibm-lsr
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: ibm-license-service-reporter
+    namespace: ibm-lsr
+  register: reporter_route
+
+- name: Copy the secret to the cp4ba
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      api_version: v1
+      kind: ConfigMap
+      metadata:
+        namespace: "{{ cp4ba_project_name }}"
+        name: ibm-license-service-reporter-url
+      data:
+        url: "https://{{ reporter_route.resources[0].spec.host }}"
+
+- name: Configure ibm-licensing to send data into ibm-lsr
+  kubernetes.core.k8s:
+    state: present
+    api_version: operator.ibm.com/v1alpha1
+    kind: IBMLicensing
+    name: instance
+    namespace: ibm-licensing
+    definition:
+      spec:
+        sender:
+          reporter:
+            secretName: ibm-license-service-reporter-token
+            configMapName: ibm-license-service-reporter-url
+
+- name: Get UMS secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ cp4ba_project_name }}"
+    name: ibm-usage-metering-upload-token
+  register: ums_secret
+  retries: 40
+  delay: 15
+
+- name: Set UMS token
+  ansible.builtin.set_fact:
+    ums_token: "{{ ums_secret.resources[0].data.token | b64decode }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: CPFS-Usage-Metering-Service-UMS
+    usage_entry_value: |-
+      # Usage Metering Service
+
+      ## Endpoints
+
+      - API: https://ibm-usage-metering-fetch-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/api/v1/snapshot
+      - CURL command to get snapshot:
+        ```bash
+        curl --output snapshot.zip --request GET \
+        --url https://ibm-usage-metering-fetch-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/api/v1/snapshot \
+        --header 'Authorization: Bearer {{ ums_token }}'
+        ```
+
+      ## Credentials
+
+      - Token: {{ ums_token }}

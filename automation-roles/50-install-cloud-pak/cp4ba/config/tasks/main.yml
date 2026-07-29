@@ -1,5 +1,5 @@
 - name: Load internal variables
-  ansible.builtin.include_vars: internal-variables.yml
+  ansible.builtin.include_vars: "{{ role_path }}/files/internal-variables.yml"
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=deployment-capability-patterns-production-deployments
 - name: Fill capabilities enabled flags based on documantation
@@ -60,13 +60,6 @@
 - name: OpenSearch config variable
   ansible.builtin.set_fact:
     opensearch_enabled: "{{ true if _current_cp4ba_cluster.ica.enabled else false }}"
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
 
 - name: Check if namespace file exists
   ansible.builtin.stat:

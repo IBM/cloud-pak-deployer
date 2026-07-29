@@ -1,10 +1,3 @@
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Create ADP organization in Gitea
   ansible.builtin.uri:
     url: "https://gitea-{{ cp4ba_gitea_project }}.{{ apps_endpoint_domain }}/api/v1/orgs"
@@ -28,25 +21,21 @@
       - 201
       - 422
 
-- name: Get IAM token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: iam-token-user
-  vars:
-    common_cpfs_project: "{{ cp4ba_project_name }}"
-    common_user: "{{ lc_principal_admin_user }}"
-    common_password: "{{ lc_principal_admin_password }}"
-    common_output_to_var: "iam_token"
-
-- name: Get Zen token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: zen-token
-  vars:
-    common_iam_token: "{{ iam_token }}"
-    common_user: "{{ lc_principal_admin_user }}"
-    common_namespace_name: "{{ cp4ba_project_name }}"
-    common_output_to_var: "zen_token"
+- name: Wait for cdra-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: ReplicaSet
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-cdra-deploy"
+  register: cdra_replicasets
+  retries: 60
+  delay: 30
+  until:
+    - cdra_replicasets.resources | length >= 2
+    - (cdra_replicasets.resources
+      | sort(attribute='metadata.creationTimestamp')
+      | last).status.readyReplicas | default(0) | int >= 1
 
 # Based on internal code cp4ba-ansible-roles\prerequisites\templates\gitea\gitea-register-to-bas-job.yaml
 - name: Create Gitea connection
@@ -82,6 +71,7 @@
     status_code:
       - 201
       - 200
+      - 500
 
 - name: Set usage entry
   ansible.builtin.include_role:
@@ -89,22 +79,17 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: CP4BA-Automation-Document-Processing-ADP
-    usage_entry_value:
-      "# CP4BA Automation Document Processing (ADP) (document_processing pattern)
+    usage_entry_value: |-
+      # CP4BA Automation Document Processing (ADP) (document_processing pattern)
 
       ## Endpoints
 
       - CDRA API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cdra/cdapi/
-
-      - Content Project Deployment Service: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cpds/ibm-dba-content-deployment/ \
-        (Note: This URL is meant to use with ADP scripts and not to be accessed as is without context root)
-
+      - Content Project Deployment Service: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/cpds/ibm-dba-content-deployment/
+        - Note: This URL is meant to use with ADP scripts and not to be accessed as is without context root
       - Ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/aca/ping
-
       - Project admin API: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/adp/designer/?projectId=<Project ID>&features=adminapi
 
       ## Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
-
-      "

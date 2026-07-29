@@ -58,12 +58,24 @@
   delay: 60
   until: (route.resources[0].spec.tls.certificate | trim) == (decoded_content | trim)
 
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
+- name: Delete Operator pods of Content proactively to fetch latest zen route SSL updates
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - name=ibm-content-operator
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
+
+- name: Delete Operator pods of CP4BA proactively to fetch latest zen route SSL updates
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - name=ibm-cp4a-operator
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=tasks-business-automation-studio
 # Get access token for ZEN administrative initial user
@@ -122,6 +134,7 @@
       - iaf-automation-developer
       - iaf-automation-operator
       - zen_user_role
+      - zen_account_admin_role
 
 # Needed as group related permissions are updated only after first real login via browser
 - name: Add all roles to default admin user
@@ -140,6 +153,7 @@
         - iaf-automation-developer
         - iaf-automation-operator
         - zen_user_role
+        - zen_account_admin_role
     validate_certs: false
     status_code:
       - 200
@@ -295,6 +309,7 @@
         - iaf-automation-developer
         - iaf-automation-operator
         - zen_user_role
+        - zen_account_admin_role
     validate_certs: false
     status_code:
       - 201
@@ -374,16 +389,14 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: cpmanagerservice-zen-api-key
-    usage_entry_value:
-      "Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=access-using-zen-api-key-authentication
-      If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service account with username \
-      *cpmanagerservice* has been prepared for you with the generated api key.
+    usage_entry_value: |-
+      Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.2?topic=access-using-zen-api-key-authentication
+
+      If you need to call CP4BA endpoints with ZenApiKey (e.g. for ODM) a service account with username *cpmanagerservice* has been prepared for you with the generated api key.
 
       Zen API key for cpmanagerservice user as generated in the UI: {{ zen_api_key }}
 
       Zen API key for cpmanagerservice user in the form of header: ZenApiKey {{ ('cpmanagerservice:' + zen_api_key) | b64encode }}
-
-      "
 
 - name: Get Zen PostgreSQL secret
   kubernetes.core.k8s_info:
@@ -421,15 +434,11 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: CP4BA-Zen-Audit
-    usage_entry_value:
-      "Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=administering-generating-logs-auditing-purposes
+    usage_entry_value: |-
+      Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.0?topic=administering-generating-logs-auditing-purposes
 
       View audit logging outputs using the followign command
 
       ```bash
-
       oc logs -f -n {{ cp4ba_project_name }} `oc get pod -n {{ cp4ba_project_name }} | grep zen-audit | awk '{print $1}'`
-
       ```
-
-      "

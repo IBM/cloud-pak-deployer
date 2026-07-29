@@ -45,3 +45,18 @@
     tasks_from: wait-crd
   vars:
     common_crd_name: icp4aclusters.icp4a.ibm.com
+
+- name: Wait Operator ibm-usage-metering-operator
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-operator
+  vars:
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_label_selector_stub: ibm-usage-metering-operator
+
+- name: Wait for ibmusagemetering CRD to be Established
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-crd
+  vars:
+    common_crd_name: ibmusagemeterings.operator.ibm.com

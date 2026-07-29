@@ -1,0 +1,131 @@
+###############################################################################
+##
+##Licensed Materials - Property of IBM
+##
+##(C) Copyright IBM Corp. 2021, 2026. All Rights Reserved.
+##
+##US Government Users Restricted Rights - Use, duplication or
+##disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
+##
+###############################################################################
+apiVersion: ccxaiservices.operator.ibm.com/v1
+kind: CCXAIServices
+metadata:
+  name: ai-services
+  labels:
+    app.kubernetes.io/instance: ibm-ai-services-operator
+    app.kubernetes.io/managed-by: ibm-ai-services-operator
+    app.kubernetes.io/name: ibm-ai-services-operator
+    release: 26.0.0
+    cxaiservices.operator.ibm.com/backup-type: mandatory
+  namespace: "{{ cp4ba_project_name }}"
+spec:
+  ## You must read the license agreement: https://www.ibm.com/support/customer/csol/terms/?id=L-UXBF-EQ4UGB and accept the ibm license.
+  ## The only valid value is "true"
+  license:
+    accept: true
+  appVersion: 26.0.0
+  ##########################################################################
+  ## This section contains the shared configuration for all AI Services components #
+  ##########################################################################
+  shared_configuration:
+    ## This is an optional parameter, If the user installing AI Services in a CNCF cluster and they selected the parameter sc_deployment_platform as "OCP" then the possible values for this parameter is: ARO or ROSA.
+    sc_deployment_ocp_platform:
+    ## The deployment context. Possible values are: "CP4A" or "FNCM"
+    ## Unless you are instructed to change this value or know the reason to change this value, please use one of these values.
+    sc_deployment_context: "CP4A"
+    ## All AI Services components must use/share the image_pull_secrets to pull images.
+    image_pull_secrets:
+      - ibm-entitlement-key
+    ## All AI Services components must use/share the same docker image repository.  For example, if IBM Entitled Registry is used, then
+    ## it should be "cp.icr.io".  Otherwise, it will be a local docker registry.
+    sc_image_repository: cp.icr.io
+    ## Used to sign all AI Services internal certificates for internal services communications. In most cases, this value should not be changed.
+    ## All AI Services components must use/share the root_ca_secret in order for integration.
+    root_ca_secret: icp4a-root-ca
+    ## Optional: You can specify a profile size - valid values are small,medium,large - default is small.
+    sc_deployment_profile_size: "small"
+    ## Flag to control deploying redis, by default it is set to false and file storage/ PVCs will be used
+    sc_redis_enable: false
+    ## Optional: This parameter is used to optionally enable integration with HashiCorp Vault. If the parameter is not defined, then the default value is "false". If the parameter is not defined, then the default value is "false".
+    ## IMPORTANT: Only set this flag to "true" if want to integrate with Vault and have already completed the mandatory prerequisites for Vault integration. See the IBM CP4BA KC topic "External secret management".
+    ## WARNING: If you set the flag to "true" without completing the mandatory prerequisites for Vault integration for CP4BA, the CP4BA deployment will fail.
+    sc_vault_configuration:
+      enable_external_secret_store: false
+    ## If your Openshift cluster is configured for Hugepages and you want the applicable deployment resources to consume Hugepages.
+    ## You must set "true" for sc_hugepages.enabled. Default is "false".
+    ## You must set type for "Hugepages" like hugepages-2Mi or hugepages-1Gi. Default is "hugepages-2Mi".
+    ## You must set size for value which is suitable for Openshift cluster.
+    sc_hugepages:
+      enabled: false
+      type: ""
+      value: ""
+    ## Shared custom TLS secret which will be used to sign all external routes if defined.
+    ## If this is not defined, all external routes will be signed with `root_ca_secret`
+    ## Starting with AI Services 26.0.0 release, this parameter only applies to non-OCP deployments. For OCP, all external traffic is routed via a
+    ## common front door in Platform UI so custom TLS certificates must be configured in AutomationUIConfig. Please refer
+    ## to https://www.ibm.com/docs/en/cloud-paks/1.0?topic=foundation-custom-resources#automationuiconfig for more information.
+    external_tls_certificate_secret:
+    ## Specify the RunAsUser for the security context of the pod.  This is usually a numeric value that corresponds to a user ID.
+    ## For non-OCP (e.g., CNCF platforms such as AWS, GKE, etc), this parameter is optional. It is not supported on OCP and ROKS.
+    sc_run_as_user:
+    ## Optional setting for secure computing mode (seccomp) profile for AI Services containers.  The default seccomp profile is RuntimeDefault on OCP 4.11 (k8s v1.24) or higher. seccomp profile won't be created on OCP 4.10 (k8s v1.23) or lower.
+    ## For more information on seccomp please refer to https://kubernetes.io/docs/tutorials/security/seccomp/ and https://docs.openshift.com/container-platform/4.12/security/seccomp-profiles.html
+    ## NOTE: Defining a custom, localhost seccomp profile that is stricter than the default RuntimeDefault profile may cause our pods fail to start.  This custom profile should be created at the worker nodes.
+    sc_seccomp_profile:
+    #  type: # RuntimeDefault, Localhost, Unconfined
+    #  localhost_profile: # Local path of custom seccomp profile when type `Localhost` is used. The custom profile must be accessible by the pod and must exist locally on all worker nodes.  For example: `/profiles/fine-grained.json`.
+
+    ## Enables integration with Instana to collect application and infrastructure metrics for enhanced observability. 
+    ## This optional parameter controls the instana instrumentation. If the parameter is not defined, then the default value is "false".
+    ## Set this flag to "true" if you plan to enable instana monitoring for AI Services application.
+    sc_enable_instana_metric_collection: false
+    ## The optional parameter to enable/disable the creation of sample network policy templates for AI Services components.  If the parameter is not defined, then the default value is "false".
+    ## Set this flag to "true" if you plan to have restricted network policies in AI Services namespaces so that the operators can create sample network policy templates for AI Services components.
+    ## Please refer to the AI Services documentation for more information about how to retrieve and apply the sample network policy templates.
+    sc_generate_sample_network_policies: false
+    ## For ROKS Ingress, provide TLS secret name for Ingress controller. If you are not using ROKS, comment out this line.
+    #sc_ingress_tls_secret_name: <Required>
+
+    ## Optional. This parameter is used to create legacy OCP routes. The default hostname suffix will be <route-name>-meta.namespace.<router-canonical-hostname> when not defined.
+    ## For more information refer to <>
+    ## All AI Services application URLs are accessed through the Platform UI route (this route starts with https://cpd-<namespace>.<cluster>.<domain> and this parameter is not applicable to the Platform UI route).
+    #sc_deployment_hostname_suffix: " meta.namespace .<router-canonical-hostname> or your own custom domain, e.g., `.acme.com`"
+
+    ## If the root certificate authority (CA) key of the external service is not signed by the operator root CA key, provide the TLS certificate of
+    ## the external service to the component's truststore.
+    trusted_certificate_list: ['global-ca', 'default-ca']
+    ## On OCP 3.x and 4.x, the User script will populate these three (3) parameters based on your input for "production" deployment.
+    ## If you manually deploying without using the User script, then you would provide the different storage classes for the slow.  
+    storage_configuration:
+      sc_slow_file_storage_classname: "{{ cp4ba_storage_class_name }}"
+      # Block storage is only required when Redis has been enabled i.e sc_redis_enable: true
+      sc_block_storage_classname: "{{ cp4ba_block_storage_class_name }}"
+    ## This optional property is a string value corresponding to the "ipFamilyPolicy" property of Kubernetes "service" objects.
+    ## Ref: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+    ## This setting is only applicable in dual-stack clusters where both IPv4 and IPv6 are enabled.
+    ## If not set, then the "ipFamilyPolicy" property of the services will default to the cluster-level settings.
+    ## ALLOWED VALUES (case-sensitive): "PreferDualStack", "RequireDualStack"
+    ## WARNING: Setting this property to a value not supported by your cluster will cause Content Cortex AI Services deployment to fail.
+    ## For example, if your cluster only supports one IP family, using "RequireDualStack" will cause deployment to fail.
+    sc_service_ip_family_policy:
+    ## This optional property is a list value corresponding to the "ipFamilies" property of Kubernetes "service" objects.
+    ## Ref: https://kubernetes.io/docs/reference/kubernetes-api/service-resources/service-v1/
+    ## This parameter works in conjunction with the ipFamilyPolicy to define the IP addressing behaviors for the Service.
+    ## If not set, then the "ipFamilies" property of the services will default to the cluster-level settings.
+    ## ALLOWED VALUES (case-sensitive):
+    ##   If "sc_service_ip_family_policy: PreferDualStack" or "RequireDualStack", then a list of two IP families supported by your cluster in desired order ("IPv6", "IPv4")
+    ## WARNING: Setting this property to a value not supported by your cluster will cause Content Cortex AI Services deployment to fail.
+    ## For example, if your cluster does not support "IPv6" family, then including "IPv6" in this property will cause deployment to fail.
+    ## IMPORTANT: This setting is only supported for initial deployment. Updating this property after deployment has completed may
+    ## cause system instability and require some pods (such as "ibm-nginx") to be manually restarted.
+    sc_service_ip_families:
+    ## If a cluster is configured for multiple availability zones (AZ) and the parameter sc_is_multiple_az is set to true, then the pods are spread across all the zones.
+    ## By default, the sc_is_multiple_az parameter is set to true. When the value is set to true, the pods of the Content Cortex AI Services deployment are spread across your user-defined topology domains.
+    ## The pod API includes a spec.topologySpreadConstraints field, which is used by the Content Cortex AI Services operator to configure it.
+    sc_is_multiple_az: true
+    ## The global flag to enable or disable Pod Disruption Budget (PDB) creation across all components.  Default is true
+    ## A PDB will be created with a 'minAvailable: 1' only if the replica count of a particular deployment is greater than 1.  Otherwise, the PDB will have 'minAvailable: 0' if the replica is 1.
+    sc_enable_pdb: false
+    # Enable debug logging 
+    show_sensitive_logs: true

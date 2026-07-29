@@ -1,33 +1,6 @@
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
-- name: Get IAM token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: iam-token-user
-  vars:
-    common_cpfs_project: "{{ cp4ba_project_name }}"
-    common_user: "{{ lc_principal_admin_user }}"
-    common_password: "{{ lc_principal_admin_password }}"
-    common_output_to_var: "iam_token"
-
-- name: Get Zen token
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: zen-token
-  vars:
-    common_iam_token: "{{ iam_token }}"
-    common_user: "{{ lc_principal_admin_user }}"
-    common_namespace_name: "{{ cp4ba_project_name }}"
-    common_output_to_var: "zen_token"
-
 - name: Build OS list
   ansible.builtin.set_fact:
-    os_list: ["OS1"]
+    os_list: ["OS1", "OS2", "OS3"]
 
 - name: Add IER to OS list
   ansible.builtin.set_fact:
@@ -39,7 +12,7 @@
     os_list: "{{ os_list + ['BAWTOS', 'BAWDOS', 'BAWDOCS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
-- name: Add BAW to OS list
+- name: Add AEOS to OS list
   ansible.builtin.set_fact:
     os_list: "{{ os_list + ['AEOS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.application.enabled and
@@ -91,55 +64,120 @@
   failed_when: "'errors' in graphql_response.content"
   with_items: "{{ os_list }}"
 
+- name: Set PTE object store list
+  ansible.builtin.set_fact:
+    pte_os_list: ["CONTENT", "OS1", "OS2", "OS3"]
+
+- name: Add BAWTOS to PTE object store list
+  ansible.builtin.set_fact:
+    pte_os_list: "{{ pte_os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Enable Permanent Text Extration
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          admUpdateClassDefinition(
+            repositoryIdentifier: \"{{ item }}\"
+            identifier: \"Document\"
+            classDefinitionProperties: {
+              objectProperties: [
+                {
+                  identifier: \"TextIndexingPreprocessorDefinitions\"
+                  dependentObjectListValue: {
+                    modify: [
+                      {
+                        insertAction: {}
+                        properties:[
+                          {DisplayName: \"TIPD Persistent Text Extract\"}
+                        ]
+                        objectProperties:[
+                          {
+                            identifier: \"TextIndexingPreprocessorAction\"
+                            objectReferenceValue:{
+                              identifier: \"{B83DD197-BC50-C401-87B5-8C63B9A00000}\"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ){
+            id
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content and
+    'A uniqueness requirement has been violated' not in graphql_response.content"
+  with_items: "{{ pte_os_list }}"
+
+- name: Setup Enhanced Permanent Text Extration for object stores
+  ansible.builtin.include_tasks: fncm-enhanced-permanent-text-extration.yml
+  with_items: "{{ pte_os_list }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.gen_ai
+
+- name: Set Plugin desktops Ids list
+  ansible.builtin.set_fact:
+    plugin_desktops_list: "{{ pte_os_list }}"
+
+- name: Configure plugins on desktops
+  ansible.builtin.include_tasks: fncm-configure-desktop-plugins.yml
+  with_items: "{{ plugin_desktops_list }}"
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
     tasks_from: set-entry
   vars:
-    usage_entry_name: CP4BA-FileNet-Content-Manager-FNCM
-    usage_entry_value:
-      "# FileNet Content Manager (FNCM) (content pattern)
+    usage_entry_name: CP4BA-FileNet-Content-Manager-FNCM-Content-Cortex-CCX
+    usage_entry_value: |-
+      # FileNet Content Manager (FNCM) (content pattern)
 
       ## Endpoints
 
-      For external share you need to use ingress prefixed set of endpoints.
-
       - ACCE console UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/acce
-
-      - CPE WSI endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/wsi/FNCEWS40MTOM \
-      (https://cpe-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/wsi/FNCEWS40MTOM)
-
+      - CPE WSI endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/wsi/FNCEWS40MTOM
+        - Non CPD: https://cpe-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/wsi/FNCEWS40MTOM
       - CPE health check: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/P8CE/Health
-
       - CPE ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/FileNet/Engine
-
       - CPE automatic upgrade status endpoint: https://cpe-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/FileNet/AutomaticUpgradeStatus
-
       - PE ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/peengine/IOR/ping
-
       - PE details page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/peengine/IOR/admin/help
-
       - CSS health check: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/P8CE/Health/CBRDashboard
-
       - CMIS definitions UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cmis/openfncmis_wlp
-
       - CMIS endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cmis/openfncmis_wlp/services (e.g. for BAW CMIS)
-
       - GraphiQL UI: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql
-
       - GraphQL endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql
-
-      - CONTENT Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=CONTENT (Uses Database storage policy)
-
-      - OS1 Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=OS1 (Uses File system storage policy)
-
+      - CONTENT Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=CONTENT
+        - Uses Database storage policy, Connected to ICA CM, CBR enabled
+      - OS1 Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=OS1
+        - Uses File system storage policy, Connected to ICA CM, CBR enabled
+      - OS2 Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=OS2
+        - Uses File system storage policy, Connected to ICA CM, CBR disabled
+      - OS3 Desktop: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/?desktop=OS3
+        - Uses File system storage policy, Ready to be ICA SaaS connected, CBR disabled
       - Task Manager API endpoint: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/tm/api/v1
-
       - Task Manager Ping page: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/tm/api/v1/tasks/ping
-
       - IER application plugin: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ier/EnterpriseRecordsPlugin/IERApplicationPlugin.jar
+      - Content Cortex AI Services - Reasoning Service: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/reasoningservice/
+      - Content Cortex AI Services - Core MCP Server: https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/coremcp/
 
-      #### Credentials
+      ## Credentials
 
       - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
@@ -148,95 +186,169 @@
       If you want FDM to connect to CPE, you need to provide it with Zen certificate. To do it update DeploymentManager.ini file and add to it
 
       ```text
-
       # Overrides default TLS.
-
       -Dcom.ibm.jsse2.overrideDefaultTLS=true
 
       # Path to your truststrore.jks containing Zen certificate chain. Can be download e.g. from ODM Decision center.
-
-      -Djavax.net.ssl.trustStore=C:\\truststore.jks
+      -Djavax.net.ssl.trustStore=C:\truststore.jks
 
       # Password for the truststore if any. If none completely omit the line.
-
       -Djavax.net.ssl.trustStorePassword=password
-
       ```
 
-      ## MCP Server configuration for watsonx Orchestrate for OS1 object store
+      ## MCP Servers configuration for watsonx Orchestrate for OS1 object store
 
       Based on https://github.com/ibm-ecm/ibm-content-services-mcp-server
-
+      ```bash
       orchestrate connections add --app-id core-cs-mcp-server-connection
 
       orchestrate connections configure --app-id core-cs-mcp-server-connection --environment draft --type team --kind key_value
 
-      orchestrate connections set-credentials --app-id core-cs-mcp-server-connection \\
-
-        --environment draft \\
-
-        --entries SERVER_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql \\
-
-        --entries OBJECT_STORE=OS1 \\
-
-        --entries ZENIAM_ZEN_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth \\
-
-        --entries ZENIAM_IAM_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken \\
-
-        --entries ZENIAM_IAM_GRANT_TYPE=password \\
-
-        --entries ZENIAM_IAM_SCOPE=openid \\
-
-        --entries ZENIAM_IAM_USER={{ lc_principal_admin_user }} \\
-
+      orchestrate connections set-credentials --app-id core-cs-mcp-server-connection \
+        --environment draft \
+        --entries SERVER_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql \
+        --entries OBJECT_STORE=OS1 \
+        --entries ZENIAM_ZEN_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth \
+        --entries ZENIAM_IAM_URL=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken \
+        --entries ZENIAM_IAM_GRANT_TYPE=password \
+        --entries ZENIAM_IAM_SCOPE=openid \
+        --entries ZENIAM_IAM_USER={{ lc_principal_admin_user }} \
         --entries ZENIAM_IAM_PASSWORD={{ lc_principal_admin_password }}
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name core-cs-mcp-server \\
-
-        --description \"core-cs-mcp-server\" \\
-
-        --command \"uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server core-cs-mcp-server\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name core-cs-mcp-server \
+        --description "core-cs-mcp-server" \
+        --command "uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server core-cs-mcp-server" \
+        --tools "*" \
         --app-id core-cs-mcp-server-connection
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name property-extraction-and-classification-cs-mcp-server \\
-
-        --description \"property-extraction-and-classification-cs-mcp-server\" \\
-
-        --command \"uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server property-extraction-and-classification-cs-mcp-server\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name property-extraction-and-classification-cs-mcp-server \
+        --description "property-extraction-and-classification-cs-mcp-server" \
+        --command "uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server property-extraction-and-classification-cs-mcp-server" \
+        --tools "*" \
         --app-id core-cs-mcp-server-connection
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name legal-hold-cs-mcp-server \\
-
-        --description \"legal-hold-cs-mcp-server\" \\
-
-        --command \"uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server legal-hold-cs-mcp-server\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name legal-hold-cs-mcp-server \
+        --description "legal-hold-cs-mcp-server" \
+        --command "uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server legal-hold-cs-mcp-server" \
+        --tools "*" \
         --app-id core-cs-mcp-server-connection
 
-      orchestrate toolkits add --kind mcp \\
-
-        --name ai-document-insight-cs-mcp-server \\
-
-        --description \"ai-document-insight-cs-mcp-server\" \\
-
-        --command \"uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server ai-document-insight-cs-mcp-server\" \\
-
-        --tools \"*\" \\
-
+      orchestrate toolkits add --kind mcp \
+        --name ai-document-insight-cs-mcp-server \
+        --description "ai-document-insight-cs-mcp-server" \
+        --command "uvx --from git+https://github.com/ibm-ecm/ibm-content-services-mcp-server ai-document-insight-cs-mcp-server" \
+        --tools "*" \
         --app-id core-cs-mcp-server-connection
+      ```
 
-      "
+      Based on https://www.ibm.com/docs/en/content-cortex/26.0.0?topic=services-developing-custom-agents-core-mcp-server
+      ```bash
+      orchestrate connections add --app-id core-mcp-server-connection
+      orchestrate connections configure --app-id core-mcp-server-connection --environment draft --type member --kind oauth_auth_code_flow \
+      --config-entries CS-Object-Store=OS1
+
+      orchestrate connections set-credentials --app-id core-mcp-server-connection \
+        --environment draft \
+        --client-id 'cpmanager-client' \
+        --client-secret '{{ lc_principal_admin_password }}' \
+        --auth-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/authorize' \
+        --token-url 'https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/ccxai/mcpserver/token' \
+        --scope 'openid profile email'
+
+      # Now you need to manually go to WXO UI and in your Profile > Settings > Member credentials > Reconnect 'core-mcp-server-connection'
+
+      orchestrate toolkits add --kind mcp \
+        --name core-mcp-server \
+        --description "core-mcp-server" \
+        --url "https://core-mcp-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/mcp" \
+        --transport "streamable_http" \
+        --tools "*" \
+        --app-id core-mcp-server-connection
+      ```
+
+      ## MCP Servers configuration for Bob for OS1 object store
+
+      Based on https://github.com/ibm-ecm/ibm-content-services-mcp-server
+
+      Change name of Object Store as needed
+
+      ```json
+      {
+        "mcpServers": {
+          "core-cs-mcp-server": {
+            "command": "uvx",
+            "args": [
+              "--from",
+              "git+https://github.com/ibm-ecm/ibm-content-services-mcp-server",
+              "core-cs-mcp-server"
+            ],
+            "env": {
+              "SERVER_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql",
+              "OBJECT_STORE": "OS1",
+              "ZENIAM_ZEN_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth",
+              "ZENIAM_IAM_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken",
+              "ZENIAM_IAM_GRANT_TYPE": "password",
+              "ZENIAM_IAM_SCOPE": "openid",
+              "ZENIAM_IAM_USER": "{{ lc_principal_admin_user }}",
+              "ZENIAM_IAM_PASSWORD": "{{ lc_principal_admin_password }}"
+            }
+          },
+          "property-extraction-cs-mcp-server": {
+            "command": "uvx",
+            "args": [
+              "--from",
+              "git+https://github.com/ibm-ecm/ibm-content-services-mcp-server",
+              "property-extraction-and-classification-cs-mcp-server"
+            ],
+            "env": {
+              "SERVER_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql",
+              "OBJECT_STORE": "OS1",
+              "ZENIAM_ZEN_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth",
+              "ZENIAM_IAM_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken",
+              "ZENIAM_IAM_GRANT_TYPE": "password",
+              "ZENIAM_IAM_SCOPE": "openid",
+              "ZENIAM_IAM_USER": "{{ lc_principal_admin_user }}",
+              "ZENIAM_IAM_PASSWORD": "{{ lc_principal_admin_password }}"
+            }
+          },
+          "legal-hold-cs-mcp-server": {
+            "command": "uvx",
+            "args": [
+              "--from",
+              "git+https://github.com/ibm-ecm/ibm-content-services-mcp-server",
+              "legal-hold-cs-mcp-server"
+            ],
+            "env": {
+              "SERVER_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql",
+              "OBJECT_STORE": "OS1",
+              "ZENIAM_ZEN_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth",
+              "ZENIAM_IAM_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken",
+              "ZENIAM_IAM_GRANT_TYPE": "password",
+              "ZENIAM_IAM_SCOPE": "openid",
+              "ZENIAM_IAM_USER": "{{ lc_principal_admin_user }}",
+              "ZENIAM_IAM_PASSWORD": "{{ lc_principal_admin_password }}"
+          },
+          "ai-document-insight-cs-mcp-server": {
+            "command": "uvx",
+            "args": [
+              "--from",
+              "git+https://github.com/ibm-ecm/ibm-content-services-mcp-server",
+              "ai-document-insight-cs-mcp-server"
+            ],
+            "env": {
+              "SERVER_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql",
+              "OBJECT_STORE": "OS1",
+              "ZENIAM_ZEN_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/v1/preauth/validateAuth",
+              "ZENIAM_IAM_URL": "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/idprovider/v1/auth/identitytoken",
+              "ZENIAM_IAM_GRANT_TYPE": "password",
+              "ZENIAM_IAM_SCOPE": "openid",
+              "ZENIAM_IAM_USER": "{{ lc_principal_admin_user }}",
+              "ZENIAM_IAM_PASSWORD": "{{ lc_principal_admin_password }}"
+            }
+          }
+        }
+      }
+      ```

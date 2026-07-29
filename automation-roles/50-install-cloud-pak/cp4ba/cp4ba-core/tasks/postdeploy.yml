@@ -4,8 +4,31 @@
 - name: Manage dedicated CPFS
   ansible.builtin.include_tasks: postdeploy/cpfs.yml
 
+- name: Manage UMS
+  ansible.builtin.include_tasks: postdeploy/ums.yml
+
 - name: Manage Zen
   ansible.builtin.include_tasks: postdeploy/zen.yml
+
+- name: Get IAM token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: iam-token-user
+  vars:
+    common_cpfs_project: "{{ cp4ba_project_name }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_password: "{{ lc_principal_admin_password }}"
+    common_output_to_var: "iam_token"
+
+- name: Get Zen token
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: zen-token
+  vars:
+    common_iam_token: "{{ iam_token }}"
+    common_user: "{{ lc_principal_admin_user }}"
+    common_namespace_name: "{{ cp4ba_project_name }}"
+    common_output_to_var: "zen_token"
 
 - name: Manage RR
   ansible.builtin.include_tasks: postdeploy/rr.yml
@@ -33,43 +56,56 @@
   ansible.builtin.include_tasks: postdeploy/ads.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
 
-- name: Manage FNCM
-  ansible.builtin.include_tasks: postdeploy/fncm.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
-
 - name: Manage AAE
   ansible.builtin.include_tasks: postdeploy/aae.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae
 
-- name: Manage ADP
-  ansible.builtin.include_tasks: postdeploy/adp.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
-
-# - name: Manage IER
-#   ansible.builtin.include_tasks: postdeploy/ier.yml
-#   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+- name: Manage BAWAUT
+  ansible.builtin.include_tasks: postdeploy/bawaut.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Manage IER TM
   ansible.builtin.include_tasks: postdeploy/ier-tm.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
     and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
 
+- name: Manage ADP
+  ansible.builtin.include_tasks: postdeploy/adp.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+
+# Only if content is enabled, because otherwise following post deploy tasks would not execute
+- name: Wait for navigator-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: ReplicaSet
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
+  register: navigator_replicasets
+  retries: 60
+  delay: 30
+  until:
+    - navigator_replicasets.resources | length >= 2
+    - (navigator_replicasets.resources
+      | sort(attribute='metadata.creationTimestamp')
+      | last).status.readyReplicas | default(0) | int >= 1
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
+
+- name: Manage FNCM
+  ansible.builtin.include_tasks: postdeploy/fncm.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
+
+- name: Manage CCXAI
+  ansible.builtin.include_tasks: postdeploy/ccxai.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ccxai
+
+# - name: Manage IER
+#   ansible.builtin.include_tasks: postdeploy/ier.yml
+#   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+
 - name: Manage TM
   ansible.builtin.include_tasks: postdeploy/tm.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
-
-- name: Manage BAWAUT
-  ansible.builtin.include_tasks: postdeploy/bawaut.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
-
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ cp4ba_output_namespace }}"
-    common_output_directory: "{{ cp4ba_output_directory }}"
-    common_project_output_name: "cp4ba-output-project.yaml"
 
 - name: Prepare post-deploy.md
   ansible.builtin.template:

@@ -8,7 +8,7 @@
   ansible.builtin.set_fact:
     apps_endpoint_domain: mock
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ gitea_output_directory }}/{{ item }}.yaml"
@@ -19,7 +19,7 @@
     - deployments
     - services
 
-- name: Remove {{ item.name }}
+- name: Remove resources
   kubernetes.core.k8s:
     state: absent
     src: "{{ gitea_output_directory }}/{{ item.name }}.yaml"

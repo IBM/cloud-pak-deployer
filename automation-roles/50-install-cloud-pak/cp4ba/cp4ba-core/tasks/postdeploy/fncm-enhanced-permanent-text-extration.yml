@@ -1,0 +1,123 @@
+- name: Configure Enhanced Permanent Text Extration
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          changeObject(
+            repositoryIdentifier:\"{{ item }}\"
+            classIdentifier: \"TxeWatsonxExtractionAction\"
+            identifier: \"{2ABF31AC-E82A-4BF6-92DE-01C1D31C4476}\"
+            properties: [
+              {IsEnabled: true},
+              {TxeICOSApiKey: \"{{ (_current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.cos_api_key | default('cos_api_key')).encode('utf-8').hex() }}\"},
+              {TxeICOSConnectionGuid: \"{{ _current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.cos_connection_id | default('cos_connection_id') }}\"},
+              {TxeICOSUrl: \"{{ _current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.cos_endpoint | default('cos_endpoint') }}\"},
+              {TxeWatsonDesiredMetadataTypes: [\"kvps\",\"tables\",\"markdown\"]},
+              {TxeWatsonOcrMode: \"enabled\"},
+              {TxeWatsonServiceUrl: \"{{ _current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.endpoint | default('endpoint') }}\"},
+              {TxeWatsonxApiKey: \"{{ (_current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.api_key | default('api_key')).encode('utf-8').hex() }}\"},
+              {TxeWatsonxSpaceGuid: \"{{ _current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.space_id | default('space_id') }}\"}
+            ]
+            actions: [
+              {
+                type:UPDATE
+              }
+            ]
+          )
+          {
+            className
+            objectReference {
+              identifier
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content"
+
+- name: Find existing Enhanced Permanent Text Extration
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "query {
+          repositoryObjects(repositoryIdentifier: \"{{ item }}\", from: \"TxeEnhancedExtractionSettings\") {
+            independentObjects {
+              objectReference {
+                identifier
+              }
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content"
+
+- name: Enable Enhanced Permanent Text Extration
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/content-services-graphql/graphql"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        query: "mutation {
+          changeObject(
+            repositoryIdentifier:\"{{ item }}\"
+            properties: [
+              {DisplayName:\"Enhanced Extraction Settings\"}
+            ]
+            objectProperties: [
+              {
+                identifier:\"TxeExtractionClass\"
+                objectReferenceValue:{
+                  identifier: \"Document\"
+                }
+              }
+            ]
+            actions: [
+              {
+                type:CREATE
+                subCreateAction: {
+                  classId: \"TxeEnhancedExtractionSettings\"
+                }
+              }
+            ]
+          )
+          {
+            className
+            objectReference {
+              identifier
+            }
+          }
+        }"
+      }
+    validate_certs: false
+    return_content: true
+    status_code:
+      - 200
+  register: graphql_response
+  failed_when: "'errors' in graphql_response.content and
+    'A uniqueness requirement has been violated' not in graphql_response.content"
+  when: graphql_response.json.data.repositoryObjects.independentObjects | length == 0

@@ -1,0 +1,204 @@
+## Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/26.0.0?topic=ccas-configuring-content-cortex-ai-services-support-external-mcp-clients
+
+- name: Prepare yaml file for CCX AI CM
+  ansible.builtin.template:
+    src: ccxai/ccxai-configmap.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ccxai-configmap.yaml"
+    mode: u+rwx
+
+- name: Add CCX AI CM
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ccxai-configmap.yaml"
+
+- name: Patch ibm-ai-services-integration-config ConfigMap
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: ConfigMap
+    name: ibm-ai-services-integration-config
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      data:
+        oidc_client_secret: "mcp-oauth-client-secret"
+    merge_type: merge
+
+- name: Patch CCXAIServices ai-services custom configmap
+  kubernetes.core.k8s:
+    api_version: ccxaiservices.operator.ibm.com/v1
+    kind: CCXAIServices
+    name: ai-services
+    namespace: "{{ cp4ba_project_name }}"
+    definition:
+      spec:
+        core_mcp_server_configuration:
+          custom_configmap:
+            - name: "core-mcp-override-custom-configmap"
+              is_env: true
+    merge_type: merge
+
+- name: Get CCXAI MCP Pods
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name=ibm-core-mcp-server-deploy"
+  register: pods
+  retries: 40
+  delay: 15
+
+- name: Delete CCXAI MCP pods
+  kubernetes.core.k8s:
+    api_version: v1
+    kind: Pod
+    state: absent
+    namespace: "{{ cp4ba_project_name }}"
+    name: "{{ item.metadata.name }}"
+  loop: "{{ pods.resources }}"
+
+- name: Wait for CCXAI MCP Deployment Available State
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition
+  vars:
+    common_api_version: v1
+    common_resource_kind: Deployment
+    common_resource_name: ibm-core-mcp-server-deploy
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_name: Available
+    common_retries: 80
+    common_delay: 15
+
+## Based on https://www.ibm.com/docs/en/content-cortex/26.0.0?topic=pcpeccas-egistering-object-store-use-content-cortex-ai-services
+
+- name: Set CCX AI object store list
+  ansible.builtin.set_fact:
+    ccxai_os_list: ["CONTENT", "OS1", "OS2", "OS3"]
+
+- name: Add BAWTOS to CCX AI object store list
+  ansible.builtin.set_fact:
+    ccxai_os_list: "{{ ccxai_os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Create CCX AI metadata tool directory
+  ansible.builtin.file:
+    path: "{{ cp4ba_output_directory }}/ccxaitools"
+    state: directory
+    mode: u+rwx
+
+- name: Unzip CCX AI Services metadata tool
+  ansible.builtin.unarchive:
+    src: "files/ccxai/ICCXAIST.zip"
+    dest: "{{ cp4ba_output_directory }}/ccxaitools"
+    creates: "{{ cp4ba_output_directory }}/ccxaitools/ccx-ai-services-metadata/ccx_ai_metadata.sh"
+
+- name: Get CPE pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-cpe-deploy"
+  register: cpe_pod
+
+- name: Copy ccx-ai-services-metadata folder to CPE pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ cpe_pod.resources[0].metadata.name }}"
+    remote_path: /tmp/ccx-ai-services-metadata
+    local_path: "{{ cp4ba_output_directory }}/ccxaitools/ccx-ai-services-metadata"
+    no_preserve: true
+    state: to_pod
+
+- name: Make ccx_ai_metadata.sh executable in Java pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ cpe_pod.resources[0].metadata.name }}"
+    command: chmod +x /tmp/ccx-ai-services-metadata/ccx_ai_metadata.sh
+
+- name: Update ECMPopulation.properties and register object store with CCX AI
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ cpe_pod.resources[0].metadata.name }}"
+    command: '
+      /bin/bash -c ''
+      sed -i
+      -e "s|psi.URI=.*|psi.URI=https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/cpe/wsi/FNCEWS40MTOM/|"
+      -e "s|psi.UserName=.*|psi.UserName={{ lc_principal_admin_user }}|"
+      -e "s|psi.Password=.*|psi.Password={{ lc_principal_admin_password }}|"
+      -e "s|psi.ObjectStoreName=.*|psi.ObjectStoreName={{ item }}|"
+      -e "s|psi.DomainName=.*|psi.DomainName=P8DOMAIN|"
+      -e "s|pop.ExistingStoragePolicyName=.*|pop.ExistingStoragePolicyName=
+      {{ ''Default Database Storage Policy'' if item == ''CONTENT'' else ''Default ASA Storage Policy'' }}|"
+      /tmp/ccx-ai-services-metadata/data/ECMPopulation.properties
+      && cd /tmp/ccx-ai-services-metadata
+      && ./ccx_ai_metadata.sh create CE_metadata.xml
+      && ./ccx_ai_metadata.sh insert MessageLoader.xml'''
+  register: ccxai_register_result
+  failed_when: ccxai_register_result.rc is defined and ccxai_register_result.rc != 0
+  loop: "{{ ccxai_os_list }}"
+
+- name: Cleanup ccx-ai-services-metadata folder to CPE pod
+  kubernetes.core.k8s_exec:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ cpe_pod.resources[0].metadata.name }}"
+    command: rm -rf /tmp/ccx-ai-services-metadata
+
+- name: Get ICN pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
+  register: icn_pod
+
+- name: Copy plugin to ICN pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ icn_pod.resources[0].metadata.name }}"
+    remote_path: /opt/ibm/plugins/genaiAgentPlugin.jar
+    local_path: "{{ cp4ba_output_directory }}/ccxaitools/genaiAgentPlugin.jar"
+    no_preserve: true
+    state: to_pod
+
+- name: Configure plugin
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/plugins"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "id": "GenAIAgentPlugin",
+        "pluginJar": {
+          "filePath": "/opt/ibm/plugins/genaiAgentPlugin.jar",
+          "validateChecksum": false
+        },
+        "orderIndex": 1,
+        "configuration": "{\"serverUrl\":\"https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/reasoningservice/\"}"
+      }
+    validate_certs: false
+    status_code:
+      - 200
+      - 409
+
+- name: Set CCX AI desktop defs list
+  ansible.builtin.set_fact:
+    ccxai_desktop_def_list: [
+      {desktopId: 'CONTENT', repositoryIds: ['CONTENT'], defaultRepositoryId: 'CONTENT'},
+      {desktopId: 'OS1', repositoryIds: ['OS1'], defaultRepositoryId: 'OS1'},
+      {desktopId: 'OS2', repositoryIds: ['OS2'], defaultRepositoryId: 'OS2'},
+      {desktopId: 'OS3', repositoryIds: ['OS3'], defaultRepositoryId: 'OS3'}
+    ]
+
+- name: Add BAWTOS to CCX AI desktop defs list
+  ansible.builtin.set_fact:
+    ccxai_desktop_def_list: "{{ ccxai_desktop_def_list + [{'desktopId': 'BAWTOS', 'repositoryIds': ['BAWTOS'], 'defaultRepositoryId': 'BAWTOS'}] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Configure CCX AI on Object Stores
+  ansible.builtin.include_tasks: ccxai-configure-desktop.yml
+  with_items: "{{ ccxai_desktop_def_list }}"

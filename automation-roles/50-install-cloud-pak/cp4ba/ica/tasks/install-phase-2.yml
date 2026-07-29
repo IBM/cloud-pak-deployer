@@ -1,0 +1,351 @@
+- name: Copy plugin to status dir
+  ansible.builtin.copy:
+    src: "files/genaiPlugin.jar"
+    dest: "{{ ica_output_directory }}/genaiPlugin.jar"
+    mode: u+rwx
+
+- name: Get ICN pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
+  register: icn_pod
+
+- name: Copy plugin to ICN pod
+  kubernetes.core.k8s_cp:
+    namespace: "{{ cp4ba_project_name }}"
+    pod: "{{ icn_pod.resources[0].metadata.name }}"
+    remote_path: /opt/ibm/plugins/genaiPlugin.jar
+    local_path: "{{ ica_output_directory }}/genaiPlugin.jar"
+    no_preserve: true
+    state: to_pod
+
+- name: Configure plugin
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/admin/v1/plugins"
+    method: POST
+    headers:
+      Content-Type: application/json
+      Authorization: "Bearer {{ zen_token }}"
+    body_format: json
+    body:
+      {
+        "id": "GenAIPlugin",
+        "pluginJar": {
+          "filePath": "/opt/ibm/plugins/genaiPlugin.jar",
+          "validateChecksum": false
+        },
+        "orderIndex": 1,
+        "configuration": "{\"desktopSuggestions\":[]}"
+      }
+    validate_certs: false
+    status_code:
+      - 200
+      - 409
+
+- name: Set ICA object store list
+  ansible.builtin.set_fact:
+    ica_os_list: ["CONTENT", "OS1", "OS2"]
+
+- name: Add BAWTOS to ICA object store list
+  ansible.builtin.set_fact:
+    ica_os_list: "{{ ica_os_list + ['BAWTOS'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Configure ICA on Object Stores
+  ansible.builtin.include_tasks: configure-os.yml
+  loop: "{{ ica_os_list }}"
+
+- name: Navigator Logon
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/logon"
+    method: POST
+    body: "desktop=admin"
+    force_basic_auth: true
+    status_code: 200
+    headers:
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: InternalIamRealm
+      Content-Type: "application/x-www-form-urlencoded"
+    validate_certs: false
+    timeout: 60
+    return_content: true
+  register: login
+
+- name: ICN session
+  ansible.builtin.set_fact:
+    content: "{{ login.content[4:] | from_json }}"
+    login_jsession: "{{ login.cookies['icn-JSESSIONID'] }}"
+    cookie_jsessionid_name: icn-JSESSIONID
+
+- name: Create Content toolbar menu with Compare
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/\
+      admin/configuration?action=multiple&id=GenAICompareContentListToolbar&configuration=MenuConfig&\
+      application=navigator&securityTopic=menus.menus&userid={{ lc_principal_admin_user }}&login_desktop=admin&desktop=admin"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body_format: form-urlencoded
+    body:
+      json_post: >-
+        [
+          {
+              "action": "add",
+              "configuration": "MenuConfig",
+              "id": "GenAICompareContentListToolbar",
+              "data": {
+                  "name": "GenAI Compare Content List Toolbar",
+                  "description": "Content List Toolbar with GenAI Compare",
+                  "type": "ContentListToolbar",
+                  "items": [
+                      "RefreshGrid",
+                      "Import",
+                      "CreateFolder",
+                      "DefaultNew",
+                      "Separator",
+                      "CompareAction"
+                  ]
+              },
+              "update_list_configuration": "ApplicationConfig",
+              "update_list_id": "navigator",
+              "update_list_type": "menus"
+          }
+        ]
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Create Search toolbar menu with Compare
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/\
+      admin/configuration?action=multiple&id=GenAICompareSearchResultsToolbar&configuration=MenuConfig&\
+      application=navigator&securityTopic=menus.menus&userid={{ lc_principal_admin_user }}&login_desktop=admin&desktop=admin"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body_format: form-urlencoded
+    body:
+      json_post: >-
+        [
+          {
+              "action": "add",
+              "configuration": "MenuConfig",
+              "id": "GenAICompareSearchResultsToolbar",
+              "data": {
+                  "name": "GenAI Compare Search Results Toolbar",
+                  "description": "Search Results Toolbar with GenAI Compare",
+                  "type": "SearchResultsToolbar",
+                  "items": [
+                      "RefreshGrid",
+                      "Import",
+                      "ODImport",
+                      "CreateFolder",
+                      "DefaultNew",
+                      "Separator",
+                      "ExportAll",
+                      "CompareAction"
+                  ]
+              },
+              "update_list_configuration": "ApplicationConfig",
+              "update_list_id": "navigator",
+              "update_list_type": "menus"
+          }
+        ]
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Create Item context menu with View Versions
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/\
+      admin/configuration?action=multiple&id=GenAIItemContextMenu&configuration=MenuConfig&\
+      application=navigator&securityTopic=menus.menus&userid={{ lc_principal_admin_user }}&login_desktop=admin&desktop=admin"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body_format: form-urlencoded
+    body:
+      json_post: >-
+        [
+          {
+              "action": "add",
+              "configuration": "MenuConfig",
+              "id": "GenAIItemContextMenu",
+              "data": {
+                  "name": "GenAI Document Context Menu",
+                  "description": "Document Context Menu with View Versions",
+                  "type": "ItemContextMenu",
+                  "items": [
+                      "View",
+                      "Preview",
+                      "ViewVersionsAction",
+                      "MergeSplit",
+                      "ViewFullReport",
+                      "Edit",
+                      "DefaultEdit",
+                      "DefaultCopy",
+                      "ViewChildDocuments",
+                      "ViewAnnotation",
+                      "DefaultDownload",
+                      "AddToFavorites",
+                      "DeleteFavorite",
+                      "Export",
+                      "EnableSync",
+                      "DisableSync",
+                      "DeleteItem",
+                      "Separator",
+                      "DefaultCheckOut",
+                      "CheckIn",
+                      "Unlock",
+                      "Separator",
+                      "DefaultBox",
+                      "DefaultLink",
+                      "DefaultSendEmail",
+                      "DefaultVersion",
+                      "DefaultFolderActions",
+                      "DefaultPrint",
+                      "DefaultWorkflow",
+                      "DefaultHolds"
+                  ]
+              },
+              "update_list_configuration": "ApplicationConfig",
+              "update_list_id": "navigator",
+              "update_list_type": "menus"
+          }
+        ]
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Create Favorites context menu with View Versions
+  ansible.builtin.uri:
+    url: "https://cpd-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}/icn/navigator/jaxrs/\
+      admin/configuration?action=multiple&id=GenAIFavoriteItemContextMenu&configuration=MenuConfig&\
+      application=navigator&securityTopic=menus.menus&userid={{ lc_principal_admin_user }}&login_desktop=admin&desktop=admin"
+    method: POST
+    return_content: true
+    follow_redirects: all
+    body_format: form-urlencoded
+    body:
+      json_post: >-
+        [
+          {
+              "action": "add",
+              "configuration": "MenuConfig",
+              "id": "GenAIFavoriteItemContextMenu",
+              "data": {
+                  "name": "GenAI Favorite Context Menu",
+                  "description": "Favorite Context Menu with View Versions",
+                  "type": "FavoriteItemContextMenu",
+                  "items": [
+                    "View",
+                    "Preview",
+                    "ViewVersionsAction",
+                    "MergeSplit",
+                    "Edit",
+                    "DefaultEdit",
+                    "DefaultCopy",
+                    "ViewChildDocuments",
+                    "ViewAnnotation",
+                    "DefaultDownload",
+                    "RenameFavorite",
+                    "DeleteFavorite",
+                    "EnableSync",
+                    "DisableSync",
+                    "DeleteItem",
+                    "Separator",
+                    "DefaultCheckOut",
+                    "CheckIn",
+                    "Unlock",
+                    "Separator",
+                    "DefaultBox",
+                    "DefaultLink",
+                    "DefaultSendEmail",
+                    "DefaultVersion",
+                    "DefaultFolderActions",
+                    "DefaultPrint",
+                    "DefaultWorkflow",
+                    "DefaultHolds"
+                    ]
+              },
+              "update_list_configuration": "ApplicationConfig",
+              "update_list_id": "navigator",
+              "update_list_type": "menus"
+          }
+        ]
+    validate_certs: false
+    headers:
+      Content-Type: "application/x-www-form-urlencoded"
+      Connection: "keep-alive"
+      Cookie: "{{ cookie_jsessionid_name }}={{ login_jsession }}"
+      security_token: "{{ content.security_token }}"
+      Authorization: "Bearer {{ zen_token }}"
+      auth-token-realm: "InternalIamRealm"
+    timeout: 60
+  register: navigator_response
+  failed_when: "'errors' in navigator_response.content"
+
+- name: Set ICA desktop defs list
+  ansible.builtin.set_fact:
+    ica_desktop_def_list: [
+      {desktopId: 'CONTENT', repositoryIds: ['CONTENT'], defaultRepositoryId: 'CONTENT'},
+      {desktopId: 'OS1', repositoryIds: ['OS1'], defaultRepositoryId: 'OS1'},
+      {desktopId: 'OS2', repositoryIds: ['OS2'], defaultRepositoryId: 'OS2'}
+    ]
+
+- name: Add BAWTOS to ICA desktop defs list
+  ansible.builtin.set_fact:
+    ica_desktop_def_list: "{{ ica_desktop_def_list + [{'desktopId': 'BAWTOS', 'repositoryIds': ['BAWTOS'], 'defaultRepositoryId': 'BAWTOS'}] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Configure ICA on Object Stores
+  ansible.builtin.include_tasks: configure-desktop.yml
+  with_items: "{{ ica_desktop_def_list }}"
+
+- name: Set usage entry
+  ansible.builtin.include_role:
+    name: usage
+    tasks_from: set-entry
+  vars:
+    usage_entry_name: IBM-Content-Assistant
+    usage_entry_value: |-
+      # IBM Content Assistant Client Managed Software (ICA)
+
+      ## Endpoints
+
+      - ICA base url (also used for CLI access): https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
+      - ICA OpenSearch user: genai-service-user / {{ ica_opensearch_password }}
+
+      ## CLI access (CLI has to be downloaded from IBM)
+
+      ```bash
+      ibmca config url https://cas-{{ cp4ba_project_name }}.{{ apps_endpoint_domain }}
+      ibmca login -u genai-service-user # password is: {{ ica_universal_password }}
+      ```

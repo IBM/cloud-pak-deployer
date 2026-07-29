@@ -95,6 +95,28 @@
     common_namespace_name: "{{ cp4ba_project_name }}"
   when: flink_deployments.resources | length != 0
 
+# wait for the ConnectivityPack instances to disappear as if we do not wait, they will have finalizers left
+- name: Wait for ConnectivityPack intances to disappear
+  kubernetes.core.k8s_info:
+    api_version: icp4a.ibm.com/v1
+    kind: ConnectivityPack
+    namespace: "{{ cp4ba_project_name }}"
+  register: connpack_deployments
+  retries: 3
+  delay: 30
+  until: connpack_deployments.resources | length == 0
+  ignore_errors: true
+
+- name: Clear ConnectivityPack instances finalizers
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: clear-resource-finalizers
+  vars:
+    common_api_version: icp4a.ibm.com/v1
+    common_kind: ConnectivityPack
+    common_namespace_name: "{{ cp4ba_project_name }}"
+  when: connpack_deployments.resources | length != 0
+
 - name: Remove Catalog Sources
   kubernetes.core.k8s:
     state: absent
@@ -111,9 +133,10 @@
     - ibm-bts-operator-catalog-{{ cpfs_bts_version }}
     - ibm-iam-operator-catalog-{{ cpfs_iam_version }}
     - ibm-zen-operator-catalog-{{ cpfs_zen_version }}
+    - ibm-usage-metering-catalog
     - ibm-events-operator-catalog-{{ cpfs_events_version }}
     - cloud-native-postgresql-catalog
-    - ibm-fncm-operator-catalog
+    - ibm-content-cortex-operator-catalog
 
 # Based on https://www.ibm.com/docs/en/cpfs?topic=online-uninstalling-foundational-services
 
@@ -314,6 +337,9 @@
     - bawexternal
     - gcddb
     - contentdb
+    - os1db
+    - os2db
+    - os3db
     - fpos
     - ros
     - odmdb
@@ -346,6 +372,9 @@
     - bawexternal_tbs
     - gcddb_tbs
     - contentdb_tbs
+    - os1db_tbs
+    - os2db_tbs
+    - os3db_tbs
     - adpbase_tbs
     - adpggdb_tbs
     - proj1_tbs
@@ -380,6 +409,9 @@
     - bawexternal
     - gcddb
     - contentdb
+    - os1db
+    - os2db
+    - os3db
     - fpos
     - ros
     - odmdb

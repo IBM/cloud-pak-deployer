@@ -10,3 +10,39 @@
   kubernetes.core.k8s:
     state: present
     src: "{{ cp4ba_output_directory }}/fncm-secret.yaml"
+
+- name: Manage FNCM GenAI trusted TLS secret
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.gen_ai
+  block:
+    - name: Fetch TLS certificate chain from COS endpoint
+      community.crypto.get_certificate:
+        host: "{{ _current_cp4ba_cluster.cp4ba.patterns.content.gen_ai.cos_endpoint | urlsplit('hostname') }}"
+        port: 443
+        get_certificate_chain: true
+      register: _fncm_cos_cert
+
+    - name: Extract root (top-level) certificate from COS chain
+      ansible.builtin.set_fact:
+        _fncm_cos_root_crt: "{{ _fncm_cos_cert.verified_chain | last }}"
+
+    - name: Fetch TLS certificate chain from IAM endpoint
+      community.crypto.get_certificate:
+        host: iam.cloud.ibm.com
+        port: 443
+        get_certificate_chain: true
+      register: _fncm_iam_cert
+
+    - name: Extract root (top-level) certificate from IAM chain
+      ansible.builtin.set_fact:
+        _fncm_iam_root_crt: "{{ _fncm_iam_cert.verified_chain | last }}"
+
+    - name: Prepare yaml file for FNCM trusted TLS Secret
+      ansible.builtin.template:
+        src: fncm/fncm-trusted-tls-secret.yaml.j2
+        dest: "{{ cp4ba_output_directory }}/fncm-trusted-tls-secret.yaml"
+        mode: u+rwx
+
+    - name: Add FNCM trusted TLS Secret
+      kubernetes.core.k8s:
+        state: present
+        src: "{{ cp4ba_output_directory }}/fncm-trusted-tls-secret.yaml"

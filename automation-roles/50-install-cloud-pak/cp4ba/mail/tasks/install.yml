@@ -4,14 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ mail_project_name }}"
-    common_output_directory: "{{ mail_output_directory }}"
-
 - name: Generate an OpenSSL private key
   community.crypto.openssl_privatekey:
     path: "{{ mail_output_directory }}/mailserver.key"
@@ -23,12 +15,12 @@
     subject: "CN=mailserver"
     subject_alt_name: DNS:mailserver
 
-- name: Check that the {{ mail_ca_key_path }} exists
+- name: Check that the path exists {{ mail_ca_key_path }}
   ansible.builtin.stat:
     path: "{{ mail_ca_key_path }}"
   register: mail_ca_key_file
 
-- name: Check that the {{ mail_ca_crt_path }} exists
+- name: Check that the path exists {{ mail_ca_crt_path }}
   ansible.builtin.stat:
     path: "{{ mail_ca_crt_path }}"
   register: mail_ca_crt_file
@@ -66,7 +58,7 @@
   ansible.builtin.set_fact:
     _tls_crt: "{{ slurped_crt_data.content }}"
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ mail_output_directory }}/{{ item }}.yaml"
@@ -79,7 +71,7 @@
     - statefulsets
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ mail_output_directory }}/{{ item.name }}.yaml"
@@ -100,26 +92,26 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Extras-Mail
-    usage_entry_value:
-      "# Mail
+    usage_entry_value: |-
+      # Mail
 
       As mail server.
 
-      Emails sent to {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}, cpmanager1@{{ lc_ldap_domain }}, cpmanager2@{{ lc_ldap_domain }}, \
-      cpuser@{{ lc_ldap_domain }}, cpuser1@{{ lc_ldap_domain }}, cpuser2@{{ lc_ldap_domain }} \
-      will be delivered in their respective mailboxes. \
+      Emails sent to following addresses will be delivered in their respective mailboxes:
+        - {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}
+        - cpmanager1@{{ lc_ldap_domain }}
+        - cpmanager2@{{ lc_ldap_domain }}
+        - cpuser@{{ lc_ldap_domain }}
+        - cpuser1@{{ lc_ldap_domain }}
+        - cpuser2@{{ lc_ldap_domain }}
       Any email received at other *\\*@{{ lc_ldap_domain }} will be delivered to *{{ lc_principal_admin_user }}*.
 
       ## Endpoints
 
       - Exposed as NodePort (30062,30063,30064,30065,30066) as found in Project *{{ mail_project_name }}* in Service *mail*.
-
       - Available as mail.{{ postgresql_project_name }}.svc.cluster.local:25 for SMTP within OCP
 
       ## Credentials
 
       - for admin: {{ lc_principal_admin_user }}@{{ lc_ldap_domain }}/ {{ mail_universal_password }}
-
       - for user: cpuser@{{ lc_ldap_domain }} / {{ mail_universal_password }}
-
-      "

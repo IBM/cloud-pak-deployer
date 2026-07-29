@@ -1,10 +1,3 @@
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Load base CR to variable
   ansible.builtin.set_fact:
     cr: "{{ lookup('template', 'cr.yaml.j2') | from_yaml }}"
@@ -126,6 +119,11 @@
   ansible.builtin.set_fact:
     components: "{{ components + ['ier'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+
+- name: Add FNCM components
+  ansible.builtin.set_fact:
+    components: "{{ components + ['ccxmo'] }}"
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ccxmo
 
 - name: Add FNCM to CR
   ansible.builtin.set_fact:
@@ -300,7 +298,7 @@
 
 - name: Add BAWAUT component
   ansible.builtin.set_fact:
-    components: "{{ components + ['baw_authoring', 'pfs'] }}"
+    components: "{{ components + ['baw_authoring', 'pfs', 'opensearch', 'application_connectors', 'workflow_runtime_mcp_server'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/23.0.1?topic=services-kafka
@@ -397,6 +395,56 @@
     apply: true
     src: "{{ cp4ba_output_directory }}/cr.yaml"
 
+- name: Prepare yaml file for UMS CR
+  ansible.builtin.template:
+    src: ums/ums-cr.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ums-cr.yaml"
+    mode: u+rwx
+
+- name: Add UMS CR
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ums-cr.yaml"
+
+- name: Wait for UMS instance ibmusagemetering Ready phase
+  kubernetes.core.k8s_info:
+    api_version: operator.ibm.com/v1
+    kind: IBMUsageMetering
+    name: ibmusagemetering
+    namespace: "{{ cp4ba_project_name }}"
+  register: ums
+  retries: 60
+  delay: 30
+  until: ('Ready' in phase)
+  vars:
+    condition_query: "resources[*].status.phase"
+    phase: "{{ ums | json_query(condition_query) | unique }}"
+
+- name: Prepare yaml file for UMS Metrics
+  ansible.builtin.template:
+    src: ums/ums-metrics.yaml.j2
+    dest: "{{ cp4ba_output_directory }}/ums-metrics.yaml"
+    mode: u+rwx
+
+- name: Add UMS Metrics
+  kubernetes.core.k8s:
+    state: present
+    src: "{{ cp4ba_output_directory }}/ums-metrics.yaml"
+
+- name: Wait for ZenService instance Ready state
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: wait-resource-condition-generic
+  vars:
+    common_api_version: zen.cpd.ibm.com/v1
+    common_resource_kind: ZenService
+    common_resource_name: iaf-zen-cpdservice
+    common_resource_namespace: "{{ cp4ba_project_name }}"
+    common_condition_query: resources[*].status.zenStatus
+    common_condition_value: Completed
+    common_retries: 90
+    common_delay: 60
+
 - name: Wait for Kafka
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.kafka or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
   block:
@@ -471,20 +519,6 @@
     common_delay: 60
   when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai or _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled
 
-- name: Wait for ZenService instance Ready state
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition-generic
-  vars:
-    common_api_version: zen.cpd.ibm.com/v1
-    common_resource_kind: ZenService
-    common_resource_name: iaf-zen-cpdservice
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.zenStatus
-    common_condition_value: Completed
-    common_retries: 90
-    common_delay: 60
-
 - name: Wait for Prereqs Ready states
   ansible.builtin.include_role:
     name: common
@@ -502,257 +536,3 @@
     - resources[*].status.components.prereq.iafStatus
     - resources[*].status.components.prereq.iamIntegrationStatus
     - resources[*].status.components.prereq.rootCAStatus
-
-- name: Wait for RR Ready state
-  kubernetes.core.k8s_info:
-    kind: Pod
-    namespace: "{{ cp4ba_project_name }}"
-    label_selectors:
-      - app.kubernetes.io/component=etcd-server
-  register: pod
-  retries: 30
-  delay: 120
-  until: (['True'] in pod | json_query(condition_query) | unique )
-  vars:
-    condition_query: "resources[*].status.conditions[?type == 'Ready'].status"
-
-- name: Wait for BTS Ready state
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition-generic
-  vars:
-    common_api_version: operator.ibm.com/v1alpha1
-    common_resource_kind: BusinessTeamsService
-    common_resource_name: cp4ba-bts
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_query: resources[*].status.serviceStatus
-    common_condition_value: ready
-    common_retries: 30
-    common_delay: 120
-  when:
-    _current_cp4ba_cluster.cp4ba.patterns.document_processing.optional_components.document_processing_designer
-    or _current_cp4ba_cluster.cp4ba.patterns.application.enabled
-    or _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
-
-- name: Deployments wait_list - content / document_processing prereq
-  ansible.builtin.set_fact:
-    wait_list:
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-cpe-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.css | ternary(cp4ba_cr_meta_name + '-css-deploy-1', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.cmis | ternary(cp4ba_cr_meta_name + '-cmis-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.content.enabled | ternary(cp4ba_cr_meta_name + '-graphql-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.content.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm | ternary(cp4ba_cr_meta_name + '-tm-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-gitgateway-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-viewone-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-cpds-deploy', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-cds-deploy', '') }}"
-      - "{{ cp4ba_cr_meta_name + '-navigator-deploy' }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.application.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.application.optional_components.app_designer | ternary(cp4ba_cr_meta_name + '-pbk-ae-deployment', '') }}"
-
-- name: Wait for Deployments wait_list - content / document_processing prereq to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 60
-    common_delay: 120
-  with_items: "{{ wait_list | select | list }}"
-
-- name: Wait for {{ cp4ba_cr_meta_name }}-bastudio-deployment StatefulSet to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-statefulset-available
-  vars:
-    common_resource_name: "{{ cp4ba_cr_meta_name }}-bastudio-deployment"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_retries: 60
-    common_delay: 120
-  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bas
-
-- name: Wait for Deployment Workflow Agent to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 30
-    common_delay: 120
-  with_items:
-    - "{{ cp4ba_cr_meta_name }}-workflow-server-agent"
-  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workflow_assistant or
-    _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.workplace_assistant
-
-- name: StatefulSets wait_list - document_processing
-  ansible.builtin.set_fact:
-    wait_list:
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled | ternary(cp4ba_cr_meta_name + '-rabbitmq-ha', '') }}"
-
-- name: Wait for StatefulSets wait_list - document_processing to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-statefulset-available
-  vars:
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_retries: 30
-    common_delay: 120
-  with_items: "{{ wait_list | select | list }}"
-
-- name: Wait for Deployment IER to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 30
-    common_delay: 120
-  with_items:
-    - "{{ cp4ba_cr_meta_name }}-ier-deploy"
-  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
-
-- name: Wait for Deployments document_processing_core to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 36
-    common_delay: 300
-  with_items:
-    - "{{ cp4ba_cr_meta_name }}-classifyprocess-classify"
-    - "{{ cp4ba_cr_meta_name }}-natural-language-extractor"
-    - "{{ cp4ba_cr_meta_name }}-ocr-extraction"
-    - "{{ cp4ba_cr_meta_name }}-postprocessing"
-    - "{{ cp4ba_cr_meta_name }}-processing-extraction"
-    - "{{ cp4ba_cr_meta_name }}-setup"
-    - "{{ cp4ba_cr_meta_name }}-spbackend"
-  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
-
-- name: Wait for Deployment document_processing_deeplearning to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 36
-    common_delay: 300
-  with_items:
-    - "{{ cp4ba_cr_meta_name }}-deep-learning"
-  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.cr_custom.spec.ca_configuration.ocrextraction.deep_learning_object_detection.enabled
-    | default(false) | bool
-
-- name: Wait for BAI InsightsEngine instance Ready state
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: icp4a.ibm.com/v1
-    common_resource_kind: InsightsEngine
-    common_resource_name: "{{ cp4ba_cr_meta_name }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Ready
-    common_retries: 60
-    common_delay: 120
-  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai
-
-- name: Deployments wait_list - bai / decision_odm / app
-  ansible.builtin.set_fact:
-    wait_list:
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name + '-mls-itp', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.bai | ternary(cp4ba_cr_meta_name + '-mls-wfi', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_center | ternary(cp4ba_cr_meta_name + '-odm-decisioncenter', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
-        ternary(cp4ba_cr_meta_name + '-odm-decisionserverruntime', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_server_runtime |
-        ternary(cp4ba_cr_meta_name + '-odm-decisionserverconsole', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions.optional_components.decision_runner | ternary(cp4ba_cr_meta_name + '-odm-decisionrunner', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.application.enabled | ternary(cp4ba_cr_meta_name + '-workspace-aae-ae-deployment', '') }}"
-
-- name: Wait for Deployments wait_list - bai / decision_odm / app to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 60
-    common_delay: 120
-  with_items: "{{ wait_list | select | list }}"
-
-- name: Deployments wait_list - decision_ads
-  ansible.builtin.set_fact:
-    wait_list:
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name + '-ads-run-service', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-parsing-service', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-git-service', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-rest-api', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_designer | ternary(cp4ba_cr_meta_name + '-ads-credentials-service', '') }}"
-      - "{{ _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled and
-        _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.optional_components.ads_runtime | ternary(cp4ba_cr_meta_name + '-ads-runtime-service', '') }}"
-
-- name: Wait for Deployments wait_list - decision_ads to be Available
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: v1
-    common_resource_kind: Deployment
-    common_resource_name: "{{ item }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Available
-    common_retries: 60
-    common_delay: 120
-  with_items: "{{ wait_list | select | list }}"
-
-- name: Wait for CP4BA instance Ready state
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: wait-resource-condition
-  vars:
-    common_api_version: icp4a.ibm.com/v1
-    common_resource_kind: ICP4ACluster
-    common_resource_name: "{{ cp4ba_cr_meta_name }}"
-    common_resource_namespace: "{{ cp4ba_project_name }}"
-    common_condition_name: Ready
-    common_retries: 60
-    common_delay: 120

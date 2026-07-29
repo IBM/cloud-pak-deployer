@@ -4,21 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ opensearch_project_name }}"
-    common_output_directory: "{{ opensearch_output_directory }}"
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
 - name: Generate OpenSearch private key
   community.crypto.openssl_privatekey:
     path: "{{ opensearch_output_directory }}/opensearch.key"
@@ -30,12 +15,12 @@
     subject: "CN=opensearch"
     subject_alt_name: "DNS:opensearch"
 
-- name: Check that the {{ opensearch_ca_key_path }} exists
+- name: Check that the path exists {{ opensearch_ca_key_path }}
   ansible.builtin.stat:
     path: "{{ opensearch_ca_key_path }}"
   register: opensearch_ca_key_file
 
-- name: Check that the {{ opensearch_ca_crt_path }} exists
+- name: Check that the exists {{ opensearch_ca_crt_path }}
   ansible.builtin.stat:
     path: "{{ opensearch_ca_crt_path }}"
   register: opensearch_ca_crt_file
@@ -82,7 +67,7 @@
   ansible.builtin.set_fact:
     _opensearch_ca_crt: "{{ opensearch_slurped_ca_data.content }}"
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ opensearch_output_directory }}/{{ item }}.yaml"
@@ -96,7 +81,7 @@
     - statefulsets
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ opensearch_output_directory }}/{{ item.name }}.yaml"
@@ -123,23 +108,41 @@
     common_apps_endpoint_domain: "{{ apps_endpoint_domain }}"
     common_output_directory: "{{ opensearch_output_directory }}"
 
+- name: Create Unsecured Route
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: route.openshift.io/v1
+      kind: Route
+      metadata:
+        name: opensearch-unsecured
+        namespace: "{{ opensearch_project_name }}"
+      spec:
+        host: "opensearch-unsecured-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}"
+        to:
+          kind: Service
+          name: opensearch
+          weight: 100
+        port:
+          targetPort: http
+        wildcardPolicy: None
+
 - name: Set usage entry
   ansible.builtin.include_role:
     name: usage
     tasks_from: set-entry
   vars:
     usage_entry_name: Pre-requisites-OpenSearch
-    usage_entry_value:
-      "# OpenSearch
+    usage_entry_value: |-
+      # OpenSearch
 
       As search and analytics engine for the platform.
 
       ## Endpoints
 
       - Main 9200 port: https://opensearch-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}
+      - Main 9200 port unsecured: https://opensearch-unsecured-{{ opensearch_project_name }}.{{ apps_endpoint_domain }}
 
       ## Credentials
 
       - admin / {{ opensearch_universal_password }}
-
-      "

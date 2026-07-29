@@ -1,3 +1,12 @@
+- name: Get postgresql pod
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_postgresql_project }}"
+    label_selectors:
+      - app=postgresql
+  register: postgresql_pod
+
 - name: Manage DBs for BAN
   ansible.builtin.include_tasks: db/ban.yml
 

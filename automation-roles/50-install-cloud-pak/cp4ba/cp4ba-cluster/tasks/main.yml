@@ -20,9 +20,9 @@
 
 - name: Determine current OCP cluster
   ansible.builtin.set_fact:
-    _current_openshift_cluster: "{{ all_config.openshift | json_query(query) | first | default({}) }}"
+    _current_openshift_cluster: "{{ all_config.openshift | json_query(custom_query) | first | default({}) }}"
   vars:
-    query: >-
+    custom_query: >-
       [?name=='{{ _current_cp4ba_cluster.openshift_cluster_name }}']
 
 - name: Login to the OpenShift cluster
@@ -79,7 +79,8 @@
     state: directory
     mode: u+rwx
 
-- name: Get OpenShift storage classes to use for {{ _current_cp4ba_cluster.project }} and storage class name {{ _current_cp4ba_cluster.openshift_storage_name }}
+- name: Get OpenShift storage classes to use for {{ _current_cp4ba_cluster.project +
+    ' and storage class name ' + _current_cp4ba_cluster.openshift_storage_name }}
   ansible.builtin.include_role:
     name: get-openshift-storage
   vars:
@@ -114,9 +115,10 @@
 
 - name: Set passwrod from vault
   ansible.builtin.set_fact:
-    _cp4ba_admin_password_vault_key_name: "cp4ba_admin_{{ _current_cp4ba_cluster.project | replace('-', '_') }}_{{ _current_cp4ba_cluster.openshift_cluster_name | replace('-', '_') }}"
+    _cp4ba_admin_password_vault_key_name: "cp4ba_admin_{{ _current_cp4ba_cluster.project | replace('-', '_') + '_' +
+      _current_cp4ba_cluster.openshift_cluster_name | replace('-', '_') }}"
 
-- name: Validate if an existing admin password for {{ _cp4ba_admin_password_vault_key_name }} exists in the vault
+- name: Validate if an existing admin password exists in the vault for {{ _cp4ba_admin_password_vault_key_name }}
   ansible.builtin.include_role:
     name: vault-get-secret
   vars:
@@ -147,13 +149,21 @@
         name: vault-set-secret
       vars:
         secret_name: "{{ _cp4ba_admin_password_vault_key_name }}"
-        secret_description: "cp4ba admin password for namespace {{ _current_cp4ba_cluster.project }}, cluster {{ _current_cp4ba_cluster.openshift_cluster_name }}"
+        secret_description: "cp4ba admin password for namespace {{ _current_cp4ba_cluster.project + ', cluster' +
+          _current_cp4ba_cluster.openshift_cluster_name }}"
         secret_payload: "{{ _cp4ba_admin_password_new }}"
         secret_group: "{{ environment_name }}"
 
     - name: Set universal password
       ansible.builtin.set_fact:
         universal_password: "{{ _cp4ba_admin_password_new }}"
+
+- name: Get OCP Apps domain
+  ansible.builtin.include_role:
+    name: common
+    tasks_from: apps-endpoint
+  vars:
+    common_output_to_var: "apps_endpoint_domain"
 
 - name: Prepare the Playbook Configuration variables
   ansible.builtin.include_role:

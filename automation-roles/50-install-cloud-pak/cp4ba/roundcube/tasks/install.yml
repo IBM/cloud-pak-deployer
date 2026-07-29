@@ -4,14 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ roundcube_project_name }}"
-    common_output_directory: "{{ roundcube_output_directory }}"
-
 - name: Get postgresql pod
   kubernetes.core.k8s_info:
     api_version: v1
@@ -36,7 +28,7 @@
       EOF"
   register: command_status
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ roundcube_output_directory }}/{{ item }}.yaml"
@@ -50,7 +42,7 @@
     - services
     - deployments
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ roundcube_output_directory }}/{{ item.name }}.yaml"
@@ -65,14 +57,6 @@
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
 
 - name: Crete Edge Route
   ansible.builtin.include_role:
@@ -91,8 +75,8 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Extras-Roundcube
-    usage_entry_value:
-      "# Roundcube
+    usage_entry_value: |-
+      # Roundcube
 
       As mail client.
 
@@ -102,10 +86,7 @@
 
       ## Credentials
 
-      - for admin: {{ lc_principal_admin_user }}@{{ lc_ldap_domain }} / {{ roundcube_universal_password }} \
-        (you can also use only *{{ lc_principal_admin_user }}* without domain as username to login)
-
-      - for other users: cpmanager1, cpmanager2, cpuser, cpuser1, cpuser2 with domain @{{ lc_ldap_domain }} / {{ roundcube_universal_password }} \
-        (you can also use only the usernames without domain to login)
-
-      "
+      - For admin: {{ lc_principal_admin_user }}@{{ lc_ldap_domain }} / {{ roundcube_universal_password }}
+        - You can also use only *{{ lc_principal_admin_user }}* without domain as username to login)
+      - For other users: cpmanager1, cpmanager2, cpuser, cpuser1, cpuser2 with domain @{{ lc_ldap_domain }} / {{ roundcube_universal_password }}
+        - You can also use only the usernames without domain to login)

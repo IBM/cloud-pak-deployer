@@ -10,14 +10,7 @@
 #     common_password: "{{ prefix_universal_password }}"
 #     common_user: "{{ admin_user }}"
 
-- name: Get OCP Apps domain
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-
-- name: Upload to Nexus
+- name: Upload to Nexus # noqa: command-instead-of-module
   ansible.builtin.command: |
     curl -kX 'POST' \
     'https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=raw-hosted' \
@@ -30,7 +23,6 @@
     -s -o /dev/null -w "%{http_code}"
   register: import_curl_result
   changed_when: true
-  # noqa: command-instead-of-module
 
 - name: Restart and reupload
   when: import_curl_result.stdout != "204"
@@ -59,7 +51,7 @@
         common_retries: 80
         common_delay: 15
 
-    - name: Upload to Nexus
+    - name: Upload to Nexus # noqa: command-instead-of-module
       ansible.builtin.command: |
         curl -kX 'POST' \
         'https://nexus-{{ nexus_project_name }}.{{ apps_endpoint_domain }}/service/rest/v1/components?repository=raw-hosted' \
@@ -73,4 +65,3 @@
       register: import_curl_result
       failed_when: import_curl_result.stdout != "204"
       changed_when: true
-      # noqa: command-instead-of-module

@@ -2,6 +2,16 @@
   ansible.builtin.set_fact:
     cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}"
 
+- name: Set output directory variable for Phase 1
+  ansible.builtin.set_fact:
+    cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}/phase-1"
+  when: "cp4ba_action == 'install' and (install_phase_1 | default(false))"
+
+- name: Set output directory variable for Phase 2
+  ansible.builtin.set_fact:
+    cp4ba_output_directory: "{{ cp4ba_base_dir }}/{{ cp4ba_dir_name }}/phase-2"
+  when: "cp4ba_action == 'install' and (install_phase_2 | default(false))"
+
 - name: Remove CP4BA directory for generated files
   ansible.builtin.file:
     path: "{{ cp4ba_output_directory }}"
@@ -13,15 +23,21 @@
     state: directory
     mode: u+rwx
 
-- name: Install CP4BA
-  ansible.builtin.include_tasks: install.yml
+- name: Install CP4BA Phase 1
+  ansible.builtin.include_tasks: install-phase-1.yml
   vars:
     _cp4ba_run_repository: "{{ _cp4ba_run_repository_override if _cp4ba_run_repository_override is defined else true }}"
     _cp4ba_run_dbs: "{{ _cp4ba_run_dbs_override if _cp4ba_run_dbs_override is defined else true }}"
     _cp4ba_run_predeploy: "{{ _cp4ba_run_predeploy_override if _cp4ba_run_predeploy_override is defined else true }}"
     _cp4ba_run_deploy: "{{ _cp4ba_run_deploy_override if _cp4ba_run_deploy_override is defined else true }}"
+  when: "cp4ba_action == 'install' and (install_phase_1 | default(false))"
+
+- name: Install CP4BA Phase 2
+  ansible.builtin.include_tasks: install-phase-2.yml
+  vars:
+    _cp4ba_run_deploy: "{{ _cp4ba_run_deploy_override if _cp4ba_run_deploy_override is defined else true }}"
     _cp4ba_run_postdeploy: "{{ _cp4ba_run_postdeploy_override if _cp4ba_run_postdeploy_override is defined else true }}"
-  when: "cp4ba_action == 'install'"
+  when: "cp4ba_action == 'install' and (install_phase_2 | default(false))"
 
 - name: Remove CP4BA
   ansible.builtin.include_tasks: remove.yml

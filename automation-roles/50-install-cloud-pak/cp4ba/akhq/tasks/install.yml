@@ -6,13 +6,14 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
+- name: Retrieve default certification
   ansible.builtin.include_role:
     name: common
-    tasks_from: create-project
+    tasks_from: retrieve-default-certification
   vars:
-    common_namespace_name: "{{ akhq_project_name }}"
-    common_output_directory: "{{ akhq_output_directory }}"
+    common_crt_output_to_var: "tls_crt"
+    common_key_output_to_var: "tls_key"
+    common_ca_output_to_var: "ca_crt"
 
 - name: Create a pod with OpenJDK runtime image
   kubernetes.core.k8s:
@@ -30,23 +31,14 @@
             command: ["/bin/sh", "-c", "sleep 3600"]
     wait: true
 
-- name: Fetch certificate, create JKS, and encode as Base64
+- name: Create JKS from tls_crt and encode as Base64
   kubernetes.core.k8s_exec:
     namespace: "{{ akhq_project_name }}"
     pod: akhq-keytool
     container: openjdk-container
-    command: |
-      /bin/bash -c '
-      keytool -printcert -rfc -sslserver iaf-system-kafka-bootstrap-{{ akhq_cp4ba_project_name }}.{{ apps_endpoint_domain }}:443 > /tmp/cert.pem
-      keytool -importcert \
-        -file /tmp/cert.pem \
-        -alias iaf-ca \
-        -keystore /tmp/truststore.jks \
-        -storepass {{ akhq_universal_password }} \
-        -noprompt \
-        -trustcacerts
-      base64 -w 0 /tmp/truststore.jks
-      '
+    command: "/bin/bash -c 'echo {{ tls_crt }} | base64 -d > /tmp/cert.pem &&
+      keytool -importcert -file /tmp/cert.pem -alias iaf-ca -keystore /tmp/truststore.jks -storepass {{ akhq_universal_password }}
+      -noprompt -trustcacerts && base64 -w 0 /tmp/truststore.jks'"
   register: base64_result
 
 - name: Decode data and store as fact
@@ -60,15 +52,7 @@
     name: akhq-keytool
     namespace: "{{ akhq_project_name }}"
 
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
-
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ akhq_output_directory }}/{{ item }}.yaml"
@@ -79,7 +63,7 @@
     - deployments
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ akhq_output_directory }}/{{ item.name }}.yaml"
@@ -110,13 +94,11 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Extras-AKHQ
-    usage_entry_value:
-      "# AKHQ
+    usage_entry_value: |-
+      # AKHQ
 
       As kafka browser.
 
       ## Endpoints
 
       - UI: https://akhq-{{ akhq_project_name }}.{{ apps_endpoint_domain }}
-
-      "

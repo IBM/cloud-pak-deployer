@@ -4,14 +4,6 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ cerebro_project_name }}"
-    common_output_directory: "{{ cerebro_output_directory }}"
-
 - name: Get OpenSearch password
   kubernetes.core.k8s_info:
     api_version: v1
@@ -26,7 +18,7 @@
   ansible.builtin.set_fact:
     os_password: "{{ os_secret.resources[0].data['opensearch-admin'] | b64decode }}"
 
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ cerebro_output_directory }}/{{ item }}.yaml"
@@ -38,7 +30,7 @@
     - deployments
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ cerebro_output_directory }}/{{ item.name }}.yaml"
@@ -51,14 +43,6 @@
     - {name: rolebindings, wait_sleep: 15, wait_timeout: 15}
     - {name: deployments, wait_sleep: 15, wait_timeout: 600}
     - {name: services, wait_sleep: 15, wait_timeout: 15}
-
-- name: Get OCP Apps Endpoint
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: apps-endpoint
-  vars:
-    common_output_to_var: "apps_endpoint_domain"
-  when: apps_endpoint_domain is not defined
 
 - name: Crete Edge Route
   ansible.builtin.include_role:
@@ -77,13 +61,11 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Extras-Cerebro
-    usage_entry_value:
-      "# Cerebro
+    usage_entry_value: |-
+      # Cerebro
 
       As OpenSearch browser.
 
       ## Endpoints
 
       - UI: https://cerebro-{{ cerebro_project_name }}.{{ apps_endpoint_domain }}
-
-      "

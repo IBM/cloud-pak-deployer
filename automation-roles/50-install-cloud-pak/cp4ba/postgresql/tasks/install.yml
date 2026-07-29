@@ -6,15 +6,7 @@
     state: directory
     mode: u+rwx
 
-- name: Create Project
-  ansible.builtin.include_role:
-    name: common
-    tasks_from: create-project
-  vars:
-    common_namespace_name: "{{ postgresql_project_name }}"
-    common_output_directory: "{{ postgresql_output_directory }}"
-
-- name: Prepare yaml file for {{ item }}
+- name: Prepare yaml file for resources
   ansible.builtin.template:
     src: "{{ item }}.yaml.j2"
     dest: "{{ postgresql_output_directory }}/{{ item }}.yaml"
@@ -27,7 +19,7 @@
     - statefulsets
     - services
 
-- name: Add {{ item.name }}
+- name: Add resources
   kubernetes.core.k8s:
     state: present
     src: "{{ postgresql_output_directory }}/{{ item.name }}.yaml"
@@ -48,15 +40,14 @@
     tasks_from: set-entry
   vars:
     usage_entry_name: Pre-requisites-PostgreSQL
-    usage_entry_value:
-      "# PostgreSQL
+    usage_entry_value: |-
+      # PostgreSQL
 
       As PostgreSQL database storage for the platform.
 
       ## Endpoints
 
       - Exposed as NodePort 30060 as found in Project *{{ postgresql_project_name }}* in Service *postgresql*.
-
       - Available as postgresql.{{ postgresql_project_name }}.svc.cluster.local:5432 within OCP
 
       ## Credentials
@@ -66,9 +57,5 @@
       ## CLI in container
 
       ```bash
-
       psql postgresql://postgres:$POSTGRES_PASSWORD@localhost:5432
-
       ```
-
-      "
