@@ -69,26 +69,11 @@
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
     and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
 
-- name: Wait for cdra-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
-  kubernetes.core.k8s_info:
-    api_version: apps/v1
-    kind: ReplicaSet
-    namespace: "{{ cp4ba_project_name }}"
-    label_selectors:
-      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-cdra-deploy"
-  register: cdra_replicasets
-  retries: 60
-  delay: 30
-  until:
-    - cdra_replicasets.resources | length >= 2
-    - (cdra_replicasets.resources
-      | sort(attribute='metadata.creationTimestamp')
-      | last).status.readyReplicas | default(0) | int >= 1
-
 - name: Manage ADP
   ansible.builtin.include_tasks: postdeploy/adp.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
 
+# Only if content is enabled, because otherwise following post deploy tasks would not execute
 - name: Wait for navigator-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
   kubernetes.core.k8s_info:
     api_version: apps/v1
@@ -104,6 +89,7 @@
     - (navigator_replicasets.resources
       | sort(attribute='metadata.creationTimestamp')
       | last).status.readyReplicas | default(0) | int >= 1
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
 
 - name: Manage FNCM
   ansible.builtin.include_tasks: postdeploy/fncm.yml

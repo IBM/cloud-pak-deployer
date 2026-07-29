@@ -21,6 +21,22 @@
       - 201
       - 422
 
+- name: Wait for cdra-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: ReplicaSet
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-cdra-deploy"
+  register: cdra_replicasets
+  retries: 60
+  delay: 30
+  until:
+    - cdra_replicasets.resources | length >= 2
+    - (cdra_replicasets.resources
+      | sort(attribute='metadata.creationTimestamp')
+      | last).status.readyReplicas | default(0) | int >= 1
+
 # Based on internal code cp4ba-ansible-roles\prerequisites\templates\gitea\gitea-register-to-bas-job.yaml
 - name: Create Gitea connection
   ansible.builtin.uri:
