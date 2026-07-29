@@ -152,13 +152,6 @@
     label_selectors:
       - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
   register: icn_pod
-  retries: 48
-  delay: 15
-  until: >-
-    icn_pod.resources | length > 0 and
-    (icn_pod.resources[0].status.conditions | default([]) |
-     selectattr('type', 'equalto', 'Ready') |
-     selectattr('status', 'equalto', 'True') | list | length) > 0
 
 - name: Copy plugin to ICN pod
   kubernetes.core.k8s_cp:

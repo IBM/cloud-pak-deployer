@@ -58,6 +58,24 @@
   delay: 60
   until: (route.resources[0].spec.tls.certificate | trim) == (decoded_content | trim)
 
+- name: Delete Operator pods of Content proactively to fetch latest zen route SSL updates
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - name=ibm-content-operator
+
+- name: Delete Operator pods of CP4BA proactively to fetch latest zen route SSL updates
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - name=ibm-cp4a-operator
+
 # Based on https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/latest?topic=tasks-business-automation-studio
 # Get access token for ZEN administrative initial user
 - name: Get Zen Initial Admin User Secret

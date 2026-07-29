@@ -56,6 +56,55 @@
   ansible.builtin.include_tasks: postdeploy/ads.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.decisions_ads.enabled
 
+- name: Manage AAE
+  ansible.builtin.include_tasks: postdeploy/aae.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae
+
+- name: Manage BAWAUT
+  ansible.builtin.include_tasks: postdeploy/bawaut.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
+
+- name: Manage IER TM
+  ansible.builtin.include_tasks: postdeploy/ier-tm.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
+    and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
+
+- name: Wait for cdra-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: ReplicaSet
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-cdra-deploy"
+  register: cdra_replicasets
+  retries: 60
+  delay: 30
+  until:
+    - cdra_replicasets.resources | length >= 2
+    - (cdra_replicasets.resources
+      | sort(attribute='metadata.creationTimestamp')
+      | last).status.readyReplicas | default(0) | int >= 1
+
+- name: Manage ADP
+  ansible.builtin.include_tasks: postdeploy/adp.yml
+  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
+
+- name: Wait for navigator-deploy Deployment to have 2 ReplicaSets and newest ready (zen Route SSL updates)
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: ReplicaSet
+    namespace: "{{ cp4ba_project_name }}"
+    label_selectors:
+      - "app.kubernetes.io/name={{ cp4ba_cr_meta_name }}-navigator-deploy"
+  register: navigator_replicasets
+  retries: 60
+  delay: 30
+  until:
+    - navigator_replicasets.resources | length >= 2
+    - (navigator_replicasets.resources
+      | sort(attribute='metadata.creationTimestamp')
+      | last).status.readyReplicas | default(0) | int >= 1
+
 - name: Manage FNCM
   ansible.builtin.include_tasks: postdeploy/fncm.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled
@@ -64,30 +113,13 @@
   ansible.builtin.include_tasks: postdeploy/ccxai.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ccxai
 
-- name: Manage AAE
-  ansible.builtin.include_tasks: postdeploy/aae.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.foundation.optional_components.ae
-
-- name: Manage ADP
-  ansible.builtin.include_tasks: postdeploy/adp.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.document_processing.enabled
-
 # - name: Manage IER
 #   ansible.builtin.include_tasks: postdeploy/ier.yml
 #   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
 
-- name: Manage IER TM
-  ansible.builtin.include_tasks: postdeploy/ier-tm.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.ier
-    and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
-
 - name: Manage TM
   ansible.builtin.include_tasks: postdeploy/tm.yml
   when: _current_cp4ba_cluster.cp4ba.patterns.content.enabled and _current_cp4ba_cluster.cp4ba.patterns.content.optional_components.tm
-
-- name: Manage BAWAUT
-  ansible.builtin.include_tasks: postdeploy/bawaut.yml
-  when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Prepare post-deploy.md
   ansible.builtin.template:
