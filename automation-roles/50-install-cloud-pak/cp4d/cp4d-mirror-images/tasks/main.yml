@@ -99,7 +99,9 @@
           -p "{{ _target_registry_password }}" \
           --tls-verify=false
 
-  when: (_p_current_cp4d_cluster.image_registry_name | default('')) != ''
+  when: 
+  - (_p_current_cp4d_cluster.image_registry_name | default('')) != ''
+  - _p_mirror_motion is match('.*private$')
 
 - name: Download case files
   include_role:
