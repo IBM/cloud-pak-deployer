@@ -1,0 +1,23 @@
+---
+apiVersion: apiconnect.ibm.com/v1beta1
+kind: APIConnectCluster
+metadata:
+  annotations:
+    apiconnect-operator/cp4i: 'true'
+  labels:
+    backup.apiconnect.ibm.com/component: apiconnectcluster
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  analytics:
+    mtlsValidateClient: true
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+    metric: VIRTUAL_PROCESSOR_CORE
+    use: nonproduction
+  portal:
+    mtlsValidateClient: true
+  profile: n1xc7.m48
+  storageClassName: {{ocp_storage_class_block}}
+  version: "{{instance_properties.version}}"

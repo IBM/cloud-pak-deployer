@@ -1,0 +1,44 @@
+---
+apiVersion: integration.ibm.com/v1beta1
+kind: Monitoring
+metadata:
+  name: {{instance_properties.name}}
+  namespace: {{current_cp4i_cluster.project}}
+spec:
+  collector:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 3Gi
+      requests:
+        cpu: 500m
+        memory: 3Gi
+  datastore:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+    storage:
+      class: {{ocp_storage_class_block}}
+      data:
+        size: 2Gi
+      deployment:
+        size: 2Gi
+  license:
+    accept: {{ _cpd_accept_licenses | default(False) }}
+    license: {{instance_properties.license}}
+  ui:
+    replicas: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 2Gi
+  version: 12.4.7
