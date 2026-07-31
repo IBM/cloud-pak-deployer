@@ -200,7 +200,7 @@ You can return to view the logs as follows:
 cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../30-reference/timings.md).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -263,4 +263,4 @@ cp4d_admin_zen_40_pluto_01: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
 ### Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../5-post-run/post-run.md).

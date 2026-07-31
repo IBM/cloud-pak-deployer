@@ -58,7 +58,7 @@ In order to successfully install OpenShift on vSphere infrastructure, the follow
 | IBM Entitlement key | When instaling an IBM Cloud Pak, you need an IBM entitlement key. See [Acquire IBM Cloud Pak entitlement key](#acquire-an-ibm-cloud-pak-entitlement-key)
 | vSphere credentials | The OpenShift IPI installer requires vSphere credentials to create VMs and storage
 | Firewall rules      | The OpenShift cluster's API server on port 6443 and application server on port 443 must be reachable.
-| Whitelisted URLs    | The OpenShift and Cloud Pak download locations and registry must be accessible from the vSphere infrastructure. See [Whitelisted locations](../../../50-advanced/locations-to-whitelist)
+| Whitelisted URLs    | The OpenShift and Cloud Pak download locations and registry must be accessible from the vSphere infrastructure. See [Whitelisted locations](../../50-advanced/locations-to-whitelist.md)
 | DHCP                | When provisioning new VMs, IP addresses must be automatically assigned through DHCP 
 | DNS                 | A DNS server that will resolve the OpenShift API server and applications is required. See [DNS configuration](#dns-configuration) 
 | Time server         | A time server to synchronize the time must be available in the network and configured through the DHCP server 
@@ -183,7 +183,7 @@ To run the container using a local configuration input directory and a data dire
 cp-deploy.sh env apply --accept-all-licenses
 ```
 
-You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
+You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../50-advanced/advanced-configuration.md).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -195,7 +195,7 @@ You can return to view the logs as follows:
 cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../30-reference/timings.md).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -258,4 +258,4 @@ cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
 ### Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../5-post-run/post-run.md).

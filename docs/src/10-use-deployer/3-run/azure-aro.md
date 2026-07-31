@@ -182,7 +182,7 @@ To run the container using a local configuration input directory and a data dire
 cp-deploy.sh env apply --accept-all-licenses
 ```
 
-You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../../50-advanced/advanced-configuration).
+You can also specify extra variables such as `env_id` to override the names of the objects referenced in the `.yaml` configuration files as `{{ env_id }}-xxxx`. For more information about the extra (dynamic) variables, see [advanced configuration](../../50-advanced/advanced-configuration.md).
 
 The `--accept-all-licenses` flag is optional and confirms that you accept all licenses of the installed cartridges and instances. Licenses must be either accepted in the configuration files or at the command line.
 
@@ -194,7 +194,7 @@ You can return to view the logs as follows:
 cp-deploy.sh env logs
 ```
 
-Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../../30-reference/timings).
+Deploying the infrastructure, preparing OpenShift and installing the Cloud Pak will take a long time, typically between 1-5 hours,dependent on which Cloud Pak cartridges you configured. For estimated duration of the steps, refer to [Timings](../../30-reference/timings.md).
 
 If you need to interrupt the automation, use CTRL-C to stop the logging output and then use:
 
@@ -254,4 +254,4 @@ cp4d_admin_zen_sample_sample: gelGKrcgaLatBsnAdMEbmLwGr
 ```
 
 ### Post-install configuration
-You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../../../10-use-deployer/5-post-run/post-run).
+You can find examples of a couple of typical changes you may want to do here: [Post-run changes](../5-post-run/post-run.md).

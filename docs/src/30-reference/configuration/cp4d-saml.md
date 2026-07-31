@@ -37,4 +37,4 @@ The above configuration uses the IBM preproduction IAM server to delegate authen
 
 The `callbackUrl` field in the `samlConfig.json` file is automatically populated by the deployer if it is not specified by the `cp4d_saml_config` entry. It then consists of the Cloud Pak for Data base URL appended with `/auth/login/sso/callback`.
 
-Before running the deployer with SAML configuration, ensure that the secret configured for `idp_cert_secret` exists in the vault. Check [Vault configuration](./vault) for instructions on adding secrets to the vault.
+Before running the deployer with SAML configuration, ensure that the secret configured for `idp_cert_secret` exists in the vault. Check [Vault configuration](vault.md) for instructions on adding secrets to the vault.

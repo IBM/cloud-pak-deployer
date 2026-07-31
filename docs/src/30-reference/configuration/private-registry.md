@@ -36,7 +36,7 @@ image_registry:
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name by which the image registry is identified.                      | Yes       |  |
-| registry_url | Full URL (https://host[:port][/namespace]) of the registry serverHost name or IP address of the registry server   | Yes if registry_host_name not specified |  |
+| registry_url | Full URL (`https://host[:port][/namespace]`) of the registry server. Host name or IP address of the registry server   | Yes if registry_host_name not specified |  |
 | registry_host_name | Host name or IP address of the registry server             | Yes if registry_url not specified |  |
 | registry_port | Port that the image registry listens on. Default is the https port (443) | No | |
 | registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory only when using the IBM Cloud Container Registry (ICR)    | No       | |

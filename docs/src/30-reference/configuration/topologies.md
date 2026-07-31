@@ -9,21 +9,21 @@ Depicted below is the basic deployment topology, followed by a topology with all
 
 For more details on each of the configuration elements, refer to:
 
-* [Infrastructure](../../../30-reference/configuration/infrastructure)
-* [OpenShift](../../../30-reference/configuration/openshift)
-* [Cloud Pak](../../../30-reference/configuration/cloud-pak)
-* [Cloud Pak Cartridges](../../../30-reference/configuration/cp4d-cartridges)
-* [Cloud Pak Instances](../../../30-reference/configuration/cp4d-instances)
-* [Cloud Pak Assets](../../../30-reference/configuration/cp4d-assets)
+* [Infrastructure](infrastructure.md)
+* [OpenShift](openshift.md)
+* [Cloud Pak](cloud-pak.md)
+* [Cloud Pak Cartridges](cp4d-cartridges.md)
+* [Cloud Pak Instances](cp4d-instances.md)
+* [Cloud Pak Assets](cp4d-assets.md)
 
 ## Extended deployment
 ![Extended deployment](images/cloud-pak-context-deployment-full.png)
 
 For more details about extended deployment, refer to:
 
-* [Monitoring](../../../30-reference/configuration/monitoring)
-* [Logging and auditing](../../../30-reference/configuration/logging-auditing)
-* [Private registry](../../../30-reference/configuration/private-registry)
-* [DNS Servers](../../../30-reference/configuration/dns)
-* [Cloud Pak for Data access control](../../../30-reference/configuration/cp4d-access-control)
-* [Cloud Pak for Data SAML](../../../30-reference/configuration/cp4d-saml)
+* [Monitoring](monitoring.md)
+* [Logging and auditing](logging-auditing.md)
+* [Private registry](private-registry.md)
+* [DNS Servers](dns.md)
+* [Cloud Pak for Data access control](cp4d-access-control.md)
+* [Cloud Pak for Data SAML](cp4d-saml.md)

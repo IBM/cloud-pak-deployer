@@ -4,14 +4,14 @@
 
 When running the Cloud Pak Deployer (`cp-deploy env apply`), a series of pre-defined stages are followed to arrive at the desired end-state.
 
-## [10 - Validation](../../../30-reference/process/validate)
+## [10 - Validation](validate.md)
 In this stage, the following activities are executed:
 
 * Is the specified cloud platform in the inventory file supported?
 * Are the mandatory variables defined?
 * Can the deployer connect to the specified vault?
 
-## [20 - Prepare](../../../30-reference/process/prepare)
+## [20 - Prepare](prepare.md)
 In this stage, the following activities are executed:
 
 * Read the configuration files from the `config` directory
@@ -21,20 +21,20 @@ In this stage, the following activities are executed:
 * Generate the Terraform scripts to provision the infrastructure (IBM Cloud only)
 * Download all CLIs needed for the selected cloud platform and cloud pak(s), if not air-gapped
 
-## [30 - Provision infra](../../../30-reference/process/provision-infra)
+## [30 - Provision infra](provision-infra.md)
 In this stage, the following activities are executed:
 
 * Run Terraform to create or change the infrastructure components for IBM cloud
 * Run the OpenShift installer-provisioned infrastructure (IPI) installer for AWS (ROSA), Azure (ARO) or vSphere
 
-## [40 - Configure infra](../../../30-reference/process/configure-infra)
+## [40 - Configure infra](configure-infra.md)
 In this stage, the following activities are executed:
 
 * Configure the VPC bastion and NFS server(s) for IBM Cloud
 * Configure the OpenShift storage classes or test validate the existing storege classes if an existing OpenShift cluster is used
 * Configure OpenShift logging
 
-## [50 - Install Cloud Pak](../../../30-reference/process/install-cloud-pak)
+## [50 - Install Cloud Pak](install-cloud-pak.md)
 In this stage, the following activities are executed:
 
 * Create the IBM Container Registry namespace for IBM Cloud
@@ -45,7 +45,7 @@ In this stage, the following activities are executed:
 * Configure Foundational Services license service
 * Install specified Cloud Pak for Data cartridges
 
-## [60 - Configure Cloud Pak](../../../30-reference/process/configure-cloud-pak)
+## [60 - Configure Cloud Pak](configure-cloud-pak.md)
 In this stage, the following activities are executed:
 
 * Add OpenShift signed certificate to Cloud Pak for Data web server when on IBM Cloud
@@ -55,12 +55,12 @@ In this stage, the following activities are executed:
 * Configure instance for the cartridges (Analytics engine, Db2, Cognos Analytics, Data Virtualization, ...)
 * Configure instance authorization using the LDAP group mapping
 
-## [70 - Deploy Assets](../../../30-reference/process/deploy-assets)
+## [70 - Deploy Assets](deploy-assets.md)
 
 * Configure Cloud Pak for Data monitors
 * Install Cloud Pak for Data assets
 
-## [80 - Smoke Tests](../../../30-reference/process/smoke-tests)
+## [80 - Smoke Tests](smoke-tests.md)
 In this stage, the following activities are executed:
 
 * Show the Cloud Pak for Data URL and admin password
