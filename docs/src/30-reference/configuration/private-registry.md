@@ -11,34 +11,47 @@ The below steps outline how to configure a private registry for a Cloud Pak depl
 
 ## `image_registry`
 Defines a private registry that will be used for pulling the Cloud Pak container images from. Additionally, if the Cloud Pak entitlement key was specified at run time of the deployer, the images defined by the case files will be mirrored to this private registry.
+
 ```
 image_registry:
-- name: cpd463
+- name: cpd
+  registry_url: https://registry.example.com:5000/cpd
+  registry_insecure: false
+  registry_trusted_ca_secret: cpd-ca-bundle
+```
+
+or,
+
+```
+image_registry:
+- name: cpd
   registry_host_name: registry.example.com
   registry_port: 5000
+  registry_namespace: cpd
   registry_insecure: false
-  registry_trusted_ca_secret: cpd463-ca-bundle
+  registry_trusted_ca_secret: cpd-ca-bundle
 ```
 
 #### Properties
 | Property | Description                                                          | Mandatory | Allowed values |
 | -------- | -------------------------------------------------------------------- | --------- | -------------- |
 | name     | Name by which the image registry is identified.                      | Yes       |  |
-| registry_host_name | Host name or IP address of the registry server             | Yes       |  |
+| registry_url | Full URL (https://host[:port][/namespace]) of the registry serverHost name or IP address of the registry server   | Yes if registry_host_name not specified |  |
+| registry_host_name | Host name or IP address of the registry server             | Yes if registry_url not specified |  |
 | registry_port | Port that the image registry listens on. Default is the https port (443) | No | |
 | registry_namespace | Namespace (path) within the registry that holds the Cloud Pak images. Mandatory only when using the IBM Cloud Container Registry (ICR)    | No       | |
 | registry_insecure | Defines whether insecure registry access with a self-signed certificate is allowed | No       | True, False (default) |
 | registry_trusted_ca_secret | Defines the vault secret which holds the certificate authority bundle that must be used when connecting to this private registry. This parameter cannot be specified if `registry_insecure` is also specified. | No       |  |
 
 !!! warning
-    The `registry_host_name` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
+    The `registry_host_name` or `registry_url` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
 
 When mirroring images, the deployer connects to the registry using the host name and port. If the port is omitted, the standard https protocol (443) is used. If a `registry_namespace` is specified, for example when using the IBM Container Registry on IBM Cloud, it will be appended to the registry URL.
 
 The user and password to connect to the registry will be retrieved from the vault, using secret `image-registry-<your_image_registry_name>` and must be stored in the format `registry_user:registry_password`. For example, if you want to connect to the image registry `cpd404` with user `admin` and password `very_s3cret`, you would create a secret as follows:
 ```
 cp-deploy.sh vault set \
-  -vs image-registry-cpd463 \
+  -vs image-registry-cpd \
   -vsv "admin:very_s3cret"
 ```
 
@@ -49,11 +62,11 @@ If you need to connect to a private registry which is not signed by a public cer
 For example, if you have a file `/tmp/ca.crt` with the PEM certificate for the certificate authority, you can do the following:
 ```
 cp-deploy.sh vault set \
-  -vs cpd463-ca-bundle \
+  -vs cpd-ca-bundle \
   -vsf /tmp/ca.crt
 ```
 
-This will create a vault secret which the deployer will use to populate a `configmap` in the `openshift-config` project, which in turn is referenced by the `image.config.openshift.io/cluster` custom resource. For the above configuration, configmap `cpd404-ca-bundle` would be created and teh `image.config.openshift.io/cluster` would look something like this:
+This will create a vault secret which the deployer will use to populate a `configmap` in the `openshift-config` project, which in turn is referenced by the `image.config.openshift.io/cluster` custom resource. For the above configuration, configmap `cpd-ca-bundle` would be created and teh `image.config.openshift.io/cluster` would look something like this:
 ```
 apiVersion: config.openshift.io/v1
 kind: Image
@@ -63,7 +76,7 @@ metadata:
   name: cluster
 spec:
   additionalTrustedCA:
-    name: cpd463-ca-bundle
+    name: cpd-ca-bundle
 ```
 
 ### Using the IBM Container Registry as a private registry
@@ -71,9 +84,8 @@ If you want to use a private registry when running the deployer for a ROKS clust
 
 ```
 image_registry:
-- name: cpd463
-  registry_host_name: de.icr.io
-  registry_namespace: cpd463
+- name: cpd
+  registry_url: https://de.icr.io/cpd
 ```
 
 The registry host name must end with `icr.io` and the registry namespace is mandatory. No other properties are needed; the deployer will retrieve them from IBM Cloud.
@@ -81,7 +93,7 @@ The registry host name must end with `icr.io` and the registry namespace is mand
 If you have already created the ICR namespace, create a vault secret for the image registry credentials:
 ```
 cp-deploy.sh vault set \
-  -vs image-registry-cpd463
+  -vs image-registry-cpd
   -vsv "admin:very_s3cret"
 ```
 
@@ -91,10 +103,10 @@ cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.8.3
-  image_registry_name: cpd463
+  image_registry_name: cpd
 ```
 
-The Cloud Pak for Data installation refers to the `cpd463` `image_registry` object.
+The Cloud Pak for Data installation refers to the `cpd` `image_registry` object.
 
 If the `ibm_cp_entitlement_key` secret is in the vault at the time of running the deployer, the required images will be mirrored from the entitled registry to the private registry. If all images are already available in the private registry, just specify the `--skip-mirror-images` flag when you run the deployer.
 
@@ -104,11 +116,11 @@ Configure an image_registry object with the host name of the private registry an
 Example:
 ```
 image_registry:
-- name: cpd463
+- name: cpd
   registry_host_name: registry.example.com
   registry_port: 5000
   registry_insecure: false
-  registry_trusted_ca_secret: cpd463-ca-bundle
+  registry_trusted_ca_secret: cpd-ca-bundle
 ```
 
 !!! warning
@@ -117,14 +129,14 @@ image_registry:
 To create the vault secret for the image registry credentials:
 ```
 cp-deploy.sh vault set \
-  -vs image-registry-cpd463
+  -vs image-registry-cpd
   -vsv "admin:very_s3cret"
 ```
 
 To create the vault secret for the CA bundle:
 ```
 cp-deploy.sh vault set \
-  -vs cpd463-ca-bundle
+  -vs cpd-ca-bundle
   -vsf /tmp/ca.crt
 ```
 
@@ -145,9 +157,9 @@ cp4d:
 - project: cpd-instance
   openshift_cluster_name: {{ env_id }}
   cp4d_version: 4.8.3
-  image_registry_name: cpd463
+  image_registry_name: cpd
 ```
 
-The Cloud Pak for Data installation refers to the `cpd463` `image_registry` object.
+The Cloud Pak for Data installation refers to the `cpd` `image_registry` object.
 
 If the `ibm_cp_entitlement_key` secret is in the vault at the time of running the deployer, the required images will be mirrored from the entitled registry to the private registry. If all images are already available in the private registry, just specify the `--skip-mirror-images` flag when you run the deployer.

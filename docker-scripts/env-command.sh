@@ -6,8 +6,7 @@ echo "Entering Cloud Pak Deployer command line in a container."
 echo 'Use the "exit" command to leave the container and return to the hosting server.'
 echo "-------------------------------------------------------------------------------"
 
-# export PS1='\[\e]0;\w\a\]\n[\#] \[\e[32m\u@Cloud Pak Deployer:\[\e[33m\]\w \e[m\$ ';
-export PS1="[\#] \e[0;32m[\u@Cloud Pak Deployer: \W] \e[m "
+export PS1="\[\e[0;32m\][\#] [\u@Cloud Pak Deployer \W]\[\e[00m\] \$ "
 
 # Get the public and private keys if existing
 if grep -q ocp-ssh $STATUS_DIR/vault/* 2>&1;then
@@ -47,6 +46,11 @@ if [ -e $STATUS_DIR/openshift/kubeconfig ];then
 else
   echo "No existing OpenShift configuration found, you will need to login to OpenShift first."
 fi
+
+# Create /tmp/work/registries.conf
+mkdir -p /tmp/work
+cp /cloud-pak-deployer/automation-roles/50-install-cloud-pak/cpfs/cp-ocp-global-pull-secret/templates/registries_conf.j2 \
+  /tmp/work/registries.conf
 
 # Set environment variables
 source ${SCRIPT_DIR}/../scripts/deployer/set-env-var.sh

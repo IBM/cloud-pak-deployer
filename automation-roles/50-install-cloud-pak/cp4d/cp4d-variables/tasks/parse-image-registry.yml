@@ -1,0 +1,39 @@
+- set_fact:
+    _registry_hostname: ""
+    _registry_port: ""
+    _registry_namespace: ""
+
+- name: Retrieve image registry details
+  set_fact:
+    _current_image_registry: "{{ all_config.image_registry | json_query(_registry_query) | first | default({}) }}"
+  vars:
+    _registry_query: >-
+      [?name=='{{ _p_current_cp4d_cluster.image_registry_name }}']
+
+- debug:
+    var: _current_image_registry
+
+- name: Split registry_url into hostname, port and namespace if URL specified
+  vars:
+    # Strip scheme (http:// or https://) then split on the first /
+    _no_scheme: "{{ _current_image_registry.registry_url | regex_replace('^https?://', '') }}"
+    _host_part: "{{ _no_scheme.split('/')[0] }}"
+    _namespace: "{{ _no_scheme.split('/', 1)[1] | default('') }}"
+    _hostname: "{{ _host_part.split(':')[0] }}"
+    _port: "{{ _host_part.split(':')[1] | default('') }}"
+  set_fact:
+    _registry_hostname: "{{ _hostname }}"
+    _registry_port: "{{ _port }}"
+    _registry_namespace: "{{ _namespace }}"
+  when: (_current_image_registry.registry_url | default('')) != ''
+
+- name: Set registry host name, port and namespace if separate attributes were set
+  set_fact:
+    _registry_hostname: "{{ _current_image_registry.registry_hostname }}"
+    _registry_port: "{{ _current_image_registry.registry_port | default('') }}"
+    _registry_namespace: "{{ _current_image_registry.registry_namespace | default('') }}"
+  when: (_current_image_registry.registry_url | default('')) == ''
+
+- set_fact:
+    _registry_host_port: "{{ lookup('template','image-registry-with-host-port.j2') }}"
+    _registry_full_path: "{{ lookup('template','image-registry-with-namespace.j2') }}"

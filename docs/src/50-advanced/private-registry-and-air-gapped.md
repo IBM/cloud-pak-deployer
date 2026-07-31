@@ -16,11 +16,11 @@ There are three use cases for mirroring images to a private registry and using t
 Use cases 1 and 3 are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.5.x?topic=tasks-mirroring-images-your-private-container-registry
 
 For specifying a private registry in the Cloud Pak Deployer configuration, please see [Private registry](../../../30-reference/configuration/private-registry). Example of specifying a private registry with a self-signed certificate in the configuration:
+
 ``` { .yaml .copy }
 image_registry:
 - name: cpd453
-  registry_host_name: registry.coc.ibm.com
-  registry_port: 5000
+  registry_url: https://registry.coc.ibm.com:5000/cpd453
   registry_insecure: True
 ```
 
@@ -38,7 +38,7 @@ cp4d:
     The deployer only supports using a private registry for the Cloud Pak images, not for OpenShift itself. Air-gapped installation of OpenShift is currently not in scope for the deployer.
 
 !!! warning
-    The `registry_host_name` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
+    The `registry_host_name` or `registry_url` you specify in the `image_registry` definition must also be available for DNS lookup within OpenShift. If the registry runs on a server that is not registered in the DNS, use its IP address instead of a host name.
 
 The main 3 directories that are needed for both types of air-gapped installations are:
 

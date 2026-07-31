@@ -9,12 +9,18 @@
     path: /tmp/work/offline
     state: absent
 
+- ansible.builtin.stat:
+    path: "{{ status_dir }}/work/offline"
+  register: _status_offline_dir
+
 - name: If air-gapped, copy case files from {{ status_dir }}/work/offline to /tmp/work/offline
   copy:
     src: "{{ status_dir }}/work/offline"
     dest: /tmp/work/
     remote_src: True
-  when: (cpd_airgap | default(False) | bool)
+  when: 
+  - (cpd_airgap | default(False) | bool)
+  - _status_offline_dir.stat.exists
 
 - name: Generate OLM command to create catalog sources for Cloud Pak for Data {{ _p_catsrc_scope }}
   set_fact:

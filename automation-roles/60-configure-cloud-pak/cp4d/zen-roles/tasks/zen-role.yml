@@ -23,9 +23,9 @@
     var: _existing_zen_roles
 
 - set_fact:
-    _existing_zen_role: "{{ _existing_zen_roles.json.rows | json_query(query) | first | default({}) }}"
+    _existing_zen_role: "{{ _existing_zen_roles.json.rows | json_query(_zen_role_query) | first | default({}) }}"
   vars:
-    query: >-
+    _zen_role_query: >-
       [?doc.role_name=='{{ _zen_role.name }}']
 
 - include_tasks: zen-role-create.yml

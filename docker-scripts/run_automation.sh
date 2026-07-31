@@ -41,6 +41,11 @@ show_deployer_info() {
 
 if [ "${CPD_NO_COLOR}" == "" ];then CPD_NO_COLOR=false;fi
 
+# Create /tmp/work/registries.conf
+mkdir -p /tmp/work
+cp /cloud-pak-deployer/automation-roles/50-install-cloud-pak/cpfs/cp-ocp-global-pull-secret/templates/registries_conf.j2 \
+  /tmp/work/registries.conf
+
 # Check that subcommand is valid
 export SUBCOMMAND=${SUBCOMMAND,,}
 export ACTION=${ACTION,,}

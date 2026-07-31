@@ -1,0 +1,106 @@
+---
+- name: Delete file with case images to be mirrored
+  ansible.builtin.file:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
+    state: absent
+
+- name: Add image for patch ID {{ _p_cp4d_patch_id }}
+  ansible.builtin.lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
+    line: "/cpopen/patch:{{ _p_cp4d_version }}-p{{ _p_cp4d_patch_id }}"
+    create: true
+  when:
+  - _p_cp4d_patch_id != ''
+  - _p_cp4d_patch_id != 0
+
+- name: Add image for patch ID 0
+  ansible.builtin.lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
+    line: "/cpopen/patch:{{ _p_cp4d_version }}"
+    create: true
+  when:
+  - _p_cp4d_patch_id != ''
+  - _p_cp4d_patch_id == 0
+
+- name: Add image for case-repo-index:latest
+  ansible.builtin.lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
+    line: "/cpopen/case-repo-index:latest"
+    create: true
+
+- name: Find helm .tgz files for cases
+  ansible.builtin.find:
+    paths: "{{ status_dir }}/work/offline/{{ _p_cp4d_version }}/.ibm-pak/data/cases"
+    patterns: "*.tgz"
+    recurse: true
+    depth: 3
+    hidden: true
+  register: _case_helm_tgz_files
+
+- name: Build case image list from helm .tgz filenames
+  ansible.builtin.set_fact:
+    _case_helm_images: >-
+      {{ _case_helm_images | default([]) + [
+        {
+          'case_name':      item.path | basename | regex_replace('\.tgz$', '') | regex_replace('-[0-9].*$', ''),
+          'case_version':   item.path | dirname | basename,
+          'case_image_tag': item.path | basename | regex_replace('\.tgz$', '') | regex_replace('^.*-(?=[0-9])', '') | regex_replace('\+', '_'),
+        }
+      ] }}
+  loop: "{{ _case_helm_tgz_files.files }}"
+
+- debug:
+    var: _case_helm_images
+
+- name: Write case index image lines to case-images-out file
+  ansible.builtin.lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
+    line: "/cpopen/case-{{ item.case_name }}-index:latest"
+    create: true
+  loop: "{{ _case_helm_images | default([]) }}"
+  loop_control:
+    label: "/cpopen/case-{{ item.case_name }}-index:latest"
+
+- name: Write case image lines to case-images-out file
+  ansible.builtin.lineinfile:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
+    line: "/cpopen/case-{{ item.case_name }}:{{ item.case_image_tag }}"
+    create: true
+  loop: "{{ _case_helm_images | default([]) }}"
+  loop_control:
+    label: "/cpopen/case-{{ item.case_name }}:{{ item.case_image_tag }}"
+
+- name: Read case images from case-images-out file
+  ansible.builtin.set_fact:
+    _case_images_to_mirror: "{{ lookup('file', status_dir + '/cp4d/' + _p_current_cp4d_cluster.project + '-case-images.out').splitlines() }}"
+
+- set_fact:
+    _case_mirror_source_registry: icr.io
+  when:
+  - _p_mirror_motion is match('^entitled.*')
+
+- set_fact:
+    _case_mirror_source_registry: "{{ _v_portable_registry }}:{{ _v_portable_registry_port }}"
+  when:
+  - _p_mirror_motion is match('^portable.*')
+
+- set_fact:
+    _case_mirror_target_registry: "{{ _v_portable_registry }}:{{ _v_portable_registry_port }}"
+  when:
+  - _p_mirror_motion is match('.*portable$')
+
+- set_fact:
+    _case_mirror_target_registry: "{{ _registry_full_path }}"
+  when:
+  - _p_mirror_motion is match('.*private$')
+
+- name: Mirror case images from {{ _case_mirror_source_registry }} to {{ _case_mirror_target_registry }}
+  ansible.builtin.command: >-
+    skopeo copy 
+    docker://{{ _case_mirror_source_registry }}{{ item }}
+    docker://{{ _case_mirror_target_registry }}{{ item }}
+    --preserve-digests
+    --dest-tls-verify=false
+  loop: "{{ _case_images_to_mirror }}"
+  loop_control:
+    label: "{{ item }}"

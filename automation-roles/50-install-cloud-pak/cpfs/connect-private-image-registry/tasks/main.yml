@@ -6,9 +6,9 @@
 
 - name: Retrieve image registry details
   set_fact:
-    current_image_registry: "{{ all_config.image_registry | json_query(query) | first | default({}) }}"
+    current_image_registry: "{{ all_config.image_registry | json_query(_registry_query) | first | default({}) }}"
   vars:
-    query: >-
+    _registry_query: >-
       [?name=='{{ _p_current_cp4d_cluster.image_registry_name }}']
 
 - name: Fail if the registry details for the image registry have not been found
@@ -42,6 +42,27 @@
   fail:
     msg: "Private registry credentials in vault secret image-registry-{{ _p_current_cp4d_cluster.image_registry_name }} must in the format of user:password"
   when: not (private_registry_auth is search(':'))
+
+- name: Split registry_url into hostname, port and namespace if URL specified
+  vars:
+    # Strip scheme (http:// or https://) then split on the first /
+    _no_scheme: "{{ current_image_registry.registry_url | regex_replace('^https?://', '') }}"
+    _host_part: "{{ _no_scheme.split('/')[0] }}"
+    _namespace: "{{ _no_scheme.split('/', 1)[1] | default('') }}"
+    _hostname: "{{ _host_part.split(':')[0] }}"
+    _port: "{{ _host_part.split(':')[1] | default('') }}"
+  set_fact:
+    _registry_hostname: "{{ _hostname }}"
+    _registry_port: "{{ _port }}"
+    _registry_namespace: "{{ _namespace }}"
+  when: (current_image_registry.registry_url | default('')) != ''
+
+- name: Set registry host name, port and namespace if separate attributes were set
+  set_fact:
+    _registry_hostname: "{{ current_image_registry.registry_hostname }}"
+    _registry_port: "{{ current_image_registry.registry_port | default('') }}"
+    _registry_namespace: "{{ current_image_registry.registry_namespace | default('') }}"
+  when: (current_image_registry.registry_url | default('')) == ''
 
 - set_fact:
     private_registry_url: "{{ lookup('template','get_private_registry.j2') }}"
