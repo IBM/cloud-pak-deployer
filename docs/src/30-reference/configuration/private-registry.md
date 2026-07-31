@@ -11,12 +11,11 @@ The below steps outline how to configure a private registry for a Cloud Pak depl
 
 ## `image_registry`
 Defines a private registry that will be used for pulling the Cloud Pak container images from. Additionally, if the Cloud Pak entitlement key was specified at run time of the deployer, the images defined by the case files will be mirrored to this private registry.
+
 ```
 image_registry:
 - name: cpd
-  registry_host_name: registry.example.com
-  registry_port: 5000
-  registry_namespace: cpd
+  registry_url: https://registry.example.com:5000/cpd
   registry_insecure: false
   registry_trusted_ca_secret: cpd-ca-bundle
 ```
@@ -26,7 +25,9 @@ or,
 ```
 image_registry:
 - name: cpd
-  registry_url: https://registry.example.com:5000/cpd
+  registry_host_name: registry.example.com
+  registry_port: 5000
+  registry_namespace: cpd
   registry_insecure: false
   registry_trusted_ca_secret: cpd-ca-bundle
 ```
@@ -84,8 +85,7 @@ If you want to use a private registry when running the deployer for a ROKS clust
 ```
 image_registry:
 - name: cpd
-  registry_host_name: de.icr.io
-  registry_namespace: cpd
+  registry_url: https://de.icr.io/cpd
 ```
 
 The registry host name must end with `icr.io` and the registry namespace is mandatory. No other properties are needed; the deployer will retrieve them from IBM Cloud.

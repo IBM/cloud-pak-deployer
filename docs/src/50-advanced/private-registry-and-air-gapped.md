@@ -16,16 +16,6 @@ There are three use cases for mirroring images to a private registry and using t
 Use cases 1 and 3 are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.5.x?topic=tasks-mirroring-images-your-private-container-registry
 
 For specifying a private registry in the Cloud Pak Deployer configuration, please see [Private registry](../../../30-reference/configuration/private-registry). Example of specifying a private registry with a self-signed certificate in the configuration:
-``` { .yaml .copy }
-image_registry:
-- name: cpd453
-  registry_host_name: registry.coc.ibm.com
-  registry_port: 5000
-  registry_namespace: cpd453
-  registry_insecure: True
-```
-
-or:
 
 ``` { .yaml .copy }
 image_registry:
