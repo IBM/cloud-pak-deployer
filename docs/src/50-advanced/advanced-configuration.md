@@ -59,7 +59,7 @@ Additionally, there are 3 optional subdirectories:
 * `assets`: Keeps directories of assets which must be deployed onto the Cloud Pak
 
 ### `config` directory
-You can choose to keep only a single file per subdirectory or, for more complex configurations, you can create multiple yaml files. You can find a full list of all supported object types here: [Configuration objects](../../../30-reference/configuration/cpd-objects). The generator automatically merges all `.yaml` files in the config and defaults directory. Files with different extensions are ignored. In the sample configurations we split configuration of the OpenShift `ocp-...` and Cloud Pak `cp4.-...` objects.
+You can choose to keep only a single file per subdirectory or, for more complex configurations, you can create multiple yaml files. You can find a full list of all supported object types here: [Configuration objects](../30-reference/configuration/cpd-objects.md). The generator automatically merges all `.yaml` files in the config and defaults directory. Files with different extensions are ignored. In the sample configurations we split configuration of the OpenShift `ocp-...` and Cloud Pak `cp4.-...` objects.
 
 For example, your `config` directory could hold the following files:
 ``` { .bash .copy }
@@ -75,7 +75,7 @@ Holds the defaults for all object types. If a certain object property has not be
 You should not need this subdirectory in most circumstances.
 
 ### `assets` directory (optional)
-Optional directory holding the assets you wish to deploy for the Cloud Pak. More information about Cloud Pak for Data assets which can be deployed can be found in object definition [cp4d_asset](../../../30-reference/configuration/cp4d-assets). The directory can be named differently as well, for example `cp4d-assets` or `customer-churn-demo`.
+Optional directory holding the assets you wish to deploy for the Cloud Pak. More information about Cloud Pak for Data assets which can be deployed can be found in object definition [cp4d_asset](../30-reference/configuration/cp4d-assets.md). The directory can be named differently as well, for example `cp4d-assets` or `customer-churn-demo`.
 
 ### `inventory` directory (optional)
 The Cloud Pak Deployer pipeline has been built using Ansible and it can be configured using "inventory" files. Inventory files allow you to specify global variables used throughout Ansible playbooks. In the current version of the Cloud Pak Deployer, the inventory directory has become fully optional as the `global_config` and `vault` objects have taken over its role. However, if there are certain global variables such as `env_id` you want to pass via an inventory file, you can also do this.
@@ -83,7 +83,7 @@ The Cloud Pak Deployer pipeline has been built using Ansible and it can be confi
 ## Vault secrets
 User passwords, certificates and other "secret" information is kept in the vault, which can be either a flat file (not encrypted), HashiCorp Vault or the IBM Cloud Secrets Manager service. Some of the deployment configurations require that the vault is pre-populated with secrets which as needed during the deployment. For example, a vSphere deployment needs the vSphere user and password to authenticate to vSphere and Cloud Pak for Data SAML configuration requires the idP certificate
 
-All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](../../../30-reference/configuration/vault).
+All samples default to the **File Vault**, meaning that the vault will be kept in the `vault` directory under the status directory you specify when you run the deployer. Detailed descriptions of the vault settings can be found in the sample inventory file and also here: [vault settings](../30-reference/configuration/vault.md).
 
 Optional: Ensure that the environment variables for the configuration and status directories are set. If not specified, the directories are assumed to be `$HOME/cpd-config` and `$HOME/cpd-status`.
 ``` { .bash .copy }

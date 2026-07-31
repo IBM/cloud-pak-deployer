@@ -15,7 +15,7 @@ There are three use cases for mirroring images to a private registry and using t
 
 Use cases 1 and 3 are also outlined in the Cloud Pak for Data installation documentation: https://www.ibm.com/docs/en/cloud-paks/cp-data/4.5.x?topic=tasks-mirroring-images-your-private-container-registry
 
-For specifying a private registry in the Cloud Pak Deployer configuration, please see [Private registry](../../../30-reference/configuration/private-registry). Example of specifying a private registry with a self-signed certificate in the configuration:
+For specifying a private registry in the Cloud Pak Deployer configuration, please see [Private registry](../30-reference/configuration/private-registry.md). Example of specifying a private registry with a self-signed certificate in the configuration:
 
 ``` { .yaml .copy }
 image_registry:
@@ -62,7 +62,7 @@ This is effectively "not-air-gapped" scenario, where the following conditions ap
 
 The bastion server is connected to the internet and OpenShift cluster.
 
-* If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](../../50-advanced/locations-to-whitelist)
+* If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](locations-to-whitelist.md)
 * If a proxy server is configured for the bastion node, check the settings (`http_proxy`, `https_proxy`, `no_proxy` environment variables)
 * Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
@@ -102,7 +102,7 @@ This use case is also sometimes referred to as "semi-air-gapped", where the foll
 
 ### On the internet-connected server
 
-* If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](../../50-advanced/locations-to-whitelist)
+* If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](locations-to-whitelist.md)
 * If a proxy server is configured for the internet-connected server, check the settings (`http_proxy`, `https_proxy`, `no_proxy` environment variables)
 * Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration; make sure all your Cloud Paks and cartridges are specified as well as an `image_registry` entry to identify the private registry
@@ -142,7 +142,7 @@ You can use tar with gzip mode or any other compression technique. The total siz
 The bastion server is not connected to the internet but is connected to the private registry and the OpenShift cluster.
 
 #### Diagram step 4
-We're using the instructions in [Run on existing OpenShift](../../10-use-deployer/3-run/existing-openshift), adding the `--air-gapped` and `--skip-mirror-images` flags, to start the deployer:
+We're using the instructions in [Run on existing OpenShift](../10-use-deployer/3-run/existing-openshift.md), adding the `--air-gapped` and `--skip-mirror-images` flags, to start the deployer:
 
 * Restore the status directory onto the bastion server
 * Export the STATUS_DIR environment variable to point to the status directory
@@ -187,7 +187,7 @@ This use case is also usually referred to as "air-gapped", where the following c
 
 ### On the internet-connected server
 
-* If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](../../../50-advanced/locations-to-whitelist)
+* If there are restrictions regarding the internet sites that can be reached, ensure that the website domains the deployer needs are whitelisted. For a list of domains, check [locations to whitelist](locations-to-whitelist.md)
 * If a proxy server is configured for the bastion node, check the settings (`http_proxy`, `https_proxy`, `no_proxy` environment variables)
 * Build the Cloud Pak Deployer image using `cp-deploy.sh build`
 * Create or update the directory with the configuration, making sure all your Cloud Paks and cartridges are specified
@@ -231,7 +231,7 @@ See the air-gapped installation of Cloud Pak for Data in action:
 
 For the demonstration video, the download of the previous step has first been re-run to only download the Cloud Pak for Data control plane to avoid having to ship and upload ~700 GB.
 
-We're using the instructions in [Run on existing OpenShift](../../10-use-deployer/3-run/existing-openshift), adding the CPD_AIRGAP environment variable.
+We're using the instructions in [Run on existing OpenShift](../10-use-deployer/3-run/existing-openshift.md), adding the CPD_AIRGAP environment variable.
 
 * Restore the status directory onto the bastion server. Make sure the volume to which you restore has enough space to hold the entire status directory, which includes the portable registry.
 * Export the STATUS_DIR environment variable to point to the status directory

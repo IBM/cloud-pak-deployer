@@ -75,7 +75,7 @@ cp4d:
 | state | Indicated whether Cloud Pak for Data must be installed or removed | No | installed (default), removed |
 | image_registry_name | When using private registry, specify name of `image_registry` | No       |  |
 | openshift_storage_name | References an `openshift_storage` element in the OpenShift cluster that was defined for this Cloud Pak for Data instance. The name must exist under `openshift.[openshift_cluster_name].openshift_storage. | No, inferred from openshift->openshift_storage | |
-| cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](../../../30-reference/configuration/cp4d-cartridges) for more details | Yes | |
+| cartridges | List of cartridges to install for this Cloud Pak for Data instance. See [Cloud Pak for Data cartridges](cp4d-cartridges.md) for more details | Yes | |
 
 ## `cp4i`
 
@@ -531,7 +531,7 @@ See sample config for remainder of properties.
 ## `cp4ba`
 
 Defines the Cloud Pak for Business Automation installation to be configured on the OpenShift cluster(s).  
-See [Cloud Pak for Business Automation](../../../30-reference/configuration/cp4ba) for additional details.  
+See [Cloud Pak for Business Automation](cp4ba.md) for additional details.
 
 ``` { .yaml .copy }
 ---
