@@ -16,9 +16,9 @@
   loop: "{{ _apply_cartridges }}"
   when:
   - (item.Expected_Version | default('')) != 'N/A'
-  - (item.allow_optimize | default(True) | bool)
   - (item.Status | default('')) != (item.cr_status_completed | default('')) or
-      (item.upgrade_cartridge | default(False) | bool)
+      (item.upgrade_cartridge | default(False) | bool) or
+      not (item.allow_optimize | default(True) | bool)
 
 - set_fact:
     _apply_cartridges: "{{ _tmp_cartridges }}"
