@@ -94,13 +94,13 @@
   when:
   - _p_mirror_motion is match('.*private$')
 
-- name: Mirror case images from {{ _case_mirror_source_registry }} to {{ _case_mirror_target_registry }}
+- name: Mirror case images from {{ _case_mirror_source_registry }} to {{ _case_mirror_target_registry }}, log file is {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-case-images.log
   ansible.builtin.command: >-
     skopeo copy 
     docker://{{ _case_mirror_source_registry }}{{ item }}
     docker://{{ _case_mirror_target_registry }}{{ item }}
     --preserve-digests
-    --dest-tls-verify=false
+    --dest-tls-verify=false | tee -a {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-case-images.log
   loop: "{{ _case_images_to_mirror }}"
   loop_control:
     label: "{{ item }}"
