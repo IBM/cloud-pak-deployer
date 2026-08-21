@@ -1,0 +1,12 @@
+---
+- name: Find the first cephfs storage class
+  set_fact:
+    ocp_storage_class_file: "{{ _storage_classes.resources | selectattr('provisioner', 'in', _v_cephfs_provisioners) | map(attribute='metadata.name') | list | first | default('') }}"
+
+- name: Find the first rbd storage class
+  set_fact:
+    ocp_storage_class_block: "{{ _storage_classes.resources | selectattr('provisioner', 'in', _v_ceph_rbd_provisioners) | map(attribute='metadata.name') | list | first | default('') }}"
+
+- fail:
+    msg: "No ODF storage classes found in {{ _storage_class_names }}"
+  when: ocp_storage_class_file=='' or ocp_storage_class_block==''

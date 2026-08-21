@@ -102,8 +102,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
             else:
                 if os['storage_type']=='ocs':
                     os.update([("storage_type", "odf")])
-                if os['storage_type'] not in ['nfs','odf','odf-ext','aws-elastic','pwx','ibm-storage-fdf','custom','auto']:
-                    g.appendError(msg='storage_type must be nfs, odf, odf-ext, aws-elastic, ibm-storage-fdf, custom, or auto')
+                if os['storage_type'] not in ['nfs','odf','aws-elastic','pwx','ibm-storage-fdf','custom','auto']:
+                    g.appendError(msg='storage_type must be nfs, odf, aws-elastic, ibm-storage-fdf, custom, or auto')
                 if os['storage_type'] == 'custom':
                     if "ocp_storage_class_file" not in os:
                         g.appendError(msg='ocp_storage_class_file must be specified when storage_type is custom')
