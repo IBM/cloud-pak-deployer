@@ -33,7 +33,6 @@
     paths: "{{ status_dir }}/work/offline/{{ _p_cp4d_version }}/.ibm-pak/data/cases"
     patterns: "*.tgz"
     recurse: true
-    depth: 3
     hidden: true
   register: _case_helm_tgz_files
 
@@ -45,6 +44,7 @@
           'case_name':      item.path | basename | regex_replace('\.tgz$', '') | regex_replace('-[0-9].*$', ''),
           'case_version':   item.path | dirname | basename,
           'case_image_tag': item.path | basename | regex_replace('\.tgz$', '') | regex_replace('^.*-(?=[0-9])', '') | regex_replace('\+', '_'),
+          'image_prefix':   '/cpopen/charts' if (item.path | dirname | basename == 'charts') else '/cpopen',
         }
       ] }}
   loop: "{{ _case_helm_tgz_files.files }}"
@@ -55,20 +55,20 @@
 - name: Write case index image lines to case-images-out file
   ansible.builtin.lineinfile:
     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
-    line: "/cpopen/case-{{ item.case_name }}-index:latest"
+    line: "{{ item.image_prefix }}/case-{{ item.case_name }}-index:latest"
     create: true
   loop: "{{ _case_helm_images | default([]) }}"
   loop_control:
-    label: "/cpopen/case-{{ item.case_name }}-index:latest"
+    label: "{{ item.image_prefix }}/case-{{ item.case_name }}-index:latest"
 
 - name: Write case image lines to case-images-out file
   ansible.builtin.lineinfile:
     path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-case-images.out"
-    line: "/cpopen/case-{{ item.case_name }}:{{ item.case_image_tag }}"
+    line: "{{ item.image_prefix }}/case-{{ item.case_name }}:{{ item.case_image_tag }}"
     create: true
   loop: "{{ _case_helm_images | default([]) }}"
   loop_control:
-    label: "/cpopen/case-{{ item.case_name }}:{{ item.case_image_tag }}"
+    label: "{{ item.image_prefix }}/case-{{ item.case_name }}:{{ item.case_image_tag }}"
 
 - name: Read case images from case-images-out file
   ansible.builtin.set_fact:

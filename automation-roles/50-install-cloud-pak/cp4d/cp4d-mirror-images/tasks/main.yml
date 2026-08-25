@@ -23,6 +23,16 @@
     path: "{{ status_dir }}/work"
     state: directory
 
+# Delete the offline directory when mirroring from the entitled registry to ensure we always have
+# the latest version of the -index images. Otherwise there may be a mismatch between the latest
+# -index and the other CASE images
+- name: Remove {{ status_dir }}/work/offline directory when mirroring from entitled registry
+  file:
+    path: "{{ status_dir }}/work/offline"
+    state: absent
+  when:
+  - _p_mirror_motion is match('^entitled.*')
+
 - debug:
     var: _p_mirror_motion
 
