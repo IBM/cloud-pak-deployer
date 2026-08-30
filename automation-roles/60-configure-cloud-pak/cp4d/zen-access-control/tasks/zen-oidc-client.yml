@@ -1,0 +1,92 @@
+---
+- set_fact:
+    _current_oidc_provider: {}
+
+- set_fact:
+    _current_oidc_provider: "{{ all_config.oidc_provider | json_query(_query_oidc_provider) | first | default({}) }}"
+  vars:
+    _query_oidc_provider: >-
+      [?name=='{{ _zen_access_control.oidc_provider_name }}']
+
+- name: Show configured OIDC provider {{ _zen_access_control.oidc_provider_name }}
+  debug:
+    var: _current_oidc_provider
+
+- name: Check if OpenID Connect provider {{ _zen_access_control.oidc_provider_name }} already exists in Foundational Services
+  uri:
+    url: 'https://{{ _current_idp_url }}v3/auth/idsource?name={{ _zen_access_control.oidc_provider_name }}'
+    method: GET
+    headers:
+      Authorization: "Bearer {{ _iam_token }}"
+      Content-Type: "application/json"
+    return_content: yes
+    validate_certs: no
+  register: _fs_iam_oidc_provider_client
+
+- debug:
+    var: _fs_iam_oidc_provider_client
+
+# Default method for OpenID Connect provider
+- set_fact:
+    _fs_iam_oidc_provider_client_uid: "{{ _fs_iam_oidc_provider_client.json.idp[0].uid }}"
+  when: (_fs_iam_oidc_provider_client.json.idp | default([])) != []
+
+- name: Retrieve client secret {{ _current_oidc_provider.client_secret }}
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _current_oidc_provider.client_secret }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _oidc_client_secret
+
+- fail:
+    msg: "Secret {{ _current_oidc_provider.client_secret }} not found in vault"
+  when: _oidc_client_secret | default('') == ''
+
+- name: Create Foundational Services OpenID Connect provider {{ _current_oidc_provider.name }}
+  uri:
+    url: 'https://{{ _current_idp_url }}v3/auth/idsource/'
+    method: POST
+    headers:
+      Authorization: "Bearer {{ _iam_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ _current_oidc_provider.name }}"
+      description: "OIDC authentication, client {{ _current_oidc_provider.name }}"
+      protocol: oidc
+      type: "OIDC"
+      idp_config:
+        discovery_url: "{{ _current_oidc_provider.discovery_url }}"
+        client_id: "{{ _current_oidc_provider.client_id }}"
+        client_secret: "{{ _oidc_client_secret }}"
+        token_attribute_mappings: "{{ _current_oidc_provider.token_attribute_mappings }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _fs_iam_oidc_client
+  when: (_fs_iam_oidc_provider_client.json.idp | default([])) == []
+
+- name: Update Foundational Services OpenID Connect provider {{ _current_oidc_provider.name }}
+  uri:
+    url: 'https://{{ _current_idp_url }}v3/auth/idsource/{{ _fs_iam_oidc_provider_client_uid }}'
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ _iam_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      name: "{{ _current_oidc_provider.name }}"
+      description: "OIDC authentication, client {{ _current_oidc_provider.name }}"
+      protocol: oidc
+      type: "OIDC"
+      idp_config:
+        discovery_url: "{{ _current_oidc_provider.discovery_url }}"
+        client_id: "{{ _current_oidc_provider.client_id }}"
+        client_secret: "{{ _oidc_client_secret }}"
+        token_attribute_mappings: "{{ _current_oidc_provider.token_attribute_mappings }}"
+    return_content: yes
+    validate_certs: no
+    status_code: 200
+  register: _fs_iam_oidc_client
+  when: (_fs_iam_oidc_provider_client.json.idp | default([])) != []
