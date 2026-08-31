@@ -20,11 +20,12 @@
     var: _existing_zen_group_members
 
 - set_fact:
-    _idp_groups: "{{ _zen_user_group.keycloak_groups | default([]) }}"
+    _keycloak_groups: "{{ _zen_user_group.keycloak_groups | default([]) }}"
+    _oidc_groups: "{{ _zen_user_group.oidc_groups | default([]) }}"
     _ldap_groups: "{{ _zen_user_group.ldap_groups | default([]) }}"
 
 - set_fact:
-    _group_members: "{{ _idp_groups | union(_ldap_groups) }}"
+    _group_members: "{{ _keycloak_groups | union(_oidc_groups) | union(_ldap_groups) }}"
 
 - name: Get group members to be added
   set_fact:
