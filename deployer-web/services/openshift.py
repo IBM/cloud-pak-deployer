@@ -6,7 +6,7 @@ This module handles OpenShift cluster operations including login and connection 
 
 import subprocess
 import json
-import re
+import shlex
 import logging
 from fastapi import HTTPException
 
@@ -32,34 +32,39 @@ def oc_login(request: OcLoginRequest) -> dict:
         "code": -1,
         "error": "",
     }
-    
+
     oc_login_command = request.oc_login_command.strip()
 
-    # Validate that it's an oc login command
-    pattern = r'oc(\s+)login(\s)(.*)'
-    is_oc_login_cmd = re.match(pattern, oc_login_command)
-    
-    if is_oc_login_cmd:
-        proc = subprocess.Popen(
-            oc_login_command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            shell=True
-        )
-        outputlog, errorlog = proc.communicate()
-
-        if proc.returncode == 0:
-            result["code"] = proc.returncode
-            logger.info("Successfully logged in to OpenShift cluster")
-        else:
-            errors = str(errorlog, 'utf-8').split("\n")
-            result = {"code": proc.returncode, "error": errors[-2]}
-            logger.error(f'Login error: {errors}')
-
-        return result
-    else:
+    # Parse the command string into an argument list so that shell metacharacters
+    # (;, &&, |, newlines, etc.) are never interpreted by a shell.
+    try:
+        args = shlex.split(oc_login_command)
+    except ValueError:
         raise HTTPException(status_code=400, detail='Bad Request: Invalid oc login command')
+
+    # Validate the argument list: must start with exactly ["oc", "login", <server>]
+    if len(args) < 3 or args[0] != 'oc' or args[1] != 'login':
+        raise HTTPException(status_code=400, detail='Bad Request: Invalid oc login command')
+
+    # Execute with shell=False so the argument list is passed directly to execvp;
+    # no shell is spawned and no metacharacter interpretation occurs.
+    proc = subprocess.Popen(
+        args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    outputlog, errorlog = proc.communicate()
+
+    if proc.returncode == 0:
+        result["code"] = proc.returncode
+        logger.info("Successfully logged in to OpenShift cluster")
+    else:
+        errors = str(errorlog, 'utf-8').split("\n")
+        result = {"code": proc.returncode, "error": errors[-2]}
+        logger.error(f'Login error: {errors}')
+
+    return result
 
 
 def oc_check_connection() -> OcCheckConnectionResponse:
@@ -88,11 +93,10 @@ def oc_check_connection() -> OcCheckConnectionResponse:
     # Step 1: Check if user is logged in with 'oc whoami'
     try:
         proc = subprocess.Popen(
-            'oc whoami',
+            ['oc', 'whoami'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
         )
         stdout, stderr = proc.communicate()
         
@@ -113,11 +117,10 @@ def oc_check_connection() -> OcCheckConnectionResponse:
     # Step 2: Get server URL with 'oc whoami --show-server'
     try:
         proc = subprocess.Popen(
-            'oc whoami --show-server',
+            ['oc', 'whoami', '--show-server'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
         )
         stdout, stderr = proc.communicate()
         
@@ -133,11 +136,10 @@ def oc_check_connection() -> OcCheckConnectionResponse:
     # Step 3: Get version info with 'oc version -o json'
     try:
         proc = subprocess.Popen(
-            'oc version -o json',
+            ['oc', 'version', '-o', 'json'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
         )
         stdout, stderr = proc.communicate()
         

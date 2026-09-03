@@ -8,6 +8,7 @@ import sys, psutil, subprocess, os, getpass, json
 from shutil import copy2
 from pathlib import Path
 import glob, zipfile, tarfile
+import shlex
 import logging
 import yaml
 
@@ -47,6 +48,7 @@ app = FastAPI(
 )
 
 deployer_dir = Path(os.path.dirname(os.path.realpath(__file__))).parent
+spa_dir = Path(__file__).resolve().parent / 'ww'
 logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 ocp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
@@ -762,32 +764,40 @@ def download_log_openshift(deployerLog):
 )
 def oc_login(request: OcLoginRequest):
     result = {
-        "code":-1,
-        "error":"",
+        "code": -1,
+        "error": "",
     }
-    #print(body, file=sys.stderr)
-    env = {}
-    oc_login_command=request.oc_login_command
-    oc_login_command = oc_login_command.strip()
+    oc_login_command = request.oc_login_command.strip()
 
-    import re
-    pattern = r'oc(\s+)login(\s)(.*)'
-    isOcLoginCmd = re.match(pattern, oc_login_command)
-    
-    if isOcLoginCmd:
-        proc = subprocess.Popen(oc_login_command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-        outputlog, errorlog = proc.communicate()
-
-        if  proc.returncode == 0:
-            result["code"]=proc.returncode
-        else:
-            errors = str(errorlog,  'utf-8').split("\n")
-            result={"code": proc.returncode,"error": errors[-2]}
-            logger.error('Login error: {}'.format(errors))
-
-        return result
-    else:
+    # Parse the command string into an argument list so that shell metacharacters
+    # (;, &&, |, newlines, etc.) are never interpreted by a shell.
+    try:
+        args = shlex.split(oc_login_command)
+    except ValueError:
         raise HTTPException(status_code=400, detail='Bad Request')
+
+    # Validate the argument list: must start with exactly ["oc", "login", <server>]
+    if len(args) < 3 or args[0] != 'oc' or args[1] != 'login':
+        raise HTTPException(status_code=400, detail='Bad Request')
+
+    # Execute with shell=False so the argument list is passed directly to execvp;
+    # no shell is spawned and no metacharacter interpretation occurs.
+    proc = subprocess.Popen(
+        args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    outputlog, errorlog = proc.communicate()
+
+    if proc.returncode == 0:
+        result["code"] = proc.returncode
+    else:
+        errors = str(errorlog, 'utf-8').split("\n")
+        result = {"code": proc.returncode, "error": errors[-2]}
+        logger.error('Login error: {}'.format(errors))
+
+    return result
 
 #
 # OpenShift connection check
@@ -902,11 +912,10 @@ def oc_check_connection() -> OcCheckConnectionResponse:
     # Step 1: Check if user is logged in with 'oc whoami'
     try:
         proc = subprocess.Popen(
-            'oc whoami',
+            ['oc', 'whoami'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
         )
         stdout, stderr = proc.communicate()
         
@@ -927,11 +936,10 @@ def oc_check_connection() -> OcCheckConnectionResponse:
     # Step 2: Get server URL with 'oc whoami --show-server'
     try:
         proc = subprocess.Popen(
-            'oc whoami --show-server',
+            ['oc', 'whoami', '--show-server'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
         )
         stdout, stderr = proc.communicate()
         
@@ -947,11 +955,10 @@ def oc_check_connection() -> OcCheckConnectionResponse:
     # Step 3: Get version info with 'oc version -o json'
     try:
         proc = subprocess.Popen(
-            'oc version -o json',
+            ['oc', 'version', '-o', 'json'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True
         )
         stdout, stderr = proc.communicate()
         
@@ -1942,9 +1949,14 @@ def environmentVariable():
 # SPA catch-all route (must be last to not interfere with API routes)
 @app.get('/{full_path:path}')
 def serve_spa(full_path: str):
-    file_path = Path('ww') / full_path
+    file_path = (spa_dir / full_path).resolve()
+    try:
+        file_path.relative_to(spa_dir)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Not found")
+
     if file_path.is_file():
         return FileResponse(file_path)
     if not full_path.startswith('api/'):
-        return FileResponse('ww/index.html')
+        return FileResponse(spa_dir / 'index.html')
     raise HTTPException(status_code=404, detail="Not found")
