@@ -12,7 +12,7 @@
     condition_query: "resources[*].status.service.status"
 
 # Based on https://www.ibm.com/docs/en/cpfs?topic=operator-replacing-foundational-services-endpoint-certificates
-- name: Get cpfsadmin user password in secret
+- name: Get cpadmin user password in secret
   kubernetes.core.k8s_info:
     api_version: v1
     kind: Secret
@@ -31,7 +31,7 @@
     # cloudctl command replaced with actual Secret and Pod restarts because per
     # https://www.ibm.com/docs/en/cloud-paks/cp-integration/2020.3?topic=SSGT7J_20.3/cloudctl/3.x.x/cli_pm_commands.html#update-secret
     # it does "Update a secret and restart deployments that use the secret."
-    - name: Change cpfsadmin user password in secret
+    - name: Change cpadmin user password in secret
       kubernetes.core.k8s:
         state: present
         api_version: v1
@@ -42,27 +42,35 @@
           data:
             admin_password: "{{ cpfs_universal_password | b64encode }}"
 
-    - name: Delete pod which use cpfsadmin secret
+    - name: Delete pod which use cpadmin secret
       kubernetes.core.k8s:
         state: absent
         api_version: v1
         kind: Pod
         namespace: "{{ cp4ba_project_name }}"
         label_selectors:
-          - app=platform-auth-service
+          - "{{ item }}"
+      with_items:
+        - app=platform-auth-service
+        - app=platform-identity-provider
+        - app=platform-identity-management          
 
-    - name: Wait for Deployments which use cpfsadmin secret to be Available
+    - name: Wait for Deployments which use cpadmin secret to be Available
       ansible.builtin.include_role:
         name: common
         tasks_from: wait-resource-condition
       vars:
         common_api_version: v1
         common_resource_kind: Deployment
-        common_resource_name: platform-auth-service
+        common_resource_name: "{{ item }}"
         common_resource_namespace: "{{ cp4ba_project_name }}"
         common_condition_name: Available
         common_retries: 80
         common_delay: 15
+      with_items:
+        - platform-auth-service
+        - platform-identity-provider
+        - platform-identity-management
 
     - name: Delete commonui to refresh references
       kubernetes.core.k8s:
@@ -73,7 +81,7 @@
         label_selectors:
           - k8s-app=common-web-ui
 
-    - name: Wait for Deployments which use cpfsadmin secret to be Available
+    - name: Wait for Deployments which use cpadmin secret to be Available
       ansible.builtin.include_role:
         name: common
         tasks_from: wait-resource-condition
@@ -125,7 +133,7 @@
         api_version: v1
         kind: Secret
         namespace: "{{ cp4ba_project_name }}"
-        name: "ibm-bts-cnpg-{{ cp4ba_project_name }}-cp4ba-bts-app"
+        name: "ibm-bts-ibmpg-{{ cp4ba_project_name }}-cp4ba-bts-app"
       register: bts_pg_secret
       retries: 40
       delay: 15
@@ -143,7 +151,7 @@
         common_cloudbeaver_username: "{{ lc_principal_admin_user }}"
         common_cloudbeaver_password: "{{ cp4ba_cloudbeaver_universal_password }}"
         common_cloudbeaver_connection_name: BTS PostgreSQL
-        common_pg_host: "ibm-bts-cnpg-{{ cp4ba_project_name }}-{{ cp4ba_project_name }}-bts-rw.{{ cp4ba_project_name }}.svc.cluster.local"
+        common_pg_host: "ibm-bts-ibmpg-{{ cp4ba_project_name }}-{{ cp4ba_project_name }}-bts-rw.{{ cp4ba_project_name }}.svc.cluster.local"
         common_pg_port: "5432"
         common_pg_username: postgresadmin
         common_pg_password: "{{ bts_pg_password }}"
@@ -168,13 +176,13 @@
 
           - {{ lc_principal_admin_user }} / {{ lc_principal_admin_password }}
 
-- name: Get IAM token
+- name: Get IAM token for cpadmin as roles are not yet propagated to cpmanager
   ansible.builtin.include_role:
     name: common
     tasks_from: iam-token-user
   vars:
     common_cpfs_project: "{{ cp4ba_project_name }}"
-    common_user: "{{ lc_principal_admin_user }}"
+    common_user: cpadmin
     common_password: "{{ lc_principal_admin_password }}"
     common_output_to_var: "iam_token"
 
@@ -212,11 +220,10 @@
       }
     validate_certs: false
     status_code:
-      - 200
       - 201
       - 400
   register: client_response
-  failed_when: client_response.status != 201 and client_response.status != 200 and
+  failed_when: client_response.status != 201 and
     not (client_response.status == 400 and
     client_response.json.error_description is search('.*already exists.*'))
 

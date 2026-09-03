@@ -1,9 +1,9 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 26.0.0.  
-Contains IPM version 2.2.0.  
+Contains CP4BA version 26.0.0 IF002.  
+Contains IPM version 2.2.0 IF002.  
 Contains RPA version 30.0.3.  
-Contains BAMOE version 9.5.0.  
+Contains BAMOE version 9.5.2.  
 Contains ICA version 1.0.3.  
 
 - [Disclaimer ✋](#disclaimer-)
@@ -183,7 +183,6 @@ For your convenience the following post-deployment setup tasks have been automat
 - BAW - Created FileNet Subscription for ECM Content event in BAWTOS Object Store. https://www.ibm.com/docs/en/baw/24.x?topic=events-using-event-handler-filenet-content-manager
 - BAW - Enable Case History on FNCM Domain level as a prerequisite for Timeline Visualizer. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=widgets-timeline-visualizer
 - BAW - Added stub configurations for watsonx.ai integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-generative-ai
-- BAW - Enabled Process Admin audit log. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=customizing-enabling-audit-log
 - BAW - Added stub configurations for Git integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/24.0.1?topic=integration-integrating-github
 - BAW - Added stub configuration for Workplace and Authoring assistants.https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=customizing-configuring-authoring-assistant
 - BAW - Added stub configuration for watsonx Orchestrate integration. https://www.ibm.com/docs/en/cloud-paks/cp-biz-automation/25.0.1?topic=services-integrating-ai-agents
