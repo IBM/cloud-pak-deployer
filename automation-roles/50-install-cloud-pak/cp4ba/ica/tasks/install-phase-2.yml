@@ -51,7 +51,7 @@
 
 - name: Add BAWTOS to ICA object store list
   ansible.builtin.set_fact:
-    ica_os_list: "{{ ica_os_list + ['BAWTOS'] }}"
+    ica_os_list: "{{ ica_os_list + ['BAWTOS', 'BAWDOCS'] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Configure ICA on Object Stores
@@ -320,13 +320,22 @@
       {desktopId: 'OS2', repositoryIds: ['OS2'], defaultRepositoryId: 'OS2'}
     ]
 
-- name: Add BAWTOS to ICA desktop defs list
+- name: Add BAWTOS and BAWDOCS to ICA desktop defs list
   ansible.builtin.set_fact:
-    ica_desktop_def_list: "{{ ica_desktop_def_list + [{'desktopId': 'BAWTOS', 'repositoryIds': ['BAWTOS'], 'defaultRepositoryId': 'BAWTOS'}] }}"
+    ica_desktop_def_list: "{{ ica_desktop_def_list + [{'desktopId': 'BAWTOS', 'repositoryIds': ['BAWTOS'], 'defaultRepositoryId': 'BAWTOS'},
+      {'desktopId': 'BAWDOCS', 'repositoryIds': ['BAWDOCS'], 'defaultRepositoryId': 'BAWDOCS'}] }}"
   when: _current_cp4ba_cluster.cp4ba.patterns.workflow.enabled and _current_cp4ba_cluster.cp4ba.patterns.workflow.optional_components.baw_authoring
 
 - name: Configure ICA on Object Stores
   ansible.builtin.include_tasks: configure-desktop.yml
+  with_items: "{{ ica_desktop_def_list }}"
+
+- name: Add OS3 to ICA desktop defs list for menus
+  ansible.builtin.set_fact:
+    ica_desktop_def_list: "{{ ica_desktop_def_list + [{'desktopId': 'OS3', 'repositoryIds': ['OS3'], 'defaultRepositoryId': 'OS3'}] }}"
+
+- name: Configure ICA on Object Stores for menus
+  ansible.builtin.include_tasks: configure-desktop-menus.yml
   with_items: "{{ ica_desktop_def_list }}"
 
 - name: Set usage entry
