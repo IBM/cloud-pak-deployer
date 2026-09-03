@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cloud-pak-deployer-wizard
+  namespace: cloud-pak-deployer
+spec:
+  podSelector:
+    matchLabels:
+      app: cloud-pak-deployer-wizard
+  policyTypes:
+    - Ingress
+  ingress:
+    # Allow only the oauth-proxy port (8888) — the raw uvicorn port (8080) is
+    # not exposed on the Service and receives no external traffic, but this
+    # policy adds defence-in-depth by dropping any in-cluster attempt to reach
+    # port 8080 directly.
+    - ports:
+        - port: 8888
+          protocol: TCP

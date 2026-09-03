@@ -36,7 +36,7 @@ objects:
           command: ["/bin/sh","-xc"]
           args: 
             - /cloud-pak-deployer/cp-deploy.sh env wizard -v
-        - name: oauth-proxy 
+        - name: oauth-proxy
           args:
             - -provider=openshift
             - -https-address=:8888
@@ -49,6 +49,7 @@ objects:
             - -openshift-service-account=cloud-pak-deployer-sa
             - -openshift-ca=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
             - -skip-auth-regex=^/metrics
+            - -openshift-sar={"namespace":"cloud-pak-deployer","resource":"services","verb":"get"}
           image: quay.io/openshift/origin-oauth-proxy:4.16
           imagePullPolicy: IfNotPresent
           ports:
@@ -86,10 +87,6 @@ objects:
       port: 8888
       protocol: TCP
       targetPort: oauth-proxy
-    - name: wizard
-      port: 8080            
-      protocol: TCP
-      targetPort: wizard
     type: ClusterIP
 
 - apiVersion: route.openshift.io/v1
