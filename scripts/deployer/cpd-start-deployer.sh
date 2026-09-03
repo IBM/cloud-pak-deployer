@@ -108,6 +108,9 @@ elif [ "$CPD_WIZARD" ]; then
   # Delete finished Cloud Pak Deployer wizard
   oc delete deployment cloud-pak-deployer-wizard --ignore-not-found
 
+  echo "Creating the network policy..."
+  oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-network-policy.yaml | oc apply -f -
+
   echo "Starting the deployer wizard..."
   oc process -f ${SCRIPT_DIR}/assets/cloud-pak-deployer-wizard.yaml -p IMAGE=${IMAGE} | oc apply -f -
 
