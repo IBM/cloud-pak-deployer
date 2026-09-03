@@ -48,6 +48,7 @@ app = FastAPI(
 )
 
 deployer_dir = Path(os.path.dirname(os.path.realpath(__file__))).parent
+spa_dir = Path(__file__).resolve().parent / 'ww'
 logger.info('Deployer directory: {}'.format(deployer_dir))
 cp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
 ocp_base_config_path = os.path.join(deployer_dir,'sample-configurations/sample-dynamic/config-samples')
@@ -1948,9 +1949,14 @@ def environmentVariable():
 # SPA catch-all route (must be last to not interfere with API routes)
 @app.get('/{full_path:path}')
 def serve_spa(full_path: str):
-    file_path = Path('ww') / full_path
+    file_path = (spa_dir / full_path).resolve()
+    try:
+        file_path.relative_to(spa_dir)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Not found")
+
     if file_path.is_file():
         return FileResponse(file_path)
     if not full_path.startswith('api/'):
-        return FileResponse('ww/index.html')
+        return FileResponse(spa_dir / 'index.html')
     raise HTTPException(status_code=404, detail="Not found")

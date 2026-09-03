@@ -57,6 +57,6 @@ fi
 
 echo "Starting Web UI with uvicorn"
 echo "Logging level (CPD_WIZARD_LOG_LEVEL): ${CPD_WIZARD_LOG_LEVEL}"
-uvicorn webapp:app --host 0.0.0.0 --port 32080
+uvicorn webapp:app --host 127.0.0.1 --port 32080
 
 exit 0

@@ -32,7 +32,7 @@ test-web-ui:
 test-web-server:
 	uv venv --allow-existing; \
 	uv pip install -r requirements.txt; \
-	uv run uvicorn webapp:app --host 0.0.0.0 --port 32080 --reload
+	uv run uvicorn webapp:app --host 127.0.0.1 --port 32080 --reload
 
 # help: build                          - Build the production UI
 .PHONY: build
