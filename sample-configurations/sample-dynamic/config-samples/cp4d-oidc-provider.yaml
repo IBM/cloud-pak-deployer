@@ -1,0 +1,50 @@
+oidc_provider:
+- name: ibm-oidc
+  discovery_url: "https://.../auth/realms/master/.well-known/openid-configuration"
+  client_id: ibm-oidc
+  client_secret: ibm-oidc-secret
+  token_attribute_mappings:
+    groups: "groupIds"
+    given_name: "given_name"
+    family_name: "family_name"
+    first_name: "given_name"
+    last_name: "family_name"
+    sub: "uid"
+    email: "email"
+
+zen_role:
+- name: cp4d-monitoring-role
+  description: Cloud Pak for Data monitoring role
+  state: installed
+  permissions:
+  - monitor_platform
+
+zen_access_control:
+- project: cpd
+  openshift_cluster_name: "{{ env_id }}"
+  oidc_name: ibm-oidc
+  user_groups:
+  - name: cp4d-admins
+    description: Cloud Pak for Data Administrators
+    roles:
+    - Administrator
+    oidc_groups:
+    - oidc-cp4d-admins
+  - name: cp4d-data-engineers
+    description: Cloud Pak for Data Data Engineers
+    roles:
+    - User
+    oidc_groups:
+    - oidc-cp4d-data-engineers
+  - name: cp4d-data-scientists
+    description: Cloud Pak for Data Data Scientists
+    roles:
+    - User
+    oidc_groups:
+    - oidc-cp4d-data-scientists
+  - name: cp4d-monitors
+    description: Cloud Pak for Data Monitoring
+    roles:
+    - cp4d-monitoring-role
+    oidc_groups:
+    - oidc-cp4d-monitors

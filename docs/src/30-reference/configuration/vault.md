@@ -68,6 +68,7 @@ vault:
 | vault_secret_field | Field to store or retrieve vault secrets                    | Yes       |           |
 | vault_secret_path_append_group | Determines whether or not the secrete group will be appended to the path | Yes | True (default), False |
 | vault_exchange_token | Depicts if the VAULT_PASSWORD passed to deployer is exchanged with another token | No  | False (default), True |
+| validate_certs | Specifies if the certificate of the vault_url must be validated | No        | True (default), False |
 
 ##### Set up HashiCorp Vault for short-lived token creation
 

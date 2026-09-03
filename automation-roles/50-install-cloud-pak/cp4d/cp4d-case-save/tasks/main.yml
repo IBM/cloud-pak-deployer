@@ -57,8 +57,12 @@
   - _p_registry_source_target == 'target'
   - _p_current_cp4d_cluster.image_registry_name | default('') == ''
 
-- set_fact:
-    _oci_location: '{{ _registry_full_path }}/cpopen'
+- block:
+  - name: Authenticate to the private registry if specified
+    include_role:
+      name: cp4d-login-private-registry
+  - set_fact:
+      _oci_location: '{{ _registry_full_path }}/cpopen'
   when:
   - _from_oci | bool
   - _p_registry_source_target == 'target'

@@ -117,7 +117,9 @@
             union(_all_cartridges | selectattr('state','defined') | selectattr('state','==','installed')) }}
 
 - include_tasks: add-patch-info.yml
-  when: (status_dir + '/work/offline/patch/patch-' + _p_cp4d_version + '.yaml') is exists
+  when: 
+  - _p_cp4d_patch_id | default('') != ''
+  - (status_dir ~ '/work/offline/patch/patch-' ~ _p_cp4d_version ~ '-' ~ _p_cp4d_patch_id ~ '.yaml') is exists
 
 - set_fact:
     _cartridges_to_install_list: >-
@@ -133,14 +135,12 @@
   when: cpd_action=='apply'
 
 - set_fact:
-    _apply_cartridges: "{{ _cartridges_to_install }}"
+    _apply_cartridges: "{{ _cartridges_to_install | rejectattr('olm_utils_name','in',_v_cp4d_control_plane_cartridges) }}"
 
 - set_fact:
     _apply_cartridges_list: >-
       {{  _apply_cartridges 
         | map(attribute='olm_utils_name')
-        | difference(_v_cp4d_control_plane_cartridges)
-        | list
         | join(',') }}
 
 # Optimize cartridges if --optimize-deploy was specified
@@ -233,6 +233,12 @@
         | map(attribute='olm_utils_name')
         | list
         | join(',') }}
+
+- debug:
+    var: _all_cartridges
+
+- debug:
+    var: _all_cartridges_names
 
 - debug:
     var: _cartridges_to_install

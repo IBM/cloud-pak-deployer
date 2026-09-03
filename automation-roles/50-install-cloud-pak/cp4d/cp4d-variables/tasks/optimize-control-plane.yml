@@ -12,7 +12,7 @@
   - set_fact:
       _install_control_plane: False
     when:
-    - (_cpd_control_plane.Reconciled_Version | default('')).startswith(_cpd_control_plane.CR_Version)
     - (_cpd_control_plane.Status | default('')) == _cpd_control_plane.cr_status_completed
+    - not (_cpd_control_plane.upgrade_cartridge | default(False) | bool)
   when:
   - _cpd_optimize_deploy

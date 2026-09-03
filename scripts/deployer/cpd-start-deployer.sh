@@ -52,15 +52,17 @@ fi
 #
 # General steps
 #
+
 # Determine if the PVC must be created
 if ! $(oc get pvc cloud-pak-deployer-status > /dev/null 2>&1 );then
     echo "Determining storage class for cloud-pak-deployer-status PVC..."
-    if oc get sc managed-nfs-storage > /dev/null 2>&1;then
+    
+    # Get storage classes with CephFS provisioners
+    cephfs_sc=$(oc get sc -o json   | jq -r '.items[] | select(.provisioner=="cephfs.csi.ceph.com" or .provisioner=="openshift-storage.cephfs.csi.ceph.com") | .metadata.name' | head -n 1)
+    if [ -n "$cephfs_sc" ]; then
+        export DEPLOYER_SC="$cephfs_sc"
+    elif oc get sc managed-nfs-storage > /dev/null 2>&1;then
         export DEPLOYER_SC=managed-nfs-storage
-    elif oc get sc ocs-storagecluster-cephfs > /dev/null 2>&1;then
-        export DEPLOYER_SC=ocs-storagecluster-cephfs
-    elif oc get sc ocs-external-storagecluster-cephfs > /dev/null 2>&1;then
-        export DEPLOYER_SC=ocs-external-storagecluster-cephfs
     elif oc get sc ibmc-file-gold-gid > /dev/null 2>&1;then
         export DEPLOYER_SC=ibmc-file-gold-gid
     elif oc get sc ibmc-vpc-file-1000-iops > /dev/null 2>&1;then

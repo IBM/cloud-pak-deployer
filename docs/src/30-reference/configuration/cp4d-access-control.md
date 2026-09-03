@@ -63,6 +63,42 @@ zen_access_control:
     - kc-cp4d-monitor
 ```
 
+#### Example with OIDC provider authentication
+
+The below configuration references a generic OIDC configuration. For the generic OIDC configuratino, refer to [oidc_provider](./oidc-provider.md).
+
+```
+zen_access_control:
+- project: cpd
+  openshift_cluster_name: "{{ env_id }}"
+  oidc_provider_name: ibm-keycloak
+  user_groups:
+  - name: cp4d-admins
+    description: Cloud Pak for Data Administrators
+    roles:
+    - Administrator
+    keycloak_groups:
+    - kc-cp4d-admins
+  - name: cp4d-data-engineers
+    description: Cloud Pak for Data Data Engineers
+    roles:
+    - User
+    keycloak_groups:
+    - kc-cp4d-data-engineers
+  - name: cp4d-data-scientists
+    description: Cloud Pak for Data Data Scientists
+    roles:
+    - User
+    keycloak_groups:
+    - kc-cp4d-data-scientists
+  - name: cp4d-monitor
+    description: Cloud Pak for Data monitoring
+    roles:
+    - monitor-role
+    keycloak_groups:
+    - kc-cp4d-monitor
+```
+
 #### Example with LDAP authentication
 
 The below configuration references an LDAP configuration. For the LDAP configuration, refer to [ldap](./ldap.md).

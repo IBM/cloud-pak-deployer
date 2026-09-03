@@ -45,8 +45,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
         fc = g.getFullConfig()
         ge=g.getExpandedAttributes()
 
-        if 'keycloak_name' in ge and ('demo_openldap_names' in ge or 'ldap_names' in ge):
-             g.appendError(msg="If keycloak_name is defined, demo_openldap_names and ldap_names must not be defined. You cannot reference more than 1 type of external IdP.")
+        if ('keycloak_name' in ge or 'oidc_provider_name' in ge) and ('demo_openldap_names' in ge or 'ldap_names' in ge):
+             g.appendError(msg="If keycloak_name or oidc_provider_name is defined, demo_openldap_names and ldap_names must not be defined. You cannot reference more than 1 type of external IdP.")
 
         for user_group in ge['user_groups']:
             if 'name' not in user_group:
@@ -59,6 +59,9 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
 
             if 'keycloak_groups' in user_group and 'keycloak_name' not in ge:
                 g.appendError(msg="If keycloak_groups are defined, the zen_access_control must reference a keycloak_name")
+
+            if 'oidc_groups' in user_group and 'oidc_provider_name' not in ge:
+                g.appendError(msg="If oidc_groups are defined, the zen_access_control must reference an oidc_provider_name")
 
             if 'ldap_groups' in user_group and 'demo_openldap_names' not in ge and 'ldap_names' not in ge:
                 g.appendError(msg="If ldap_groups are defined, the zen_access_control must reference a demo_openldap_names or ldap_names")

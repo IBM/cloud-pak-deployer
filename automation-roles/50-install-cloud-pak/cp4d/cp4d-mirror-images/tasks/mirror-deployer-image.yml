@@ -1,0 +1,29 @@
+---
+- set_fact:
+    _deployer_mirror_source: tarball://{{ status_dir }}/downloads/cloud-pak-deployer-image.tar
+  when:
+  - _p_mirror_motion is match('^entitled.*')
+
+- set_fact:
+    _deployer_mirror_source: "docker://{{ _v_portable_registry }}:{{ _v_portable_registry_port }}/cloud-pak-deployer/cloud-pak-deployer:latest"
+  when:
+  - _p_mirror_motion is match('^portable.*')
+
+- set_fact:
+    _deployer_mirror_target: "docker://{{ _v_portable_registry }}:{{ _v_portable_registry_port }}/cloud-pak-deployer/cloud-pak-deployer:latest"
+  when:
+  - _p_mirror_motion is match('.*portable$')
+
+- set_fact:
+    _deployer_mirror_target: "docker://{{ _registry_full_path }}/cloud-pak-deployer/cloud-pak-deployer:latest"
+  when:
+  - _p_mirror_motion is match('.*private$')
+
+- name: Mirror deployer images from {{ _deployer_mirror_source }} to {{ _deployer_mirror_target }}, log file is {{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-deployer-image.log
+  ansible.builtin.shell: |
+    _log={{ status_dir }}/log/{{ _p_current_cp4d_cluster.project }}-mirror-deployer-image.log
+    _cmd="skopeo copy {{ _deployer_mirror_source }} {{ _deployer_mirror_target }} --preserve-digests --dest-tls-verify=false"
+    echo "" | tee -a "${_log}"
+    echo "${_cmd}" | tee -a "${_log}"
+    eval "${_cmd}" 2>&1 | tee -a "${_log}"
+  ignore_errors: true

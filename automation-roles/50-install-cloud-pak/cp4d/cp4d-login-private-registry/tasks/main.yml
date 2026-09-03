@@ -1,0 +1,41 @@
+---
+- set_fact:
+    _target_registry_credentials_secret: "image-registry-{{ _p_current_cp4d_cluster.image_registry_name }}"
+
+- name: Get target registry authentication details
+  include_role: 
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ _target_registry_credentials_secret }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _target_registry_auth
+
+- name: Fail if the credentials for the target image registry have not been found in the vault
+  fail:
+    msg: "Secret with credentials for target image registry ({{ _target_registry_credentials_secret }}) have not been found in the vault."
+  when: 
+  - _target_registry_auth == ""
+
+- set_fact:
+    _target_registry_user: "{{ _target_registry_auth | regex_search('^(.+):(.+)', '\\1') | first }}"
+    _target_registry_password: "{{ _target_registry_auth | regex_search('^(.+):(.+)', '\\2') | first }}"
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Log in to the target private registry
+    _p_command: |
+      login-private-registry {{ _registry_host_port }} \
+        "{{ _target_registry_user }}" \
+        "{{ _target_registry_password }}"
+    _p_cpd_cli_manage: True
+
+- include_role:
+    name: run-command
+  vars:
+    _p_command_description: Log in to the target private registry using skopeo
+    _p_command: |
+      skopeo login {{ _registry_host_port }} \
+        -u "{{ _target_registry_user }}" \
+        -p "{{ _target_registry_password }}" \
+        --tls-verify=false
