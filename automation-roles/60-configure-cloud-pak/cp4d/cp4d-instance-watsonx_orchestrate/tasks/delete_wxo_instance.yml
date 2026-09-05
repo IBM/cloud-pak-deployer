@@ -2,20 +2,21 @@
 - set_fact:
     _wxo_instance_name: "{{ _wxo_instance.display_name }}"
     _wxo_instance_id: "{{ _wxo_instance.id }}"
-    _wxo_cartridge_listed: {}
+    _wxo_instance_listed: {}
     _delete_wxo_instance: False
 
 # If not all instances must be deleted, check if instance still in the configuration
 - block:
   - set_fact:
-      _wxo_cartridge_listed: "{{ _wxo_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
+      _wxo_instance_listed: "{{ _wxo_cartridge.instances | json_query(_query_instance) | first | default({}) }}"
     vars:
       _query_instance: "[?name=='{{ _wxo_instance_name }}']" 
     when: _wxo_cartridge.instances is defined
   - set_fact:
       _delete_wxo_instance: True
     when: 
-    - _wxo_cartridge_listed == {}
+    - _wxo_instance_listed == {}
+    - _wxo_instance_name != 'watsonx-orchestrate-agentic-control-plane'
   when: (_p_delete_all_instances | default(False)) == False
 
 - set_fact:
