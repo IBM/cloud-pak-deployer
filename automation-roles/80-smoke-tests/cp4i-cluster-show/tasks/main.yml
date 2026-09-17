@@ -9,10 +9,20 @@
 - include_tasks: cp4i-get-admin-new-style.yml
   when: _p_new_style
 
-- name: Get route for Cloud Pak for Integration Platform platform-navigator
-  shell: |
-    oc get route -n {{ current_cp4i_cluster.project }} integration-navigator-pn -o jsonpath='{.spec.host}'
-  register: _cp4i_pn_host
+- name: Wait for route integration-navigator-pn to exist
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    name: integration-navigator-pn
+    namespace: "{{ current_cp4i_cluster.project }}"
+  register: _cp4i_pn_route
+  until: _cp4i_pn_route.resources | default([]) | length > 0
+  retries: 60
+  delay: 10
+
+- name: "Set route host for Cloud Pak for Integration Platform platform-navigator"
+  set_fact:
+    _cp4i_pn_host: "{{ _cp4i_pn_route.resources[0].spec.host }}"
 
 - name: "Make sure that directory {{ status_dir }}/cloud-paks exists"
   file:
@@ -31,6 +41,6 @@
     marker: ""
     block: |
       --- Cloud Pak for Integration instance {{ current_cp4i_cluster.project }} ---
-      Platform Navigator URL: https://{{ _cp4i_pn_host.stdout }}
+      Platform Navigator URL: https://{{ _cp4i_pn_host }}
       admin user: {{ _cp4i_admin_user }}
       {{ _cp4i_admin_user }} password: {{ _cp4i_admin_password }}
