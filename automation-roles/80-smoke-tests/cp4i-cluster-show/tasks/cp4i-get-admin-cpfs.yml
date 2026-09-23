@@ -3,12 +3,21 @@
 # - _p_new_style
 # - _p_fs_namespace
 
+- name: "Wait for platform-auth-idp-credentials secret to exist"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: platform-auth-idp-credentials
+    namespace: ibm-common-services
+  register: _cp4i_admin_secret
+  until: _cp4i_admin_secret.resources | default([]) | length > 0
+  retries: 60
+  delay: 10
+
 - name: "Extract admin user when using versions prior to 2023.4.1"
-  shell: |
-    oc extract -n ibm-common-services secret/platform-auth-idp-credentials --keys=admin_username --to=-
-  register: _cp4i_admin_user
+  set_fact:
+    _cp4i_admin_user: "{{ _cp4i_admin_secret.resources[0].data.admin_username | b64decode }}"
 
 - name: "Extract admin password when using versions prior to 2023.4.1"
-  shell: |
-    oc extract -n ibm-common-services secret/platform-auth-idp-credentials --keys=admin_password --to=-
-  register: _cp4i_admin_password
+  set_fact:
+    _cp4i_admin_password: "{{ _cp4i_admin_secret.resources[0].data.admin_password | b64decode }}"

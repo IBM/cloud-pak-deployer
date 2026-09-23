@@ -3,12 +3,21 @@
 # - _p_new_style
 # - _p_fs_namespace
 
+- name: "Wait for integration-admin-initial-temporary-credentials secret to exist"
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: integration-admin-initial-temporary-credentials
+    namespace: "{{ _p_fs_namespace }}"
+  register: _cp4i_admin_secret
+  until: _cp4i_admin_secret.resources | default([]) | length > 0
+  retries: 60
+  delay: 10
+
 - name: "Extract admin user name when using versions 2023.4.1 and later"
-  shell: |
-    oc extract -n {{ _p_fs_namespace }} secret/integration-admin-initial-temporary-credentials --keys=username --to=-
-  register: _cp4i_admin_user
+  set_fact:
+    _cp4i_admin_user: "{{ _cp4i_admin_secret.resources[0].data.username | b64decode }}"
 
 - name: "Extract admin password when using versions 2023.4.1 and later"
-  shell: |
-    oc extract -n {{ _p_fs_namespace }} secret/integration-admin-initial-temporary-credentials --keys=password --to=-
-  register: _cp4i_admin_password
+  set_fact:
+    _cp4i_admin_password: "{{ _cp4i_admin_secret.resources[0].data.password | b64decode }}"
