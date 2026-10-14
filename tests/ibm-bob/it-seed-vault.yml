@@ -1,0 +1,40 @@
+---
+# Integration test step 1: put the kubeconfig and any credentials
+# into a file vault in the integration test status dir. Variables come from it-vars.json.
+#
+# Secrets seeded from environment variables:
+#   CP_ENTITLEMENT_KEY            IBM entitled registry key (required for install/airgap)
+#   IBM_BOB_IT_REGISTRY_CREDS     private registry credentials user:password (required for airgap)
+#   IBM_BOB_IT_REGISTRY_NAME      image_registry_name used in the config (default: bob-mirror)
+- name: Seed the file vault for the IBM Bob integration test
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Store the kubeconfig in the vault
+      include_role:
+        name: vault-set-secret
+      vars:
+        secret_name: "kubeconfig"
+        secret_group: "{{ environment_name }}"
+        secret_file: "/it/kubeconfig"
+
+    - name: Store the IBM entitlement key in the vault
+      include_role:
+        name: vault-set-secret
+      vars:
+        secret_name: "ibm_cp_entitlement_key"
+        secret_group: "{{ environment_name }}"
+        secret_payload: "{{ lookup('env', 'CP_ENTITLEMENT_KEY') }}"
+      when: lookup('env', 'CP_ENTITLEMENT_KEY') != ''
+      no_log: true
+
+    - name: Store the private registry credentials in the vault
+      include_role:
+        name: vault-set-secret
+      vars:
+        secret_name: "image-registry-{{ lookup('env', 'IBM_BOB_IT_REGISTRY_NAME') | default('bob-mirror', true) }}"
+        secret_group: "{{ environment_name }}"
+        secret_payload: "{{ lookup('env', 'IBM_BOB_IT_REGISTRY_CREDS') }}"
+      when: lookup('env', 'IBM_BOB_IT_REGISTRY_CREDS') != ''
+      no_log: true
