@@ -1,0 +1,122 @@
+---
+# =============================================================================
+# ibm-bob-cluster: Installs IBM Bob on OpenShift cluster
+# =============================================================================
+
+- name: ///// Handling IBM Bob instance {{ current_ibm_bob_cluster.project }} /////
+  debug:
+    msg: "Begin processing IBM Bob instance {{ current_ibm_bob_cluster.project }}"
+
+# 1. License acceptance verification (skipped for state=removed)
+- name: Verify license acceptance
+  block:
+    - set_fact:
+        _cpd_accept_licenses: false
+
+    - set_fact:
+        _cpd_accept_licenses: true
+      when: (cpd_accept_licenses | default(false) | bool) or (current_ibm_bob_cluster.accept_licenses | default(false) | bool)
+
+    - name: Fail if license is not accepted
+      fail:
+        msg: "You must accept the licenses, either in the ibm_bob object with accept_licenses: true, or by specifying --accept-all-licenses at the command line."
+      when: not _cpd_accept_licenses
+  when: (current_ibm_bob_cluster.state | default('installed')) != 'removed'
+
+# 2. Set a convenience fact for the requested state
+- name: Set _ibm_bob_state fact
+  set_fact:
+    _ibm_bob_state: "{{ current_ibm_bob_cluster.state | default('installed') }}"
+
+# 3. Resolve variables and release bundle
+- name: Resolve IBM Bob variables and download release bundle
+  include_role:
+    name: ibm-bob-variables
+
+# 4. Resolve OpenShift cluster and login
+- name: Get OpenShift cluster configuration
+  include_role:
+    name: get-openshift-cluster
+  vars:
+    _p_openshift_cluster_name: "{{ current_ibm_bob_cluster.openshift_cluster_name }}"
+
+- name: Login to the OpenShift cluster
+  include_role:
+    name: openshift-login
+  vars:
+    _p_openshift_cluster_name: "{{ current_ibm_bob_cluster.openshift_cluster_name }}"
+
+# 5. Branch: state=removed → uninstall then end_role; state=installed → continue
+- name: Uninstall IBM Bob instance {{ current_ibm_bob_cluster.project }} (state=removed)
+  block:
+    - name: Ensure log directory exists for uninstall
+      file:
+        path: "{{ status_dir }}/log/ibm-bob"
+        state: directory
+        mode: '0755'
+
+    - name: Run IBM Bob uninstall tasks
+      include_tasks: uninstall-bob.yml
+      when: not (cpd_skip_cp_install | default(false) | bool)
+
+    - name: Log that uninstall was skipped (cpd_skip_cp_install)
+      debug:
+        msg: "cpd_skip_cp_install is set — skipping cluster changes for removal of {{ current_ibm_bob_cluster.project }}."
+      when: cpd_skip_cp_install | default(false) | bool
+
+    - meta: end_role
+  when: _ibm_bob_state == 'removed'
+
+# 6. Check prerequisites (OCP version, storage classes, amd64 nodes, cert-manager)
+- name: Validate prerequisites for IBM Bob
+  include_tasks: validate-prereqs.yml
+
+# 7. Prepare instance status and log directories
+- name: Ensure instance working and log directories exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}"
+    - "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work"
+    - "{{ status_dir }}/log/ibm-bob"
+
+# 8. Render full config.yaml (overwrites the minimal stub written by ibm-bob-variables)
+# _ibm_bob_image_pull_prefix is already set correctly by ibm-bob-variables (step 3).
+- name: Render config.yaml for IBM Bob instance {{ current_ibm_bob_cluster.project }}
+  template:
+    src: config.yaml.j2
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
+    mode: '0600'
+
+- name: Display rendered config.yaml location
+  debug:
+    msg: "Rendered IBM Bob config at {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
+
+# 9. Air-gapped pre-install: create pull secrets and verify images
+- name: Perform air-gapped pre-install steps (pull secrets and image verification)
+  include_tasks: airgap-apply.yml
+  when:
+    - cpd_airgap | default(false) | bool
+    - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
+    - not (cpd_dry_run | default(false) | bool)
+
+# 10. Dry-run handling (end_role, not end_play, so that other objects in the play are still processed)
+- name: Stop processing if cpd_dry_run is enabled
+  block:
+    - name: Show dry-run notification
+      debug:
+        msg: "cpd_dry_run is set to true. IBM Bob prerequisites validated and config.yaml rendered. Skipping actual cluster installation."
+    - meta: end_role
+  when: cpd_dry_run | default(false) | bool
+
+# 11. Install IBM Bob
+- name: Install IBM Bob {{ _ibm_bob_version }} in namespace {{ current_ibm_bob_cluster.project }}
+  include_tasks: install-bob.yml
+  when: not (cpd_skip_cp_install | default(false) | bool)
+
+# 12. Wait for IBM Bob to be Ready
+- name: Wait for IBM Bob to be Ready in namespace {{ current_ibm_bob_cluster.project }}
+  include_tasks: wait-for-ready.yml
+  when: not (cpd_skip_cp_install | default(false) | bool)

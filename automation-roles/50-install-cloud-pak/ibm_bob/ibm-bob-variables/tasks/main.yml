@@ -1,0 +1,240 @@
+---
+# =============================================================================
+# ibm-bob-variables: Resolves IBM Bob version, validates required tools,
+# downloads/verifies/caches the release bundle, and resolves bobctl path.
+# =============================================================================
+
+# 1. Resolve requested version
+- name: Determine requested IBM Bob version
+  set_fact:
+    _p_requested_bob_version: "{{ _p_ibm_bob_version | default(current_ibm_bob_cluster.ibm_bob_version) }}"
+
+- name: Find available version files for IBM Bob
+  find:
+    paths: "{{ role_path }}/vars/versions"
+    recurse: false
+    patterns: "*.yml"
+  register: _ibm_bob_version_files
+
+- name: Fail if no version definition files found
+  fail:
+    msg: "No IBM Bob version definition files found in {{ role_path }}/vars/versions."
+  when: _ibm_bob_version_files.matched == 0
+
+- name: Extract available version list
+  set_fact:
+    _ibm_bob_available_versions: "{{ _ibm_bob_version_files.files | map(attribute='path') | map('basename') | map('regex_replace', '\\.yml$', '') | sort | list }}"
+
+- name: Determine effective IBM Bob version
+  set_fact:
+    _p_effective_bob_version: "{{ _ibm_bob_available_versions | last if _p_requested_bob_version == 'latest' else _p_requested_bob_version }}"
+
+- name: Check if requested IBM Bob version definition exists
+  stat:
+    path: "{{ role_path }}/vars/versions/{{ _p_effective_bob_version }}.yml"
+  register: _ibm_bob_version_file_stat
+
+- name: Fail if version definition does not exist
+  fail:
+    msg: "IBM Bob version '{{ _p_effective_bob_version }}' is not supported. Available versions: {{ _ibm_bob_available_versions | join(', ') }}. See {{ role_path }}/vars/versions/."
+  when: not _ibm_bob_version_file_stat.stat.exists
+
+- name: Load version specific properties for IBM Bob {{ _p_effective_bob_version }}
+  include_vars:
+    file: "vars/versions/{{ _p_effective_bob_version }}.yml"
+
+- name: Ensure downloads and bundle directory exists
+  file:
+    path: "{{ status_dir }}/downloads/ibm-bob/{{ _p_effective_bob_version }}"
+    state: directory
+    mode: '0755'
+
+- name: Set bundle target paths and facts
+  set_fact:
+    _ibm_bob_version: "{{ _p_effective_bob_version }}"
+    _ibm_bob_bundle_dir: "{{ status_dir }}/downloads/ibm-bob/{{ _p_effective_bob_version }}"
+    _ibm_bob_bundle_tarball: "{{ status_dir }}/downloads/ibm-bob/{{ _p_effective_bob_version }}/{{ _ibm_bob_bundle_filename }}"
+    _ibm_bob_checksum_file: "{{ status_dir }}/downloads/ibm-bob/{{ _p_effective_bob_version }}/.bundle_sha256"
+
+# 2. Check required runtime tools
+- name: Ensure Helm is available
+  include_role:
+    name: helm-download
+
+- name: Check for required command-line tools (oc, bash, openssl, helm)
+  command: "which {{ item }}"
+  register: _tool_check
+  failed_when: _tool_check.rc != 0
+  changed_when: false
+  loop:
+    - oc
+    - bash
+    - openssl
+    - helm
+
+# 3. Cache verification and download
+- name: Check if cached bundle archive exists
+  stat:
+    path: "{{ _ibm_bob_bundle_tarball }}"
+    checksum_algorithm: sha256
+    get_checksum: true
+  register: _bundle_archive_stat
+
+- name: Set cache validity fact
+  set_fact:
+    _bundle_cached_and_valid: "{{ _bundle_archive_stat.stat.exists and _bundle_archive_stat.stat.checksum | default('') == _ibm_bob_bundle_sha256 }}"
+
+- name: Fail if air-gapped mode and bundle is not cached
+  fail:
+    msg: "Air-gapped mode is enabled (CPD_AIRGAP=true) but IBM Bob bundle '{{ _ibm_bob_bundle_filename }}' was not found or failed checksum in '{{ _ibm_bob_bundle_dir }}'. Please pre-place the bundle archive before running in air-gapped mode."
+  when:
+    - cpd_airgap | default(false) | bool
+    - not _bundle_cached_and_valid
+
+# Download if not valid in cache and connected mode.
+# The pinned release-asset URL is fetched directly (no GitHub API call), so no PAT is used.
+- name: Download IBM Bob release bundle
+  get_url:
+    url: "{{ _ibm_bob_bundle_url }}"
+    dest: "{{ _ibm_bob_bundle_tarball }}"
+    checksum: "sha256:{{ _ibm_bob_bundle_sha256 }}"
+    mode: '0644'
+  register: _download_bundle
+  until: _download_bundle is succeeded
+  retries: 5
+  delay: 5
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not _bundle_cached_and_valid
+
+# 4. Extract bundle if needed
+- name: Check if bobctl executable exists in bundle directory
+  stat:
+    path: "{{ _ibm_bob_bundle_dir }}/bobctl"
+  register: _bobctl_stat
+
+- name: Extract IBM Bob release bundle
+  unarchive:
+    src: "{{ _ibm_bob_bundle_tarball }}"
+    dest: "{{ _ibm_bob_bundle_dir }}"
+    remote_src: true
+    mode: '0755'
+  when: not _bundle_cached_and_valid or not _bobctl_stat.stat.exists
+
+- name: Ensure bobctl has executable permissions
+  file:
+    path: "{{ _ibm_bob_bundle_dir }}/bobctl"
+    mode: '0755'
+
+- name: Save verified checksum marker file
+  copy:
+    content: "{{ _ibm_bob_bundle_sha256 }}"
+    dest: "{{ _ibm_bob_checksum_file }}"
+    mode: '0644'
+
+# 5. Resolve image pull prefix.
+# Used by config.yaml (imagePullPrefix) and passed through to ibm-bob-cluster.
+# In air-gapped mode (image_registry_name is set on the ibm_bob entry) derive
+# the prefix from the matching image_registry entry; otherwise use icr.io.
+- name: Determine image pull prefix (connected — default icr.io)
+  set_fact:
+    _ibm_bob_image_pull_prefix: "icr.io"
+
+- name: Determine image pull prefix (air-gapped — from image_registry entry)
+  vars:
+    _reg_name: "{{ current_ibm_bob_cluster.image_registry_name | default('') }}"
+    _reg_entry: >-
+      {{ all_config.image_registry
+         | default([])
+         | json_query("[?name=='" + _reg_name + "']")
+         | first | default({}) }}
+  set_fact:
+    _ibm_bob_image_pull_prefix: "{{ _reg_entry.registry_url | regex_replace('^https?://', '') }}"
+  when: (current_ibm_bob_cluster.image_registry_name | default('')) != ''
+
+# 6. Write a minimal config.yaml so every bobctl sub-command (including
+# verify-images) always reads the correct imagePullPrefix, regardless of
+# which role invokes bobctl.  ibm-bob-cluster overwrites this with the
+# full config (storage classes, premium packages, etc.) during installation.
+- name: Ensure instance config directory exists
+  file:
+    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project | default('ibm-bob') }}"
+    state: directory
+    mode: '0755'
+
+- name: Write minimal config.yaml (imagePullPrefix) for bobctl
+  copy:
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project | default('ibm-bob') }}/config.yaml"
+    mode: '0600'
+    force: false
+    content: |
+      # Minimal config written by ibm-bob-variables.
+      # ibm-bob-cluster overwrites this with the full configuration.
+      global:
+        imagePullPrefix: {{ _ibm_bob_image_pull_prefix }}
+  register: _ibm_bob_minimal_config
+
+- name: Update imagePullPrefix in existing config.yaml
+  lineinfile:
+    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project | default('ibm-bob') }}/config.yaml"
+    regexp: '^\s*imagePullPrefix:'
+    line: "  imagePullPrefix: {{ _ibm_bob_image_pull_prefix }}"
+  when: not _ibm_bob_minimal_config.changed
+
+# 7. Write a minimal dummy kubeconfig so that `oc registry login --auth-basic`
+# works even when no cluster login has happened yet (oc 4.x unconditionally
+# requires a kubeconfig with a current-context set, even for credential-only
+# registry operations).  Written only when the real kubeconfig is absent.
+- name: Ensure openshift status directory exists (needed for kubeconfig)
+  file:
+    path: "{{ status_dir }}/openshift"
+    state: directory
+    mode: '0755'
+
+- name: Check if a real kubeconfig already exists
+  stat:
+    path: "{{ status_dir }}/openshift/kubeconfig"
+  register: _ibm_bob_kubeconfig_stat
+
+- name: Write minimal dummy kubeconfig for oc registry login (no cluster needed)
+  copy:
+    dest: "{{ status_dir }}/openshift/kubeconfig"
+    mode: '0600'
+    content: |
+      apiVersion: v1
+      kind: Config
+      clusters:
+      - cluster:
+          server: https://localhost:6443
+        name: dummy
+      contexts:
+      - context:
+          cluster: dummy
+          user: dummy
+        name: dummy
+      users:
+      - name: dummy
+        user:
+          token: dummy
+      current-context: dummy
+      preferences: {}
+  when: not _ibm_bob_kubeconfig_stat.stat.exists
+
+- name: Set bobctl executable path and PATH update
+  set_fact:
+    _ibm_bob_bobctl_path: "{{ _ibm_bob_bundle_dir }}/bobctl"
+    _ibm_bob_bobctl_env:
+      PATH: "{{ _ibm_bob_bundle_dir }}:{{ lookup('env', 'PATH') }}"
+      KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+      BOB_CONFIG_FILE: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project | default('ibm-bob') }}/config.yaml"
+      BOB_WORK_DIR: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project | default('ibm-bob') }}/work"
+      BOB_LOG_DIR: "{{ status_dir }}/log/ibm-bob"
+
+- name: Display resolved IBM Bob variables
+  debug:
+    msg:
+      - "IBM Bob Version: {{ _ibm_bob_version }}"
+      - "Bundle Dir: {{ _ibm_bob_bundle_dir }}"
+      - "bobctl Executable: {{ _ibm_bob_bobctl_path }}"
+      - "imagePullPrefix: {{ _ibm_bob_image_pull_prefix }}"
+      - "Supported OCP Versions: {{ _ibm_bob_supported_ocp_versions | join(', ') }}"

@@ -1,0 +1,138 @@
+---
+# =============================================================================
+# uninstall-bob.yml
+# Removes an IBM Bob installation created by install-bob.yml.
+#
+# Docs: https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/uninstall
+#
+# Sequence (from the uninstall docs):
+#   1. Delete the Bob CR and BobIDP CR without waiting (--wait=false); the
+#      operator finalizer will block namespace deletion until they are gone.
+#   2. Patch out the BobIDP finalizer so the CR can actually be deleted.
+#   3. helm uninstall ibm-bob (removes the operator and all workloads).
+#   4. Wait for both namespaces to be fully terminated.
+#   5. Delete the cluster-scoped resources that were applied during install
+#      (ibm-bob-cluster-scoped CRDs, ClusterRole, etc.) if the work file exists.
+#   6. Remove the Keycloak admin vault key.
+#
+# Every step is idempotent: a resource that is already absent is not an error.
+# cpd_skip_cp_install: when true, log that uninstall is skipped (dry-run guard
+#   already handled upstream; this flag is respected here for symmetry).
+# =============================================================================
+
+# ---- Step 1: trigger CR deletion (--wait=false, async) ---------------------
+- name: Delete Bob CR in namespace {{ current_ibm_bob_cluster.project }} (async)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: bob.ibm.com/v1beta1
+    kind: Bob
+    name: bob-cr
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+    wait: false
+  ignore_errors: true
+
+- name: Delete BobIDP CR in namespace {{ current_ibm_bob_cluster.project }} (async)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: bob.ibm.com/v1beta1
+    kind: BobIDP
+    name: bob-idp
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+    wait: false
+  ignore_errors: true
+
+# ---- Step 2: patch out the BobIDP finalizer so deletion can proceed --------
+- name: Check if BobIDP CR still exists
+  kubernetes.core.k8s_info:
+    api_version: bob.ibm.com/v1beta1
+    kind: BobIDP
+    name: bob-idp
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  register: _ibm_bob_idp_cr
+
+- name: Patch out BobIDP finalizer to unblock deletion
+  kubernetes.core.k8s:
+    state: patched
+    api_version: bob.ibm.com/v1beta1
+    kind: BobIDP
+    name: bob-idp
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+    definition:
+      metadata:
+        finalizers: []
+  when: (_ibm_bob_idp_cr.resources | default([])) | length > 0
+  ignore_errors: true
+
+# ---- Step 3: helm uninstall -------------------------------------------------
+- name: Check if helm release ibm-bob exists in {{ current_ibm_bob_cluster.project }}
+  command: >-
+    helm status ibm-bob --namespace {{ current_ibm_bob_cluster.project }}
+  register: _ibm_bob_helm_status
+  changed_when: false
+  failed_when: false
+  environment: "{{ _ibm_bob_bobctl_env }}"
+
+- name: Uninstall helm release ibm-bob in {{ current_ibm_bob_cluster.project }}
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Uninstall IBM Bob helm release in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      helm uninstall ibm-bob --namespace {{ current_ibm_bob_cluster.project }} --wait
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-uninstall.log"
+  when: _ibm_bob_helm_status.rc == 0
+
+# ---- Step 4: delete the namespaces ------------------------------------------
+- name: Delete instance namespace {{ current_ibm_bob_cluster.project }}
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ current_ibm_bob_cluster.project }}"
+    wait: true
+    wait_timeout: 300
+  ignore_errors: true
+
+- name: Delete operator namespace {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+    wait: true
+    wait_timeout: 300
+  ignore_errors: true
+
+# ---- Step 5: remove cluster-scoped resources --------------------------------
+- name: Check if cluster-resources.yaml exists in the status dir
+  stat:
+    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/cluster-resources.yaml"
+  register: _ibm_bob_cluster_resources_stat
+
+- name: Delete IBM Bob cluster-scoped resources (CRDs, ClusterRole, etc.)
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete IBM Bob cluster-scoped resources"
+    _p_command: >-
+      oc delete -f {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/cluster-resources.yaml
+      --ignore-not-found
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-delete-cluster-resources.log"
+  when: _ibm_bob_cluster_resources_stat.stat.exists
+
+# ---- Step 6: remove vault keys ----------------------------------------------
+- name: Remove Keycloak admin vault key for {{ current_ibm_bob_cluster.project }}
+  include_role:
+    name: vault-delete-secret
+  vars:
+    secret_name: "ibm_bob_keycloak_admin_{{ current_ibm_bob_cluster.project | replace('-','_') }}_{{ current_ibm_bob_cluster.openshift_cluster_name | replace('-','_') }}"
+    secret_group: "{{ environment_name }}"
+  ignore_errors: true
+
+- name: IBM Bob instance {{ current_ibm_bob_cluster.project }} has been removed
+  debug:
+    msg: >-
+      IBM Bob instance '{{ current_ibm_bob_cluster.project }}' has been removed from cluster
+      '{{ current_ibm_bob_cluster.openshift_cluster_name }}'.

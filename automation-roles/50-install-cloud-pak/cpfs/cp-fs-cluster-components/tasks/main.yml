@@ -1,49 +1,18 @@
 ---
 - set_fact:
     _threads_per_core: "{{ _p_license_threads_per_core | default(1) }}"
-    _ibm_cert_manager: "{{ _p_ibm_cert_manager | default(False) | bool }}"
 
 - include_role:
     name: cp4d-get-latest-version
   when: (_p_cp4d_version | default('')) == ''
 
-- name: Check if IBM Certificate Manager is already installed
-  kubernetes.core.k8s_info:
-    api_version: operators.coreos.com/v1alpha1
-    kind: ClusterServiceVersion
-    namespace: ibm-cert-manager
-    label_selectors:
-    - operators.coreos.com/ibm-cert-manager-operator.ibm-cert-manager
-  register: _get_ibm_cert_manager
-
-- name: Check if Red Hat Certificate Manager is already installed
-  kubernetes.core.k8s_info:
-    api_version: operators.coreos.com/v1alpha1
-    kind: ClusterServiceVersion
-    label_selectors:
-    - operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator
-  register: _get_red_hat_cert_manager
-
-- name: Fail if Red Hat Certificate Manager is installed and IBM Certificate Manager is set to True
-  fail:
-    msg: >-
-      Property ibm_cert_manager in cp4d must be set to False if the Red Hat Certificate Manager is installed. 
-      Either set the property to False, or delete the cert-manager and cert-manager-operator namespaces and re-run the deployer
-      to install IBM Certificate Manager.
-  when:
-  - (_get_red_hat_cert_manager.resources | default([])) != []
-  - _ibm_cert_manager
-
-- set_fact:
-    _ibm_cert_manager: True
-  when: >-
-    (_get_ibm_cert_manager.resources | default([])) != [] or
-    _p_cp4d_version < "5.1.0"
-
-- name: Install Red Hat Certificate manager
+- name: Ensure certificate manager is available (sets _ibm_cert_manager)
   include_role:
-    name: openshift-cert-manager
-  when: not _ibm_cert_manager
+    name: cp-cert-manager
+  vars:
+    _p_force_ibm_cert_manager: "{{ _p_cp4d_version < '5.1.0' }}"
+    _p_cert_manager_object_name: cp4d
+    _p_cert_manager_property_name: ibm_cert_manager
 
 - name: Get IBM License server
   kubernetes.core.k8s_info:
