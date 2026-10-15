@@ -128,6 +128,7 @@ class TestIbmBobInfoTemplate(unittest.TestCase):
     def test_info_rendering_without_premium_packages(self):
         context = {
             '_ibm_bob_gateway_url': 'https://api.bob.apps.example.com',
+            '_ibm_bob_admin_ui_url': 'https://bob.apps.example.com',
             '_ibm_bob_keycloak_url': 'https://bob-keycloak.apps.example.com',
             '_ibm_bob_keycloak_admin_user': 'temp-admin',
             '_ibm_bob_keycloak_admin_password': 'secretpassword',
@@ -141,6 +142,7 @@ class TestIbmBobInfoTemplate(unittest.TestCase):
         }
         rendered = self.template.render(context)
         self.assertIn('IBM Bob gateway URL: https://api.bob.apps.example.com', rendered)
+        self.assertIn('IBM Bob admin UI: https://bob.apps.example.com', rendered)
         self.assertIn('Keycloak URL: https://bob-keycloak.apps.example.com', rendered)
         self.assertNotIn('RAG URL:', rendered)
         self.assertNotIn('Z Proxy URL:', rendered)
@@ -149,6 +151,7 @@ class TestIbmBobInfoTemplate(unittest.TestCase):
     def test_info_rendering_with_premium_packages(self):
         context = {
             '_ibm_bob_gateway_url': 'https://api.bob.apps.example.com',
+            '_ibm_bob_admin_ui_url': 'https://bob.apps.example.com',
             '_ibm_bob_keycloak_url': 'https://bob-keycloak.apps.example.com',
             '_ibm_bob_keycloak_admin_user': 'temp-admin',
             '_ibm_bob_keycloak_admin_password': 'secretpassword',

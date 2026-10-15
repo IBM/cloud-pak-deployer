@@ -16,21 +16,24 @@
     msg: "No gateway Route (label app.kubernetes.io/component=bob-gateway) found in namespace {{ current_ibm_bob_cluster.project }}."
   when: _ibm_bob_gateway_route.resources | length == 0
 
-# The gateway endpoint is the host starting with "api."; fall back to the first host.
+# The API gateway endpoint is the host starting with "api."; fall back to the first host.
+# The admin UI endpoint is the host that does NOT start with "api.".
 - name: Determine gateway URL
   set_fact:
     _ibm_bob_gateway_hosts: "{{ _ibm_bob_gateway_route.resources | map(attribute='spec.host') | list }}"
 
-- name: Set gateway URL fact
+- name: Set gateway URL facts
   set_fact:
     _ibm_bob_gateway_url: "https://{{ (_ibm_bob_gateway_hosts | select('match', '^api\\.') | list + _ibm_bob_gateway_hosts) | first }}"
+    _ibm_bob_admin_ui_url: "https://{{ (_ibm_bob_gateway_hosts | reject('match', '^api\\.') | list + _ibm_bob_gateway_hosts) | first }}"
 
 - name: Get Keycloak Route
   kubernetes.core.k8s_info:
     api_version: route.openshift.io/v1
     kind: Route
-    name: bob-keycloak
     namespace: "{{ current_ibm_bob_cluster.project }}"
+    label_selectors:
+      - app.kubernetes.io/instance=bob-keycloak
   register: _ibm_bob_keycloak_route
 
 - name: Set Keycloak URL fact
