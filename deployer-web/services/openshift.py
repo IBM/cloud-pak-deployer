@@ -48,6 +48,7 @@ def oc_login(request: OcLoginRequest) -> dict:
 
     # Execute with shell=False so the argument list is passed directly to execvp;
     # no shell is spawned and no metacharacter interpretation occurs.
+    args = ['oc'] + args[1:]
     proc = subprocess.Popen(
         args,
         stdin=subprocess.PIPE,
@@ -62,7 +63,7 @@ def oc_login(request: OcLoginRequest) -> dict:
     else:
         errors = str(errorlog, 'utf-8').split("\n")
         result = {"code": proc.returncode, "error": errors[-2]}
-        logger.error(f'Login error: {errors}')
+        logger.error(f'Login failed with return code {proc.returncode}')
 
     return result
 
@@ -110,7 +111,7 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             return OcCheckConnectionResponse(**result)
             
     except Exception as e:
-        result["error"] = f"Error checking connection: {str(e)}"
+        result["error"] = "Error checking connection"
         logger.error(f"Exception during oc whoami: {str(e)}")
         return OcCheckConnectionResponse(**result)
     

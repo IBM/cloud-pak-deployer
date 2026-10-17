@@ -18,16 +18,19 @@ class RegistryConfig(BaseModel):
     registryPassword: str
 
 
+ENV_ID_PATTERN = r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'
+
+
 class MirrorRequest(BaseModel):
     """Request model for mirroring Cloud Pak images."""
-    envId: str
+    envId: str = Field(..., pattern=ENV_ID_PATTERN)
     entitlementKey: str
     registry: RegistryConfig
 
 
 class DeployRequest(BaseModel):
     """Request model for deploying Cloud Pak."""
-    envId: str
+    envId: str = Field(..., pattern=ENV_ID_PATTERN)
     oc_login_command: str
     entitlementKey: str
     adminPassword: Optional[str] = None
