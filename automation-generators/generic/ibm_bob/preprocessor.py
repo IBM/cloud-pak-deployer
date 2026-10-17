@@ -47,6 +47,14 @@ import re
 
 PREMIUM_PACKAGES = ['rag', 'z_proxy', 'understand']
 
+# Supported core model identifiers and their allowed quantizations.
+# Kept in sync with _ibm_bob_ai_models in vars/versions/<ver>.yml.
+CORE_MODELS = {
+    'nemotron-3-ultra': ['fp8', 'nvfp4'],
+    'laguna-s-2.1':     ['fp8', 'nvfp4'],
+    'mistral-medium-3.5': ['fp8'],
+}
+
 def find_env_references(node, found=None):
     """Collect the VAR names of all 'env.VAR' string values in the model gateway config."""
     if found is None:
@@ -83,6 +91,7 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('premium_packages').isOptional()
     g('model_gateway').isOptional()
     g('model_gateway_secret_names').isOptional()
+    g('openshift_ai_models').isOptional()
 
     # Expand storage only when installing (not needed for removal)
     if len(g.getErrors()) == 0:
@@ -131,6 +140,73 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                         g.appendError(path='model_gateway_secret_names', msg="model_gateway references env.{} but model_gateway_secret_names has no vault secret for {}".format(var, var))
             elif secret_names:
                 g.appendError(path='model_gateway_secret_names', msg="model_gateway_secret_names can only be specified together with model_gateway")
+
+            # Check openshift_ai_models (optional; mutually exclusive with model_gateway / model_gateway_secret_names)
+            if 'openshift_ai_models' in ge:
+                ai = ge['openshift_ai_models']
+                if not isinstance(ai, dict):
+                    g.appendError(path='openshift_ai_models', msg="openshift_ai_models must be a dictionary")
+                else:
+                    # Mutual exclusion with model_gateway / model_gateway_secret_names
+                    if 'model_gateway' in ge:
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models is mutually exclusive with model_gateway; specify one or the other")
+                    if secret_names:
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models is mutually exclusive with model_gateway_secret_names; specify one or the other")
+
+                    # core_model: required, must be one of the supported values
+                    core_model = ai.get('core_model')
+                    if not core_model:
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models.core_model is required and must be one of: {}".format(', '.join(sorted(CORE_MODELS.keys()))))
+                    elif core_model not in CORE_MODELS:
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models.core_model '{}' is not supported; must be one of: {}".format(core_model, ', '.join(sorted(CORE_MODELS.keys()))))
+                    else:
+                        # quantization: optional, defaults to fp8, must be valid for the chosen model
+                        quant = ai.get('quantization', 'fp8')
+                        if quant not in CORE_MODELS[core_model]:
+                            g.appendError(path='openshift_ai_models', msg="openshift_ai_models.quantization '{}' is not supported for core_model '{}'; allowed: {}".format(quant, core_model, ', '.join(CORE_MODELS[core_model])))
+
+                    # guardrail_model: optional string
+                    if 'guardrail_model' in ai and not isinstance(ai['guardrail_model'], str):
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models.guardrail_model must be a string (model ID, e.g. openai/gpt-oss-20b)")
+
+                    # project: optional string
+                    if 'project' in ai and not isinstance(ai['project'], str):
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models.project must be a string (OpenShift namespace for model serving)")
+
+                    # gpus_per_core_model / gpus_per_guardrail_model: optional integers
+                    for _field in ('gpus_per_core_model', 'gpus_per_guardrail_model'):
+                        if _field in ai and not isinstance(ai[_field], int):
+                            g.appendError(path='openshift_ai_models', msg="openshift_ai_models.{} must be an integer".format(_field))
+
+                    # storage_size: optional dict with string values (e.g. {core: 700Gi, guardrail: 60Gi})
+                    if 'storage_size' in ai:
+                        ss = ai['storage_size']
+                        if not isinstance(ss, dict):
+                            g.appendError(path='openshift_ai_models', msg="openshift_ai_models.storage_size must be a dictionary with keys 'core' and/or 'guardrail'")
+                        else:
+                            for _k in ss:
+                                if _k not in ('core', 'guardrail'):
+                                    g.appendError(path='openshift_ai_models', msg="openshift_ai_models.storage_size has unknown key '{}'; allowed keys: core, guardrail".format(_k))
+                                elif not isinstance(ss[_k], str):
+                                    g.appendError(path='openshift_ai_models', msg="openshift_ai_models.storage_size.{} must be a string (e.g. '700Gi')".format(_k))
+
+                    # huggingface_token_secret_name: optional string
+                    if 'huggingface_token_secret_name' in ai and not isinstance(ai['huggingface_token_secret_name'], str):
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models.huggingface_token_secret_name must be a string (vault secret name)")
+
+                    # vllm_extra_args: optional list of strings
+                    if 'vllm_extra_args' in ai:
+                        if not isinstance(ai['vllm_extra_args'], list) or \
+                                not all(isinstance(x, str) for x in ai['vllm_extra_args']):
+                            g.appendError(path='openshift_ai_models', msg="openshift_ai_models.vllm_extra_args must be a list of strings")
+
+                    # skip_gpu_check: optional boolean
+                    if 'skip_gpu_check' in ai and not isinstance(ai['skip_gpu_check'], bool):
+                        g.appendError(path='openshift_ai_models', msg="openshift_ai_models.skip_gpu_check must be True or False")
+
+                    # huggingface_token_secret_name is valid in all modes: in air-gapped mode it is
+                    # used during env download on the connected side to pull gated model weights into
+                    # status_dir, which the deployer then uploads to the PVC at apply time.
 
             # If air-gapped install, image registry name must be specified
             if str_to_bool(os.environ.get('CPD_AIRGAP')):

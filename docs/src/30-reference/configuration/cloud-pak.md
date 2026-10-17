@@ -1059,3 +1059,137 @@ Alternatively, add users directly in the Keycloak Admin Console at `https://bob-
 ### Post-installation tasks
 
 Tasks such as LDAP and IDP configuration and customer-provided TLS certificates are performed with `bobctl`. See [Post-installation tasks](https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/post-install).
+
+### OpenShift AI model serving
+
+Instead of writing a `model_gateway` block by hand, the deployer can serve one of the supported air-gapped open-weight models on **Red Hat OpenShift AI** (KServe + vLLM) and generate the Bob model gateway configuration automatically. Configure this with `openshift_ai_models` in the `ibm_bob` object. `openshift_ai_models` and `model_gateway` are mutually exclusive.
+
+``` { .yaml .copy }
+ibm_bob:
+- project: ibm-bob
+  ...
+  openshift_ai_models:
+    core_model: nemotron-3-ultra       # nemotron-3-ultra | laguna-s-2.1 | mistral-medium-3.5
+    quantization: fp8                  # fp8 (default) | nvfp4 (nemotron-3-ultra and laguna-s-2.1 only)
+    guardrail_model: openai/gpt-oss-20b  # default; configurable
+    project: ibm-bob-models            # namespace for ServingRuntime / InferenceService / PVCs
+    gpus_per_core_model: 8             # default from the vLLM tensor-parallel size
+    gpus_per_guardrail_model: 1
+    storage_size:
+      core: 700Gi
+      guardrail: 60Gi
+    # huggingface_token_secret_name: ibm-bob-huggingface-token
+    # vllm_extra_args: []
+    # skip_gpu_check: false
+```
+
+The `openshift` object must have `openshift_ai.install: auto` (or `True`) and `gpu.install: auto` (or `True`). The deployer installs OpenShift AI and the NFD + NVIDIA GPU operators automatically when both are set to `auto`.
+
+#### openshift_ai_models properties
+
+| Property | Description | Mandatory | Allowed values |
+|---|---|---|---|
+| `core_model` | Core model to serve. Exactly one may be configured. `mistral-medium-3.5` requires the IBM Bob Premium Package for Z. | Yes | `nemotron-3-ultra`, `laguna-s-2.1`, `mistral-medium-3.5` |
+| `quantization` | Weight quantization variant. Not all variants are available for all models. | No | `fp8` (default), `nvfp4` (Nemotron and Laguna only) |
+| `guardrail_model` | Model ID for the guardrail (safety) model served on the `security` and `background` slots. | No | default `openai/gpt-oss-20b` |
+| `project` | OpenShift namespace for the model serving objects (PVCs, ServingRuntimes, InferenceServices). | No | default `<ibm_bob.project>-models` |
+| `gpus_per_core_model` | Number of GPUs requested by the core model InferenceService (vLLM tensor-parallel size). | No | default `8` |
+| `gpus_per_guardrail_model` | Number of GPUs requested by the guardrail model InferenceService. | No | default `1` |
+| `storage_size.core` | PVC size for the core model weights. | No | default `700Gi` |
+| `storage_size.guardrail` | PVC size for the guardrail model weights. | No | default `60Gi` |
+| `huggingface_token_secret_name` | Vault secret name for the Hugging Face access token. Required for gated model repositories. Used during `env download` in both connected and air-gapped mode. | No | vault secret name |
+| `vllm_extra_args` | Extra vLLM CLI arguments appended to the recommended arguments for the chosen model. | No | list of strings |
+| `skip_gpu_check` | Skip the GPU capacity check. The model pods will be `Pending` until GPU nodes are added. Use for deployer flow testing on clusters without GPUs. | No | `True`, `False` (default) |
+
+#### Supported models
+
+| Model | core_model value | Quantizations | GPUs (default) | Notes |
+|---|---|---|---|---|
+| Nvidia Nemotron 3 Ultra | `nemotron-3-ultra` | `fp8`, `nvfp4` | 8 | |
+| Poolside Laguna S 2.1 | `laguna-s-2.1` | `fp8`, `nvfp4` | 8 | Requires a dFlash draft model (pre-load or download). |
+| Mistral Medium 3.5 | `mistral-medium-3.5` | `fp8` | 8 | Requires the IBM Bob Premium Package for Z. Requires an Eagle draft model. |
+| gpt-oss-20b (guardrail) | — | — | 1 | Default guardrail model. Serves the `security` and `background` gateway slots. |
+
+#### What the deployer does
+
+**`env download` (both modes):**
+
+1. Downloads model weights from Hugging Face into `status_dir/downloads/ibm-bob/<version>/models/` using the `hf` CLI (`huggingface_hub`). A local marker file makes re-runs a no-op. The status directory is packaged by `env download` and carried to the air-gapped site.
+
+**`env apply`:**
+
+2. Installs OpenShift AI (KServe) and the NFD + NVIDIA GPU operators when `openshift_ai.install` and `gpu.install` are `auto`.
+3. Creates a namespace and two PVCs (one per model) using the file storage class.
+4. In **connected mode**: runs a Kubernetes Job to download weights from Hugging Face directly into the PVCs.
+5. In **air-gapped mode**: copies weights from the local status directory into the PVCs using `oc cp`, then writes a PVC-side marker. If the local weights are missing (step 1 was not run), fails with instructions to run `env download` first.
+6. Creates a vLLM `ServingRuntime` and `InferenceService` per model with the recommended arguments (plus any `vllm_extra_args`).
+7. Waits for each `InferenceService` to have a resolvable URL, and for Ready status (unless `skip_gpu_check` is `true`).
+8. Renders the Bob model gateway config (slots `premium-ide`, `security`, `background` and a static router) and passes it to `bobctl install --model-config`.
+
+#### Vault token for Hugging Face
+
+Set the token before running the deployer:
+
+``` { .bash .copy }
+./cp-deploy.sh vault set -vs=ibm-bob-huggingface-token=<your-hf-token>
+```
+
+Then reference it in the config:
+
+``` { .yaml .copy }
+  openshift_ai_models:
+    core_model: nemotron-3-ultra
+    huggingface_token_secret_name: ibm-bob-huggingface-token
+```
+
+#### Air-gapped installation
+
+The deployer follows the same two-phase pattern used for container images.
+
+**Connected side — run `env download`:**
+
+``` { .bash .copy }
+# Standard two-phase (status dir is packaged and carried to the air-gapped site)
+CPD_AIRGAP=false ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+
+# Direct air-gap (skip portable packaging, download and apply on same network path)
+CPD_AIRGAP=false CPD_SKIP_PORTABLE_REGISTRY=true \
+  ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+```
+
+This downloads model weights (and Bob container images if `image_registry_name` is set) into `<status-dir>/downloads/ibm-bob/<version>/models/`. For gated models, set `huggingface_token_secret_name` first:
+
+``` { .bash .copy }
+./cp-deploy.sh vault set -vs=ibm-bob-huggingface-token=<your-hf-token>
+```
+
+**Air-gapped side — carry the status dir and run `env apply`:**
+
+For the standard two-phase flow, the status directory (which includes the downloaded weights) is packaged by `env download` and transferred to the air-gapped site. Then:
+
+``` { .bash .copy }
+CPD_AIRGAP=true ./cp-deploy.sh env apply -c <config-dir> -l <status-dir>
+```
+
+The deployer copies the weights from the status directory into the cluster PVCs automatically. If the weights are not present (step 1 was skipped or the status dir was not carried over), the deployer fails with instructions.
+
+#### Testing without GPUs (skip_gpu_check)
+
+To verify the deployer flow on a cluster without GPU nodes:
+
+``` { .yaml .copy }
+  openshift_ai_models:
+    core_model: nemotron-3-ultra
+    skip_gpu_check: true
+```
+
+The deployer runs the full flow: OpenShift AI check, PVC creation, weight download (connected) or status-dir upload (air-gapped), `ServingRuntime` and `InferenceService` creation, gateway generation, and Bob installation. The model pods remain `Pending` as expected; this does not affect Bob itself. The same behavior applies in dry-run mode.
+
+#### Removal
+
+When `state: removed` and `openshift_ai_models` is set, the deployer deletes the `InferenceService` and `ServingRuntime` objects. **PVCs are kept** — the downloaded weights are expensive to re-download. Delete them manually when no longer needed:
+
+``` { .bash .copy }
+oc delete pvc ibm-bob-core-model ibm-bob-guardrail-model -n ibm-bob-models
+```
+

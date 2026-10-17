@@ -68,10 +68,11 @@
   when: _ibm_bob_state == 'removed'
 
 # 6. Check prerequisites (OCP version, storage classes, amd64 nodes, cert-manager)
+# Must run before config.yaml is rendered: it resolves ocp_storage_class_file/block.
 - name: Validate prerequisites for IBM Bob
   include_tasks: validate-prereqs.yml
 
-# 7. Prepare instance status and log directories
+# 6b. Prepare instance status and log directories
 - name: Ensure instance working and log directories exist
   file:
     path: "{{ item }}"
@@ -82,7 +83,7 @@
     - "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work"
     - "{{ status_dir }}/log/ibm-bob"
 
-# 8. Render full config.yaml (overwrites the minimal stub written by ibm-bob-variables)
+# 7. Render full config.yaml (overwrites the minimal stub written by ibm-bob-variables)
 # _ibm_bob_image_pull_prefix is already set correctly by ibm-bob-variables (step 3).
 - name: Render config.yaml for IBM Bob instance {{ current_ibm_bob_cluster.project }}
   template:
@@ -94,29 +95,58 @@
   debug:
     msg: "Rendered IBM Bob config at {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
 
+# 8. Dry-run handling (end_role, not end_play, so that other objects in the play are still processed)
+# Dirs and config.yaml are rendered above so they are available for inspection even in dry-run.
+- name: Stop processing if cpd_dry_run is enabled
+  block:
+    - name: Show dry-run notification
+      debug:
+        msg: "cpd_dry_run is set to true. config.yaml rendered. Skipping operator install, validation, and cluster installation."
+    - meta: end_role
+  when: cpd_dry_run | default(false) | bool
+
 # 9. Air-gapped pre-install: create pull secrets and verify images
 - name: Perform air-gapped pre-install steps (pull secrets and image verification)
   include_tasks: airgap-apply.yml
   when:
     - cpd_airgap | default(false) | bool
     - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
-    - not (cpd_dry_run | default(false) | bool)
 
-# 10. Dry-run handling (end_role, not end_play, so that other objects in the play are still processed)
-- name: Stop processing if cpd_dry_run is enabled
-  block:
-    - name: Show dry-run notification
-      debug:
-        msg: "cpd_dry_run is set to true. IBM Bob prerequisites validated and config.yaml rendered. Skipping actual cluster installation."
-    - meta: end_role
-  when: cpd_dry_run | default(false) | bool
+# 10. Install GPU and OpenShift AI operators when openshift_ai_models is configured
+- name: Install GPU and OpenShift AI prerequisites for openshift_ai_models
+  include_role:
+    name: openshift-ai-gpu-prereqs
+  vars:
+    _p_openshift_cluster_name: "{{ current_ibm_bob_cluster.openshift_cluster_name }}"
+    _p_nfd_gpu_required: true
+    _p_openshift_ai_required: true
+    _p_fail_if_not_auto: true
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - not (cpd_skip_cp_install | default(false) | bool)
 
-# 11. Install IBM Bob
+# 11. Validate OpenShift AI prerequisites (DataScienceCluster, KServe CRD, GPU capacity)
+# Runs after openshift-ai-gpu-prereqs so the operators are already installed.
+- name: Validate OpenShift AI prerequisites for IBM Bob
+  include_tasks: validate-openshift-ai-prereqs.yml
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - not (cpd_skip_cp_install | default(false) | bool)
+
+# 12. Deploy model PVCs, download Jobs, ServingRuntimes and InferenceServices
+- name: Deploy OpenShift AI models for IBM Bob {{ current_ibm_bob_cluster.project }}
+  include_role:
+    name: ibm-bob-openshift-ai-models
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - not (cpd_skip_cp_install | default(false) | bool)
+
+# 13. Install IBM Bob
 - name: Install IBM Bob {{ _ibm_bob_version }} in namespace {{ current_ibm_bob_cluster.project }}
   include_tasks: install-bob.yml
   when: not (cpd_skip_cp_install | default(false) | bool)
 
-# 12. Wait for IBM Bob to be Ready
+# 14. Wait for IBM Bob to be Ready
 - name: Wait for IBM Bob to be Ready in namespace {{ current_ibm_bob_cluster.project }}
   include_tasks: wait-for-ready.yml
   when: not (cpd_skip_cp_install | default(false) | bool)

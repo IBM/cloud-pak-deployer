@@ -1,0 +1,112 @@
+---
+# =============================================================================
+# Validation of OpenShift AI prerequisites for openshift_ai_models.
+# Must run AFTER the openshift-ai-gpu-prereqs role so the DataScienceCluster
+# and GPU operators are installed.
+# =============================================================================
+
+# These checks are only run when openshift_ai_models is configured.
+# In dry-run mode the cluster is not yet set up, so skip as with cert-manager above.
+- name: Validate OpenShift AI prerequisites for openshift_ai_models
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - not (cpd_dry_run | default(false) | bool)
+  block:
+    - name: Check that the DataScienceCluster CR exists and is Ready
+      kubernetes.core.k8s_info:
+        api_version: datasciencecluster.opendatahub.io/v1
+        kind: DataScienceCluster
+        name: default-dsc
+      register: _ibm_bob_dsc
+      until: >-
+        (_ibm_bob_dsc.resources | default([]) | length > 0) and
+        ((_ibm_bob_dsc.resources[0].status.conditions | default([])
+          | selectattr('type', 'equalto', 'Ready')
+          | selectattr('status', 'equalto', 'True') | list | length) > 0)
+      retries: 18
+      delay: 10
+      failed_when: false
+
+    - name: Fail if DataScienceCluster is not Ready
+      fail:
+        msg: >-
+          openshift_ai_models requires OpenShift AI to be installed and the DataScienceCluster
+          'default-dsc' to be Ready, but it is not. Ensure openshift_ai.install is set to
+          'auto' or 'True' in the openshift object for cluster
+          '{{ current_ibm_bob_cluster.openshift_cluster_name }}'.
+      when: >-
+        (_ibm_bob_dsc.resources | default([]) | length == 0) or
+        ((_ibm_bob_dsc.resources[0].status.conditions | default([])
+          | selectattr('type', 'equalto', 'Ready')
+          | selectattr('status', 'equalto', 'True') | list | length) == 0)
+
+    - name: Check that the KServe InferenceService CRD exists
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: inferenceservices.serving.kserve.io
+      register: _ibm_bob_kserve_crd
+
+    - name: Fail if KServe InferenceService CRD is missing
+      fail:
+        msg: >-
+          openshift_ai_models requires KServe, but the CRD
+          'inferenceservices.serving.kserve.io' is not present on the cluster.
+          Ensure the DataScienceCluster has kserve.managementState: Managed.
+      when: (_ibm_bob_kserve_crd.resources | default([]) | length) == 0
+
+    - name: Check GPU capacity on the cluster (skipped when skip_gpu_check=true)
+      when: not (current_ibm_bob_cluster.openshift_ai_models.skip_gpu_check | default(false) | bool)
+      block:
+        - name: Get cluster nodes to count allocatable GPUs
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: Node
+          register: _ibm_bob_gpu_nodes
+
+        - name: Compute total allocatable GPUs across all nodes
+          set_fact:
+            _ibm_bob_allocatable_gpus: >-
+              {{ _ibm_bob_gpu_nodes.resources | default([])
+                 | json_query('[].status.allocatable."nvidia.com/gpu"')
+                 | map('int')
+                 | sum }}
+
+        - name: Compute required GPU count (core + guardrail)
+          set_fact:
+            _ibm_bob_required_gpus: >-
+              {{ (current_ibm_bob_cluster.openshift_ai_models.gpus_per_core_model
+                  | default((_ibm_bob_ai_models
+                    | selectattr('id', 'equalto', current_ibm_bob_cluster.openshift_ai_models.core_model)
+                    | list | first).default_gpus) | int)
+                 +
+                 (current_ibm_bob_cluster.openshift_ai_models.gpus_per_guardrail_model
+                  | default(_ibm_bob_guardrail_model_defaults.default_gpus) | int) }}
+
+        - name: Fail if there are not enough allocatable GPUs
+          fail:
+            msg: >-
+              openshift_ai_models requires {{ _ibm_bob_required_gpus }} allocatable
+              nvidia.com/gpu across the cluster
+              ({{ current_ibm_bob_cluster.openshift_ai_models.gpus_per_core_model
+                  | default('default') }} for the core model +
+               {{ current_ibm_bob_cluster.openshift_ai_models.gpus_per_guardrail_model
+                  | default('default') }} for the guardrail model), but only
+              {{ _ibm_bob_allocatable_gpus }} GPU(s) are allocatable.
+              Add GPU nodes, or set skip_gpu_check: true in openshift_ai_models
+              to bypass this check (model pods will be Pending until GPUs are added).
+          when: (_ibm_bob_allocatable_gpus | int) < (_ibm_bob_required_gpus | int)
+
+        - name: Show GPU capacity information
+          debug:
+            msg: >-
+              GPU capacity check passed: {{ _ibm_bob_allocatable_gpus }} allocatable
+              GPU(s) found, {{ _ibm_bob_required_gpus }} required.
+
+    - name: Warn that GPU capacity check is skipped (skip_gpu_check=true)
+      debug:
+        msg: >-
+          WARNING: skip_gpu_check is true. GPU capacity check is skipped.
+          Model pods will remain Pending if there are no schedulable GPU nodes.
+          This is expected when testing the deployer flow without GPU hardware.
+      when: current_ibm_bob_cluster.openshift_ai_models.skip_gpu_check | default(false) | bool

@@ -1,0 +1,36 @@
+---
+# inference-service.j2
+# KServe InferenceService pointing at a PVC-backed vLLM ServingRuntime.
+# Variables expected (set by caller):
+#   _isvc_name       — InferenceService name
+#   _isvc_namespace  — namespace
+#   _isvc_runtime    — ServingRuntime name
+#   _isvc_pvc        — PVC name
+#   _isvc_gpus       — number of GPUs to request
+#   _isvc_vllm_args  — list of additional vLLM CLI arguments
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: "{{ _isvc_name }}"
+  namespace: "{{ _isvc_namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: cloud-pak-deployer
+  annotations:
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: "{{ _isvc_runtime }}"
+      storageUri: "pvc://{{ _isvc_pvc }}"
+      args: {{ _isvc_vllm_args | to_json }}
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+          nvidia.com/gpu: "{{ _isvc_gpus }}"
+        limits:
+          cpu: "8"
+          memory: "64Gi"
+          nvidia.com/gpu: "{{ _isvc_gpus }}"

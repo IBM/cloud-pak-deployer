@@ -255,6 +255,24 @@
       - not (cpd_skip_mirror | bool)
       - cpd_skip_portable_registry | bool
 
+    # ---- IBM Bob model weights download (openshift_ai_models) ---------------
+    # Runs for all ibm_bob entries with openshift_ai_models defined, regardless of
+    # image_registry_name. Only the weights are downloaded (no image mirroring) into
+    # status_dir/downloads/ibm-bob/<version>/models, which play 40 packages with the
+    # status directory. At apply time the deployer uploads them to the cluster PVCs.
+    - name: Download IBM Bob model weights
+      include_role:
+        name: ibm-bob-mirror-images
+      vars:
+        _p_models_only: true
+        _p_mirror_motion: entitled-to-portable
+        current_ibm_bob_cluster: "{{ _p_current_ibm_bob_cluster }}"
+      loop: "{{ all_config.ibm_bob | default([]) | selectattr('openshift_ai_models', 'defined') | list }}"
+      loop_control:
+        loop_var: _p_current_ibm_bob_cluster
+      when:
+      - not (cpd_skip_mirror | bool)
+
     when:
     - not (cpd_check_only | default(False) | bool)
     - not (_ibm_pak_used | default(False) | bool)  # not executed if ibm-pak tool is used

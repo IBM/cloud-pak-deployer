@@ -320,6 +320,162 @@ class TestModelGateway(unittest.TestCase):
         self.assertTrue(any('model_gateway must be a dictionary' in m for m in msgs), msgs)
 
 
+class TestOpenShiftAIModels(unittest.TestCase):
+    """Tests for the openshift_ai_models validation block."""
+
+    def _ai_base(self):
+        """Minimal valid openshift_ai_models block."""
+        return {'core_model': 'nemotron-3-ultra'}
+
+    def test_valid_nemotron_fp8(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'quantization': 'fp8'}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_valid_laguna_nvfp4(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'laguna-s-2.1', 'quantization': 'nvfp4'}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_valid_mistral_fp8(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'mistral-medium-3.5', 'quantization': 'fp8'}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_default_quantization_accepted(self):
+        """quantization defaults to fp8; omitting it must be valid."""
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra'}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_valid_with_optional_fields(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {
+            'core_model': 'nemotron-3-ultra',
+            'quantization': 'fp8',
+            'guardrail_model': 'openai/gpt-oss-20b',
+            'project': 'ibm-bob-models',
+            'gpus_per_core_model': 8,
+            'gpus_per_guardrail_model': 1,
+            'storage_size': {'core': '700Gi', 'guardrail': '60Gi'},
+            'huggingface_token_secret_name': 'ibm-bob-hf-token',
+            'vllm_extra_args': ['--max-num-seqs=128'],
+            'skip_gpu_check': False,
+        }}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_skip_gpu_check_true(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {
+            'core_model': 'nemotron-3-ultra',
+            'skip_gpu_check': True,
+        }}
+        self.assertEqual(errors(run(attrs)), [])
+
+    # --- mutual exclusion ---
+
+    def test_mutually_exclusive_with_model_gateway(self):
+        gw = {
+            'models': [{'model_name': 'premium-ide', 'openai_compatible': {'base_url': 'http://x', 'model': 'm'}}],
+            'routers': [{'name': 'r', 'strategy': 'static', 'static': {'default_model': 'premium-ide'}}],
+        }
+        attrs = {**_valid_base(),
+                 'model_gateway': gw,
+                 'openshift_ai_models': {'core_model': 'nemotron-3-ultra'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('mutually exclusive' in m for m in msgs), msgs)
+
+    def test_mutually_exclusive_with_model_gateway_secret_names(self):
+        gw = {
+            'models': [{'model_name': 'premium-ide', 'openai_compatible': {'base_url': 'http://x', 'model': 'm'}}],
+            'routers': [{'name': 'r', 'strategy': 'static', 'static': {'default_model': 'premium-ide'}}],
+        }
+        attrs = {**_valid_base(),
+                 'model_gateway': gw,
+                 'model_gateway_secret_names': {'K': 'v'},
+                 'openshift_ai_models': {'core_model': 'nemotron-3-ultra'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('mutually exclusive' in m for m in msgs), msgs)
+
+    # --- core_model ---
+
+    def test_missing_core_model(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'quantization': 'fp8'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('core_model' in m for m in msgs), msgs)
+
+    def test_unknown_core_model(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'gpt-999'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('gpt-999' in m or 'not supported' in m for m in msgs), msgs)
+
+    def test_mistral_nvfp4_rejected(self):
+        """mistral-medium-3.5 does not support nvfp4."""
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'mistral-medium-3.5', 'quantization': 'nvfp4'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('nvfp4' in m or 'quantization' in m for m in msgs), msgs)
+
+    def test_unknown_quantization(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'quantization': 'int8'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('int8' in m or 'quantization' in m for m in msgs), msgs)
+
+    # --- type checks ---
+
+    def test_not_a_dict(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': 'nemotron-3-ultra'}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('dictionary' in m for m in msgs), msgs)
+
+    def test_gpus_per_core_model_must_be_int(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'gpus_per_core_model': '8'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('gpus_per_core_model' in m and 'integer' in m for m in msgs), msgs)
+
+    def test_storage_size_must_be_dict(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'storage_size': '700Gi'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('storage_size' in m and 'dictionary' in m for m in msgs), msgs)
+
+    def test_storage_size_unknown_key(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'storage_size': {'main': '700Gi'}}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('main' in m for m in msgs), msgs)
+
+    def test_storage_size_values_must_be_strings(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'storage_size': {'core': 700}}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('storage_size' in m for m in msgs), msgs)
+
+    def test_vllm_extra_args_must_be_list_of_strings(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'vllm_extra_args': '--flag'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('vllm_extra_args' in m for m in msgs), msgs)
+
+    def test_skip_gpu_check_must_be_bool(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'skip_gpu_check': 'true'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('skip_gpu_check' in m for m in msgs), msgs)
+
+    # --- air-gapped ---
+
+    def test_hf_token_allowed_in_connected(self):
+        """huggingface_token_secret_name must be accepted in connected mode."""
+        attrs = {**_valid_base(), 'openshift_ai_models': {
+            'core_model': 'nemotron-3-ultra',
+            'huggingface_token_secret_name': 'my-hf-secret',
+        }}
+        msgs = errors(run(attrs))
+        self.assertFalse(any('huggingface_token_secret_name' in m for m in msgs), msgs)
+
+    def test_hf_token_allowed_in_airgap(self):
+        """huggingface_token_secret_name is also valid in air-gapped mode.
+        It is used during env download (connected side) to pull gated model weights
+        into status_dir; the deployer uploads them to the PVC at apply time."""
+        attrs = {**_valid_base(),
+                 'image_registry_name': 'bob-mirror',
+                 'openshift_ai_models': {
+                     'core_model': 'nemotron-3-ultra',
+                     'huggingface_token_secret_name': 'my-hf-secret',
+                 }}
+        msgs = errors(run(attrs, env={'CPD_AIRGAP': 'true'}))
+        self.assertFalse(any('huggingface_token_secret_name' in m for m in msgs), msgs)
+
+
 class TestSampleConfigs(unittest.TestCase):
     """The shipped sample configs, combined with ocp-existing-ocp.yaml, must pass."""
 
