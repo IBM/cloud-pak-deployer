@@ -1,0 +1,128 @@
+---
+# =============================================================================
+# ibm-bob-openshift-ai-models
+#
+# Creates PVCs, downloads model weights (connected mode) or verifies they are
+# pre-loaded (air-gapped mode), then creates KServe ServingRuntime and
+# InferenceService objects for the core model and the guardrail model.
+# Waits for the InferenceServices to be Ready, registers their in-cluster URLs.
+#
+# Prerequisites:
+#   current_ibm_bob_cluster       — full ibm_bob config object
+#   _ibm_bob_ai_models            — per-model table from ibm-bob-variables
+#   _ibm_bob_guardrail_model_defaults — guardrail defaults from ibm-bob-variables
+#   ocp_storage_class_file        — RWX storage class (from get-openshift-storage)
+#   status_dir, environment_name  — standard deployer vars
+#   cpd_airgap                    — boolean (connected vs air-gapped)
+#
+# Outputs (registered as facts for subsequent tasks):
+#   _ibm_bob_core_model_url       — in-cluster inference URL for core model
+#   _ibm_bob_guardrail_url        — in-cluster inference URL for guardrail model
+# =============================================================================
+
+# ---- Resolve the selected model from the version table ----------------------
+- name: Resolve core model definition from version table
+  set_fact:
+    _ibm_bob_selected_model: >-
+      {{ _ibm_bob_ai_models
+         | selectattr('id', 'equalto', current_ibm_bob_cluster.openshift_ai_models.core_model)
+         | list | first }}
+
+- name: Fail if core model is not found in the version table
+  fail:
+    msg: >-
+      core_model '{{ current_ibm_bob_cluster.openshift_ai_models.core_model }}' was not found
+      in the IBM Bob AI models table. This is a deployer bug; check _ibm_bob_ai_models in the
+      version vars file.
+  when: _ibm_bob_selected_model is not defined or _ibm_bob_selected_model == ''
+
+# ---- Derive working values --------------------------------------------------
+- name: Set working facts for the model serving deployment
+  set_fact:
+    _ibm_bob_models_project: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.project
+         | default(current_ibm_bob_cluster.project + '-models') }}
+    _ibm_bob_core_quantization: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.quantization | default('fp8') }}
+    _ibm_bob_core_gpus: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.gpus_per_core_model
+         | default(_ibm_bob_selected_model.default_gpus) | int }}
+    _ibm_bob_guardrail_gpus: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.gpus_per_guardrail_model
+         | default(_ibm_bob_guardrail_model_defaults.default_gpus) | int }}
+    _ibm_bob_core_storage: >-
+      {{ (current_ibm_bob_cluster.openshift_ai_models.storage_size | default({})).get('core',
+         _ibm_bob_selected_model.default_storage) }}
+    _ibm_bob_guardrail_storage: >-
+      {{ (current_ibm_bob_cluster.openshift_ai_models.storage_size | default({})).get('guardrail',
+         _ibm_bob_guardrail_model_defaults.default_storage) }}
+    _ibm_bob_skip_gpu_check: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.skip_gpu_check | default(false) | bool }}
+    _ibm_bob_core_hf_repo: >-
+      {{ _ibm_bob_selected_model.hf_repo_nvfp4
+         if (current_ibm_bob_cluster.openshift_ai_models.quantization | default('fp8')) == 'nvfp4'
+         else _ibm_bob_selected_model.hf_repo }}
+
+# ---- Create models namespace ------------------------------------------------
+- name: Ensure models namespace {{ _ibm_bob_models_project }} exists
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ _ibm_bob_models_project }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+          ibm-bob/models-for: "{{ current_ibm_bob_cluster.project }}"
+
+# ---- Persistent volume claims -----------------------------------------------
+- name: Create PVC for core model weights ({{ _ibm_bob_selected_model.id }})
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "ibm-bob-core-model"
+        namespace: "{{ _ibm_bob_models_project }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: "{{ _ibm_bob_core_storage }}"
+        storageClassName: "{{ ocp_storage_class_file }}"
+
+- name: Create PVC for guardrail model weights
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: "ibm-bob-guardrail-model"
+        namespace: "{{ _ibm_bob_models_project }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+      spec:
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: "{{ _ibm_bob_guardrail_storage }}"
+        storageClassName: "{{ ocp_storage_class_file }}"
+
+# ---- Download or verify model weights ---------------------------------------
+- name: Download or verify model weights
+  include_tasks: download-or-verify-models.yml
+
+# ---- ServingRuntime and InferenceService ------------------------------------
+- name: Deploy ServingRuntime and InferenceService for models
+  include_tasks: deploy-inference-services.yml
+
+# ---- Wait for InferenceServices to be Ready ---------------------------------
+- name: Wait for InferenceServices to be Ready
+  include_tasks: wait-for-inference-services.yml

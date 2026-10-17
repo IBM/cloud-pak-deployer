@@ -115,10 +115,30 @@
 
 # ---- Model gateway (optional) -----------------------------------------------
 # Resolved now so that config.yaml can be updated before bobctl runs.
+# The effective gateway is either:
+#   (a) a deployer-generated config from openshift_ai_models (preferred), or
+#   (b) the hand-written model_gateway block, or
+#   (c) absent — Bob installs with an empty gateway.
 - name: Set model gateway as absent by default
   set_fact:
     _ibm_bob_model_config_file: ""
+    _ibm_bob_model_gateway_source: "none"
 
+# (a) Generated gateway from openshift_ai_models
+- name: Render generated model-gateway.yaml from openshift_ai_models
+  template:
+    src: model-gateway-generated.j2
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    mode: '0600'
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
+- name: Set model gateway file path fact (generated from openshift_ai_models)
+  set_fact:
+    _ibm_bob_model_config_file: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    _ibm_bob_model_gateway_source: "generated"
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
+# (b) Hand-written model_gateway
 - name: Write model-gateway.yaml for IBM Bob instance {{ current_ibm_bob_cluster.project }}
   copy:
     content: "{{ current_ibm_bob_cluster.model_gateway | to_nice_yaml }}"
@@ -127,15 +147,24 @@
   when: current_ibm_bob_cluster.model_gateway is defined
   register: _model_gateway_file_result
 
-- name: Set model gateway file path fact
+- name: Set model gateway file path fact (hand-written model_gateway)
   set_fact:
     _ibm_bob_model_config_file: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    _ibm_bob_model_gateway_source: "hand-written"
   when: current_ibm_bob_cluster.model_gateway is defined
 
+# (c) No gateway
 - name: Log that Bob is installed without a model gateway
   debug:
-    msg: "No model_gateway defined. Bob will be installed without a model gateway. Configure it later with bobctl update-model-config."
-  when: current_ibm_bob_cluster.model_gateway is not defined
+    msg: "No model_gateway or openshift_ai_models defined. Bob will be installed without a model gateway. Configure it later with bobctl update-model-config."
+  when:
+    - current_ibm_bob_cluster.model_gateway is not defined
+    - current_ibm_bob_cluster.openshift_ai_models is not defined
+
+- name: Log which model gateway source is being used
+  debug:
+    msg: "Model gateway source: {{ _ibm_bob_model_gateway_source }}{{ (' — file: ' + _ibm_bob_model_config_file) if _ibm_bob_model_config_file else '' }}"
+  when: _ibm_bob_model_gateway_source != 'none'
 
 # Resolve model gateway vault secrets, then re-render config.yaml so that
 # bob.modelGateway.secrets is included (config.yaml is mode 0600 and removed after install).
@@ -216,7 +245,9 @@
   file:
     path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
     state: absent
-  when: current_ibm_bob_cluster.model_gateway is defined
+  when: >-
+    (current_ibm_bob_cluster.model_gateway is defined) or
+    (current_ibm_bob_cluster.openshift_ai_models is defined)
 
 - name: Remove config.yaml (contains secrets) after install
   file:

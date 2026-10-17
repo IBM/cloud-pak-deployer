@@ -1,3 +1,6 @@
+# This sample requires the openshift object to have openshift_ai.install: auto (or True)
+# and gpu.install: auto (or True). See ocp-existing-ocp.yaml for the openshift definition.
+
 ibm_bob:
 - project: ibm-bob
   operators_project: ibm-bob-operators
@@ -19,10 +22,34 @@ ibm_bob:
     z_proxy: false
     understand: false
 
-  # Model gateway (optional). If model_gateway is specified, the deployer writes it to
-  # model-gateway.yaml and passes it to bobctl install --model-config. If it is omitted,
-  # Bob is installed with an empty model gateway configuration.
-  # For the fields of the model gateway configuration, see:
+  # OpenShift AI model serving (optional).
+  # Mutually exclusive with model_gateway below.
+  # Requires OpenShift AI (openshift_ai.install: auto or True) and
+  # NFD + NVIDIA GPU operators (gpu.install: auto or True) in the openshift object.
+  # The deployer installs them automatically when set to 'auto'.
+  #
+  # On a cluster without GPUs, set skip_gpu_check: true to run the full deployer
+  # flow for verification. Model pods will remain Pending until GPU nodes are added.
+  openshift_ai_models:
+    core_model: nemotron-3-ultra       # Supported: nemotron-3-ultra, laguna-s-2.1, mistral-medium-3.5
+    quantization: fp8                  # fp8 (default) | nvfp4 (nemotron-3-ultra and laguna-s-2.1 only)
+    # core_model: laguna-s-2.1         # Alternative: Poolside Laguna S 2.1
+    # core_model: mistral-medium-3.5   # Alternative: Mistral Medium 3.5 (Premium Package for Z only)
+    guardrail_model: openai/gpt-oss-20b  # default; configurable
+    project: ibm-bob-models            # namespace for ServingRuntime / InferenceService / PVCs
+    gpus_per_core_model: 8             # default from the vLLM tensor-parallel size
+    gpus_per_guardrail_model: 1
+    storage_size:
+      core: 700Gi
+      guardrail: 60Gi
+    # huggingface_token_secret_name: ibm-bob-huggingface-token   # vault secret for gated models
+    #   Set with: ./cp-deploy.sh vault set -vs=ibm-bob-huggingface-token=<token>
+    # vllm_extra_args: []              # appended to the recommended vLLM arguments
+    # skip_gpu_check: false            # set to true to bypass GPU capacity check (debug only)
+
+  # Alternative: hand-written model gateway (mutually exclusive with openshift_ai_models above).
+  # If model_gateway is specified instead, the deployer writes it to model-gateway.yaml and
+  # passes it to bobctl install --model-config. For the configuration format see:
   # https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/configuration
   #
   # Do not put secrets in this file. Refer to them as env.<VAR> in model_gateway and map

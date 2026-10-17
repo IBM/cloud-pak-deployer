@@ -104,6 +104,49 @@
     wait_timeout: 300
   ignore_errors: true
 
+# ---- Step 4b: remove OpenShift AI model objects (if openshift_ai_models was configured) ----
+# PVCs are kept intentionally — they hold the downloaded weights and are expensive to re-download.
+# Document removal in the docs; users delete PVCs manually if needed.
+- name: Remove InferenceService objects created by the deployer (openshift_ai_models)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    name: "{{ item }}"
+    namespace: "{{ current_ibm_bob_cluster.openshift_ai_models.project
+                   | default(current_ibm_bob_cluster.project + '-models') }}"
+    wait: false
+  loop:
+    - ibm-bob-core-model
+    - ibm-bob-guardrail-model
+  ignore_errors: true
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
+- name: Remove ServingRuntime objects created by the deployer (openshift_ai_models)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: serving.kserve.io/v1alpha1
+    kind: ServingRuntime
+    name: "{{ item }}"
+    namespace: "{{ current_ibm_bob_cluster.openshift_ai_models.project
+                   | default(current_ibm_bob_cluster.project + '-models') }}"
+    wait: false
+  loop:
+    - ibm-bob-core-vllm
+    - ibm-bob-guardrail-vllm
+  ignore_errors: true
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
+- name: Note that PVCs in models namespace are kept after removal
+  debug:
+    msg: >-
+      The model weights PVCs in namespace
+      '{{ current_ibm_bob_cluster.openshift_ai_models.project
+          | default(current_ibm_bob_cluster.project + '-models') }}'
+      are kept. Delete them manually if you no longer need the downloaded weights:
+        oc delete pvc ibm-bob-core-model ibm-bob-guardrail-model -n <models-namespace>
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
 # ---- Step 5: remove cluster-scoped resources --------------------------------
 - name: Check if cluster-resources.yaml exists in the status dir
   stat:

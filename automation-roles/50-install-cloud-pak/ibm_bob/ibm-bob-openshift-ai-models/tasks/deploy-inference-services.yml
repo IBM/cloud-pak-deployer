@@ -1,0 +1,56 @@
+---
+# =============================================================================
+# deploy-inference-services.yml
+#
+# Creates one ServingRuntime and one InferenceService per model
+# (core model and guardrail model) in the models namespace.
+# =============================================================================
+
+# ---- ServingRuntime ---------------------------------------------------------
+- name: Create vLLM ServingRuntime for core model ({{ _ibm_bob_selected_model.id }})
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'vllm-serving-runtime.j2') | from_yaml }}"
+  vars:
+    _sr_name: "ibm-bob-core-vllm"
+    _sr_namespace: "{{ _ibm_bob_models_project }}"
+
+- name: Create vLLM ServingRuntime for guardrail model
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'vllm-serving-runtime.j2') | from_yaml }}"
+  vars:
+    _sr_name: "ibm-bob-guardrail-vllm"
+    _sr_namespace: "{{ _ibm_bob_models_project }}"
+
+# ---- Core model InferenceService --------------------------------------------
+- name: Compute effective vLLM args for core model
+  set_fact:
+    _ibm_bob_core_vllm_args: >-
+      {{ _ibm_bob_selected_model.vllm_args
+         + (current_ibm_bob_cluster.openshift_ai_models.vllm_extra_args | default([])) }}
+
+- name: Create InferenceService for core model ({{ _ibm_bob_selected_model.id }})
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'inference-service.j2') | from_yaml }}"
+  vars:
+    _isvc_name: "ibm-bob-core-model"
+    _isvc_namespace: "{{ _ibm_bob_models_project }}"
+    _isvc_runtime: "ibm-bob-core-vllm"
+    _isvc_pvc: "ibm-bob-core-model"
+    _isvc_gpus: "{{ _ibm_bob_core_gpus }}"
+    _isvc_vllm_args: "{{ _ibm_bob_core_vllm_args }}"
+
+# ---- Guardrail model InferenceService ---------------------------------------
+- name: Create InferenceService for guardrail model
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'inference-service.j2') | from_yaml }}"
+  vars:
+    _isvc_name: "ibm-bob-guardrail-model"
+    _isvc_namespace: "{{ _ibm_bob_models_project }}"
+    _isvc_runtime: "ibm-bob-guardrail-vllm"
+    _isvc_pvc: "ibm-bob-guardrail-model"
+    _isvc_gpus: "{{ _ibm_bob_guardrail_gpus }}"
+    _isvc_vllm_args: "{{ _ibm_bob_guardrail_model_defaults.vllm_args }}"
