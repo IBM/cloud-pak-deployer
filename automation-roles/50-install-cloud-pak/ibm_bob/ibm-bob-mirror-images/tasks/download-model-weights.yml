@@ -1,0 +1,150 @@
+---
+# =============================================================================
+# download-model-weights.yml
+#
+# Downloads model weights from Hugging Face into:
+#   status_dir/downloads/ibm-bob/<version>/models/<core-model-id>/
+#   status_dir/downloads/ibm-bob/<version>/models/guardrail/
+#
+# Called from ibm-bob-mirror-images/tasks/main.yml for motions:
+#   entitled-to-portable   — connected side of the two-phase air-gap flow
+#   entitled-to-private    — direct air-gap (download + apply on the same side)
+#
+# A local marker file (download-complete) in each directory makes re-runs
+# a no-op. The directories land inside status_dir which play 40 of
+# playbook-env-download.yml packages wholesale into the portable archive.
+#
+# Prerequisites (set by ibm-bob-variables before this is called):
+#   _ibm_bob_version              resolved version string
+#   _ibm_bob_ai_models            per-model table from the version vars file
+#   _ibm_bob_guardrail_model_defaults  guardrail model defaults
+#   current_ibm_bob_cluster       full ibm_bob config object
+# =============================================================================
+
+# ---- Resolve the selected model from the version table ----------------------
+- name: Resolve core model definition from version table (download-model-weights)
+  set_fact:
+    _ibm_bob_dl_model: >-
+      {{ _ibm_bob_ai_models
+         | selectattr('id', 'equalto', current_ibm_bob_cluster.openshift_ai_models.core_model)
+         | list | first }}
+
+- name: Resolve HuggingFace repo for the chosen quantization
+  set_fact:
+    _ibm_bob_dl_core_hf_repo: >-
+      {{ _ibm_bob_dl_model.hf_repo_nvfp4
+         if (current_ibm_bob_cluster.openshift_ai_models.quantization | default('fp8')) == 'nvfp4'
+         else _ibm_bob_dl_model.hf_repo }}
+
+# ---- Ensure download directories exist --------------------------------------
+- name: Set model weights base directory
+  set_fact:
+    _ibm_bob_models_dl_base: "{{ status_dir }}/downloads/ibm-bob/{{ _ibm_bob_version }}/models"
+
+- name: Ensure core model download directory exists
+  file:
+    path: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}"
+    state: directory
+    mode: '0755'
+
+- name: Ensure guardrail model download directory exists
+  file:
+    path: "{{ _ibm_bob_models_dl_base }}/guardrail"
+    state: directory
+    mode: '0755'
+
+# ---- HuggingFace token ------------------------------------------------------
+- name: Read HuggingFace token from vault (model weights download)
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ibm_bob_dl_hf_token
+  when: (current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name | default('')) != ''
+
+- name: Warn when no HuggingFace token is configured
+  debug:
+    msg: >-
+      No huggingface_token_secret_name set for openshift_ai_models. Downloading
+      without a token — this works for public repositories but will fail for
+      gated models (Mistral Medium 3.5, Poolside Laguna S 2.1, etc.).
+  when: (current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name | default('')) == ''
+
+# ---- Ensure huggingface_hub CLI is available --------------------------------
+- name: Ensure huggingface_hub Python package is installed
+  pip:
+    name: huggingface_hub
+    extra_args: "--quiet"
+  changed_when: false
+
+# ---- Download core model weights --------------------------------------------
+- name: Check if core model weights are already downloaded (marker file)
+  stat:
+    path: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}/download-complete"
+  register: _ibm_bob_core_dl_marker
+
+- name: Download core model weights from Hugging Face ({{ _ibm_bob_dl_model.id }})
+  command: >-
+    hf download {{ _ibm_bob_dl_core_hf_repo }}
+    --local-dir {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}
+    {{ '--token ' + _ibm_bob_dl_hf_token if (_ibm_bob_dl_hf_token | default('')) != '' else '' }}
+  environment:
+    HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  no_log: "{{ (_ibm_bob_dl_hf_token | default('')) != '' }}"
+  when: not _ibm_bob_core_dl_marker.stat.exists
+
+- name: Download draft model weights ({{ _ibm_bob_dl_model.draft_model_dir }}) if required
+  command: >-
+    hf download {{ _ibm_bob_dl_model.draft_hf_repo }}
+    --local-dir {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}/{{ _ibm_bob_dl_model.draft_model_dir }}
+    {{ '--token ' + _ibm_bob_dl_hf_token if (_ibm_bob_dl_hf_token | default('')) != '' else '' }}
+  environment:
+    HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  no_log: "{{ (_ibm_bob_dl_hf_token | default('')) != '' }}"
+  when:
+    - not _ibm_bob_core_dl_marker.stat.exists
+    - (_ibm_bob_dl_model.draft_hf_repo | default('')) != ''
+
+- name: Write core model download-complete marker
+  copy:
+    content: "{{ _ibm_bob_dl_core_hf_repo }}\n"
+    dest: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}/download-complete"
+    mode: '0644'
+  when: not _ibm_bob_core_dl_marker.stat.exists
+
+# ---- Download guardrail model weights ---------------------------------------
+- name: Check if guardrail model weights are already downloaded (marker file)
+  stat:
+    path: "{{ _ibm_bob_models_dl_base }}/guardrail/download-complete"
+  register: _ibm_bob_guardrail_dl_marker
+
+- name: Download guardrail model weights from Hugging Face
+  command: >-
+    hf download {{ _ibm_bob_guardrail_model_defaults.model_id }}
+    --local-dir {{ _ibm_bob_models_dl_base }}/guardrail
+    {{ '--token ' + _ibm_bob_dl_hf_token if (_ibm_bob_dl_hf_token | default('')) != '' else '' }}
+  environment:
+    HF_HUB_DISABLE_PROGRESS_BARS: "1"
+  no_log: "{{ (_ibm_bob_dl_hf_token | default('')) != '' }}"
+  when: not _ibm_bob_guardrail_dl_marker.stat.exists
+
+- name: Write guardrail model download-complete marker
+  copy:
+    content: "{{ _ibm_bob_guardrail_model_defaults.model_id }}\n"
+    dest: "{{ _ibm_bob_models_dl_base }}/guardrail/download-complete"
+    mode: '0644'
+  when: not _ibm_bob_guardrail_dl_marker.stat.exists
+
+- name: Log model weights download location
+  debug:
+    msg:
+      - "Core model ({{ _ibm_bob_dl_model.id }}) weights: {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}"
+      - "Guardrail model weights: {{ _ibm_bob_models_dl_base }}/guardrail"
+      - "These directories are packaged with the portable status dir and uploaded to cluster PVCs during env apply."
+
+# ---- Clear HF token from facts ----------------------------------------------
+- name: Clear HuggingFace token from facts
+  set_fact:
+    _ibm_bob_dl_hf_token: ""
+  no_log: true

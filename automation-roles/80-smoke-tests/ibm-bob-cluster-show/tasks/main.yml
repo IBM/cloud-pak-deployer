@@ -1,0 +1,139 @@
+---
+# Writes the IBM Bob access information to cloud-pak-deployer-info.txt.
+# Expects current_ibm_bob_cluster (the ibm_bob object) from the caller.
+
+- name: Get gateway Route of IBM Bob in namespace {{ current_ibm_bob_cluster.project }}
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+    label_selectors:
+      - app.kubernetes.io/component=bob-gateway
+  register: _ibm_bob_gateway_route
+
+- name: Fail if the gateway Route cannot be found
+  fail:
+    msg: "No gateway Route (label app.kubernetes.io/component=bob-gateway) found in namespace {{ current_ibm_bob_cluster.project }}."
+  when: _ibm_bob_gateway_route.resources | length == 0
+
+# The API gateway endpoint is the host starting with "api."; fall back to the first host.
+# The admin UI endpoint is the host that does NOT start with "api.".
+- name: Determine gateway URL
+  set_fact:
+    _ibm_bob_gateway_hosts: "{{ _ibm_bob_gateway_route.resources | map(attribute='spec.host') | list }}"
+
+- name: Set gateway URL facts
+  set_fact:
+    _ibm_bob_gateway_url: "https://{{ (_ibm_bob_gateway_hosts | select('match', '^api\\.') | list + _ibm_bob_gateway_hosts) | first }}"
+    _ibm_bob_admin_ui_url: "https://{{ (_ibm_bob_gateway_hosts | reject('match', '^api\\.') | list + _ibm_bob_gateway_hosts) | first }}"
+
+- name: Get Keycloak Route
+  kubernetes.core.k8s_info:
+    api_version: route.openshift.io/v1
+    kind: Route
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+    label_selectors:
+      - app.kubernetes.io/instance=bob-keycloak
+  register: _ibm_bob_keycloak_route
+
+- name: Set Keycloak URL fact
+  set_fact:
+    _ibm_bob_keycloak_url: "{{ ('https://' + _ibm_bob_keycloak_route.resources[0].spec.host) if _ibm_bob_keycloak_route.resources | length > 0 else 'not available' }}"
+
+- name: Get Keycloak initial admin secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: bob-keycloak-initial-admin
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  register: _ibm_bob_keycloak_admin_secret
+  no_log: true
+
+- name: Fail if the Keycloak initial admin secret cannot be found
+  fail:
+    msg: "Secret bob-keycloak-initial-admin not found in namespace {{ current_ibm_bob_cluster.project }}."
+  when: _ibm_bob_keycloak_admin_secret.resources | length == 0
+
+- name: Set Keycloak admin user and password facts
+  set_fact:
+    _ibm_bob_keycloak_admin_user: "{{ _ibm_bob_keycloak_admin_secret.resources[0].data.username | b64decode }}"
+    _ibm_bob_keycloak_admin_password: "{{ _ibm_bob_keycloak_admin_secret.resources[0].data.password | b64decode }}"
+  no_log: true
+
+- name: Set Keycloak admin password vault secret name
+  set_fact:
+    _ibm_bob_keycloak_vault_key_name: "ibm_bob_keycloak_admin_{{ current_ibm_bob_cluster.project | replace('-','_') }}_{{ current_ibm_bob_cluster.openshift_cluster_name | replace('-','_') }}"
+
+- name: Store Keycloak admin password in the vault as {{ _ibm_bob_keycloak_vault_key_name }}
+  include_role:
+    name: vault-set-secret
+  vars:
+    secret_name: "{{ _ibm_bob_keycloak_vault_key_name }}"
+    secret_group: "{{ environment_name }}"
+    secret_payload: "{{ _ibm_bob_keycloak_admin_password }}"
+  no_log: true
+
+# ---- CA certificate ----------------------------------------------------------
+# Same source as "bobctl get-ca-cert": ca.crt of the effective edge-certificate secret
+# (spec.externalCertificate.secretName of the Bob CR, default bob-external-tls).
+- name: Get Bob custom resource
+  kubernetes.core.k8s_info:
+    api_version: bob.ibm.com/v1beta1
+    kind: Bob
+    name: bob-cr
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  register: _ibm_bob_cr
+
+- name: Determine effective edge-certificate secret and premium package endpoints
+  set_fact:
+    _ibm_bob_tls_secret_name: "{{ _ibm_bob_cr.resources[0].spec.externalCertificate.secretName | default('bob-external-tls') }}"
+    _ibm_bob_rag_url: "{{ _ibm_bob_cr.resources[0].status.rag.ragURL | default('') }}"
+    _ibm_bob_internal_search_url: "{{ _ibm_bob_cr.resources[0].status.rag.internalSearchURL | default('') }}"
+    _ibm_bob_z_proxy_url: "{{ _ibm_bob_cr.resources[0].status.zProxy.zProxyURL | default('') }}"
+    _ibm_bob_z_lookup_url: "{{ _ibm_bob_cr.resources[0].status.zProxy.zLookupURL | default('') }}"
+
+- name: Get edge-certificate secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    name: "{{ _ibm_bob_tls_secret_name }}"
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  register: _ibm_bob_tls_secret
+  no_log: true
+
+- name: Set CA certificate file path
+  set_fact:
+    _ibm_bob_ca_cert_file: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/bob-ca.crt"
+    _ibm_bob_self_signed_ca: "{{ _ibm_bob_tls_secret_name == 'bob-external-tls' }}"
+    _ibm_bob_ca_cert_pem: "{{ (_ibm_bob_tls_secret.resources[0].data['ca.crt'] | default('') | b64decode) if _ibm_bob_tls_secret.resources | length > 0 else '' }}"
+  no_log: true
+
+- name: Make sure that directory for the CA certificate exists
+  file:
+    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}"
+    state: directory
+    mode: '0755'
+
+- name: Save CA certificate to {{ _ibm_bob_ca_cert_file }}
+  copy:
+    content: "{{ _ibm_bob_ca_cert_pem }}\n"
+    dest: "{{ _ibm_bob_ca_cert_file }}"
+    mode: '0644'
+  when:
+    - _ibm_bob_self_signed_ca
+    - _ibm_bob_ca_cert_pem != ''
+
+- name: Make sure that directory {{ status_dir }}/cloud-paks exists
+  file:
+    path: "{{ status_dir }}/cloud-paks"
+    state: directory
+
+- name: Write IBM Bob info to {{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt
+  blockinfile:
+    path: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+    create: True
+    insertafter: EOF
+    marker: "--- IBM Bob project {{ current_ibm_bob_cluster.project }} ---"
+    block: |2
+      {{ lookup('template','ibm-bob-info.j2') }}
+  no_log: true

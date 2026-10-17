@@ -1,0 +1,61 @@
+# Run IBM Bob unit tests on pull requests targeting main
+
+name: test-ibm-bob
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'automation-roles/**/ibm_bob/**'
+      - 'automation-generators/**/ibm_bob/**'
+      - 'automation-roles/80-smoke-tests/ibm-bob*/**'
+      - 'automation-roles/50-install-cloud-pak/cpfs/cp-cert-manager/**'
+      - 'tests/ibm-bob/**'
+      - 'sample-configurations/**/ibm-bob*.yaml'
+      - '.github/workflows/test-ibm-bob.yml'
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Unit tests (preprocessor, variables, template)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install python-benedict pyyaml jinja2
+
+      - name: Run IBM Bob unit tests
+        run: bash tests/ibm-bob/run_unit_tests.sh
+
+  syntax-checks:
+    name: Ansible syntax checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Ansible
+        run: pip install ansible
+
+      - name: Syntax check — playbook-env-apply-50-install-cloud-pak
+        run: ansible-playbook --syntax-check playbooks/playbook-env-apply-50-install-cloud-pak.yml
+
+      - name: Syntax check — playbook-env-apply-80-smoke-tests
+        run: ansible-playbook --syntax-check playbooks/playbook-env-apply-80-smoke-tests.yml
+
+      - name: Syntax check — playbook-env-download
+        run: ansible-playbook --syntax-check playbooks/playbook-env-download.yml

@@ -1,0 +1,78 @@
+# This sample requires the openshift object to have openshift_ai.install: auto (or True)
+# and gpu.install: auto (or True). See ocp-existing-ocp.yaml for the openshift definition.
+
+ibm_bob:
+- project: ibm-bob
+  operators_project: ibm-bob-operators
+  openshift_cluster_name: "{{ env_id }}"
+  openshift_storage_name: odf-storage
+  ibm_bob_version: 2.0.0
+  accept_licenses: true
+  state: installed
+
+  # cert-manager: by default the deployer installs the Red Hat cert-manager operator when no
+  # cert-manager operator is found. Set to true to reuse an existing cert-manager that was
+  # installed outside OLM (for example with Helm or manifests) and skip the installation.
+  # reuse_existing_cert_manager: false
+
+  # Premium packages — all default to false.
+  # z_proxy requires rag to also be true.
+  premium_packages:
+    rag: false
+    z_proxy: false
+    understand: false
+
+  # OpenShift AI model serving (optional).
+  # Mutually exclusive with model_gateway below.
+  # Requires OpenShift AI (openshift_ai.install: auto or True) and
+  # NFD + NVIDIA GPU operators (gpu.install: auto or True) in the openshift object.
+  # The deployer installs them automatically when set to 'auto'.
+  #
+  # On a cluster without GPUs, set skip_gpu_check: true to run the full deployer
+  # flow for verification. Model pods will remain Pending until GPU nodes are added.
+  openshift_ai_models:
+    core_model: nemotron-3-ultra       # Supported: nemotron-3-ultra, laguna-s-2.1, mistral-medium-3.5
+    quantization: fp8                  # fp8 (default) | nvfp4 (nemotron-3-ultra and laguna-s-2.1 only)
+    # core_model: laguna-s-2.1         # Alternative: Poolside Laguna S 2.1
+    # core_model: mistral-medium-3.5   # Alternative: Mistral Medium 3.5 (Premium Package for Z only)
+    guardrail_model: openai/gpt-oss-20b  # default; configurable
+    project: ibm-bob-models            # namespace for ServingRuntime / InferenceService / PVCs
+    gpus_per_core_model: 8             # default from the vLLM tensor-parallel size
+    gpus_per_guardrail_model: 1
+    storage_size:
+      core: 700Gi
+      guardrail: 60Gi
+    # huggingface_token_secret_name: ibm-bob-huggingface-token   # vault secret for gated models
+    #   Set with: ./cp-deploy.sh vault set -vs=ibm-bob-huggingface-token=<token>
+    # vllm_extra_args: []              # appended to the recommended vLLM arguments
+    # skip_gpu_check: false            # set to true to bypass GPU capacity check (debug only)
+
+  # Alternative: hand-written model gateway (mutually exclusive with openshift_ai_models above).
+  # If model_gateway is specified instead, the deployer writes it to model-gateway.yaml and
+  # passes it to bobctl install --model-config. For the configuration format see:
+  # https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/configuration
+  #
+  # Do not put secrets in this file. Refer to them as env.<VAR> in model_gateway and map
+  # each <VAR> to a vault secret in model_gateway_secret_names. Set the vault secret before
+  # running the deployer: ./cp-deploy.sh vault set -vs=ibm-bob-azure-api-key=<value>
+  # model_gateway:
+  #   models:
+  #   - model_name: premium-ide
+  #     openai_compatible:
+  #       api_key: env.AZURE_API_KEY
+  #     ...
+  # model_gateway_secret_names:
+  #   AZURE_API_KEY: ibm-bob-azure-api-key
+
+  # Required only for air-gapped installs (CPD_AIRGAP=true).
+  # Uncomment image_registry below and set image_registry_name here.
+  # image_registry_name: bob-mirror
+
+# Private image registry — required only when CPD_AIRGAP=true.
+# Uncomment and fill in the registry that holds the mirrored Bob images.
+# Mirror first with: CPD_AIRGAP=false CPD_SKIP_PORTABLE_REGISTRY=true ./cp-deploy.sh env download
+# Store registry credentials with: ./cp-deploy.sh vault set -vs=image-registry-bob-mirror=user:password
+# image_registry:
+# - name: bob-mirror
+#   registry_url: https://<registry-host>/<namespace>
+#   registry_insecure: false

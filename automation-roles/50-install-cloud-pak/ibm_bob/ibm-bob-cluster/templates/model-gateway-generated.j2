@@ -1,0 +1,51 @@
+{#
+  model-gateway-generated.j2
+  Renders the Bob model gateway configuration from the openshift_ai_models block.
+
+  Available variables:
+    current_ibm_bob_cluster       — ibm_bob config object
+    _ibm_bob_selected_model       — resolved core model entry from _ibm_bob_ai_models
+    _ibm_bob_guardrail_model_defaults — guardrail model defaults
+    _ibm_bob_core_model_url       — in-cluster URL of the core InferenceService
+    _ibm_bob_guardrail_url        — in-cluster URL of the guardrail InferenceService
+
+  Bob model gateway requirements (from the docs):
+    - Exactly one core model may be configured.
+    - Reserved slots: premium-ide, security, background.
+    - security and background use the guardrail (smaller) model.
+    - A routers entry with strategy: static and default_model: premium-ide is required.
+#}
+{% set _guardrail_id = current_ibm_bob_cluster.openshift_ai_models.guardrail_model | default(_ibm_bob_guardrail_model_defaults.model_id) %}
+models:
+  - model_name: premium-ide
+    openai_compatible:
+      base_url: "{{ _ibm_bob_core_model_url }}/v1"
+    model_info:
+      provider: "{{ _ibm_bob_selected_model.provider }}"
+      family: "{{ _ibm_bob_selected_model.family }}"
+      version: "{{ _ibm_bob_selected_model.version }}"
+      max_input_tokens: {{ _ibm_bob_selected_model.max_input_tokens }}
+      max_output_tokens: {{ _ibm_bob_selected_model.max_output_tokens }}
+      supports_vision: {{ _ibm_bob_selected_model.supports_vision | lower }}
+
+  - model_name: security
+    openai_compatible:
+      base_url: "{{ _ibm_bob_guardrail_url }}/v1"
+    model_info:
+      provider: "{{ _ibm_bob_guardrail_model_defaults.provider }}"
+      family: "{{ _ibm_bob_guardrail_model_defaults.family }}"
+      version: "{{ _ibm_bob_guardrail_model_defaults.version }}"
+
+  - model_name: background
+    openai_compatible:
+      base_url: "{{ _ibm_bob_guardrail_url }}/v1"
+    model_info:
+      provider: "{{ _ibm_bob_guardrail_model_defaults.provider }}"
+      family: "{{ _ibm_bob_guardrail_model_defaults.family }}"
+      version: "{{ _ibm_bob_guardrail_model_defaults.version }}"
+
+routers:
+  - name: router
+    strategy: static
+    static:
+      default_model: premium-ide

@@ -1,0 +1,164 @@
+# -----------------------------------------------------------------------------
+# IBM Bob Version: 2.0.0
+# -----------------------------------------------------------------------------
+# Instructions for adding a new IBM Bob version:
+# 1. Create a new file vars/versions/<version>.yml (e.g. 2.1.0.yml).
+# 2. Look up the release asset on GitHub:
+#    GET https://api.github.com/repos/IBM/ibm-bob/releases/tags/v<version>
+# 3. Fill in:
+#    - release_tag: e.g. "v2.0.0"
+#    - bundle_filename: from asset name, e.g. "ibm-bob-install-20260924-163534.tgz"
+#    - bundle_url: from asset browser_download_url
+#    - bundle_sha256: from asset digest (or sha256 checksum)
+#    - supported_ocp_versions: list of supported OpenShift minor versions, e.g. ["4.20", "4.21", "4.22"]
+#    - companion_versions: verified companion tool versions (IDE, Shell, Z package)
+#    - premium_packages: dictionary of supported premium package keys
+#    - openshift_ai_models: per-model definition table for the openshift_ai_models feature
+# -----------------------------------------------------------------------------
+
+_ibm_bob_release_tag: "v2.0.0"
+_ibm_bob_bundle_filename: "ibm-bob-install-20260924-163534.tgz"
+_ibm_bob_bundle_url: "https://github.com/IBM/ibm-bob/releases/download/v2.0.0/ibm-bob-install-20260924-163534.tgz"
+_ibm_bob_bundle_sha256: "3b6dc70cd0a236d2e58bb23d19804e3e73e3de9b7b3d77850b35f463f30c3726"
+
+_ibm_bob_supported_ocp_versions:
+  - "4.20"
+  - "4.21"
+  - "4.22"
+
+_ibm_bob_companion_versions:
+  bob_ide: "2.2.0"
+  bob_shell: "2.0.5"
+  premium_package_z: "3.1.0"
+
+_ibm_bob_premium_package_keys:
+  rag: "bob.rag.enabled"
+  z_proxy: "bob.zProxy.enabled"
+  understand: "bob.understand.enabled"
+
+# ---------------------------------------------------------------------------
+# openshift_ai_models — per-model definition table
+#
+# Used by the ibm-bob-openshift-ai-models role to create PVCs, Jobs,
+# ServingRuntimes and InferenceServices on OpenShift AI (KServe/vLLM).
+#
+# Fields per model entry:
+#   id:               short identifier used in the ibm_bob config (core_model value)
+#   provider:         Bob model_info.provider
+#   family:           Bob model_info.family
+#   version:          Bob model_info.version
+#   model_id:         canonical model ID used by Bob (e.g. "nvidia/nemotron-3-ultra-550b")
+#   max_input_tokens: Bob model_info.max_input_tokens
+#   max_output_tokens:Bob model_info.max_output_tokens
+#   supports_vision:  Bob model_info.supports_vision
+#   hf_repo:          Hugging Face repository (weights) — fp8 variant (default)
+#   hf_repo_nvfp4:    Hugging Face repository for the nvfp4 variant (empty string if unsupported)
+#   quantizations:    list of supported quantization strings
+#   default_gpus:     default tensor-parallel size (gpus_per_core_model default)
+#   default_storage:  default PVC size for the model weights
+#   vllm_args:        list of recommended vLLM extra arguments (adjust per hardware)
+#   draft_model_dir:  sub-directory under /mnt/models where the draft model is expected
+#                     (empty string = no draft model needed)
+#   draft_hf_repo:    Hugging Face repo for the draft model (empty string = none)
+#   z_only:           true if this model requires the IBM Bob Premium Package for Z
+#
+# The guardrail model is defined separately in _ibm_bob_guardrail_model_defaults.
+# ---------------------------------------------------------------------------
+
+_ibm_bob_ai_models:
+  - id: nemotron-3-ultra
+    provider: nvidia
+    family: nemotron
+    version: "3-ultra"
+    model_id: "nvidia/nemotron-3-ultra-550b"
+    max_input_tokens: 262144
+    max_output_tokens: 20000
+    supports_vision: false
+    hf_repo: "RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-FP8-dynamic"
+    hf_repo_nvfp4: "RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4"
+    quantizations:
+      - fp8
+      - nvfp4
+    default_gpus: 8
+    default_storage: "700Gi"
+    # Nemotron uses built-in MTP speculative decoding — no separate draft model
+    vllm_args:
+      - "--tensor-parallel-size=8"
+      - "--speculative-config={\"method\": \"mtp\", \"num_speculative_tokens\": 3}"
+      - "--max-model-len=262144"
+      - "--max-num-seqs=256"
+      - "--enable-chunked-prefill"
+      - "--disable-log-requests"
+    draft_model_dir: ""
+    draft_hf_repo: ""
+    z_only: false
+
+  - id: laguna-s-2.1
+    provider: poolside
+    family: laguna
+    version: "s2.1"
+    model_id: "poolside/laguna-s-2.1"
+    max_input_tokens: 270000
+    max_output_tokens: 20000
+    supports_vision: false
+    hf_repo: "poolside/Laguna-S-2.1-FP8"
+    hf_repo_nvfp4: "poolside/Laguna-S-2.1-NVFP4"
+    quantizations:
+      - fp8
+      - nvfp4
+    default_gpus: 8
+    default_storage: "700Gi"
+    # Laguna needs a dFlash draft model at /mnt/models/dflash-fp8
+    vllm_args:
+      - "--tensor-parallel-size=8"
+      - "--speculative-config={\"method\": \"draft_model\", \"model\": \"/mnt/models/dflash-fp8\", \"num_speculative_tokens\": 3}"
+      - "--max-model-len=270000"
+      - "--max-num-seqs=256"
+      - "--enable-chunked-prefill"
+      - "--disable-log-requests"
+    draft_model_dir: "dflash-fp8"
+    # Source TBD; placeholder until confirmed — operator must supply or pre-load
+    draft_hf_repo: ""
+    z_only: false
+
+  - id: mistral-medium-3.5
+    provider: mistral
+    family: medium
+    version: "3.5"
+    model_id: "mistralai/mistral-medium-3-5-0"
+    max_input_tokens: 262144
+    max_output_tokens: 20000
+    supports_vision: false
+    hf_repo: "mistralai/Mistral-Medium-3.5-128B"
+    hf_repo_nvfp4: ""
+    quantizations:
+      - fp8
+    default_gpus: 8
+    default_storage: "700Gi"
+    # Mistral needs an Eagle draft model at /mnt/models/eagle
+    vllm_args:
+      - "--tensor-parallel-size=8"
+      - "--speculative-config={\"method\": \"draft_model\", \"model\": \"/mnt/models/eagle\", \"num_speculative_tokens\": 3}"
+      - "--max-model-len=262144"
+      - "--max-num-seqs=256"
+      - "--enable-chunked-prefill"
+      - "--disable-log-requests"
+    draft_model_dir: "eagle"
+    # Source TBD; placeholder until confirmed — operator must supply or pre-load
+    draft_hf_repo: ""
+    z_only: true
+
+# ---------------------------------------------------------------------------
+# Guardrail model defaults (openai/gpt-oss-20b)
+# ---------------------------------------------------------------------------
+_ibm_bob_guardrail_model_defaults:
+  model_id: "openai/gpt-oss-20b"
+  provider: openai
+  family: gpt-oss
+  version: "20b"
+  default_gpus: 1
+  default_storage: "60Gi"
+  vllm_args:
+    - "--tensor-parallel-size=1"
+    - "--max-model-len=32768"
+    - "--disable-log-requests"

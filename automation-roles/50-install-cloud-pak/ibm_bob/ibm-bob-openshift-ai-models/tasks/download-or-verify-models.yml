@@ -1,0 +1,372 @@
+---
+# =============================================================================
+# download-or-verify-models.yml
+#
+# Connected mode (cpd_airgap=false):
+#   Creates a Kubernetes Job to download model weights from Hugging Face
+#   directly into the PVC. A PVC-side marker file (download-complete) makes
+#   re-runs a no-op.
+#
+# Air-gapped mode (cpd_airgap=true):
+#   The weights were already downloaded into
+#     status_dir/downloads/ibm-bob/<version>/models/<model-id>/
+#     status_dir/downloads/ibm-bob/<version>/models/guardrail/
+#   by ibm-bob-mirror-images during env download (entitled-to-portable or
+#   entitled-to-private motion).
+#
+#   This task file:
+#     1. Checks that the local marker file exists (env download was run).
+#     2. Creates a temporary pod that mounts the PVC.
+#     3. Uses oc cp to copy weights from the status dir into the PVC.
+#     4. Writes the PVC-side download-complete marker.
+#     5. Deletes the temporary pod.
+#   The PVC-side marker is checked first; if present the copy is skipped
+#   (idempotent re-runs).
+# =============================================================================
+
+# ---- HuggingFace token (connected mode) -------------------------------------
+- name: Read HuggingFace token from vault (connected mode)
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "{{ current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ibm_bob_hf_token
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name | default('')) != ''
+
+- name: Log when no HuggingFace token is configured (connected mode)
+  debug:
+    msg: >-
+      No huggingface_token_secret_name set; proceeding without a HuggingFace
+      token. This works for public repositories but will fail for gated models.
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name | default('')) == ''
+
+# ---- Ensure HuggingFace token secret exists in the models namespace ---------
+- name: Create HuggingFace token secret in models namespace (connected mode)
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      metadata:
+        name: ibm-bob-hf-token
+        namespace: "{{ _ibm_bob_models_project }}"
+      type: Opaque
+      stringData:
+        token: "{{ _ibm_bob_hf_token | default('') }}"
+  no_log: true
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (_ibm_bob_hf_token | default('')) != ''
+
+# ---- Core model weights download / verify -----------------------------------
+# Idempotency: check whether the Job already completed successfully (marker
+# written by the container script). A completed Job means the PVC already has
+# the weights; re-creating the Job would be rejected by the API server anyway.
+- name: Check if core model download Job already completed (connected mode)
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: "ibm-bob-core-model-download"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_core_job_info
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Set fact — core model Job already complete
+  set_fact:
+    _ibm_bob_core_job_done: >-
+      {{ (_ibm_bob_core_job_info.resources | default([]) | length > 0) and
+         ((_ibm_bob_core_job_info.resources[0].status.conditions | default([])
+           | selectattr('type', 'equalto', 'Complete')
+           | selectattr('status', 'equalto', 'True') | list | length) > 0) }}
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Run core model download Job (connected, not yet complete)
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'model-download-job.j2') | from_yaml }}"
+  vars:
+    _job_name: "ibm-bob-core-model-download"
+    _pvc_name: "ibm-bob-core-model"
+    _hf_repo: "{{ _ibm_bob_core_hf_repo }}"
+    _draft_hf_repo: "{{ _ibm_bob_selected_model.draft_hf_repo }}"
+    _draft_model_dir: "{{ _ibm_bob_selected_model.draft_model_dir }}"
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (_ibm_bob_core_job_done | default(false) | bool)
+
+- name: Wait for core model download Job to complete (connected mode)
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: "ibm-bob-core-model-download"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_core_download_job
+  until: >-
+    (_ibm_bob_core_download_job.resources | default([]) | length > 0) and
+    ((_ibm_bob_core_download_job.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Complete')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0 or
+     (_ibm_bob_core_download_job.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Failed')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  retries: 360
+  delay: 30
+  failed_when: >-
+    (_ibm_bob_core_download_job.resources | default([]) | length == 0) or
+    ((_ibm_bob_core_download_job.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Failed')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (_ibm_bob_core_job_done | default(false) | bool)
+
+- name: Check if guardrail model download Job already completed (connected mode)
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: "ibm-bob-guardrail-model-download"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_guardrail_job_info
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Set fact — guardrail model Job already complete
+  set_fact:
+    _ibm_bob_guardrail_job_done: >-
+      {{ (_ibm_bob_guardrail_job_info.resources | default([]) | length > 0) and
+         ((_ibm_bob_guardrail_job_info.resources[0].status.conditions | default([])
+           | selectattr('type', 'equalto', 'Complete')
+           | selectattr('status', 'equalto', 'True') | list | length) > 0) }}
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Run guardrail model download Job (connected, not yet complete)
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ lookup('template', 'model-download-job.j2') | from_yaml }}"
+  vars:
+    _job_name: "ibm-bob-guardrail-model-download"
+    _pvc_name: "ibm-bob-guardrail-model"
+    _hf_repo: "{{ _ibm_bob_guardrail_model_defaults.model_id }}"
+    _draft_hf_repo: ""
+    _draft_model_dir: ""
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (_ibm_bob_guardrail_job_done | default(false) | bool)
+
+- name: Wait for guardrail model download Job to complete (connected mode)
+  kubernetes.core.k8s_info:
+    api_version: batch/v1
+    kind: Job
+    name: "ibm-bob-guardrail-model-download"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_guardrail_download_job
+  until: >-
+    (_ibm_bob_guardrail_download_job.resources | default([]) | length > 0) and
+    ((_ibm_bob_guardrail_download_job.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Complete')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0 or
+     (_ibm_bob_guardrail_download_job.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Failed')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  retries: 360
+  delay: 30
+  failed_when: >-
+    (_ibm_bob_guardrail_download_job.resources | default([]) | length == 0) or
+    ((_ibm_bob_guardrail_download_job.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Failed')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (_ibm_bob_guardrail_job_done | default(false) | bool)
+
+# ---- Air-gapped: upload weights from status_dir to PVCs --------------------
+- name: Upload model weights from status_dir to cluster PVCs (air-gapped)
+  block:
+    - name: Set local model weights base directory
+      set_fact:
+        _ibm_bob_models_dl_base: "{{ status_dir }}/downloads/ibm-bob/{{ _ibm_bob_version }}/models"
+
+    # -- Verify local markers exist (env download must have run) --
+    - name: Check that core model weights were downloaded locally
+      stat:
+        path: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}/download-complete"
+      register: _ibm_bob_core_local_marker
+
+    - name: Fail if core model weights are not in status_dir (env download not run)
+      fail:
+        msg: >-
+          Air-gapped mode: the core model weights for '{{ _ibm_bob_selected_model.id }}'
+          were not found in '{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}'.
+          Run env download on the connected side first:
+            CPD_AIRGAP=false ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+          Then carry the status dir to this air-gapped site and re-run env apply.
+      when: not _ibm_bob_core_local_marker.stat.exists
+
+    - name: Check that guardrail model weights were downloaded locally
+      stat:
+        path: "{{ _ibm_bob_models_dl_base }}/guardrail/download-complete"
+      register: _ibm_bob_guardrail_local_marker
+
+    - name: Fail if guardrail model weights are not in status_dir (env download not run)
+      fail:
+        msg: >-
+          Air-gapped mode: the guardrail model weights were not found in
+          '{{ _ibm_bob_models_dl_base }}/guardrail'.
+          Run env download on the connected side first.
+      when: not _ibm_bob_guardrail_local_marker.stat.exists
+
+    # -- Core model: create temp pod, copy, write marker, delete pod --
+    - name: Create temporary pod to mount core model PVC
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: ibm-bob-pvc-loader-core
+            namespace: "{{ _ibm_bob_models_project }}"
+            labels:
+              app.kubernetes.io/managed-by: cloud-pak-deployer
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: loader
+                image: "registry.access.redhat.com/ubi9/ubi:latest"
+                command: ["sleep", "3600"]
+                volumeMounts:
+                  - name: model-storage
+                    mountPath: /mnt/models
+            volumes:
+              - name: model-storage
+                persistentVolumeClaim:
+                  claimName: ibm-bob-core-model
+
+    - name: Wait for core model loader pod to be Running
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        name: ibm-bob-pvc-loader-core
+        namespace: "{{ _ibm_bob_models_project }}"
+      register: _ibm_bob_core_loader_pod
+      until: >-
+        (_ibm_bob_core_loader_pod.resources | default([]) | length > 0) and
+        (_ibm_bob_core_loader_pod.resources[0].status.phase | default('')) == 'Running'
+      retries: 30
+      delay: 10
+
+    - name: Check if PVC-side core model marker already exists
+      kubernetes.core.k8s_exec:
+        namespace: "{{ _ibm_bob_models_project }}"
+        pod: ibm-bob-pvc-loader-core
+        command: "test -f /mnt/models/download-complete"
+      register: _ibm_bob_core_pvc_marker
+      failed_when: false
+      changed_when: false
+
+    - name: Copy core model weights into PVC (oc cp)
+      command: >-
+        oc cp
+        {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}/.
+        {{ _ibm_bob_models_project }}/ibm-bob-pvc-loader-core:/mnt/models
+        --retries=3
+      environment:
+        KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+      when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
+
+    - name: Write PVC-side download-complete marker for core model
+      kubernetes.core.k8s_exec:
+        namespace: "{{ _ibm_bob_models_project }}"
+        pod: ibm-bob-pvc-loader-core
+        command: "touch /mnt/models/download-complete"
+      when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
+
+    - name: Delete core model loader pod
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        name: ibm-bob-pvc-loader-core
+        namespace: "{{ _ibm_bob_models_project }}"
+        wait: true
+        wait_timeout: 60
+
+    # -- Guardrail model: same pattern --
+    - name: Create temporary pod to mount guardrail model PVC
+      kubernetes.core.k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Pod
+          metadata:
+            name: ibm-bob-pvc-loader-guardrail
+            namespace: "{{ _ibm_bob_models_project }}"
+            labels:
+              app.kubernetes.io/managed-by: cloud-pak-deployer
+          spec:
+            restartPolicy: Never
+            containers:
+              - name: loader
+                image: "registry.access.redhat.com/ubi9/ubi:latest"
+                command: ["sleep", "3600"]
+                volumeMounts:
+                  - name: model-storage
+                    mountPath: /mnt/models
+            volumes:
+              - name: model-storage
+                persistentVolumeClaim:
+                  claimName: ibm-bob-guardrail-model
+
+    - name: Wait for guardrail model loader pod to be Running
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        name: ibm-bob-pvc-loader-guardrail
+        namespace: "{{ _ibm_bob_models_project }}"
+      register: _ibm_bob_guardrail_loader_pod
+      until: >-
+        (_ibm_bob_guardrail_loader_pod.resources | default([]) | length > 0) and
+        (_ibm_bob_guardrail_loader_pod.resources[0].status.phase | default('')) == 'Running'
+      retries: 30
+      delay: 10
+
+    - name: Check if PVC-side guardrail model marker already exists
+      kubernetes.core.k8s_exec:
+        namespace: "{{ _ibm_bob_models_project }}"
+        pod: ibm-bob-pvc-loader-guardrail
+        command: "test -f /mnt/models/download-complete"
+      register: _ibm_bob_guardrail_pvc_marker
+      failed_when: false
+      changed_when: false
+
+    - name: Copy guardrail model weights into PVC (oc cp)
+      command: >-
+        oc cp
+        {{ _ibm_bob_models_dl_base }}/guardrail/.
+        {{ _ibm_bob_models_project }}/ibm-bob-pvc-loader-guardrail:/mnt/models
+        --retries=3
+      environment:
+        KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+      when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
+
+    - name: Write PVC-side download-complete marker for guardrail model
+      kubernetes.core.k8s_exec:
+        namespace: "{{ _ibm_bob_models_project }}"
+        pod: ibm-bob-pvc-loader-guardrail
+        command: "touch /mnt/models/download-complete"
+      when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
+
+    - name: Delete guardrail model loader pod
+      kubernetes.core.k8s:
+        state: absent
+        api_version: v1
+        kind: Pod
+        name: ibm-bob-pvc-loader-guardrail
+        namespace: "{{ _ibm_bob_models_project }}"
+        wait: true
+        wait_timeout: 60
+
+  when: cpd_airgap | default(false) | bool

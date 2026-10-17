@@ -1,0 +1,77 @@
+---
+# Smoke tests for IBM Bob.
+#   state=installed: verify operator pods Running, Bob CR Ready, then write access info.
+#   state=removed:  verify both namespaces are gone and report removal.
+
+- name: Set convenience facts for smoke tests
+  set_fact:
+    _ibm_bob_state: "{{ current_ibm_bob_cluster.state | default('installed') }}"
+    _ibm_bob_operators_project: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+
+# ---- state=removed: verify namespaces are gone ------------------------------
+- name: Verify instance namespace is absent after removal
+  block:
+    - name: Check instance namespace {{ current_ibm_bob_cluster.project }} is gone
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: "{{ current_ibm_bob_cluster.project }}"
+      register: _ibm_bob_instance_ns
+      until: (_ibm_bob_instance_ns.resources | default([])) | length == 0
+      retries: 20
+      delay: 15
+
+    - name: Check operator namespace {{ _ibm_bob_operators_project }} is gone
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Namespace
+        name: "{{ _ibm_bob_operators_project }}"
+      register: _ibm_bob_operator_ns
+      until: (_ibm_bob_operator_ns.resources | default([])) | length == 0
+      retries: 20
+      delay: 15
+
+    - name: Report IBM Bob removal confirmed
+      debug:
+        msg: >-
+          IBM Bob instance '{{ current_ibm_bob_cluster.project }}' has been removed:
+          namespace '{{ current_ibm_bob_cluster.project }}' and
+          '{{ _ibm_bob_operators_project }}' are gone.
+  when: _ibm_bob_state == 'removed'
+
+# ---- state=installed: verify pods, CR Ready, then write access info ---------
+- name: Verify IBM Bob is running and write access info
+  block:
+    - name: "Get pods in IBM Bob operator namespace {{ _ibm_bob_operators_project }}"
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        namespace: "{{ _ibm_bob_operators_project }}"
+      register: _ibm_bob_operator_pods
+      until:
+        - _ibm_bob_operator_pods.resources | length > 0
+        - _ibm_bob_operator_pods.resources | rejectattr('status.phase', 'in', ['Running', 'Succeeded']) | list | length == 0
+      retries: 10
+      delay: 15
+
+    - name: "Get Bob custom resource bob-cr in namespace {{ current_ibm_bob_cluster.project }}"
+      kubernetes.core.k8s_info:
+        api_version: bob.ibm.com/v1beta1
+        kind: Bob
+        name: bob-cr
+        namespace: "{{ current_ibm_bob_cluster.project }}"
+      register: _ibm_bob_cr
+      until: >-
+        (_ibm_bob_cr.resources | default([]) | length) > 0 and
+        ((_ibm_bob_cr.resources[0].status.conditions | default([])
+          | selectattr('type', 'equalto', 'Available')
+          | selectattr('status', 'equalto', 'True') | list | length) > 0)
+      retries: 10
+      delay: 15
+
+    - name: Output IBM Bob endpoint URL and Keycloak admin credentials
+      include_role:
+        name: ibm-bob-cluster-show
+  when:
+    - _ibm_bob_state != 'removed'
+    - not (cpd_dry_run | default(false) | bool)

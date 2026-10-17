@@ -1,0 +1,44 @@
+---
+# vllm-serving-runtime.j2
+# KServe ServingRuntime using vLLM for OpenShift AI (RawDeployment mode).
+# Variables expected (set by caller):
+#   _sr_name       — ServingRuntime name
+#   _sr_namespace  — namespace
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: "{{ _sr_name }}"
+  namespace: "{{ _sr_namespace }}"
+  labels:
+    app.kubernetes.io/managed-by: cloud-pak-deployer
+spec:
+  multiModel: false
+  supportedModelFormats:
+    - name: vLLM
+      version: "1"
+      autoSelect: true
+  containers:
+    - name: kserve-container
+      image: "quay.io/modh/vllm:rhoai-2.16-cuda"
+      command:
+        - python
+        - -m
+        - vllm.entrypoints.openai.api_server
+      args:
+        - "--model=/mnt/models"
+        - "--served-model-name={{ _sr_name }}"
+      resources:
+        requests:
+          cpu: "4"
+          memory: "16Gi"
+        limits:
+          cpu: "8"
+          memory: "32Gi"
+      volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+  volumes:
+    - name: shm
+      emptyDir:
+        medium: Memory
+        sizeLimit: "2Gi"

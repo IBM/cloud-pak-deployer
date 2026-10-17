@@ -70,6 +70,8 @@ TechZone automation itself runs on OpenShift Pipelines, so uninstalling it stops
 
     * [Cloud Pak for Integration](./existing-openshift-cp4i.md){target="_blank}
 
+    * [IBM Bob self-hosted](./existing-openshift-ibm-bob.md){target="_blank}
+
 
 ???+ note "Sample CP4D configuration"
     ``` { .yaml .copy }
