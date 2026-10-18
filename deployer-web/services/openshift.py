@@ -112,7 +112,7 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             
     except Exception as e:
         result["error"] = "Error checking connection"
-        logger.error(f"Exception during oc whoami: {str(e)}")
+        logger.error(f"Exception during oc whoami: {type(e).__name__}")
         return OcCheckConnectionResponse(**result)
     
     # Step 2: Get server URL with 'oc whoami --show-server'
@@ -132,7 +132,7 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             logger.warning("Could not retrieve server URL")
             
     except Exception as e:
-        logger.error(f"Exception during oc whoami --show-server: {str(e)}")
+        logger.error(f"Exception during oc whoami --show-server: {type(e).__name__}")
     
     # Step 3: Get version info with 'oc version -o json'
     try:
@@ -160,9 +160,9 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             logger.warning("Could not retrieve version information")
             
     except json.JSONDecodeError as e:
-        logger.error(f"Error parsing version JSON: {str(e)}")
+        logger.error(f"Error parsing version JSON: {type(e).__name__}")
     except Exception as e:
-        logger.error(f"Exception during oc version: {str(e)}")
+        logger.error(f"Exception during oc version: {type(e).__name__}")
     
     result["connected"] = True
     logger.debug("OpenShift connection check completed successfully")
