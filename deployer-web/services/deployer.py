@@ -211,7 +211,7 @@ def delete_deployer_job() -> DeleteDeployerJobResponse:
         )
         
     except Exception as e:
-        logger.error(f"Exception while deleting deployer job: {str(e)}")
+        logger.error(f"Exception while deleting deployer job: {type(e).__name__}")
         return DeleteDeployerJobResponse(
             success=False,
             message="Exception while deleting deployer job, see deployer log for details"
