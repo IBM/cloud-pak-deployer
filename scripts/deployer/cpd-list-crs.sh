@@ -69,6 +69,12 @@ if [[ "${NAMESPACE}" == "" ]];then
   export NAMESPACE=$(oc project -q)
 fi
 
+oc get project ${NAMESPACE} > /dev/null 2>&1
+if [ $? -ne 0 ];then
+  echo "Namespace ${NAMESPACE} does not exist, skipping"
+  exit 0
+fi
+
 # List the CRs in the specified namespace
 list_crs ${NAMESPACE}
 
