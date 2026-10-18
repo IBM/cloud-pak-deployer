@@ -71,13 +71,15 @@ class RegistryConfig(BaseModel):
     registryUser: str
     registryPassword: str
 
+ENV_ID_PATTERN = r'^[A-Za-z0-9][A-Za-z0-9_.-]{0,62}$'
+
 class MirrorRequest(BaseModel):
-    envId: str
+    envId: str = Field(..., pattern=ENV_ID_PATTERN)
     entitlementKey: str
     registry: RegistryConfig
 
 class DeployRequest(BaseModel):
-    envId: str
+    envId: str = Field(..., pattern=ENV_ID_PATTERN)
     oc_login_command: str
     entitlementKey: str
     adminPassword: Optional[str] = None
@@ -484,12 +486,7 @@ except RuntimeError:
 )
 def mirror(request: MirrorRequest):
     # Request validation is handled by Pydantic model
-    print(request.registry.portable)
-    print(request.registry.registryHostname)
-    print(request.registry.registryPort)
-    print(request.registry.registryNS)
-    print(request.registry.registryUser)
-    print(request.registry.registryPassword)
+    logger.debug('Mirror request received for environment {}'.format(request.envId))
 
     deployer_env = os.environ.copy()
     # Assemble the mirror command
@@ -571,7 +568,8 @@ def deploy_local(deployer_env):
     if 'adminPassword' in deployer_env and deployer_env['adminPassword']!='':
         deploy_command+=['-e=cp4d_admin_password={}'.format(deployer_env['adminPassword'])]
     deploy_command+=['-v']
-    logger.debug('Deploy command: {}'.format(deploy_command))
+    # The command contains secrets (entitlement key, login command, passwords), do not log it
+    logger.debug('Starting local deployment for environment {}'.format(deployer_env['envId']))
 
     process = subprocess.Popen(deploy_command,
                     universal_newlines=True,
@@ -642,7 +640,7 @@ def deploy_openshift(deployer_env):
     """
 )
 def download_log(request: DownloadLogRequest):
-    print(request.model_dump(), file=sys.stderr)
+    logger.debug('Download log requested: {}'.format(request.deployerLog))
 
     # Request validation is handled by Pydantic model
     deployerLog = request.deployerLog
@@ -780,8 +778,10 @@ def oc_login(request: OcLoginRequest):
     if len(args) < 3 or args[0] != 'oc' or args[1] != 'login':
         raise HTTPException(status_code=400, detail='Bad Request')
 
-    # Execute with shell=False so the argument list is passed directly to execvp;
-    # no shell is spawned and no metacharacter interpretation occurs.
+    # Use a fixed executable name rather than the user-supplied one. Execute with shell=False
+    # so the argument list is passed directly to execvp; no shell is spawned and no
+    # metacharacter interpretation occurs.
+    args = ['oc'] + args[1:]
     proc = subprocess.Popen(
         args,
         stdin=subprocess.PIPE,
@@ -795,7 +795,7 @@ def oc_login(request: OcLoginRequest):
     else:
         errors = str(errorlog, 'utf-8').split("\n")
         result = {"code": proc.returncode, "error": errors[-2]}
-        logger.error('Login error: {}'.format(errors))
+        logger.error('Login failed with return code {}'.format(proc.returncode))
 
     return result
 
@@ -929,7 +929,7 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             return result
             
     except Exception as e:
-        result["error"] = f"Error checking connection: {str(e)}"
+        result["error"] = "Error checking connection"
         logger.error(f"Exception during oc whoami: {str(e)}")
         return result
     
@@ -1253,7 +1253,7 @@ def delete_deployer_job():
         
         if process.returncode != 0:
             logger.error(f"Error deleting job: {stderr}")
-            result['message'] = f"Error deleting job: {stderr}"
+            result['message'] = "Error deleting job, see deployer log for details"
             return JSONResponse(status_code=500, content=result)
         
         result['success'] = True
@@ -1263,7 +1263,7 @@ def delete_deployer_job():
         
     except Exception as e:
         logger.error(f"Exception while deleting deployer job: {str(e)}")
-        result['message'] = f"Exception: {str(e)}"
+        result['message'] = "Exception while deleting deployer job, see deployer log for details"
         return JSONResponse(status_code=500, content=result)
 
 
@@ -1403,7 +1403,7 @@ def read_configuration():
     else:
         read_result = read_configuration_from_openshift()
 
-    logger.debug(f'read_result: {read_result}')
+    logger.debug('read_result code: {}'.format(read_result.get('code')))
 
     if (read_result['code'] == 0):
         config_result['metadata']=read_result['metadata']
@@ -1443,7 +1443,7 @@ def read_configuration():
 
             config_result['code'] = 0
             config_result['message'] = "Successfully converted input to configuration."
-            logger.debug('Result of reading configuration: {}'.format(json.dumps(config_result,indent=2)))
+            logger.debug('Successfully read existing configuration')
         else:
             logger.debug("Loading base global_config data from {}".format(cp_base_config_path+'/ocp-existing-ocp-auto.yaml'))
             config_result['data']['global_config']=loadYamlFile(cp_base_config_path+'/ocp-existing-ocp-auto.yaml')['global_config']
@@ -1457,7 +1457,7 @@ def read_configuration():
             config_result['metadata']['selectedCloudPak'] = 'software-hub'
             config_result['code'] = 0
             config_result['message'] = "Successfully created new configuration."
-            logger.debug('Result of creating configuration: {}'.format(json.dumps(config_result,indent=2)))
+            logger.debug('Successfully created new configuration')
 
     return config_result
 
@@ -1554,12 +1554,12 @@ def read_configuration_from_openshift() -> dict[str, Any]:
         
     except subprocess.SubprocessError as e:
         logger.debug('Subprocess error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
-        config_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
+        config_result['message'] = "Config map not retrieved, assuming non-existing config."
         config_result['metadata']['existing_config'] = False
         config_result['content']=""
     except Exception as e:
         logger.debug('Error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
-        config_result['message'] = "Config map not retrieved, assuming non-existing config. Error: {}".format(str(e))
+        config_result['message'] = "Config map not retrieved, assuming non-existing config."
         config_result['metadata']['existing_config'] = False
         config_result['content']=""
 
@@ -1585,8 +1585,6 @@ def read_configuration_from_openshift() -> dict[str, Any]:
         logger.debug('Error while retrieving secret: {}, assuming non-existing entitlement key'.format(str(e)))
     
     config_result['code'] = 0
-
-    logger.debug(config_result)
 
     return config_result
 
@@ -1649,7 +1647,7 @@ def read_configuration_from_openshift() -> dict[str, Any]:
 )
 def update_configuration(request: ConfigurationUpdateRequest):
     full_configuration = request.configuration
-    logger.debug("Full configuration: {}".format(json.dumps(full_configuration, indent=4)))
+    logger.debug("Updating configuration")
 
     read_result={}
     if (running_context == 'local'):
@@ -1659,22 +1657,34 @@ def update_configuration(request: ConfigurationUpdateRequest):
 
     return result
 
+def validate_config_file_path(path):
+    """
+    Return the real path of the configuration file, ensuring it is a YAML file located
+    in the configuration directory. Raises HTTP 400 otherwise.
+    """
+    base_dir = os.path.realpath(os.path.join(config_dir, 'config'))
+    real_path = os.path.realpath(str(path))
+    if not real_path.startswith(base_dir + os.sep) or not real_path.endswith(('.yaml', '.yml')):
+        raise HTTPException(status_code=400, detail='Bad Request')
+    return real_path
+
 def update_configuration_file(full_configuration):
 
     all_in_one = format_configuration_yaml(full_configuration)
+    config_file_path = validate_config_file_path(full_configuration['metadata']['config_file_path'])
         
-    with open(full_configuration['metadata']['config_file_path'], 'w', encoding='UTF-8') as f1:
+    with open(config_file_path, 'w', encoding='UTF-8') as f1:
         f1.write(all_in_one)
         f1.close()
 
-    with open(full_configuration['metadata']['config_file_path'], "r", encoding='UTF-8') as f1:
+    with open(config_file_path, "r", encoding='UTF-8') as f1:
         result={}
         result["config"]=f1.read()
         f1.close()
 
     vault_comand=['cp-deploy.sh','vault','set']
     vault_comand+=[f'-vs=ibm_cp_entitlement_key={full_configuration['metadata']['entitlementKey']}']
-    logger.debug('Vault set command: {}'.format(vault_comand))
+    logger.debug('Setting entitlement key in vault')
 
     process = subprocess.Popen(vault_comand, 
                     universal_newlines=True)
@@ -1737,7 +1747,7 @@ def update_configuration_openshift(full_configuration):
         logger.debug(f"Error creating secret: {stderr}, ignoring")
 
     update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=cp-entitlement-key={full_configuration['metadata']['entitlementKey']}']
-    logger.debug('Set data for secret command: {}'.format(update_secret_command))
+    logger.debug('Setting data for entitlement key secret')
 
     process = subprocess.Popen(update_secret_command,
                     stdout=subprocess.PIPE,
@@ -1949,13 +1959,12 @@ def environmentVariable():
 # SPA catch-all route (must be last to not interfere with API routes)
 @app.get('/{full_path:path}')
 def serve_spa(full_path: str):
-    file_path = (spa_dir / full_path).resolve()
-    try:
-        file_path.relative_to(spa_dir)
-    except ValueError:
+    spa_root = os.path.realpath(spa_dir)
+    file_path = os.path.realpath(os.path.join(spa_root, full_path))
+    if not file_path.startswith(spa_root + os.sep):
         raise HTTPException(status_code=404, detail="Not found")
 
-    if file_path.is_file():
+    if os.path.isfile(file_path):
         return FileResponse(file_path)
     if not full_path.startswith('api/'):
         return FileResponse(spa_dir / 'index.html')

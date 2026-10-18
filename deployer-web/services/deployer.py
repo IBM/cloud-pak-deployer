@@ -104,7 +104,8 @@ def deploy_local(deployer_env: Dict[str, str]) -> DeployResponse:
         deploy_command += [f'-e=cp4d_admin_password={deployer_env["adminPassword"]}']
     
     deploy_command += ['-v']
-    logger.debug(f'Deploy command: {deploy_command}')
+    # The command contains secrets, do not log it
+    logger.debug('Starting local deployment')
 
     process = subprocess.Popen(
         deploy_command,
@@ -200,7 +201,7 @@ def delete_deployer_job() -> DeleteDeployerJobResponse:
             logger.error(f"Error deleting job: {stderr}")
             return DeleteDeployerJobResponse(
                 success=False,
-                message=f"Error deleting job: {stderr}"
+                message="Error deleting job, see deployer log for details"
             )
         
         logger.debug('Successfully deleted cloud-pak-deployer job and pods')
@@ -213,5 +214,5 @@ def delete_deployer_job() -> DeleteDeployerJobResponse:
         logger.error(f"Exception while deleting deployer job: {str(e)}")
         return DeleteDeployerJobResponse(
             success=False,
-            message=f"Exception: {str(e)}"
+            message="Exception while deleting deployer job, see deployer log for details"
         )
