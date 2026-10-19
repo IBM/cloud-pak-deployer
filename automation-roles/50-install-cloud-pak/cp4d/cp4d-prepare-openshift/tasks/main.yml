@@ -19,15 +19,16 @@
   - cloud_platform == 'existing-ocp'
   - _storage_type == 'pwx'
 
-- include_tasks: cp4d-install-gpu.yml
-  when: 
-  - (_current_openshift_cluster.gpu.install | default('')) == 'auto'
-  - _nfd_gpu_required
-
-- include_tasks: cp4d-install-openshift-ai.yml
-  when: 
-  - (_current_openshift_cluster.openshift_ai.install | default('') | lower) == 'auto'
-  - _openshift_ai_required
+- name: Install GPU and OpenShift AI prerequisites (shared role)
+  include_role:
+    name: openshift-ai-gpu-prereqs
+  vars:
+    _p_openshift_cluster_name: "{{ current_cp4d_cluster.openshift_cluster_name }}"
+    _p_nfd_gpu_required: "{{ _nfd_gpu_required }}"
+    _p_openshift_ai_required: "{{ _openshift_ai_required }}"
+  # retrieve-cloud-infra-type was already called above; _current_openshift_cluster
+  # and _existing_ocp_infra_type are already set so the shared role skips the lookup.
+  when: _nfd_gpu_required or _openshift_ai_required
 
 - include_tasks: cp4d-install-knative.yml
   when: 

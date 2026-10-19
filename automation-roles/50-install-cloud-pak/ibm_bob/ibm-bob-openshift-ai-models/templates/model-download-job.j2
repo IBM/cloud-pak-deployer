@@ -1,0 +1,73 @@
+---
+# model-download-job.j2
+# Kubernetes Job to download Hugging Face model weights into a PVC.
+# Variables expected (set by caller):
+#   _job_name         — job name
+#   _pvc_name         — PVC to mount at /mnt/models
+#   _hf_repo          — Hugging Face repo ID (org/model-name)
+#   _draft_hf_repo    — optional: HF repo for draft/speculative model ('' = skip)
+#   _draft_model_dir  — optional: subdir under /mnt/models for draft model ('' = skip)
+#   _ibm_bob_models_project — namespace
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ _job_name }}"
+  namespace: "{{ _ibm_bob_models_project }}"
+  labels:
+    app.kubernetes.io/managed-by: cloud-pak-deployer
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app: "{{ _job_name }}"
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: downloader
+          # Use the standard UBI Python image — huggingface_hub is not bundled
+          # but installs quickly via pip. The marker-file check makes re-runs
+          # a no-op so the pip install only happens once per first run.
+          image: "registry.access.redhat.com/ubi9/python-311:latest"
+          command:
+            - /bin/bash
+            - -c
+            - |
+              set -e
+              if [ -f /mnt/models/download-complete ]; then
+                echo "Model weights already present (marker file found). Skipping download."
+                exit 0
+              fi
+              pip install --quiet --disable-pip-version-check huggingface_hub
+              echo "Downloading model {{ _hf_repo }} ..."
+              hf download {{ _hf_repo }} \
+                --local-dir /mnt/models \
+                {{ '--token $HF_TOKEN' if (_ibm_bob_hf_token | default('')) != '' else '' }}
+{% if _draft_hf_repo != '' %}
+              echo "Downloading draft model {{ _draft_hf_repo }} ..."
+              hf download {{ _draft_hf_repo }} \
+                --local-dir /mnt/models/{{ _draft_model_dir }} \
+                {{ '--token $HF_TOKEN' if (_ibm_bob_hf_token | default('')) != '' else '' }}
+{% endif %}
+              touch /mnt/models/download-complete
+              echo "Download complete."
+          env:
+{% if (_ibm_bob_hf_token | default('')) != '' %}
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: ibm-bob-hf-token
+                  key: token
+{% endif %}
+          resources:
+            requests:
+              cpu: "1"
+              memory: "2Gi"
+          volumeMounts:
+            - name: model-storage
+              mountPath: /mnt/models
+      volumes:
+        - name: model-storage
+          persistentVolumeClaim:
+            claimName: "{{ _pvc_name }}"
