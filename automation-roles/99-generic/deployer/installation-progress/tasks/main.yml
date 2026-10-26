@@ -1,0 +1,19 @@
+---
+- name: Mark installation progress step {{ _p_progress_step | default('') }} as {{ _p_progress_action | default('') }}
+  command:
+    argv:
+      - python3
+      - "{{ role_path }}/files/installation_progress.py"
+      - "{{ _p_progress_action | default('') }}"
+      - --status-dir
+      - "{{ status_dir | default('') }}"
+      - --step
+      - "{{ _p_progress_step | default('') }}"
+  register: _installation_progress_cmd
+  changed_when: false
+  failed_when: false
+
+- name: Show installation progress warning if the progress log could not be updated
+  debug:
+    msg: "Installation progress log could not be updated, rc={{ _installation_progress_cmd.rc }}"
+  when: _installation_progress_cmd.rc != 0
