@@ -73,16 +73,18 @@ env|environment)
     echo ansible_host=localhost > /tmp/temp_inventory.ini
     run_cmd+=" -i /tmp/temp_inventory.ini"
   fi
+  PLAYBOOK_FILE=""
   if [ "$ACTION" == "apply" ];then
     if [ "$CHECK_ONLY" == "true" ];then
-      run_cmd+=" playbooks/playbook-env-apply-check-only.yml"
+      PLAYBOOK_FILE="playbooks/playbook-env-apply-check-only.yml"
     elif [ "$CPD_SKIP_CP_INSTALL" == "true" ];then
-      run_cmd+=" playbooks/playbook-env-apply-skip-cp-install.yml"
+      PLAYBOOK_FILE="playbooks/playbook-env-apply-skip-cp-install.yml"
     elif [ "$CP_CONFIG_ONLY" == "true" ];then
-      run_cmd+=" playbooks/playbook-env-apply-cp-config-only.yml"
+      PLAYBOOK_FILE="playbooks/playbook-env-apply-cp-config-only.yml"
     else
-      run_cmd+=" playbooks/playbook-env-apply.yml"
+      PLAYBOOK_FILE="playbooks/playbook-env-apply.yml"
     fi
+    run_cmd+=" ${PLAYBOOK_FILE}"
   elif [ "$ACTION" == "destroy" ];then
     run_cmd+=" playbooks/playbook-env-destroy.yml"
   elif [ "$ACTION" == "download" ];then
@@ -134,12 +136,17 @@ env|environment)
   fi
   # Make sure that the logs of the Ansible playbook are written to a log file
   mkdir -p ${STATUS_DIR}/log
-  if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ];then
-    tar czf ${STATUS_DIR}/log/cloud-pak-deployer-log-$(date +%s).tar.gz ${STATUS_DIR}/log/cloud-pak-deployer.log 2>/dev/null
-    rm -f ${STATUS_DIR}/log/cloud-pak-deployer.log
+  if [ -f ${STATUS_DIR}/log/cloud-pak-deployer.log ] || [ -f ${STATUS_DIR}/log/installation-progress.log ];then
+    tar czf ${STATUS_DIR}/log/cloud-pak-deployer-log-$(date +%s).tar.gz ${STATUS_DIR}/log/cloud-pak-deployer.log ${STATUS_DIR}/log/installation-progress.log 2>/dev/null
+    rm -f ${STATUS_DIR}/log/cloud-pak-deployer.log ${STATUS_DIR}/log/installation-progress.log
   fi
   # Also delete mirror images log to not confuse state reporting
   rm -f ${STATUS_DIR}/log/cloud-pak-mirror-images.log
+  if [ "$ACTION" == "apply" ];then
+    python3 ${PWD}/automation-roles/99-generic/deployer/installation-progress/files/installation_progress.py init \
+      --status-dir "${STATUS_DIR}" \
+      --playbook "${PLAYBOOK_FILE}" || true
+  fi
   echo "===========================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "Starting deployer" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
   echo "  Commit ID       : ${COMMIT_HASH}" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
@@ -163,6 +170,13 @@ env|environment)
     echo | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
     echo "====================================================================================" | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
     echo "Deployer FAILED. Check previous messages. If command line is not returned, press ^C." | tee -a ${STATUS_DIR}/log/cloud-pak-deployer.log
+  fi
+  if [ "$ACTION" == "apply" ];then
+    progress_result=failed
+    if [ ${exit_code} -eq 0 ];then progress_result=success;fi
+    python3 ${PWD}/automation-roles/99-generic/deployer/installation-progress/files/installation_progress.py finalize \
+      --status-dir "${STATUS_DIR}" \
+      --result "${progress_result}" || true
   fi
 
   show_deployer_info
