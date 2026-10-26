@@ -1,13 +1,13 @@
 apiVersion: openpages.cpd.ibm.com/v1 
 kind: OpenPagesInstance 
 metadata: 
-  name: "{{ _openpages_instance_name }}"
+  name: "{{ _openpages_instance.name }}"
   namespace: "{{ _openpages_instance_namespace }}"
   annotations: 
     "ansible.sdk.operatorframework.io/verbosity": "3" 
   labels: 
     app.kubernetes.io/name: openpages 
-    app.kubernetes.io/instance: {{ _openpages_instance_name }}
+    app.kubernetes.io/instance: {{ _openpages_instance.name }}
     app.kubernetes.io/version: "{{ _openpages_version }}" 
     app.kubernetes.io/managed-by: ibm-cpd-openpages-operator 
 spec: 
@@ -18,12 +18,18 @@ spec:
   shutdown: "false"
   metadata: 
     databaseType: internal
-    blockStorageClass: {{ ocp_storage_class_block }}
-    fileStorageClass: {{ ocp_storage_class_file }}
+    database: Db2
+    enableRestrictedV2SCCForDb2: false
     dbSecretName: ""
     dedicatedDbNodes: false 
     dbNodeLabelValue: ""  
-    scaleConfig: "{{ _openpages_instance_size }}"
-    enableIntegrationWithCognos: false
+    dbDataStorageClass: {{ ocp_storage_class_block }}
+    dbMetaStorageClass: {{ ocp_storage_class_file }}
+    dbBackupStorageClass: {{ ocp_storage_class_file }}
+    appStorageClass: {{ ocp_storage_class_file }}
+    enableGlobalSearch: {{ _openpages_instance.enableGlobalSearch | default('false') }}
+    baseCurrency: {{ _openpages_instance.currency | default('USD') }}
+    scaleConfig: {{ _openpages_instance.size | default('small') }}
+    enableIntegrationWithCognos: {{ _openpages_instance.enableIntegrationWithCognos | default('false') }}
   license: 
     accept: true
