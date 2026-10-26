@@ -221,8 +221,6 @@ Referrence to licenses of used tools apart from those from IBM
 - Roundcube
     - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
     - Also using NGINX - BSD 2-Clause "Simplified" License https://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
-- Cerebro
-    - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - AKHQ
     - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - OpenSearch Dashboards
