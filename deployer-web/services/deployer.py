@@ -37,14 +37,16 @@ def mirror_images(request: MirrorRequest) -> str:
     logger.debug(f"Registry hostname: {request.registry.registryHostname}")
     logger.debug(f"Registry port: {request.registry.registryPort}")
     logger.debug(f"Registry namespace: {request.registry.registryNS}")
-    logger.debug(f"Registry user: {request.registry.registryUser}")
+    # Do not log registryUser — it is co-located with registryPassword in RegistryConfig (cs-11)
 
     deployer_env = os.environ.copy()
+    # Pass the entitlement key via the environment to keep it off the command line (cs-13)
+    deployer_env['CPD_ENTITLEMENT_KEY'] = request.entitlementKey
     # Assemble the mirror command
     deploy_command = ['/cloud-pak-deployer/cp-deploy.sh']
     deploy_command += ['env', 'download']
     deploy_command += [f'-e=env_id={request.envId}']
-    deploy_command += [f'-e=ibm_cp_entitlement_key={request.entitlementKey}']
+    deploy_command += ['-e=ibm_cp_entitlement_key=$CPD_ENTITLEMENT_KEY']
     deploy_command += ['-v']
     
     process = subprocess.Popen(
@@ -95,16 +97,17 @@ def deploy_local(deployer_env: Dict[str, str]) -> DeployResponse:
     Returns:
         DeployResponse indicating the deployment has started
     """
+    # Secrets are already in deployer_env (OCP_OC_LOGIN, CP_ENTITLEMENT_KEY, adminPassword).
+    # Reference them by $VAR name so they never appear literally on the command line (cs-13).
     deploy_command = ['cp-deploy.sh', 'env']
     deploy_command += [f'-e=env_id={deployer_env["envId"]}']
-    deploy_command += [f'-vs=oc-login={deployer_env["OCP_OC_LOGIN"]}']
-    deploy_command += [f'-e=ibm_cp_entitlement_key={deployer_env["CP_ENTITLEMENT_KEY"]}']
-    
+    deploy_command += ['-vs=oc-login=$OCP_OC_LOGIN']
+    deploy_command += ['-e=ibm_cp_entitlement_key=$CP_ENTITLEMENT_KEY']
+
     if 'adminPassword' in deployer_env and deployer_env['adminPassword'] != '':
-        deploy_command += [f'-e=cp4d_admin_password={deployer_env["adminPassword"]}']
-    
+        deploy_command += ['-e=cp4d_admin_password=$adminPassword']
+
     deploy_command += ['-v']
-    # The command contains secrets, do not log it
     logger.debug('Starting local deployment')
 
     process = subprocess.Popen(
@@ -211,7 +214,7 @@ def delete_deployer_job() -> DeleteDeployerJobResponse:
         )
         
     except Exception as e:
-        logger.error(f"Exception while deleting deployer job: {str(e)}")
+        logger.error(f"Exception while deleting deployer job: {type(e).__name__}")
         return DeleteDeployerJobResponse(
             success=False,
             message="Exception while deleting deployer job, see deployer log for details"

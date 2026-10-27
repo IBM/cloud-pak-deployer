@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
-import sys, psutil, subprocess, os, getpass, json
+import sys, psutil, subprocess, os, getpass, json, tempfile
 from shutil import copy2
 from pathlib import Path
 import glob, zipfile, tarfile
@@ -489,15 +489,17 @@ def mirror(request: MirrorRequest):
     logger.debug('Mirror request received for environment {}'.format(request.envId))
 
     deployer_env = os.environ.copy()
+    # Pass the entitlement key via the environment to keep it off the command line (cs-13)
+    deployer_env['CPD_ENTITLEMENT_KEY'] = request.entitlementKey
     # Assemble the mirror command
     deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
     deploy_command+=['env','download']
     deploy_command+=['-e=env_id={}'.format(request.envId)]
-    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(request.entitlementKey)]
+    deploy_command+=['-e=ibm_cp_entitlement_key=$CPD_ENTITLEMENT_KEY']
 
     deploy_command+=['-v']
-    
-    process = subprocess.Popen(deploy_command, 
+
+    process = subprocess.Popen(deploy_command,
                     universal_newlines=True,
                     env=deployer_env)
 
@@ -561,14 +563,15 @@ def deploy(request: DeployRequest):
     return result
 
 def deploy_local(deployer_env):
+    # Secrets are already in deployer_env (OCP_OC_LOGIN, CP_ENTITLEMENT_KEY, adminPassword).
+    # Reference them by $VAR name so they never appear literally on the command line (cs-13).
     deploy_command=['cp-deploy.sh','env']
     deploy_command+=['-e=env_id={}'.format(deployer_env['envId'])]
-    deploy_command+=['-vs=oc-login={}'.format(deployer_env['OCP_OC_LOGIN'])]
-    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(deployer_env['CP_ENTITLEMENT_KEY'])]
+    deploy_command+=['-vs=oc-login=$OCP_OC_LOGIN']
+    deploy_command+=['-e=ibm_cp_entitlement_key=$CP_ENTITLEMENT_KEY']
     if 'adminPassword' in deployer_env and deployer_env['adminPassword']!='':
-        deploy_command+=['-e=cp4d_admin_password={}'.format(deployer_env['adminPassword'])]
+        deploy_command+=['-e=cp4d_admin_password=$adminPassword']
     deploy_command+=['-v']
-    # The command contains secrets (entitlement key, login command, passwords), do not log it
     logger.debug('Starting local deployment for environment {}'.format(deployer_env['envId']))
 
     process = subprocess.Popen(deploy_command,
@@ -701,7 +704,7 @@ def download_log_openshift(deployerLog):
                                 stdout, stderr = process.communicate()
 
                             except Exception as e:
-                                logger.error('Error while getting /Data/cpd-status/log/cloud-pak-deployer.log from pod {}: {}'.format(dd['metadata']['name'],str(e)))
+                                logger.error('Error while getting /Data/cpd-status/log/cloud-pak-deployer.log from pod {}: {}'.format(dd['metadata']['name'], type(e).__name__))
                         else:
                             oc_rsh_tar=['oc','rsh',f'-n={deployer_project}',dd['metadata']['name'],'tar','cvzf','/tmp/cloud-pak-deployer-logs.tar.gz','-C','/Data/cpd-status/log','.']
                             logger.debug('tar cloud-pak-deployer logs: {}'.format(oc_rsh_tar))
@@ -715,7 +718,7 @@ def download_log_openshift(deployerLog):
                                 stdout, stderr = process.communicate()
 
                             except Exception as e:
-                                logger.error('Error while tarring Cloud Pak Deployer logs in pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                                logger.error('Error while tarring Cloud Pak Deployer logs in pod {}: {}, not getting detailed status'.format(dd['metadata']['name'], type(e).__name__))
 
                             oc_get_log_tar=['oc','cp',f'-n={deployer_project}',dd['metadata']['name']+':/tmp/cloud-pak-deployer-logs.tar.gz','/tmp/cloud-pak-deployer-logs.tar.gz']
                             logger.debug('Get cloud-pak-deployer logs: {}'.format(oc_get_log_tar))
@@ -729,10 +732,10 @@ def download_log_openshift(deployerLog):
                                 stdout, stderr = process.communicate()
 
                             except Exception as e:
-                                logger.debug('Error while getting Cloud Pak Deployer logs from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                                logger.debug('Error while getting Cloud Pak Deployer logs from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'], type(e).__name__))
 
     except Exception as e:
-        logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting getting logs'.format(str(e)))
+        logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting getting logs'.format(type(e).__name__))
 
 #
 # OpenShift login
@@ -930,7 +933,7 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             
     except Exception as e:
         result["error"] = "Error checking connection"
-        logger.error(f"Exception during oc whoami: {str(e)}")
+        logger.error(f"Exception during oc whoami: {type(e).__name__}")
         return result
     
     # Step 2: Get server URL with 'oc whoami --show-server'
@@ -950,7 +953,7 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             logger.warning("Could not retrieve server URL")
             
     except Exception as e:
-        logger.error(f"Exception during oc whoami --show-server: {str(e)}")
+        logger.error(f"Exception during oc whoami --show-server: {type(e).__name__}")
     
     # Step 3: Get version info with 'oc version -o json'
     try:
@@ -978,9 +981,9 @@ def oc_check_connection() -> OcCheckConnectionResponse:
             logger.warning("Could not retrieve version information")
             
     except json.JSONDecodeError as e:
-        logger.error(f"Error parsing version JSON: {str(e)}")
+        logger.error(f"Error parsing version JSON: {type(e).__name__}")
     except Exception as e:
-        logger.error(f"Exception during oc version: {str(e)}")
+        logger.error(f"Exception during oc version: {type(e).__name__}")
     
     result["connected"] = True
     logger.debug("OpenShift connection check completed successfully")
@@ -1035,7 +1038,9 @@ def get_deployer_status():
     else:
         result=get_deployer_status_openshift()
 
-    logger.debug(f"Deployer status: {result}")
+    # Omit sensitive fields (cp4d_password, cp4d_user) from debug output
+    safe_result = {k: v for k, v in result.items() if k not in ('cp4d_password', 'cp4d_user', 'cp4d_url')}
+    logger.debug(f"Deployer status: {safe_result}")
 
     return result
 
@@ -1082,7 +1087,7 @@ def get_deployer_status_openshift():
                         deployer_starting=True
         
     except Exception as e:
-        logger.error('Error while getting cloud-pak-deployer-start pods: {}, assuming deployer is not started'.format(str(e)))
+        logger.error('Error while getting cloud-pak-deployer-start pods: {}, assuming deployer is not started'.format(type(e).__name__))
         result['deployer_active']=False
 
     if (not deployer_starting):
@@ -1110,7 +1115,7 @@ def get_deployer_status_openshift():
                         result['completion_state']='Successful'
             
         except Exception as e:
-            logger.error('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(str(e)))
+            logger.error('Error while getting cloud-pak-deployer pods: {}, assuming deployer is not started'.format(type(e).__name__))
             result['deployer_active']=False
 
         oc_get_debug=['oc','get',f'-n={deployer_project}','pods','-l=app=cloud-pak-deployer-debug','-o=json']
@@ -1144,21 +1149,29 @@ def get_deployer_status_openshift():
                                 result=get_deployer_status_details(deploy_state_log_path, result)
                             
                         except Exception as e:
-                            logger.error('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'],str(e)))
+                            logger.error('Error while getting deployer state from pod {}: {}, not getting detailed status'.format(dd['metadata']['name'], type(e).__name__))
 
         except Exception as e:
-            logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(str(e)))
+            logger.error('Error while getting cloud-pak-deployer-debug pod: {}, not getting detailed status'.format(type(e).__name__))
 
     return(result)
 
 def get_deployer_status_details(deploy_state_log_path, result):
-    logger.debug('Retrieving state from {}'.format(deploy_state_log_path))
+    # Validate the path is within an allowed directory before opening it.
+    real_state_path = os.path.realpath(str(deploy_state_log_path))
+    allowed_dirs = [os.path.realpath('/tmp')]
+    if status_dir:
+        allowed_dirs.append(os.path.realpath(os.path.join(status_dir, 'state')))
+    if not any(real_state_path.startswith(d + os.sep) or real_state_path == d for d in allowed_dirs):
+        logger.warning('Deployer state path outside allowed directories: {}'.format(real_state_path))
+        return result
+    logger.debug('Retrieving state from {}'.format(real_state_path))
     try:
-        with open(deploy_state_log_path, "r", encoding='UTF-8') as f:
+        with open(real_state_path, "r", encoding='UTF-8') as f:
             temp={}
             content = f.read().replace('\\','')
             f.close()
-            logger.debug('Content of state file: {}'.format(content))
+            logger.debug('State file content loaded successfully ({} bytes)'.format(len(content)))
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 temp={**temp, **doc}
@@ -1262,7 +1275,7 @@ def delete_deployer_job():
         return result
         
     except Exception as e:
-        logger.error(f"Exception while deleting deployer job: {str(e)}")
+        logger.error(f"Exception while deleting deployer job: {type(e).__name__}")
         result['message'] = "Exception while deleting deployer job, see deployer log for details"
         return JSONResponse(status_code=500, content=result)
 
@@ -1472,18 +1485,26 @@ def read_configuration_from_file() -> dict[str, Any]:
     Read configuration content from a YAML file.
     """
     existing_config=False
-    found_config_files=glob.glob(config_dir+'/config/*.yaml')
+    config_base_dir = os.path.realpath(os.path.join(config_dir, 'config'))
+    found_config_files=glob.glob(os.path.join(config_base_dir, '*.yaml'))
     if len(found_config_files) == 0:
-        generated_config_yaml_path = config_dir+'/config/cpd-config.yaml'
+        generated_config_yaml_path = os.path.join(config_base_dir, 'cpd-config.yaml')
         existing_config=False
     elif len(found_config_files) > 1:
-        errmsg="More than 1 yaml file found in directory {}. Wizard can be used for 0 or 1 config files.".format(config_dir+'/config')
+        errmsg="More than 1 yaml file found in directory {}. Wizard can be used for 0 or 1 config files.".format(config_base_dir)
         logger.error(errmsg)
         file_result['code'] = 400
         file_result['message'] = errmsg
         return file_result
     else:
-        generated_config_yaml_path = found_config_files[0]
+        # Validate that the glob result stays within the config directory (path traversal guard).
+        candidate = os.path.realpath(found_config_files[0])
+        if not candidate.startswith(config_base_dir + os.sep):
+            logger.error('Config file path outside expected directory: {}'.format(candidate))
+            file_result['code'] = 400
+            file_result['message'] = 'Invalid configuration file path.'
+            return file_result
+        generated_config_yaml_path = candidate
         existing_config=True
 
     file_result['metadata']['existing_config'] = existing_config
@@ -1553,12 +1574,12 @@ def read_configuration_from_openshift() -> dict[str, Any]:
         logger.debug(f"Successfully executed oc extract command. Output length: {len(stdout)}")
         
     except subprocess.SubprocessError as e:
-        logger.debug('Subprocess error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
+        logger.debug('Subprocess error while retrieving config map: {}, assuming non-existing config'.format(type(e).__name__))
         config_result['message'] = "Config map not retrieved, assuming non-existing config."
         config_result['metadata']['existing_config'] = False
         config_result['content']=""
     except Exception as e:
-        logger.debug('Error while retrieving config map: {}, assuming non-existing config'.format(str(e)))
+        logger.debug('Error while retrieving config map: {}, assuming non-existing config'.format(type(e).__name__))
         config_result['message'] = "Config map not retrieved, assuming non-existing config."
         config_result['metadata']['existing_config'] = False
         config_result['content']=""
@@ -1577,12 +1598,12 @@ def read_configuration_from_openshift() -> dict[str, Any]:
 
         if process.returncode == 0:
             config_result['metadata']['entitlementKey']=stdout
-            logger.debug("Successfully retrieved entitlement key from secret")
+            logger.debug("Successfully retrieved entitlement key from secret (length: {})".format(len(stdout.strip())))
         else:
             logger.debug("Secret not retrieved, entitlement key not set")
         
     except Exception as e:
-        logger.debug('Error while retrieving secret: {}, assuming non-existing entitlement key'.format(str(e)))
+        logger.debug('Error while retrieving secret: {}, assuming non-existing entitlement key'.format(type(e).__name__))
     
     config_result['code'] = 0
 
@@ -1682,12 +1703,21 @@ def update_configuration_file(full_configuration):
         result["config"]=f1.read()
         f1.close()
 
-    vault_comand=['cp-deploy.sh','vault','set']
-    vault_comand+=[f'-vs=ibm_cp_entitlement_key={full_configuration['metadata']['entitlementKey']}']
-    logger.debug('Setting entitlement key in vault')
+    # Write entitlement key to a temp file to avoid embedding user-controlled data
+    # in command-line arguments (prevents command injection).
+    entitlement_key = full_configuration['metadata']['entitlementKey']
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.key', delete=False) as _tf:
+        _tf.write(entitlement_key)
+        _tf_path = _tf.name
 
-    process = subprocess.Popen(vault_comand, 
-                    universal_newlines=True)
+    try:
+        vault_comand = ['cp-deploy.sh', 'vault', 'set',
+                        f'-vs=ibm_cp_entitlement_key=@{_tf_path}']
+        logger.debug('Setting entitlement key in vault')
+        process = subprocess.Popen(vault_comand,
+                        universal_newlines=True)
+    finally:
+        os.unlink(_tf_path)
 
     return result
 
@@ -1746,18 +1776,32 @@ def update_configuration_openshift(full_configuration):
     if process.returncode != 0:
         logger.debug(f"Error creating secret: {stderr}, ignoring")
 
-    update_secret_command=['oc','set','data',f'-n={deployer_project}','secret/cloud-pak-entitlement-key',f'--from-literal=cp-entitlement-key={full_configuration['metadata']['entitlementKey']}']
-    logger.debug('Setting data for entitlement key secret')
+    # Write entitlement key to a temp file to avoid embedding user-controlled data
+    # in command-line arguments (prevents command injection).
+    entitlement_key = full_configuration['metadata']['entitlementKey']
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.key', delete=False) as _tf:
+        _tf.write(entitlement_key)
+        _tf_path = _tf.name
 
-    process = subprocess.Popen(update_secret_command,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    universal_newlines=True)
-    
-    stdout, stderr = process.communicate()
-    
-    if process.returncode != 0:
-        logger.error(f"Error updating secret: {stderr}")      
+    try:
+        update_secret_command = [
+            'oc', 'set', 'data', f'-n={deployer_project}',
+            'secret/cloud-pak-entitlement-key',
+            f'--from-file=cp-entitlement-key={_tf_path}'
+        ]
+        logger.debug('Setting data for entitlement key secret')
+
+        process = subprocess.Popen(update_secret_command,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        universal_newlines=True)
+
+        stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            logger.error(f"Error updating secret: {type(Exception).__name__}")
+    finally:
+        os.unlink(_tf_path)
 
     return result
 
@@ -1924,17 +1968,22 @@ def sort_cp4d_dict(items):
 
 
 def loadYamlFile(path):
+    # Resolve the path and ensure it stays within the expected base config directory.
+    allowed_base = os.path.realpath(cp_base_config_path)
+    real_path = os.path.realpath(str(path))
+    if not real_path.startswith(allowed_base + os.sep):
+        raise ValueError('Path outside allowed base config directory: {}'.format(path))
     result={}
     content=""
     try:
-        with open(path, 'r', encoding='UTF-8') as f1:
+        with open(real_path, 'r', encoding='UTF-8') as f1:
             content=f1.read()
             docs=yaml.safe_load_all(content)
             for doc in docs:
                 result={**result, **doc}
     except:
-        logger.error('Error while reading file {}'.format(path))
-        raise Exception('Error while reading file {}'.format(path))
+        logger.error('Error while reading file {}'.format(real_path))
+        raise Exception('Error while reading file {}'.format(real_path))
     return result
 
 @app.get(
