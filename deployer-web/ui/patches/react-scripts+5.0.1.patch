@@ -1,0 +1,68 @@
+diff --git a/node_modules/react-scripts/config/webpackDevServer.config.js b/node_modules/react-scripts/config/webpackDevServer.config.js
+index 522a81b..8771e20 100644
+--- a/node_modules/react-scripts/config/webpackDevServer.config.js
++++ b/node_modules/react-scripts/config/webpackDevServer.config.js
+@@ -99,7 +99,12 @@ module.exports = function (proxy, allowedHost) {
+       publicPath: paths.publicUrlOrPath.slice(0, -1),
+     },
+ 
+-    https: getHttpsConfig(),
++    server: (() => {
++      const httpsConfig = getHttpsConfig();
++      return httpsConfig
++        ? { type: 'https', options: httpsConfig === true ? {} : httpsConfig }
++        : 'http';
++    })(),
+     host,
+     historyApiFallback: {
+       // Paths with dots should still use the history fallback.
+@@ -109,7 +114,7 @@ module.exports = function (proxy, allowedHost) {
+     },
+     // `proxy` is run between `before` and `after` `webpack-dev-server` hooks
+     proxy,
+-    onBeforeSetupMiddleware(devServer) {
++    setupMiddlewares(middlewares, devServer) {
+       // Keep `evalSourceMapMiddleware`
+       // middlewares before `redirectServedPath` otherwise will not have any effect
+       // This lets us fetch source contents from webpack for the error overlay
+@@ -119,8 +124,7 @@ module.exports = function (proxy, allowedHost) {
+         // This registers user provided middleware for proxy reasons
+         require(paths.proxySetup)(devServer.app);
+       }
+-    },
+-    onAfterSetupMiddleware(devServer) {
++
+       // Redirect to `PUBLIC_URL` or `homepage` from `package.json` if url not match
+       devServer.app.use(redirectServedPath(paths.publicUrlOrPath));
+ 
+@@ -130,6 +134,8 @@ module.exports = function (proxy, allowedHost) {
+       // it used the same host and port.
+       // https://github.com/facebook/create-react-app/issues/2272#issuecomment-302832432
+       devServer.app.use(noopServiceWorkerMiddleware(paths.publicUrlOrPath));
++
++      return middlewares;
+     },
+   };
+ };
+diff --git a/node_modules/react-scripts/scripts/start.js b/node_modules/react-scripts/scripts/start.js
+index 8b9a2c2..4668ca7 100644
+--- a/node_modules/react-scripts/scripts/start.js
++++ b/node_modules/react-scripts/scripts/start.js
+@@ -141,7 +141,7 @@ checkBrowsers(paths.appPath, isInteractive)
+ 
+     ['SIGINT', 'SIGTERM'].forEach(function (sig) {
+       process.on(sig, function () {
+-        devServer.close();
++        devServer.stop();
+         process.exit();
+       });
+     });
+@@ -149,7 +149,7 @@ checkBrowsers(paths.appPath, isInteractive)
+     if (process.env.CI !== 'true') {
+       // Gracefully exit when stdin ends
+       process.stdin.on('end', function () {
+-        devServer.close();
++        devServer.stop();
+         process.exit();
+       });
+     }
