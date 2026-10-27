@@ -11,6 +11,7 @@ import glob, zipfile, tarfile
 import shlex
 import logging
 import yaml
+from utils.oc_login_validation import validate_oc_login_args
 
 # Configure the logging
 logging.basicConfig(
@@ -773,12 +774,8 @@ def oc_login(request: OcLoginRequest):
     # Parse the command string into an argument list so that shell metacharacters
     # (;, &&, |, newlines, etc.) are never interpreted by a shell.
     try:
-        args = shlex.split(oc_login_command)
+        args = validate_oc_login_args(shlex.split(oc_login_command))
     except ValueError:
-        raise HTTPException(status_code=400, detail='Bad Request')
-
-    # Validate the argument list: must start with exactly ["oc", "login", <server>]
-    if len(args) < 3 or args[0] != 'oc' or args[1] != 'login':
         raise HTTPException(status_code=400, detail='Bad Request')
 
     # Use a fixed executable name rather than the user-supplied one. Execute with shell=False
@@ -796,8 +793,8 @@ def oc_login(request: OcLoginRequest):
     if proc.returncode == 0:
         result["code"] = proc.returncode
     else:
-        errors = str(errorlog, 'utf-8').split("\n")
-        result = {"code": proc.returncode, "error": errors[-2]}
+        errors = [line for line in str(errorlog, 'utf-8').splitlines() if line.strip()]
+        result = {"code": proc.returncode, "error": errors[-1] if errors else ""}
         logger.error('Login failed with return code {}'.format(proc.returncode))
 
     return result
