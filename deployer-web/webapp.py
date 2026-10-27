@@ -489,15 +489,17 @@ def mirror(request: MirrorRequest):
     logger.debug('Mirror request received for environment {}'.format(request.envId))
 
     deployer_env = os.environ.copy()
+    # Pass the entitlement key via the environment to keep it off the command line (cs-13)
+    deployer_env['CPD_ENTITLEMENT_KEY'] = request.entitlementKey
     # Assemble the mirror command
     deploy_command=['/cloud-pak-deployer/cp-deploy.sh']
     deploy_command+=['env','download']
     deploy_command+=['-e=env_id={}'.format(request.envId)]
-    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(request.entitlementKey)]
+    deploy_command+=['-e=ibm_cp_entitlement_key=$CPD_ENTITLEMENT_KEY']
 
     deploy_command+=['-v']
-    
-    process = subprocess.Popen(deploy_command, 
+
+    process = subprocess.Popen(deploy_command,
                     universal_newlines=True,
                     env=deployer_env)
 
@@ -561,14 +563,15 @@ def deploy(request: DeployRequest):
     return result
 
 def deploy_local(deployer_env):
+    # Secrets are already in deployer_env (OCP_OC_LOGIN, CP_ENTITLEMENT_KEY, adminPassword).
+    # Reference them by $VAR name so they never appear literally on the command line (cs-13).
     deploy_command=['cp-deploy.sh','env']
     deploy_command+=['-e=env_id={}'.format(deployer_env['envId'])]
-    deploy_command+=['-vs=oc-login={}'.format(deployer_env['OCP_OC_LOGIN'])]
-    deploy_command+=['-e=ibm_cp_entitlement_key={}'.format(deployer_env['CP_ENTITLEMENT_KEY'])]
+    deploy_command+=['-vs=oc-login=$OCP_OC_LOGIN']
+    deploy_command+=['-e=ibm_cp_entitlement_key=$CP_ENTITLEMENT_KEY']
     if 'adminPassword' in deployer_env and deployer_env['adminPassword']!='':
-        deploy_command+=['-e=cp4d_admin_password={}'.format(deployer_env['adminPassword'])]
+        deploy_command+=['-e=cp4d_admin_password=$adminPassword']
     deploy_command+=['-v']
-    # The command contains secrets (entitlement key, login command, passwords), do not log it
     logger.debug('Starting local deployment for environment {}'.format(deployer_env['envId']))
 
     process = subprocess.Popen(deploy_command,
