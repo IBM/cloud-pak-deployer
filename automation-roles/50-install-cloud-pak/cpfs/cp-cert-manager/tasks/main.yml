@@ -1,0 +1,76 @@
+---
+# Shared role to make sure a certificate manager is available on the OpenShift cluster.
+#
+# Parameters:
+#   _p_ibm_cert_manager:             Requested choice: True to use the IBM Certificate Manager (default False)
+#   _p_force_ibm_cert_manager:       Use the IBM Certificate Manager regardless of the requested choice (default False)
+#   _p_cert_manager_object_name:     Name of the configuration object, used in the failure message
+#   _p_cert_manager_property_name:   Name of the property that selects IBM Certificate Manager, used in the failure message
+#   _p_reuse_existing_cert_manager:  If True and the cert-manager.io CRDs exist without an OLM-managed
+#                                    IBM or Red Hat cert-manager, reuse it and skip the installation (default False)
+#
+# Sets facts:
+#   _ibm_cert_manager:               True if the IBM Certificate Manager is used
+#   _cert_manager_reused:            True if an existing cert-manager without OLM subscription is reused
+
+- set_fact:
+    _ibm_cert_manager: "{{ _p_ibm_cert_manager | default(False) | bool }}"
+    _cert_manager_reused: False
+
+- name: Check if IBM Certificate Manager is already installed
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    namespace: ibm-cert-manager
+    label_selectors:
+    - operators.coreos.com/ibm-cert-manager-operator.ibm-cert-manager
+  register: _get_ibm_cert_manager
+
+- name: Check if Red Hat Certificate Manager is already installed
+  kubernetes.core.k8s_info:
+    api_version: operators.coreos.com/v1alpha1
+    kind: ClusterServiceVersion
+    label_selectors:
+    - operators.coreos.com/openshift-cert-manager-operator.cert-manager-operator
+  register: _get_red_hat_cert_manager
+
+- name: Fail if Red Hat Certificate Manager is installed and IBM Certificate Manager is set to True
+  fail:
+    msg: >-
+      Property {{ _p_cert_manager_property_name | default('ibm_cert_manager') }} in {{ _p_cert_manager_object_name | default('the configuration') }}
+      must be set to False if the Red Hat Certificate Manager is installed.
+      Either set the property to False, or delete the cert-manager and cert-manager-operator namespaces and re-run the deployer
+      to install IBM Certificate Manager.
+  when:
+  - (_get_red_hat_cert_manager.resources | default([])) != []
+  - _ibm_cert_manager
+
+- set_fact:
+    _ibm_cert_manager: True
+  when: >-
+    (_get_ibm_cert_manager.resources | default([])) != [] or
+    (_p_force_ibm_cert_manager | default(False) | bool)
+
+- name: Check if cert-manager.io custom resource definitions exist
+  kubernetes.core.k8s_info:
+    api_version: apiextensions.k8s.io/v1
+    kind: CustomResourceDefinition
+    name: certificates.cert-manager.io
+  register: _get_cert_manager_crd
+  when: _p_reuse_existing_cert_manager | default(False) | bool
+
+- name: Reuse existing cert-manager that is not managed by OLM
+  set_fact:
+    _cert_manager_reused: True
+  when:
+  - _p_reuse_existing_cert_manager | default(False) | bool
+  - (_get_cert_manager_crd.resources | default([])) != []
+  - (_get_ibm_cert_manager.resources | default([])) == []
+  - (_get_red_hat_cert_manager.resources | default([])) == []
+
+- name: Install Red Hat Certificate manager
+  include_role:
+    name: openshift-cert-manager
+  when:
+  - not _ibm_cert_manager
+  - not _cert_manager_reused

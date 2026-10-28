@@ -37,6 +37,7 @@ To make it easier to navigate the different object types, they have been groups 
 * [Cloud Pak for Data - cp4d](cloud-pak.md#cp4d)
 * [Cloud Pak for Integration - cp4d](cloud-pak.md#cp4i)
 * [Cloud Pak for Watson AIOps - cp4d](cloud-pak.md#cp4waiops)
+* [IBM Bob self-hosted - ibm_bob](cloud-pak.md#ibm_bob)
 * [Private registry](private-registry.md)
 
 ### [Cloud Pak for Data Cartridges object types](cp4d-cartridges.md)
