@@ -1760,7 +1760,7 @@ def update_configuration_openshift(full_configuration):
         logger.debug(f"Error creating updating config map: {stderr}")        
 
     create_secret_command=['oc','create',f'-n={deployer_project}','secret','generic','cloud-pak-entitlement-key']
-    logger.debug('Create secret command: {}'.format(create_secret_command))
+    logger.debug("Creating Kubernetes secret resource (command redacted)")
 
     process = subprocess.Popen(create_secret_command,
                     stdout=subprocess.PIPE,
