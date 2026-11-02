@@ -1,3 +1,5 @@
+# OpenSearch Security based on https://www.ibm.com/docs/en/cacms/1.0.x?topic=service-configuring-cluster-security
+
 - name: Create role - ibm-genai-index-manager
   ansible.builtin.uri:
     url: "http://opensearch-unsecured-{{ ica_opensearch_project }}.{{ apps_endpoint_domain }}/_plugins/_security/api/roles/ibm-genai-index-manager"
@@ -28,7 +30,9 @@
     validate_certs: false
     body_format: json
     body:
-      cluster_permissions: []
+      # Not in IBM docs: bulk writes are authorized at cluster level, index permissions alone give 403 on indices:data/write/bulk TODO last seen 2026-11-02
+      cluster_permissions:
+        - "indices:data/write/bulk"
       index_permissions:
         - index_patterns:
             - "ibm-genai-*"
@@ -37,6 +41,8 @@
             - "delete"
             - "read"
             - "write"
+            - "indices:admin/get"
+            - "indices:admin/refresh"
     status_code: [200, 201]
 
 - name: Create genai-service-user
