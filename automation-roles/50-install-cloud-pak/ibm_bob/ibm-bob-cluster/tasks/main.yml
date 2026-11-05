@@ -49,6 +49,15 @@
 # 5. Branch: state=removed → uninstall then end_role; state=installed → continue
 - name: Uninstall IBM Bob instance {{ current_ibm_bob_cluster.project }} (state=removed)
   block:
+    - name: Fail if destroy was not confirmed
+      fail:
+        msg: >-
+          Destroy of IBM Bob instance {{ current_ibm_bob_cluster.project }} was not confirmed
+          with --confirm-destroy parameter or via global_config confirm_destroy property.
+      when:
+        - not (_confirm_destroy | bool)
+        - not (cpd_dry_run | default(false) | bool)
+
     - name: Ensure log directory exists for uninstall
       file:
         path: "{{ status_dir }}/log/ibm-bob"
@@ -149,4 +158,11 @@
 # 14. Wait for IBM Bob to be Ready
 - name: Wait for IBM Bob to be Ready in namespace {{ current_ibm_bob_cluster.project }}
   include_tasks: wait-for-ready.yml
+  when: not (cpd_skip_cp_install | default(false) | bool)
+
+# 15. Provision a TLS certificate for Bob routes via cert-manager (ingress_cert mode).
+# No-op when ingress_cert is not configured (self-signed). Must run after Bob is Ready
+# so the routes exist for the HTTP-01 challenge and bobctl setup-route can be called.
+- name: Provision ingress certificate for IBM Bob routes in namespace {{ current_ibm_bob_cluster.project }}
+  include_tasks: setup-cluster-ingress-cert.yml
   when: not (cpd_skip_cp_install | default(false) | bool)

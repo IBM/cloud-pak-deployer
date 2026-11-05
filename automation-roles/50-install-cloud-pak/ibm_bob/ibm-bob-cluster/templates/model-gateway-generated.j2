@@ -21,9 +21,13 @@ models:
     openai_compatible:
       base_url: "{{ _ibm_bob_core_model_url }}/v1"
     model_info:
+      exposed: true
+      mode: chat
+{% if not (_ibm_bob_selected_model.omit_model_info_triple | default(false)) %}
       provider: "{{ _ibm_bob_selected_model.provider }}"
       family: "{{ _ibm_bob_selected_model.family }}"
       version: "{{ _ibm_bob_selected_model.version }}"
+{% endif %}
       max_input_tokens: {{ _ibm_bob_selected_model.max_input_tokens }}
       max_output_tokens: {{ _ibm_bob_selected_model.max_output_tokens }}
       supports_vision: {{ _ibm_bob_selected_model.supports_vision | lower }}

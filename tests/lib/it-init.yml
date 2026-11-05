@@ -1,0 +1,48 @@
+---
+# Shared task file for the integration test playbooks: runs the same initialization as
+# playbooks/playbook-env-apply-10-validate.yml, so that the roles under test see the variables
+# they get in a real deployer run (global_config, vault, all_config, environment_name, ...).
+#
+# Configuration comes from {{ config_dir }}/config/*.yaml (tests/test-run/config), secrets from the
+# VAULT_SECRETS environment variable and the vault in {{ status_dir }}/vault.
+- name: Load global config
+  include_role:
+    name: load-global-config
+
+- name: Load vault config
+  include_role:
+    name: load-vault-config
+
+- name: Set the secret group
+  set_fact:
+    secret_group: "{{ secret_group_param if (secret_group_param | default('')) != '' else environment_name }}"
+
+- name: Merge configuration
+  include_role:
+    name: merge-config
+  vars:
+    path_to_config_dir: "{{ config_dir }}"
+
+- name: Set vault secrets if specified (oc-login from CPD_OC_LOGIN)
+  include_role:
+    name: vault-set-secret
+  vars:
+    _p_vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
+  when: lookup('ansible.builtin.env', 'VAULT_SECRETS') != ''
+
+- name: Store the entitled registry key in the vault if one was passed in the environment variable
+  include_role:
+    name: vault-set-secret
+  vars:
+    secret_name: "ibm_cp_entitlement_key"
+    secret_group: "{{ environment_name }}"
+    secret_payload: "{{ cp_entitlement_key }}"
+  when: (cp_entitlement_key | default('')) != ''
+  no_log: true
+
+- name: Lint and pre-process the configuration
+  include_role:
+    name: lint-config
+  vars:
+    path_to_generators_dir: "{{ generators_dir }}"
+

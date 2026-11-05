@@ -36,14 +36,30 @@
       version vars file.
   when: _ibm_bob_selected_model is not defined or _ibm_bob_selected_model == ''
 
+# ---- Resolve the quantization -----------------------------------------------
+- name: Resolve quantization and quantization-specific definition
+  set_fact:
+    _ibm_bob_core_quantization: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.quantization
+         | default(_ibm_bob_selected_model.default_quantization) }}
+
+- name: Fail if the quantization is not defined for the core model
+  fail:
+    msg: >-
+      Quantization '{{ _ibm_bob_core_quantization }}' is not defined for core_model
+      '{{ _ibm_bob_selected_model.id }}'. Supported: {{ _ibm_bob_selected_model.quantizations.keys() | list | join(', ') }}.
+  when: _ibm_bob_core_quantization not in _ibm_bob_selected_model.quantizations
+
+- name: Set quantization-specific facts
+  set_fact:
+    _ibm_bob_core_quant_def: "{{ _ibm_bob_selected_model.quantizations[_ibm_bob_core_quantization] }}"
+
 # ---- Derive working values --------------------------------------------------
 - name: Set working facts for the model serving deployment
   set_fact:
     _ibm_bob_models_project: >-
       {{ current_ibm_bob_cluster.openshift_ai_models.project
          | default(current_ibm_bob_cluster.project + '-models') }}
-    _ibm_bob_core_quantization: >-
-      {{ current_ibm_bob_cluster.openshift_ai_models.quantization | default('fp8') }}
     _ibm_bob_core_gpus: >-
       {{ current_ibm_bob_cluster.openshift_ai_models.gpus_per_core_model
          | default(_ibm_bob_selected_model.default_gpus) | int }}
@@ -52,16 +68,13 @@
          | default(_ibm_bob_guardrail_model_defaults.default_gpus) | int }}
     _ibm_bob_core_storage: >-
       {{ (current_ibm_bob_cluster.openshift_ai_models.storage_size | default({})).get('core',
-         _ibm_bob_selected_model.default_storage) }}
+         _ibm_bob_core_quant_def.default_storage) }}
     _ibm_bob_guardrail_storage: >-
       {{ (current_ibm_bob_cluster.openshift_ai_models.storage_size | default({})).get('guardrail',
          _ibm_bob_guardrail_model_defaults.default_storage) }}
     _ibm_bob_skip_gpu_check: >-
       {{ current_ibm_bob_cluster.openshift_ai_models.skip_gpu_check | default(false) | bool }}
-    _ibm_bob_core_hf_repo: >-
-      {{ _ibm_bob_selected_model.hf_repo_nvfp4
-         if (current_ibm_bob_cluster.openshift_ai_models.quantization | default('fp8')) == 'nvfp4'
-         else _ibm_bob_selected_model.hf_repo }}
+    _ibm_bob_core_hf_repo: "{{ _ibm_bob_core_quant_def.hf_repo }}"
 
 # ---- Create models namespace ------------------------------------------------
 - name: Ensure models namespace {{ _ibm_bob_models_project }} exists
@@ -75,6 +88,60 @@
         labels:
           app.kubernetes.io/managed-by: cloud-pak-deployer
           ibm-bob/models-for: "{{ current_ibm_bob_cluster.project }}"
+
+# ---- Ensure image pull secret exists in models namespace (air-gapped) -------
+- name: Read private registry credentials from vault (openshift_ai_models)
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "image-registry-{{ current_ibm_bob_cluster.image_registry_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ibm_bob_models_registry_creds
+  when: (current_ibm_bob_cluster.image_registry_name | default('')) != ''
+
+- name: Create ibm-entitlement-key pull secret in models namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: kubernetes.io/dockerconfigjson
+      metadata:
+        name: ibm-entitlement-key
+        namespace: "{{ _ibm_bob_models_project }}"
+      data:
+        .dockerconfigjson: >-
+          {{ ({
+            'auths': {
+              _ibm_bob_image_pull_prefix.split('/')[0]: {
+                'username': _ibm_bob_models_registry_creds.split(':')[0],
+                'password': (_ibm_bob_models_registry_creds.split(':', 1)[1] | default('')),
+                'auth': (_ibm_bob_models_registry_creds | b64encode)
+              }
+            }
+          }) | to_json | b64encode }}
+  no_log: true
+  when:
+    - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
+    - (_ibm_bob_models_registry_creds | default('')) != ''
+
+- name: Link ibm-entitlement-key to default service account in models namespace
+  kubernetes.core.k8s:
+    state: patched
+    kind: ServiceAccount
+    name: default
+    namespace: "{{ _ibm_bob_models_project }}"
+    definition:
+      imagePullSecrets:
+        - name: ibm-entitlement-key
+  when:
+    - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
+    - (_ibm_bob_models_registry_creds | default('')) != ''
+
+- name: Clear models registry credential fact
+  set_fact:
+    _ibm_bob_models_registry_creds: ""
+  no_log: true
 
 # ---- Persistent volume claims -----------------------------------------------
 - name: Create PVC for core model weights ({{ _ibm_bob_selected_model.id }})

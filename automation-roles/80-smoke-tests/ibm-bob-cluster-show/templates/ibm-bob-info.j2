@@ -18,8 +18,15 @@
 {% if _ibm_bob_self_signed_ca and _ibm_bob_ca_cert_pem != '' %}
   CA certificate: {{ _ibm_bob_ca_cert_file }}
   The default self-signed certificate is in use. Distribute the CA certificate to every workstation that connects to IBM Bob.
+{% elif _ibm_bob_cluster_cert %}
+  Certificate: A TLS certificate was issued by cert-manager and registered with IBM Bob (bobctl setup-route).
+  Secret bob-cluster-ingress-tls in project {{ current_ibm_bob_cluster.project }} covers:
+    bob.{{ current_ibm_bob_cluster.project }}.<apps-domain>
+    api.bob.{{ current_ibm_bob_cluster.project }}.<apps-domain>
+    bob-keycloak.{{ current_ibm_bob_cluster.project }}.<apps-domain>
+  Clients that trust the issuing CA trust IBM Bob. The certificate renews automatically via cert-manager.
 {% elif not _ibm_bob_self_signed_ca %}
-  Customer-provided certificate in use (secret {{ _ibm_bob_tls_secret_name }}). Clients must trust the issuing CA.
+  Certificate: User-provided certificate in use (secret {{ _ibm_bob_tls_secret_name }}). Clients must trust the issuing CA.
 {% endif %}
   bob-shell: export BOB_GATEWAY_URL={{ _ibm_bob_gateway_url }}
   bob-ide: set gatewayUrl to {{ _ibm_bob_gateway_url }}

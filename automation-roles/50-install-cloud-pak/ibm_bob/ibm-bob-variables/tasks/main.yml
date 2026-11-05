@@ -152,6 +152,52 @@
     _ibm_bob_image_pull_prefix: "{{ _reg_entry.registry_url | regex_replace('^https?://', '') }}"
   when: (current_ibm_bob_cluster.image_registry_name | default('')) != ''
 
+# 5b. Resolve effective vLLM runtime images, the model loader pod image and destination paths for openshift_ai_models.
+# Used by ibm-bob-mirror-images (to mirror the images) and ibm-bob-openshift-ai-models
+# (to configure ServingRuntimes). In air-gapped mode, images are pulled from the private registry.
+- name: Resolve effective vLLM runtime images (openshift_ai_models)
+  vars:
+    _raw_core: >-
+      {{ (current_ibm_bob_cluster.openshift_ai_models.runtime_image | default({})).get('core',
+         _ibm_bob_vllm_runtime_image | default('vllm/vllm-openai:v0.32.0')) }}
+    _raw_guardrail: >-
+      {{ (current_ibm_bob_cluster.openshift_ai_models.runtime_image | default({})).get('guardrail',
+         _ibm_bob_vllm_runtime_image | default('vllm/vllm-openai:v0.32.0')) }}
+    _is_airgap: >-
+      {{ (cpd_airgap | default(false) | bool) or ((current_ibm_bob_cluster.image_registry_name | default('')) != '') }}
+    _reg_host: "{{ _ibm_bob_image_pull_prefix.split('/')[0] }}"
+    _core_first_seg: "{{ _raw_core.split('/')[0] }}"
+    _core_repo: >-
+      {{ _raw_core.split('/', 1)[1] if ('/' in _raw_core and ('.' in _core_first_seg or ':' in _core_first_seg or _core_first_seg == 'localhost')) else _raw_core }}
+    _core_is_private: >-
+      {{ _is_airgap and (_raw_core.startswith(_ibm_bob_image_pull_prefix) or _core_first_seg == _reg_host) }}
+    _gr_first_seg: "{{ _raw_guardrail.split('/')[0] }}"
+    _gr_repo: >-
+      {{ _raw_guardrail.split('/', 1)[1] if ('/' in _raw_guardrail and ('.' in _gr_first_seg or ':' in _gr_first_seg or _gr_first_seg == 'localhost')) else _raw_guardrail }}
+    _gr_is_private: >-
+      {{ _is_airgap and (_raw_guardrail.startswith(_ibm_bob_image_pull_prefix) or _gr_first_seg == _reg_host) }}
+    _raw_loader: "{{ _ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest') }}"
+    _ld_first_seg: "{{ _raw_loader.split('/')[0] }}"
+    _ld_repo: >-
+      {{ _raw_loader.split('/', 1)[1] if ('/' in _raw_loader and ('.' in _ld_first_seg or ':' in _ld_first_seg or _ld_first_seg == 'localhost')) else _raw_loader }}
+    _ld_is_private: >-
+      {{ _is_airgap and (_raw_loader.startswith(_ibm_bob_image_pull_prefix) or _ld_first_seg == _reg_host) }}
+  set_fact:
+    _ibm_bob_vllm_core_source_image: "{{ _raw_core }}"
+    _ibm_bob_vllm_guardrail_source_image: "{{ _raw_guardrail }}"
+    _ibm_bob_vllm_core_repo_path: "{{ _core_repo }}"
+    _ibm_bob_vllm_guardrail_repo_path: "{{ _gr_repo }}"
+    _ibm_bob_vllm_effective_core_image: >-
+      {{ _raw_core if (not _is_airgap or _core_is_private) else (_ibm_bob_image_pull_prefix ~ '/' ~ _core_repo) }}
+    _ibm_bob_vllm_effective_guardrail_image: >-
+      {{ _raw_guardrail if (not _is_airgap or _gr_is_private) else (_ibm_bob_image_pull_prefix ~ '/' ~ _gr_repo) }}
+    # Loader pod image (oc cp of model weights in air-gapped mode), mirrored with the vLLM images
+    _ibm_bob_loader_source_image: "{{ _raw_loader }}"
+    _ibm_bob_loader_repo_path: "{{ _ld_repo }}"
+    _ibm_bob_loader_effective_image: >-
+      {{ _raw_loader if (not _is_airgap or _ld_is_private) else (_ibm_bob_image_pull_prefix ~ '/' ~ _ld_repo) }}
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
 # 6. Write a minimal config.yaml so every bobctl sub-command (including
 # verify-images) always reads the correct imagePullPrefix, regardless of
 # which role invokes bobctl.  ibm-bob-cluster overwrites this with the

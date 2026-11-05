@@ -93,8 +93,8 @@
     _job_name: "ibm-bob-core-model-download"
     _pvc_name: "ibm-bob-core-model"
     _hf_repo: "{{ _ibm_bob_core_hf_repo }}"
-    _draft_hf_repo: "{{ _ibm_bob_selected_model.draft_hf_repo }}"
-    _draft_model_dir: "{{ _ibm_bob_selected_model.draft_model_dir }}"
+    _draft_hf_repo: "{{ _ibm_bob_core_quant_def.draft_hf_repo | default('') }}"
+    _draft_model_dir: "{{ _ibm_bob_core_quant_def.draft_model_dir | default('') }}"
   when:
     - not (cpd_airgap | default(false) | bool)
     - not (_ibm_bob_core_job_done | default(false) | bool)
@@ -235,8 +235,8 @@
             restartPolicy: Never
             containers:
               - name: loader
-                image: "registry.access.redhat.com/ubi9/ubi:latest"
-                command: ["sleep", "3600"]
+                image: "{{ _ibm_bob_loader_effective_image | default(_ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest')) }}"
+                command: ["sleep", "28800"]
                 volumeMounts:
                   - name: model-storage
                     mountPath: /mnt/models
@@ -267,14 +267,12 @@
       failed_when: false
       changed_when: false
 
-    - name: Copy core model weights into PVC (oc cp)
-      command: >-
-        oc cp
-        {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}/.
-        {{ _ibm_bob_models_project }}/ibm-bob-pvc-loader-core:/mnt/models
-        --retries=3
-      environment:
-        KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+    - name: Copy core model weights into PVC (file by file, resumable)
+      include_tasks: copy-model-to-pvc.yml
+      vars:
+        _copy_src_dir: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}"
+        _copy_pod: ibm-bob-pvc-loader-core
+        _copy_label: core
       when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
 
     - name: Write PVC-side download-complete marker for core model
@@ -310,8 +308,8 @@
             restartPolicy: Never
             containers:
               - name: loader
-                image: "registry.access.redhat.com/ubi9/ubi:latest"
-                command: ["sleep", "3600"]
+                image: "{{ _ibm_bob_loader_effective_image | default(_ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest')) }}"
+                command: ["sleep", "28800"]
                 volumeMounts:
                   - name: model-storage
                     mountPath: /mnt/models
@@ -342,14 +340,12 @@
       failed_when: false
       changed_when: false
 
-    - name: Copy guardrail model weights into PVC (oc cp)
-      command: >-
-        oc cp
-        {{ _ibm_bob_models_dl_base }}/guardrail/.
-        {{ _ibm_bob_models_project }}/ibm-bob-pvc-loader-guardrail:/mnt/models
-        --retries=3
-      environment:
-        KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+    - name: Copy guardrail model weights into PVC (file by file, resumable)
+      include_tasks: copy-model-to-pvc.yml
+      vars:
+        _copy_src_dir: "{{ _ibm_bob_models_dl_base }}/guardrail"
+        _copy_pod: ibm-bob-pvc-loader-guardrail
+        _copy_label: guardrail
       when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
 
     - name: Write PVC-side download-complete marker for guardrail model

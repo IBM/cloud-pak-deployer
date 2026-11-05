@@ -6,9 +6,9 @@
 # Docs: https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/uninstall
 #
 # Sequence (from the uninstall docs):
-#   1. Delete the Bob CR and BobIDP CR without waiting (--wait=false); the
+#   1. Delete the Bob CR and BobIdp CR without waiting (--wait=false); the
 #      operator finalizer will block namespace deletion until they are gone.
-#   2. Patch out the BobIDP finalizer so the CR can actually be deleted.
+#   2. Patch out the BobIdp finalizer so the CR can actually be deleted.
 #   3. helm uninstall ibm-bob (removes the operator and all workloads).
 #   4. Wait for both namespaces to be fully terminated.
 #   5. Delete the cluster-scoped resources that were applied during install
@@ -31,36 +31,46 @@
     wait: false
   ignore_errors: true
 
-- name: Delete BobIDP CR in namespace {{ current_ibm_bob_cluster.project }} (async)
+- name: Check if BobIdp CRD exists
+  command: oc get crd bobidps.bob.ibm.com
+  register: _ibm_bob_idp_crd_check
+  changed_when: false
+  failed_when: false
+
+- name: Delete BobIdp CR in namespace {{ current_ibm_bob_cluster.project }} (async)
   kubernetes.core.k8s:
     state: absent
     api_version: bob.ibm.com/v1beta1
-    kind: BobIDP
+    kind: BobIdp
     name: bob-idp
     namespace: "{{ current_ibm_bob_cluster.project }}"
     wait: false
   ignore_errors: true
+  when: _ibm_bob_idp_crd_check.rc == 0
 
-# ---- Step 2: patch out the BobIDP finalizer so deletion can proceed --------
-- name: Check if BobIDP CR still exists
+# ---- Step 2: patch out the BobIdp finalizer so deletion can proceed --------
+- name: Check if BobIdp CR still exists
   kubernetes.core.k8s_info:
     api_version: bob.ibm.com/v1beta1
-    kind: BobIDP
+    kind: BobIdp
     name: bob-idp
     namespace: "{{ current_ibm_bob_cluster.project }}"
   register: _ibm_bob_idp_cr
+  when: _ibm_bob_idp_crd_check.rc == 0
 
-- name: Patch out BobIDP finalizer to unblock deletion
+- name: Patch out BobIdp finalizer to unblock deletion
   kubernetes.core.k8s:
     state: patched
     api_version: bob.ibm.com/v1beta1
-    kind: BobIDP
+    kind: BobIdp
     name: bob-idp
     namespace: "{{ current_ibm_bob_cluster.project }}"
     definition:
       metadata:
         finalizers: []
-  when: (_ibm_bob_idp_cr.resources | default([])) | length > 0
+  when:
+    - _ibm_bob_idp_crd_check.rc == 0
+    - (_ibm_bob_idp_cr.resources | default([])) | length > 0
   ignore_errors: true
 
 # ---- Step 3: helm uninstall -------------------------------------------------
@@ -105,8 +115,8 @@
   ignore_errors: true
 
 # ---- Step 4b: remove OpenShift AI model objects (if openshift_ai_models was configured) ----
-# PVCs are kept intentionally — they hold the downloaded weights and are expensive to re-download.
-# Document removal in the docs; users delete PVCs manually if needed.
+# By default (remove_model_weights: true) the PVCs and the models namespace are deleted too.
+# Set remove_model_weights: false to keep the downloaded weights, which are expensive to re-download.
 - name: Remove InferenceService objects created by the deployer (openshift_ai_models)
   kubernetes.core.k8s:
     state: absent
@@ -145,7 +155,78 @@
           | default(current_ibm_bob_cluster.project + '-models') }}'
       are kept. Delete them manually if you no longer need the downloaded weights:
         oc delete pvc ibm-bob-core-model ibm-bob-guardrail-model -n <models-namespace>
-  when: current_ibm_bob_cluster.openshift_ai_models is defined
+      remove_model_weights is set to false in the ibm_bob config. Remove that setting (default is true) to delete them automatically.
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - not (current_ibm_bob_cluster.remove_model_weights | default(true) | bool)
+
+- name: Delete model weight PVCs (when remove_model_weights is true)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: PersistentVolumeClaim
+    name: "{{ item }}"
+    namespace: "{{ current_ibm_bob_cluster.openshift_ai_models.project
+                   | default(current_ibm_bob_cluster.project + '-models') }}"
+    wait: true
+    wait_timeout: 300
+  loop:
+    - ibm-bob-core-model
+    - ibm-bob-guardrail-model
+  ignore_errors: true
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
+
+- name: Delete models namespace (when remove_model_weights is true)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Namespace
+    name: "{{ current_ibm_bob_cluster.openshift_ai_models.project
+               | default(current_ibm_bob_cluster.project + '-models') }}"
+    wait: false
+  ignore_errors: true
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
+
+- name: Wait for models namespace to be fully terminated
+  shell: >-
+    oc get namespace
+    {{ current_ibm_bob_cluster.openshift_ai_models.project
+       | default(current_ibm_bob_cluster.project + '-models') }}
+    --no-headers 2>/dev/null | wc -l
+  register: _ibm_bob_models_ns_wait
+  retries: 30
+  delay: 10
+  until: _ibm_bob_models_ns_wait.stdout | trim == '0'
+  changed_when: false
+  failed_when: false
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
+
+# ---- Step 4c: remove cert-manager Certificate and Issuer (if deployer-managed) ----
+- name: Delete Certificate bob-cluster-ingress-tls (deployer-managed)
+  kubernetes.core.k8s:
+    state: absent
+    api_version: cert-manager.io/v1
+    kind: Certificate
+    name: bob-cluster-ingress-tls
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  ignore_errors: true
+  when: (current_ibm_bob_cluster.ingress_cert | default({})) != {}
+
+- name: Delete deployer-managed Issuer ibm-bob-acme
+  kubernetes.core.k8s:
+    state: absent
+    api_version: cert-manager.io/v1
+    kind: Issuer
+    name: ibm-bob-acme
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  ignore_errors: true
+  when: (current_ibm_bob_cluster.ingress_cert.acme_email | default('')) != ''
 
 # ---- Step 5: remove cluster-scoped resources --------------------------------
 - name: Check if cluster-resources.yaml exists in the status dir

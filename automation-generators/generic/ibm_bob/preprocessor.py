@@ -47,11 +47,13 @@ import re
 
 PREMIUM_PACKAGES = ['rag', 'z_proxy', 'understand']
 
-# Supported core model identifiers and their allowed quantizations.
+# Supported core model identifiers and their allowed quantizations. The first
+# quantization in each list is the default when 'quantization' is omitted.
 # Kept in sync with _ibm_bob_ai_models in vars/versions/<ver>.yml.
 CORE_MODELS = {
-    'nemotron-3-ultra': ['fp8', 'nvfp4'],
-    'laguna-s-2.1':     ['fp8', 'nvfp4'],
+    'nemotron-3-ultra':   ['fp8', 'nvfp4'],
+    'nemotron-3.5-super': ['nvfp4'],
+    'laguna-s-2.1':       ['fp8', 'nvfp4'],
     'mistral-medium-3.5': ['fp8'],
 }
 
@@ -92,6 +94,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('model_gateway').isOptional()
     g('model_gateway_secret_names').isOptional()
     g('openshift_ai_models').isOptional()
+    g('remove_model_weights').isOptional().mustBeOneOf([True, False])
+    g('ingress_cert').isOptional()
 
     # Expand storage only when installing (not needed for removal)
     if len(g.getErrors()) == 0:
@@ -160,8 +164,8 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     elif core_model not in CORE_MODELS:
                         g.appendError(path='openshift_ai_models', msg="openshift_ai_models.core_model '{}' is not supported; must be one of: {}".format(core_model, ', '.join(sorted(CORE_MODELS.keys()))))
                     else:
-                        # quantization: optional, defaults to fp8, must be valid for the chosen model
-                        quant = ai.get('quantization', 'fp8')
+                        # quantization: optional, defaults to the first (default) quantization of the model, must be valid for the chosen model
+                        quant = ai.get('quantization', CORE_MODELS[core_model][0])
                         if quant not in CORE_MODELS[core_model]:
                             g.appendError(path='openshift_ai_models', msg="openshift_ai_models.quantization '{}' is not supported for core_model '{}'; allowed: {}".format(quant, core_model, ', '.join(CORE_MODELS[core_model])))
 
@@ -190,6 +194,18 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                                 elif not isinstance(ss[_k], str):
                                     g.appendError(path='openshift_ai_models', msg="openshift_ai_models.storage_size.{} must be a string (e.g. '700Gi')".format(_k))
 
+                    # runtime_image: optional dict with string values (vLLM image per inference service)
+                    if 'runtime_image' in ai:
+                        ri = ai['runtime_image']
+                        if not isinstance(ri, dict):
+                            g.appendError(path='openshift_ai_models', msg="openshift_ai_models.runtime_image must be a dictionary with keys 'core' and/or 'guardrail'")
+                        else:
+                            for _k in ri:
+                                if _k not in ('core', 'guardrail'):
+                                    g.appendError(path='openshift_ai_models', msg="openshift_ai_models.runtime_image has unknown key '{}'; allowed keys: core, guardrail".format(_k))
+                                elif not isinstance(ri[_k], str) or not ri[_k]:
+                                    g.appendError(path='openshift_ai_models', msg="openshift_ai_models.runtime_image.{} must be a non-empty string (container image reference)".format(_k))
+
                     # huggingface_token_secret_name: optional string
                     if 'huggingface_token_secret_name' in ai and not isinstance(ai['huggingface_token_secret_name'], str):
                         g.appendError(path='openshift_ai_models', msg="openshift_ai_models.huggingface_token_secret_name must be a string (vault secret name)")
@@ -208,10 +224,35 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
                     # used during env download on the connected side to pull gated model weights into
                     # status_dir, which the deployer then uploads to the PVC at apply time.
 
+            # remove_model_weights only makes sense with openshift_ai_models
+            if ge.get('remove_model_weights') is True and 'openshift_ai_models' not in ge:
+                g.appendError(msg="remove_model_weights: True requires openshift_ai_models to be configured")
+
             # If air-gapped install, image registry name must be specified
             if str_to_bool(os.environ.get('CPD_AIRGAP')):
                 if 'image_registry_name' not in ge:
                     g.appendError(msg="When doing an air-gapped install, the image_registry_name must be specified for the ibm_bob object")
+
+            # ingress_cert: optional; acme_email and cluster_issuer are mutually exclusive
+            if 'ingress_cert' in ge:
+                ic = ge['ingress_cert']
+                if not isinstance(ic, dict):
+                    g.appendError(path='ingress_cert', msg="ingress_cert must be a dictionary")
+                else:
+                    has_acme = 'acme_email' in ic
+                    has_issuer = 'cluster_issuer' in ic
+                    if has_acme and has_issuer:
+                        g.appendError(path='ingress_cert', msg="ingress_cert: acme_email and cluster_issuer are mutually exclusive; specify one or the other")
+                    if not has_acme and not has_issuer:
+                        g.appendError(path='ingress_cert', msg="ingress_cert: specify either acme_email (ACME HTTP-01) or cluster_issuer (existing ClusterIssuer name)")
+                    if 'acme_url' in ic and not has_acme:
+                        g.appendError(path='ingress_cert', msg="ingress_cert.acme_url requires acme_email")
+                    if has_acme and not isinstance(ic['acme_email'], str):
+                        g.appendError(path='ingress_cert', msg="ingress_cert.acme_email must be a string (email address)")
+                    if 'acme_url' in ic and not isinstance(ic['acme_url'], str):
+                        g.appendError(path='ingress_cert', msg="ingress_cert.acme_url must be a string (ACME directory URL)")
+                    if has_issuer and not isinstance(ic['cluster_issuer'], str):
+                        g.appendError(path='ingress_cert', msg="ingress_cert.cluster_issuer must be a string (ClusterIssuer name)")
 
         # License check: skip when removing (same as ACTION=destroy)
         if not _removing and os.environ.get('ACTION') != 'destroy':

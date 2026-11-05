@@ -12,6 +12,7 @@ command_usage() {
   echo "  environment,env           Apply configuration to create, modify or destroy an environment"
   echo "  vault                     Get, create, modify or delete secrets in the configured vault"
   echo "  build                     Build the container image for the Cloud Pak Deployer"
+  echo "  test                      Run the live integration tests (tests/*/run_integration_tests.sh) against an OpenShift cluster"
   echo "  version                   Show deployer version"
   echo "  help,h                    Show help"
   echo
@@ -30,6 +31,7 @@ command_usage() {
   echo "    delete                  Delete a secret from the vault"
   echo "    list                    List secrets for the specified vault group"
   echo "  build:                    No actions."
+  echo "  test:                     No actions. Use --mode to select the product and mode to test."
   echo
   echo "OPTIONS:"
   echo "Generic options (environment variable). You can specify the options on the command line or set an environment variable before running the $0 command:"
@@ -63,6 +65,11 @@ command_usage() {
   echo "  --cpd-develop                 Map current directory to automation scripts, only for development/debug (\$CPD_DEVELOP)"
   echo "  --cpd-test-cartridges         Test installation of all cartridges one by one (\$CPD_TEST_CARTRIDGES)"
   echo 
+  echo "Options for test subcommand:"
+  echo "  --mode <[product:]mode>       Product and mode to test, e.g. full, install, ibm_bob:airgap-full, ibm_bob:install. Default is full"
+  echo "                                ibm_bob also accepts a comma-separated list, e.g. ibm_bob:airgap-full,remove,airgap-semi"
+  echo "                                Products are discovered from tests/*/run_integration_tests.sh. Test status and config are kept in tests/test-run"
+  echo
   echo "Options for environment subcommand:"
   echo "  --confirm-destroy             Confirm that infra may be destroyed. Required for action destroy and when apply destroys infrastructure (\$CONFIRM_DESTROY)"
   echo "  --optimize-deploy             Optimize the deployment process by skipping components already deployed with the correct version (\$CPD_OPTIMIZE_DEPLOY)"
@@ -164,6 +171,13 @@ build)
   fi
   shift 1
   ;;
+test)
+  if ${INSIDE_CONTAINER};then
+    echo "test subcommand not allowed when running inside container"
+    exit 99
+  fi
+  shift 1
+  ;;
 h|help)
   command_usage 0
   ;;
@@ -224,6 +238,10 @@ vault)
   esac
   ;;
 build)
+  ;;
+test)
+  # test has no actions; the harness scripts manage their own directories
+  export ACTION="run"
   ;;
 esac
 
@@ -299,6 +317,23 @@ while (( "$#" )); do
       shift 2
     else
       echo "Error: Missing argument for --config-git-ref parameter."
+      command_usage 2
+    fi
+    fi
+    ;;
+  --mode*)
+    if [[ "${SUBCOMMAND}" != "test" ]];then
+      echo "Error: --mode is not valid for $SUBCOMMAND subcommand."
+      command_usage 2
+    fi
+    if [[ "$1" =~ "=" ]] && [ ! -z "${1#*=}" ];then
+      TEST_MODE="${1#*=}"
+      shift 1
+    else if [ -n "$2" ] && [ ${2:0:1} != "-" ];then
+      TEST_MODE=$2
+      shift 2
+    else
+      echo "Error: Missing argument for --mode parameter."
       command_usage 2
     fi
     fi
@@ -783,7 +818,9 @@ fi
 
 # Validate if the status has been set
 if [ "${STATUS_DIR}" == "" ]; then
-  echo "Status directory not specified, assuming $HOME/cpd-status"
+  if [ "${SUBCOMMAND}" != "test" ];then
+    echo "Status directory not specified, assuming $HOME/cpd-status"
+  fi
   export STATUS_DIR=$HOME/cpd-status
 fi
 
@@ -811,7 +848,8 @@ if [ "${CPD_CONFIG_GIT_REPO}" != "" ];then
 fi
 
 # Validate if the configuration directory exists and has the correct subdirectories
-if [[ "${ACTION}" != "kill" ]]; then
+# The test subcommand is skipped as the test harness manages its own directories
+if [[ "${ACTION}" != "kill" && "${SUBCOMMAND}" != "test" ]]; then
   if [ "${CONFIG_DIR}" == "" ]; then
     echo "Config directory not specified, assuming $HOME/cpd-config"
     export CONFIG_DIR=$HOME/cpd-config
@@ -856,11 +894,13 @@ fi
 # Add any vault secrets that have been specified as environment variables                                   #
 # This must only be done when env subcommand is specified                                                   #
 # --------------------------------------------------------------------------------------------------------- #
-if [[ "${SUBCOMMAND}" == "environment" ]];then
+if [[ "${SUBCOMMAND}" == "environment" || "${SUBCOMMAND}" == "test" ]];then
   if [[ "${CPD_OC_LOGIN}" != "" ]];then
     arrVaultSecret+=("oc-login")
     arrVaultSecretValue+=("${CPD_OC_LOGIN}")
   fi
+fi
+if [[ "${SUBCOMMAND}" == "environment" ]];then
   if [[ "${AWS_ACCESS_KEY_ID}" != "" ]];then
     arrVaultSecret+=("aws-access-key")
     arrVaultSecretValue+=("${AWS_ACCESS_KEY_ID}")
@@ -896,6 +936,54 @@ fi
 
 # Set remaining parameters
 eval set -- "$PARAMS"
+
+# --------------------------------------------------------------------------------------------------------- #
+# Run the integration test harnesses (test subcommand)                                                      #
+# --------------------------------------------------------------------------------------------------------- #
+if [ "$SUBCOMMAND" == "test" ];then
+  TEST_MODE=${TEST_MODE:-full}
+  if [[ "${TEST_MODE}" == *:* ]];then
+    TEST_PRODUCT="${TEST_MODE%%:*}"
+    TEST_PRODUCT_MODE="${TEST_MODE#*:}"
+  else
+    TEST_PRODUCT=""
+    TEST_PRODUCT_MODE="${TEST_MODE}"
+  fi
+  if [ -z "${TEST_PRODUCT_MODE}" ];then
+    echo "Error: no mode specified in --mode ${TEST_MODE}."
+    exit 1
+  fi
+
+  # Discover harnesses; directory name is the product key with hyphens replaced by underscores
+  TEST_HARNESSES=()
+  for harness in "${SCRIPT_DIR}"/tests/*/run_integration_tests.sh;do
+    [ -f "${harness}" ] || continue
+    harness_product=$(basename "$(dirname "${harness}")" | tr '-' '_')
+    if [ -z "${TEST_PRODUCT}" ] || [ "${TEST_PRODUCT}" == "${harness_product}" ];then
+      TEST_HARNESSES+=("${harness}")
+    fi
+  done
+  if [ ${#TEST_HARNESSES[@]} -eq 0 ];then
+    echo "Error: no integration test harness found for product '${TEST_PRODUCT:-*}' in ${SCRIPT_DIR}/tests/*/run_integration_tests.sh."
+    exit 1
+  fi
+
+  export MODE="${TEST_PRODUCT_MODE}"
+  export CPD_IMAGE_TAG
+  export CPD_CONTAINER_ENGINE
+  export CP_ENTITLEMENT_KEY
+  export VAULT_SECRETS
+  TEST_RC=0
+  for harness in "${TEST_HARNESSES[@]}";do
+    echo "Running integration tests: ${harness} (mode ${MODE})"
+    bash "${harness}"
+    if [ $? -ne 0 ];then
+      TEST_RC=1
+      echo "Integration tests failed: ${harness}"
+    fi
+  done
+  exit ${TEST_RC}
+fi
 
 # --------------------------------------------------------------------------------------------------------- #
 # Run the Cloud Pak Deployer                                                                                #

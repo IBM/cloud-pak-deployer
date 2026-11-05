@@ -29,12 +29,23 @@
          | selectattr('id', 'equalto', current_ibm_bob_cluster.openshift_ai_models.core_model)
          | list | first }}
 
-- name: Resolve HuggingFace repo for the chosen quantization
+- name: Resolve quantization for the core model
   set_fact:
-    _ibm_bob_dl_core_hf_repo: >-
-      {{ _ibm_bob_dl_model.hf_repo_nvfp4
-         if (current_ibm_bob_cluster.openshift_ai_models.quantization | default('fp8')) == 'nvfp4'
-         else _ibm_bob_dl_model.hf_repo }}
+    _ibm_bob_dl_quantization: >-
+      {{ current_ibm_bob_cluster.openshift_ai_models.quantization
+         | default(_ibm_bob_dl_model.default_quantization) }}
+
+- name: Fail if the quantization is not defined for the core model
+  fail:
+    msg: >-
+      Quantization '{{ _ibm_bob_dl_quantization }}' is not defined for core_model
+      '{{ _ibm_bob_dl_model.id }}'. Supported: {{ _ibm_bob_dl_model.quantizations.keys() | list | join(', ') }}.
+  when: _ibm_bob_dl_quantization not in _ibm_bob_dl_model.quantizations
+
+- name: Resolve HuggingFace repositories for the chosen quantization
+  set_fact:
+    _ibm_bob_dl_quant_def: "{{ _ibm_bob_dl_model.quantizations[_ibm_bob_dl_quantization] }}"
+    _ibm_bob_dl_core_hf_repo: "{{ _ibm_bob_dl_model.quantizations[_ibm_bob_dl_quantization].hf_repo }}"
 
 # ---- Ensure download directories exist --------------------------------------
 - name: Set model weights base directory
@@ -67,8 +78,8 @@
   debug:
     msg: >-
       No huggingface_token_secret_name set for openshift_ai_models. Downloading
-      without a token — this works for public repositories but will fail for
-      gated models (Mistral Medium 3.5, Poolside Laguna S 2.1, etc.).
+      without a token — this works for the supported core model repositories,
+      which are public, but will fail for gated repositories.
   when: (current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name | default('')) == ''
 
 # ---- Ensure huggingface_hub CLI is available --------------------------------
@@ -94,17 +105,17 @@
   no_log: "{{ (_ibm_bob_dl_hf_token | default('')) != '' }}"
   when: not _ibm_bob_core_dl_marker.stat.exists
 
-- name: Download draft model weights ({{ _ibm_bob_dl_model.draft_model_dir }}) if required
+- name: Download draft model weights ({{ _ibm_bob_dl_quant_def.draft_model_dir | default('') }}) if required
   command: >-
-    hf download {{ _ibm_bob_dl_model.draft_hf_repo }}
-    --local-dir {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}/{{ _ibm_bob_dl_model.draft_model_dir }}
+    hf download {{ _ibm_bob_dl_quant_def.draft_hf_repo }}
+    --local-dir {{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_dl_model.id }}/{{ _ibm_bob_dl_quant_def.draft_model_dir }}
     {{ '--token ' + _ibm_bob_dl_hf_token if (_ibm_bob_dl_hf_token | default('')) != '' else '' }}
   environment:
     HF_HUB_DISABLE_PROGRESS_BARS: "1"
   no_log: "{{ (_ibm_bob_dl_hf_token | default('')) != '' }}"
   when:
     - not _ibm_bob_core_dl_marker.stat.exists
-    - (_ibm_bob_dl_model.draft_hf_repo | default('')) != ''
+    - (_ibm_bob_dl_quant_def.draft_hf_repo | default('')) != ''
 
 - name: Write core model download-complete marker
   copy:

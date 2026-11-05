@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
-# tests/ibm-bob/run_dry_run_tests.sh
+# tests/ibm-bob/run_container_tests.sh
 #
-# Dry-run and syntax checks: deployer container, no OpenShift cluster needed.
-#   1. ./cp-deploy.sh env apply --check-only (validation + generation, stages 10 and 20)
+# Container-level validation: deployer image required, no OpenShift cluster needed.
+#   1. ./cp-deploy.sh env apply --check-only (config validation + generation, stages 10 and 20)
 #      for the IBM Bob sample configs, plus the cp4d and cp4i samples as a regression
 #      check for the shared cp-cert-manager role.
 #   2. ansible-playbook --syntax-check on the touched playbooks.
 #
 # Run from anywhere:
-#   bash tests/ibm-bob/run_dry_run_tests.sh
+#   bash tests/ibm-bob/run_container_tests.sh
 #
 # Requirements: the container image cloud-pak-deployer:latest has been built, and
 # podman or docker is available. With podman on macOS the machine only shares paths
@@ -44,17 +44,18 @@ check_only() {
   fi
 }
 
+# $1 playbook path relative to the repository root, without .yml
 syntax_check() {
-  local playbook="$1"
+  local playbook="$1" logname="${1//\//_}"
   echo "--- syntax-check: ${playbook}"
   if ${ENGINE} run --rm -v "${REPO_ROOT}:/cloud-pak-deployer" -w /cloud-pak-deployer \
         --entrypoint bash cloud-pak-deployer:latest \
-        -c "ANSIBLE_CONFIG=/cloud-pak-deployer/ansible.cfg ansible-playbook --syntax-check playbooks/${playbook}.yml -e status_dir=/tmp -e environment_name=x" \
-        > "${WORK_DIR}/${playbook}.log" 2>&1; then
+        -c "ANSIBLE_CONFIG=/cloud-pak-deployer/ansible.cfg ansible-playbook --syntax-check ${playbook}.yml -e status_dir=/tmp -e environment_name=x" \
+        > "${WORK_DIR}/${logname}.log" 2>&1; then
     echo "PASS ${playbook}"
   else
     echo "FAIL ${playbook}"
-    tail -30 "${WORK_DIR}/${playbook}.log"
+    tail -30 "${WORK_DIR}/${logname}.log"
     FAILED=1
   fi
 }
@@ -66,11 +67,14 @@ done
 
 echo "=== IBM Bob Syntax Checks — ansible playbooks ==="
 for playbook in playbook-env-apply-50-install-cloud-pak playbook-env-apply-80-smoke-tests playbook-env-apply playbook-env-apply-cp-config-only playbook-env-download; do
+  syntax_check "playbooks/${playbook}"
+done
+for playbook in tests/ibm-bob/playbooks/test-assert-live; do
   syntax_check "${playbook}"
 done
 
 if [ "${FAILED}" -ne 0 ]; then
-  echo "=== Dry-run & syntax checks FAILED ==="
+  echo "=== Container checks FAILED ==="
   exit 1
 fi
-echo "=== All dry-run & syntax checks passed ==="
+echo "=== All container checks passed ==="

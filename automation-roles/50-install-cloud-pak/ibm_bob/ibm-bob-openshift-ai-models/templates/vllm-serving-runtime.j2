@@ -4,6 +4,8 @@
 # Variables expected (set by caller):
 #   _sr_name       — ServingRuntime name
 #   _sr_namespace  — namespace
+#   _sr_image      — vLLM container image
+#   _sr_env        — list of {name, value} container environment variables ([] = none)
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
@@ -19,14 +21,20 @@ spec:
       autoSelect: true
   containers:
     - name: kserve-container
-      image: "quay.io/modh/vllm:rhoai-2.16-cuda"
+      image: "{{ _sr_image }}"
+      # The upstream vllm/vllm-openai image has `vllm serve` as entrypoint and
+      # no `python` binary guaranteed, so the command is set explicitly.
       command:
-        - python
-        - -m
-        - vllm.entrypoints.openai.api_server
+        - vllm
+        - serve
+        - /mnt/models
       args:
-        - "--model=/mnt/models"
+        - "--port=8080"
         - "--served-model-name={{ _sr_name }}"
+      ports:
+        - containerPort: 8080
+          protocol: TCP
+      env: {{ ([{'name': 'HOME', 'value': '/tmp'}] + _sr_env) | to_json }}
       resources:
         requests:
           cpu: "4"

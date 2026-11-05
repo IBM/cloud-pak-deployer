@@ -3,7 +3,7 @@ Unit tests for the ibm_bob preprocessor — no container, no cluster required.
 
 Run from the repo root with:
     PYTHONPATH=automation-roles/10-validation/lint-config/scripts \
-    python3 tests/ibm-bob/test_preprocessor.py
+    python3 tests/ibm-bob/unit/test_preprocessor.py
 
 Or via the convenience wrapper:
     bash tests/ibm-bob/run_unit_tests.sh
@@ -14,11 +14,11 @@ import sys, os, unittest
 # Make the generatorPreProcessor helper importable from its source location
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__),
-    '../../automation-roles/10-validation/lint-config/scripts'
+    '../../../automation-roles/10-validation/lint-config/scripts'
 ))
 sys.path.insert(0, os.path.join(
     os.path.dirname(__file__),
-    '../../automation-generators/generic/ibm_bob'
+    '../../../automation-generators/generic/ibm_bob'
 ))
 
 from preprocessor import preprocessor
@@ -143,6 +143,17 @@ class TestValidConfigs(unittest.TestCase):
         r = run(_valid_base())
         self.assertNotEqual(r['attributes_updated'].get('reuse_existing_cert_manager'), True)
 
+    def test_remove_model_weights_false_valid(self):
+        attrs = {**_valid_base(), 'remove_model_weights': False}
+        r = run(attrs)
+        self.assertEqual(errors(r), [], msg=errors(r))
+
+    def test_remove_model_weights_true_with_openshift_ai_models(self):
+        attrs = {**_valid_base(), 'remove_model_weights': True,
+                 'openshift_ai_models': {'core_model': 'nemotron-3-ultra'}}
+        r = run(attrs)
+        self.assertEqual(errors(r), [], msg=errors(r))
+
 
 class TestInvalidConfigs(unittest.TestCase):
 
@@ -235,6 +246,18 @@ class TestInvalidConfigs(unittest.TestCase):
 
     def test_reuse_existing_cert_manager_non_boolean(self):
         attrs = {**_valid_base(), 'reuse_existing_cert_manager': 'yes'}
+        r = run(attrs)
+        msgs = errors(r)
+        self.assertTrue(any('is not one of' in m for m in msgs), msgs)
+
+    def test_remove_model_weights_true_without_openshift_ai_models(self):
+        attrs = {**_valid_base(), 'remove_model_weights': True}
+        r = run(attrs)
+        msgs = errors(r)
+        self.assertTrue(any('remove_model_weights' in m for m in msgs), msgs)
+
+    def test_remove_model_weights_non_boolean(self):
+        attrs = {**_valid_base(), 'remove_model_weights': 'yes'}
         r = run(attrs)
         msgs = errors(r)
         self.assertTrue(any('is not one of' in m for m in msgs), msgs)
@@ -340,9 +363,49 @@ class TestOpenShiftAIModels(unittest.TestCase):
         self.assertEqual(errors(run(attrs)), [])
 
     def test_default_quantization_accepted(self):
-        """quantization defaults to fp8; omitting it must be valid."""
+        """quantization defaults to the model's default; omitting it must be valid."""
         attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra'}}
         self.assertEqual(errors(run(attrs)), [])
+
+    def test_valid_super_nvfp4(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3.5-super', 'quantization': 'nvfp4'}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_super_default_quantization_accepted(self):
+        """nemotron-3.5-super only has nvfp4, which must be the default (not fp8)."""
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3.5-super'}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_super_fp8_rejected(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3.5-super', 'quantization': 'fp8'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('fp8' in m and 'nemotron-3.5-super' in m for m in msgs), msgs)
+
+    def test_runtime_image_valid(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {
+            'core_model': 'nemotron-3-ultra',
+            'runtime_image': {'core': 'registry.example.com/vllm/vllm-openai:v0.32.0', 'guardrail': 'registry.example.com/vllm/vllm-openai:v0.32.0'}}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_runtime_image_core_only_valid(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {
+            'core_model': 'nemotron-3-ultra', 'runtime_image': {'core': 'registry.example.com/vllm:1'}}}
+        self.assertEqual(errors(run(attrs)), [])
+
+    def test_runtime_image_must_be_dict(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'runtime_image': 'vllm/vllm-openai:v0.32.0'}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('runtime_image' in m for m in msgs), msgs)
+
+    def test_runtime_image_unknown_key(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'runtime_image': {'main': 'x:1'}}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('main' in m for m in msgs), msgs)
+
+    def test_runtime_image_value_must_be_nonempty_string(self):
+        attrs = {**_valid_base(), 'openshift_ai_models': {'core_model': 'nemotron-3-ultra', 'runtime_image': {'core': ''}}}
+        msgs = errors(run(attrs))
+        self.assertTrue(any('runtime_image.core' in m for m in msgs), msgs)
 
     def test_valid_with_optional_fields(self):
         attrs = {**_valid_base(), 'openshift_ai_models': {
@@ -475,13 +538,38 @@ class TestOpenShiftAIModels(unittest.TestCase):
         msgs = errors(run(attrs, env={'CPD_AIRGAP': 'true'}))
         self.assertFalse(any('huggingface_token_secret_name' in m for m in msgs), msgs)
 
+    def test_runtime_image_in_airgap_requires_image_registry_name(self):
+        """When CPD_AIRGAP is true and runtime_image is set, image_registry_name is required."""
+        attrs = {**_valid_base(),
+                 'openshift_ai_models': {
+                     'core_model': 'nemotron-3-ultra',
+                     'runtime_image': {
+                         'core': 'vllm/vllm-openai:v0.32.0',
+                     },
+                 }}
+        msgs = errors(run(attrs, env={'CPD_AIRGAP': 'true'}))
+        self.assertTrue(any('image_registry_name' in m for m in msgs), msgs)
+
+    def test_runtime_image_in_airgap_passes_with_image_registry_name(self):
+        """When CPD_AIRGAP is true and image_registry_name is provided with runtime_image, validation passes."""
+        attrs = {**_valid_base(),
+                 'image_registry_name': 'bob-mirror',
+                 'openshift_ai_models': {
+                     'core_model': 'nemotron-3-ultra',
+                     'runtime_image': {
+                         'core': 'quay.io/myorg/custom-vllm:1.0',
+                     },
+                 }}
+        msgs = errors(run(attrs, env={'CPD_AIRGAP': 'true'}))
+        self.assertFalse(any('image_registry_name' in m for m in msgs), msgs)
+
 
 class TestSampleConfigs(unittest.TestCase):
     """The shipped sample configs, combined with ocp-existing-ocp.yaml, must pass."""
 
     SAMPLES_DIR = os.path.join(
         os.path.dirname(__file__),
-        '../../sample-configurations/sample-dynamic/config-samples'
+        '../../../sample-configurations/sample-dynamic/config-samples'
     )
 
     def _load(self, name):
@@ -510,6 +598,93 @@ class TestSampleConfigs(unittest.TestCase):
         attrs = full['ibm_bob'][0]
         attrs['image_registry_name'] = 'bob-mirror'
         r = preprocessor(attributes=attrs, fullConfig=full, moduleVariables={'cpd_airgap': 'true'})
+        self.assertEqual(errors(r), [], msg=errors(r))
+
+
+# ---------------------------------------------------------------------------
+# ingress_cert tests
+# ---------------------------------------------------------------------------
+class TestIngressCert(unittest.TestCase):
+
+    def _base(self):
+        return _valid_base()
+
+    def test_acme_email_valid(self):
+        """ingress_cert with acme_email is accepted."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {'acme_email': 'ops@example.com'}
+        r = run(attrs)
+        self.assertEqual(errors(r), [], msg=errors(r))
+
+    def test_acme_email_with_url_valid(self):
+        """ingress_cert with acme_email and acme_url is accepted."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {
+            'acme_email': 'ops@example.com',
+            'acme_url': 'https://acme-staging-v02.api.letsencrypt.org/directory',
+        }
+        r = run(attrs)
+        self.assertEqual(errors(r), [], msg=errors(r))
+
+    def test_cluster_issuer_valid(self):
+        """ingress_cert with cluster_issuer is accepted."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {'cluster_issuer': 'my-corporate-issuer'}
+        r = run(attrs)
+        self.assertEqual(errors(r), [], msg=errors(r))
+
+    def test_mutual_exclusion(self):
+        """ingress_cert with both acme_email and cluster_issuer is rejected."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {
+            'acme_email': 'ops@example.com',
+            'cluster_issuer': 'my-issuer',
+        }
+        r = run(attrs)
+        self.assertTrue(any('mutually exclusive' in e for e in errors(r)), msg=errors(r))
+
+    def test_neither_key(self):
+        """ingress_cert dict without acme_email or cluster_issuer is rejected."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {}
+        r = run(attrs)
+        self.assertTrue(any('either' in e for e in errors(r)), msg=errors(r))
+
+    def test_acme_url_without_acme_email(self):
+        """acme_url without acme_email is rejected."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {
+            'acme_url': 'https://acme-staging-v02.api.letsencrypt.org/directory',
+            'cluster_issuer': 'my-issuer',
+        }
+        r = run(attrs)
+        self.assertTrue(any('acme_url requires acme_email' in e for e in errors(r)), msg=errors(r))
+
+    def test_not_a_dict(self):
+        """ingress_cert set to a string is rejected."""
+        attrs = self._base()
+        attrs['ingress_cert'] = 'ops@example.com'
+        r = run(attrs)
+        self.assertTrue(any('must be a dictionary' in e for e in errors(r)), msg=errors(r))
+
+    def test_acme_email_not_string(self):
+        """acme_email that is not a string is rejected."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {'acme_email': 42}
+        r = run(attrs)
+        self.assertTrue(any('must be a string' in e for e in errors(r)), msg=errors(r))
+
+    def test_cluster_issuer_not_string(self):
+        """cluster_issuer that is not a string is rejected."""
+        attrs = self._base()
+        attrs['ingress_cert'] = {'cluster_issuer': True}
+        r = run(attrs)
+        self.assertTrue(any('must be a string' in e for e in errors(r)), msg=errors(r))
+
+    def test_ingress_cert_omitted_is_valid(self):
+        """Omitting ingress_cert entirely (self-signed) is always valid."""
+        attrs = self._base()
+        r = run(attrs)
         self.assertEqual(errors(r), [], msg=errors(r))
 
 

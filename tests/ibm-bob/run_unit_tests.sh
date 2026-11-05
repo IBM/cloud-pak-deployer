@@ -17,12 +17,12 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 
 echo "=== IBM Bob Unit Tests — preprocessor ==="
 PYTHONPATH="${REPO_ROOT}/automation-roles/10-validation/lint-config/scripts" \
-  python3 "${REPO_ROOT}/tests/ibm-bob/test_preprocessor.py" "$@"
+  python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_preprocessor.py" "$@"
 
 echo "=== IBM Bob Unit Tests — variables & version table ==="
-python3 "${REPO_ROOT}/tests/ibm-bob/test_variables.py" "$@"
+python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_variables.py" "$@"
 
 echo "=== IBM Bob Unit Tests — config.yaml template rendering ==="
-python3 "${REPO_ROOT}/tests/ibm-bob/test_template.py" "$@"
+python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_template.py" "$@"
 
 echo "=== All unit tests passed ==="

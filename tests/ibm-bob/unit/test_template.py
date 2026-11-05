@@ -2,15 +2,23 @@
 Tests for ibm-bob-cluster config.yaml template rendering and prerequisite logic.
 """
 
-import sys, os, unittest, jinja2, yaml
+import sys, os, json, unittest, jinja2, yaml
 
+VERSIONS_DIR = os.path.join(
+    os.path.dirname(__file__),
+    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-variables/vars/versions'
+)
+SERVING_TEMPLATES_DIR = os.path.join(
+    os.path.dirname(__file__),
+    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-openshift-ai-models/templates'
+)
 TEMPLATES_DIR = os.path.join(
     os.path.dirname(__file__),
-    '../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-cluster/templates'
+    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-cluster/templates'
 )
 SHOW_TEMPLATES_DIR = os.path.join(
     os.path.dirname(__file__),
-    '../../automation-roles/80-smoke-tests/ibm-bob-cluster-show/templates'
+    '../../../automation-roles/80-smoke-tests/ibm-bob-cluster-show/templates'
 )
 
 class TestIbmBobClusterTemplate(unittest.TestCase):
@@ -118,6 +126,77 @@ class TestIbmBobClusterTemplate(unittest.TestCase):
         data = yaml.safe_load(self.template.render(context))
         self.assertEqual(data['bob']['modelGateway']['secrets']['AZURE_API_KEY'], 'a"b')
 
+
+
+class TestModelGatewayGeneratedTemplate(unittest.TestCase):
+
+    def render(self, model_id):
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
+        template = env.get_template('model-gateway-generated.j2')
+        with open(os.path.join(VERSIONS_DIR, '2.0.0.yml')) as f:
+            data = yaml.safe_load(f)
+        model = [m for m in data['_ibm_bob_ai_models'] if m['id'] == model_id][0]
+        context = {
+            'current_ibm_bob_cluster': {'openshift_ai_models': {'core_model': model_id}},
+            '_ibm_bob_selected_model': model,
+            '_ibm_bob_guardrail_model_defaults': data['_ibm_bob_guardrail_model_defaults'],
+            '_ibm_bob_core_model_url': 'http://core',
+            '_ibm_bob_guardrail_url': 'http://guard',
+        }
+        return yaml.safe_load(template.render(context))
+
+    def test_nemotron_super_gateway(self):
+        """Bob 2.0.0 does not know nvidia/nemotron/3.5-super: the triple must be left out,
+        otherwise bob-inference panics at startup."""
+        info = self.render('nemotron-3.5-super')['models'][0]['model_info']
+        for key in ('provider', 'family', 'version'):
+            self.assertNotIn(key, info)
+        self.assertTrue(info['exposed'])
+        self.assertEqual(info['mode'], 'chat')
+        self.assertEqual(info['max_input_tokens'], 270000)
+        self.assertEqual(info['max_output_tokens'], 20000)
+        self.assertTrue(info['supports_vision'])
+
+    def test_known_model_keeps_triple(self):
+        info = self.render('nemotron-3-ultra')['models'][0]['model_info']
+        self.assertEqual((info['provider'], info['family'], info['version']), ('nvidia', 'nemotron', '3-ultra'))
+        self.assertTrue(info['exposed'])
+        self.assertEqual(info['mode'], 'chat')
+
+    def test_guardrail_slots_keep_triple(self):
+        models = {m['model_name']: m for m in self.render('nemotron-3.5-super')['models']}
+        for slot in ('security', 'background'):
+            info = models[slot]['model_info']
+            self.assertEqual((info['provider'], info['family'], info['version']), ('openai', 'gpt-oss', '20b'))
+        self.assertEqual(self.render('nemotron-3.5-super')['routers'][0]['static']['default_model'], 'premium-ide')
+
+
+class TestVllmServingRuntimeTemplate(unittest.TestCase):
+
+    def setUp(self):
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(SERVING_TEMPLATES_DIR))
+        env.filters['to_json'] = json.dumps
+        self.template = env.get_template('vllm-serving-runtime.j2')
+
+    def test_image_command_port_and_env_rendered(self):
+        context = {'_sr_name': 'core', '_sr_namespace': 'ns', '_sr_image': 'vllm/vllm-openai:v0.32.0',
+                   '_sr_env': [{'name': 'VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER', 'value': '0'}]}
+        container = yaml.safe_load(self.template.render(context))['spec']['containers'][0]
+        self.assertEqual(container['image'], 'vllm/vllm-openai:v0.32.0')
+        self.assertEqual(container['command'], ['vllm', 'serve', '/mnt/models'])
+        self.assertIn('--port=8080', container['args'])
+        self.assertIn('--served-model-name=core', container['args'])
+        self.assertEqual(container['ports'][0]['containerPort'], 8080)
+        env = {e['name']: e['value'] for e in container['env']}
+        self.assertEqual(env['VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER'], '0')
+        self.assertEqual(env['HOME'], '/tmp')
+
+    def test_only_default_env_when_none_given(self):
+        context = {'_sr_name': 'core', '_sr_namespace': 'ns', '_sr_image': 'img:1', '_sr_env': []}
+        container = yaml.safe_load(self.template.render(context))['spec']['containers'][0]
+        self.assertEqual([e['name'] for e in container['env']], ['HOME'])
+
+
 class TestIbmBobInfoTemplate(unittest.TestCase):
 
     def setUp(self):
@@ -168,7 +247,7 @@ class TestIbmBobInfoTemplate(unittest.TestCase):
         self.assertIn('Internal search URL: https://bob-search.ibm-bob.svc.cluster.local:8082', rendered)
         self.assertIn('Z Proxy URL: https://bob-zproxy.ibm-bob.svc.cluster.local:8081', rendered)
         self.assertIn('Z Lookup URL: https://bob-zproxy.ibm-bob.svc.cluster.local:8083', rendered)
-        self.assertIn('Customer-provided certificate in use (secret custom-cert)', rendered)
+        self.assertIn('User-provided certificate in use (secret custom-cert)', rendered)
 
 if __name__ == '__main__':
     unittest.main()

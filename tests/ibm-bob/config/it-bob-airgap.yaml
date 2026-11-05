@@ -1,0 +1,34 @@
+# Integration test configuration, part 2 of 2 (modes airgap-full and airgap-semi).
+# Copied by run_integration_tests.sh to tests/test-run/config/it-bob.yaml before the phase.
+#
+# The two placeholders below are not vault lookups made by Ansible: the harness reads the vault
+# secrets image_registry_name and image_registry_url and passes them as extra variables, which the
+# deployer resolves when it merges the configuration. Set them once, see tests/README.md:
+#   image_registry_name   name of the registry entry, also the suffix of the vault secret
+#                         image-registry-<name> that holds the credentials (user:password)
+#   image_registry_url    registry URL including the namespace path, for example https://de.icr.io/bob-on-prem
+image_registry:
+- name: "{{ image_registry_name }}"
+  registry_url: "{{ image_registry_url }}"
+
+ibm_bob:
+- project: ibm-bob
+  operators_project: ibm-bob-operators
+  openshift_cluster_name: "{{ env_id }}"        # resolved from global_config.env_id
+  openshift_storage_name: auto-storage          # storage_name in it-ocp.yaml
+  ibm_bob_version: latest
+  accept_licenses: true
+  state: installed
+  image_registry_name: "{{ image_registry_name }}"
+
+  # ACME HTTP-01 certificate for Bob routes: disabled for now, see it-bob-install.yaml.
+  # ingress_cert:
+  #   acme_email: "{{ acme_email }}"
+
+  # The vLLM serving image and the model weights are mirrored together with the Bob
+  # images. skip_gpu_check lets the run work on a cluster without GPU nodes.
+  openshift_ai_models:
+    core_model: nemotron-3.5-super
+    quantization: nvfp4
+    gpus_per_core_model: 1
+    skip_gpu_check: true
