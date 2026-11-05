@@ -30,16 +30,6 @@
     _p_vault_secrets: "{{ lookup('ansible.builtin.env', 'VAULT_SECRETS') }}"
   when: lookup('ansible.builtin.env', 'VAULT_SECRETS') != ''
 
-- name: Store the entitled registry key in the vault if one was passed in the environment variable
-  include_role:
-    name: vault-set-secret
-  vars:
-    secret_name: "ibm_cp_entitlement_key"
-    secret_group: "{{ environment_name }}"
-    secret_payload: "{{ cp_entitlement_key }}"
-  when: (cp_entitlement_key | default('')) != ''
-  no_log: true
-
 - name: Lint and pre-process the configuration
   include_role:
     name: lint-config

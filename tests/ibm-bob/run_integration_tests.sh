@@ -10,6 +10,14 @@
 # which exports MODE, CPD_IMAGE_TAG, CPD_CONTAINER_ENGINE, CP_ENTITLEMENT_KEY and
 # VAULT_SECRETS (the oc-login secret from CPD_OC_LOGIN) to this script. It can also be
 # run directly: MODE=install bash tests/ibm-bob/run_integration_tests.sh
+# The nested cp-deploy.sh calls rebuild the oc-login secret from CPD_OC_LOGIN, so a direct
+# run needs CPD_OC_LOGIN in the environment unless oc-login is already in the vault.
+#
+# The script runs on the host. Install, remove, smoke and download steps are real deployer
+# runs (./cp-deploy.sh env apply|download, see it_deployer in tests/lib/it-common.sh), so the
+# deployer code under test is the code built into the image: rebuild it with
+# ./cp-deploy.sh build after changing roles or playbooks. The commit of the image is printed
+# at the start. Only the assertions and the shared cleanup are test playbooks.
 #
 # Modes (MODE):
 #   dry-run  validate the configuration and render config.yaml; no cluster changes
@@ -39,12 +47,6 @@ set -euo pipefail
 PRODUCT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=../lib/it-common.sh
 source "${PRODUCT_DIR}/../lib/it-common.sh"
-
-# ---- Per-phase state read by run_playbook ------------------------------------
-DRY_RUN=false
-CONFIRM_DESTROY=false
-AIRGAP=false
-REGISTRY_EXTRA=""
 
 # ---- Checks ------------------------------------------------------------------
 # MODE is one mode or a comma-separated list; "full" expands to its sequence.
@@ -80,11 +82,29 @@ ACME_EMAIL="${ACME_EMAIL:-}"
 if [ -z "${ACME_EMAIL}" ] && vault_has "ibm_bob_acme_email"; then
   ACME_EMAIL="$(vault_get ibm_bob_acme_email)"
 fi
-ACME_EXTRA=""
-[ -z "${ACME_EMAIL}" ] || ACME_EXTRA="-e acme_email=${ACME_EMAIL}"
 
 it_check_common
 it_reset_config
+
+# ---- Values the test configurations take from the command line ---------------
+# image_registry_name / image_registry_url are set per airgap phase (REGISTRY_NAME, REGISTRY_URL).
+# deployer_vars: --extra-vars for cp-deploy.sh; ansible_vars: -e for the test playbooks.
+REGISTRY_NAME=""
+REGISTRY_URL=""
+deployer_vars() {
+  [ -z "${ACME_EMAIL}" ] || echo "--extra-vars acme_email=${ACME_EMAIL}"
+  [ -z "${REGISTRY_NAME}" ] || echo "--extra-vars image_registry_name=${REGISTRY_NAME}"
+  [ -z "${REGISTRY_URL}" ] || echo "--extra-vars image_registry_url=${REGISTRY_URL}"
+}
+ansible_vars() {
+  [ -z "${ACME_EMAIL}" ] || echo "-e acme_email=${ACME_EMAIL}"
+  [ -z "${REGISTRY_NAME}" ] || echo "-e image_registry_name=${REGISTRY_NAME}"
+  [ -z "${REGISTRY_URL}" ] || echo "-e image_registry_url=${REGISTRY_URL}"
+}
+# it_deployer <apply|download> [flags]: the unquoted $(deployer_vars) is split into words on purpose
+# (none of the values contain spaces).
+deployer() { it_deployer "$@" $(deployer_vars); }
+assert_phase() { it_run_playbook tests/ibm-bob/playbooks/test-assert-live.yml "-e it_assert_phase=$1 $(ansible_vars)"; }
 
 # ---- Configuration -----------------------------------------------------------
 use_bob_config() {
@@ -93,83 +113,68 @@ use_bob_config() {
   echo "Active IBM Bob configuration: $1"
 }
 
-# ---- Playbook runner ---------------------------------------------------------
-# Wraps it_run_playbook with the IBM Bob-specific DRY_RUN / CONFIRM_DESTROY / AIRGAP flags.
-# $1 playbook name (under tests/ibm-bob/playbooks/), $2 optional extra ansible args.
-run_playbook() {
-  local playbook="$1" extra="${2:-}"
-  local bool_yaml="cpd_dry_run: ${DRY_RUN}
-confirm_destroy: ${CONFIRM_DESTROY}
-cpd_airgap: ${AIRGAP}"
-  it_run_playbook \
-    "tests/ibm-bob/playbooks/${playbook}" \
-    "-e IT_DRY_RUN=${DRY_RUN} -e IT_CONFIRM_DESTROY=${CONFIRM_DESTROY} -e IT_AIRGAP=${AIRGAP} -e CPD_AIRGAP=${AIRGAP}" \
-    "${bool_yaml}" \
-    "${REGISTRY_EXTRA} ${extra}"
-}
-
 show_info() {
   echo "Access info:"
   cat "${STATUS_DIR}/cloud-paks/cloud-pak-deployer-info.txt" || true
 }
 
 # ---- Phases ------------------------------------------------------------------
+# Each phase is the deployer call from the mode mapping of the plan (sub-task 30).
 phase_dry_run() {
   use_bob_config it-bob-install.yaml
-  DRY_RUN=true
-  run_playbook test-cluster-live.yml "${ACME_EXTRA}"
-  DRY_RUN=false
+  deployer apply --dry-run
 }
 
 phase_install() {
   use_bob_config it-bob-install.yaml
-  run_playbook test-cluster-live.yml "${ACME_EXTRA}"
-  run_playbook test-smoke-live.yml "${ACME_EXTRA}"
+  deployer apply
   show_info
-  run_playbook test-assert-live.yml "-e it_assert_phase=install ${ACME_EXTRA}"
+  assert_phase install
 }
 
 phase_smoke() {
   use_bob_config it-bob-install.yaml
-  run_playbook test-smoke-live.yml "${ACME_EXTRA}"
+  deployer apply --skip-cp-install
   show_info
 }
 
 phase_remove() {
   use_bob_config it-bob-remove.yaml
-  CONFIRM_DESTROY="$(awk '/^[[:space:]]*confirm_destroy:/ {print tolower($2); exit}' "${CONFIG_YAML_DIR}/it-bob.yaml")"
-  CONFIRM_DESTROY="${CONFIRM_DESTROY:-false}"
-  run_playbook test-uninstall-live.yml "${ACME_EXTRA}"
-  CONFIRM_DESTROY=false
-  run_playbook test-assert-live.yml "-e it_assert_phase=remove ${ACME_EXTRA}"
+  local confirm
+  confirm="$(awk '/^[[:space:]]*confirm_destroy:/ {print tolower($2); exit}' "${CONFIG_YAML_DIR}/it-bob.yaml")"
+  if [ "${confirm:-false}" = "true" ]; then
+    deployer apply --confirm-destroy
+  else
+    deployer apply
+  fi
+  assert_phase remove
 }
 
 # $1 flavour: full (via portable directory) or semi (direct mirror)
 phase_airgap() {
-  local flavour="$1" name
+  local flavour="$1" name download_flags=""
   for secret in image_registry_name image_registry_url; do
     vault_has "${secret}" || die "vault secret ${secret} is required for airgap (see tests/README.md)"
   done
   name="$(vault_get image_registry_name)"
   vault_has "image-registry-${name}" || die "vault secret image-registry-${name} is required for airgap (see tests/README.md)"
   use_bob_config it-bob-airgap.yaml
-  REGISTRY_EXTRA="-e image_registry_name=${name} -e image_registry_url=$(vault_get image_registry_url)"
-  AIRGAP=true
-  run_playbook "test-airgap-${flavour}-live.yml" "${ACME_EXTRA}"
+  REGISTRY_NAME="${name}"
+  REGISTRY_URL="$(vault_get image_registry_url)"
+  if [ "${flavour}" = "semi" ]; then download_flags="--skip-portable-registry"; fi
+  # shellcheck disable=SC2086
+  deployer download ${download_flags}
+  deployer apply --air-gapped
   show_info
   # The registry placeholders in the configuration must still resolve, so assert before the reset.
-  run_playbook test-assert-live.yml "-e it_assert_phase=airgap ${ACME_EXTRA}"
-  AIRGAP=false
-  REGISTRY_EXTRA=""
+  assert_phase airgap
+  REGISTRY_NAME=""
+  REGISTRY_URL=""
 }
 
 phase_cleanup() {
   it_reset_config
-  it_run_playbook "tests/lib/test-cleanup.yml" \
-    "" \
-    "cpd_dry_run: false
-confirm_destroy: false
-cpd_airgap: false"
+  it_run_playbook tests/lib/test-cleanup.yml
 }
 
 # Bash reads a script command by command while it executes it, so editing this file during a
@@ -178,6 +183,7 @@ cpd_airgap: false"
 # and reads nothing from the file after main returns.
 main() {
   echo "IBM Bob integration test, mode: ${MODE} (${MODES[*]}), run directory: ${RUN_DIR}"
+  it_version_info
   local step=0 m
   for m in "${MODES[@]}"; do
     step=$((step + 1))

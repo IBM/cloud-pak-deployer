@@ -2,14 +2,16 @@
 # ---------------------------------------------------------------------------
 # tests/lib/it-common.sh
 #
-# Shared setup sourced by every harness's run_integration_tests.sh.
+# Shared setup sourced by every harness's run_integration_tests.sh. The harness runs on the
+# host; install, remove, smoke and download steps go through ./cp-deploy.sh (it_deployer),
+# the deployer code under test is the code built into the deployer image.
 # Source this file AFTER defining PRODUCT_DIR and VALID_MODES in the caller.
 #
 # Provides:
 #   Variables  REPO_ROOT, RUN_DIR, CONFIG_DIR, CONFIG_YAML_DIR, STATUS_DIR,
 #              ENVIRONMENT_NAME, VAULT_FILE, MODE, ENGINE, IMAGE, ARCH, IMAGE_ARCH
 #   Functions  die, vault_has, vault_get, it_check_common, it_reset_config,
-#              it_run_playbook
+#              it_deployer, it_version_info, it_run_playbook
 # ---------------------------------------------------------------------------
 
 # ---- Paths ------------------------------------------------------------------
@@ -62,52 +64,72 @@ it_reset_config() {
   cp "${REPO_ROOT}/tests/config/it-ocp.yaml" "${CONFIG_YAML_DIR}/it-ocp.yaml"
 }
 
-# it_run_playbook <playbook_path> [extra_docker_envs] [bool_yaml] [extra_ansible_args]
+# it_deployer <apply|download> [cp-deploy.sh options...]
 #
-#   <playbook_path>      full path relative to /cloud-pak-deployer inside the container,
-#                        e.g. "tests/ibm-bob/playbooks/test-cluster-live.yml"
-#   [extra_docker_envs]  additional space-separated -e KEY=VAL flags for docker/podman run,
-#                        e.g. "-e IT_DRY_RUN=true -e IT_AIRGAP=false"
-#   [bool_yaml]          YAML string of boolean variables written to a file and loaded with
-#                        -e @file, e.g. "cpd_dry_run: false\nconfirm_destroy: false".
-#                        Ansible -e @file parses YAML types correctly (unlike -e key=value
-#                        which always yields strings).
-#   [extra_ansible_args] additional ansible-playbook -e string arguments
+#   Runs ./cp-deploy.sh env <action> against the run directory, the same way a user would.
+#   Always passed: -c <run dir> -l <run dir>/status --skip-infra -v
+#     -v selects ansible.cfg (default callback, full output); without it most output is hidden.
+#   Never pass --clean-up: cp-deploy.sh starts apply and download detached and reads the exit
+#   code of the stopped container; with --clean-up the container is gone and the code is lost.
+#   The stopped container is removed here instead. The exit code of cp-deploy.sh is returned.
+#   CPD_CONTAINER_ENGINE, CPD_IMAGE_TAG, CPD_OC_LOGIN and CP_ENTITLEMENT_KEY come from the
+#   environment (exported by ./cp-deploy.sh test).
+it_deployer() {
+  local action="$1" rc=0 container_id
+  shift
+  echo "=== cp-deploy.sh env ${action} $* ==="
+  CPD_CONTAINER_ENGINE="${ENGINE}" CPD_IMAGE_TAG="${CPD_IMAGE_TAG:-latest}" \
+    "${REPO_ROOT}/cp-deploy.sh" env "${action}" \
+      -c "${CONFIG_DIR}" -l "${STATUS_DIR}" --skip-infra -v "$@" || rc=$?
+  if [ -f "${STATUS_DIR}/pid/container.id" ]; then
+    container_id="$(cat "${STATUS_DIR}/pid/container.id")"
+    [ -z "${container_id}" ] || ${ENGINE} rm -f "${container_id}" >/dev/null 2>&1 || true
+    rm -f "${STATUS_DIR}/pid/container.id"
+  fi
+  return ${rc}
+}
+
+# it_version_info
+#   Prints the commit the deployer image was built from. The roles and playbooks under test
+#   are the image version, the harness and the test configs are the working-tree version.
+it_version_info() {
+  echo "Deployer image ${IMAGE} was built from:"
+  ${ENGINE} run --rm --arch "${IMAGE_ARCH}" --entrypoint cat "${IMAGE}" \
+    /cloud-pak-deployer/.version-info/version-info.sh | sed 's/^/  /' \
+    || echo "  (version info not available)"
+}
+
+# it_run_playbook <playbook_path> [extra_ansible_args]
+#
+#   Runs one of the test playbooks (assert, cleanup) that have no deployer equivalent, in a
+#   container of the deployer image. Only tests/ (read-only) and the run directory are mounted:
+#   the roles used by the playbook are the ones built into the image.
+#
+#   <playbook_path>      path relative to /cloud-pak-deployer inside the container,
+#                        e.g. "tests/ibm-bob/playbooks/test-assert-live.yml"
+#   [extra_ansible_args] additional ansible-playbook arguments, e.g. "-e it_assert_phase=install"
 it_run_playbook() {
   local playbook="$1"
-  local extra_docker="${2:-}"
-  local bool_yaml="${3:-}"
-  local extra_ansible="${4:-}"
+  local extra_ansible="${2:-}"
   echo "=== ${playbook} ==="
   # shellcheck disable=SC2086
   ${ENGINE} run --rm --arch "${IMAGE_ARCH}" \
-    -v "${REPO_ROOT}:/cloud-pak-deployer" \
+    -v "${REPO_ROOT}/tests:/cloud-pak-deployer/tests:ro" \
     -v "${RUN_DIR}:${RUN_DIR}" \
     -e CP_ENTITLEMENT_KEY -e VAULT_SECRETS \
-    -e ACTION=apply -e CPD_ACCEPT_LICENSES=false \
     -e CONFIG_DIR="${CONFIG_DIR}" -e STATUS_DIR="${STATUS_DIR}" \
-    -e ARCH="${ARCH}" -e IMAGE_ARCH="${IMAGE_ARCH}" \
     -e IT_PLAYBOOK="${playbook}" \
     -e IT_EXTRA="${extra_ansible}" \
-    -e IT_BOOL_YAML="${bool_yaml}" \
-    ${extra_docker} \
     -w /cloud-pak-deployer --entrypoint bash "${IMAGE}" -c '
-      source ./scripts/deployer/set-env-var.sh > /dev/null
       export ANSIBLE_CONFIG=/cloud-pak-deployer/ansible.cfg
-      # Redirect the ansible log to a unique timestamped file so nested ansible-playbook
-      # invocations (e.g. olm-utils list-components) do not contend on /tmp/ansible.log.
+      # Timestamped log file so nested ansible-playbook invocations do not contend on /tmp/ansible.log.
+      mkdir -p "${STATUS_DIR}/log"
       export ANSIBLE_LOG_PATH="${STATUS_DIR}/log/ansible-it-$(date +%s).log"
-      # Write boolean flags into a YAML file so ansible-playbook parses them as real
-      # booleans. -e key=value always yields strings; -e @file parses YAML types correctly.
-      printf "%s\n" "${IT_BOOL_YAML}" > /tmp/it-bool-vars.yaml
+      # cpd_dry_run is read as a boolean by the deployer roles: pass it as JSON, not key=value.
       ansible-playbook "${IT_PLAYBOOK}" \
-        -e cpd_action=apply -e "config_dir=${CONFIG_DIR}" -e "status_dir=${STATUS_DIR}" \
-        -e generators_dir=/cloud-pak-deployer/automation-generators -e _deployer_dir=/cloud-pak-deployer \
-        -e ibmcloud_api_key= -e secret_group_param= -e "cp_entitlement_key=${CP_ENTITLEMENT_KEY:-}" \
-        -e cpd_optimize_deploy=false -e cpd_skip_infra=true -e cp_config_only=false -e cpd_check_only=false \
-        -e cpd_skip_mirror=false -e cpd_skip_cp_install=false -e cpd_skip_portable_registry=false \
-        -e cpd_test_cartridges=false -e cpd_accept_licenses=false \
-        -e "ARCH=${ARCH}" -e "IMAGE_ARCH=${IMAGE_ARCH}" -e "OLM_UTILS_IMAGE=${OLM_UTILS_IMAGE:-}" \
-        -e @/tmp/it-bool-vars.yaml \
+        -e "config_dir=${CONFIG_DIR}" -e "status_dir=${STATUS_DIR}" \
+        -e generators_dir=/cloud-pak-deployer/automation-generators \
+        -e secret_group_param= \
+        -e "{\"cpd_dry_run\": false}" \
         ${IT_EXTRA}'
 }

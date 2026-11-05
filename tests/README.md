@@ -21,6 +21,8 @@ podman run --rm -v $PWD:/cloud-pak-deployer -w /cloud-pak-deployer --entrypoint 
 
 `cp-deploy.sh test` discovers harnesses under `tests/*/run_integration_tests.sh`, builds the vault secrets from environment variables (`CPD_OC_LOGIN`, `CP_ENTITLEMENT_KEY`) and delegates to each matching harness. All harnesses share the gitignored run directory `tests/test-run/` — config templates are copied there on every run and never modified; the vault, logs and downloads persist between runs.
 
+The harness runs on the host and calls `./cp-deploy.sh env apply|download`, so the tests run the real deployer. The deployer code under test is the code built into the image; after changing a role or playbook, run `./cp-deploy.sh build` before `./cp-deploy.sh test`. The deployer log is `tests/test-run/status/log/cloud-pak-deployer.log`.
+
 Podman on macOS only shares paths under `$HOME`, so the repository must be under `$HOME`.
 
 ### Mode syntax
