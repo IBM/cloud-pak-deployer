@@ -8,6 +8,7 @@ Defines the Cloud Pak(s) which is/are layed out on the OpenShift cluster, typica
 - [Cloud Pak for Integration](#cp4i)
 - [Cloud Pak for Watson AIOps](#cp4waiops)
 - [Cloud Pak for Business Automation](#cp4ba)
+- [IBM Bob self-hosted](#ibm_bob)
 
 ## `cp4d`
 
@@ -913,3 +914,343 @@ The following properties are defined on the project level.
 | akhq_enabled                         | Set to `true` to enable AKHQ. Client for Kafka in CP4BA. | Yes  | true, false |
 | phpldapadmin_enabled                         | Set to `true` to enable phpLDApAdmin. Client for OpenLDAP. | Yes  | true, false |
 | opensearch_dashboards_enabled                         | Set to `true` to enable OpenSearch Dashboards. Client for OpenSearch. | Yes  | true, false |
+
+## `ibm_bob`
+
+Defines an IBM Bob self-hosted installation on an existing OpenShift cluster. The deployer installs IBM Bob with `bobctl`, which it takes from the versioned release bundle on GitHub. It downloads the bundle at run time, verifies its SHA-256 checksum and caches it in `<status_dir>/downloads/ibm-bob/<version>/`.
+
+``` { .yaml .copy }
+ibm_bob:
+- project: ibm-bob
+  operators_project: ibm-bob-operators
+  openshift_cluster_name: "{{ env_id }}"
+  openshift_storage_name: odf-storage
+  ibm_bob_version: 2.0.0
+  accept_licenses: false
+  reuse_existing_cert_manager: false
+  state: installed
+  premium_packages:
+    rag: false
+    z_proxy: false
+    understand: false
+```
+
+### Prerequisites
+
+The cluster requirements of IBM Bob (supported OpenShift versions, node architecture, storage, cert-manager and permissions) depend on the IBM Bob version. See the [IBM Bob prerequisites](https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/prerequisites). The deployer checks them before it installs.
+
+What the deployer does with them:
+
+* The file (RWX) and block (RWO) storage classes are resolved from the `openshift_storage` element that `openshift_storage_name` refers to.
+* If no cert-manager operator is found, the deployer installs the Red Hat cert-manager operator, as it does for Cloud Pak for Data. The IBM License Service is not installed.
+* The IBM entitlement key is read from the vault secret `ibm_cp_entitlement_key`. IBM Bob images are pulled from `cp.icr.io` with this key.
+
+### IBM Bob main properties
+
+| Property                      | Description | Mandatory | Allowed values |
+|-------------------------------|-------------|-----------|----------------|
+| project                       | The OpenShift project (bobctl: `global.instanceNamespace`) in which the IBM Bob instance is created. | Yes | |
+| operators_project             | The OpenShift project (bobctl: `global.operatorNamespace`) for the IBM Bob operators. | No, defaults to `<project>-operators` | |
+| openshift_cluster_name        | Name of the `openshift` element to install on. | Yes, inferred from `openshift` | Existing `openshift` cluster |
+| openshift_storage_name        | References an `openshift_storage` element of the cluster. Provides the file and block storage classes. | No, inferred from `openshift` -> `openshift_storage` | |
+| ibm_bob_version               | Version of IBM Bob, `x.y.z`, or `latest` for the highest version known to the deployer. | Yes | `2.0.0`, `latest` |
+| accept_licenses               | Set to `True` to accept the IBM Bob license. Alternatively use `--accept-all-licenses` with `cp-deploy.sh`. | Yes (not required for `state: removed`) | True, False |
+| reuse_existing_cert_manager   | Set to `True` to reuse a working cert-manager that was installed outside OLM (for example with Helm or manifests) instead of installing the Red Hat cert-manager. The deployer checks that a cert-manager controller is running. | No | True, False (default) |
+| state                         | Desired state of the IBM Bob instance. Setting `removed` requires `--confirm-destroy` or `global_config.confirm_destroy: true`. | No | `installed` (default), `removed` |
+| premium_packages              | Premium packages to enable, see below. | No | |
+| model_gateway                 | Model gateway configuration, see below. | No | |
+| model_gateway_secret_names    | Maps `env.<VAR>` references in `model_gateway` to vault secret names. | Only with `env.<VAR>` references | |
+| image_registry_name           | Private registry (`image_registry` object) to pull from. Required for air-gapped installations. | Yes if `CPD_AIRGAP` is true | |
+| remove_model_weights          | When `state: removed` and `openshift_ai_models` is configured: the model weight PVCs and the models namespace are deleted too. Set to `False` to keep the downloaded weights (PVCs and namespace are kept). | No | True (default), False |
+| ingress_cert                  | TLS certificate for Bob's routes, see [Ingress certificate](#ingress-certificate) below. | No | |
+
+### Ingress certificate
+
+By default, Bob generates its own self-signed CA and issues a certificate for its routes. The deployer saves the CA certificate to `<status_dir>/ibm-bob/<project>/bob-ca.crt`; distribute it to every workstation that connects to IBM Bob.
+
+To provision a publicly trusted certificate automatically, add an `ingress_cert` block with **exactly one** of:
+
+| Key | Description |
+|---|---|
+| `acme_email` | Email address for ACME HTTP-01 (Let's Encrypt by default). The deployer creates a namespace-scoped cert-manager `Issuer` and a `Certificate` covering Bob's three routes, waits for `Ready`, and calls `bobctl setup-route`. The cluster's apps domain must be reachable from the internet for the HTTP-01 challenge. |
+| `cluster_issuer` | Name of an existing cert-manager `ClusterIssuer`. The deployer creates the `Certificate` only; the `ClusterIssuer` must already be `Ready`. |
+
+`acme_email` and `cluster_issuer` are mutually exclusive. The optional `acme_url` key overrides the ACME directory URL (defaults to Let's Encrypt production; set to a staging or corporate ACME CA as needed).
+
+``` { .yaml .copy }
+# ACME HTTP-01 — Let's Encrypt (default) or corporate ACME CA
+ibm_bob:
+- project: ibm-bob
+  ...
+  ingress_cert:
+    acme_email: ops@example.com
+    # acme_url: https://acme-v02.api.letsencrypt.org/directory   # default
+
+# Existing ClusterIssuer
+ibm_bob:
+- project: ibm-bob
+  ...
+  ingress_cert:
+    cluster_issuer: my-corporate-issuer
+```
+
+Bob's route hostnames (covered by the certificate):
+
+- `bob.<project>.<apps-domain>`
+- `api.bob.<project>.<apps-domain>`
+- `bob-keycloak.<project>.<apps-domain>`
+
+On `state: removed`, the deployer deletes the `Certificate` and, if ACME mode was used, the `Issuer` created by the deployer. The secret `bob-cluster-ingress-tls` is deleted together with the Bob namespace.
+
+### Premium packages
+
+| Property   | Description | Default |
+|------------|-------------|---------|
+| rag        | Enables `bob.rag.enabled` (retrieval-augmented generation, installs OpenSearch). | False |
+| z_proxy    | Enables `bob.zProxy.enabled`. Requires `rag: True`. | False |
+| understand | Enables `bob.understand.enabled`. | False |
+
+### Model gateway
+
+If `model_gateway` is specified, the deployer writes it to `model-gateway.yaml` in the status directory and passes it to `bobctl install --model-config`. If it is omitted, IBM Bob is installed with an empty model gateway configuration, which you can set later with `bobctl update-model-config`. The structure of `model_gateway` follows the [IBM Bob model gateway configuration](https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/configuration).
+
+Do not put secrets in the configuration. Refer to them as `env.<VAR>` and map each `<VAR>` to a vault secret:
+
+``` { .yaml .copy }
+  model_gateway:
+    models:
+    - model_name: premium-ide
+      openai_compatible:
+        api_key: env.AZURE_API_KEY
+  model_gateway_secret_names:
+    AZURE_API_KEY: ibm-bob-azure-api-key
+```
+
+``` { .bash .copy }
+./cp-deploy.sh vault set -vs=ibm-bob-azure-api-key=<value>
+```
+
+The deployer reads the values from the vault when it installs, and removes the temporary files that contain them afterwards.
+
+### Air-gapped installation
+
+For air-gapped clusters, set `CPD_AIRGAP=true` and provide an `image_registry` object with the private registry that holds the mirrored IBM Bob images. Set `image_registry_name` in the `ibm_bob` object to reference it.
+
+Mirror the images before running the deployer:
+
+``` { .bash .copy }
+# Step 1: download images from cp.icr.io to a local filesystem directory
+CPD_AIRGAP=false CPD_SKIP_PORTABLE_REGISTRY=false \
+  ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+
+# Step 2: upload from the filesystem directory to the private registry
+CPD_AIRGAP=true CPD_SKIP_PORTABLE_REGISTRY=false \
+  ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+```
+
+Or mirror directly from the IBM registry to the private registry in one step:
+
+``` { .bash .copy }
+CPD_AIRGAP=false CPD_SKIP_PORTABLE_REGISTRY=true \
+  ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+```
+
+Store the private registry credentials in the vault before running the apply:
+
+``` { .bash .copy }
+./cp-deploy.sh vault set -vs=image-registry-<name>=<user>:<password>
+```
+
+Then run the deployer with `CPD_AIRGAP=true`:
+
+``` { .bash .copy }
+CPD_AIRGAP=true ./cp-deploy.sh env apply -c <config-dir> -l <status-dir>
+```
+
+### Uninstall
+
+To remove an IBM Bob instance, set `state: removed`. No storage or license properties are required:
+
+``` { .yaml .copy }
+ibm_bob:
+- project: ibm-bob
+  openshift_cluster_name: "{{ env_id }}"
+  ibm_bob_version: 2.0.0
+  state: removed
+```
+
+The deployer deletes the `Bob` CR, removes the Helm release, deletes both namespaces (`project` and `operators_project`) and removes the Keycloak admin vault key. cert-manager is left untouched.
+
+### Access information
+
+When the installation has completed, the smoke tests wait for the operators and the `Bob` custom resource to be ready. They then write the following to `<status_dir>/cloud-paks/cloud-pak-deployer-info.txt`, which is also displayed at the end of the run:
+
+* The gateway URL for IBM Bob clients (`BOB_GATEWAY_URL` for bob-shell, `gatewayUrl` for bob-ide).
+* The Keycloak URL, admin user and password (also stored in the vault as `ibm_bob_keycloak_admin_<project>_<cluster>`).
+* The URLs for premium packages (RAG URL, Internal search URL, Z Proxy URL, Z Lookup URL), if enabled and available in the `Bob` custom resource status.
+* When the default self-signed certificate is in use: the CA certificate is saved as `<status_dir>/ibm-bob/<project>/bob-ca.crt`. Distribute it to every workstation that connects to IBM Bob, because it is not publicly trusted.
+* When `ingress_cert` is configured: confirmation that the cert-manager certificate was issued and registered, including the hostnames it covers.
+
+### Adding users
+
+After installation, add users through the IBM Bob Admin UI at `https://bob.<project>.<apps-domain>/admin`. Log in with the `temp-admin` Keycloak credentials from the access information above. Navigate to **Users & Teams**, add each user by email address, assign their role (`bob-admin` or `bob-user`), and add them to a team.
+
+Alternatively, add users directly in the Keycloak Admin Console at `https://bob-keycloak.<project>.<apps-domain>`: create a user in the `bob` realm, set a password, and assign the `bob-admin` or `bob-user` realm role.
+
+### Post-installation tasks
+
+Tasks such as LDAP and IDP configuration and customer-provided TLS certificates are performed with `bobctl`. See [Post-installation tasks](https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/post-install).
+
+### OpenShift AI model serving
+
+Instead of writing a `model_gateway` block by hand, the deployer can serve one of the open-weight models listed under [Supported models](#supported-models) on **Red Hat OpenShift AI** (KServe + vLLM) and generate the Bob model gateway configuration automatically. Configure this with `openshift_ai_models` in the `ibm_bob` object. `openshift_ai_models` and `model_gateway` are mutually exclusive.
+
+What IBM Bob supports and requires for these models is documented only in the IBM Bob documentation: [Required and supported models](https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/supported-models) and [Recommended vLLM runtime configuration](https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/vllm-runtime). Check these pages before you choose a model.
+
+``` { .yaml .copy }
+ibm_bob:
+- project: ibm-bob
+  ...
+  openshift_ai_models:
+    core_model: nemotron-3-ultra       # see Supported models
+    quantization: fp8                  # default depends on the model, see Supported models
+    guardrail_model: openai/gpt-oss-20b  # default; configurable
+    project: ibm-bob-models            # namespace for ServingRuntime / InferenceService / PVCs
+    gpus_per_core_model: 8             # default depends on the model, see Supported models
+    gpus_per_guardrail_model: 1
+    storage_size:
+      core: 700Gi                      # default depends on the model and quantization
+      guardrail: 60Gi
+    # runtime_image:                   # vLLM image per inference service
+    #   core: vllm/vllm-openai:v0.32.0
+    #   guardrail: vllm/vllm-openai:v0.32.0
+    # huggingface_token_secret_name: ibm-bob-huggingface-token
+    # vllm_extra_args: []
+    # skip_gpu_check: false
+```
+
+The `openshift` object must have `openshift_ai.install: auto` (or `True`) and `gpu.install: auto` (or `True`). The deployer installs OpenShift AI and the NFD + NVIDIA GPU operators automatically when both are set to `auto`.
+
+#### openshift_ai_models properties
+
+| Property | Description | Mandatory | Allowed values |
+|---|---|---|---|
+| `core_model` | Core model to serve. Exactly one may be configured. | Yes | `core_model` value in [Supported models](#supported-models) |
+| `quantization` | Weight quantization variant. Not all variants are available for all models. | No | Quantizations in [Supported models](#supported-models); default per model |
+| `guardrail_model` | Model ID for the guardrail (safety) model served on the `security` and `background` slots. | No | default `openai/gpt-oss-20b` |
+| `project` | OpenShift namespace for the model serving objects (PVCs, ServingRuntimes, InferenceServices). | No | default `<ibm_bob.project>-models` |
+| `gpus_per_core_model` | Number of GPUs requested by the core model InferenceService. The vLLM `--tensor-parallel-size` is set to the same number. | No | default per model, see [Supported models](#supported-models) |
+| `gpus_per_guardrail_model` | Number of GPUs requested by the guardrail model InferenceService. | No | default `1` |
+| `storage_size.core` | PVC size for the core model weights (and draft model, if any). | No | default per model and quantization, see [Supported models](#supported-models) |
+| `storage_size.guardrail` | PVC size for the guardrail model weights. | No | default `60Gi` |
+| `runtime_image.core` | vLLM container image for the core model ServingRuntime. By default the deployer uses `vllm/vllm-openai:v0.32.0` and automatically mirrors it to your private registry for air-gapped installations. Use this property to override the image with a custom build or different version. | No | default `vllm/vllm-openai:v0.32.0` |
+| `runtime_image.guardrail` | vLLM container image for the guardrail model ServingRuntime. By default the deployer uses `vllm/vllm-openai:v0.32.0` and automatically mirrors it to your private registry for air-gapped installations. | No | default `vllm/vllm-openai:v0.32.0` |
+| `huggingface_token_secret_name` | Vault secret name for the Hugging Face access token. Required for gated model repositories. Used during `env download` in both connected and air-gapped mode. | No | vault secret name |
+| `vllm_extra_args` | Extra vLLM CLI arguments appended to the arguments the deployer sets for the chosen model, so they take precedence. | No | list of strings |
+| `skip_gpu_check` | Skip the GPU capacity check. The model pods will be `Pending` until GPU nodes are added. Use for deployer flow testing on clusters without GPUs. | No | `True`, `False` (default) |
+
+#### Supported models
+
+The Cloud Pak Deployer currently supports the following core models. For what IBM Bob requires of these models, see the [IBM Bob documentation](https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/supported-models).
+
+| `core_model` | Quantization | Hugging Face repository | Default GPUs | Default `storage_size.core` |
+|---|---|---|---|---|
+| `nemotron-3-ultra` | `fp8` (default) | [`RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-FP8-dynamic`](https://huggingface.co/RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-FP8-dynamic) | 8 | `700Gi` |
+| `nemotron-3-ultra` | `nvfp4` | [`RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4`](https://huggingface.co/RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4) | 8 | `400Gi` |
+| `nemotron-3.5-super` | `nvfp4` (default, only) | [`nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4`](https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4) | 2 | `100Gi` |
+| `laguna-s-2.1` | `fp8` (default) | [`poolside/Laguna-S-2.1-FP8`](https://huggingface.co/poolside/Laguna-S-2.1-FP8) | 8 | `150Gi` |
+| `laguna-s-2.1` | `nvfp4` | [`poolside/Laguna-S-2.1-NVFP4`](https://huggingface.co/poolside/Laguna-S-2.1-NVFP4) | 8 | `120Gi` |
+| `mistral-medium-3.5` | `fp8` (default, only) | [`mistralai/Mistral-Medium-3.5-128B`](https://huggingface.co/mistralai/Mistral-Medium-3.5-128B) | 8 | `300Gi` |
+
+The guardrail model `openai/gpt-oss-20b` serves the `security` and `background` gateway slots (1 GPU, `60Gi`).
+
+The vLLM arguments are the values recommended on the [IBM Bob vLLM page](https://bob.ibm.com/docs/ide/enterprise/on-premises/model-gateway/vllm-runtime). `nemotron-3.5-super` is not on that page; its arguments are from the Hugging Face model card (2x H100 or 1x H200 recipe, so `gpus_per_core_model: 1` is also valid on an H200). Adjust the arguments for your hardware with `vllm_extra_args`. The following notes are specific to the deployer:
+
+- The Laguna S 2.1 and Mistral Medium 3.5 speculative decoding draft models (dFlash and Eagle) are downloaded together with the model weights into a sub-directory of the model PVC. The Nemotron models use built-in speculative decoding.
+- The `nvfp4` quantization of Laguna S 2.1 runs on NVIDIA Blackwell GPUs only. If vLLM crashes with DFlash at the default sequence limit, add `--max-num-seqs=32` to `vllm_extra_args`.
+- All models are served with the upstream `vllm/vllm-openai:v0.32.0` image (or the image configured via `runtime_image`). The vLLM images that Red Hat ships with OpenShift AI are not used because they contain older vLLM versions than these models need. In an air-gapped environment, the deployer automatically mirrors the runtime image, and the `ubi9/ubi` image of the temporary pods that load the model weights, to your private registry alongside the IBM Bob images during `env download`.
+
+#### What the deployer does
+
+**`env download` (both modes):**
+
+1. Downloads model weights from Hugging Face into `status_dir/downloads/ibm-bob/<version>/models/` using the `hf` CLI (`huggingface_hub`). A local marker file makes re-runs a no-op. The status directory is packaged by `env download` and carried to the air-gapped site.
+2. Mirrors the vLLM runtime container image (`vllm/vllm-openai:v0.32.0` or user-configured `runtime_image`) and the `registry.access.redhat.com/ubi9/ubi:latest` image, which the temporary pods use to copy the model weights into the PVCs, to local disk (`downloads/ibm-bob/<version>/images/vllm/`) or directly to the private registry when `image_registry_name` is configured.
+
+**`env apply`:**
+
+2. Installs OpenShift AI (KServe) and the NFD + NVIDIA GPU operators when `openshift_ai.install` and `gpu.install` are `auto`.
+3. Creates a namespace and two PVCs (one per model) using the file storage class.
+4. In **connected mode**: runs a Kubernetes Job to download weights from Hugging Face directly into the PVCs.
+5. In **air-gapped mode**: copies weights from the local status directory into the PVCs file by file with `oc cp` (files already on the PVC with the same size are skipped, so an interrupted copy resumes; progress is written to `<status_dir>/log/ibm-bob/models-copy-<core|guardrail>.log`), then writes a PVC-side marker. If the local weights are missing (step 1 was not run), fails with instructions to run `env download` first.
+6. Creates a vLLM `ServingRuntime` and `InferenceService` per model with the recommended arguments (plus any `vllm_extra_args`).
+7. Waits for each `InferenceService` to have a resolvable URL, and for Ready status (unless `skip_gpu_check` is `true`).
+8. Renders the Bob model gateway config (slots `premium-ide`, `security`, `background` and a static router) and passes it to `bobctl install --model-config`.
+
+#### Vault token for Hugging Face
+
+Set the token before running the deployer:
+
+``` { .bash .copy }
+./cp-deploy.sh vault set -vs=ibm-bob-huggingface-token=<your-hf-token>
+```
+
+Then reference it in the config:
+
+``` { .yaml .copy }
+  openshift_ai_models:
+    core_model: nemotron-3-ultra
+    huggingface_token_secret_name: ibm-bob-huggingface-token
+```
+
+#### Air-gapped installation
+
+The deployer follows the same two-phase pattern used for container images.
+
+**Connected side — run `env download`:**
+
+``` { .bash .copy }
+# Standard two-phase (status dir is packaged and carried to the air-gapped site)
+CPD_AIRGAP=false ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+
+# Direct air-gap (skip portable packaging, download and apply on same network path)
+CPD_AIRGAP=false CPD_SKIP_PORTABLE_REGISTRY=true \
+  ./cp-deploy.sh env download -c <config-dir> -l <status-dir>
+```
+
+This downloads model weights (and Bob container images if `image_registry_name` is set) into `<status-dir>/downloads/ibm-bob/<version>/models/`. For gated models, set `huggingface_token_secret_name` first:
+
+``` { .bash .copy }
+./cp-deploy.sh vault set -vs=ibm-bob-huggingface-token=<your-hf-token>
+```
+
+**Air-gapped side — carry the status dir and run `env apply`:**
+
+For the standard two-phase flow, the status directory (which includes the downloaded weights) is packaged by `env download` and transferred to the air-gapped site. Then:
+
+``` { .bash .copy }
+CPD_AIRGAP=true ./cp-deploy.sh env apply -c <config-dir> -l <status-dir>
+```
+
+The deployer copies the weights from the status directory into the cluster PVCs automatically. If the weights are not present (step 1 was skipped or the status dir was not carried over), the deployer fails with instructions.
+
+#### Testing without GPUs (skip_gpu_check)
+
+To verify the deployer flow on a cluster without GPU nodes:
+
+``` { .yaml .copy }
+  openshift_ai_models:
+    core_model: nemotron-3-ultra
+    skip_gpu_check: true
+```
+
+The deployer runs the full flow: OpenShift AI check, PVC creation, weight download (connected) or status-dir upload (air-gapped), `ServingRuntime` and `InferenceService` creation, gateway generation, and Bob installation. The model pods remain `Pending` as expected; this does not affect Bob itself. The same behavior applies in dry-run mode.
+
+#### Removal
+
+When `state: removed` and `openshift_ai_models` is set, the deployer deletes the `InferenceService` and `ServingRuntime` objects. **PVCs are kept** — the downloaded weights are expensive to re-download. Delete them manually when no longer needed:
+
+``` { .bash .copy }
+oc delete pvc ibm-bob-core-model ibm-bob-guardrail-model -n ibm-bob-models
+```
+

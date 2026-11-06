@@ -1,0 +1,31 @@
+# Integration test configuration, part 1: environment and OpenShift cluster.
+# Shared by all test harnesses. Copied by run_integration_tests.sh to
+# tests/test-run/config/it-ocp.yaml on every run (alongside the product config).
+# No cluster-specific values are needed here: the cluster is reached with the
+# oc-login secret in the vault (CPD_OC_LOGIN env var or ./cp-deploy.sh vault set).
+global_config:
+  # Fixed env_id — cluster name is not needed for oc-login authentication.
+  env_id: it-bob
+  # Vault group shared by all harnesses: tests/test-run/status/vault/integration-tests
+  environment_name: integration-tests
+  cloud_platform: existing-ocp
+
+vault:
+  vault_type: file-vault
+
+openshift:
+- name: "{{ env_id }}"              # resolved from global_config.env_id
+  ocp_version: detect
+  cluster_name: "{{ env_id }}"
+  # domain_name is left out: only validated for kubeconfig auth, not for oc-login.
+  gpu:
+    install: auto                   # install NFD + NVIDIA GPU operator when required by a product
+  openshift_ai:
+    install: auto                   # install OpenShift AI (KServe) when required by a product
+
+  openshift_storage:
+  - storage_name: auto-storage      # referenced by openshift_storage_name in the product configs
+    storage_type: auto              # picks the cluster default storage classes.
+    # For a cluster without default storage classes, name them here:
+    # ocp_storage_class_file: <file storage class>
+    # ocp_storage_class_block: <block storage class>

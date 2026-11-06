@@ -1,0 +1,281 @@
+---
+# Integration test: live assertions against the cluster, called by run_integration_tests.sh.
+#
+#   -e it_assert_phase=install   cert-manager certificate for IBM Bob routes
+#   -e it_assert_phase=airgap    all containers in the Bob and operators namespaces use the private registry
+#   -e it_assert_phase=remove    namespaces and PVCs are gone
+#
+# The configuration is the tests/test-run/config copy made by run_integration_tests.sh.
+- name: Assert the state of IBM Bob on a live OpenShift cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+  tasks:
+    - name: Check the assertion phase
+      assert:
+        that: it_assert_phase | default('') in ['install', 'airgap', 'remove']
+        fail_msg: "Specify -e it_assert_phase=install, -e it_assert_phase=airgap or -e it_assert_phase=remove"
+        quiet: true
+
+    - name: Initialize the deployer configuration and vault
+      include_tasks: "{{ playbook_dir }}/../../lib/it-init.yml"
+
+    - name: Login to the OpenShift cluster
+      include_role:
+        name: openshift-login
+      vars:
+        _p_openshift_cluster_name: "{{ all_config.ibm_bob[0].openshift_cluster_name }}"
+
+    - name: Set the IBM Bob projects
+      set_fact:
+        _it_bob: "{{ all_config.ibm_bob[0] }}"
+        _it_bob_project: "{{ all_config.ibm_bob[0].project }}"
+        _it_bob_operators_project: "{{ all_config.ibm_bob[0].operators_project | default(all_config.ibm_bob[0].project + '-operators') }}"
+        _it_bob_models_project: >-
+          {{ (all_config.ibm_bob[0].openshift_ai_models | default({})).project
+             | default(all_config.ibm_bob[0].project + '-models') }}
+
+    # ---- Certificate mode ------------------------------------------------------
+    # Branch on whether ingress_cert is configured in the deployer config:
+    #   - ingress_cert set (acme_email or cluster_issuer): assert Certificate Ready,
+    #     Bob CR uses bob-cluster-ingress-tls, access report confirms cert provisioned.
+    #   - ingress_cert not set (default self-signed): assert Bob CR uses bob-external-tls
+    #     and the access report says self-signed.
+    - name: Assert the certificate configuration of IBM Bob
+      when: it_assert_phase == 'install'
+      block:
+        - name: Determine certificate mode from deployer config
+          set_fact:
+            _it_ingress_cert_configured: "{{ (_it_bob.ingress_cert | default({})) != {} }}"
+
+        # ---- ingress_cert configured: cert-manager issued cert ----------------
+        - name: Assert cert-manager certificate was issued and registered
+          when: _it_ingress_cert_configured
+          block:
+            - name: Get Certificate bob-cluster-ingress-tls
+              kubernetes.core.k8s_info:
+                api_version: cert-manager.io/v1
+                kind: Certificate
+                name: bob-cluster-ingress-tls
+                namespace: "{{ _it_bob_project }}"
+              register: _it_cert_cr
+
+            - name: Assert Certificate exists and is Ready
+              assert:
+                that:
+                  - _it_cert_cr.resources | length == 1
+                  - (_it_cert_cr.resources[0].status.conditions
+                     | selectattr('type', 'equalto', 'Ready')
+                     | map(attribute='status') | first | default('False')) == 'True'
+                fail_msg: "Certificate bob-cluster-ingress-tls in {{ _it_bob_project }} is missing or not Ready."
+                quiet: true
+
+            - name: Get the Bob custom resource bob-cr
+              kubernetes.core.k8s_info:
+                api_version: bob.ibm.com/v1beta1
+                kind: Bob
+                name: bob-cr
+                namespace: "{{ _it_bob_project }}"
+              register: _it_bob_cr
+
+            - name: Assert that the Bob CR uses bob-cluster-ingress-tls
+              assert:
+                that:
+                  - _it_bob_cr.resources | length == 1
+                  - _it_bob_cr.resources[0].spec.externalCertificate.secretName | default('') == 'bob-cluster-ingress-tls'
+                fail_msg: >-
+                  spec.externalCertificate.secretName of bob-cr in {{ _it_bob_project }} is not bob-cluster-ingress-tls.
+                quiet: true
+
+            - name: Read the access report
+              slurp:
+                src: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+              register: _it_info_file
+
+            - name: Assert that the access report mentions the provisioned certificate
+              assert:
+                that: "'A TLS certificate was issued by cert-manager' in (_it_info_file.content | b64decode)"
+                fail_msg: "The access report does not mention the cert-manager issued certificate."
+                quiet: true
+
+        # ---- ingress_cert not configured: self-signed -------------------------
+        - name: Assert Bob uses default self-signed certificate
+          when: not _it_ingress_cert_configured
+          block:
+            - name: Get the Bob custom resource bob-cr
+              kubernetes.core.k8s_info:
+                api_version: bob.ibm.com/v1beta1
+                kind: Bob
+                name: bob-cr
+                namespace: "{{ _it_bob_project }}"
+              register: _it_bob_cr
+
+            - name: Assert Bob CR uses the default self-signed secret
+              assert:
+                that:
+                  - _it_bob_cr.resources | length == 1
+                  - _it_bob_cr.resources[0].spec.externalCertificate.secretName | default('') != 'bob-cluster-ingress-tls'
+                fail_msg: >-
+                  ingress_cert is not configured but Bob CR is using bob-cluster-ingress-tls.
+                  Expected the default self-signed certificate (bob-external-tls).
+                quiet: true
+
+            - name: Read the access report
+              slurp:
+                src: "{{ status_dir }}/cloud-paks/cloud-pak-deployer-info.txt"
+              register: _it_info_file
+
+            - name: Assert that the access report shows self-signed certificate in use
+              assert:
+                that: "'default self-signed certificate is in use' in (_it_info_file.content | b64decode)"
+                fail_msg: "The access report does not show 'default self-signed certificate is in use'."
+                quiet: true
+
+    # ---- Private registry (air-gapped) -----------------------------------------
+    # Every container and init container of every pod in the Bob and operators namespaces
+    # must pull its image from the private registry of the ibm_bob entry
+    # (image_registry_name -> image_registry.registry_url). The pod spec is checked, not the
+    # container status, so pods that have not started yet are covered as well.
+    # The models namespace pods belong to OpenShift AI / KServe and are not checked, except for
+    # the vLLM image that the deployer sets explicitly on the two ServingRuntimes.
+    - name: Assert that the containers use the private registry
+      when: it_assert_phase == 'airgap'
+      block:
+        - name: Resolve the private registry of the IBM Bob entry
+          set_fact:
+            _it_registry_entry: >-
+              {{ all_config.image_registry | default([])
+                 | selectattr('name', 'equalto', _it_bob.image_registry_name | default(''))
+                 | first | default({}) }}
+
+        - name: Assert that the private registry is defined
+          assert:
+            that: (_it_registry_entry.registry_url | default('')) != ''
+            fail_msg: >-
+              No image_registry entry '{{ _it_bob.image_registry_name | default('') }}' with a registry_url
+              was found; the airgap assertions need ibm_bob.image_registry_name.
+            quiet: true
+
+        - name: Set the private registry prefix
+          set_fact:
+            _it_registry_prefix: "{{ _it_registry_entry.registry_url | regex_replace('^https?://', '') | regex_replace('/+$', '') }}"
+
+        - name: Get the pods in the IBM Bob and operators namespaces
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: Pod
+            namespace: "{{ item }}"
+          register: _it_pods
+          loop:
+            - "{{ _it_bob_project }}"
+            - "{{ _it_bob_operators_project }}"
+
+        - name: List the images of all containers and init containers
+          set_fact:
+            _it_image_rows: |
+              {% set ns = namespace(rows=[]) %}
+              {% for r in _it_pods.results %}
+              {% for p in r.resources %}
+              {% for c in (p.spec.initContainers | default([])) + p.spec.containers %}
+              {% set ns.rows = ns.rows + [{'namespace': p.metadata.namespace, 'pod': p.metadata.name, 'container': c.name, 'image': c.image}] %}
+              {% endfor %}
+              {% endfor %}
+              {% endfor %}
+              {{ ns.rows | to_json }}
+
+        - name: Parse the image list
+          set_fact:
+            _it_images: "{{ _it_image_rows | from_json }}"
+
+        - name: Find the images that do not come from the private registry
+          set_fact:
+            _it_foreign_images: >-
+              {{ _it_images | rejectattr('image', 'match', (_it_registry_prefix | regex_escape) ~ '/') | list }}
+
+        - name: Show the images checked
+          debug:
+            msg: "{{ _it_images | length }} containers checked against {{ _it_registry_prefix }}/"
+
+        - name: Assert that the Bob and operator namespaces have containers
+          assert:
+            that:
+              - _it_images | selectattr('namespace', 'equalto', _it_bob_project) | list | length > 0
+              - _it_images | selectattr('namespace', 'equalto', _it_bob_operators_project) | list | length > 0
+            fail_msg: >-
+              No pods found in {{ _it_bob_project }} or {{ _it_bob_operators_project }}; there is nothing to check.
+            quiet: true
+
+        - name: Assert that all images come from the private registry
+          assert:
+            that: _it_foreign_images | length == 0
+            fail_msg: >-
+              {{ _it_foreign_images | length }} container(s) do not use the private registry
+              {{ _it_registry_prefix }}/ :
+              {% for i in _it_foreign_images %}
+              {{ i.namespace }}/{{ i.pod }} [{{ i.container }}] {{ i.image }};
+              {% endfor %}
+            quiet: true
+
+        # ---- vLLM image of the ServingRuntimes (models namespace) -------------
+        - name: Get the vLLM ServingRuntimes
+          kubernetes.core.k8s_info:
+            api_version: serving.kserve.io/v1alpha1
+            kind: ServingRuntime
+            namespace: "{{ _it_bob_models_project }}"
+          register: _it_serving_runtimes
+          when: (_it_bob.openshift_ai_models | default({})) != {}
+
+        - name: List the vLLM images
+          set_fact:
+            _it_vllm_images: >-
+              {{ _it_serving_runtimes.resources | default([])
+                 | selectattr('metadata.name', 'in', ['ibm-bob-core-vllm', 'ibm-bob-guardrail-vllm'])
+                 | map(attribute='spec.containers') | flatten
+                 | map(attribute='image') | list }}
+          when: (_it_bob.openshift_ai_models | default({})) != {}
+
+        - name: Assert that the vLLM images come from the private registry
+          assert:
+            that:
+              - _it_vllm_images | length == 2
+              - _it_vllm_images | reject('match', (_it_registry_prefix | regex_escape) ~ '/') | list | length == 0
+            fail_msg: >-
+              The ServingRuntimes ibm-bob-core-vllm and ibm-bob-guardrail-vllm in {{ _it_bob_models_project }}
+              must both use an image from {{ _it_registry_prefix }}/. Found: {{ _it_vllm_images }}
+            quiet: true
+          when: (_it_bob.openshift_ai_models | default({})) != {}
+
+    # ---- Removal ---------------------------------------------------------------
+    - name: Assert that IBM Bob was removed
+      when: it_assert_phase == 'remove'
+      block:
+        - name: Get the IBM Bob namespaces
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: Namespace
+            name: "{{ item }}"
+          register: _it_namespaces
+          loop:
+            - "{{ _it_bob_project }}"
+            - "{{ _it_bob_operators_project }}"
+            - "{{ _it_bob_models_project }}"
+
+        - name: Get the PVCs in the models namespace
+          kubernetes.core.k8s_info:
+            api_version: v1
+            kind: PersistentVolumeClaim
+            namespace: "{{ _it_bob_models_project }}"
+          register: _it_model_pvcs
+
+        - name: Assert that the namespaces and the model PVCs are absent
+          assert:
+            that:
+              - _it_namespaces.results | map(attribute='resources') | map('length') | sum == 0
+              - _it_model_pvcs.resources | default([]) | length == 0
+            fail_msg: >-
+              IBM Bob was not fully removed. Namespaces {{ _it_bob_project }}, {{ _it_bob_operators_project }}
+              and {{ _it_bob_models_project }} and the model PVCs must be absent
+              (set remove_model_weights: false to keep the models namespace on purpose).
+            quiet: true

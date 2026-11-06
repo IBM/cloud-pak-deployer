@@ -1,0 +1,260 @@
+# -----------------------------------------------------------------------------
+# IBM Bob Version: 2.0.0
+# -----------------------------------------------------------------------------
+# Instructions for adding a new IBM Bob version:
+# 1. Create a new file vars/versions/<version>.yml (e.g. 2.1.0.yml).
+# 2. Look up the release asset on GitHub:
+#    GET https://api.github.com/repos/IBM/ibm-bob/releases/tags/v<version>
+# 3. Fill in:
+#    - release_tag: e.g. "v2.0.0"
+#    - bundle_filename: from asset name, e.g. "ibm-bob-install-20260924-163534.tgz"
+#    - bundle_url: from asset browser_download_url
+#    - bundle_sha256: from asset digest (or sha256 checksum)
+#    - supported_ocp_versions: list of supported OpenShift minor versions, e.g. ["4.20", "4.21", "4.22"]
+#    - companion_versions: verified companion tool versions (IDE, Shell, Z package)
+#    - premium_packages: dictionary of supported premium package keys
+#    - openshift_ai_models: per-model definition table for the openshift_ai_models feature
+# -----------------------------------------------------------------------------
+
+_ibm_bob_release_tag: "v2.0.0"
+_ibm_bob_bundle_filename: "ibm-bob-install-20260924-163534.tgz"
+_ibm_bob_bundle_url: "https://github.com/IBM/ibm-bob/releases/download/v2.0.0/ibm-bob-install-20260924-163534.tgz"
+_ibm_bob_bundle_sha256: "3b6dc70cd0a236d2e58bb23d19804e3e73e3de9b7b3d77850b35f463f30c3726"
+
+_ibm_bob_supported_ocp_versions:
+  - "4.20"
+  - "4.21"
+  - "4.22"
+
+_ibm_bob_companion_versions:
+  bob_ide: "2.2.0"
+  bob_shell: "2.0.5"
+  premium_package_z: "3.1.0"
+
+_ibm_bob_premium_package_keys:
+  rag: "bob.rag.enabled"
+  z_proxy: "bob.zProxy.enabled"
+  understand: "bob.understand.enabled"
+
+# ---------------------------------------------------------------------------
+# openshift_ai_models — per-model definition table
+#
+# Used by the ibm-bob-openshift-ai-models role to create PVCs, Jobs,
+# ServingRuntimes and InferenceServices on OpenShift AI (KServe/vLLM).
+# What Bob supports and requires is documented only in the official Bob
+# documentation; this table lists what the deployer supports.
+#
+# All models are served with the same vLLM image, _ibm_bob_vllm_runtime_image.
+# It can be overridden per inference service with openshift_ai_models.runtime_image.
+#
+# Fields per model entry:
+#   id:                    short identifier used in the ibm_bob config (core_model value)
+#   provider:              Bob model_info.provider
+#   family:                Bob model_info.family
+#   version:               Bob model_info.version
+#   omit_model_info_triple: when true, provider/family/version are left out of the generated
+#                          model_info (optional; for models the Bob release does not know yet)
+#   model_id:              canonical model ID used by Bob (e.g. "nvidia/nemotron-3-ultra-550b")
+#   max_input_tokens:      Bob model_info.max_input_tokens
+#   max_output_tokens:     Bob model_info.max_output_tokens
+#   supports_vision:       Bob model_info.supports_vision
+#   default_quantization:  quantization used when openshift_ai_models.quantization is omitted
+#   default_gpus:          default tensor-parallel size (gpus_per_core_model default).
+#                          --tensor-parallel-size is generated from the GPU count and is
+#                          therefore not part of vllm_args.
+#   vllm_args:             vLLM arguments common to all quantizations (Bob's recommended
+#                          values; Nemotron 3.5 Super: Hugging Face model card)
+#   quantizations:         map keyed by quantization; each entry has:
+#     hf_repo:             Hugging Face repository (weights)
+#     default_storage:     default PVC size (weights + draft model + headroom)
+#     vllm_args:           additional vLLM arguments for this quantization (optional)
+#     env:                 list of {name, value} container environment variables (optional)
+#     draft_hf_repo:       Hugging Face repo of the speculative-decoding draft model ('' = none)
+#     draft_model_dir:     sub-directory under /mnt/models for the draft model ('' = none)
+#
+# Keep the models and quantizations in sync with CORE_MODELS in
+# automation-generators/generic/ibm_bob/preprocessor.py.
+# The guardrail model is defined separately in _ibm_bob_guardrail_model_defaults.
+# ---------------------------------------------------------------------------
+
+# Upstream vLLM image used by the ServingRuntimes of the core and guardrail models.
+# The Red Hat OpenShift AI vLLM images are not used: the newest Red Hat build
+# (RHAIIS 3.3) ships vLLM 0.13, but the supported models need vLLM >= 0.25
+# (Laguna S 2.1 with dFlash) and 0.32 (Nemotron 3.5 Super).
+_ibm_bob_vllm_runtime_image: "vllm/vllm-openai:v0.32.0"
+
+# Image of the temporary loader pods that copy model weights into the PVCs in air-gapped
+# mode (oc cp). In air-gapped mode it is mirrored to the private registry together with
+# the vLLM image and the pods pull it from there.
+_ibm_bob_loader_image: "registry.access.redhat.com/ubi9/ubi:latest"
+
+_ibm_bob_ai_models:
+  - id: nemotron-3-ultra
+    provider: nvidia
+    family: nemotron
+    version: "3-ultra"
+    model_id: "nvidia/nemotron-3-ultra-550b"
+    max_input_tokens: 262144
+    max_output_tokens: 20000
+    supports_vision: false
+    default_quantization: fp8
+    default_gpus: 8
+    # Nemotron uses built-in MTP speculative decoding — no separate draft model
+    vllm_args:
+      - "--enable-expert-parallel"
+      - "--max-model-len=262144"
+      - "--max-num-seqs=32"
+      - "--max-num-batched-tokens=32768"
+      - "--gpu-memory-utilization=0.90"
+      - "--enable-chunked-prefill"
+      - "--enable-prefix-caching"
+      - "--mamba-cache-mode=align"
+      - "--mamba-ssm-cache-dtype=float16"
+      - "--mamba-backend=flashinfer"
+      - "--enable-mamba-cache-stochastic-rounding"
+      - "--mamba-cache-philox-rounds=5"
+      - "--speculative-config={\"method\": \"nemotron_h_mtp\", \"num_speculative_tokens\": 5}"
+      - "--model-loader-extra-config={\"enable_multithread_load\": true, \"num_threads\": 64}"
+      - "--reasoning-parser=nemotron_v3"
+      - "--tool-call-parser=qwen3_coder"
+      - "--enable-auto-tool-choice"
+      - "--enable-prompt-tokens-details"
+      - "--trust-remote-code"
+    quantizations:
+      fp8:
+        hf_repo: "RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-FP8-dynamic"
+        default_storage: "700Gi"
+        draft_hf_repo: ""
+        draft_model_dir: ""
+      nvfp4:
+        hf_repo: "RedHatAI/NVIDIA-Nemotron-3-Ultra-550B-A55B-NVFP4"
+        default_storage: "400Gi"
+        draft_hf_repo: ""
+        draft_model_dir: ""
+
+  - id: nemotron-3.5-super
+    provider: nvidia
+    family: nemotron
+    version: "3.5-super"
+    # Bob 2.0.0's built-in alias table does not know nvidia/nemotron/3.5-super (support was
+    # added after 2.0.0), so bob-inference panics at startup when the triple is present.
+    # The triple is omitted from the generated gateway config; remove this flag once the
+    # Bob release in use knows the triple.
+    omit_model_info_triple: true
+    model_id: "nvidia/nemotron-3.5-super-120b"
+    max_input_tokens: 270000
+    max_output_tokens: 20000
+    supports_vision: true
+    default_quantization: nvfp4
+    default_gpus: 2
+    # Not documented on the Bob vLLM page: arguments from the Hugging Face model
+    # card (2x H100 / 1x H200 recipe). MTP is built in — no separate draft model.
+    vllm_args:
+      - "--max-num-seqs=128"
+      - "--trust-remote-code"
+      - "--gpu-memory-utilization=0.89"
+      - "--max-num-batched-tokens=16384"
+      - "--block-size=64"
+      - "--prefix-match-unit=64"
+      - "--compilation_config.max_cudagraph_capture_size=256"
+      - "--mamba-backend=flashinfer"
+      - "--mamba-ssm-cache-dtype=float16"
+      - "--enable-mamba-cache-stochastic-rounding"
+      - "--mamba-cache-philox-rounds=5"
+      - "--enable-mamba-shared-prefix-checkpoint"
+      - "--mamba-cache-mode=align"
+      - "--speculative-config.method=mtp"
+      - "--speculative-config.num_speculative_tokens=3"
+      - "--video-pruning-rate=0.5"
+      - "--media-io-kwargs={\"video\": {\"fps\": 2, \"num_frames\": 256}}"
+      - "--enable-auto-tool-choice"
+      - "--tool-call-parser=qwen3_coder"
+      - "--reasoning-parser=nemotron_v3"
+    quantizations:
+      nvfp4:
+        hf_repo: "nvidia/NVIDIA-Nemotron-3.5-Super-VL-120B-A12B-NVFP4"
+        default_storage: "100Gi"
+        draft_hf_repo: ""
+        draft_model_dir: ""
+
+  - id: laguna-s-2.1
+    provider: poolside
+    family: laguna
+    version: "s2.1"
+    model_id: "poolside/laguna-s-2.1"
+    max_input_tokens: 270000
+    max_output_tokens: 20000
+    supports_vision: false
+    default_quantization: fp8
+    default_gpus: 8
+    vllm_args:
+      - "--trust-remote-code"
+      - "--tool-call-parser=poolside_v1"
+      - "--enable-auto-tool-choice"
+      - "--reasoning-parser=poolside_v1"
+      - "--enable-prompt-tokens-details"
+      - "--max-num-batched-tokens=16384"
+      - "--enable-prefix-caching"
+      - "--default-chat-template-kwargs={\"preserve_thinking\": true, \"enable_thinking\": true}"
+      - "--moe-backend=triton"
+    # The dFlash draft model is stored in a sub-directory of the model PVC
+    quantizations:
+      fp8:
+        hf_repo: "poolside/Laguna-S-2.1-FP8"
+        default_storage: "150Gi"
+        vllm_args:
+          - "--speculative-config={\"num_speculative_tokens\": 7, \"method\": \"dflash\", \"model\": \"/mnt/models/dflash-fp8\"}"
+        env:
+          - name: VLLM_BLOCKSCALE_FP8_GEMM_FLASHINFER
+            value: "0"
+        draft_hf_repo: "poolside/Laguna-S-2.1-DFlash-FP8"
+        draft_model_dir: "dflash-fp8"
+      nvfp4:
+        hf_repo: "poolside/Laguna-S-2.1-NVFP4"
+        default_storage: "120Gi"
+        vllm_args:
+          - "--speculative-config={\"num_speculative_tokens\": 7, \"method\": \"dflash\", \"model\": \"/mnt/models/dflash-nvfp4\"}"
+        draft_hf_repo: "poolside/Laguna-S-2.1-DFlash-NVFP4"
+        draft_model_dir: "dflash-nvfp4"
+
+  - id: mistral-medium-3.5
+    provider: mistral
+    family: medium
+    version: "3.5"
+    model_id: "mistralai/mistral-medium-3-5-0"
+    max_input_tokens: 262144
+    max_output_tokens: 20000
+    supports_vision: false
+    default_quantization: fp8
+    default_gpus: 8
+    vllm_args:
+      - "--tool-call-parser=mistral"
+      - "--enable-auto-tool-choice"
+      - "--reasoning-parser=mistral"
+      - "--max-num-batched-tokens=32768"
+      - "--max-num-seqs=32"
+      - "--kv-cache-dtype=fp8"
+      - "--max-model-len=234800"
+      - "--gpu-memory-utilization=0.92"
+    quantizations:
+      fp8:
+        hf_repo: "mistralai/Mistral-Medium-3.5-128B"
+        default_storage: "300Gi"
+        vllm_args:
+          - "--speculative-config={\"model\": \"/mnt/models/eagle\", \"num_speculative_tokens\": 3, \"method\": \"eagle\"}"
+        draft_hf_repo: "mistralai/Mistral-Medium-3.5-128B-EAGLE"
+        draft_model_dir: "eagle"
+
+# ---------------------------------------------------------------------------
+# Guardrail model defaults (openai/gpt-oss-20b)
+# ---------------------------------------------------------------------------
+_ibm_bob_guardrail_model_defaults:
+  model_id: "openai/gpt-oss-20b"
+  provider: openai
+  family: gpt-oss
+  version: "20b"
+  default_gpus: 1
+  default_storage: "60Gi"
+  vllm_args:
+    - "--tensor-parallel-size=1"
+    - "--max-model-len=32768"

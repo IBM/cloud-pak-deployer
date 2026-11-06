@@ -1,0 +1,256 @@
+---
+# =============================================================================
+# install-bob.yml
+# Runs the three-step install (connected or air-gapped):
+#   1. bobctl generate-cluster-resources  → work/cluster-resources.yaml
+#   2. oc apply --force-conflicts --server-side
+#   3. bobctl install [--registry-creds cp:<key>] --accept-license [--model-config …]
+#
+#      In air-gapped mode (cpd_airgap=true), the pull secret was pre-created by
+#      airgap-apply.yml; --registry-creds is NOT passed to bobctl install because
+#      the Helm chart only creates the pull secret when registryUsername/Password
+#      are set (which we don't want — it would overwrite our pre-created secret).
+#
+# Docs: https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/install
+#
+# Prerequisites (all set before this file is included):
+#   _ibm_bob_bobctl_path          absolute path to the bobctl script
+#   _ibm_bob_bobctl_env           env dict (BOB_CONFIG_FILE, BOB_WORK_DIR, BOB_LOG_DIR, PATH)
+#   _ibm_bob_version              resolved version string, e.g. "2.0.0"
+#   current_ibm_bob_cluster       full ibm_bob config object
+#   ocp_storage_class_file/block  resolved from get-openshift-storage
+#   status_dir, environment_name  standard deployer vars
+# =============================================================================
+
+# ---- Entitlement key and pull secret (connected mode) -----------------------
+- name: Read IBM CP entitlement key from vault (connected mode)
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "ibm_cp_entitlement_key"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ibm_bob_entitlement_key
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Fail if entitlement key is not set in vault (connected mode)
+  fail:
+    msg: >-
+      The vault secret 'ibm_cp_entitlement_key' in group '{{ environment_name }}' is empty.
+      Set it with: ./cp-deploy.sh vault set -vs=ibm_cp_entitlement_key=<your-key>
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (_ibm_bob_entitlement_key | default('')) == ''
+
+- name: Ensure operator namespace exists for pull secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Ensure instance namespace exists for pull secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ current_ibm_bob_cluster.project }}"
+  when: not (cpd_airgap | default(false) | bool)
+
+- name: Create ibm-entitlement-key pull secret in operator namespace (connected)
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: kubernetes.io/dockerconfigjson
+      metadata:
+        name: ibm-entitlement-key
+        namespace: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+      data:
+        .dockerconfigjson: >-
+          {{ ({
+            'auths': {
+              'cp.icr.io': {
+                'username': 'cp',
+                'password': _ibm_bob_entitlement_key,
+                'auth': ('cp:' + _ibm_bob_entitlement_key) | b64encode
+              }
+            }
+          }) | to_json | b64encode }}
+  no_log: true
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (_ibm_bob_entitlement_key | default('')) != ''
+
+- name: Create ibm-entitlement-key pull secret in instance namespace (connected)
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: kubernetes.io/dockerconfigjson
+      metadata:
+        name: ibm-entitlement-key
+        namespace: "{{ current_ibm_bob_cluster.project }}"
+      data:
+        .dockerconfigjson: >-
+          {{ ({
+            'auths': {
+              'cp.icr.io': {
+                'username': 'cp',
+                'password': _ibm_bob_entitlement_key,
+                'auth': ('cp:' + _ibm_bob_entitlement_key) | b64encode
+              }
+            }
+          }) | to_json | b64encode }}
+  no_log: true
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (_ibm_bob_entitlement_key | default('')) != ''
+
+# ---- Model gateway (optional) -----------------------------------------------
+# Resolved now so that config.yaml can be updated before bobctl runs.
+# The effective gateway is either:
+#   (a) a deployer-generated config from openshift_ai_models (preferred), or
+#   (b) the hand-written model_gateway block, or
+#   (c) absent — Bob installs with an empty gateway.
+- name: Set model gateway as absent by default
+  set_fact:
+    _ibm_bob_model_config_file: ""
+    _ibm_bob_model_gateway_source: "none"
+
+# (a) Generated gateway from openshift_ai_models
+- name: Render generated model-gateway.yaml from openshift_ai_models
+  template:
+    src: model-gateway-generated.j2
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    mode: '0600'
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
+- name: Set model gateway file path fact (generated from openshift_ai_models)
+  set_fact:
+    _ibm_bob_model_config_file: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    _ibm_bob_model_gateway_source: "generated"
+  when: current_ibm_bob_cluster.openshift_ai_models is defined
+
+# (b) Hand-written model_gateway
+- name: Write model-gateway.yaml for IBM Bob instance {{ current_ibm_bob_cluster.project }}
+  copy:
+    content: "{{ current_ibm_bob_cluster.model_gateway | to_nice_yaml }}"
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    mode: '0600'
+  when: current_ibm_bob_cluster.model_gateway is defined
+  register: _model_gateway_file_result
+
+- name: Set model gateway file path fact (hand-written model_gateway)
+  set_fact:
+    _ibm_bob_model_config_file: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    _ibm_bob_model_gateway_source: "hand-written"
+  when: current_ibm_bob_cluster.model_gateway is defined
+
+# (c) No gateway
+- name: Log that Bob is installed without a model gateway
+  debug:
+    msg: "No model_gateway or openshift_ai_models defined. Bob will be installed without a model gateway. Configure it later with bobctl update-model-config."
+  when:
+    - current_ibm_bob_cluster.model_gateway is not defined
+    - current_ibm_bob_cluster.openshift_ai_models is not defined
+
+- name: Log which model gateway source is being used
+  debug:
+    msg: "Model gateway source: {{ _ibm_bob_model_gateway_source }}{{ (' — file: ' + _ibm_bob_model_config_file) if _ibm_bob_model_config_file else '' }}"
+  when: _ibm_bob_model_gateway_source != 'none'
+
+# Resolve model gateway vault secrets, then re-render config.yaml so that
+# bob.modelGateway.secrets is included (config.yaml is mode 0600 and removed after install).
+- name: Resolve model gateway vault secrets and re-render config.yaml
+  block:
+    - name: Initialize model gateway secrets
+      set_fact:
+        _ibm_bob_model_gateway_secrets: {}
+
+    - name: Resolve each model gateway secret from the vault
+      include_tasks: resolve-model-gateway-secret.yml
+      loop: "{{ current_ibm_bob_cluster.model_gateway_secret_names | dict2items }}"
+      loop_control:
+        loop_var: _mg_secret
+        label: "{{ _mg_secret.key }}"
+
+    - name: Re-render config.yaml including model gateway secrets
+      template:
+        src: config.yaml.j2
+        dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
+        mode: '0600'
+      no_log: true
+  when:
+    - current_ibm_bob_cluster.model_gateway is defined
+    - (current_ibm_bob_cluster.model_gateway_secret_names | default({})) | length > 0
+
+# ---- Step 1: generate cluster-scoped resources ------------------------------
+- name: "Generate cluster-scoped resources for IBM Bob {{ _ibm_bob_version }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Generate IBM Bob cluster-scoped resources"
+    _p_command: "{{ _ibm_bob_bobctl_path }} generate-cluster-resources"
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-generate-cluster-resources.log"
+
+- name: "Display path to generated cluster-resources.yaml"
+  debug:
+    msg: >-
+      Cluster-scoped resources written to
+      {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/cluster-resources.yaml
+
+# ---- Step 2: apply cluster-scoped resources ---------------------------------
+- name: "Apply IBM Bob cluster-scoped resources (server-side, force-conflicts)"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Apply IBM Bob cluster-scoped resources"
+    _p_command: >-
+      oc apply -f {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/cluster-resources.yaml
+      --force-conflicts --server-side
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-apply-cluster-resources.log"
+
+# ---- Step 3: bobctl install -------------------------------------------------
+# In both connected and air-gapped modes, the pull secret ibm-entitlement-key is
+# pre-created by the deployer. --registry-creds is omitted so that the Helm chart
+# does not create/manage container-registry-secrets, allowing smooth, idempotent
+# updates and upgrades across revisions without ownership conflicts.
+- name: "Run bobctl install for IBM Bob {{ current_ibm_bob_cluster.project }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Install IBM Bob {{ _ibm_bob_version }} in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      {{ _ibm_bob_bobctl_path }} install --accept-license
+      {{ ('--model-config ' + _ibm_bob_model_config_file) if _ibm_bob_model_config_file else '' }}
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-install.log"
+
+- name: Clear entitlement key from facts
+  set_fact:
+    _ibm_bob_entitlement_key: ""
+  no_log: true
+
+# ---- Clean up transient secrets from config.yaml ----------------------------
+- name: Remove model-gateway.yaml after install
+  file:
+    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/model-gateway.yaml"
+    state: absent
+  when: >-
+    (current_ibm_bob_cluster.model_gateway is defined) or
+    (current_ibm_bob_cluster.openshift_ai_models is defined)
+
+- name: Remove config.yaml (contains secrets) after install
+  file:
+    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
+    state: absent
+  when: (current_ibm_bob_cluster.model_gateway_secret_names | default({})) | length > 0

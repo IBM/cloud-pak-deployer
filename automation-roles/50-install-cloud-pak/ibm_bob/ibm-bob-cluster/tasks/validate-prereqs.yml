@@ -1,0 +1,101 @@
+---
+# =============================================================================
+# Validation and prerequisite checks for IBM Bob
+# =============================================================================
+
+- name: Retrieve current OpenShift version
+  include_role:
+    name: openshift-get-version
+
+- name: Validate OpenShift version is supported for IBM Bob {{ _ibm_bob_version }}
+  fail:
+    msg: "OpenShift version {{ _p_current_ocp_version }} is not supported for IBM Bob {{ _ibm_bob_version }}. Supported versions: {{ _ibm_bob_supported_ocp_versions | join(', ') }}"
+  when: _p_current_ocp_version not in _ibm_bob_supported_ocp_versions
+
+- name: Retrieve OpenShift worker nodes with amd64 architecture
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Node
+    label_selectors:
+      - "node-role.kubernetes.io/worker"
+      - "kubernetes.io/arch=amd64"
+  register: _amd64_worker_nodes
+
+- name: Fail if no amd64 worker nodes found
+  fail:
+    msg: "IBM Bob requires worker nodes with amd64 (x86_64) architecture. No amd64 worker nodes found in OpenShift cluster."
+  when: (_amd64_worker_nodes.resources | default([])) | length == 0
+
+- name: Resolve and validate storage classes for OpenShift cluster
+  include_role:
+    name: get-openshift-storage
+  vars:
+    _p_openshift_cluster_name: "{{ current_ibm_bob_cluster.openshift_cluster_name }}"
+    _p_openshift_storage_name: "{{ current_ibm_bob_cluster.openshift_storage_name | default('') }}"
+
+- name: Ensure Certificate Manager is available
+  include_role:
+    name: cp-cert-manager
+  vars:
+    _p_openshift_cluster_name: "{{ current_ibm_bob_cluster.openshift_cluster_name }}"
+    _p_cert_manager_object_name: "ibm_bob"
+    _p_reuse_existing_cert_manager: "{{ current_ibm_bob_cluster.reuse_existing_cert_manager | default(false) | bool }}"
+
+# These checks require cert-manager to already be installed (running controller + CRDs).
+# In dry-run mode the cert-manager install tasks are skipped by run-command, so skip here too.
+- name: Verify cert-manager is ready (skipped in dry-run)
+  when: not (cpd_dry_run | default(false) | bool)
+  block:
+    - name: Verify cert-manager CRDs are present
+      kubernetes.core.k8s_info:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: certificates.cert-manager.io
+      register: _cert_manager_crd
+
+    - name: Fail if cert-manager CRD is missing
+      fail:
+        msg: "Certificate Manager CRD 'certificates.cert-manager.io' is not present on the cluster."
+      when: (_cert_manager_crd.resources | default([])) | length == 0
+
+    - name: Wait for cert-manager controller pod to be running
+      kubernetes.core.k8s_info:
+        api_version: v1
+        kind: Pod
+        label_selectors:
+          - "app.kubernetes.io/name=cert-manager"
+          - "app.kubernetes.io/component=controller"
+      register: _cert_manager_pods
+      until: >-
+        (_cert_manager_pods.resources | default([])
+         | selectattr('status.phase', 'equalto', 'Running') | list | length) > 0
+      retries: "{{ 3 if (_cert_manager_reused | default(false)) else 30 }}"
+      delay: 10
+      failed_when: false
+
+    - name: Fail if no cert-manager controller is running
+      fail:
+        msg: >-
+          The cert-manager custom resource definitions exist, but no running cert-manager controller pod was found
+          (labels app.kubernetes.io/name=cert-manager, app.kubernetes.io/component=controller).
+          {{ 'The CRDs may be left over from a removed cert-manager. Install a working cert-manager, or set reuse_existing_cert_manager to false so that the deployer installs the Red Hat cert-manager.' if (_cert_manager_reused | default(false)) else '' }}
+      when: >-
+        (_cert_manager_pods.resources | default([])
+         | selectattr('status.phase', 'equalto', 'Running') | list | length) == 0
+
+    - name: Determine cert-manager version from the controller pod
+      set_fact:
+        _cert_manager_version: >-
+          {{ (_cert_manager_pods.resources | selectattr('status.phase', 'equalto', 'Running') | first)
+             .metadata.labels['app.kubernetes.io/version'] | default('') | regex_replace('^v', '') }}
+
+    - name: Fail if cert-manager version is older than 1.14
+      fail:
+        msg: "IBM Bob requires cert-manager 1.14 or later, found version {{ _cert_manager_version }}."
+      when:
+        - _cert_manager_version != ''
+        - _cert_manager_version is version('1.14', '<')
+
+    - name: Show cert-manager status
+      debug:
+        msg: "cert-manager version: {{ _cert_manager_version | default('unknown') | default('unknown', true) }}, reused existing installation: {{ _cert_manager_reused | default(false) }}"

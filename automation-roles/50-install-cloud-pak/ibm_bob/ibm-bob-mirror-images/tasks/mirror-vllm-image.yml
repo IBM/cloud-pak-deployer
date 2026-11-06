@@ -1,0 +1,61 @@
+---
+# =============================================================================
+# mirror-vllm-image.yml
+#
+# Mirrors the vLLM runtime image (default vllm/vllm-openai:v0.32.0 or
+# custom runtime_image overrides) and the model loader pod image (ubi9) for
+# air-gapped OpenShift AI model serving.
+#
+# Supported motions:
+#   entitled-to-portable: skopeo copy docker://... dir:...
+#   portable-to-private:  skopeo copy dir:... docker://...
+#   entitled-to-private:  skopeo copy docker://... docker://...
+#
+# Called from ibm-bob-mirror-images/tasks/main.yml when
+# current_ibm_bob_cluster.openshift_ai_models is defined.
+# =============================================================================
+
+- name: Ensure log directory exists for vLLM image mirroring
+  file:
+    path: "{{ status_dir }}/log/ibm-bob"
+    state: directory
+    mode: '0755'
+
+- name: Determine vLLM runtime and model loader images to mirror
+  vars:
+    _core_entry:
+      raw: "{{ _ibm_bob_vllm_core_source_image }}"
+      repo: "{{ _ibm_bob_vllm_core_repo_path }}"
+      dest: "{{ _ibm_bob_image_pull_prefix ~ '/' ~ _ibm_bob_vllm_core_repo_path if _p_mirror_motion == 'entitled-to-portable' else _ibm_bob_registry_full_path ~ '/' ~ _ibm_bob_vllm_core_repo_path }}"
+      src_docker: "{{ _ibm_bob_vllm_core_source_image if ('.' in _ibm_bob_vllm_core_source_image.split('/')[0] or ':' in _ibm_bob_vllm_core_source_image.split('/')[0] or _ibm_bob_vllm_core_source_image.split('/')[0] == 'localhost') else ('docker.io/' ~ _ibm_bob_vllm_core_source_image) }}"
+      is_private: >-
+        {{ (_ibm_bob_vllm_core_source_image.startswith(_ibm_bob_image_pull_prefix) or _ibm_bob_vllm_core_source_image.split('/')[0] == _ibm_bob_image_pull_prefix.split('/')[0]) if _p_mirror_motion == 'entitled-to-portable' else (_ibm_bob_vllm_core_source_image.startswith(_ibm_bob_registry_full_path) or _ibm_bob_vllm_core_source_image.split('/')[0] == _ibm_bob_registry_host) }}
+      local_dir: "{{ status_dir }}/downloads/ibm-bob/{{ _ibm_bob_version }}/images/vllm/{{ _ibm_bob_vllm_core_repo_path | regex_replace('[:/]', '_') }}"
+    _gr_entry:
+      raw: "{{ _ibm_bob_vllm_guardrail_source_image }}"
+      repo: "{{ _ibm_bob_vllm_guardrail_repo_path }}"
+      dest: "{{ _ibm_bob_image_pull_prefix ~ '/' ~ _ibm_bob_vllm_guardrail_repo_path if _p_mirror_motion == 'entitled-to-portable' else _ibm_bob_registry_full_path ~ '/' ~ _ibm_bob_vllm_guardrail_repo_path }}"
+      src_docker: "{{ _ibm_bob_vllm_guardrail_source_image if ('.' in _ibm_bob_vllm_guardrail_source_image.split('/')[0] or ':' in _ibm_bob_vllm_guardrail_source_image.split('/')[0] or _ibm_bob_vllm_guardrail_source_image.split('/')[0] == 'localhost') else ('docker.io/' ~ _ibm_bob_vllm_guardrail_source_image) }}"
+      is_private: >-
+        {{ (_ibm_bob_vllm_guardrail_source_image.startswith(_ibm_bob_image_pull_prefix) or _ibm_bob_vllm_guardrail_source_image.split('/')[0] == _ibm_bob_image_pull_prefix.split('/')[0]) if _p_mirror_motion == 'entitled-to-portable' else (_ibm_bob_vllm_guardrail_source_image.startswith(_ibm_bob_registry_full_path) or _ibm_bob_vllm_guardrail_source_image.split('/')[0] == _ibm_bob_registry_host) }}
+      local_dir: "{{ status_dir }}/downloads/ibm-bob/{{ _ibm_bob_version }}/images/vllm/{{ _ibm_bob_vllm_guardrail_repo_path | regex_replace('[:/]', '_') }}"
+    # Loader pod image: used by the temporary pods that copy model weights into the PVCs
+    # (oc cp) in air-gapped mode, mirrored with the vLLM images
+    _ld_entry:
+      raw: "{{ _ibm_bob_loader_source_image }}"
+      repo: "{{ _ibm_bob_loader_repo_path }}"
+      dest: "{{ _ibm_bob_image_pull_prefix ~ '/' ~ _ibm_bob_loader_repo_path if _p_mirror_motion == 'entitled-to-portable' else _ibm_bob_registry_full_path ~ '/' ~ _ibm_bob_loader_repo_path }}"
+      src_docker: "{{ _ibm_bob_loader_source_image if ('.' in _ibm_bob_loader_source_image.split('/')[0] or ':' in _ibm_bob_loader_source_image.split('/')[0] or _ibm_bob_loader_source_image.split('/')[0] == 'localhost') else ('docker.io/' ~ _ibm_bob_loader_source_image) }}"
+      is_private: >-
+        {{ (_ibm_bob_loader_source_image.startswith(_ibm_bob_image_pull_prefix) or _ibm_bob_loader_source_image.split('/')[0] == _ibm_bob_image_pull_prefix.split('/')[0]) if _p_mirror_motion == 'entitled-to-portable' else (_ibm_bob_loader_source_image.startswith(_ibm_bob_registry_full_path) or _ibm_bob_loader_source_image.split('/')[0] == _ibm_bob_registry_host) }}
+      local_dir: "{{ status_dir }}/downloads/ibm-bob/{{ _ibm_bob_version }}/images/vllm/{{ _ibm_bob_loader_repo_path | regex_replace('[:/]', '_') }}"
+  set_fact:
+    _vllm_images_to_process: >-
+      {{ [_core_entry, _gr_entry, _ld_entry] | unique(attribute='raw') }}
+
+- name: Process each vLLM runtime image for mirror motion {{ _p_mirror_motion }}
+  include_tasks: mirror-vllm-image-single.yml
+  loop: "{{ _vllm_images_to_process }}"
+  loop_control:
+    loop_var: _vllm_img
+    label: "{{ _vllm_img.raw }}"
