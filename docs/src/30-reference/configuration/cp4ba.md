@@ -85,8 +85,6 @@ Contains extra software which makes working with the platform even easier.
   - Installed if ADS is enabled.
 - Roundcube - Web UI for included Mail server to be able to browse incoming emails.
   - Installed if enabled in configuration (default) and if Mail server (below) is installed.
-- Cerebro - Web UI elastic search browser automatically connected to ES instance deployed with CP4BA.
-  - Installed if enabled in configuration (default) and if BAI or BAW is enabled.
 - AKHQ - Web UI kafka browser automatically connected to Kafka instance deployed with CP4BA.
   - Installed if enabled in configuration (default) and if BAI or BAW with Kafka feature is enabled.
 - OpenSearch Dashboards - Web UI OpenSearch dashboard tool automatically connected to OpenSearch instance deployed with CP4BA.
