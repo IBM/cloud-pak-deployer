@@ -45,6 +45,9 @@
          + (_ibm_bob_core_quant_def.vllm_args | default([]))
          + (current_ibm_bob_cluster.openshift_ai_models.vllm_extra_args | default([])) }}
 
+# Right after OpenShift AI is installed, the KServe admission webhook can reject the request because
+# its CA bundle has not been injected yet ("x509: certificate signed by unknown authority").
+# Only webhook errors are retried.
 - name: Create InferenceService for core model ({{ _ibm_bob_selected_model.id }})
   kubernetes.core.k8s:
     state: present
@@ -56,6 +59,10 @@
     _isvc_pvc: "ibm-bob-core-model"
     _isvc_gpus: "{{ _ibm_bob_core_gpus }}"
     _isvc_vllm_args: "{{ _ibm_bob_core_vllm_args }}"
+  register: _ibm_bob_core_isvc
+  until: _ibm_bob_core_isvc is succeeded or 'webhook' not in (_ibm_bob_core_isvc.msg | default(''))
+  retries: 20
+  delay: 15
 
 # ---- Guardrail model InferenceService ---------------------------------------
 - name: Create InferenceService for guardrail model
@@ -69,3 +76,7 @@
     _isvc_pvc: "ibm-bob-guardrail-model"
     _isvc_gpus: "{{ _ibm_bob_guardrail_gpus }}"
     _isvc_vllm_args: "{{ _ibm_bob_guardrail_model_defaults.vllm_args }}"
+  register: _ibm_bob_guardrail_isvc
+  until: _ibm_bob_guardrail_isvc is succeeded or 'webhook' not in (_ibm_bob_guardrail_isvc.msg | default(''))
+  retries: 20
+  delay: 15
