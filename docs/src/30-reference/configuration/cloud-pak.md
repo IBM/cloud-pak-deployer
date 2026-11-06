@@ -694,9 +694,6 @@ cp4ba:
   # Set to false if you don't want to install (or remove) Roundcube
   roundcube_enabled: true
 
-  # Set to false if you don't want to install (or remove) Cerebro
-  cerebro_enabled: true
-
   # Set to false if you don't want to install (or remove) AKHQ
   akhq_enabled: true
 
@@ -909,7 +906,6 @@ The following properties are defined on the project level.
 |---------------------|--------------------------------|----------------------|----------------|
 | cloudbeaver_enabled                         | Set to `true` to enable CloudBeaver (PostgreSQL, DB2, MSSQL UI). | Yes  | true, false |
 | roundcube_enabled                         | Set to `true` to enable Roundcube. Client for mail. | Yes  | true, false |
-| cerebro_enabled                         | Set to `true` to enable Cerebro. Client for ElasticSearch in CP4BA. | Yes  | true, false |
 | akhq_enabled                         | Set to `true` to enable AKHQ. Client for Kafka in CP4BA. | Yes  | true, false |
 | phpldapadmin_enabled                         | Set to `true` to enable phpLDApAdmin. Client for OpenLDAP. | Yes  | true, false |
 | opensearch_dashboards_enabled                         | Set to `true` to enable OpenSearch Dashboards. Client for OpenSearch. | Yes  | true, false |
