@@ -95,14 +95,14 @@ export CP_ENTITLEMENT_KEY=<key>
 | `dry-run` | `deployer apply --dry-run` with the install config (Bob 2.0.0): the planned commands in `deployer-activities.log` are asserted (order, no secrets, no upgrade/removal commands) and the state of the cluster and the vault must be unchanged; no entitlement key needed |
 | `install` | Install Bob 2.0.0 + smoke tests + version and certificate assertions |
 | `upgrade` | Upgrade the installed Bob to the latest published version (`ibm_bob_version: latest`, 2.0.1 at the time of writing) in place (`bobctl upgrade`); asserts `spec.version`, `Available` for the current generation, no `Degraded`, pods ready, Keycloak admin secret and InferenceServices kept, obsolete ClusterRole/Binding removed. Must follow `install` on the same cluster |
-| `dry-run-upgrade` | Like `dry-run` with the upgrade config, run by hand between `install` and `upgrade` (`--mode ibm_bob:install,dry-run-upgrade,upgrade`); asserts `bobctl upgrade`, the two `oc delete clusterrole/clusterrolebinding` commands and `bobctl update-model-config`, and no `bobctl install`. Not part of `full` |
+| `dry-run-upgrade` | Like `dry-run` with the upgrade config, runs between `install` and `upgrade` in `full`, or by hand (`--mode ibm_bob:install,dry-run-upgrade,upgrade`); asserts `bobctl upgrade`, the two `oc delete clusterrole/clusterrolebinding` commands and `bobctl update-model-config`, and no `bobctl install`.  |
 | `dry-run-remove` | `deployer apply --dry-run` with the removal config on an installed Bob: the planned removal commands are asserted in order, and the CR, Helm release, namespaces, model PVCs and vault key must all still exist |
 | `smoke` | Post-install check only; no changes |
 | `remove` | Uninstall Bob; cert-manager and OpenShift AI are left in place; removal assertions |
 | `airgap-full` | Fully air-gapped: mirror images, vLLM image and model weights entitled→portable (local directory)→private registry, install and check; asserts that every container in the Bob and operators namespaces and the vLLM ServingRuntime images use the private registry |
 | `airgap-semi` | Semi air-gapped: mirror directly entitled→private registry (no local directory), install and check; same registry assertion |
 | `cleanup` | Remove shared infrastructure (cert-manager, OpenShift AI, NFD, NVIDIA GPU operator); needs only `oc-login`, no entitlement key |
-| `full` | `dry-run → install → upgrade → dry-run-remove → remove → airgap-full → remove → airgap-semi → remove → cleanup`; stops at first failure |
+| `full` | `dry-run → install → dry-run-upgrade → upgrade → dry-run-remove → remove → airgap-full → remove → airgap-semi → remove → cleanup`; stops at first failure |
 
 Config templates: `tests/ibm-bob/config/`. For a non-standard environment (storage class, project, Bob version) edit the templates before running. `it-bob-install.yaml` installs 2.0.0 and `it-bob-upgrade.yaml` (identical except for `ibm_bob_version: latest`) is the upgrade target, so the test follows new releases. The version assertion resolves `latest` to the highest bundle in `downloads/ibm-bob`. After `upgrade`, running `install` or `dry-run` with the 2.0.0 config on the same cluster fails with the downgrade message; run `remove` first.
 

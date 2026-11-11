@@ -27,7 +27,7 @@
 #   upgrade  upgrade the installed Bob to the latest version (it-bob-upgrade.yaml) with bobctl upgrade,
 #            then live assertions. Must follow install on the same cluster
 #   dry-run-upgrade  list the planned upgrade commands and assert them; no cluster changes.
-#            Run by hand between install and upgrade, it is not part of full
+#            Needs the installed older version, so run it between install and upgrade
 #   dry-run-remove   list the planned removal commands and assert them, and assert that nothing
 #            was removed. Needs an installed Bob
 #   smoke    post-install check only; no cluster changes
@@ -37,8 +37,8 @@
 #   airgap-semi  semi air-gapped: entitled-to-private (direct mirror, no local directory)
 #                -> install -> check
 #   cleanup  remove shared infrastructure (cert-manager, OpenShift AI, NFD, NVIDIA GPU operator)
-#   full     dry-run -> install -> upgrade -> dry-run-remove -> remove -> airgap-full -> remove
-#            -> airgap-semi -> remove -> cleanup (default); stops at the first failure
+#   full     dry-run -> install -> dry-run-upgrade -> upgrade -> dry-run-remove -> remove
+#            -> airgap-full -> remove -> airgap-semi -> remove -> cleanup (default); stops at the first failure
 #
 # MODE can also be a comma-separated list, run in the given order and stopping at the first
 # failure, for example:
@@ -59,7 +59,7 @@ source "${PRODUCT_DIR}/../lib/it-common.sh"
 
 # ---- Checks ------------------------------------------------------------------
 # MODE is one mode or a comma-separated list; "full" expands to its sequence.
-FULL_SEQUENCE="dry-run install upgrade dry-run-remove remove airgap-full remove airgap-semi remove cleanup"
+FULL_SEQUENCE="dry-run install dry-run-upgrade upgrade dry-run-remove remove airgap-full remove airgap-semi remove cleanup"
 MODES=()
 IFS=',' read -r -a REQUESTED_MODES <<< "${MODE}"
 for m in "${REQUESTED_MODES[@]}"; do

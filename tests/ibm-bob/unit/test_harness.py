@@ -39,15 +39,17 @@ def _phase_conditions():
 class TestHarnessModes(unittest.TestCase):
     def test_full_sequence(self):
         self.assertEqual(_full_sequence(), [
-            'dry-run', 'install', 'upgrade', 'dry-run-remove', 'remove', 'airgap-full', 'remove',
-            'airgap-semi', 'remove', 'cleanup'])
+            'dry-run', 'install', 'dry-run-upgrade', 'upgrade', 'dry-run-remove', 'remove',
+            'airgap-full', 'remove', 'airgap-semi', 'remove', 'cleanup'])
 
     def test_every_sequence_step_is_a_valid_mode(self):
         self.assertTrue(set(_full_sequence()) <= _valid_modes())
 
-    def test_dry_run_upgrade_is_valid_but_not_in_full(self):
+    def test_dry_run_upgrade_runs_between_install_and_upgrade(self):
+        seq = _full_sequence()
         self.assertIn('dry-run-upgrade', _valid_modes())
-        self.assertNotIn('dry-run-upgrade', _full_sequence())
+        self.assertEqual(seq.index('dry-run-upgrade'), seq.index('install') + 1)
+        self.assertEqual(seq.index('upgrade'), seq.index('dry-run-upgrade') + 1)
 
     def test_every_valid_mode_is_dispatched(self):
         for mode in _valid_modes():
