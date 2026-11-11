@@ -1,0 +1,155 @@
+---
+# =============================================================================
+# mirror-vllm-image-single.yml
+#
+# Mirrors a single vLLM container image for the active mirror motion.
+# Variable _vllm_img is passed by loop in mirror-vllm-image.yml.
+# =============================================================================
+
+# Skip if the source image already points to the private registry
+- name: Log skip if image is already in private registry
+  debug:
+    msg: "vLLM image '{{ _vllm_img.raw }}' is already pointing to the target registry; skipping mirror."
+  when: _vllm_img.is_private | bool
+
+# ---- entitled-to-portable: download image from public registry to local dir ---
+- name: "Mirror (entitled-to-portable): check if vLLM image is already downloaded"
+  stat:
+    path: "{{ _vllm_img.local_dir }}/manifest.json"
+  register: _vllm_download_stat
+  when:
+    - _p_mirror_motion == 'entitled-to-portable'
+    - not (_vllm_img.is_private | bool)
+
+- name: "Mirror (entitled-to-portable): log that vLLM image is already downloaded"
+  debug:
+    msg: "vLLM image {{ _vllm_img.src_docker }} is already downloaded in {{ _vllm_img.local_dir }}; skipping."
+  when:
+    - _p_mirror_motion == 'entitled-to-portable'
+    - not (_vllm_img.is_private | bool)
+    - _vllm_download_stat.stat.exists
+
+- name: "Mirror (entitled-to-portable): ensure vLLM download directory exists"
+  file:
+    path: "{{ _vllm_img.local_dir }}"
+    state: directory
+    mode: '0755'
+  when:
+    - _p_mirror_motion == 'entitled-to-portable'
+    - not (_vllm_img.is_private | bool)
+    - not _vllm_download_stat.stat.exists
+
+- name: "Mirror (entitled-to-portable): skopeo copy vLLM image to local directory"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Mirror (entitled-to-portable): download vLLM image {{ _vllm_img.src_docker }} to local directory"
+    _p_command: >-
+      skopeo copy --retry-times 3 --retry-delay 5s
+      docker://{{ _vllm_img.src_docker }}
+      dir:{{ _vllm_img.local_dir }}
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-download-vllm-image.log"
+  when:
+    - _p_mirror_motion == 'entitled-to-portable'
+    - not (_vllm_img.is_private | bool)
+    - not _vllm_download_stat.stat.exists
+
+# ---- portable-to-private: upload image from local directory to private registry -
+- name: "Mirror (portable-to-private): check if portable vLLM directory exists"
+  stat:
+    path: "{{ _vllm_img.local_dir }}/manifest.json"
+  register: _vllm_portable_stat
+  when:
+    - _p_mirror_motion == 'portable-to-private'
+    - not (_vllm_img.is_private | bool)
+
+- name: "Mirror (portable-to-private): fail if portable vLLM directory does not exist"
+  fail:
+    msg: >-
+      The portable vLLM image directory '{{ _vllm_img.local_dir }}' does not exist.
+      Run the 'entitled-to-portable' motion first to download the vLLM image.
+  when:
+    - _p_mirror_motion == 'portable-to-private'
+    - not (_vllm_img.is_private | bool)
+    - not _vllm_portable_stat.stat.exists
+
+- name: "Mirror (portable-to-private): check if vLLM image already exists in private registry"
+  command: >-
+    skopeo inspect --tls-verify=false --creds "$IBM_BOB_REGISTRY_CREDS" docker://{{ _vllm_img.dest }}
+  environment:
+    IBM_BOB_REGISTRY_CREDS: "{{ _ibm_bob_registry_creds }}"
+  register: _vllm_inspect_portable
+  failed_when: false
+  changed_when: false
+  no_log: true
+  when:
+    - _p_mirror_motion == 'portable-to-private'
+    - not (_vllm_img.is_private | bool)
+
+- name: "Mirror (portable-to-private): log if vLLM image already exists in private registry"
+  debug:
+    msg: "vLLM image {{ _vllm_img.dest }} already exists in private registry; skipping upload."
+  when:
+    - _p_mirror_motion == 'portable-to-private'
+    - not (_vllm_img.is_private | bool)
+    - _vllm_inspect_portable.rc == 0
+
+- name: "Mirror (portable-to-private): upload vLLM image to private registry"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Mirror (portable-to-private): upload vLLM image to {{ _vllm_img.dest }}"
+    _p_command: >-
+      skopeo copy --retry-times 3 --retry-delay 5s --preserve-digests --dest-tls-verify=false
+      --dest-creds "$IBM_BOB_REGISTRY_CREDS"
+      dir:{{ _vllm_img.local_dir }}
+      docker://{{ _vllm_img.dest }}
+    _p_command_environment:
+      IBM_BOB_REGISTRY_CREDS: "{{ _ibm_bob_registry_creds }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-upload-vllm-image.log"
+  no_log: true
+  when:
+    - _p_mirror_motion == 'portable-to-private'
+    - not (_vllm_img.is_private | bool)
+    - _vllm_inspect_portable.rc != 0
+
+# ---- entitled-to-private: mirror directly from public to private registry ----
+- name: "Mirror (entitled-to-private): check if vLLM image already exists in private registry"
+  command: >-
+    skopeo inspect --tls-verify=false --creds "$IBM_BOB_REGISTRY_CREDS" docker://{{ _vllm_img.dest }}
+  environment:
+    IBM_BOB_REGISTRY_CREDS: "{{ _ibm_bob_registry_creds }}"
+  register: _vllm_inspect_direct
+  failed_when: false
+  changed_when: false
+  no_log: true
+  when:
+    - _p_mirror_motion == 'entitled-to-private'
+    - not (_vllm_img.is_private | bool)
+
+- name: "Mirror (entitled-to-private): log if vLLM image already exists in private registry"
+  debug:
+    msg: "vLLM image {{ _vllm_img.dest }} already exists in private registry; skipping mirror."
+  when:
+    - _p_mirror_motion == 'entitled-to-private'
+    - not (_vllm_img.is_private | bool)
+    - _vllm_inspect_direct.rc == 0
+
+- name: "Mirror (entitled-to-private): skopeo copy vLLM image directly to private registry"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Mirror (entitled-to-private): copy vLLM image from {{ _vllm_img.src_docker }} to {{ _vllm_img.dest }}"
+    _p_command: >-
+      skopeo copy --retry-times 3 --retry-delay 5s --preserve-digests --dest-tls-verify=false
+      --dest-creds "$IBM_BOB_REGISTRY_CREDS"
+      docker://{{ _vllm_img.src_docker }}
+      docker://{{ _vllm_img.dest }}
+    _p_command_environment:
+      IBM_BOB_REGISTRY_CREDS: "{{ _ibm_bob_registry_creds }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-mirror-vllm-image.log"
+  no_log: true
+  when:
+    - _p_mirror_motion == 'entitled-to-private'
+    - not (_vllm_img.is_private | bool)
+    - _vllm_inspect_direct.rc != 0

@@ -1,0 +1,28 @@
+# IBM Bob self-hosted — minimal configuration.
+# For all available options see:
+# https://ibm.github.io/cloud-pak-deployer/30-reference/configuration/cloud-pak/#ibm_bob
+
+ibm_bob:
+- project: ibm-bob
+  operators_project: ibm-bob-operators
+  openshift_cluster_name: "{{ env_id }}"
+  openshift_storage_name: odf-storage
+  ibm_bob_version: 2.0.0
+  accept_licenses: true
+  state: installed
+
+  premium_packages:
+    rag: false
+    z_proxy: false
+    understand: false
+
+  openshift_ai_models:
+    core_model: nemotron-3-ultra
+    quantization: fp8
+    guardrail_model: openai/gpt-oss-20b
+    project: ibm-bob-models
+    gpus_per_core_model: 8
+    gpus_per_guardrail_model: 1
+    storage_size:
+      core: 700Gi
+      guardrail: 60Gi

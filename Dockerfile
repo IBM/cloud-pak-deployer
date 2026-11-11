@@ -55,10 +55,7 @@ COPY --from=olm-utils-v3 /tmp/opt-ansible-v3.tar.gz /olm-utils/
 RUN cd /opt/ansible && \
     tar czf /olm-utils/opt-ansible-v4.tar.gz *
 
-# BUG with building wheel 
-#RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
-RUN pip3 install --no-cache-dir "cython<3.0.0" wheel && pip3 install PyYAML==6.0 --no-build-isolation && \
-    pip3 install --no-cache-dir -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
+RUN pip3 install -r /cloud-pak-deployer/deployer-web/requirements.txt > /tmp/deployer-web-pip-install.out 2>&1
 
 # cli utilities
 RUN wget -q -O /tmp/cpd-cli.tar.gz $(curl -s https://api.github.com/repos/IBM/cpd-cli/releases/latest | jq -r '.assets[] | select( .browser_download_url | contains("linux-EE")).browser_download_url') && \

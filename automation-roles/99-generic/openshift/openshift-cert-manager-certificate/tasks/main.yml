@@ -1,0 +1,144 @@
+---
+# =============================================================================
+# Issues a TLS certificate with cert-manager, for any product.
+#
+# The issuer is either
+#   - an ACME Issuer (HTTP-01) that this role creates in the target namespace
+#     (_p_acme_email set), or
+#   - an existing, user-managed (Cluster)Issuer, for example one backed by a custom CA
+#     (_p_issuer_name set). The role only checks that it is Ready.
+# _p_acme_email and _p_issuer_name are mutually exclusive.
+#
+# A namespace-scoped Issuer needs no cluster-admin and is removed together with its namespace.
+#
+# Parameters:
+#   _p_namespace          - (required) namespace of the Certificate (and of the ACME Issuer)
+#   _p_certificate_name   - (required) name of the Certificate; also the secret name by default
+#   _p_dns_names          - (required) list of DNS names the certificate must cover
+#   _p_secret_name        - name of the secret that receives the certificate (default: _p_certificate_name)
+#   _p_acme_email         - create an ACME Issuer with this account email
+#   _p_acme_url           - ACME directory URL (default: Let's Encrypt production)
+#   _p_acme_issuer_name   - name of the ACME Issuer to create (default: <_p_certificate_name>-acme).
+#                           The account key secret is <issuer name>-account-key.
+#   _p_issuer_name        - name of an existing Issuer or ClusterIssuer to use
+#   _p_issuer_kind        - kind of the existing issuer (default: ClusterIssuer)
+#   _p_wait_retries       - retries while waiting for readiness (default: 30)
+#   _p_wait_delay         - seconds between retries (default: 10)
+#
+# Output facts:
+#   _cmc_issuer_kind, _cmc_issuer_name - the issuer the Certificate references
+#   _cmc_certificate_changed           - true if the Certificate was created or changed
+#   _cmc_certificate_ready             - 'True' once the Certificate is Ready
+#
+# No cluster changes are made when cpd_dry_run is true.
+# =============================================================================
+
+- name: Fail if neither or both of _p_acme_email and _p_issuer_name are set
+  fail:
+    msg: "Specify exactly one of _p_acme_email (create an ACME Issuer) or _p_issuer_name (use an existing issuer)."
+  when: ((_p_acme_email | default('')) != '') == ((_p_issuer_name | default('')) != '')
+
+- name: Set issuer kind and name
+  set_fact:
+    _cmc_issuer_kind: "{{ (_p_issuer_kind | default('ClusterIssuer')) if (_p_issuer_name | default('')) != '' else 'Issuer' }}"
+    _cmc_issuer_name: "{{ _p_issuer_name if (_p_issuer_name | default('')) != '' else (_p_acme_issuer_name | default(_p_certificate_name + '-acme')) }}"
+    _cmc_certificate_changed: false
+    _cmc_certificate_ready: ''
+
+# ---- ACME mode: create a namespace-scoped Issuer ------------------------------
+- name: Create ACME Issuer {{ _cmc_issuer_name }} in {{ _p_namespace }}
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: cert-manager.io/v1
+      kind: Issuer
+      metadata:
+        name: "{{ _cmc_issuer_name }}"
+        namespace: "{{ _p_namespace }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+      spec:
+        acme:
+          email: "{{ _p_acme_email }}"
+          server: "{{ _p_acme_url | default('https://acme-v02.api.letsencrypt.org/directory') }}"
+          privateKeySecretRef:
+            name: "{{ _cmc_issuer_name }}-account-key"
+          solvers:
+          - http01:
+              ingress: {}
+  when:
+    - (_p_acme_email | default('')) != ''
+    - not (cpd_dry_run | default(false) | bool)
+
+# ---- Verify the Issuer/ClusterIssuer is Ready ---------------------------------
+- name: Wait for {{ _cmc_issuer_kind }} {{ _cmc_issuer_name }} to be Ready
+  shell: >-
+    oc get {{ _cmc_issuer_kind | lower }} {{ _cmc_issuer_name }}
+    {{ '-n ' + _p_namespace if _cmc_issuer_kind == 'Issuer' else '' }}
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null
+  register: _cmc_issuer_ready
+  retries: 12
+  delay: 10
+  until: _cmc_issuer_ready.stdout == 'True'
+  changed_when: false
+  failed_when: false
+  when: not (cpd_dry_run | default(false) | bool)
+
+- name: Fail if {{ _cmc_issuer_kind }} {{ _cmc_issuer_name }} is not Ready
+  fail:
+    msg: >-
+      {{ _cmc_issuer_kind }} '{{ _cmc_issuer_name }}' is not Ready.
+      Check: oc describe {{ _cmc_issuer_kind | lower }} {{ _cmc_issuer_name }}
+      {{ '-n ' + _p_namespace if _cmc_issuer_kind == 'Issuer' else '' }}
+  when:
+    - not (cpd_dry_run | default(false) | bool)
+    - _cmc_issuer_ready.stdout != 'True'
+
+# ---- Issue the Certificate ----------------------------------------------------
+- name: Create Certificate {{ _p_certificate_name }} in {{ _p_namespace }}
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: "{{ _p_certificate_name }}"
+        namespace: "{{ _p_namespace }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+      spec:
+        secretName: "{{ _p_secret_name | default(_p_certificate_name) }}"
+        issuerRef:
+          name: "{{ _cmc_issuer_name }}"
+          kind: "{{ _cmc_issuer_kind }}"
+        dnsNames: "{{ _p_dns_names }}"
+  when: not (cpd_dry_run | default(false) | bool)
+  register: _cmc_certificate_cr
+
+- name: Wait for Certificate {{ _p_certificate_name }} to be Ready
+  shell: >-
+    oc get certificate {{ _p_certificate_name }} -n {{ _p_namespace }}
+    -o jsonpath='{.status.conditions[?(@.type=="Ready")].status}' 2>/dev/null
+  register: _cmc_certificate_wait
+  retries: "{{ _p_wait_retries | default(30) }}"
+  delay: "{{ _p_wait_delay | default(10) }}"
+  until: _cmc_certificate_wait.stdout == 'True'
+  changed_when: false
+  failed_when: false
+  when: not (cpd_dry_run | default(false) | bool)
+
+- name: Fail if Certificate {{ _p_certificate_name }} is not Ready
+  fail:
+    msg: >-
+      Certificate {{ _p_certificate_name }} in {{ _p_namespace }} is not Ready after
+      {{ (_p_wait_retries | default(30)) | int * (_p_wait_delay | default(10)) | int }} seconds.
+      Check: oc describe certificate {{ _p_certificate_name }} -n {{ _p_namespace }}
+  when:
+    - not (cpd_dry_run | default(false) | bool)
+    - _cmc_certificate_wait.stdout != 'True'
+
+- name: Set certificate output facts
+  set_fact:
+    _cmc_certificate_changed: "{{ _cmc_certificate_cr is changed }}"
+    _cmc_certificate_ready: "{{ _cmc_certificate_wait.stdout | default('') }}"
+  when: not (cpd_dry_run | default(false) | bool)

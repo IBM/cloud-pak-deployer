@@ -1,0 +1,158 @@
+---
+# tests/lib/test-cleanup.yml
+#
+# Shared integration test cluster cleanup: removes shared infrastructure installed by the
+# deployer (cert-manager, OpenShift AI, NFD, NVIDIA GPU operator) so the cluster is in a
+# clean state for the next test run.
+#
+# Safe to run against a cluster where some or all of these are absent — each step is guarded.
+# Does NOT remove IBM Bob (or any other product) — use the product's own remove mode for that.
+- name: Remove shared infra operators from the integration test cluster
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  environment:
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+  tasks:
+    - name: Initialize the deployer configuration and vault
+      include_tasks: "{{ playbook_dir }}/../lib/it-init.yml"
+
+    - name: Login to the OpenShift cluster
+      include_role:
+        name: openshift-login
+      vars:
+        _p_openshift_cluster_name: "{{ all_config.openshift[0].name }}"
+
+    # ---- NVIDIA GPU operator ---------------------------------------------------
+    - name: Remove NVIDIA ClusterPolicy CR
+      kubernetes.core.k8s:
+        api_version: nvidia.com/v1
+        kind: ClusterPolicy
+        name: gpu-cluster-policy
+        state: absent
+      ignore_errors: true
+
+    - name: Remove NVIDIA subscription
+      kubernetes.core.k8s:
+        api_version: operators.coreos.com/v1alpha1
+        kind: Subscription
+        name: gpu-operator-certified
+        namespace: nvidia-gpu-operator
+        state: absent
+      ignore_errors: true
+
+    - name: Remove NVIDIA namespace
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: nvidia-gpu-operator
+        state: absent
+      ignore_errors: true
+
+    # ---- NFD operator ----------------------------------------------------------
+    - name: Remove NFD instance CR
+      kubernetes.core.k8s:
+        api_version: nfd.openshift.io/v1
+        kind: NodeFeatureDiscovery
+        name: nfd-instance
+        namespace: openshift-nfd
+        state: absent
+      ignore_errors: true
+
+    - name: Remove NFD subscription
+      kubernetes.core.k8s:
+        api_version: operators.coreos.com/v1alpha1
+        kind: Subscription
+        name: nfd
+        namespace: openshift-nfd
+        state: absent
+      ignore_errors: true
+
+    - name: Remove NFD namespace
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: openshift-nfd
+        state: absent
+      ignore_errors: true
+
+    # ---- OpenShift AI ----------------------------------------------------------
+    - name: Remove DataScienceCluster CR
+      kubernetes.core.k8s:
+        api_version: datasciencecluster.opendatahub.io/v1
+        kind: DataScienceCluster
+        name: default-dsc
+        state: absent
+      ignore_errors: true
+
+    - name: Remove DSCInitialization CR
+      kubernetes.core.k8s:
+        api_version: dscinitialization.opendatahub.io/v1
+        kind: DSCInitialization
+        name: default-dsci
+        state: absent
+      ignore_errors: true
+
+    - name: Remove OpenShift AI subscription
+      kubernetes.core.k8s:
+        api_version: operators.coreos.com/v1alpha1
+        kind: Subscription
+        name: rhods-operator
+        namespace: redhat-ods-operator
+        state: absent
+      ignore_errors: true
+
+    - name: Remove OpenShift AI namespaces
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - redhat-ods-operator
+        - redhat-ods-applications
+        - redhat-ods-monitoring
+        - rhods-notebooks
+      ignore_errors: true
+
+    # ---- cert-manager ----------------------------------------------------------
+    - name: Remove cert-manager subscription
+      kubernetes.core.k8s:
+        api_version: operators.coreos.com/v1alpha1
+        kind: Subscription
+        name: openshift-cert-manager-operator
+        namespace: cert-manager-operator
+        state: absent
+      ignore_errors: true
+
+    - name: Remove cert-manager CRDs
+      kubernetes.core.k8s:
+        api_version: apiextensions.k8s.io/v1
+        kind: CustomResourceDefinition
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - certificates.cert-manager.io
+        - certificaterequests.cert-manager.io
+        - challenges.acme.cert-manager.io
+        - clusterissuers.cert-manager.io
+        - issuers.cert-manager.io
+        - orders.acme.cert-manager.io
+      ignore_errors: true
+
+    - name: Remove cert-manager namespaces
+      kubernetes.core.k8s:
+        api_version: v1
+        kind: Namespace
+        name: "{{ item }}"
+        state: absent
+      loop:
+        - cert-manager-operator
+        - cert-manager
+      ignore_errors: true
+
+    - name: Report cleanup complete
+      debug:
+        msg: >-
+          Cluster cleanup complete. cert-manager, OpenShift AI, NFD and NVIDIA GPU operator
+          have been removed (or were not present). The cluster is ready for the next test run.

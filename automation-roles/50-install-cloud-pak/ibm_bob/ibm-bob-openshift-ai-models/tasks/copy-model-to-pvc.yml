@@ -1,0 +1,76 @@
+---
+# Copies a local model weights directory into a PVC through a running loader pod.
+#
+# Unlike a single "oc cp dir/." (one tar stream, no progress, restarts from zero on
+# failure), this copies file by file:
+#   - files already on the PVC with the same size are skipped, so a re-run resumes
+#     with at most the file that was in flight;
+#   - each file is retried individually;
+#   - progress is written to {{ status_dir }}/log/ibm-bob/models-copy-<label>.log,
+#     follow it with: tail -f <that file>
+#
+# Inputs:
+#   _copy_src_dir : local directory holding the weights
+#   _copy_pod     : running loader pod that mounts the PVC at /mnt/models
+#   _copy_label   : short label used in the log file name (core, guardrail)
+
+- name: "Copy {{ _copy_label }} model weights into PVC (progress: {{ status_dir }}/log/ibm-bob/models-copy-{{ _copy_label }}.log)"
+  ansible.builtin.shell:
+    cmd: |
+      {% raw %}
+      set -u -o pipefail
+      mkdir -p "$(dirname "$COPY_LOG")"
+      exec > >(tee -a "$COPY_LOG") 2>&1
+
+      echo "$(date '+%F %T') Copying $SRC_DIR to $NS/$POD:/mnt/models"
+
+      declare -A remote_size
+      while IFS=$'\t' read -r rel size; do
+        remote_size["$rel"]="$size"
+      done < <(oc exec -n "$NS" "$POD" -- sh -c 'cd /mnt/models && find . -type f -printf "%P\t%s\n"')
+
+      # The local download-complete marker must not be copied: the PVC-side marker is
+      # written by the caller only after this task succeeded.
+      mapfile -t files < <(cd "$SRC_DIR" && find . -type f ! -path './download-complete' -printf '%P\t%s\n' | sort)
+      total_files=${#files[@]}
+      total_bytes=0
+      for entry in "${files[@]}"; do total_bytes=$((total_bytes + ${entry##*$'\t'})); done
+
+      n=0
+      done_bytes=0
+      for entry in "${files[@]}"; do
+        rel="${entry%%$'\t'*}"
+        size="${entry##*$'\t'}"
+        n=$((n + 1))
+        if [ "${remote_size[$rel]:-}" = "$size" ]; then
+          done_bytes=$((done_bytes + size))
+          echo "$(date '+%F %T') [$n/$total_files] skip (already on PVC) $rel"
+          continue
+        fi
+        echo "$(date '+%F %T') [$n/$total_files] copy $rel ($((size / 1048576)) MiB), $((done_bytes / 1048576))/$((total_bytes / 1048576)) MiB done"
+        oc exec -n "$NS" "$POD" -- mkdir -p "/mnt/models/$(dirname "$rel")"
+        ok=false
+        for attempt in 1 2 3; do
+          if oc cp "$SRC_DIR/$rel" "$NS/$POD:/mnt/models/$rel" --retries=3; then
+            ok=true
+            break
+          fi
+          echo "$(date '+%F %T') attempt $attempt failed for $rel"
+          sleep 10
+        done
+        if [ "$ok" != true ]; then
+          echo "$(date '+%F %T') ERROR: giving up on $rel"
+          exit 1
+        fi
+        done_bytes=$((done_bytes + size))
+      done
+      echo "$(date '+%F %T') Done: $total_files files, $((total_bytes / 1048576)) MiB"
+      {% endraw %}
+  args:
+    executable: /bin/bash
+  environment:
+    KUBECONFIG: "{{ status_dir }}/openshift/kubeconfig"
+    NS: "{{ _ibm_bob_models_project }}"
+    POD: "{{ _copy_pod }}"
+    SRC_DIR: "{{ _copy_src_dir }}"
+    COPY_LOG: "{{ status_dir }}/log/ibm-bob/models-copy-{{ _copy_label }}.log"

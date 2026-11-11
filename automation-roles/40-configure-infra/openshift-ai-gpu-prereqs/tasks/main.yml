@@ -1,0 +1,106 @@
+---
+# =============================================================================
+# openshift-ai-gpu-prereqs
+#
+# Shared role: installs NFD + NVIDIA GPU operators and/or OpenShift AI when
+# their respective cluster-level install flag is set to 'auto' and the caller
+# signals they are required.
+#
+# Inputs (all must be set by the caller):
+#   _p_openshift_cluster_name  — name of the OpenShift cluster object
+#   _p_nfd_gpu_required        — boolean; true → install NFD + GPU when auto
+#   _p_openshift_ai_required   — boolean; true → install OpenShift AI when auto
+#   _p_fail_if_not_auto        — boolean (default false); when true, fail if
+#                                install is not 'auto' and the flag is required.
+#                                CP4D callers leave this false (skip silently).
+#                                Bob callers set this true (hard requirement).
+#
+# The role calls retrieve-cloud-infra-type itself only when
+# _current_openshift_cluster or _existing_ocp_infra_type is not yet set,
+# so callers that already ran retrieve-cloud-infra-type pay no extra cost.
+#
+# Callers:
+#   cp4d-prepare-openshift (CP4D) — passes _nfd_gpu_required and
+#                                    _openshift_ai_required from check-gpu-openshift-ai.yml;
+#                                    does NOT set _p_fail_if_not_auto (defaults false),
+#                                    preserving the original CP4D behaviour: 'auto' installs,
+#                                    anything else is a no-op for this role.
+#   ibm-bob-cluster          (Bob) — passes both flags true when openshift_ai_models is set,
+#                                    and sets _p_fail_if_not_auto: true so the deployer fails
+#                                    with a clear message when the operator is not configured.
+# =============================================================================
+
+- name: Validate required inputs for openshift-ai-gpu-prereqs
+  assert:
+    that:
+      - _p_openshift_cluster_name is defined
+      - _p_nfd_gpu_required is defined
+      - _p_openshift_ai_required is defined
+    fail_msg: >-
+      openshift-ai-gpu-prereqs requires _p_openshift_cluster_name,
+      _p_nfd_gpu_required, and _p_openshift_ai_required to be set.
+
+# Retrieve infra type only when not already known (avoids duplicate API calls).
+# _p_openshift_cluster_name is already in scope (role input); do not re-declare it in
+# vars: with a self-reference, as that causes a "recursive loop detected" error.
+- name: Retrieve cloud infrastructure type (if not already set)
+  include_role:
+    name: retrieve-cloud-infra-type
+  when: >-
+    (_current_openshift_cluster is not defined) or
+    (_existing_ocp_infra_type is not defined) or
+    (_existing_ocp_infra_type == 'detect')
+
+# ---- Node Feature Discovery + NVIDIA GPU operators --------------------------
+# install: True  → configure-openshift (stage 40) already ran openshift-gpu; no-op here.
+# install: auto  → install here if the component was not needed at stage-40 time but is now.
+# install: False → user opted out; skip silently (CP4D) or fail with a clear message (Bob,
+#                  via _p_fail_if_not_auto=true), because Bob's openshift_ai_models requires it.
+- name: Install NFD and NVIDIA GPU operators (auto + required)
+  include_role:
+    name: openshift-gpu
+  vars:
+    _p_openshift_cluster: "{{ _current_openshift_cluster }}"
+  when:
+    - _p_nfd_gpu_required | bool
+    - (_current_openshift_cluster.gpu.install | default('')) == 'auto'
+
+- name: Fail — GPU operators required but gpu.install is False (Bob only)
+  fail:
+    msg: >-
+      openshift_ai_models requires the NFD and NVIDIA GPU operators but
+      openshift.{{ _p_openshift_cluster_name }}.gpu.install is
+      '{{ _current_openshift_cluster.gpu.install | default("not set") }}'.
+      Set gpu.install to 'auto' (install automatically when required) or 'True'
+      (already installed in stage 40) in the openshift object, or set
+      skip_gpu_check: true in openshift_ai_models to bypass the GPU capacity check.
+  when:
+    - _p_nfd_gpu_required | bool
+    - (_p_fail_if_not_auto | default(false)) | bool
+    - (_current_openshift_cluster.gpu.install | default('')) | lower not in ['auto', 'true']
+
+# ---- OpenShift AI -----------------------------------------------------------
+# install: True  → configure-openshift (stage 40) already ran openshift-ai; no-op here.
+# install: auto  → install here if required but not yet installed.
+# install: False → skip silently (CP4D) or fail (Bob, via _p_fail_if_not_auto=true).
+- name: Install OpenShift AI (auto + required)
+  include_role:
+    name: openshift-ai
+  vars:
+    _p_openshift_cluster: "{{ _current_openshift_cluster }}"
+  when:
+    - _p_openshift_ai_required | bool
+    - (_current_openshift_cluster.openshift_ai.install | default('') | lower) == 'auto'
+
+- name: Fail — OpenShift AI required but openshift_ai.install is False (Bob only)
+  fail:
+    msg: >-
+      openshift_ai_models requires OpenShift AI (KServe) but
+      openshift.{{ _p_openshift_cluster_name }}.openshift_ai.install is
+      '{{ _current_openshift_cluster.openshift_ai.install | default("not set") }}'.
+      Set openshift_ai.install to 'auto' (install automatically when required) or 'True'
+      (already installed in stage 40) in the openshift object.
+  when:
+    - _p_openshift_ai_required | bool
+    - (_p_fail_if_not_auto | default(false)) | bool
+    - (_current_openshift_cluster.openshift_ai.install | default('') | lower) not in ['auto', 'true']

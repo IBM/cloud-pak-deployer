@@ -1,0 +1,81 @@
+---
+# =============================================================================
+# setup-cluster-ingress-cert.yml
+# Provisions a TLS certificate for IBM Bob routes using cert-manager (shared role
+# openshift-cert-manager-certificate) and registers it with bobctl setup-route.
+#
+# Requires current_ibm_bob_cluster.ingress_cert to be set; no-op otherwise
+# (Bob uses its default self-signed certificate).
+#
+# ingress_cert modes:
+#   acme_email + optional acme_url  — create a namespace-scoped Issuer (ACME HTTP-01)
+#                                     in Bob's project and issue a Certificate covering
+#                                     Bob's three routes.
+#   cluster_issuer                  — use an existing ClusterIssuer (user-managed);
+#                                     issue a Certificate for Bob's three routes.
+#
+# Bob routes are at <svc>.<project>.<apps-domain>; the Certificate covers:
+#   bob.<project>.<apps-domain>
+#   api.bob.<project>.<apps-domain>
+#   bob-keycloak.<project>.<apps-domain>
+# =============================================================================
+
+- name: Skip certificate provisioning — ingress_cert not configured (self-signed)
+  meta: end_role
+  when: (current_ibm_bob_cluster.ingress_cert | default({})) == {}
+
+# ---- Resolve the apps domain from IngressController -------------------------
+- name: Get IngressController/default for apps domain
+  kubernetes.core.k8s_info:
+    api_version: operator.openshift.io/v1
+    kind: IngressController
+    name: default
+    namespace: openshift-ingress-operator
+  register: _ibm_bob_ic
+
+- name: Set apps domain
+  set_fact:
+    _ibm_bob_apps_domain: >-
+      {{ (_ibm_bob_ic.resources | default([]))
+         | map(attribute='status.domain', default='') | first | default('') }}
+
+- name: Fail if apps domain could not be determined
+  fail:
+    msg: "Could not determine apps domain from IngressController/default.status.domain."
+  when: _ibm_bob_apps_domain == ''
+
+- name: Set Bob route hostnames
+  set_fact:
+    _ibm_bob_cert_dns_names:
+      - "bob.{{ current_ibm_bob_cluster.project }}.{{ _ibm_bob_apps_domain }}"
+      - "api.bob.{{ current_ibm_bob_cluster.project }}.{{ _ibm_bob_apps_domain }}"
+      - "bob-keycloak.{{ current_ibm_bob_cluster.project }}.{{ _ibm_bob_apps_domain }}"
+
+# ---- Issuer and Certificate (shared role) ------------------------------------
+# acme_email: the role creates a namespace-scoped Issuer ibm-bob-acme in Bob's project.
+# cluster_issuer: the role uses the existing ClusterIssuer and only checks that it is Ready.
+- name: Issue Certificate bob-cluster-ingress-tls for Bob routes
+  include_role:
+    name: openshift-cert-manager-certificate
+  vars:
+    _p_namespace: "{{ current_ibm_bob_cluster.project }}"
+    _p_certificate_name: bob-cluster-ingress-tls
+    _p_dns_names: "{{ _ibm_bob_cert_dns_names }}"
+    _p_acme_email: "{{ current_ibm_bob_cluster.ingress_cert.acme_email | default('') }}"
+    _p_acme_url: "{{ current_ibm_bob_cluster.ingress_cert.acme_url | default('https://acme-v02.api.letsencrypt.org/directory') }}"
+    _p_acme_issuer_name: ibm-bob-acme
+    _p_issuer_name: "{{ current_ibm_bob_cluster.ingress_cert.cluster_issuer | default('') }}"
+    _p_issuer_kind: ClusterIssuer
+
+# ---- Register cert with Bob via bobctl setup-route --------------------------
+- name: Register certificate with IBM Bob (bobctl setup-route)
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Register ingress certificate with IBM Bob"
+    _p_command: "{{ _ibm_bob_bobctl_path }} setup-route --tls-secret bob-cluster-ingress-tls"
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-setup-route.log"
+  when:
+    - not (cpd_dry_run | default(false) | bool)
+    - _cmc_certificate_ready == 'True'

@@ -43,7 +43,6 @@ def preprocessor(attributes=None, fullConfig=None, moduleVariables=None):
     g('state').isRequired().mustBeOneOf(['installed', 'removed'])
     g('cloudbeaver_enabled').isOptional().mustBeOneOf([True, False])
     g('roundcube_enabled').isOptional().mustBeOneOf([True, False])
-    g('cerebro_enabled').isOptional().mustBeOneOf([True, False])
     g('akhq_enabled').isOptional().mustBeOneOf([True, False])
 
     # Now that we have reached this point, we can check the attribute details if the previous checks passed

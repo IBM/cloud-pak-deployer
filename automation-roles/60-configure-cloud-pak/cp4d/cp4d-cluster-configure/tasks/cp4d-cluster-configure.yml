@@ -100,7 +100,7 @@
     loop_var: _zen_role 
   when: not cpd_dry_run
 
-# First provision DB2 OLTP instance(s) and wait for it to cpmplete
+# First provision DB2 OLTP instance(s) and wait for it to complete
 - name: Provision or remove Db2 OLTP instances
   include_role:
     name: cp4d-instance-db2oltp
@@ -121,7 +121,6 @@
     - datastage
     - dv
     - dmc
-    - openpages
     - planning-analytics
     - watsonx_ai
     - watson_assistant
@@ -141,12 +140,22 @@
     - datastage
     - dv
     - dmc
-    - openpages
     - planning-analytics
     - watsonx_ai
     - watson_assistant
     - watson_discovery
     - watsonx_orchestrate
+
+# Provision OpenPages instance last, this is needed because CA instance provisioning will fail
+# if OpenPages instance is created in parallel
+- name: Provision or remove OpenPages instances
+  include_role:
+    name: cp4d-instance-openpages
+- name: Wait for OpenPages instances to be provisioned
+  include_role:
+    name: cp4d-instance-openpages
+  vars:
+    _p_wait_instances: True
 
 - name: Create Data Management Console profiles
   include_role:

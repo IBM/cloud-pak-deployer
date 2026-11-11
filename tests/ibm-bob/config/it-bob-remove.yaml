@@ -1,0 +1,23 @@
+# Integration test configuration, part 2 of 2 (mode remove).
+# Copied by run_integration_tests.sh to tests/test-run/config/it-bob.yaml before the phase.
+#
+# The destroy guard and remove_model_weights are tested by editing this committed template:
+#   - confirm_destroy: false   the guard must fire and the namespaces must stay; restore to true afterwards
+#   - remove_model_weights: false   the models namespace and PVCs must stay; restore before the next install
+ibm_bob:
+- project: ibm-bob
+  operators_project: ibm-bob-operators
+  openshift_cluster_name: "{{ env_id }}"        # resolved from global_config.env_id
+  ibm_bob_version: latest
+  state: removed
+  # confirm_destroy is a global deployer setting rather than a property of ibm_bob; it is kept here
+  # so that it is switched together with the removal. The harness reads the value from this line and
+  # passes it to the playbook as confirm_destroy.
+  confirm_destroy: true
+
+  # The model serving objects, PVCs and namespace are only removed when openshift_ai_models is
+  # present, so keep it in line with it-bob-install.yaml.
+  openshift_ai_models:
+    core_model: nemotron-3.5-super
+
+  # remove_model_weights: false
