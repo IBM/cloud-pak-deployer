@@ -1,0 +1,132 @@
+---
+# =============================================================================
+# airgap-apply.yml
+# Air-gapped pre-install steps, run from main.yml before install-bob.yml when
+# cpd_airgap=true and current_ibm_bob_cluster.image_registry_name is set.
+#
+# What this file does:
+#   1. Resolve the image_registry entry and credentials from the vault.
+#   2. Create the ibm-entitlement-key pull secret in both Bob namespaces.
+#   3. Call bobctl verify-images to confirm all images are reachable.
+#
+# Prerequisites (all set before this file is included):
+#   _ibm_bob_bobctl_path / _ibm_bob_bobctl_env   set by ibm-bob-variables
+#   _ibm_bob_image_pull_prefix                    set by ibm-bob-variables
+#   current_ibm_bob_cluster                       full ibm_bob config object
+#   status_dir, environment_name                  standard deployer vars
+# =============================================================================
+
+# ---- Resolve private registry -----------------------------------------------
+- name: Resolve private image registry entry for {{ current_ibm_bob_cluster.image_registry_name }}
+  set_fact:
+    _ibm_bob_airgap_registry: >-
+      {{ all_config.image_registry
+         | json_query("[?name=='" + current_ibm_bob_cluster.image_registry_name + "']")
+         | first | default({}) }}
+
+- name: Fail if image_registry entry is not defined
+  fail:
+    msg: >-
+      image_registry entry '{{ current_ibm_bob_cluster.image_registry_name }}' was not found
+      in all_config.image_registry. Add it to your configuration.
+  when: _ibm_bob_airgap_registry == {}
+
+- name: Read private registry credentials from vault
+  include_role:
+    name: vault-get-secret
+  vars:
+    secret_name: "image-registry-{{ current_ibm_bob_cluster.image_registry_name }}"
+    secret_group: "{{ environment_name }}"
+    _p_secret_variable: _ibm_bob_airgap_registry_creds
+
+- name: Fail if private registry credentials are not in the vault
+  fail:
+    msg: >-
+      Vault secret 'image-registry-{{ current_ibm_bob_cluster.image_registry_name }}' in group
+      '{{ environment_name }}' is empty. Set it with:
+        ./cp-deploy.sh vault set -vs=image-registry-{{ current_ibm_bob_cluster.image_registry_name }}=user:password
+  when: (_ibm_bob_airgap_registry_creds | default('')) == ''
+
+# ---- Create pull secrets in both namespaces ---------------------------------
+- name: Ensure operator namespace exists for pull secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+
+- name: Ensure instance namespace exists for pull secret
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Namespace
+      metadata:
+        name: "{{ current_ibm_bob_cluster.project }}"
+
+- name: Create ibm-entitlement-key pull secret in operator namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: kubernetes.io/dockerconfigjson
+      metadata:
+        name: ibm-entitlement-key
+        namespace: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+      data:
+        .dockerconfigjson: >-
+          {{ ({
+            'auths': {
+              _ibm_bob_image_pull_prefix.split('/')[0]: {
+                'username': _ibm_bob_airgap_registry_creds.split(':')[0],
+                'password': (_ibm_bob_airgap_registry_creds.split(':', 1)[1] | default('')),
+                'auth': (_ibm_bob_airgap_registry_creds | b64encode)
+              }
+            }
+          }) | to_json | b64encode }}
+  no_log: true
+
+- name: Create ibm-entitlement-key pull secret in instance namespace
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Secret
+      type: kubernetes.io/dockerconfigjson
+      metadata:
+        name: ibm-entitlement-key
+        namespace: "{{ current_ibm_bob_cluster.project }}"
+      data:
+        .dockerconfigjson: >-
+          {{ ({
+            'auths': {
+              _ibm_bob_image_pull_prefix.split('/')[0]: {
+                'username': _ibm_bob_airgap_registry_creds.split(':')[0],
+                'password': (_ibm_bob_airgap_registry_creds.split(':', 1)[1] | default('')),
+                'auth': (_ibm_bob_airgap_registry_creds | b64encode)
+              }
+            }
+          }) | to_json | b64encode }}
+  no_log: true
+
+# ---- Verify images in private registry --------------------------------------
+- name: "Verify IBM Bob images in private registry {{ _ibm_bob_image_pull_prefix }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "IBM Bob: verify images in private registry {{ _ibm_bob_image_pull_prefix }}"
+    _p_command: >-
+      {{ _ibm_bob_bobctl_path }} verify-images
+      --creds "$IBM_BOB_REGISTRY_CREDS"
+    _p_command_environment: "{{ _ibm_bob_bobctl_env | combine({'IBM_BOB_REGISTRY_CREDS': _ibm_bob_airgap_registry_creds}) }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-verify-images.log"
+  no_log: true
+
+# ---- Clear secrets from facts -----------------------------------------------
+- name: Clear airgap credential facts
+  set_fact:
+    _ibm_bob_airgap_registry_creds: ""
+  no_log: true

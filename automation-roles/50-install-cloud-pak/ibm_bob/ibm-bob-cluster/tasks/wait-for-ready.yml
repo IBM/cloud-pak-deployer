@@ -1,0 +1,46 @@
+---
+# =============================================================================
+# wait-for-ready.yml
+# bobctl install returns as soon as helm has applied the chart, so the deployer
+# polls the operator deployment and the Bob CR itself.
+# =============================================================================
+
+- name: "Wait for the IBM Bob operator deployment in {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }} to be available"
+  kubernetes.core.k8s_info:
+    api_version: apps/v1
+    kind: Deployment
+    name: ibm-bob-operator
+    namespace: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+  register: _ibm_bob_operator_deployment
+  until:
+    - _ibm_bob_operator_deployment.resources | default([]) | length > 0
+    - (_ibm_bob_operator_deployment.resources[0].status.availableReplicas | default(0)) >= 1
+  retries: 30
+  delay: 20
+  when: not cpd_dry_run
+
+- name: "Wait for the Bob custom resource bob-cr in {{ current_ibm_bob_cluster.project }} to report Available"
+  kubernetes.core.k8s_info:
+    api_version: bob.ibm.com/v1beta1
+    kind: Bob
+    name: bob-cr
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  register: _ibm_bob_cr
+  until: >-
+    (_ibm_bob_cr.resources | default([]) | length) > 0 and
+    ((_ibm_bob_cr.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Available')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  retries: 90
+  delay: 30
+  vars:
+    ansible_callback_diy_runner_retry_msg: >-
+      {%- set result = ansible_callback_diy.result.output -%}
+      {%- set retries_left = result.retries - result.attempts -%}
+      Retrying: {{ ansible_callback_diy.task.name }} ({{ retries_left }} Retries left) ...
+  when: not cpd_dry_run
+
+- name: Show Bob custom resource conditions
+  debug:
+    msg: "{{ _ibm_bob_cr.resources[0].status.conditions | default([]) | map(attribute='type') | zip(_ibm_bob_cr.resources[0].status.conditions | default([]) | map(attribute='status')) | list }}"
+  when: not cpd_dry_run

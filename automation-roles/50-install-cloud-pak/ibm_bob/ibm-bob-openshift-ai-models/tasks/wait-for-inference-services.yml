@@ -1,0 +1,123 @@
+---
+# =============================================================================
+# wait-for-inference-services.yml
+#
+# Waits for InferenceService objects to reach Ready status and registers
+# their in-cluster URLs as facts for gateway generation.
+#
+# When skip_gpu_check is true (no GPUs on cluster), we only wait for the
+# InferenceService objects to exist and have a URL field; we do NOT fail if
+# the model pods are Pending (expected on GPU-less clusters). The generated
+# URLs are still usable for the Bob gateway config, even though the model
+# pods won't serve traffic.
+# =============================================================================
+
+# ---- Core model -------------------------------------------------------------
+- name: Wait for core model InferenceService to have a URL
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    name: "ibm-bob-core-model"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_core_isvc
+  until: >-
+    (_ibm_bob_core_isvc.resources | default([]) | length > 0) and
+    (_ibm_bob_core_isvc.resources[0].status.url | default('')) != ''
+  retries: 60
+  delay: 10
+
+- name: Fail if core model InferenceService has no URL after waiting
+  fail:
+    msg: >-
+      The core model InferenceService 'ibm-bob-core-model' in namespace
+      '{{ _ibm_bob_models_project }}' did not get a URL after 10 minutes.
+      Check the KServe controller logs and the InferenceService status.
+  when: (_ibm_bob_core_isvc.resources | default([]) | length == 0) or
+        (_ibm_bob_core_isvc.resources[0].status.url | default('')) == ''
+
+- name: Register core model in-cluster URL
+  set_fact:
+    _ibm_bob_core_model_url: "{{ _ibm_bob_core_isvc.resources[0].status.url }}"
+
+# ---- Guardrail model --------------------------------------------------------
+- name: Wait for guardrail model InferenceService to have a URL
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    name: "ibm-bob-guardrail-model"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_guardrail_isvc
+  until: >-
+    (_ibm_bob_guardrail_isvc.resources | default([]) | length > 0) and
+    (_ibm_bob_guardrail_isvc.resources[0].status.url | default('')) != ''
+  retries: 60
+  delay: 10
+
+- name: Fail if guardrail model InferenceService has no URL after waiting
+  fail:
+    msg: >-
+      The guardrail model InferenceService 'ibm-bob-guardrail-model' in namespace
+      '{{ _ibm_bob_models_project }}' did not get a URL after 10 minutes.
+      Check the KServe controller logs and the InferenceService status.
+  when: (_ibm_bob_guardrail_isvc.resources | default([]) | length == 0) or
+        (_ibm_bob_guardrail_isvc.resources[0].status.url | default('')) == ''
+
+- name: Register guardrail model in-cluster URL
+  set_fact:
+    _ibm_bob_guardrail_url: "{{ _ibm_bob_guardrail_isvc.resources[0].status.url }}"
+
+# ---- Check for Ready condition (skipped when skip_gpu_check is true) --------
+- name: Wait for core model InferenceService to be Ready (not skipped when GPUs present)
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    name: "ibm-bob-core-model"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_core_isvc_ready
+  until: >-
+    (_ibm_bob_core_isvc_ready.resources | default([]) | length > 0) and
+    ((_ibm_bob_core_isvc_ready.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Ready')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  retries: 180
+  delay: 20
+  when: not _ibm_bob_skip_gpu_check
+
+- name: Warn that core model pods may be Pending (skip_gpu_check=true)
+  debug:
+    msg: >-
+      skip_gpu_check is true: core model InferenceService may not become Ready
+      because the cluster has no schedulable GPU nodes. Pod state:
+      {{ (_ibm_bob_core_isvc.resources[0].status.modelStatus | default('unknown')) }}
+  when: _ibm_bob_skip_gpu_check
+
+- name: Wait for guardrail model InferenceService to be Ready (not skipped when GPUs present)
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    name: "ibm-bob-guardrail-model"
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_guardrail_isvc_ready
+  until: >-
+    (_ibm_bob_guardrail_isvc_ready.resources | default([]) | length > 0) and
+    ((_ibm_bob_guardrail_isvc_ready.resources[0].status.conditions | default([])
+      | selectattr('type', 'equalto', 'Ready')
+      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+  retries: 180
+  delay: 20
+  when: not _ibm_bob_skip_gpu_check
+
+- name: Warn that guardrail model pods may be Pending (skip_gpu_check=true)
+  debug:
+    msg: >-
+      skip_gpu_check is true: guardrail model InferenceService may not become Ready
+      because the cluster has no schedulable GPU nodes. Pod state:
+      {{ (_ibm_bob_guardrail_isvc.resources[0].status.modelStatus | default('unknown')) }}
+  when: _ibm_bob_skip_gpu_check
+
+# ---- Log registered URLs ----------------------------------------------------
+- name: Log registered InferenceService URLs
+  debug:
+    msg:
+      - "Core model URL    : {{ _ibm_bob_core_model_url }}"
+      - "Guardrail model URL: {{ _ibm_bob_guardrail_url }}"
