@@ -81,9 +81,6 @@
 - name: Mirror deployer image to the target registry
   include_tasks: mirror-deployer-image.yml
 
-- name: Mirror case images to the target registry
-  include_tasks: mirror-case-images.yml
-
 - name: Generate script to copy mirroring log files {{ _p_current_cp4d_cluster.project }}-mirror-images-copy-log-files.sh
   template:
     src: mirror-images-copy-log-files.j2
@@ -192,11 +189,6 @@
 - set_fact:
     _mirror_images: "{{ _run_command_result }}"
 
-- name: Remove {{ status_dir }}/work/offline
-  ansible.builtin.file:
-    path: "{{ status_dir }}/work/offline"
-    state: absent
-
 - name: Copy mirror-images assets from /tmp/work/offline to {{ status_dir }}/work/
   copy:
     src: /tmp/work/offline
@@ -215,6 +207,33 @@
     remote_src: True
   with_fileglob:
     - "/tmp/work/mirror_*.log"
+
+- name: Delete {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-images-mapping.txt if present
+  file:
+    path: "{{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-images-mapping.txt"
+    state: absent
+
+- name: Find all images-mapping.txt files in /tmp/work/offline
+  find:
+    paths: /tmp/work/offline
+    patterns: 'images-mapping.txt'
+    recurse: True
+    hidden: True
+  register: _mirror_images_txt_files
+
+- debug:
+    var: _mirror_images_txt_files
+
+# - pause:
+#     minutes: 60
+
+- name: Concatenate all images-mapping.txt files into a single {{ status_dir }}/cp4d/images-mapping.txt
+  shell: |
+    echo "" >> {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-images-mapping.txt
+    echo "# {{ item }}" >> {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-images-mapping.txt
+    cat {{ item }} >> {{ status_dir }}/cp4d/{{ _p_current_cp4d_cluster.project }}-images-mapping.txt
+  loop: "{{ _mirror_images_txt_files.files | map(attribute='path') | list }}"
+  when: _mirror_images_txt_files.files | length > 0
 
 - fail:
     msg: Mirroring of images failed, check mirror*.log files in {{ status_dir }}/log for details
