@@ -81,6 +81,11 @@
 - name: Validate prerequisites for IBM Bob
   include_tasks: validate-prereqs.yml
 
+# 6a. Decide between install, re-apply and upgrade (reads the cluster only, so it also runs in dry-run)
+- name: Determine whether IBM Bob must be installed, re-applied or upgraded
+  include_tasks: check-bob-upgrade.yml
+  when: not (cpd_skip_cp_install | default(false) | bool)
+
 # 6b. Prepare instance status and log directories
 - name: Ensure instance working and log directories exist
   file:
@@ -91,6 +96,23 @@
     - "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}"
     - "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work"
     - "{{ status_dir }}/log/ibm-bob"
+
+# 6c. Cluster base domain for bob.externalDomain. helm upgrade and helm install detect it with a
+# lookup of the cluster Ingress object, but bobctl update-model-config uses helm template, which
+# cannot look anything up and fails when bob.externalDomain is not in config.yaml. The value is the
+# one the chart detects itself (spec.domain of ingresses.config.openshift.io/cluster). Read-only,
+# so it also runs in dry run.
+- name: Get the cluster Ingress configuration
+  kubernetes.core.k8s_info:
+    api_version: config.openshift.io/v1
+    kind: Ingress
+    name: cluster
+  register: _ibm_bob_cluster_ingress
+
+- name: Set the cluster base domain
+  set_fact:
+    _ibm_bob_external_domain: >-
+      {{ ((_ibm_bob_cluster_ingress.resources | default([])) | first | default({})).spec.domain | default('') }}
 
 # 7. Render full config.yaml (overwrites the minimal stub written by ibm-bob-variables)
 # _ibm_bob_image_pull_prefix is already set correctly by ibm-bob-variables (step 3).
@@ -104,14 +126,15 @@
   debug:
     msg: "Rendered IBM Bob config at {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
 
-# 8. Dry-run handling (end_role, not end_play, so that other objects in the play are still processed)
-# Dirs and config.yaml are rendered above so they are available for inspection even in dry-run.
-- name: Stop processing if cpd_dry_run is enabled
-  block:
-    - name: Show dry-run notification
-      debug:
-        msg: "cpd_dry_run is set to true. config.yaml rendered. Skipping operator install, validation, and cluster installation."
-    - meta: end_role
+# 8. Dry-run handling
+# In dry run the steps below still run: every task that changes the cluster or runs a tool goes
+# through run-command (or is guarded with cpd_dry_run), which writes the planned commands and YAML
+# to {{ status_dir }}/log/deployer-activities.log without executing them.
+- name: Show dry-run notification
+  debug:
+    msg: >-
+      cpd_dry_run is set to true. No changes are made to the cluster; the commands that would be run are
+      written to {{ status_dir }}/log/deployer-activities.log.
   when: cpd_dry_run | default(false) | bool
 
 # 9. Air-gapped pre-install: create pull secrets and verify images

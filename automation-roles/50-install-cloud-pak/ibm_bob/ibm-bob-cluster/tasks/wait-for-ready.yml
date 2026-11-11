@@ -1,9 +1,27 @@
 ---
 # =============================================================================
 # wait-for-ready.yml
-# bobctl install returns as soon as helm has applied the chart, so the deployer
-# polls the operator deployment and the Bob CR itself.
+# bobctl install and bobctl upgrade return as soon as helm has applied the chart, so the
+# deployer polls the operator deployment and the Bob CR itself.
+#
+# After an upgrade (_upgrade_bob) the CR stays Available during the upgrade, so Available says
+# nothing about the new version. Observed on a live 2.0.0 to 2.0.1 upgrade: the Available
+# condition has no observedGeneration, Progressing keeps an old observedGeneration, and only
+# Degraded carries the current one. The wait therefore requires that spec.version is the
+# requested version and that Degraded is present, False and (when it has an observedGeneration)
+# observed at the current metadata.generation.
 # =============================================================================
+
+- name: Log the wait for IBM Bob to be ready (dry run)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Wait for IBM Bob {{ _ibm_bob_version }} to be ready in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_activity_comment: >-
+      Wait until deployment ibm-bob-operator in namespace {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}
+      is available and the Bob custom resource bob-cr in namespace {{ current_ibm_bob_cluster.project }} reports Available
+      {{- ' for version ' ~ _ibm_bob_version ~ ' and Degraded=False for the current generation' if (_upgrade_bob | default(false) | bool) else '' }}
+  when: cpd_dry_run | default(false) | bool
 
 - name: "Wait for the IBM Bob operator deployment in {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }} to be available"
   kubernetes.core.k8s_info:
@@ -30,7 +48,17 @@
     (_ibm_bob_cr.resources | default([]) | length) > 0 and
     ((_ibm_bob_cr.resources[0].status.conditions | default([])
       | selectattr('type', 'equalto', 'Available')
-      | selectattr('status', 'equalto', 'True') | list | length) > 0)
+      | selectattr('status', 'equalto', 'True') | list | length) > 0) and
+    (not (_upgrade_bob | default(false) | bool) or (
+      (_ibm_bob_cr.resources[0].spec.version | default('') | string) == _ibm_bob_version and
+      ((_ibm_bob_cr.resources[0].status.conditions | default([])
+        | selectattr('type', 'equalto', 'Degraded')
+        | selectattr('status', 'equalto', 'False') | list | length) == 1) and
+      ((_ibm_bob_cr.resources[0].status.conditions | default([])
+        | selectattr('type', 'equalto', 'Degraded')
+        | selectattr('observedGeneration', 'defined')
+        | rejectattr('observedGeneration', 'equalto', _ibm_bob_cr.resources[0].metadata.generation)
+        | list | length) == 0)))
   retries: 90
   delay: 30
   vars:

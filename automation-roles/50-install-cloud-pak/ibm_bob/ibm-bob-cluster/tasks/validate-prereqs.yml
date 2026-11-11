@@ -10,7 +10,9 @@
 - name: Validate OpenShift version is supported for IBM Bob {{ _ibm_bob_version }}
   fail:
     msg: "OpenShift version {{ _p_current_ocp_version }} is not supported for IBM Bob {{ _ibm_bob_version }}. Supported versions: {{ _ibm_bob_supported_ocp_versions | join(', ') }}"
-  when: _p_current_ocp_version not in _ibm_bob_supported_ocp_versions
+  when:
+    - _ibm_bob_supported_ocp_versions | length > 0
+    - _p_current_ocp_version not in _ibm_bob_supported_ocp_versions
 
 - name: Retrieve OpenShift worker nodes with amd64 architecture
   kubernetes.core.k8s_info:
