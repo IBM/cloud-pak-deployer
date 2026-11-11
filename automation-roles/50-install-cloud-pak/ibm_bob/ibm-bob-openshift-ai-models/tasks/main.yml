@@ -77,10 +77,15 @@
     _ibm_bob_core_hf_repo: "{{ _ibm_bob_core_quant_def.hf_repo }}"
 
 # ---- Create models namespace ------------------------------------------------
+# In dry run (cpd_dry_run) objects are written to YAML files and logged in
+# deployer-activities.log, not applied (see apply-object.yml). Tasks that carry secrets
+# are skipped and replaced by a comment activity.
 - name: Ensure models namespace {{ _ibm_bob_models_project }} exists
-  kubernetes.core.k8s:
-    state: present
-    definition:
+  include_tasks: apply-object.yml
+  vars:
+    _obj_description: "Create namespace {{ _ibm_bob_models_project }} for the IBM Bob models"
+    _obj_file_name: "models-namespace.yaml"
+    _obj_definition:
       apiVersion: v1
       kind: Namespace
       metadata:
@@ -124,6 +129,7 @@
   when:
     - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
     - (_ibm_bob_models_registry_creds | default('')) != ''
+    - not (cpd_dry_run | default(false) | bool)
 
 - name: Link ibm-entitlement-key to default service account in models namespace
   kubernetes.core.k8s:
@@ -137,6 +143,19 @@
   when:
     - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
     - (_ibm_bob_models_registry_creds | default('')) != ''
+    - not (cpd_dry_run | default(false) | bool)
+
+- name: Log planned pull secret in models namespace (dry run)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create ibm-entitlement-key pull secret in namespace {{ _ibm_bob_models_project }}"
+    _p_activity_comment: >-
+      Create the pull secret ibm-entitlement-key for {{ _ibm_bob_image_pull_prefix.split('/')[0] }} in namespace
+      {{ _ibm_bob_models_project }} and link it to the default service account (the credentials are not logged)
+  when:
+    - (current_ibm_bob_cluster.image_registry_name | default('')) != ''
+    - cpd_dry_run | default(false) | bool
 
 - name: Clear models registry credential fact
   set_fact:
@@ -145,9 +164,11 @@
 
 # ---- Persistent volume claims -----------------------------------------------
 - name: Create PVC for core model weights ({{ _ibm_bob_selected_model.id }})
-  kubernetes.core.k8s:
-    state: present
-    definition:
+  include_tasks: apply-object.yml
+  vars:
+    _obj_description: "Create PVC ibm-bob-core-model for core model weights ({{ _ibm_bob_selected_model.id }})"
+    _obj_file_name: "pvc-core-model.yaml"
+    _obj_definition:
       apiVersion: v1
       kind: PersistentVolumeClaim
       metadata:
@@ -164,9 +185,11 @@
         storageClassName: "{{ ocp_storage_class_file }}"
 
 - name: Create PVC for guardrail model weights
-  kubernetes.core.k8s:
-    state: present
-    definition:
+  include_tasks: apply-object.yml
+  vars:
+    _obj_description: "Create PVC ibm-bob-guardrail-model for guardrail model weights"
+    _obj_file_name: "pvc-guardrail-model.yaml"
+    _obj_definition:
       apiVersion: v1
       kind: PersistentVolumeClaim
       metadata:

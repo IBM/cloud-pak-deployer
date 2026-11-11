@@ -9,11 +9,14 @@
 # ---- ServingRuntime ---------------------------------------------------------
 # One vLLM image for both models, overridable per inference service with
 # openshift_ai_models.runtime_image.core / .guardrail
+# apply-object.yml applies the object, or in dry run (cpd_dry_run) writes it to a YAML file and
+# logs it in deployer-activities.log.
 - name: Create vLLM ServingRuntime for core model ({{ _ibm_bob_selected_model.id }})
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'vllm-serving-runtime.j2') | from_yaml }}"
+  include_tasks: apply-object.yml
   vars:
+    _obj_description: "Create ServingRuntime ibm-bob-core-vllm for the core model ({{ _ibm_bob_selected_model.id }})"
+    _obj_file_name: "servingruntime-core.yaml"
+    _obj_definition: "{{ lookup('template', 'vllm-serving-runtime.j2') | from_yaml }}"
     _sr_name: "ibm-bob-core-vllm"
     _sr_namespace: "{{ _ibm_bob_models_project }}"
     _sr_image: >-
@@ -23,10 +26,11 @@
     _sr_env: "{{ _ibm_bob_core_quant_def.env | default([]) }}"
 
 - name: Create vLLM ServingRuntime for guardrail model
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'vllm-serving-runtime.j2') | from_yaml }}"
+  include_tasks: apply-object.yml
   vars:
+    _obj_description: "Create ServingRuntime ibm-bob-guardrail-vllm for the guardrail model"
+    _obj_file_name: "servingruntime-guardrail.yaml"
+    _obj_definition: "{{ lookup('template', 'vllm-serving-runtime.j2') | from_yaml }}"
     _sr_name: "ibm-bob-guardrail-vllm"
     _sr_namespace: "{{ _ibm_bob_models_project }}"
     _sr_image: >-
@@ -49,34 +53,28 @@
 # its CA bundle has not been injected yet ("x509: certificate signed by unknown authority").
 # Only webhook errors are retried.
 - name: Create InferenceService for core model ({{ _ibm_bob_selected_model.id }})
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'inference-service.j2') | from_yaml }}"
+  include_tasks: apply-object.yml
   vars:
+    _obj_description: "Create InferenceService ibm-bob-core-model for the core model ({{ _ibm_bob_selected_model.id }})"
+    _obj_file_name: "inferenceservice-core.yaml"
+    _obj_definition: "{{ lookup('template', 'inference-service.j2') | from_yaml }}"
     _isvc_name: "ibm-bob-core-model"
     _isvc_namespace: "{{ _ibm_bob_models_project }}"
     _isvc_runtime: "ibm-bob-core-vllm"
     _isvc_pvc: "ibm-bob-core-model"
     _isvc_gpus: "{{ _ibm_bob_core_gpus }}"
     _isvc_vllm_args: "{{ _ibm_bob_core_vllm_args }}"
-  register: _ibm_bob_core_isvc
-  until: _ibm_bob_core_isvc is succeeded or 'webhook' not in (_ibm_bob_core_isvc.msg | default(''))
-  retries: 20
-  delay: 15
 
 # ---- Guardrail model InferenceService ---------------------------------------
 - name: Create InferenceService for guardrail model
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'inference-service.j2') | from_yaml }}"
+  include_tasks: apply-object.yml
   vars:
+    _obj_description: "Create InferenceService ibm-bob-guardrail-model for the guardrail model"
+    _obj_file_name: "inferenceservice-guardrail.yaml"
+    _obj_definition: "{{ lookup('template', 'inference-service.j2') | from_yaml }}"
     _isvc_name: "ibm-bob-guardrail-model"
     _isvc_namespace: "{{ _ibm_bob_models_project }}"
     _isvc_runtime: "ibm-bob-guardrail-vllm"
     _isvc_pvc: "ibm-bob-guardrail-model"
     _isvc_gpus: "{{ _ibm_bob_guardrail_gpus }}"
     _isvc_vllm_args: "{{ _ibm_bob_guardrail_model_defaults.vllm_args }}"
-  register: _ibm_bob_guardrail_isvc
-  until: _ibm_bob_guardrail_isvc is succeeded or 'webhook' not in (_ibm_bob_guardrail_isvc.msg | default(''))
-  retries: 20
-  delay: 15
