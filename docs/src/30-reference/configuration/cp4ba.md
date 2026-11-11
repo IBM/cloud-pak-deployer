@@ -1,10 +1,10 @@
 # Cloud Pak for Business Automation<!-- omit in toc -->
 
-Contains CP4BA version 26.0.0 IF002.  
-Contains IPM version 2.2.0 IF002.  
-Contains RPA version 30.0.3.  
-Contains BAMOE version 9.5.2.  
-Contains ICA version 1.0.3.  
+Contains CP4BA version 26.0.0 IF004.  
+Contains IPM version 2.2.1 IF001.  
+Contains RPA version 30.0.4.  
+Contains BAMOE version 9.6.1.  
+Contains ICA version 1.0.4.  
 
 - [Disclaimer ✋](#disclaimer-)
 - [Documentation base 📝](#documentation-base-)
@@ -85,8 +85,6 @@ Contains extra software which makes working with the platform even easier.
   - Installed if ADS is enabled.
 - Roundcube - Web UI for included Mail server to be able to browse incoming emails.
   - Installed if enabled in configuration (default) and if Mail server (below) is installed.
-- Cerebro - Web UI elastic search browser automatically connected to ES instance deployed with CP4BA.
-  - Installed if enabled in configuration (default) and if BAI or BAW is enabled.
 - AKHQ - Web UI kafka browser automatically connected to Kafka instance deployed with CP4BA.
   - Installed if enabled in configuration (default) and if BAI or BAW with Kafka feature is enabled.
 - OpenSearch Dashboards - Web UI OpenSearch dashboard tool automatically connected to OpenSearch instance deployed with CP4BA.
@@ -221,8 +219,6 @@ Referrence to licenses of used tools apart from those from IBM
 - Roundcube
     - GNU General Public License v3.0 https://github.com/roundcube/roundcubemail/blob/master/LICENSE (OSI approved https://opensource.org/license/gpl-3-0)
     - Also using NGINX - BSD 2-Clause "Simplified" License https://github.com/nginx/nginx/blob/master/LICENSE (OSI approved https://opensource.org/license/bsd-2-clause)
-- Cerebro
-    - MIT License https://github.com/lmenezes/cerebro/blob/main/LICENSE (OSI approved https://opensource.org/license/mit)
 - AKHQ
     - Apache License 2.0 https://github.com/tchiotludo/akhq/blob/dev/LICENSE (OSI Approved https://opensource.org/license/apache-2-0)
 - OpenSearch Dashboards
