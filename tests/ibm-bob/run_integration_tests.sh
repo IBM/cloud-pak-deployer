@@ -20,8 +20,16 @@
 # at the start. Only the assertions and the shared cleanup are test playbooks.
 #
 # Modes (MODE):
-#   dry-run  validate the configuration and render config.yaml; no cluster changes
-#   install  full install and wait for Ready, then smoke test and live assertions
+#   dry-run  validate the configuration, list the planned install commands in
+#            deployer-activities.log and assert them; no cluster changes
+#   install  install Bob 2.0.0 (it-bob-install.yaml) and wait for Ready, then smoke test and
+#            live assertions
+#   upgrade  upgrade the installed Bob to the latest version (it-bob-upgrade.yaml) with bobctl upgrade,
+#            then live assertions. Must follow install on the same cluster
+#   dry-run-upgrade  list the planned upgrade commands and assert them; no cluster changes.
+#            Run by hand between install and upgrade, it is not part of full
+#   dry-run-remove   list the planned removal commands and assert them, and assert that nothing
+#            was removed. Needs an installed Bob
 #   smoke    post-install check only; no cluster changes
 #   remove   uninstall Bob (cert-manager and OpenShift AI stay), then live assertions
 #   airgap-full  fully air-gapped: entitled-to-portable (local directory) -> portable-to-private
@@ -29,8 +37,8 @@
 #   airgap-semi  semi air-gapped: entitled-to-private (direct mirror, no local directory)
 #                -> install -> check
 #   cleanup  remove shared infrastructure (cert-manager, OpenShift AI, NFD, NVIDIA GPU operator)
-#   full     dry-run -> install -> remove -> airgap-full -> remove -> airgap-semi -> remove
-#            -> cleanup (default); stops at the first failure
+#   full     dry-run -> install -> upgrade -> dry-run-remove -> remove -> airgap-full -> remove
+#            -> airgap-semi -> remove -> cleanup (default); stops at the first failure
 #
 # MODE can also be a comma-separated list, run in the given order and stopping at the first
 # failure, for example:
@@ -38,7 +46,8 @@
 # "full" may be used inside a list and expands to its sequence above.
 #
 # Secrets all live in the vault (see tests/README.md):
-#   oc-login, ibm_cp_entitlement_key                      all modes except dry-run
+#   oc-login                                              all modes
+#   ibm_cp_entitlement_key                                install, upgrade and the airgap modes
 #   image-registry-<name>, image_registry_name,
 #   image_registry_url                                    airgap-full, airgap-semi and full
 # ---------------------------------------------------------------------------
@@ -50,7 +59,7 @@ source "${PRODUCT_DIR}/../lib/it-common.sh"
 
 # ---- Checks ------------------------------------------------------------------
 # MODE is one mode or a comma-separated list; "full" expands to its sequence.
-FULL_SEQUENCE="dry-run install remove airgap-full remove airgap-semi remove cleanup"
+FULL_SEQUENCE="dry-run install upgrade dry-run-remove remove airgap-full remove airgap-semi remove cleanup"
 MODES=()
 IFS=',' read -r -a REQUESTED_MODES <<< "${MODE}"
 for m in "${REQUESTED_MODES[@]}"; do
@@ -58,15 +67,15 @@ for m in "${REQUESTED_MODES[@]}"; do
     full)
       read -r -a FULL_MODES <<< "${FULL_SEQUENCE}"
       MODES+=("${FULL_MODES[@]}") ;;
-    dry-run|install|smoke|remove|airgap-full|airgap-semi|cleanup) MODES+=("${m}") ;;
-    *) die "MODE must be a comma-separated list of full, dry-run, install, smoke, remove, airgap-full, airgap-semi or cleanup, got '${MODE}'" ;;
+    dry-run|dry-run-upgrade|dry-run-remove|install|upgrade|smoke|remove|airgap-full|airgap-semi|cleanup) MODES+=("${m}") ;;
+    *) die "MODE must be a comma-separated list of full, dry-run, dry-run-upgrade, dry-run-remove, install, upgrade, smoke, remove, airgap-full, airgap-semi or cleanup, got '${MODE}'" ;;
   esac
 done
 [ ${#MODES[@]} -gt 0 ] || die "no mode specified"
 
 needs_entitlement=false
 for m in "${MODES[@]}"; do
-  case "${m}" in dry-run|smoke|remove|cleanup) ;; *) needs_entitlement=true ;; esac
+  case "${m}" in dry-run|dry-run-upgrade|dry-run-remove|smoke|remove|cleanup) ;; *) needs_entitlement=true ;; esac
 done
 
 if [ "${needs_entitlement}" = true ]; then
@@ -120,16 +129,34 @@ show_info() {
 
 # ---- Phases ------------------------------------------------------------------
 # Each phase is the deployer call from the mode mapping of the plan (sub-task 30).
-phase_dry_run() {
-  use_bob_config it-bob-install.yaml
+# A dry-run phase takes a snapshot of the cluster first, runs the deployer with --dry-run, and
+# asserts the planned commands in deployer-activities.log and that the cluster did not change.
+dry_run_phase() {
+  local config="$1" phase="$2"
+  use_bob_config "${config}"
+  assert_phase snapshot
   deployer apply --dry-run
+  assert_phase "${phase}"
 }
+
+phase_dry_run() { dry_run_phase it-bob-install.yaml dry-run; }
+phase_dry_run_upgrade() { dry_run_phase it-bob-upgrade.yaml dry-run-upgrade; }
+phase_dry_run_remove() { dry_run_phase it-bob-remove.yaml dry-run-remove; }
 
 phase_install() {
   use_bob_config it-bob-install.yaml
   deployer apply
   show_info
   assert_phase install
+}
+
+# Upgrades the Bob that phase_install installed. On a cluster without Bob it is a plain install
+# of the upgrade version.
+phase_upgrade() {
+  use_bob_config it-bob-upgrade.yaml
+  deployer apply
+  show_info
+  assert_phase upgrade
 }
 
 phase_smoke() {
@@ -190,7 +217,10 @@ main() {
     echo "=== IBM Bob integration test, step ${step}/${#MODES[@]}: ${m} ==="
     case "${m}" in
       dry-run) phase_dry_run ;;
+      dry-run-upgrade) phase_dry_run_upgrade ;;
+      dry-run-remove) phase_dry_run_remove ;;
       install) phase_install ;;
+      upgrade) phase_upgrade ;;
       smoke)   phase_smoke ;;
       remove)  phase_remove ;;
       airgap-full) phase_airgap full ;;

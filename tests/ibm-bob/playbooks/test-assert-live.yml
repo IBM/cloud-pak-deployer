@@ -1,9 +1,17 @@
 ---
 # Integration test: live assertions against the cluster, called by run_integration_tests.sh.
 #
-#   -e it_assert_phase=install   cert-manager certificate for IBM Bob routes
+#   -e it_assert_phase=install   Bob version and cert-manager certificate for IBM Bob routes
+#   -e it_assert_phase=upgrade   Bob upgraded in place to the configured version, Degraded=False at the current generation,
+#                                obsolete cluster role and binding removed
 #   -e it_assert_phase=airgap    all containers in the Bob and operators namespaces use the private registry
 #   -e it_assert_phase=remove    namespaces and PVCs are gone
+#   -e it_assert_phase=snapshot  save the state of the Bob installation, before a dry run
+#   -e it_assert_phase=dry-run          after deployer apply --dry-run of the install configuration:
+#   -e it_assert_phase=dry-run-upgrade  after deployer apply --dry-run of the upgrade configuration:
+#   -e it_assert_phase=dry-run-remove   after deployer apply --dry-run of the removal configuration:
+#                                the planned commands in deployer-activities.log, no secrets in the log,
+#                                and the state of the cluster and the vault is the same as in the snapshot
 #
 # The configuration is the tests/test-run/config copy made by run_integration_tests.sh.
 - name: Assert the state of IBM Bob on a live OpenShift cluster
@@ -15,8 +23,12 @@
   tasks:
     - name: Check the assertion phase
       assert:
-        that: it_assert_phase | default('') in ['install', 'airgap', 'remove']
-        fail_msg: "Specify -e it_assert_phase=install, -e it_assert_phase=airgap or -e it_assert_phase=remove"
+        that: >-
+          it_assert_phase | default('') in ['install', 'upgrade', 'airgap', 'remove', 'snapshot',
+          'dry-run', 'dry-run-upgrade', 'dry-run-remove']
+        fail_msg: >-
+          Specify -e it_assert_phase=install, upgrade, airgap, remove, snapshot, dry-run,
+          dry-run-upgrade or dry-run-remove
         quiet: true
 
     - name: Initialize the deployer configuration and vault
@@ -36,6 +48,289 @@
         _it_bob_models_project: >-
           {{ (all_config.ibm_bob[0].openshift_ai_models | default({})).project
              | default(all_config.ibm_bob[0].project + '-models') }}
+
+    # ---- Version of the installed Bob ------------------------------------------
+    # spec.version of the Bob CR is the source the deployer uses to detect an upgrade
+    # (check-bob-upgrade.yml). A latest in the configuration is not checked.
+    - name: Assert the version of IBM Bob
+      when: it_assert_phase in ['install', 'upgrade']
+      block:
+        # latest is resolved by the deployer to the highest x.y.z, and its bundle is then in the
+        # status directory (downloads/ibm-bob/<version>), so the highest directory is the expected version.
+        - name: Find the downloaded IBM Bob versions
+          find:
+            paths: "{{ status_dir }}/downloads/ibm-bob"
+            file_type: directory
+            patterns: '^[0-9]+\.[0-9]+\.[0-9]+$'
+            use_regex: true
+          register: _it_version_dirs
+          when: _it_bob.ibm_bob_version | default('latest') == 'latest'
+
+        - name: Set the expected version of IBM Bob
+          set_fact:
+            _it_expected_version: >-
+              {{ (_it_version_dirs.files | map(attribute='path') | map('basename')
+                  | community.general.version_sort | last)
+                 if _it_bob.ibm_bob_version | default('latest') == 'latest'
+                 else (_it_bob.ibm_bob_version | string) }}
+
+        - name: Get the Bob custom resource bob-cr
+          kubernetes.core.k8s_info:
+            api_version: bob.ibm.com/v1beta1
+            kind: Bob
+            name: bob-cr
+            namespace: "{{ _it_bob_project }}"
+          register: _it_version_cr
+
+        - name: Assert that spec.version of bob-cr is the configured version
+          assert:
+            that:
+              - _it_version_cr.resources | length == 1
+              - (_it_version_cr.resources[0].spec.version | default('') | string) == _it_expected_version
+            fail_msg: >-
+              spec.version of bob-cr in {{ _it_bob_project }} is
+              '{{ (_it_version_cr.resources | first | default({})).spec.version | default('not set') }}',
+              expected {{ _it_expected_version }} (ibm_bob_version: {{ _it_bob.ibm_bob_version | default('latest') }}).
+            quiet: true
+
+    # ---- Upgrade ---------------------------------------------------------------
+    # Live confirmation of what the deployer assumes after bobctl upgrade (see wait-for-ready.yml):
+    # the CR is Available for the current generation, not Degraded, and the instance was upgraded in
+    # place (Keycloak admin secret, model gateway objects), with the obsolete cluster role removed.
+    - name: Assert that IBM Bob was upgraded
+      when: it_assert_phase == 'upgrade'
+      block:
+        - name: Get the Bob custom resource bob-cr
+          kubernetes.core.k8s_info:
+            api_version: bob.ibm.com/v1beta1
+            kind: Bob
+            name: bob-cr
+            namespace: "{{ _it_bob_project }}"
+          register: _it_up_cr
+
+        # Observed on a live 2.0.0 to 2.0.1 upgrade: Available has no observedGeneration and
+        # Progressing keeps an old one; only Degraded carries the current generation.
+        - name: Set the conditions of the Bob custom resource
+          vars:
+            _cr: "{{ _it_up_cr.resources | first | default({}) }}"
+            _conditions: "{{ (_cr.status | default({})).conditions | default([]) }}"
+          set_fact:
+            _it_up_generation: "{{ (_cr.metadata | default({})).generation | default(-1) }}"
+            _it_up_available: "{{ _conditions | selectattr('type', 'equalto', 'Available') | list }}"
+            _it_up_degraded: "{{ _conditions | selectattr('type', 'equalto', 'Degraded') | list }}"
+
+        - name: Assert that the Bob CR is Available and not Degraded for its current generation
+          assert:
+            that:
+              - _it_up_cr.resources | length == 1
+              - _it_up_available | selectattr('status', 'equalto', 'True') | list | length == 1
+              - _it_up_degraded | length == 1
+              - _it_up_degraded[0].status == 'False'
+              - _it_up_degraded[0].observedGeneration is defined
+              - _it_up_degraded[0].observedGeneration | int == _it_up_generation | int
+            fail_msg: >-
+              bob-cr in {{ _it_bob_project }} is not Available, or Degraded was not False at generation
+              {{ _it_up_generation }}. Available: {{ _it_up_available }} Degraded: {{ _it_up_degraded }}
+            quiet: true
+
+        - name: Get the operator deployment and the pods of the Bob instance
+          kubernetes.core.k8s_info:
+            api_version: "{{ item.api_version }}"
+            kind: "{{ item.kind }}"
+            namespace: "{{ item.namespace }}"
+          register: _it_up_workloads
+          loop:
+            - { api_version: apps/v1, kind: Deployment, namespace: "{{ _it_bob_operators_project }}" }
+            - { api_version: v1, kind: Pod, namespace: "{{ _it_bob_project }}" }
+
+        - name: Find the pods that are not running
+          set_fact:
+            _it_up_bad_pods: >-
+              {{ _it_up_workloads.results[1].resources
+                 | rejectattr('status.phase', 'in', ['Running', 'Succeeded'])
+                 | map(attribute='metadata.name') | list }}
+            _it_up_operator: >-
+              {{ _it_up_workloads.results[0].resources
+                 | selectattr('metadata.name', 'equalto', 'ibm-bob-operator') | list }}
+
+        - name: Assert that the operator and the instance pods are ready
+          assert:
+            that:
+              - _it_up_operator | length == 1
+              - (_it_up_operator[0].status.availableReplicas | default(0)) >= 1
+              - _it_up_workloads.results[1].resources | length > 0
+              - _it_up_bad_pods | length == 0
+            fail_msg: >-
+              The operator deployment ibm-bob-operator in {{ _it_bob_operators_project }} is not available, or
+              pods in {{ _it_bob_project }} are not Running or Succeeded: {{ _it_up_bad_pods }}
+            quiet: true
+
+        - name: Get the Keycloak admin secret and the model gateway objects
+          kubernetes.core.k8s_info:
+            api_version: "{{ item.api_version }}"
+            kind: "{{ item.kind }}"
+            name: "{{ item.name }}"
+            namespace: "{{ item.namespace }}"
+          register: _it_up_kept
+          loop:
+            - { api_version: v1, kind: Secret, name: bob-keycloak-initial-admin, namespace: "{{ _it_bob_project }}" }
+            - { api_version: serving.kserve.io/v1beta1, kind: InferenceService, name: ibm-bob-core-model, namespace: "{{ _it_bob_models_project }}" }
+            - { api_version: serving.kserve.io/v1beta1, kind: InferenceService, name: ibm-bob-guardrail-model, namespace: "{{ _it_bob_models_project }}" }
+          loop_control:
+            label: "{{ item.kind }} {{ item.name }}"
+          no_log: true
+
+        - name: Assert that the Keycloak admin secret was kept (the instance was not reinstalled)
+          assert:
+            that: _it_up_kept.results[0].resources | length == 1
+            fail_msg: "Secret bob-keycloak-initial-admin in {{ _it_bob_project }} is missing after the upgrade."
+            quiet: true
+
+        - name: Assert that the InferenceServices were kept
+          assert:
+            that:
+              - _it_up_kept.results[1].resources | length == 1
+              - _it_up_kept.results[2].resources | length == 1
+            fail_msg: "InferenceService ibm-bob-core-model or ibm-bob-guardrail-model in {{ _it_bob_models_project }} is missing after the upgrade."
+            quiet: true
+          when: (_it_bob.openshift_ai_models | default({})) != {}
+
+        - name: Get the obsolete cluster role and cluster role binding
+          kubernetes.core.k8s_info:
+            api_version: rbac.authorization.k8s.io/v1
+            kind: "{{ item.kind }}"
+            name: "{{ item.name }}"
+          register: _it_up_rbac
+          loop:
+            - { kind: ClusterRole, name: "ibm-bob-role-{{ _it_bob_operators_project }}" }
+            - { kind: ClusterRoleBinding, name: "ibm-bob-rolebinding-{{ _it_bob_operators_project }}" }
+          loop_control:
+            label: "{{ item.kind }} {{ item.name }}"
+
+        - name: Assert that the obsolete cluster role and binding are gone
+          assert:
+            that: _it_up_rbac.results | map(attribute='resources') | map('length') | sum == 0
+            fail_msg: >-
+              ClusterRole ibm-bob-role-{{ _it_bob_operators_project }} or ClusterRoleBinding
+              ibm-bob-rolebinding-{{ _it_bob_operators_project }} still exists after the upgrade.
+            quiet: true
+
+    # ---- Dry run: snapshot and comparison --------------------------------------
+    # The snapshot is taken before deployer apply --dry-run (phase snapshot) and compared after it.
+    - name: Save the state of IBM Bob before a dry run
+      when: it_assert_phase == 'snapshot'
+      block:
+        - name: Collect the state of IBM Bob
+          include_tasks: "{{ playbook_dir }}/bob-state.yml"
+
+        - name: Write the snapshot
+          copy:
+            content: "{{ _it_state | to_nice_json }}"
+            dest: "{{ status_dir }}/ibm-bob-it-snapshot.json"
+            mode: '0644'
+
+    - name: Assert the result of a dry run
+      when: it_assert_phase in ['dry-run', 'dry-run-upgrade', 'dry-run-remove']
+      block:
+        - name: Set the names used in the planned commands
+          set_fact:
+            _it_dr_models: "{{ (_it_bob.openshift_ai_models | default({})) != {} }}"
+            _it_dr_keep_weights: "{{ not (_it_bob.remove_model_weights | default(true) | bool) }}"
+
+        # Secrets that must never be written to the log: the entitlement key (when known; the dry
+        # run itself does not need it), plus the field names of the pull secret and registry credentials.
+        - name: Read the entitlement key from the vault file (empty when not set)
+          shell: >-
+            grep "^ibm_cp_entitlement_key=" "{{ status_dir }}/vault/{{ environment_name }}" | cut -d= -f2- | base64 -d || true
+          register: _it_dr_vault_entitlement_key
+          changed_when: false
+          no_log: true
+
+        - name: List the secrets and secret fields that must not be logged
+          set_fact:
+            _it_log_secrets: >-
+              {{ ([lookup('ansible.builtin.env', 'CP_ENTITLEMENT_KEY'), _it_dr_vault_entitlement_key.stdout | default('')]
+                  | select('truthy') | list | unique) }}
+            _it_log_forbid_secrets: ['registryPassword', '.dockerconfigjson']
+          no_log: true
+
+        # Order of the planned install activities (see main.yml): OpenShift AI objects, then
+        # bobctl generate-cluster-resources, oc apply, bobctl install.
+        - name: Set the planned activities of the install dry run
+          set_fact:
+            _it_log_expect: >-
+              {{ (['Create PVC ibm-bob-core-model', 'Create InferenceService ibm-bob-core-model'] if _it_dr_models else [])
+                 + ['bobctl generate-cluster-resources',
+                    'cluster-resources.yaml --force-conflicts --server-side',
+                    'bobctl install --accept-license']
+                 + (['--model-config'] if _it_dr_models else []) }}
+            _it_log_forbid: ['bobctl upgrade', 'bobctl update-model-config', 'oc delete clusterrole']
+          when: it_assert_phase == 'dry-run'
+
+        - name: Set the planned activities of the upgrade dry run
+          set_fact:
+            _it_log_expect: >-
+              {{ ['bobctl generate-cluster-resources',
+                  'cluster-resources.yaml --force-conflicts --server-side',
+                  'oc delete clusterrole ibm-bob-role-' ~ _it_bob_operators_project,
+                  'oc delete clusterrolebinding ibm-bob-rolebinding-' ~ _it_bob_operators_project,
+                  'bobctl upgrade']
+                 + (['bobctl update-model-config', '--model-config'] if _it_dr_models else []) }}
+            _it_log_forbid: ['bobctl install']
+          when: it_assert_phase == 'dry-run-upgrade'
+
+        # Same order as uninstall-bob.yml.
+        - name: Set the planned activities of the removal dry run
+          set_fact:
+            _it_log_expect: >-
+              {{ ['oc delete bob bob-cr -n ' ~ _it_bob_project,
+                  'helm uninstall ibm-bob --namespace ' ~ _it_bob_project,
+                  'oc delete namespace ' ~ _it_bob_project ~ ' ',
+                  'oc delete namespace ' ~ _it_bob_operators_project ~ ' ']
+                 + (['oc delete inferenceservice.serving.kserve.io ibm-bob-core-model -n ' ~ _it_bob_models_project,
+                     'oc delete servingruntime.serving.kserve.io ibm-bob-core-vllm -n ' ~ _it_bob_models_project] if _it_dr_models else [])
+                 + (['oc delete job ibm-bob-core-model-download -n ' ~ _it_bob_models_project,
+                     'oc delete pvc ibm-bob-core-model -n ' ~ _it_bob_models_project,
+                     'oc delete namespace ' ~ _it_bob_models_project ~ ' '] if (_it_dr_models and not _it_dr_keep_weights) else [])
+                 + ['cluster-resources.yaml --ignore-not-found',
+                    'Remove Keycloak admin vault key for ' ~ _it_bob_project] }}
+            _it_log_forbid: >-
+              {{ ['bobctl install', 'bobctl upgrade']
+                 + (['oc delete job', 'oc delete pvc', 'oc delete namespace ' ~ _it_bob_models_project] if (_it_dr_models and _it_dr_keep_weights) else []) }}
+          when: it_assert_phase == 'dry-run-remove'
+
+        - name: Assert the planned activities in deployer-activities.log
+          include_tasks: "{{ playbook_dir }}/assert-activity-log.yml"
+
+        - name: Read the snapshot taken before the dry run
+          slurp:
+            src: "{{ status_dir }}/ibm-bob-it-snapshot.json"
+          register: _it_snapshot_file
+
+        - name: Collect the state of IBM Bob after the dry run
+          include_tasks: "{{ playbook_dir }}/bob-state.yml"
+
+        - name: Assert that the dry run changed nothing on the cluster or in the vault
+          assert:
+            that: _it_state == (_it_snapshot_file.content | b64decode | from_json)
+            fail_msg: >-
+              The dry run changed the state of IBM Bob.
+              Before: {{ _it_snapshot_file.content | b64decode | from_json }}
+              After: {{ _it_state }}
+            quiet: true
+
+        - name: Assert that Bob is still fully installed after the removal dry run
+          assert:
+            that:
+              - _it_state.bob_cr_exists
+              - _it_state.namespaces_present is superset([_it_bob_project, _it_bob_operators_project])
+              - _it_state.helm_release_secrets | length > 0
+              - _it_state.keycloak_vault_key_present
+              - not _it_dr_models or (_it_state.model_pvcs | length > 0 and _it_state.inference_services | length > 0)
+            fail_msg: >-
+              dry-run-remove needs an installed Bob, and nothing may be removed by it. State: {{ _it_state }}
+            quiet: true
+          when: it_assert_phase == 'dry-run-remove'
 
     # ---- Certificate mode ------------------------------------------------------
     # Branch on whether ingress_cert is configured in the deployer config:

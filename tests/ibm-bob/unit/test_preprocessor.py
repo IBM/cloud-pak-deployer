@@ -585,16 +585,16 @@ class TestSampleConfigs(unittest.TestCase):
         r = preprocessor(attributes=attrs, fullConfig=full, moduleVariables={})
         self.assertEqual(errors(r), [], msg=errors(r))
 
-    def test_sample_200(self):
-        self._check_sample('ibm-bob-200.yaml')
+    def test_sample_201(self):
+        self._check_sample('ibm-bob-201.yaml')
 
     def test_sample_latest(self):
         self._check_sample('ibm-bob-latest.yaml')
 
     def test_sample_airgap_image_registry_name(self):
-        """ibm-bob-200.yaml with image_registry_name set must pass when CPD_AIRGAP is true."""
+        """ibm-bob-201.yaml with image_registry_name set must pass when CPD_AIRGAP is true."""
         full = self._load('ocp-existing-ocp.yaml')
-        full.update(self._load('ibm-bob-200.yaml'))
+        full.update(self._load('ibm-bob-201.yaml'))
         attrs = full['ibm_bob'][0]
         attrs['image_registry_name'] = 'bob-mirror'
         r = preprocessor(attributes=attrs, fullConfig=full, moduleVariables={'cpd_airgap': 'true'})

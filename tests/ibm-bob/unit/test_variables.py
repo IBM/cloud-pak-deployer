@@ -3,12 +3,21 @@ Tests for ibm-bob-variables version resolution logic, version definition files,
 and vLLM image path derivation for air-gapped installs.
 """
 
-import sys, os, unittest, glob, yaml, json, jinja2
+import sys, os, re, ast, unittest, glob, yaml, json, jinja2
 
 VERSIONS_DIR = os.path.join(
     os.path.dirname(__file__),
     '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-variables/vars/versions'
 )
+
+MODELS_FILE = os.path.join(
+    os.path.dirname(__file__),
+    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-variables/vars/ibm-bob-models.yml'
+)
+
+# Variables that used to be in the version files and that no role uses
+REMOVED_VERSION_KEYS = ('_ibm_bob_release_tag', '_ibm_bob_companion_versions', '_ibm_bob_premium_package_keys')
+
 
 class TestIbmBobVersions(unittest.TestCase):
 
@@ -22,31 +31,43 @@ class TestIbmBobVersions(unittest.TestCase):
         with open(v200_file, 'r') as f:
             data = yaml.safe_load(f)
 
-        self.assertEqual(data.get('_ibm_bob_release_tag'), 'v2.0.0')
-        self.assertEqual(data.get('_ibm_bob_bundle_filename'), 'ibm-bob-install-20260924-163534.tgz')
-        self.assertTrue(data.get('_ibm_bob_bundle_url', '').startswith('https://github.com/IBM/ibm-bob/releases/download/v2.0.0/'))
-        self.assertEqual(data.get('_ibm_bob_bundle_sha256'), '3b6dc70cd0a236d2e58bb23d19804e3e73e3de9b7b3d77850b35f463f30c3726')
-        self.assertEqual(data.get('_ibm_bob_supported_ocp_versions'), ['4.20', '4.21', '4.22'])
-        self.assertIn('bob_ide', data.get('_ibm_bob_companion_versions', {}))
-        self.assertIn('bob_shell', data.get('_ibm_bob_companion_versions', {}))
-        self.assertIn('premium_package_z', data.get('_ibm_bob_companion_versions', {}))
-        self.assertEqual(data.get('_ibm_bob_premium_package_keys', {}).get('rag'), 'bob.rag.enabled')
-        self.assertEqual(data.get('_ibm_bob_premium_package_keys', {}).get('z_proxy'), 'bob.zProxy.enabled')
-        self.assertEqual(data.get('_ibm_bob_premium_package_keys', {}).get('understand'), 'bob.understand.enabled')
+        # the only per-version data is the list of supported OpenShift versions
+        self.assertEqual(list(data), ['_ibm_bob_supported_ocp_versions'])
+        self.assertEqual(data['_ibm_bob_supported_ocp_versions'], ['4.20', '4.21', '4.22'])
 
-    def test_version_resolution_logic(self):
-        files = glob.glob(os.path.join(VERSIONS_DIR, '*.yml'))
-        available_versions = sorted([os.path.basename(f).replace('.yml', '') for f in files])
-        
-        # 'latest' should resolve to highest version
-        latest_version = available_versions[-1]
-        self.assertEqual(latest_version, '2.0.0')
+    def test_201_version_file_content(self):
+        v201_file = os.path.join(VERSIONS_DIR, '2.0.1.yml')
+        self.assertTrue(os.path.exists(v201_file), "2.0.1.yml does not exist")
+        with open(v201_file, 'r') as f:
+            data = yaml.safe_load(f)
+        self.assertEqual(list(data), ['_ibm_bob_supported_ocp_versions'])
+        self.assertEqual(data['_ibm_bob_supported_ocp_versions'], ['4.20', '4.21', '4.22'])
 
-        # specific version should match
-        self.assertIn('2.0.0', available_versions)
+    def test_version_files_hold_no_deployer_data(self):
+        for path in glob.glob(os.path.join(VERSIONS_DIR, '*.yml')):
+            with open(path) as f:
+                data = yaml.safe_load(f)
+            self.assertEqual(list(data), ['_ibm_bob_supported_ocp_versions'], path)
+            for key in REMOVED_VERSION_KEYS:
+                self.assertNotIn(key, data, path)
+
+    def test_version_file_names_are_versions(self):
+        for path in glob.glob(os.path.join(VERSIONS_DIR, '*.yml')):
+            self.assertRegex(os.path.basename(path), r'^\d+\.\d+\.\d+\.yml$')
+
+    def test_models_file_holds_version_independent_data(self):
+        with open(MODELS_FILE) as f:
+            data = yaml.safe_load(f)
+        for key in ('_ibm_bob_ai_models', '_ibm_bob_vllm_runtime_image', '_ibm_bob_loader_image',
+                    '_ibm_bob_guardrail_model_defaults'):
+            self.assertIn(key, data)
+        self.assertNotIn('_ibm_bob_supported_ocp_versions', data)
+        for key in REMOVED_VERSION_KEYS:
+            self.assertNotIn(key, data)
+
 
 class TestIbmBobAiModelsTable(unittest.TestCase):
-    """The model table in 2.0.0.yml must agree with CORE_MODELS in the preprocessor."""
+    """The model table in ibm-bob-models.yml must agree with CORE_MODELS in the preprocessor."""
 
     EXPECTED_REPOS = {
         ('mistral-medium-3.5', 'fp8'): 'mistralai/Mistral-Medium-3.5-128B',
@@ -64,7 +85,7 @@ class TestIbmBobAiModelsTable(unittest.TestCase):
             os.path.dirname(__file__), '../../../automation-generators/generic/ibm_bob'))
         from preprocessor import CORE_MODELS
         self.core_models = CORE_MODELS
-        with open(os.path.join(VERSIONS_DIR, '2.0.0.yml'), 'r') as f:
+        with open(MODELS_FILE, 'r') as f:
             self.models = {m['id']: m for m in yaml.safe_load(f)['_ibm_bob_ai_models']}
 
     def test_models_and_quantizations_match_preprocessor(self):
@@ -98,7 +119,7 @@ class TestIbmBobAiModelsTable(unittest.TestCase):
             self.assertNotIn('runtime_image', model, model_id)
 
     def test_single_vllm_runtime_image(self):
-        with open(os.path.join(VERSIONS_DIR, '2.0.0.yml'), 'r') as f:
+        with open(MODELS_FILE, 'r') as f:
             data = yaml.safe_load(f)
         self.assertTrue(data['_ibm_bob_vllm_runtime_image'].startswith('vllm/vllm-openai:v'))
         self.assertNotIn('runtime_image', data['_ibm_bob_guardrail_model_defaults'])
@@ -107,7 +128,7 @@ class TestIbmBobAiModelsTable(unittest.TestCase):
         self.assertFalse(any('--disable-log-requests' in a for a in data['_ibm_bob_guardrail_model_defaults']['vllm_args']))
 
     def test_loader_image_defined(self):
-        with open(os.path.join(VERSIONS_DIR, '2.0.0.yml'), 'r') as f:
+        with open(MODELS_FILE, 'r') as f:
             data = yaml.safe_load(f)
         self.assertEqual(data['_ibm_bob_loader_image'], 'registry.access.redhat.com/ubi9/ubi:latest')
 
@@ -115,6 +136,91 @@ class TestIbmBobAiModelsTable(unittest.TestCase):
         self.assertTrue(self.models['nemotron-3.5-super']['supports_vision'])
         for model_id in ('nemotron-3-ultra', 'laguna-s-2.1'):
             self.assertFalse(self.models[model_id]['supports_vision'], model_id)
+
+
+TASKS_DIR = os.path.join(
+    os.path.dirname(__file__),
+    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-variables/tasks'
+)
+
+
+def _find_task(tasks, name_prefix):
+    """Depth-first search of an Ansible task list (including block/rescue) by task name prefix."""
+    for task in tasks:
+        if task.get('name', '').startswith(name_prefix):
+            return task
+        for key in ('block', 'rescue', 'always'):
+            if key in task:
+                found = _find_task(task[key], name_prefix)
+                if found:
+                    return found
+    return None
+
+
+def _render(task_file, task_name, fact, **variables):
+    """Render the Jinja expression of a set_fact task, taken from the real task file.
+    Ansible-only filters and tests used by these expressions are stubbed."""
+    with open(os.path.join(TASKS_DIR, task_file)) as f:
+        task = _find_task(yaml.safe_load(f), task_name)
+    env = jinja2.Environment()
+    env.filters['regex_replace'] = lambda s, p, r='': re.sub(p, r, s)
+    env.filters['dirname'] = os.path.dirname
+    env.filters['basename'] = os.path.basename
+    env.filters['unique'] = lambda seq: list(dict.fromkeys(seq))
+    env.tests['match'] = lambda s, p: re.match(p, s) is not None
+    return env.from_string(task['set_fact'][fact]).render(**variables).strip()
+
+
+class TestIbmBobBundleLookup(unittest.TestCase):
+    """The bundle is resolved from the GitHub release, not from the version file."""
+
+    def test_highest_version_is_numeric_not_alphabetical(self):
+        candidates = ['2.0.2', '2.0.10', '2.0.9', '1.9.0']
+        res = _render('resolve-version.yml', 'Determine highest IBM Bob version',
+                      '_p_effective_bob_version', _ibm_bob_latest_candidates=candidates)
+        self.assertEqual(res, '2.0.10')
+
+    def test_newer_minor_wins_over_later_fixpack_of_older_minor(self):
+        candidates = ['2.0.1', '2.1.0', '2.0.2']
+        res = _render('resolve-version.yml', 'Determine highest IBM Bob version',
+                      '_p_effective_bob_version', _ibm_bob_latest_candidates=candidates)
+        self.assertEqual(res, '2.1.0')
+
+    def test_candidates_from_releases_skip_drafts_prereleases_and_odd_tags(self):
+        releases = [
+            {'tag_name': 'v2.0.1', 'draft': False, 'prerelease': False},
+            {'tag_name': 'v2.1.0', 'draft': False, 'prerelease': True},
+            {'tag_name': 'v2.2.0', 'draft': True, 'prerelease': False},
+            {'tag_name': 'v2.0.0', 'draft': False, 'prerelease': False},
+            {'tag_name': 'nightly', 'draft': False, 'prerelease': False},
+            {'tag_name': 'v2.0.1-rc1', 'draft': False, 'prerelease': False},
+        ]
+        res = _render('resolve-version.yml', 'Collect candidate versions from published releases',
+                      '_ibm_bob_latest_candidates', _ibm_bob_releases={'json': releases})
+        self.assertEqual(sorted(ast.literal_eval(res)), ['2.0.0', '2.0.1'])
+
+    def test_air_gapped_candidates_come_from_cached_bundle_directories(self):
+        files = [{'path': '/s/downloads/ibm-bob/2.0.1/ibm-bob-install-20261110-064941.tgz'},
+                 {'path': '/s/downloads/ibm-bob/2.0.0/ibm-bob-install-20260924-163534.tgz'},
+                 {'path': '/s/downloads/ibm-bob/models/x/ibm-bob-install-1.tgz'}]
+        res = _render('resolve-version.yml', 'Collect candidate versions from downloaded bundles',
+                      '_ibm_bob_latest_candidates', _ibm_bob_cached_bundles={'files': files})
+        self.assertEqual(sorted(ast.literal_eval(res)), ['2.0.0', '2.0.1'])
+
+    def test_bundle_asset_regex_and_digest_check(self):
+        with open(os.path.join(TASKS_DIR, 'resolve-bundle.yml')) as f:
+            tasks = yaml.safe_load(f)
+        sel = _find_task(tasks, 'Select IBM Bob release bundle asset')['set_fact']['_ibm_bob_release_assets']
+        self.assertIn(r"^ibm-bob-install-.*\.tgz$", sel)
+        digest_task = _find_task(tasks, 'Fail if the release bundle asset has no sha256 digest')
+        self.assertIn("^sha256:[0-9a-f]{64}$", digest_task['when'])
+
+    def test_no_bundle_properties_pinned_in_version_files(self):
+        for path in glob.glob(os.path.join(VERSIONS_DIR, '*.yml')):
+            with open(path) as f:
+                data = yaml.safe_load(f)
+            for key in ('_ibm_bob_bundle_filename', '_ibm_bob_bundle_url', '_ibm_bob_bundle_sha256'):
+                self.assertNotIn(key, data, path)
 
 
 class TestVllmImagePathDerivation(unittest.TestCase):
