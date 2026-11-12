@@ -17,7 +17,7 @@
 # ---- Paths ------------------------------------------------------------------
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[1]}")/../.." && pwd)"
 RUN_DIR="${REPO_ROOT}/tests/test-run"
-CONFIG_DIR="${RUN_DIR}"
+CONFIG_DIR="${RUN_DIR}/cpd-config"
 CONFIG_YAML_DIR="${CONFIG_DIR}/config"
 STATUS_DIR="${RUN_DIR}/status"
 ENVIRONMENT_NAME="integration-tests"
