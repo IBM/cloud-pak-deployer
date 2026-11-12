@@ -109,6 +109,33 @@ class TestAssertPlaybook(unittest.TestCase):
         state = open(os.path.join(PLAYBOOKS, 'bob-state.yml')).read()
         self.assertNotRegex(state, r'(?m)^[^#\n]*resourceVersion')
 
+    def test_foreign_images_filter_permits_private_registry_and_cpopen(self):
+        from jinja2.nativetypes import NativeEnvironment
+        env = NativeEnvironment()
+        env.filters['regex_escape'] = re.escape
+        env.tests['match'] = lambda val, pat: bool(re.search(pat, val))
+
+        def find_task(tasks, name):
+            for t in tasks:
+                if t.get('name') == name:
+                    return t
+                sub = find_task(t.get('block', []), name)
+                if sub:
+                    return sub
+            return None
+
+        task = find_task(ASSERT, 'Find the images that do not come from the private registry')
+        expr = task['set_fact']['_it_foreign_images']
+        images = [
+            {'namespace': 'ibm-bob', 'pod': 'p1', 'container': 'c1', 'image': 'de.icr.io/bob-on-prem/ibm-bob-gateway:2.0.1'},
+            {'namespace': 'ibm-bob', 'pod': 'p2', 'container': 'ibm-usage-metering-instance', 'image': 'icr.io/cpopen/cpfs/ibm-usage-metering-instance@sha256:f398b25e5a2d02bc75fcdbf1cd848448c0ffe07ee4eb38630ca87971c007d7f7'},
+            {'namespace': 'ibm-bob-operators', 'pod': 'p3', 'container': 'ibm-usage-metering-operator', 'image': 'icr.io/cpopen/ibm-usage-metering-operator@sha256:6da2b2e3fa74881bccfb4d0baded7c7a813595454c01cdcee5ad2f26de7f35ff'},
+            # Dummy fixture: an un-mirrored foreign image must still be flagged
+            {'namespace': 'ibm-bob', 'pod': 'p4', 'container': 'c4', 'image': 'docker.io/library/nginx:latest'},
+        ]
+        res = env.from_string(expr).render(_it_images=images, _it_registry_prefix='de.icr.io/bob-on-prem')
+        self.assertEqual(res, [images[3]])
+
 
 if __name__ == '__main__':
     unittest.main()
