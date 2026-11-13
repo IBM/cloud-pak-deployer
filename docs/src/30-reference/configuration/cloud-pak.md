@@ -1069,7 +1069,8 @@ To upgrade IBM Bob, change `ibm_bob_version` to the new version (for example fro
 
 | Installed version | Action |
 |-------------------|--------|
-| None, or not recognized | Install with `bobctl install`. A warning is shown if a `Bob` custom resource exists but its version cannot be determined. |
+| None (no `Bob` custom resource) | Install with `bobctl install`. |
+| `Bob` custom resource exists, version not recognized | The deployer stops with an error, to avoid breaking the existing installation with `bobctl install`. |
 | Same as requested | Re-apply with `bobctl install`, as before. |
 | Lower than requested | Upgrade, see below. |
 | Higher than requested | The deployer stops with an error. Downgrading IBM Bob is not supported. |

@@ -100,17 +100,18 @@ class TestBobUpgradeDetection(unittest.TestCase):
     def test_spec_version_wins_over_label(self):
         self.assertEqual(detect(cr('2.0.1', label='2.0.0-3'), '2.0.1'), ('2.0.1', 'reapply'))
 
-    def test_unknown_version_falls_back_to_install(self):
+    def test_unknown_version_is_reported_as_empty_installed_version(self):
         self.assertEqual(detect(cr(), '2.0.1'), ('', 'install'))
         self.assertEqual(detect(cr('garbage'), '2.0.1'), ('', 'install'))
 
-    def test_downgrade_fails_and_unknown_version_warns(self):
+    def test_downgrade_and_unknown_version_fail(self):
         tasks = _load('check-bob-upgrade.yml')
         fail = _find_task(tasks, 'Fail if the requested IBM Bob version is lower')
         self.assertEqual(fail['when'], "_ibm_bob_action == 'downgrade'")
         self.assertIn('fail', fail)
-        warn = _find_task(tasks, 'Warn when the installed IBM Bob version cannot be determined')
-        self.assertIn('debug', warn)
+        unknown = _find_task(tasks, 'Fail if the installed IBM Bob version cannot be determined')
+        self.assertIn('fail', unknown)
+        self.assertIn('_ibm_bob_cr_exists | bool', unknown['when'])
 
     def test_detection_only_reads_the_cluster(self):
         # it also runs in dry-run mode, so it must not change anything

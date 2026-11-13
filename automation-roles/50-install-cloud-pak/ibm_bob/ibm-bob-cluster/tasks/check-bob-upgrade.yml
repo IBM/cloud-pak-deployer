@@ -15,7 +15,8 @@
 #   _ibm_bob_installed_version  installed version, '' when not installed or unknown
 #   _ibm_bob_action             install | reapply | upgrade
 #   _upgrade_bob                true when the action is upgrade
-# Fails when the installed version is higher than the requested version.
+# Fails when the installed version is higher than the requested version, or when a Bob custom
+# resource exists but its version cannot be determined (bobctl install could break it).
 # =============================================================================
 
 - name: "Retrieve current Bob custom resource bob-cr in {{ current_ibm_bob_cluster.project }}"
@@ -55,11 +56,13 @@
       Set ibm_bob_version to {{ _ibm_bob_installed_version }} or higher.
   when: _ibm_bob_action == 'downgrade'
 
-- name: Warn when the installed IBM Bob version cannot be determined
-  debug:
+- name: Fail if the installed IBM Bob version cannot be determined
+  fail:
     msg: >-
-      WARNING: A Bob custom resource exists in namespace {{ current_ibm_bob_cluster.project }}, but its version
-      ('{{ _ibm_bob_installed_version_raw }}') cannot be determined. IBM Bob {{ _ibm_bob_version }} is installed with bobctl install.
+      A Bob custom resource exists in namespace {{ current_ibm_bob_cluster.project }}, but its version
+      ('{{ _ibm_bob_installed_version_raw }}') cannot be determined. To avoid breaking the existing installation,
+      the deployer does not run bobctl install. Check spec.version of the Bob custom resource bob-cr
+      (or its label app.kubernetes.io/version) and resolve this before running the deployer again.
   when:
     - _ibm_bob_cr_exists | bool
     - _ibm_bob_installed_version == ''
