@@ -10,6 +10,15 @@
     ansible_callback_diy_runner_on_ok_msg: ""
     ansible_callback_diy_playbook_on_include_msg: ""
 
+  pre_tasks:
+
+  - name: Mark installation progress step as started
+    include_role:
+      name: installation-progress
+    vars:
+      _p_progress_action: start
+      _p_progress_step: "30 - Provision infrastructure"
+
   tasks:
 
   - stat:
@@ -41,3 +50,12 @@
     include_role:
       name: provision-azure
     when: cloud_platform == 'azure'
+
+  post_tasks:
+
+  - name: Mark installation progress step as completed
+    include_role:
+      name: installation-progress
+    vars:
+      _p_progress_action: complete
+      _p_progress_step: "30 - Provision infrastructure"
