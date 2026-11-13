@@ -5,6 +5,8 @@
 #   1. bobctl generate-cluster-resources  → work/cluster-resources.yaml
 #   2. oc apply --force-conflicts --server-side
 #   3. bobctl install [--registry-creds cp:<key>] --accept-license [--model-config …]
+#      When check-bob-upgrade.yml found an older version (_upgrade_bob), step 3 is
+#      upgrade-bob.yml instead (bobctl upgrade, see there).
 #
 #      In air-gapped mode (cpd_airgap=true), the pull secret was pre-created by
 #      airgap-apply.yml; --registry-creds is NOT passed to bobctl install because
@@ -12,6 +14,11 @@
 #      are set (which we don't want — it would overwrite our pre-created secret).
 #
 # Docs: https://bob.ibm.com/docs/ide/enterprise/on-premises/installation/install
+#
+# Dry run (cpd_dry_run): bobctl and oc commands go through run-command (logged in
+# deployer-activities.log, not executed). Tasks that carry secrets (pull secrets) are
+# guarded and replaced by a comment activity that never contains the secret. The
+# entitlement key is not required in dry run.
 #
 # Prerequisites (all set before this file is included):
 #   _ibm_bob_bobctl_path          absolute path to the bobctl script
@@ -39,6 +46,7 @@
       Set it with: ./cp-deploy.sh vault set -vs=ibm_cp_entitlement_key=<your-key>
   when:
     - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
     - (_ibm_bob_entitlement_key | default('')) == ''
 
 - name: Ensure operator namespace exists for pull secret
@@ -49,7 +57,9 @@
       kind: Namespace
       metadata:
         name: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
-  when: not (cpd_airgap | default(false) | bool)
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
 
 - name: Ensure instance namespace exists for pull secret
   kubernetes.core.k8s:
@@ -59,7 +69,9 @@
       kind: Namespace
       metadata:
         name: "{{ current_ibm_bob_cluster.project }}"
-  when: not (cpd_airgap | default(false) | bool)
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
 
 - name: Create ibm-entitlement-key pull secret in operator namespace (connected)
   kubernetes.core.k8s:
@@ -85,6 +97,7 @@
   no_log: true
   when:
     - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
     - (_ibm_bob_entitlement_key | default('')) != ''
 
 - name: Create ibm-entitlement-key pull secret in instance namespace (connected)
@@ -111,7 +124,21 @@
   no_log: true
   when:
     - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
     - (_ibm_bob_entitlement_key | default('')) != ''
+
+- name: Log planned namespaces and pull secrets (dry run, connected mode)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create IBM Bob namespaces and ibm-entitlement-key pull secrets"
+    _p_activity_comment: >-
+      Create namespaces {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }} and
+      {{ current_ibm_bob_cluster.project }} if they do not exist, and create the pull secret ibm-entitlement-key
+      for cp.icr.io in both (the secret is not logged)
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - cpd_dry_run | default(false) | bool
 
 # ---- Model gateway (optional) -----------------------------------------------
 # Resolved now so that config.yaml can be updated before bobctl runs.
@@ -219,7 +246,7 @@
     _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
     _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-apply-cluster-resources.log"
 
-# ---- Step 3: bobctl install -------------------------------------------------
+# ---- Step 3: bobctl install, or bobctl upgrade ------------------------------
 # In both connected and air-gapped modes, the pull secret ibm-entitlement-key is
 # pre-created by the deployer. --registry-creds is omitted so that the Helm chart
 # does not create/manage container-registry-secrets, allowing smooth, idempotent
@@ -234,6 +261,11 @@
       {{ ('--model-config ' + _ibm_bob_model_config_file) if _ibm_bob_model_config_file else '' }}
     _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
     _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-install.log"
+  when: not (_upgrade_bob | default(false) | bool)
+
+- name: Upgrade IBM Bob {{ _ibm_bob_installed_version | default('') }} to {{ _ibm_bob_version }}
+  include_tasks: upgrade-bob.yml
+  when: _upgrade_bob | default(false) | bool
 
 - name: Clear entitlement key from facts
   set_fact:

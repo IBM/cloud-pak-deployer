@@ -949,7 +949,7 @@ What the deployer does with them:
 | operators_project             | The OpenShift project (bobctl: `global.operatorNamespace`) for the IBM Bob operators. | No, defaults to `<project>-operators` | |
 | openshift_cluster_name        | Name of the `openshift` element to install on. | Yes, inferred from `openshift` | Existing `openshift` cluster |
 | openshift_storage_name        | References an `openshift_storage` element of the cluster. Provides the file and block storage classes. | No, inferred from `openshift` -> `openshift_storage` | |
-| ibm_bob_version               | Version of IBM Bob, `x.y.z`, or `latest` for the highest version known to the deployer. | Yes | `2.0.0`, `latest` |
+| ibm_bob_version               | Version of IBM Bob, `x.y.z`, or `latest` for the highest published version (connected) or the highest downloaded bundle (air-gapped). If an older version is installed, the deployer upgrades it, see [Upgrade](#upgrade). | Yes | `2.0.0`, `2.0.1`, `latest` |
 | accept_licenses               | Set to `True` to accept the IBM Bob license. Alternatively use `--accept-all-licenses` with `cp-deploy.sh`. | Yes (not required for `state: removed`) | True, False |
 | reuse_existing_cert_manager   | Set to `True` to reuse a working cert-manager that was installed outside OLM (for example with Helm or manifests) instead of installing the Red Hat cert-manager. The deployer checks that a cert-manager controller is running. | No | True, False (default) |
 | state                         | Desired state of the IBM Bob instance. Setting `removed` requires `--confirm-destroy` or `global_config.confirm_destroy: true`. | No | `installed` (default), `removed` |
@@ -1062,6 +1062,38 @@ Then run the deployer with `CPD_AIRGAP=true`:
 ``` { .bash .copy }
 CPD_AIRGAP=true ./cp-deploy.sh env apply -c <config-dir> -l <status-dir>
 ```
+
+### Upgrade
+
+To upgrade IBM Bob, change `ibm_bob_version` to the new version (for example from `2.0.0` to `2.0.1`, or to `latest`) and run the deployer again. Before it changes anything, the deployer compares the requested version with `spec.version` of the `Bob` custom resource `bob-cr` in the IBM Bob project (the label `app.kubernetes.io/version` is used when `spec.version` is not set):
+
+| Installed version | Action |
+|-------------------|--------|
+| None (no `Bob` custom resource) | Install with `bobctl install`. |
+| `Bob` custom resource exists, version not recognized | The deployer stops with an error, to avoid breaking the existing installation with `bobctl install`. |
+| Same as requested | Re-apply with `bobctl install`, as before. |
+| Lower than requested | Upgrade, see below. |
+| Higher than requested | The deployer stops with an error. Downgrading IBM Bob is not supported. |
+
+An upgrade does the following:
+
+1. Generates and applies the cluster-scoped resources of the new version, as for an install.
+2. Deletes the `ClusterRole` `ibm-bob-role-<operators_project>` and `ClusterRoleBinding` `ibm-bob-rolebinding-<operators_project>` that older versions created, if the new version no longer creates them.
+3. Runs `bobctl upgrade`. The values of the installed release are kept, so the model gateway, certificate and premium package settings of the installed instance are retained.
+4. Runs `bobctl update-model-config` when `model_gateway` or `openshift_ai_models` is configured, because `bobctl upgrade` does not take a model configuration.
+5. Waits until the `Bob` custom resource reports the new version, is `Available` for its current generation, and is not `Degraded`.
+
+The instance is upgraded in place: the Keycloak admin credentials, the model weights and the other data of the instance are kept.
+
+With `--dry-run` the deployer lists these steps in `deployer-activities.log` without running them, see [Dry run](#dry-run).
+
+### Dry run
+
+Run `cp-deploy.sh env apply --dry-run` (or `env destroy --dry-run`) to review what the deployer would do with IBM Bob without changing the cluster or the vault. The deployer still reads the cluster (for example to detect an upgrade) and renders the configuration, but every command that would change something is written to `<status_dir>/log/deployer-activities.log` instead: the `bobctl`, `oc` and `helm` commands, the YAML of the objects it would create (namespaces, PVCs, `ServingRuntime`s, `InferenceService`s, model download jobs) and comments for the steps that cannot be shown as a command, such as waits and pull secrets. Pull secrets and other secrets are never written to the log, and the IBM entitlement key is not required. The log is recreated at the start of every run.
+
+For `state: removed` the log lists the removal commands in the order in which they would run. Use a user with the `cluster-reader` role to run a dry run.
+
+Model weights are not downloaded or uploaded in a dry run, so the log only contains the `Job` that would download them.
 
 ### Uninstall
 
@@ -1240,7 +1272,7 @@ To verify the deployer flow on a cluster without GPU nodes:
     skip_gpu_check: true
 ```
 
-The deployer runs the full flow: OpenShift AI check, PVC creation, weight download (connected) or status-dir upload (air-gapped), `ServingRuntime` and `InferenceService` creation, gateway generation, and Bob installation. The model pods remain `Pending` as expected; this does not affect Bob itself. The same behavior applies in dry-run mode.
+The deployer runs the full flow: OpenShift AI check, PVC creation, weight download (connected) or status-dir upload (air-gapped), `ServingRuntime` and `InferenceService` creation, gateway generation, and Bob installation. The model pods remain `Pending` as expected; this does not affect Bob itself. In a dry run, nothing of this is created: the objects are written to `deployer-activities.log`.
 
 #### Removal
 

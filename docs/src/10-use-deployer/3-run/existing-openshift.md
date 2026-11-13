@@ -27,7 +27,7 @@ When running the Cloud Pak Deployer on an existing OpenShift cluster, the follow
     You can reinstall the OpenShift Pipelines operator from OperatorHub after Watson Studio Pipelines is deployed.
 
 !!! info
-    If you don't want to make changes to the OpenShift cluster and only want to review the steps deployer will run, you can use the `--dry-run` option with `cp-deploy.sh`. This will generate a log file `$STATUS_DIR/log/deployer-activities.log`, which lists the steps deployer will execute when running without `--dry-run`. Please note that the dry-run option has only been implemented for Cloud Pak for Data i.e. watsonx.
+    If you don't want to make changes to the OpenShift cluster and only want to review the steps deployer will run, you can use the `--dry-run` option with `cp-deploy.sh`. This will generate a log file `$STATUS_DIR/log/deployer-activities.log`, which lists the steps deployer will execute when running without `--dry-run`. Please note that the dry-run option has been implemented for Cloud Pak for Data i.e. watsonx, and for IBM Bob (installation, upgrade and removal), see [IBM Bob dry run](../../30-reference/configuration/cloud-pak.md#dry-run). It is not implemented for the other Cloud Paks.
 
 !!! info
     You can also choose to run Cloud Pak Deployer as a job on the OpenShift cluster. This removes the dependency on a separate server or workstation to run the deployer. **Please note that you may need unrestricted OpenShift entitlements for this.** To run the deployer on OpenShift via the OpenShift console, see [Run on OpenShift using console](./existing-openshift-console.md)

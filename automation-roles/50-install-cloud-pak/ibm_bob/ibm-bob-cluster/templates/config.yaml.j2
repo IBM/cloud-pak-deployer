@@ -9,6 +9,9 @@ global:
   imagePullSecretName: ibm-entitlement-key
 
 bob:
+{% if _ibm_bob_external_domain | default('') != '' %}
+  externalDomain: {{ _ibm_bob_external_domain }}
+{% endif %}
   rag:
     enabled: {{ 'true' if (current_ibm_bob_cluster.premium_packages.rag | default(false)) else 'false' }}
   zProxy:

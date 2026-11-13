@@ -18,17 +18,31 @@
 # Every step is idempotent: a resource that is already absent is not an error.
 # cpd_skip_cp_install: when true, log that uninstall is skipped (dry-run guard
 #   already handled upstream; this flag is respected here for symmetry).
+#
+# Dry run (cpd_dry_run): every task that changes the cluster or the vault goes through
+# run-command (logged in deployer-activities.log, not executed) or is guarded with
+# "when: not cpd_dry_run" and replaced by a comment activity. Only read-only checks run.
+# Do not add kubernetes.core.k8s state absent/patched or vault changes without a guard
+# (tests/ibm-bob/unit/test_upgrade.py checks this).
 # =============================================================================
+
+- name: Set fact for the OpenShift AI models namespace
+  set_fact:
+    _ibm_bob_models_project: >-
+      {{ (current_ibm_bob_cluster.openshift_ai_models | default({})).project
+         | default(current_ibm_bob_cluster.project + '-models') }}
+    _ibm_bob_uninstall_log: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-uninstall.log"
 
 # ---- Step 1: trigger CR deletion (--wait=false, async) ---------------------
 - name: Delete Bob CR in namespace {{ current_ibm_bob_cluster.project }} (async)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: bob.ibm.com/v1beta1
-    kind: Bob
-    name: bob-cr
-    namespace: "{{ current_ibm_bob_cluster.project }}"
-    wait: false
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete Bob CR bob-cr in namespace {{ current_ibm_bob_cluster.project }} (async)"
+    _p_command: >-
+      oc delete bob bob-cr -n {{ current_ibm_bob_cluster.project }} --ignore-not-found --wait=false
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
 
 - name: Check if BobIdp CRD exists
@@ -38,13 +52,14 @@
   failed_when: false
 
 - name: Delete BobIdp CR in namespace {{ current_ibm_bob_cluster.project }} (async)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: bob.ibm.com/v1beta1
-    kind: BobIdp
-    name: bob-idp
-    namespace: "{{ current_ibm_bob_cluster.project }}"
-    wait: false
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete BobIdp CR bob-idp in namespace {{ current_ibm_bob_cluster.project }} (async)"
+    _p_command: >-
+      oc delete bobidp bob-idp -n {{ current_ibm_bob_cluster.project }} --ignore-not-found --wait=false
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
   when: _ibm_bob_idp_crd_check.rc == 0
 
@@ -59,15 +74,15 @@
   when: _ibm_bob_idp_crd_check.rc == 0
 
 - name: Patch out BobIdp finalizer to unblock deletion
-  kubernetes.core.k8s:
-    state: patched
-    api_version: bob.ibm.com/v1beta1
-    kind: BobIdp
-    name: bob-idp
-    namespace: "{{ current_ibm_bob_cluster.project }}"
-    definition:
-      metadata:
-        finalizers: []
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Patch out BobIdp finalizer of bob-idp in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      oc patch bobidp bob-idp -n {{ current_ibm_bob_cluster.project }} --type merge
+      -p '{"metadata":{"finalizers":[]}}'
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   when:
     - _ibm_bob_idp_crd_check.rc == 0
     - (_ibm_bob_idp_cr.resources | default([])) | length > 0
@@ -95,37 +110,41 @@
 
 # ---- Step 4: delete the namespaces ------------------------------------------
 - name: Delete instance namespace {{ current_ibm_bob_cluster.project }}
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Namespace
-    name: "{{ current_ibm_bob_cluster.project }}"
-    wait: true
-    wait_timeout: 300
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete instance namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      oc delete namespace {{ current_ibm_bob_cluster.project }} --ignore-not-found --wait=true --timeout=300s
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
 
 - name: Delete operator namespace {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Namespace
-    name: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
-    wait: true
-    wait_timeout: 300
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete operator namespace {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+    _p_command: >-
+      oc delete namespace {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}
+      --ignore-not-found --wait=true --timeout=300s
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
 
 # ---- Step 4b: remove OpenShift AI model objects (if openshift_ai_models was configured) ----
 # By default (remove_model_weights: true) the PVCs and the models namespace are deleted too.
 # Set remove_model_weights: false to keep the downloaded weights, which are expensive to re-download.
 - name: Remove InferenceService objects created by the deployer (openshift_ai_models)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: serving.kserve.io/v1beta1
-    kind: InferenceService
-    name: "{{ item }}"
-    namespace: "{{ current_ibm_bob_cluster.openshift_ai_models.project
-                   | default(current_ibm_bob_cluster.project + '-models') }}"
-    wait: false
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete InferenceService {{ item }} in namespace {{ _ibm_bob_models_project }}"
+    _p_command: >-
+      oc delete inferenceservice.serving.kserve.io {{ item }} -n {{ _ibm_bob_models_project }}
+      --ignore-not-found --wait=false
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   loop:
     - ibm-bob-core-model
     - ibm-bob-guardrail-model
@@ -133,14 +152,15 @@
   when: current_ibm_bob_cluster.openshift_ai_models is defined
 
 - name: Remove ServingRuntime objects created by the deployer (openshift_ai_models)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: serving.kserve.io/v1alpha1
-    kind: ServingRuntime
-    name: "{{ item }}"
-    namespace: "{{ current_ibm_bob_cluster.openshift_ai_models.project
-                   | default(current_ibm_bob_cluster.project + '-models') }}"
-    wait: false
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete ServingRuntime {{ item }} in namespace {{ _ibm_bob_models_project }}"
+    _p_command: >-
+      oc delete servingruntime.serving.kserve.io {{ item }} -n {{ _ibm_bob_models_project }}
+      --ignore-not-found --wait=false
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   loop:
     - ibm-bob-core-vllm
     - ibm-bob-guardrail-vllm
@@ -151,8 +171,7 @@
   debug:
     msg: >-
       The model weights PVCs in namespace
-      '{{ current_ibm_bob_cluster.openshift_ai_models.project
-          | default(current_ibm_bob_cluster.project + '-models') }}'
+      '{{ _ibm_bob_models_project }}'
       are kept. Delete them manually if you no longer need the downloaded weights:
         oc delete pvc ibm-bob-core-model ibm-bob-guardrail-model -n <models-namespace>
       remove_model_weights is set to false in the ibm_bob config. Remove that setting (default is true) to delete them automatically.
@@ -160,16 +179,36 @@
     - current_ibm_bob_cluster.openshift_ai_models is defined
     - not (current_ibm_bob_cluster.remove_model_weights | default(true) | bool)
 
+# The completed download Jobs (ttlSecondsAfterFinished: 86400) keep their pods, and the pods keep
+# the PVCs in use, so a PVC delete would wait on the kubernetes.io/pvc-protection finalizer until
+# the 5 minute timeout. Delete the Jobs and their pods first.
+- name: Delete model download Jobs (when remove_model_weights is true)
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete model download Job {{ item }} in namespace {{ _ibm_bob_models_project }}"
+    _p_command: >-
+      oc delete job {{ item }} -n {{ _ibm_bob_models_project }}
+      --ignore-not-found --cascade=foreground --wait=true --timeout=120s
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
+  loop:
+    - ibm-bob-core-model-download
+    - ibm-bob-guardrail-model-download
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
+
 - name: Delete model weight PVCs (when remove_model_weights is true)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: PersistentVolumeClaim
-    name: "{{ item }}"
-    namespace: "{{ current_ibm_bob_cluster.openshift_ai_models.project
-                   | default(current_ibm_bob_cluster.project + '-models') }}"
-    wait: true
-    wait_timeout: 300
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete model weight PVC {{ item }} in namespace {{ _ibm_bob_models_project }}"
+    _p_command: >-
+      oc delete pvc {{ item }} -n {{ _ibm_bob_models_project }}
+      --ignore-not-found --wait=true --timeout=300s
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   loop:
     - ibm-bob-core-model
     - ibm-bob-guardrail-model
@@ -179,13 +218,14 @@
     - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
 
 - name: Delete models namespace (when remove_model_weights is true)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: v1
-    kind: Namespace
-    name: "{{ current_ibm_bob_cluster.openshift_ai_models.project
-               | default(current_ibm_bob_cluster.project + '-models') }}"
-    wait: false
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete models namespace {{ _ibm_bob_models_project }}"
+    _p_command: >-
+      oc delete namespace {{ _ibm_bob_models_project }} --ignore-not-found --wait=false
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
   when:
     - current_ibm_bob_cluster.openshift_ai_models is defined
@@ -193,9 +233,7 @@
 
 - name: Wait for models namespace to be fully terminated
   shell: >-
-    oc get namespace
-    {{ current_ibm_bob_cluster.openshift_ai_models.project
-       | default(current_ibm_bob_cluster.project + '-models') }}
+    oc get namespace {{ _ibm_bob_models_project }}
     --no-headers 2>/dev/null | wc -l
   register: _ibm_bob_models_ns_wait
   retries: 30
@@ -206,25 +244,43 @@
   when:
     - current_ibm_bob_cluster.openshift_ai_models is defined
     - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
+    - not (cpd_dry_run | default(false) | bool)
+
+- name: Log that the wait for the models namespace is skipped in dry run
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Wait for models namespace {{ _ibm_bob_models_project }} to be terminated"
+    _p_activity_comment: "Wait until namespace {{ _ibm_bob_models_project }} no longer exists (up to 30 x 10 seconds)"
+  when:
+    - current_ibm_bob_cluster.openshift_ai_models is defined
+    - current_ibm_bob_cluster.remove_model_weights | default(true) | bool
+    - cpd_dry_run | default(false) | bool
 
 # ---- Step 4c: remove cert-manager Certificate and Issuer (if deployer-managed) ----
 - name: Delete Certificate bob-cluster-ingress-tls (deployer-managed)
-  kubernetes.core.k8s:
-    state: absent
-    api_version: cert-manager.io/v1
-    kind: Certificate
-    name: bob-cluster-ingress-tls
-    namespace: "{{ current_ibm_bob_cluster.project }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete Certificate bob-cluster-ingress-tls in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      oc delete certificate.cert-manager.io bob-cluster-ingress-tls -n {{ current_ibm_bob_cluster.project }}
+      --ignore-not-found
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
   when: (current_ibm_bob_cluster.ingress_cert | default({})) != {}
 
 - name: Delete deployer-managed Issuer ibm-bob-acme
-  kubernetes.core.k8s:
-    state: absent
-    api_version: cert-manager.io/v1
-    kind: Issuer
-    name: ibm-bob-acme
-    namespace: "{{ current_ibm_bob_cluster.project }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Delete Issuer ibm-bob-acme in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      oc delete issuer.cert-manager.io ibm-bob-acme -n {{ current_ibm_bob_cluster.project }}
+      --ignore-not-found
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ _ibm_bob_uninstall_log }}"
   ignore_errors: true
   when: (current_ibm_bob_cluster.ingress_cert.acme_email | default('')) != ''
 
@@ -254,6 +310,17 @@
     secret_name: "ibm_bob_keycloak_admin_{{ current_ibm_bob_cluster.project | replace('-','_') }}_{{ current_ibm_bob_cluster.openshift_cluster_name | replace('-','_') }}"
     secret_group: "{{ environment_name }}"
   ignore_errors: true
+  when: not (cpd_dry_run | default(false) | bool)
+
+- name: Log that the Keycloak admin vault key is not removed in dry run
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Remove Keycloak admin vault key for {{ current_ibm_bob_cluster.project }}"
+    _p_activity_comment: >-
+      Remove vault secret ibm_bob_keycloak_admin_{{ current_ibm_bob_cluster.project | replace('-','_') }}_{{ current_ibm_bob_cluster.openshift_cluster_name | replace('-','_') }}
+      from vault group {{ environment_name }}
+  when: cpd_dry_run | default(false) | bool
 
 - name: IBM Bob instance {{ current_ibm_bob_cluster.project }} has been removed
   debug:

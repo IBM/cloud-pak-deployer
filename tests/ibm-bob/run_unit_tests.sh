@@ -25,4 +25,10 @@ python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_variables.py" "$@"
 echo "=== IBM Bob Unit Tests — config.yaml template rendering ==="
 python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_template.py" "$@"
 
+echo "=== IBM Bob Unit Tests — upgrade, dry run and uninstall ==="
+python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_upgrade.py" "$@"
+
+echo "=== IBM Bob Unit Tests — integration test harness ==="
+python3 "${REPO_ROOT}/tests/ibm-bob/unit/test_harness.py" "$@"
+
 echo "=== All unit tests passed ==="

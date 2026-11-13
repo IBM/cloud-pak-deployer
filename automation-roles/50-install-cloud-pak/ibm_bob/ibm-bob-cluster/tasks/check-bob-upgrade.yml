@@ -1,0 +1,79 @@
+---
+# =============================================================================
+# check-bob-upgrade.yml
+# Decides per run whether the action is a fresh install, a re-apply of the same
+# version or an upgrade, by comparing the installed version with the requested one
+# (same pattern as check-cp4d-upgrade.yml). Only reads the cluster, so it also runs
+# in dry-run mode.
+#
+# The installed version is spec.version of the Bob custom resource bob-cr (set by the
+# Helm chart from bob.crVersion). Bob.status has no version field. When spec.version
+# is missing, the label app.kubernetes.io/version (appVersion, for example 2.0.0-3)
+# without the build suffix is used.
+#
+# Sets:
+#   _ibm_bob_installed_version  installed version, '' when not installed or unknown
+#   _ibm_bob_action             install | reapply | upgrade
+#   _upgrade_bob                true when the action is upgrade
+# Fails when the installed version is higher than the requested version, or when a Bob custom
+# resource exists but its version cannot be determined (bobctl install could break it).
+# =============================================================================
+
+- name: "Retrieve current Bob custom resource bob-cr in {{ current_ibm_bob_cluster.project }}"
+  kubernetes.core.k8s_info:
+    api_version: bob.ibm.com/v1beta1
+    kind: Bob
+    name: bob-cr
+    namespace: "{{ current_ibm_bob_cluster.project }}"
+  register: _ibm_bob_current_cr
+
+- name: Determine installed IBM Bob version
+  vars:
+    _cr: "{{ (_ibm_bob_current_cr.resources | default([])) | first | default({}) }}"
+    _spec_version: "{{ (_cr.spec | default({})).version | default('') | string }}"
+    _label_version: "{{ ((_cr.metadata | default({})).labels | default({}))['app.kubernetes.io/version'] | default('') | string | regex_replace('-.*$', '') }}"
+  set_fact:
+    _ibm_bob_cr_exists: "{{ _cr | length > 0 }}"
+    _ibm_bob_installed_version_raw: "{{ _spec_version if _spec_version != '' else _label_version }}"
+
+- name: Determine IBM Bob action (install, reapply or upgrade)
+  vars:
+    _valid: "{{ _ibm_bob_installed_version_raw is match('^[0-9]+\\.[0-9]+\\.[0-9]+$') }}"
+  set_fact:
+    _ibm_bob_installed_version: "{{ _ibm_bob_installed_version_raw if (_ibm_bob_cr_exists and _valid) else '' }}"
+    _ibm_bob_action: >-
+      {%- if not _ibm_bob_cr_exists or not _valid -%}install
+      {%- elif _ibm_bob_installed_version_raw is version(_ibm_bob_version, '<') -%}upgrade
+      {%- elif _ibm_bob_installed_version_raw is version(_ibm_bob_version, '>') -%}downgrade
+      {%- else -%}reapply
+      {%- endif -%}
+
+- name: Fail if the requested IBM Bob version is lower than the installed version
+  fail:
+    msg: >-
+      IBM Bob {{ _ibm_bob_installed_version }} is installed in namespace {{ current_ibm_bob_cluster.project }},
+      but version {{ _ibm_bob_version }} is requested. Downgrading IBM Bob is not supported.
+      Set ibm_bob_version to {{ _ibm_bob_installed_version }} or higher.
+  when: _ibm_bob_action == 'downgrade'
+
+- name: Fail if the installed IBM Bob version cannot be determined
+  fail:
+    msg: >-
+      A Bob custom resource exists in namespace {{ current_ibm_bob_cluster.project }}, but its version
+      ('{{ _ibm_bob_installed_version_raw }}') cannot be determined. To avoid breaking the existing installation,
+      the deployer does not run bobctl install. Check spec.version of the Bob custom resource bob-cr
+      (or its label app.kubernetes.io/version) and resolve this before running the deployer again.
+  when:
+    - _ibm_bob_cr_exists | bool
+    - _ibm_bob_installed_version == ''
+
+- name: Set upgrade flag
+  set_fact:
+    _upgrade_bob: "{{ _ibm_bob_action == 'upgrade' }}"
+
+- name: Show IBM Bob installed version, requested version and action
+  debug:
+    msg:
+      - "Installed IBM Bob version: {{ _ibm_bob_installed_version if _ibm_bob_installed_version != '' else 'none' }}"
+      - "Requested IBM Bob version: {{ _ibm_bob_version }}"
+      - "Action: {{ _ibm_bob_action }}"
