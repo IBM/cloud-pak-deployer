@@ -1,0 +1,103 @@
+---
+# =============================================================================
+# Resolves _p_effective_bob_version from the requested ibm_bob_version.
+#
+#   - explicit version (e.g. 2.0.1): used as is, no network access needed.
+#   - latest, connected:  highest x.y.z release published on GitHub (drafts and
+#                         pre-releases excluded). Version-sorted, so a fixpack
+#                         on an older minor never wins over a newer minor.
+#   - latest, air-gapped: highest x.y.z version whose bundle is already present
+#                         in status_dir/downloads/ibm-bob (put there by
+#                         'env download'). GitHub is never contacted.
+# =============================================================================
+
+- name: Determine requested IBM Bob version
+  set_fact:
+    _p_requested_bob_version: "{{ _p_ibm_bob_version | default(current_ibm_bob_cluster.ibm_bob_version) }}"
+
+- name: Use requested IBM Bob version as effective version
+  set_fact:
+    _p_effective_bob_version: "{{ _p_requested_bob_version }}"
+  when: _p_requested_bob_version != 'latest'
+
+- name: Resolve latest IBM Bob version
+  when: _p_requested_bob_version == 'latest'
+  block:
+
+    - name: Find IBM Bob bundles already downloaded (air-gapped)
+      find:
+        paths: "{{ status_dir }}/downloads/ibm-bob"
+        patterns: "ibm-bob-install-*.tgz"
+        recurse: true
+        depth: 2
+      register: _ibm_bob_cached_bundles
+      when: cpd_airgap | default(false) | bool
+
+    - name: Collect candidate versions from downloaded bundles (air-gapped)
+      set_fact:
+        _ibm_bob_latest_candidates: >-
+          {{ _ibm_bob_cached_bundles.files | map(attribute='path') | map('dirname') | map('basename')
+             | select('match', '^[0-9]+\.[0-9]+\.[0-9]+$') | unique | list }}
+        _ibm_bob_latest_source: "the downloaded bundles in {{ status_dir }}/downloads/ibm-bob"
+      when: cpd_airgap | default(false) | bool
+
+    - name: Query GitHub for published IBM Bob releases (connected)
+      when: not (cpd_airgap | default(false) | bool)
+      block:
+
+        - name: Get IBM Bob releases from GitHub
+          uri:
+            url: "https://api.github.com/repos/IBM/ibm-bob/releases?per_page=100"
+            method: GET
+            headers: "{{ {'Accept': 'application/vnd.github+json'} | combine({'Authorization': 'Bearer ' ~ _github_ibm_pat} if (_github_ibm_pat | default('')) != '' else {}) }}"
+            return_content: true
+            status_code: 200
+          register: _ibm_bob_releases
+          until: _ibm_bob_releases is succeeded or (_ibm_bob_releases.status | default(0)) in [401, 403, 404]
+          retries: 5
+          delay: 5
+
+      rescue:
+
+        - name: Fail if the GitHub release list cannot be retrieved
+          fail:
+            msg: >-
+              Could not retrieve the IBM Bob release list from https://api.github.com/repos/IBM/ibm-bob/releases
+              ({{ ansible_failed_result.msg | default('unknown error') }}).
+              Check internet access, or set an explicit ibm_bob_version. If the GitHub API rate limit was hit,
+              store a personal access token in the vault secret 'github-ibm-pat'.
+
+    - name: Collect candidate versions from published releases (connected)
+      set_fact:
+        _ibm_bob_latest_candidates: >-
+          {{ _ibm_bob_releases.json | rejectattr('draft') | rejectattr('prerelease')
+             | map(attribute='tag_name') | map('regex_replace', '^v', '')
+             | select('match', '^[0-9]+\.[0-9]+\.[0-9]+$') | unique | list }}
+        _ibm_bob_latest_source: "the releases published at https://github.com/IBM/ibm-bob/releases"
+      when: not (cpd_airgap | default(false) | bool)
+
+    - name: Fail if no IBM Bob version can be determined
+      fail:
+        msg: >-
+          ibm_bob_version is 'latest' but no IBM Bob version was found in {{ _ibm_bob_latest_source }}.
+          {{ 'In air-gapped mode run env download on a connected machine first, and carry the status directory over, or set an explicit ibm_bob_version.'
+             if (cpd_airgap | default(false) | bool) else '' }}
+      when: _ibm_bob_latest_candidates | length == 0
+
+    # Compare the dotted version numerically, not as strings (2.0.10 > 2.0.2)
+    - name: Determine highest IBM Bob version
+      set_fact:
+        _p_effective_bob_version: >-
+          {%- set ns = namespace(best=none, bestkey=none) -%}
+          {%- for v in _ibm_bob_latest_candidates -%}
+          {%- set k = v.split('.') | map('int') | list -%}
+          {%- if ns.bestkey is none or k > ns.bestkey -%}
+          {%- set ns.best = v -%}
+          {%- set ns.bestkey = k -%}
+          {%- endif -%}
+          {%- endfor -%}
+          {{ ns.best }}
+
+    - name: Show resolved latest IBM Bob version
+      debug:
+        msg: "ibm_bob_version 'latest' resolved to {{ _p_effective_bob_version }} from {{ _ibm_bob_latest_source }}"

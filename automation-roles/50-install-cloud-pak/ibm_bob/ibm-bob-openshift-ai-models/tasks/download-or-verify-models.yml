@@ -62,6 +62,18 @@
   when:
     - not (cpd_airgap | default(false) | bool)
     - (_ibm_bob_hf_token | default('')) != ''
+    - not (cpd_dry_run | default(false) | bool)
+
+- name: Log planned HuggingFace token secret (dry run)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create HuggingFace token secret ibm-bob-hf-token in namespace {{ _ibm_bob_models_project }}"
+    _p_activity_comment: "Create the secret ibm-bob-hf-token with the token from vault secret {{ current_ibm_bob_cluster.openshift_ai_models.huggingface_token_secret_name | default('') }} (the token is not logged)"
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - (_ibm_bob_hf_token | default('')) != ''
+    - cpd_dry_run | default(false) | bool
 
 # ---- Core model weights download / verify -----------------------------------
 # Idempotency: check whether the Job already completed successfully (marker
@@ -86,10 +98,11 @@
   when: not (cpd_airgap | default(false) | bool)
 
 - name: Run core model download Job (connected, not yet complete)
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'model-download-job.j2') | from_yaml }}"
+  include_tasks: apply-object.yml
   vars:
+    _obj_description: "Create Job ibm-bob-core-model-download to download the core model weights"
+    _obj_file_name: "job-core-model-download.yaml"
+    _obj_definition: "{{ lookup('template', 'model-download-job.j2') | from_yaml }}"
     _job_name: "ibm-bob-core-model-download"
     _pvc_name: "ibm-bob-core-model"
     _hf_repo: "{{ _ibm_bob_core_hf_repo }}"
@@ -123,6 +136,18 @@
       | selectattr('status', 'equalto', 'True') | list | length) > 0)
   when:
     - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
+    - not (_ibm_bob_core_job_done | default(false) | bool)
+
+- name: Log wait for the core model download Job (dry run)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Wait for Job ibm-bob-core-model-download to complete"
+    _p_activity_comment: "Wait until the Job ibm-bob-core-model-download in namespace {{ _ibm_bob_models_project }} is Complete (up to 360 x 30 seconds)"
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - cpd_dry_run | default(false) | bool
     - not (_ibm_bob_core_job_done | default(false) | bool)
 
 - name: Check if guardrail model download Job already completed (connected mode)
@@ -144,10 +169,11 @@
   when: not (cpd_airgap | default(false) | bool)
 
 - name: Run guardrail model download Job (connected, not yet complete)
-  kubernetes.core.k8s:
-    state: present
-    definition: "{{ lookup('template', 'model-download-job.j2') | from_yaml }}"
+  include_tasks: apply-object.yml
   vars:
+    _obj_description: "Create Job ibm-bob-guardrail-model-download to download the guardrail model weights"
+    _obj_file_name: "job-guardrail-model-download.yaml"
+    _obj_definition: "{{ lookup('template', 'model-download-job.j2') | from_yaml }}"
     _job_name: "ibm-bob-guardrail-model-download"
     _pvc_name: "ibm-bob-guardrail-model"
     _hf_repo: "{{ _ibm_bob_guardrail_model_defaults.model_id }}"
@@ -181,6 +207,18 @@
       | selectattr('status', 'equalto', 'True') | list | length) > 0)
   when:
     - not (cpd_airgap | default(false) | bool)
+    - not (cpd_dry_run | default(false) | bool)
+    - not (_ibm_bob_guardrail_job_done | default(false) | bool)
+
+- name: Log wait for the guardrail model download Job (dry run)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Wait for Job ibm-bob-guardrail-model-download to complete"
+    _p_activity_comment: "Wait until the Job ibm-bob-guardrail-model-download in namespace {{ _ibm_bob_models_project }} is Complete (up to 360 x 30 seconds)"
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - cpd_dry_run | default(false) | bool
     - not (_ibm_bob_guardrail_job_done | default(false) | bool)
 
 # ---- Air-gapped: upload weights from status_dir to PVCs --------------------
@@ -219,150 +257,20 @@
           Run env download on the connected side first.
       when: not _ibm_bob_guardrail_local_marker.stat.exists
 
-    # -- Core model: create temp pod, copy, write marker, delete pod --
-    - name: Create temporary pod to mount core model PVC
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: ibm-bob-pvc-loader-core
-            namespace: "{{ _ibm_bob_models_project }}"
-            labels:
-              app.kubernetes.io/managed-by: cloud-pak-deployer
-          spec:
-            restartPolicy: Never
-            containers:
-              - name: loader
-                image: "{{ _ibm_bob_loader_effective_image | default(_ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest')) }}"
-                command: ["sleep", "28800"]
-                volumeMounts:
-                  - name: model-storage
-                    mountPath: /mnt/models
-            volumes:
-              - name: model-storage
-                persistentVolumeClaim:
-                  claimName: ibm-bob-core-model
+    # -- Upload to the cluster PVCs (changes the cluster: not in dry run) --
+    - name: Upload model weights into the model PVCs through temporary loader pods
+      include_tasks: upload-model-weights.yml
+      when: not (cpd_dry_run | default(false) | bool)
 
-    - name: Wait for core model loader pod to be Running
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
-        name: ibm-bob-pvc-loader-core
-        namespace: "{{ _ibm_bob_models_project }}"
-      register: _ibm_bob_core_loader_pod
-      until: >-
-        (_ibm_bob_core_loader_pod.resources | default([]) | length > 0) and
-        (_ibm_bob_core_loader_pod.resources[0].status.phase | default('')) == 'Running'
-      retries: 30
-      delay: 10
-
-    - name: Check if PVC-side core model marker already exists
-      kubernetes.core.k8s_exec:
-        namespace: "{{ _ibm_bob_models_project }}"
-        pod: ibm-bob-pvc-loader-core
-        command: "test -f /mnt/models/download-complete"
-      register: _ibm_bob_core_pvc_marker
-      failed_when: false
-      changed_when: false
-
-    - name: Copy core model weights into PVC (file by file, resumable)
-      include_tasks: copy-model-to-pvc.yml
+    - name: Log planned upload of the model weights (dry run)
+      include_role:
+        name: log-deployer-activity
       vars:
-        _copy_src_dir: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}"
-        _copy_pod: ibm-bob-pvc-loader-core
-        _copy_label: core
-      when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
-
-    - name: Write PVC-side download-complete marker for core model
-      kubernetes.core.k8s_exec:
-        namespace: "{{ _ibm_bob_models_project }}"
-        pod: ibm-bob-pvc-loader-core
-        command: "touch /mnt/models/download-complete"
-      when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
-
-    - name: Delete core model loader pod
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Pod
-        name: ibm-bob-pvc-loader-core
-        namespace: "{{ _ibm_bob_models_project }}"
-        wait: true
-        wait_timeout: 60
-
-    # -- Guardrail model: same pattern --
-    - name: Create temporary pod to mount guardrail model PVC
-      kubernetes.core.k8s:
-        state: present
-        definition:
-          apiVersion: v1
-          kind: Pod
-          metadata:
-            name: ibm-bob-pvc-loader-guardrail
-            namespace: "{{ _ibm_bob_models_project }}"
-            labels:
-              app.kubernetes.io/managed-by: cloud-pak-deployer
-          spec:
-            restartPolicy: Never
-            containers:
-              - name: loader
-                image: "{{ _ibm_bob_loader_effective_image | default(_ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest')) }}"
-                command: ["sleep", "28800"]
-                volumeMounts:
-                  - name: model-storage
-                    mountPath: /mnt/models
-            volumes:
-              - name: model-storage
-                persistentVolumeClaim:
-                  claimName: ibm-bob-guardrail-model
-
-    - name: Wait for guardrail model loader pod to be Running
-      kubernetes.core.k8s_info:
-        api_version: v1
-        kind: Pod
-        name: ibm-bob-pvc-loader-guardrail
-        namespace: "{{ _ibm_bob_models_project }}"
-      register: _ibm_bob_guardrail_loader_pod
-      until: >-
-        (_ibm_bob_guardrail_loader_pod.resources | default([]) | length > 0) and
-        (_ibm_bob_guardrail_loader_pod.resources[0].status.phase | default('')) == 'Running'
-      retries: 30
-      delay: 10
-
-    - name: Check if PVC-side guardrail model marker already exists
-      kubernetes.core.k8s_exec:
-        namespace: "{{ _ibm_bob_models_project }}"
-        pod: ibm-bob-pvc-loader-guardrail
-        command: "test -f /mnt/models/download-complete"
-      register: _ibm_bob_guardrail_pvc_marker
-      failed_when: false
-      changed_when: false
-
-    - name: Copy guardrail model weights into PVC (file by file, resumable)
-      include_tasks: copy-model-to-pvc.yml
-      vars:
-        _copy_src_dir: "{{ _ibm_bob_models_dl_base }}/guardrail"
-        _copy_pod: ibm-bob-pvc-loader-guardrail
-        _copy_label: guardrail
-      when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
-
-    - name: Write PVC-side download-complete marker for guardrail model
-      kubernetes.core.k8s_exec:
-        namespace: "{{ _ibm_bob_models_project }}"
-        pod: ibm-bob-pvc-loader-guardrail
-        command: "touch /mnt/models/download-complete"
-      when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
-
-    - name: Delete guardrail model loader pod
-      kubernetes.core.k8s:
-        state: absent
-        api_version: v1
-        kind: Pod
-        name: ibm-bob-pvc-loader-guardrail
-        namespace: "{{ _ibm_bob_models_project }}"
-        wait: true
-        wait_timeout: 60
+        _p_activity_description: "Upload IBM Bob model weights to the model PVCs"
+        _p_activity_comment: >-
+          For the core and the guardrail model: create a temporary loader pod that mounts the PVC in namespace
+          {{ _ibm_bob_models_project }}, copy the weights from {{ _ibm_bob_models_dl_base }} with oc cp (skipping
+          files that are already on the PVC), write the download-complete marker and delete the loader pod
+      when: cpd_dry_run | default(false) | bool
 
   when: cpd_airgap | default(false) | bool

@@ -1,0 +1,75 @@
+---
+# =============================================================================
+# upgrade-bob.yml
+# Step 3 of install-bob.yml when an older IBM Bob version is installed
+# (_upgrade_bob, set by check-bob-upgrade.yml). The cluster-scoped resources of the
+# new version were already generated and applied by install-bob.yml.
+#
+#   1. Remove the cluster-scoped ClusterRole and ClusterRoleBinding that older
+#      releases created and that the new release no longer includes
+#      (the commands bobctl generate-cluster-resources prints).
+#   2. bobctl upgrade: helm upgrade --reset-then-reuse-values -f config.yaml. It takes
+#      no --accept-license, --registry-creds or --model-config; the values of the
+#      installed release are kept.
+#   3. bobctl update-model-config for the model gateway, when one is defined.
+#
+# Prerequisites: same as install-bob.yml, plus _ibm_bob_model_config_file and
+# _ibm_bob_bundle_dir.
+# =============================================================================
+
+# ---- Step 1: cluster-scoped cleanup ------------------------------------------
+# bobctl install.sh prints these two commands when createClusterRoleBinding is false in
+# the values of the cluster-scoped chart of the new release. The names are fixed.
+- name: Read values of the IBM Bob cluster-scoped chart
+  set_fact:
+    _ibm_bob_cluster_scoped_values: "{{ lookup('file', _ibm_bob_bundle_dir ~ '/charts/ibm-bob-cluster-scoped/values.yaml') | from_yaml }}"
+
+- name: Determine whether obsolete cluster role and binding must be removed
+  set_fact:
+    _ibm_bob_remove_cluster_role: >-
+      {{ not ((_ibm_bob_cluster_scoped_values.bob | default({})).createClusterRoleBinding | default(true) | bool) }}
+
+- name: "Remove obsolete IBM Bob ClusterRole and ClusterRoleBinding"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Remove obsolete IBM Bob {{ item.kind }} {{ item.name }}"
+    _p_command: "oc delete {{ item.kind }} {{ item.name }} --ignore-not-found"
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-upgrade.log"
+  loop:
+    - kind: clusterrole
+      name: "ibm-bob-role-{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+    - kind: clusterrolebinding
+      name: "ibm-bob-rolebinding-{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+  when: _ibm_bob_remove_cluster_role | bool
+
+# ---- Step 2: bobctl upgrade -------------------------------------------------
+- name: "Run bobctl upgrade for IBM Bob {{ current_ibm_bob_cluster.project }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Upgrade IBM Bob from {{ _ibm_bob_installed_version }} to {{ _ibm_bob_version }} in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: "{{ _ibm_bob_bobctl_path }} upgrade"
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-upgrade.log"
+
+# ---- Step 3: model gateway ----------------------------------------------------
+# bobctl upgrade cannot take --model-config. The gateway config (and, for a hand-written
+# gateway with secrets, the secrets) are applied with bobctl update-model-config, which
+# renders the model config and secret templates and applies them with oc apply.
+- name: "Run bobctl update-model-config for IBM Bob {{ current_ibm_bob_cluster.project }}"
+  include_role:
+    name: run-command
+  vars:
+    _p_command_description: "Update IBM Bob model gateway configuration in namespace {{ current_ibm_bob_cluster.project }}"
+    _p_command: >-
+      {{ _ibm_bob_bobctl_path }} update-model-config
+      --model-config {{ _ibm_bob_model_config_file }}
+      {{ '--update-secrets' if (current_ibm_bob_cluster.model_gateway_secret_names | default({})) | length > 0 else '' }}
+      --output-config {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/model-gateway-config.yaml
+      --output-secret {{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/model-gateway-secret.yaml
+      --cleanup
+    _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
+    _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-upgrade.log"
+  when: _ibm_bob_model_config_file != ''

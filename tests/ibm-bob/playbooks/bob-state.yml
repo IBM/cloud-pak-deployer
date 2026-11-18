@@ -1,0 +1,75 @@
+---
+# Task file included by test-assert-live.yml: collects the state of the IBM Bob installation that
+# a dry run must not change, in the fact _it_state. Needs _it_bob, _it_bob_project,
+# _it_bob_operators_project and _it_bob_models_project (set by test-assert-live.yml).
+#
+# Not compared: the resourceVersion of the Bob CR, because the operator updates the status of the
+# CR at any time. metadata.generation only changes when the spec changes.
+
+- name: Get the IBM Bob namespaces
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Namespace
+    name: "{{ item }}"
+  register: _it_s_namespaces
+  loop:
+    - "{{ _it_bob_project }}"
+    - "{{ _it_bob_operators_project }}"
+    - "{{ _it_bob_models_project }}"
+
+- name: Get the Bob custom resource bob-cr
+  kubernetes.core.k8s_info:
+    api_version: bob.ibm.com/v1beta1
+    kind: Bob
+    name: bob-cr
+    namespace: "{{ _it_bob_project }}"
+  register: _it_s_cr
+
+- name: Get the Helm release secrets of ibm-bob
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: "{{ _it_bob_project }}"
+    label_selectors:
+      - owner=helm
+      - name=ibm-bob
+  register: _it_s_helm
+  no_log: true
+
+- name: Get the PVCs in the models namespace
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: PersistentVolumeClaim
+    namespace: "{{ _it_bob_models_project }}"
+  register: _it_s_pvcs
+
+- name: Get the InferenceServices in the models namespace
+  kubernetes.core.k8s_info:
+    api_version: serving.kserve.io/v1beta1
+    kind: InferenceService
+    namespace: "{{ _it_bob_models_project }}"
+  register: _it_s_isvcs
+
+# The vault is a file vault in the integration tests (see tests/lib/it-common.sh). Only the presence
+# of the key is checked; the value is not read.
+- name: Check whether the Keycloak admin key is in the vault
+  shell: >-
+    grep -c "^ibm_bob_keycloak_admin_{{ _it_bob_project | replace('-','_') }}_{{ _it_bob.openshift_cluster_name | replace('-','_') }}=."
+    "{{ status_dir }}/vault/{{ environment_name }}" || true
+  register: _it_s_keycloak_vault
+  changed_when: false
+
+- name: Collect the state of IBM Bob
+  vars:
+    _cr: "{{ (_it_s_cr.resources | default([])) | first | default({}) }}"
+  set_fact:
+    _it_state:
+      namespaces_present: "{{ _it_s_namespaces.results | rejectattr('resources', 'equalto', []) | map(attribute='item') | sort | list }}"
+      bob_cr_exists: "{{ _cr | length > 0 }}"
+      bob_cr_generation: "{{ (_cr.metadata | default({})).generation | default(0) | int }}"
+      bob_cr_version: "{{ (_cr.spec | default({})).version | default('') | string }}"
+      helm_release_secrets: "{{ (_it_s_helm.resources | default([])) | map(attribute='metadata.name') | sort | list }}"
+      model_pvcs: "{{ (_it_s_pvcs.resources | default([])) | map(attribute='metadata.name') | sort | list }}"
+      inference_services: "{{ (_it_s_isvcs.resources | default([])) | map(attribute='metadata.name') | sort | list }}"
+      keycloak_vault_key_present: "{{ (_it_s_keycloak_vault.stdout | trim) not in ['', '0'] }}"
+  no_log: true

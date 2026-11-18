@@ -4,9 +4,9 @@ Tests for ibm-bob-cluster config.yaml template rendering and prerequisite logic.
 
 import sys, os, json, unittest, jinja2, yaml
 
-VERSIONS_DIR = os.path.join(
+MODELS_FILE = os.path.join(
     os.path.dirname(__file__),
-    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-variables/vars/versions'
+    '../../../automation-roles/50-install-cloud-pak/ibm_bob/ibm-bob-variables/vars/ibm-bob-models.yml'
 )
 SERVING_TEMPLATES_DIR = os.path.join(
     os.path.dirname(__file__),
@@ -133,7 +133,7 @@ class TestModelGatewayGeneratedTemplate(unittest.TestCase):
     def render(self, model_id):
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(TEMPLATES_DIR))
         template = env.get_template('model-gateway-generated.j2')
-        with open(os.path.join(VERSIONS_DIR, '2.0.0.yml')) as f:
+        with open(MODELS_FILE) as f:
             data = yaml.safe_load(f)
         model = [m for m in data['_ibm_bob_ai_models'] if m['id'] == model_id][0]
         context = {

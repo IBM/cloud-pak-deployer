@@ -1,0 +1,41 @@
+---
+# =============================================================================
+# apply-object.yml
+# Creates or updates one Kubernetes object (no secrets).
+#
+#   real run : kubernetes.core.k8s state present. Only errors from the KServe admission
+#              webhook are retried: right after OpenShift AI is installed its CA bundle
+#              may not have been injected yet ("x509: certificate signed by unknown authority").
+#   dry run  : the object is written to a YAML file in the work directory and the file is
+#              logged in deployer-activities.log; nothing is applied.
+#
+# Inputs:
+#   _obj_definition   the object as a dict
+#   _obj_description  description for the task and the activity log
+#   _obj_file_name    file name (without directory) for the dry-run YAML
+# =============================================================================
+
+- name: "{{ _obj_description }}"
+  kubernetes.core.k8s:
+    state: present
+    definition: "{{ _obj_definition }}"
+  register: _ibm_bob_obj_result
+  until: _ibm_bob_obj_result is succeeded or 'webhook' not in (_ibm_bob_obj_result.msg | default(''))
+  retries: 20
+  delay: 15
+  when: not (cpd_dry_run | default(false) | bool)
+
+- name: "Write YAML of {{ _obj_description }} (dry run)"
+  copy:
+    content: "{{ _obj_definition | to_nice_yaml }}"
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/{{ _obj_file_name }}"
+    mode: '0644'
+  when: cpd_dry_run | default(false) | bool
+
+- name: "Log {{ _obj_description }} (dry run)"
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "{{ _obj_description }}"
+    _p_activity_yaml: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/work/{{ _obj_file_name }}"
+  when: cpd_dry_run | default(false) | bool

@@ -1,0 +1,153 @@
+---
+# =============================================================================
+# upload-model-weights.yml
+# Air-gapped mode: copies the model weights from status_dir into the model PVCs through
+# temporary loader pods. Included by download-or-verify-models.yml after the local weights
+# were verified; not included in dry run (it only changes the cluster).
+# =============================================================================
+
+# -- Core model: create temp pod, copy, write marker, delete pod --
+- name: Create temporary pod to mount core model PVC
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: ibm-bob-pvc-loader-core
+        namespace: "{{ _ibm_bob_models_project }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+      spec:
+        restartPolicy: Never
+        containers:
+          - name: loader
+            image: "{{ _ibm_bob_loader_effective_image | default(_ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest')) }}"
+            command: ["sleep", "28800"]
+            volumeMounts:
+              - name: model-storage
+                mountPath: /mnt/models
+        volumes:
+          - name: model-storage
+            persistentVolumeClaim:
+              claimName: ibm-bob-core-model
+
+- name: Wait for core model loader pod to be Running
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    name: ibm-bob-pvc-loader-core
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_core_loader_pod
+  until: >-
+    (_ibm_bob_core_loader_pod.resources | default([]) | length > 0) and
+    (_ibm_bob_core_loader_pod.resources[0].status.phase | default('')) == 'Running'
+  retries: 30
+  delay: 10
+
+- name: Check if PVC-side core model marker already exists
+  kubernetes.core.k8s_exec:
+    namespace: "{{ _ibm_bob_models_project }}"
+    pod: ibm-bob-pvc-loader-core
+    command: "test -f /mnt/models/download-complete"
+  register: _ibm_bob_core_pvc_marker
+  failed_when: false
+  changed_when: false
+
+- name: Copy core model weights into PVC (file by file, resumable)
+  include_tasks: copy-model-to-pvc.yml
+  vars:
+    _copy_src_dir: "{{ _ibm_bob_models_dl_base }}/{{ _ibm_bob_selected_model.id }}"
+    _copy_pod: ibm-bob-pvc-loader-core
+    _copy_label: core
+  when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
+
+- name: Write PVC-side download-complete marker for core model
+  kubernetes.core.k8s_exec:
+    namespace: "{{ _ibm_bob_models_project }}"
+    pod: ibm-bob-pvc-loader-core
+    command: "touch /mnt/models/download-complete"
+  when: (_ibm_bob_core_pvc_marker.return_code | default(1)) != 0
+
+- name: Delete core model loader pod
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    name: ibm-bob-pvc-loader-core
+    namespace: "{{ _ibm_bob_models_project }}"
+    wait: true
+    wait_timeout: 60
+
+# -- Guardrail model: same pattern --
+- name: Create temporary pod to mount guardrail model PVC
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: ibm-bob-pvc-loader-guardrail
+        namespace: "{{ _ibm_bob_models_project }}"
+        labels:
+          app.kubernetes.io/managed-by: cloud-pak-deployer
+      spec:
+        restartPolicy: Never
+        containers:
+          - name: loader
+            image: "{{ _ibm_bob_loader_effective_image | default(_ibm_bob_loader_image | default('registry.access.redhat.com/ubi9/ubi:latest')) }}"
+            command: ["sleep", "28800"]
+            volumeMounts:
+              - name: model-storage
+                mountPath: /mnt/models
+        volumes:
+          - name: model-storage
+            persistentVolumeClaim:
+              claimName: ibm-bob-guardrail-model
+
+- name: Wait for guardrail model loader pod to be Running
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    name: ibm-bob-pvc-loader-guardrail
+    namespace: "{{ _ibm_bob_models_project }}"
+  register: _ibm_bob_guardrail_loader_pod
+  until: >-
+    (_ibm_bob_guardrail_loader_pod.resources | default([]) | length > 0) and
+    (_ibm_bob_guardrail_loader_pod.resources[0].status.phase | default('')) == 'Running'
+  retries: 30
+  delay: 10
+
+- name: Check if PVC-side guardrail model marker already exists
+  kubernetes.core.k8s_exec:
+    namespace: "{{ _ibm_bob_models_project }}"
+    pod: ibm-bob-pvc-loader-guardrail
+    command: "test -f /mnt/models/download-complete"
+  register: _ibm_bob_guardrail_pvc_marker
+  failed_when: false
+  changed_when: false
+
+- name: Copy guardrail model weights into PVC (file by file, resumable)
+  include_tasks: copy-model-to-pvc.yml
+  vars:
+    _copy_src_dir: "{{ _ibm_bob_models_dl_base }}/guardrail"
+    _copy_pod: ibm-bob-pvc-loader-guardrail
+    _copy_label: guardrail
+  when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
+
+- name: Write PVC-side download-complete marker for guardrail model
+  kubernetes.core.k8s_exec:
+    namespace: "{{ _ibm_bob_models_project }}"
+    pod: ibm-bob-pvc-loader-guardrail
+    command: "touch /mnt/models/download-complete"
+  when: (_ibm_bob_guardrail_pvc_marker.return_code | default(1)) != 0
+
+- name: Delete guardrail model loader pod
+  kubernetes.core.k8s:
+    state: absent
+    api_version: v1
+    kind: Pod
+    name: ibm-bob-pvc-loader-guardrail
+    namespace: "{{ _ibm_bob_models_project }}"
+    wait: true
+    wait_timeout: 60

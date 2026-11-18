@@ -2,6 +2,7 @@
 # Smoke tests for IBM Bob.
 #   state=installed: verify operator pods Running, Bob CR Ready, then write access info.
 #   state=removed:  verify both namespaces are gone and report removal.
+# Both are skipped in dry run: nothing was installed or removed.
 
 - name: Set convenience facts for smoke tests
   set_fact:
@@ -37,7 +38,9 @@
           IBM Bob instance '{{ current_ibm_bob_cluster.project }}' has been removed:
           namespace '{{ current_ibm_bob_cluster.project }}' and
           '{{ _ibm_bob_operators_project }}' are gone.
-  when: _ibm_bob_state == 'removed'
+  when:
+    - _ibm_bob_state == 'removed'
+    - not (cpd_dry_run | default(false) | bool)
 
 # ---- state=installed: verify pods, CR Ready, then write access info ---------
 - name: Verify IBM Bob is running and write access info

@@ -1,0 +1,85 @@
+---
+# Task file included by test-assert-live.yml for the dry-run phases: asserts the content of
+# {{ status_dir }}/log/deployer-activities.log.
+#
+# Inputs:
+#   _it_log_expect   list of fragments that must occur in the log, in this order (a fragment is
+#                    searched after the end of the previous one, on one line of the log)
+#   _it_log_forbid   list of fragments that must not occur
+#   _it_log_forbid_secrets  optional, more fragments that must not occur (secret field names)
+#   _it_log_secrets  list of secret values that must not occur (never printed)
+
+- name: Check the activity log exists
+  stat:
+    path: "{{ status_dir }}/log/deployer-activities.log"
+  register: _it_log_stat
+
+- name: Assert that the activity log exists and is not empty
+  assert:
+    that:
+      - _it_log_stat.stat.exists
+      - _it_log_stat.stat.size > 0
+    fail_msg: >-
+      {{ status_dir }}/log/deployer-activities.log does not exist or is empty: the dry run did not
+      list any planned activity.
+    quiet: true
+
+- name: Read the activity log
+  slurp:
+    src: "{{ status_dir }}/log/deployer-activities.log"
+  register: _it_log_file
+
+- name: Parse the activity log
+  vars:
+    _text: "{{ _it_log_file.content | b64decode }}"
+  set_fact:
+    _it_log: "{{ _text | regex_replace('[ \\t]+', ' ') }}"
+    _it_log_sequence: "{{ _text | regex_findall('# Deployer activity: ([0-9]+)') | map('int') | list }}"
+
+- name: Assert that the activity numbers are consecutive and start at 1
+  assert:
+    that: _it_log_sequence == (range(1, (_it_log_sequence | length) + 1) | list)
+    fail_msg: >-
+      The activity numbers in deployer-activities.log are {{ _it_log_sequence }}; they must be consecutive
+      from 1 (a re-run must recreate the log, not append to it).
+    quiet: true
+
+- name: Find the position of each expected fragment in the activity log
+  set_fact:
+    _it_log_positions: |
+      {% set ns = namespace(pos=0, out=[]) %}
+      {% for f in _it_log_expect %}
+      {% set i = _it_log.find(f, ns.pos) %}
+      {% set ns.out = ns.out + [i] %}
+      {% if i >= 0 %}{% set ns.pos = i + (f | length) %}{% endif %}
+      {% endfor %}
+      {{ ns.out | to_json }}
+
+- name: Parse the positions
+  set_fact:
+    _it_log_positions: "{{ _it_log_positions if _it_log_positions is not string else (_it_log_positions | from_json) }}"
+
+- name: Assert that all expected activities are logged, in order
+  assert:
+    that: -1 not in _it_log_positions
+    fail_msg: >-
+      deployer-activities.log is missing these planned activities, or lists them out of order:
+      {% for f in _it_log_expect %}{% if _it_log_positions[loop.index0] == -1 %}'{{ f }}' {% endif %}{% endfor %}
+    quiet: true
+
+- name: Assert that no forbidden activity is logged
+  assert:
+    that: item not in _it_log
+    fail_msg: "deployer-activities.log contains '{{ item }}', which must not be planned in this phase."
+    quiet: true
+  loop: "{{ _it_log_forbid + (_it_log_forbid_secrets | default([])) }}"
+
+- name: Assert that no secret is logged
+  assert:
+    that: item not in _it_log
+    fail_msg: "deployer-activities.log contains a secret value or secret field."
+    quiet: true
+  loop: "{{ _it_log_secrets }}"
+  loop_control:
+    label: "secret"
+  no_log: true

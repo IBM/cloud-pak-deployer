@@ -61,7 +61,7 @@ syntax_check() {
 }
 
 echo "=== IBM Bob Dry-Run — check-only validation ==="
-for sample in ibm-bob-200 ibm-bob-latest cp4d-latest cp4i-latest; do
+for sample in ibm-bob-201 ibm-bob-latest cp4d-latest cp4i-latest; do
   check_only "${sample}"
 done
 

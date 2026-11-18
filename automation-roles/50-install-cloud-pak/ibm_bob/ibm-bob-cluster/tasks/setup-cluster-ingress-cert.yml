@@ -68,6 +68,18 @@
     _p_issuer_kind: ClusterIssuer
 
 # ---- Register cert with Bob via bobctl setup-route --------------------------
+# In dry run the certificate is not issued, so the command is logged but not run (run-command).
+- name: Log the certificate and issuer that would be created (dry run)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Issue Certificate bob-cluster-ingress-tls for the IBM Bob routes"
+    _p_activity_comment: >-
+      Create {{ 'Issuer ibm-bob-acme (ACME) and ' if (current_ibm_bob_cluster.ingress_cert.acme_email | default('')) != '' else '' }}Certificate
+      bob-cluster-ingress-tls in namespace {{ current_ibm_bob_cluster.project }} for
+      {{ _ibm_bob_cert_dns_names | join(', ') }} and wait until it is Ready
+  when: cpd_dry_run | default(false) | bool
+
 - name: Register certificate with IBM Bob (bobctl setup-route)
   include_role:
     name: run-command
@@ -76,6 +88,4 @@
     _p_command: "{{ _ibm_bob_bobctl_path }} setup-route --tls-secret bob-cluster-ingress-tls"
     _p_command_environment: "{{ _ibm_bob_bobctl_env }}"
     _p_command_log_file: "{{ status_dir }}/log/ibm-bob/{{ current_ibm_bob_cluster.project }}-setup-route.log"
-  when:
-    - not (cpd_dry_run | default(false) | bool)
-    - _cmc_certificate_ready == 'True'
+  when: (cpd_dry_run | default(false) | bool) or (_cmc_certificate_ready == 'True')

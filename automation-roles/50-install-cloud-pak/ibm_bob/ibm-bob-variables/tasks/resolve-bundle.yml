@@ -1,0 +1,165 @@
+---
+# =============================================================================
+# Locates the IBM Bob release bundle for _ibm_bob_version and downloads it.
+#
+# Sets: _ibm_bob_bundle_filename, _ibm_bob_bundle_sha256, _ibm_bob_bundle_tarball,
+#       _ibm_bob_bundle_cached_valid
+#
+# The release asset name contains a build timestamp, so it cannot be derived from
+# the version number. In connected mode it is looked up on GitHub once, and the
+# result (name, url, sha256) is saved as bundle-info.json next to the tarball.
+# Later runs and air-gapped runs use that file and never contact GitHub.
+# =============================================================================
+
+- name: Check for saved IBM Bob bundle metadata
+  stat:
+    path: "{{ _ibm_bob_bundle_dir }}/bundle-info.json"
+  register: _ibm_bob_info_stat
+
+- name: Read saved IBM Bob bundle metadata
+  slurp:
+    src: "{{ _ibm_bob_bundle_dir }}/bundle-info.json"
+  register: _ibm_bob_info_raw
+  when: _ibm_bob_info_stat.stat.exists
+
+- name: Check for checksum marker of an earlier deployer run
+  stat:
+    path: "{{ _ibm_bob_checksum_file }}"
+  register: _ibm_bob_marker_stat
+
+- name: Read checksum marker of an earlier deployer run
+  slurp:
+    src: "{{ _ibm_bob_checksum_file }}"
+  register: _ibm_bob_marker_raw
+  when: _ibm_bob_marker_stat.stat.exists
+
+- name: Find IBM Bob bundle archives in the download directory
+  find:
+    paths: "{{ _ibm_bob_bundle_dir }}"
+    patterns: "ibm-bob-install-*.tgz"
+    recurse: false
+  register: _ibm_bob_archives
+
+# Metadata file wins. Without it (bundle downloaded by an earlier deployer version, or placed by
+# hand) fall back to the single archive in the directory and the checksum marker.
+- name: Determine known bundle properties
+  set_fact:
+    _ibm_bob_known_info: "{{ (_ibm_bob_info_raw.content | b64decode | from_json) if _ibm_bob_info_stat.stat.exists else {} }}"
+    _ibm_bob_known_marker_sha: "{{ (_ibm_bob_marker_raw.content | b64decode | trim) if _ibm_bob_marker_stat.stat.exists else '' }}"
+    _ibm_bob_single_archive: "{{ (_ibm_bob_archives.files[0].path | basename) if _ibm_bob_archives.matched == 1 else '' }}"
+
+- name: Set known bundle file name and checksum
+  set_fact:
+    _ibm_bob_bundle_filename: "{{ _ibm_bob_known_info.filename | default(_ibm_bob_single_archive) }}"
+    _ibm_bob_bundle_sha256: "{{ _ibm_bob_known_info.sha256 | default(_ibm_bob_known_marker_sha) }}"
+
+- name: Check if cached bundle archive exists
+  stat:
+    path: "{{ _ibm_bob_bundle_dir }}/{{ _ibm_bob_bundle_filename }}"
+    checksum_algorithm: sha256
+    get_checksum: true
+  register: _bundle_archive_stat
+  when: _ibm_bob_bundle_filename != ''
+
+- name: Set cache validity fact
+  set_fact:
+    _ibm_bob_bundle_cached_valid: >-
+      {{ _ibm_bob_bundle_filename != '' and _ibm_bob_bundle_sha256 != ''
+         and (_bundle_archive_stat.stat.exists | default(false))
+         and (_bundle_archive_stat.stat.checksum | default('')) == _ibm_bob_bundle_sha256 }}
+
+- name: Fail if air-gapped mode and bundle is not cached
+  fail:
+    msg: >-
+      Air-gapped mode is enabled (CPD_AIRGAP=true) but a valid IBM Bob {{ _ibm_bob_version }} release bundle
+      was not found in '{{ _ibm_bob_bundle_dir }}'.
+      Run 'env download' on a connected machine (this saves the bundle and its checksum in
+      bundle-info.json) and copy the status directory to this machine, or place the bundle
+      ibm-bob-install-*.tgz there together with a .bundle_sha256 file that contains its SHA256.
+  when:
+    - cpd_airgap | default(false) | bool
+    - not (_ibm_bob_bundle_cached_valid | bool)
+
+# Connected mode, bundle missing or corrupt: look up the release asset on GitHub
+- name: Look up IBM Bob release bundle on GitHub
+  when:
+    - not (cpd_airgap | default(false) | bool)
+    - not (_ibm_bob_bundle_cached_valid | bool)
+  block:
+
+    - name: Get IBM Bob release v{{ _ibm_bob_version }} from GitHub
+      block:
+        - name: Call GitHub releases API for v{{ _ibm_bob_version }}
+          uri:
+            url: "https://api.github.com/repos/IBM/ibm-bob/releases/tags/v{{ _ibm_bob_version }}"
+            method: GET
+            headers: "{{ {'Accept': 'application/vnd.github+json'} | combine({'Authorization': 'Bearer ' ~ _github_ibm_pat} if (_github_ibm_pat | default('')) != '' else {}) }}"
+            return_content: true
+            status_code: 200
+          register: _ibm_bob_release
+          until: _ibm_bob_release is succeeded or (_ibm_bob_release.status | default(0)) in [401, 403, 404]
+          retries: 5
+          delay: 5
+      rescue:
+        - name: Fail with a hint if the IBM Bob release cannot be retrieved
+          fail:
+            msg: >-
+              Could not retrieve the IBM Bob {{ _ibm_bob_version }} release from GitHub
+              ({{ ansible_failed_result.msg | default('unknown error') }}).
+              Release URL: https://github.com/IBM/ibm-bob/releases/tag/v{{ _ibm_bob_version }}.
+              Check internet access and the version number. If the GitHub API rate limit was hit,
+              store a personal access token in the vault secret 'github-ibm-pat'.
+
+    - name: Select IBM Bob release bundle asset
+      set_fact:
+        _ibm_bob_release_assets: >-
+          {{ _ibm_bob_release.json.assets | default([])
+             | selectattr('name', 'match', '^ibm-bob-install-.*\.tgz$') | list }}
+
+    - name: Fail if the release is a draft or pre-release
+      fail:
+        msg: "IBM Bob release v{{ _ibm_bob_version }} is a draft or pre-release and cannot be used."
+      when: _ibm_bob_release.json.draft | default(false) or _ibm_bob_release.json.prerelease | default(false)
+
+    - name: Fail if the release does not have exactly one bundle asset
+      fail:
+        msg: >-
+          Expected exactly one ibm-bob-install-*.tgz asset in release v{{ _ibm_bob_version }}
+          at https://github.com/IBM/ibm-bob/releases/tag/v{{ _ibm_bob_version }},
+          found {{ _ibm_bob_release_assets | length }}.
+      when: _ibm_bob_release_assets | length != 1
+
+    - name: Fail if the release bundle asset has no sha256 digest
+      fail:
+        msg: >-
+          Release asset {{ _ibm_bob_release_assets[0].name }} of IBM Bob v{{ _ibm_bob_version }}
+          has no sha256 digest in the GitHub API response, so the download cannot be verified.
+      when: not ((_ibm_bob_release_assets[0].digest | default('')) is match('^sha256:[0-9a-f]{64}$'))
+
+    - name: Set IBM Bob release bundle properties
+      set_fact:
+        _ibm_bob_bundle_filename: "{{ _ibm_bob_release_assets[0].name }}"
+        _ibm_bob_bundle_url: "{{ _ibm_bob_release_assets[0].browser_download_url }}"
+        _ibm_bob_bundle_sha256: "{{ _ibm_bob_release_assets[0].digest | regex_replace('^sha256:', '') }}"
+
+    - name: Download IBM Bob release bundle
+      get_url:
+        url: "{{ _ibm_bob_bundle_url }}"
+        dest: "{{ _ibm_bob_bundle_dir }}/{{ _ibm_bob_bundle_filename }}"
+        checksum: "sha256:{{ _ibm_bob_bundle_sha256 }}"
+        mode: '0644'
+      register: _download_bundle
+      until: _download_bundle is succeeded
+      retries: 5
+      delay: 5
+
+    # Written only after a verified download. Used by later runs and by air-gapped runs.
+    - name: Save IBM Bob bundle metadata
+      copy:
+        content: "{{ {'version': _ibm_bob_version, 'filename': _ibm_bob_bundle_filename, 'url': _ibm_bob_bundle_url, 'sha256': _ibm_bob_bundle_sha256} | to_nice_json }}"
+        dest: "{{ _ibm_bob_bundle_dir }}/bundle-info.json"
+        mode: '0644'
+
+- name: Set bundle tarball path
+  set_fact:
+    _ibm_bob_bundle_tarball: "{{ _ibm_bob_bundle_dir }}/{{ _ibm_bob_bundle_filename }}"

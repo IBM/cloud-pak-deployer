@@ -48,6 +48,8 @@
   when: (_ibm_bob_airgap_registry_creds | default('')) == ''
 
 # ---- Create pull secrets in both namespaces ---------------------------------
+# In dry run (cpd_dry_run) these tasks are skipped and a comment activity is logged instead;
+# the pull secret carries the registry credentials and is never logged.
 - name: Ensure operator namespace exists for pull secret
   kubernetes.core.k8s:
     state: present
@@ -56,6 +58,7 @@
       kind: Namespace
       metadata:
         name: "{{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }}"
+  when: not (cpd_dry_run | default(false) | bool)
 
 - name: Ensure instance namespace exists for pull secret
   kubernetes.core.k8s:
@@ -65,6 +68,18 @@
       kind: Namespace
       metadata:
         name: "{{ current_ibm_bob_cluster.project }}"
+  when: not (cpd_dry_run | default(false) | bool)
+
+- name: Log planned namespaces and pull secrets (dry run, air-gapped mode)
+  include_role:
+    name: log-deployer-activity
+  vars:
+    _p_activity_description: "Create IBM Bob namespaces and ibm-entitlement-key pull secrets for the private registry"
+    _p_activity_comment: >-
+      Create namespaces {{ current_ibm_bob_cluster.operators_project | default('ibm-bob-operators') }} and
+      {{ current_ibm_bob_cluster.project }} if they do not exist, and create the pull secret ibm-entitlement-key
+      for {{ _ibm_bob_image_pull_prefix.split('/')[0] }} in both (the credentials are not logged)
+  when: cpd_dry_run | default(false) | bool
 
 - name: Create ibm-entitlement-key pull secret in operator namespace
   kubernetes.core.k8s:
@@ -88,6 +103,7 @@
             }
           }) | to_json | b64encode }}
   no_log: true
+  when: not (cpd_dry_run | default(false) | bool)
 
 - name: Create ibm-entitlement-key pull secret in instance namespace
   kubernetes.core.k8s:
@@ -111,6 +127,7 @@
             }
           }) | to_json | b64encode }}
   no_log: true
+  when: not (cpd_dry_run | default(false) | bool)
 
 # ---- Verify images in private registry --------------------------------------
 - name: "Verify IBM Bob images in private registry {{ _ibm_bob_image_pull_prefix }}"

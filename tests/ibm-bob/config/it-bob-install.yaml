@@ -1,8 +1,13 @@
 # Integration test configuration, part 2 of 2 (modes dry-run, install, smoke).
 # Copied by run_integration_tests.sh to tests/test-run/config/it-bob.yaml before the phase.
 #
+# This config installs Bob 2.0.0 so that the upgrade phase (it-bob-upgrade.yaml, 2.0.1) has
+# something to upgrade. Keep it identical to it-bob-upgrade.yaml except for ibm_bob_version.
+# After the upgrade phase on the same cluster, a plain install or dry-run with this config fails
+# with the downgrade message (expected); smoke uses --skip-cp-install and is not affected.
+#
 # Changes for other test cases are made by editing this committed template, for example:
-#   - another Bob version:            ibm_bob_version: 2.0.0
+#   - another Bob version:            ibm_bob_version: 2.0.1 (the upgrade phase is then a re-apply)
 #   - another storage or project:     openshift_storage_name / project / operators_project
 #   - another model: change core_model to laguna-s-2.1 with quantization fp8
 ibm_bob:
@@ -10,7 +15,7 @@ ibm_bob:
   operators_project: ibm-bob-operators
   openshift_cluster_name: "{{ env_id }}"        # resolved from global_config.env_id
   openshift_storage_name: auto-storage          # storage_name in it-ocp.yaml
-  ibm_bob_version: latest
+  ibm_bob_version: 2.0.0
   accept_licenses: true
   state: installed
 
