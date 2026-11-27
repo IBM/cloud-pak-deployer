@@ -194,7 +194,7 @@
   when: _ibm_bob_model_gateway_source != 'none'
 
 # Resolve model gateway vault secrets, then re-render config.yaml so that
-# bob.modelGateway.secrets is included (config.yaml is mode 0600 and removed after install).
+# bob.modelGateway.secrets is included (config.yaml is mode 0600 and scrubbed of the secrets after install).
 - name: Resolve model gateway vault secrets and re-render config.yaml
   block:
     - name: Initialize model gateway secrets
@@ -267,9 +267,10 @@
   include_tasks: upgrade-bob.yml
   when: _upgrade_bob | default(false) | bool
 
-- name: Clear entitlement key from facts
+- name: Clear secrets from facts
   set_fact:
     _ibm_bob_entitlement_key: ""
+    _ibm_bob_model_gateway_secrets: {}
   no_log: true
 
 # ---- Clean up transient secrets from config.yaml ----------------------------
@@ -281,8 +282,9 @@
     (current_ibm_bob_cluster.model_gateway is defined) or
     (current_ibm_bob_cluster.openshift_ai_models is defined)
 
-- name: Remove config.yaml (contains secrets) after install
-  file:
-    path: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
-    state: absent
+- name: Re-render config.yaml without model gateway secrets after install
+  template:
+    src: config.yaml.j2
+    dest: "{{ status_dir }}/ibm-bob/{{ current_ibm_bob_cluster.project }}/config.yaml"
+    mode: '0600'
   when: (current_ibm_bob_cluster.model_gateway_secret_names | default({})) | length > 0

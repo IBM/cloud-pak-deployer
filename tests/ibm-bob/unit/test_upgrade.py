@@ -428,6 +428,61 @@ class TestConfigTemplateExternalDomain(unittest.TestCase):
         self.assertLess(main.index('Set the cluster base domain'), main.index('Render config.yaml for IBM Bob'))
 
 
+class TestConfigYamlKeptAfterInstall(unittest.TestCase):
+    """bobctl setup-route and later bobctl commands need config.yaml, but without the model gateway secrets."""
+
+    TEMPLATE = os.path.join(TASKS_DIR, '../templates/config.yaml.j2')
+    DUMMY_SECRET = 'dummy-not-a-real-secret'
+
+    def tasks(self):
+        return [t for t, _ in _flatten(_load('install-bob.yml'))]
+
+    def render(self, **extra):
+        from jinja2 import Environment
+        ctx = dict(_ibm_bob_version='2.0.1', current_ibm_bob_cluster={'project': 'ibm-bob', 'premium_packages': {}},
+                   ocp_storage_class_file='f', ocp_storage_class_block='b', _ibm_bob_image_pull_prefix='icr.io')
+        ctx.update(extra)
+        with open(self.TEMPLATE) as f:
+            return yaml.safe_load(Environment(trim_blocks=True).from_string(f.read()).render(**ctx))
+
+    def test_config_yaml_is_never_removed(self):
+        for task in self.tasks():
+            path = str((task.get('file') or {}).get('path', ''))
+            state = (task.get('file') or {}).get('state')
+            self.assertFalse(path.endswith('config.yaml') and state == 'absent', task.get('name'))
+
+    def test_secrets_are_cleared_from_facts(self):
+        task = _find_task(self.tasks(), 'Clear secrets from facts')
+        self.assertIsNotNone(task)
+        self.assertEqual(task['set_fact']['_ibm_bob_entitlement_key'], '')
+        self.assertEqual(task['set_fact']['_ibm_bob_model_gateway_secrets'], {})
+        self.assertTrue(task.get('no_log'))
+
+    def test_config_yaml_is_re_rendered_without_secrets_after_install(self):
+        tasks = self.tasks()
+        names = [t.get('name', '') for t in tasks]
+        rerender = _find_task(tasks, 'Re-render config.yaml without model gateway secrets')
+        self.assertIsNotNone(rerender)
+        self.assertEqual(rerender['template']['src'], 'config.yaml.j2')
+        self.assertTrue(rerender['template']['dest'].endswith('/config.yaml'))
+        self.assertEqual(rerender['template']['mode'], '0600')
+        self.assertIn('model_gateway_secret_names', str(rerender['when']))
+        install = [i for i, t in enumerate(tasks) if t.get('name', '').startswith('Run bobctl install')
+                   or t.get('include_tasks') == 'upgrade-bob.yml']
+        self.assertEqual(len(install), 2)
+        clear = names.index(_find_task(tasks, 'Clear secrets from facts')['name'])
+        position = tasks.index(rerender)
+        self.assertGreater(clear, max(install))
+        self.assertGreater(position, clear)
+
+    def test_render_includes_secrets_only_when_set(self):
+        with_secret = self.render(_ibm_bob_model_gateway_secrets={'API_KEY': self.DUMMY_SECRET})
+        self.assertEqual(with_secret['bob']['modelGateway']['secrets'], {'API_KEY': self.DUMMY_SECRET})
+        for scrubbed in (self.render(_ibm_bob_model_gateway_secrets={}), self.render()):
+            self.assertNotIn('modelGateway', scrubbed['bob'])
+            self.assertNotIn(self.DUMMY_SECRET, yaml.safe_dump(scrubbed))
+
+
 class TestSmokeTestsDryRun(unittest.TestCase):
     """The smoke tests wait for things that a dry run never creates or removes."""
 
